@@ -1,0 +1,154 @@
+:root {
+  color: #1e2722;
+  background: #f4efe4;
+  font-family: "Avenir Next", "Gill Sans", sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 78% 10%, rgba(218, 97, 61, 0.2), transparent 30rem),
+    linear-gradient(125deg, #f4efe4 0%, #e8eadc 100%);
+}
+
+main {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 44px 0 64px;
+}
+
+.eyebrow {
+  margin: 0 0 10vh;
+  color: #ab4c30;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.5fr);
+  gap: 56px;
+  align-items: end;
+}
+
+h1 {
+  margin: 0;
+  max-width: 760px;
+  font-family: Georgia, serif;
+  font-size: clamp(4rem, 10vw, 8.5rem);
+  font-weight: 500;
+  letter-spacing: -0.07em;
+  line-height: 0.8;
+}
+
+.lede {
+  max-width: 620px;
+  margin: 42px 0 0;
+  color: #536159;
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  line-height: 1.6;
+}
+
+.status-card {
+  padding: 26px;
+  border: 1px solid rgba(30, 39, 34, 0.24);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.status-card strong,
+.status-card small {
+  display: block;
+}
+
+.status-card small {
+  margin-top: 8px;
+  color: #67736c;
+  line-height: 1.5;
+}
+
+.pulse {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 0 8px 1px 0;
+  border-radius: 50%;
+  background: #d85d3c;
+  box-shadow: 0 0 0 8px rgba(216, 93, 60, 0.12);
+}
+
+.surface-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 12vh;
+  border-top: 1px solid rgba(30, 39, 34, 0.24);
+}
+
+.surface-grid article {
+  min-height: 190px;
+  padding: 24px 22px;
+  border-right: 1px solid rgba(30, 39, 34, 0.24);
+}
+
+.surface-grid article:last-child {
+  border-right: 0;
+}
+
+.surface-grid span {
+  color: #ab4c30;
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+.surface-grid h2 {
+  margin: 58px 0 6px;
+  font-family: Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.surface-grid p {
+  margin: 0;
+  color: #67736c;
+}
+
+@media (max-width: 760px) {
+  main {
+    width: min(100% - 28px, 620px);
+    padding-top: 28px;
+  }
+
+  .eyebrow {
+    margin-bottom: 16vh;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: clamp(3.5rem, 18vw, 6rem);
+  }
+
+  .surface-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .surface-grid article {
+    min-height: 150px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(30, 39, 34, 0.24);
+  }
+
+  .surface-grid h2 {
+    margin-top: 34px;
+  }
+}

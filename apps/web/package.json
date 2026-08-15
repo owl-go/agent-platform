@@ -1,0 +1,21 @@
+{
+  "name": "@agent-platform/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vue-tsc -b && vite build",
+    "dev": "vite",
+    "typecheck": "vue-tsc -b"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "6.0.8",
+    "vite": "8.2.1",
+    "vue": "3.5.41"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3",
+    "vue-tsc": "3.3.9"
+  }
+}
