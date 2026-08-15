@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "vue-tsc -b && vite build",
+    "build": "vue-tsc --noEmit && vite build",
     "dev": "vite",
-    "typecheck": "vue-tsc -b"
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "6.0.8",
