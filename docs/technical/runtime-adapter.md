@@ -146,11 +146,16 @@ Sandbox Runner 负责：
 ```text
 internal/agentruntime/
   contract.go
+  contract_sink.go
+  error.go
+  runtimefake/
   conformance/
   claude/
   codex/
   hermes/
   openclaw/
+internal/runworker/
+  runner.go
 ```
 
 每个 Adapter 包只包含该 CLI 的参数、输出解析、状态目录和错误映射。共享进程、事件和脱敏逻辑放在 `internal/agentruntime` 的内部 Module 中，不复制到四个 Adapter。
@@ -187,4 +192,3 @@ Adapter 将错误归一化为：
 - `internal_adapter_error`
 
 错误分类决定 Run 状态和重试资格；原始 CLI 错误只作为脱敏诊断信息保存。
-

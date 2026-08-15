@@ -2,6 +2,7 @@ package agentruntime
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -32,6 +33,27 @@ type ExecuteRequest struct {
 	Model          string
 	CheckpointRef  string
 	EnvironmentRef string
+}
+
+func (r ExecuteRequest) Validate() error {
+	required := []struct {
+		name  string
+		value string
+	}{
+		{name: "run ID", value: r.RunID},
+		{name: "workspace path", value: r.WorkspacePath},
+		{name: "model", value: r.Model},
+		{name: "environment ref", value: r.EnvironmentRef},
+	}
+	for _, field := range required {
+		if field.value == "" {
+			return &Error{
+				Code:    ErrorInvalidConfiguration,
+				Message: fmt.Sprintf("%s is required", field.name),
+			}
+		}
+	}
+	return nil
 }
 
 type Result struct {
