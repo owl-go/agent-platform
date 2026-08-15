@@ -130,6 +130,7 @@ func run(parent context.Context, opts options) error {
 		RunID: opts.runID, WorkspacePath: opts.workspace, Instruction: opts.instruction,
 		Model: opts.model, EnvironmentRef: "production-conformance",
 	}, agentruntime.NewRedactingEventSink(redactor, events))
+	result = redactResult(redactor, result)
 
 	diff, diffErr := gitOutput(opts.workspace, "diff", "--binary", "--no-ext-diff", strings.TrimSpace(string(baseline)), "--")
 	if diffErr == nil {
@@ -156,6 +157,12 @@ func run(parent context.Context, opts options) error {
 		return err
 	}
 	return combinedErr
+}
+
+func redactResult(redactor *credentials.Redactor, result agentruntime.Result) agentruntime.Result {
+	result.FinalMessage = string(redactor.Bytes([]byte(result.FinalMessage)))
+	result.DiffArtifact = string(redactor.Bytes([]byte(result.DiffArtifact)))
+	return result
 }
 
 func validateOptions(opts options) error {
@@ -238,12 +245,9 @@ func loadCredentialPatterns(root string) ([][]byte, error) {
 }
 
 func scanWorkspace(root string, patterns [][]byte) error {
-	return filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+	walkErr := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
-		}
-		if entry.IsDir() && entry.Name() == ".git" {
-			return filepath.SkipDir
 		}
 		if !entry.Type().IsRegular() {
 			return nil
@@ -266,6 +270,33 @@ func scanWorkspace(root string, patterns [][]byte) error {
 		}
 		return nil
 	})
+	if walkErr != nil {
+		return walkErr
+	}
+	return scanGitObjects(root, patterns)
+}
+
+func scanGitObjects(workspace string, patterns [][]byte) error {
+	command := exec.Command("git", "-C", workspace, "cat-file", "--batch-all-objects", "--batch")
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("open Git object scan: %w", err)
+	}
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		return fmt.Errorf("start Git object scan: %w", err)
+	}
+	detector := newPatternDetector(patterns)
+	_, copyErr := io.Copy(detector, stdout)
+	waitErr := command.Wait()
+	if copyErr != nil || waitErr != nil {
+		return fmt.Errorf("scan Git objects: %s: %w", strings.TrimSpace(stderr.String()), errors.Join(copyErr, waitErr))
+	}
+	if detector.found {
+		return fmt.Errorf("credential value found in Git object database")
+	}
+	return nil
 }
 
 func gitOutput(workspace string, args ...string) ([]byte, error) {
@@ -344,3 +375,38 @@ func (s *jsonlEventSink) Publish(_ context.Context, event agentruntime.Event) er
 }
 
 func (s *jsonlEventSink) Close() error { return s.file.Close() }
+
+type patternDetector struct {
+	patterns [][]byte
+	pending  []byte
+	keep     int
+	found    bool
+}
+
+func newPatternDetector(patterns [][]byte) *patternDetector {
+	keep := 0
+	for _, pattern := range patterns {
+		if len(pattern) > keep {
+			keep = len(pattern)
+		}
+	}
+	if keep > 0 {
+		keep--
+	}
+	return &patternDetector{patterns: patterns, keep: keep}
+}
+
+func (d *patternDetector) Write(value []byte) (int, error) {
+	combined := append(append([]byte(nil), d.pending...), value...)
+	for _, pattern := range d.patterns {
+		if len(pattern) > 0 && bytes.Contains(combined, pattern) {
+			d.found = true
+		}
+	}
+	if len(combined) > d.keep {
+		d.pending = append(d.pending[:0], combined[len(combined)-d.keep:]...)
+	} else {
+		d.pending = append(d.pending[:0], combined...)
+	}
+	return len(value), nil
+}
