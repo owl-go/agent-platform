@@ -111,6 +111,22 @@ Adapter 必须：
 - 记录 CLI 版本和最终参数的脱敏形式；
 - 拒绝 Runtime 在 Run 中自更新。
 
+### Process Harness
+
+共享实现位于 `internal/agentruntime/processharness`。Adapter 以参数数组传入固定 CLI，不经过 Shell；Harness 为每个 Run 创建独立进程组，并将 stdout/stderr 分别写入受限临时 Spool。
+
+`Spec` 定义工作目录、追加环境变量、stdin、内联阈值、总输出上限、单行上限、终止 Grace Period 和可选 `OutputObserver`。Observer 用于 Runtime 增量解析；任意 Observer 错误都会触发进程组终止，因此 EventSink 失败不会留下继续执行但无法审计的 CLI。
+
+进程结束后，`OutputSink` 接收只读 `io.Reader`、原始字节数、UTF-8 标记和内联建议。`Output.Size` 始终表示脱敏前捕获的原始字节数；持久内容必须通过 `NewRedactingSink`，替换后的长度可以不同。
+
+取消顺序固定为：向整个进程组发送 SIGTERM，等待 Grace Period，再向仍存活的进程组发送 SIGKILL，并等待父进程回收后返回。
+
+### Credential Redaction
+
+`internal/credentials.Materializer` 把 EnvironmentRef 对应的凭据物化到本次 Run 的 0700 临时目录。文件权限为 0600，路径必须是目录内的本地相对路径；环境变量名只允许 POSIX 风格标识符。Run 结束时清除内存副本并幂等删除目录。
+
+Redactor 使用精确字节值而不是正则表达式。小型数据通过 `Bytes` 处理；stdout/stderr、Diff Artifact 与 Workspace Snapshot 通过 `Reader` 流式处理，能够识别跨底层读取边界的 Secret。Event Payload 通过 `NewRedactingEventSink`，进程输出和其他 Reader Artifact 通过 `processharness.NewRedactingSink`，之后才允许进入数据库或对象存储。
+
 ## Sandbox Interface
 
 Adapter 不直接调用 Docker。Worker 通过 Sandbox Runner 创建 gVisor Container，并在 Container 内启动 Runtime Adapter Entrypoint。
@@ -154,8 +170,12 @@ internal/agentruntime/
   codex/
   hermes/
   openclaw/
+  processharness/
 internal/runworker/
   runner.go
+internal/credentials/
+  materializer.go
+  redactor.go
 ```
 
 每个 Adapter 包只包含该 CLI 的参数、输出解析、状态目录和错误映射。共享进程、事件和脱敏逻辑放在 `internal/agentruntime` 的内部 Module 中，不复制到四个 Adapter。
