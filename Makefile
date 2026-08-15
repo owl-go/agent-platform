@@ -1,4 +1,4 @@
-.PHONY: build test web-build web-typecheck
+.PHONY: build test web-build web-typecheck sandbox-conformance
 
 build:
 	go build ./...
@@ -12,3 +12,5 @@ web-build:
 web-typecheck:
 	pnpm web:typecheck
 
+sandbox-conformance:
+	scripts/conformance/sandbox-linux.sh

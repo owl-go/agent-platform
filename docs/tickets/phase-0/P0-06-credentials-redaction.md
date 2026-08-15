@@ -27,8 +27,9 @@ P0-01；与 P0-02、P0-03 并行协作。
 ## 当前证据
 
 - `internal/credentials.Materializer` 按 EnvironmentRef 创建 0700 临时目录，以环境变量或 0600 文件注入本次 Run 选中的凭据。
+- `Materializer.Owner` 将目录树 chown 给 Sandbox 的非 root UID/GID，Container 通过只读 Bind Mount 读取；生产 Worker 使用专用凭据根并负责最终清理。
 - 凭据文件拒绝绝对路径和 `..` 路径穿越；创建失败会删除部分目录，Run 清理可重复执行。
 - `Environment.Redactor` 只包含当前凭据环境中的值；测试证明不同 Run 的 Redactor 不会混入另一 Run 的 Secret。
 - `Redactor.Bytes` 覆盖 Event、命令、错误和小型 Diff；`Redactor.Reader` 对 stdout/stderr、Artifact 与 Snapshot 做有界流式替换，并覆盖跨读取边界和二进制 Secret。
 - `agentruntime.NewRedactingEventSink` 与 `processharness.NewRedactingSink` 把脱敏放在持久化 seam，而不是依赖各 Runtime 自觉处理。
-- 尚未关闭的验收项是“其他 Run、非选中 Runtime 和宿主进程无法读取凭据”；该项需要 P0-03 的独立 gVisor Container、挂载与 UID 隔离共同证明。
+- Sandbox Runner 只允许挂载配置根下的单个凭据目录，并在 Start 前复核挂载；尚未关闭的部分是 Linux + runsc 中“其他 Run、非选中 Runtime 和非特权宿主进程无法读取”的真实证据。

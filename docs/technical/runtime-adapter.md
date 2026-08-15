@@ -144,6 +144,8 @@ Sandbox Runner 负责：
 
 这样可在不修改 Runtime Adapter 的情况下替换 Docker 执行实现。
 
+Docker + gVisor 的参数、Egress 防火墙、凭据 UID/GID 与 Reconcile 细节见 `docs/technical/sandbox-runner.md`。
+
 ## 恢复
 
 平台恢复始终可用，原生恢复是优化：

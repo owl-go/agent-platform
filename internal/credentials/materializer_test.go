@@ -5,13 +5,17 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"testing"
 
 	"agent-platform/internal/credentials"
 )
 
 func TestMaterializerCreatesPrivateCredentialFilesAndCleansUp(t *testing.T) {
-	materializer := credentials.Materializer{Root: t.TempDir()}
+	materializer := credentials.Materializer{
+		Root:  t.TempDir(),
+		Owner: &credentials.Owner{UID: os.Getuid(), GID: os.Getgid()},
+	}
 	environment, err := materializer.Create(credentials.Request{
 		Ref: "run-1",
 		Files: map[string][]byte{
@@ -35,6 +39,10 @@ func TestMaterializerCreatesPrivateCredentialFilesAndCleansUp(t *testing.T) {
 	}
 	if got := directoryInfo.Mode().Perm(); got != 0o700 {
 		t.Fatalf("credential directory mode: got %o, want 700", got)
+	}
+	credentialStat := info.Sys().(*syscall.Stat_t)
+	if int(credentialStat.Uid) != os.Getuid() || int(credentialStat.Gid) != os.Getgid() {
+		t.Fatalf("credential owner = %d:%d, want %d:%d", credentialStat.Uid, credentialStat.Gid, os.Getuid(), os.Getgid())
 	}
 
 	if err := environment.Cleanup(); err != nil {

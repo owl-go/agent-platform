@@ -14,7 +14,13 @@ type Request struct {
 }
 
 type Materializer struct {
-	Root string
+	Root  string
+	Owner *Owner
+}
+
+type Owner struct {
+	UID int
+	GID int
 }
 
 type Environment struct {
@@ -67,7 +73,43 @@ func (m Materializer) Create(request Request) (*Environment, error) {
 		}
 		environment.secrets = append(environment.secrets, append([]byte(nil), contents...))
 	}
+	if m.Owner != nil {
+		if m.Owner.UID < 0 || m.Owner.GID < 0 {
+			_ = environment.Cleanup()
+			return nil, fmt.Errorf("credential owner UID and GID must be non-negative")
+		}
+		if err := chownTree(directory, *m.Owner); err != nil {
+			_ = environment.Cleanup()
+			return nil, err
+		}
+	}
 	return environment, nil
+}
+
+func chownTree(root string, owner Owner) error {
+	var directories []string
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			directories = append(directories, path)
+			return nil
+		}
+		if err := os.Chown(path, owner.UID, owner.GID); err != nil {
+			return fmt.Errorf("set credential file owner: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for index := len(directories) - 1; index >= 0; index-- {
+		if err := os.Chown(directories[index], owner.UID, owner.GID); err != nil {
+			return fmt.Errorf("set credential directory owner: %w", err)
+		}
+	}
+	return nil
 }
 
 func (e *Environment) Directory() string {
