@@ -111,6 +111,13 @@ func TestEnvironmentReturnsIsolatedVariables(t *testing.T) {
 	if slices.Contains(environment.Environ(), "MODEL_API_KEY=changed") {
 		t.Fatal("caller changed the stored credential environment")
 	}
+	credentialValue, err := os.ReadFile(filepath.Join(environment.Directory(), "env", "MODEL_API_KEY"))
+	if err != nil {
+		t.Fatalf("read materialized environment credential: %v", err)
+	}
+	if string(credentialValue) != "model-secret" {
+		t.Fatalf("materialized environment credential = %q", credentialValue)
+	}
 }
 
 func TestEnvironmentRedactorCoversSelectedVariablesAndFiles(t *testing.T) {

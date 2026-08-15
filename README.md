@@ -10,6 +10,7 @@ Internal platform for configuring, running, and operating governed Coding Agents
 - `internal/agentruntime` - Runtime Adapter seam
 - `internal/sandbox` - Docker + gVisor Sandbox lifecycle seam
 - `internal/objectstore` - Aliyun OSS and MinIO provider seam
+- `deploy/runtimes` - isolated Claude, Codex, Hermes, and OpenClaw images
 - `docs/product` - confirmed product requirements and MVP scope
 - `docs/technical` - implementation specifications
 - `docs/tickets/phase-0` - executable Phase 0 work

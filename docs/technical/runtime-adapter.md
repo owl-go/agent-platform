@@ -167,6 +167,7 @@ internal/agentruntime/
   contract_sink.go
   error.go
   runtimefake/
+  cliadapter/
   conformance/
   claude/
   codex/
@@ -181,6 +182,8 @@ internal/credentials/
 ```
 
 每个 Adapter 包只包含该 CLI 的参数、输出解析、状态目录和错误映射。共享进程、事件和脱敏逻辑放在 `internal/agentruntime` 的内部 Module 中，不复制到四个 Adapter。
+
+固定 CLI 版本、无头参数、凭据 EntryPoint 与 Capability Gate 见 `docs/technical/runtime-images.md`。
 
 ## Conformance Suite
 

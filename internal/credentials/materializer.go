@@ -52,24 +52,29 @@ func (m Materializer) Create(request Request) (*Environment, error) {
 		variableNames = append(variableNames, name)
 	}
 	sort.Strings(variableNames)
-	for _, name := range variableNames {
-		value := request.Variables[name]
-		environment.variables = append(environment.variables, name+"="+value)
-		environment.secrets = append(environment.secrets, []byte(value))
-	}
-	for name, contents := range request.Files {
+	for name := range request.Files {
 		if !filepath.IsLocal(name) {
 			_ = environment.Cleanup()
 			return nil, fmt.Errorf("credential file path %q must be local", name)
 		}
-		path := filepath.Join(directory, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		if name == "env" || filepath.Dir(name) == "env" || len(name) > len("env/") && name[:len("env/")] == "env/" {
 			_ = environment.Cleanup()
-			return nil, fmt.Errorf("create credential parent: %w", err)
+			return nil, fmt.Errorf("credential file path %q uses reserved env directory", name)
 		}
-		if err := os.WriteFile(path, contents, 0o600); err != nil {
+	}
+	for _, name := range variableNames {
+		value := request.Variables[name]
+		environment.variables = append(environment.variables, name+"="+value)
+		environment.secrets = append(environment.secrets, []byte(value))
+		if err := writeCredentialFile(directory, filepath.Join("env", name), []byte(value)); err != nil {
 			_ = environment.Cleanup()
-			return nil, fmt.Errorf("write credential file: %w", err)
+			return nil, err
+		}
+	}
+	for name, contents := range request.Files {
+		if err := writeCredentialFile(directory, name, contents); err != nil {
+			_ = environment.Cleanup()
+			return nil, err
 		}
 		environment.secrets = append(environment.secrets, append([]byte(nil), contents...))
 	}
@@ -84,6 +89,17 @@ func (m Materializer) Create(request Request) (*Environment, error) {
 		}
 	}
 	return environment, nil
+}
+
+func writeCredentialFile(root, name string, contents []byte) error {
+	path := filepath.Join(root, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("create credential parent: %w", err)
+	}
+	if err := os.WriteFile(path, contents, 0o600); err != nil {
+		return fmt.Errorf("write credential file: %w", err)
+	}
+	return nil
 }
 
 func chownTree(root string, owner Owner) error {
