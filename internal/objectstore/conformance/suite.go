@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +17,8 @@ import (
 )
 
 type Factory func(t *testing.T) objectstore.Provider
+
+var conformanceHTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 func Run(t *testing.T, factory Factory) {
 	t.Helper()
@@ -147,6 +151,63 @@ func Run(t *testing.T, factory Factory) {
 			t.Fatalf("cleanup deleted object outside prefix: %v", err)
 		}
 	})
+}
+
+// RunHTTPBehavior verifies properties that an in-memory provider cannot model.
+func RunHTTPBehavior(t *testing.T, factory Factory) {
+	t.Helper()
+	provider := factory(t)
+	contents := []byte("private artifact")
+	put(t, provider, "http/private.txt", contents)
+
+	signed, err := provider.PresignGet(context.Background(), "http/private.txt", time.Second)
+	if err != nil {
+		t.Fatalf("presign object: %v", err)
+	}
+	assertHTTPBody(t, signed.URL, contents)
+
+	unsigned, err := url.Parse(signed.URL)
+	if err != nil {
+		t.Fatalf("parse signed URL: %v", err)
+	}
+	unsigned.RawQuery = ""
+	response, err := conformanceHTTPClient.Get(unsigned.String()) // #nosec G107 -- conformance target is explicitly configured.
+	if err != nil {
+		t.Fatalf("request unsigned URL: %v", err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		t.Fatalf("private object was accessible without signature: status %d", response.StatusCode)
+	}
+
+	time.Sleep(1500 * time.Millisecond)
+	response, err = conformanceHTTPClient.Get(signed.URL) // #nosec G107 -- conformance target is explicitly configured.
+	if err != nil {
+		t.Fatalf("request expired URL: %v", err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		t.Fatalf("expired signed URL remained accessible: status %d", response.StatusCode)
+	}
+}
+
+func assertHTTPBody(t *testing.T, target string, want []byte) {
+	t.Helper()
+	response, err := conformanceHTTPClient.Get(target) // #nosec G107 -- conformance target is explicitly configured.
+	if err != nil {
+		t.Fatalf("request signed URL: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		t.Fatalf("signed URL status = %d", response.StatusCode)
+	}
+	got, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read signed URL response: %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("signed URL body = %q, want %q", got, want)
+	}
 }
 
 func put(t *testing.T, provider objectstore.Provider, key string, contents []byte) {

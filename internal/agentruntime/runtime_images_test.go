@@ -26,7 +26,7 @@ func TestRuntimeDockerfilesPinOneCLIAndNonRootUser(t *testing.T) {
 				t.Fatalf("read Dockerfile: %v", err)
 			}
 			text := string(contents)
-			for _, required := range []string{test.version, test.install, test.entry, "USER 65532:65532", "WORKDIR /workspace"} {
+			for _, required := range []string{test.version, test.install, test.entry, "USER 65532:65532", "WORKDIR /workspace", "FROM public.ecr.aws/", "@sha256:"} {
 				if !strings.Contains(text, required) {
 					t.Fatalf("Dockerfile does not contain %q", required)
 				}

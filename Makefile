@@ -1,4 +1,4 @@
-.PHONY: build test web-build web-typecheck runtime-images runtime-image-smoke sandbox-conformance
+.PHONY: build test web-build web-typecheck runtime-images runtime-image-smoke sandbox-conformance minio-conformance
 
 build:
 	go build ./...
@@ -20,3 +20,6 @@ runtime-image-smoke:
 
 sandbox-conformance:
 	scripts/conformance/sandbox-linux.sh
+
+minio-conformance:
+	scripts/conformance/minio-local.sh

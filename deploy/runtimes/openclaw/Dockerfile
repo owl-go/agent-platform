@@ -1,9 +1,9 @@
-FROM node:24.15.0-bookworm-slim
+FROM public.ecr.aws/docker/library/node:24.15.0-bookworm-slim@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d
 
 ARG OPENCLAW_VERSION=2026.7.1-2
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
     && npm install --global "openclaw@${OPENCLAW_VERSION}" \
     && npm cache clean --force \
     && rm -rf /var/lib/apt/lists/* \

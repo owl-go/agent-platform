@@ -3,6 +3,9 @@ set -eu
 
 umask 077
 mkdir -p "${HOME}"
+if [ -n "${CODEX_HOME:-}" ]; then
+  mkdir -p "${CODEX_HOME}"
+fi
 
 credential_root="/run/agent-credentials"
 if [ -d "${credential_root}/env" ]; then

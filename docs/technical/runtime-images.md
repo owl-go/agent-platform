@@ -1,6 +1,6 @@
 # Runtime Images 与 CLI Adapter
 
-状态：实现完成，等待镜像构建和 Production Conformance
+状态：本地镜像构建与 smoke test 完成，等待 Production Conformance
 
 ## 版本基线
 
@@ -13,7 +13,7 @@
 
 四个 Dockerfile 位于 `deploy/runtimes/<runtime>/Dockerfile`，独立安装且只包含一种 Agent Runtime。镜像以 UID/GID 65532 运行，CLI 全局安装目录归 root；结合 Sandbox 只读 Rootfs，Runtime 无法在 Run 中覆盖自身版本。
 
-Dockerfile 固定精确基础版本标签和 CLI 包版本。`scripts/build-runtime-images.sh` 只为本机构建记录 Image ID；Production CI 必须 Push 后记录 Registry 返回的 `repository@sha256:<digest>`。Agent Release 不接受 Tag 或本地 Image ID 作为不可变引用。
+Dockerfile 使用 public ECR 的 Docker Official Images 镜像并固定基础 Manifest Digest，同时固定 CLI 包版本。`scripts/build-runtime-images.sh` 只为本机构建记录 Image ID；Production CI 必须 Push 后记录 Registry 返回的 `repository@sha256:<digest>`。Agent Release 不接受 Tag 或本地 Image ID 作为不可变引用。
 
 ## Credential Entrypoint
 

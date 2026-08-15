@@ -1,9 +1,9 @@
-FROM node:22.22.0-bookworm-slim
+FROM public.ecr.aws/docker/library/node:22.22.0-bookworm-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94
 
 ARG CODEX_VERSION=0.147.0
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
     && npm install --global "@openai/codex@${CODEX_VERSION}" \
     && npm cache clean --force \
     && rm -rf /var/lib/apt/lists/* \

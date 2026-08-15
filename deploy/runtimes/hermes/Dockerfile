@@ -1,9 +1,9 @@
-FROM python:3.13.11-slim-bookworm
+FROM public.ecr.aws/docker/library/python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0
 
 ARG HERMES_VERSION=0.19.0
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
+RUN apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
     && python -m pip install --no-cache-dir "hermes-agent==${HERMES_VERSION}" \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 65532 agent \

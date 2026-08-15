@@ -1,5 +1,7 @@
 # P0-09 完成 Phase 0 决策报告
 
+状态：已完成，当前决策为 NO-GO
+
 ## 目标
 
 把 PoC 证据转化为可以进入 Phase 1 的明确结论，不让临时代码静默成为生产架构。
@@ -23,3 +25,6 @@
 
 P0-08。
 
+## 产出
+
+决策、Runtime 状态、限制、阻断项 Owner 和转为 GO 的条件见 `docs/product/phase-0-decision.md`。

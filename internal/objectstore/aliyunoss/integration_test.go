@@ -19,7 +19,7 @@ func TestProviderConformance(t *testing.T) {
 		t.Skip("ALIYUN_OSS_ENDPOINT and ALIYUN_OSS_BUCKET are required for integration conformance")
 	}
 	runPrefix := "conformance/" + time.Now().UTC().Format("20060102T150405.000000000")
-	conformance.Run(t, func(t *testing.T) objectstore.Provider {
+	factory := func(t *testing.T) objectstore.Provider {
 		provider, err := aliyunadapter.New(aliyunadapter.Config{
 			Endpoint:     endpoint,
 			AccessKey:    os.Getenv("ALIYUN_OSS_ACCESS_KEY"),
@@ -35,6 +35,10 @@ func TestProviderConformance(t *testing.T) {
 			_, _ = provider.DeleteExpired(context.Background(), objectstore.LifecycleQuery{Before: time.Now().Add(time.Hour)})
 		})
 		return provider
+	}
+	conformance.Run(t, factory)
+	t.Run("http behavior", func(t *testing.T) {
+		conformance.RunHTTPBehavior(t, factory)
 	})
 }
 
