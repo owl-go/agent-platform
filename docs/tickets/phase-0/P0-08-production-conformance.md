@@ -27,3 +27,5 @@ P0-04、P0-05、P0-06、P0-07。
 ## 当前证据
 
 本地镜像和 MinIO 证据见 `docs/evidence/phase-0/2026-08-15-local-conformance.md`。Linux + gVisor、真实模型、Git SSH Push、Registry RepoDigest 和阿里云 OSS 尚未执行，因此本 Ticket 未完成。
+
+Runtime Adapter 与 gVisor Container 的执行 seam、证据文件和统一 Fixture 已实现，见 `docs/technical/production-conformance.md`。这减少了外部环境中的人工步骤，但不替代真实执行结果。

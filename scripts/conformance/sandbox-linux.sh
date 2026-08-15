@@ -4,6 +4,7 @@ set -euo pipefail
 image="${SANDBOX_TEST_IMAGE:-}"
 network_name="${AGENT_EGRESS_NETWORK:-agent-public-egress}"
 public_url="${SANDBOX_PUBLIC_TEST_URL:-https://example.com}"
+test_entrypoint="${SANDBOX_TEST_ENTRYPOINT:-/usr/local/bin/runtime-entrypoint}"
 container_name="agent-sandbox-conformance-$$"
 volume_name="agent-sandbox-workspace-$$"
 credential_root="$(mktemp -d)"
@@ -36,6 +37,11 @@ chmod 0700 "${credential_root}/selected"
 chmod 0600 "${credential_root}/selected/model-key"
 docker volume create "${volume_name}" >/dev/null
 
+entrypoint_args=()
+if [[ -n "${test_entrypoint}" ]]; then
+  entrypoint_args=(--entrypoint "${test_entrypoint}")
+fi
+
 docker create \
   --name "${container_name}" \
   --runtime runsc \
@@ -54,6 +60,7 @@ docker create \
   --label agent-platform.run-id=conformance \
   --label agent-platform.egress=public \
   --init \
+  "${entrypoint_args[@]}" \
   "${image}" \
   sh -ceu '
     test "$(id -u)" = "65532"

@@ -1,0 +1,1 @@
+Read CONFORMANCE.md and complete its coding task exactly, including the intentional failure and redaction probe. Fix the calculator bug, run the tests, and leave the final change uncommitted. Do not repeat or store the probe result.

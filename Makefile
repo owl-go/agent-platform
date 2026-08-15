@@ -1,4 +1,4 @@
-.PHONY: build test web-build web-typecheck runtime-images runtime-image-smoke sandbox-conformance minio-conformance
+.PHONY: build test web-build web-typecheck runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
 
 build:
 	go build ./...
@@ -23,3 +23,9 @@ sandbox-conformance:
 
 minio-conformance:
 	scripts/conformance/minio-local.sh
+
+production-conformance-preflight:
+	scripts/conformance/production-preflight.sh
+
+production-conformance:
+	scripts/conformance/production.sh
