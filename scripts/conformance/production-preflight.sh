@@ -55,7 +55,9 @@ for root_name in CONFORMANCE_WORK_ROOT CONFORMANCE_EVIDENCE_ROOT; do
   root="${!root_name:-}"
   [[ -z "${root}" || "${root}" == /* ]] || failures+=("${root_name} must be absolute")
 done
-[[ "${CONFORMANCE_WORK_ROOT:-}" != "${CONFORMANCE_EVIDENCE_ROOT:-}" ]] || failures+=("work and evidence roots must differ")
+if [[ -n "${CONFORMANCE_WORK_ROOT:-}" && -n "${CONFORMANCE_EVIDENCE_ROOT:-}" && "${CONFORMANCE_WORK_ROOT}" == "${CONFORMANCE_EVIDENCE_ROOT}" ]]; then
+  failures+=("work and evidence roots must differ")
+fi
 
 network="${AGENT_EGRESS_NETWORK:-agent-public-egress}"
 if command -v docker >/dev/null 2>&1; then
