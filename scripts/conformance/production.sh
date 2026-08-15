@@ -88,7 +88,7 @@ for runtime in "${runtimes[@]}"; do
   set -e
   forced_container="$(wait_for_container "${forced_run_id}")"
   deadline=$((SECONDS + 600))
-  until "${workspace}/scripts/test.sh" >/dev/null 2>&1; do
+  until "${workspace}/scripts/test.sh" >/dev/null 2>&1 && [[ -f "${workspace}/.conformance-long-started" ]]; do
     if ! kill -0 "${forced_pid}" 2>/dev/null; then
       echo "${runtime} exited before producing the forced-recovery snapshot" >&2
       wait "${forced_pid}" || true
@@ -187,9 +187,9 @@ for runtime in "${runtimes[@]}"; do
       --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files." &
     control_pid=$!
     set -e
-    control_container="$(wait_for_container "${control_run_id}")"
+    wait_for_container "${control_run_id}" >/dev/null
     deadline=$((SECONDS + 300))
-    until docker logs "${control_container}" 2>&1 | rg -q 'long command started'; do
+    until [[ -f "${control_workspace}/.conformance-long-started" ]]; do
       if ! kill -0 "${control_pid}" 2>/dev/null; then
         echo "${runtime} exited before starting the ${control} command" >&2
         wait "${control_pid}" || true
@@ -236,7 +236,10 @@ for runtime in "${runtimes[@]}"; do
     exit 1
   fi
   jq -e '.error_code == "timed_out"' "${timeout_evidence}/report.json" >/dev/null
-  rg -q 'long command started' "${timeout_evidence}/stdout.log" "${timeout_evidence}/stderr.log"
+  [[ -f "${timeout_workspace}/.conformance-long-started" ]] || {
+    echo "${runtime} timed out before starting the fixture long command" >&2
+    exit 1
+  }
   if docker ps --all --filter "label=agent-platform.run-id=${timeout_run_id}" --format '{{.ID}}' | rg -q .; then
     echo "${runtime} container survived timeout cleanup" >&2
     exit 1

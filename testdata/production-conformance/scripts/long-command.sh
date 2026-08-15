@@ -2,4 +2,5 @@
 set -eu
 
 echo "long command started"
-sleep 300
+printf '%s\n' "started" >.conformance-long-started
+sleep 900
