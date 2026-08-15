@@ -9,6 +9,7 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 suite_root="${CONFORMANCE_EVIDENCE_ROOT}/${stamp}"
 mkdir -p "${CONFORMANCE_WORK_ROOT}" "${suite_root}"
 go build -o "${suite_root}/runtime-conformance" ./cmd/runtime-conformance
+go build -o "${suite_root}/conformance-artifact" ./cmd/conformance-artifact
 
 prepare_owned_directory() {
   local directory="$1"
@@ -49,6 +50,11 @@ for runtime in "${runtimes[@]}"; do
   image="${!image_name}"
   model="${!model_name}"
   credential_dir="${!credential_name}"
+  canary="$(<"${credential_dir}/env/CONFORMANCE_CANARY_SECRET")"
+  if [[ ${#canary} -lt 16 ]]; then
+    echo "${credential_name} canary must contain at least 16 characters" >&2
+    exit 2
+  fi
   workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}"
   evidence_root="${suite_root}/${runtime}"
   forced_evidence="${evidence_root}/forced-kill"
@@ -102,6 +108,36 @@ for runtime in "${runtimes[@]}"; do
     exit 1
   fi
   jq -e '.error != null' "${forced_evidence}/report.json" >/dev/null
+  if rg --fixed-strings --quiet -- "${canary}" "${forced_evidence}" "${workspace}"; then
+    echo "credential canary persisted before ${runtime} snapshot" >&2
+    exit 1
+  fi
+
+  snapshot_key="phase-0/${stamp}/${runtime}/workspace.tar"
+  "${suite_root}/conformance-artifact" --action upload --provider minio \
+    --source "${workspace}" --key "${snapshot_key}" --report "${forced_evidence}/minio-upload.json"
+  "${suite_root}/conformance-artifact" --action upload --provider aliyun_oss \
+    --source "${workspace}" --key "${snapshot_key}" --report "${forced_evidence}/aliyun-oss-upload.json"
+
+  recovery_workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}-recovery"
+  oss_restore_workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}-oss-restore"
+  prepare_owned_directory "${recovery_workspace}"
+  prepare_owned_directory "${oss_restore_workspace}"
+  "${suite_root}/conformance-artifact" --action restore --provider minio \
+    --source "${recovery_workspace}" --key "${snapshot_key}" --report "${forced_evidence}/minio-restore.json"
+  "${suite_root}/conformance-artifact" --action restore --provider aliyun_oss \
+    --source "${oss_restore_workspace}" --key "${snapshot_key}" --report "${forced_evidence}/aliyun-oss-restore.json"
+  if [[ "$(id -u)" == "0" ]]; then
+    chown -R 65532:65532 "${recovery_workspace}" "${oss_restore_workspace}"
+  fi
+  "${oss_restore_workspace}/scripts/test.sh" >/dev/null
+  minio_snapshot_sha="$(jq -r '.sha256' "${forced_evidence}/minio-restore.json")"
+  oss_snapshot_sha="$(jq -r '.sha256' "${forced_evidence}/aliyun-oss-restore.json")"
+  [[ "${minio_snapshot_sha}" == "${oss_snapshot_sha}" ]] || {
+    echo "MinIO and Aliyun OSS restored different ${runtime} snapshots" >&2
+    exit 1
+  }
+  workspace="${recovery_workspace}"
 
   "${suite_root}/runtime-conformance" \
     --runtime "${runtime}" \
@@ -123,68 +159,120 @@ for runtime in "${runtimes[@]}"; do
     "${image}" "${workspace}" "${credential_dir}" \
     "${CONFORMANCE_REPOSITORY_URL}" "${review_branch}"
 
-  canary="$(<"${credential_dir}/env/CONFORMANCE_CANARY_SECRET")"
-  if [[ ${#canary} -lt 16 ]]; then
-    echo "${credential_name} canary must contain at least 16 characters" >&2
-    exit 2
-  fi
   if rg --fixed-strings --quiet -- "${canary}" "${evidence}" "${workspace}"; then
     echo "credential canary persisted for ${runtime}" >&2
     exit 1
   fi
 
-  interrupt_workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}-interrupt"
-  interrupt_evidence="${evidence_root}/interrupt"
-  interrupt_run_id="${stamp}-${runtime}-interrupt"
-  prepare_owned_directory "${interrupt_workspace}"
-  mkdir -p "${interrupt_evidence}"
-  chown 65532:65532 "${interrupt_evidence}" 2>/dev/null || true
+  for control in interrupt cancel; do
+    control_workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}-${control}"
+    control_evidence="${evidence_root}/${control}"
+    control_run_id="${stamp}-${runtime}-${control}"
+    control_signal="INT"
+    [[ "${control}" == "cancel" ]] && control_signal="TERM"
+    prepare_owned_directory "${control_workspace}"
+    mkdir -p "${control_evidence}"
+    chown 65532:65532 "${control_evidence}" 2>/dev/null || true
+    AGENT_EGRESS_NETWORK="${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
+      "${repo_root}/scripts/conformance/runtime-git-sandbox.sh" clone \
+      "${image}" "${control_workspace}" "${credential_dir}" \
+      "${CONFORMANCE_REPOSITORY_URL}" "${CONFORMANCE_BASE_BRANCH}"
+
+    set +e
+    "${suite_root}/runtime-conformance" \
+      --runtime "${runtime}" --image "${image}" --model "${model}" \
+      --workspace "${control_workspace}" --credentials "${credential_dir}" \
+      --output "${control_evidence}" --run-id "${control_run_id}" \
+      --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" --timeout 15m \
+      --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files." &
+    control_pid=$!
+    set -e
+    control_container="$(wait_for_container "${control_run_id}")"
+    deadline=$((SECONDS + 300))
+    until docker logs "${control_container}" 2>&1 | rg -q 'long command started'; do
+      if ! kill -0 "${control_pid}" 2>/dev/null; then
+        echo "${runtime} exited before starting the ${control} command" >&2
+        wait "${control_pid}" || true
+        exit 1
+      fi
+      if ((SECONDS >= deadline)); then
+        echo "${runtime} did not start the ${control} command" >&2
+        kill -TERM "${control_pid}" 2>/dev/null || true
+        wait "${control_pid}" || true
+        exit 1
+      fi
+      sleep 2
+    done
+    kill -"${control_signal}" "${control_pid}"
+    if wait "${control_pid}"; then
+      echo "${runtime} ${control} scenario unexpectedly succeeded" >&2
+      exit 1
+    fi
+    jq -e '.error_code == "interrupted"' "${control_evidence}/report.json" >/dev/null
+    if docker ps --all --filter "label=agent-platform.run-id=${control_run_id}" --format '{{.ID}}' | rg -q .; then
+      echo "${runtime} container survived ${control} cleanup" >&2
+      exit 1
+    fi
+  done
+
+  timeout_workspace="${CONFORMANCE_WORK_ROOT}/${stamp}-${runtime}-timeout"
+  timeout_evidence="${evidence_root}/timeout"
+  timeout_run_id="${stamp}-${runtime}-timeout"
+  prepare_owned_directory "${timeout_workspace}"
+  mkdir -p "${timeout_evidence}"
+  chown 65532:65532 "${timeout_evidence}" 2>/dev/null || true
   AGENT_EGRESS_NETWORK="${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
     "${repo_root}/scripts/conformance/runtime-git-sandbox.sh" clone \
-    "${image}" "${interrupt_workspace}" "${credential_dir}" \
+    "${image}" "${timeout_workspace}" "${credential_dir}" \
     "${CONFORMANCE_REPOSITORY_URL}" "${CONFORMANCE_BASE_BRANCH}"
-
-  set +e
-  "${suite_root}/runtime-conformance" \
+  if "${suite_root}/runtime-conformance" \
     --runtime "${runtime}" --image "${image}" --model "${model}" \
-    --workspace "${interrupt_workspace}" --credentials "${credential_dir}" \
-    --output "${interrupt_evidence}" --run-id "${interrupt_run_id}" \
-    --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" --timeout 15m \
-    --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files." &
-  interrupt_pid=$!
-  set -e
-  interrupt_container="$(wait_for_container "${interrupt_run_id}")"
-  deadline=$((SECONDS + 300))
-  until docker logs "${interrupt_container}" 2>&1 | rg -q 'long command started'; do
-    if ! kill -0 "${interrupt_pid}" 2>/dev/null; then
-      echo "${runtime} exited before starting the interrupt command" >&2
-      wait "${interrupt_pid}" || true
-      exit 1
-    fi
-    if ((SECONDS >= deadline)); then
-      echo "${runtime} did not start the interrupt command" >&2
-      kill -TERM "${interrupt_pid}" 2>/dev/null || true
-      wait "${interrupt_pid}" || true
-      exit 1
-    fi
-    sleep 2
-  done
-  kill -INT "${interrupt_pid}"
-  if wait "${interrupt_pid}"; then
-    echo "${runtime} interrupt scenario unexpectedly succeeded" >&2
+    --workspace "${timeout_workspace}" --credentials "${credential_dir}" \
+    --output "${timeout_evidence}" --run-id "${timeout_run_id}" \
+    --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
+    --timeout "${CONFORMANCE_TIMEOUT_DURATION:-5m}" \
+    --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files."; then
+    echo "${runtime} timeout scenario unexpectedly succeeded" >&2
     exit 1
   fi
-  jq -e '.error_code == "interrupted"' "${interrupt_evidence}/report.json" >/dev/null
-  if docker ps --all --filter "label=agent-platform.run-id=${interrupt_run_id}" --format '{{.ID}}' | rg -q .; then
-    echo "${runtime} container survived interrupt cleanup" >&2
+  jq -e '.error_code == "timed_out"' "${timeout_evidence}/report.json" >/dev/null
+  rg -q 'long command started' "${timeout_evidence}/stdout.log" "${timeout_evidence}/stderr.log"
+  if docker ps --all --filter "label=agent-platform.run-id=${timeout_run_id}" --format '{{.ID}}' | rg -q .; then
+    echo "${runtime} container survived timeout cleanup" >&2
     exit 1
   fi
+
+  if rg --fixed-strings --quiet -- "${canary}" "${evidence_root}"; then
+    echo "credential canary persisted in ${runtime} evidence" >&2
+    exit 1
+  fi
+  jq -n \
+    --arg runtime "${runtime}" --arg image "${image}" --arg review_branch "${review_branch}" \
+    --slurpfile forced "${forced_evidence}/report.json" \
+    --slurpfile recovery "${evidence}/report.json" \
+    --slurpfile interrupt "${evidence_root}/interrupt/report.json" \
+    --slurpfile cancel "${evidence_root}/cancel/report.json" \
+    --slurpfile timeout "${evidence_root}/timeout/report.json" \
+    --slurpfile minio_snapshot "${forced_evidence}/minio-restore.json" \
+    --slurpfile oss_snapshot "${forced_evidence}/aliyun-oss-restore.json" \
+    '{runtime: $runtime, image: $image, review_branch: $review_branch,
+      scenarios: {forced_kill: $forced[0], recovery: $recovery[0], interrupt: $interrupt[0], cancel: $cancel[0], timeout: $timeout[0]},
+      snapshots: {minio: $minio_snapshot[0], aliyun_oss: $oss_snapshot[0]}}' \
+    >"${evidence_root}/scenario-summary.json"
+
+  artifact_report_root="${suite_root}/artifact-reports/${runtime}"
+  mkdir -p "${artifact_report_root}"
+  evidence_key="phase-0/${stamp}/${runtime}/evidence.tar"
+  "${suite_root}/conformance-artifact" --action upload --provider minio \
+    --source "${evidence_root}" --key "${evidence_key}" --report "${artifact_report_root}/minio-evidence.json"
+  "${suite_root}/conformance-artifact" --action upload --provider aliyun_oss \
+    --source "${evidence_root}" --key "${evidence_key}" --report "${artifact_report_root}/aliyun-oss-evidence.json"
 done
 
-"${repo_root}/scripts/conformance/minio-local.sh" >"${suite_root}/minio.log" 2>&1
+go test -count=1 -v ./internal/objectstore/minio >"${suite_root}/minio.log" 2>&1
 go test -count=1 -v ./internal/objectstore/aliyunoss >"${suite_root}/aliyun-oss.log" 2>&1
 
-jq -s '{generated_at: now | todate, decision: "PENDING_SNAPSHOT_AND_TIMEOUT", runtimes: .}' \
-  "${suite_root}"/{claude,codex,hermes,openclaw}/recovery/report.json >"${suite_root}/summary.json"
+jq -s '{generated_at: now | todate, decision: "GO", runtimes: .}' \
+  "${suite_root}"/{claude,codex,hermes,openclaw}/scenario-summary.json >"${suite_root}/summary.json"
 
 echo "Production Conformance passed; evidence: ${suite_root}"

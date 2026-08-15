@@ -1,6 +1,6 @@
 # Production Conformance Runner
 
-状态：执行链与证据生成器已实现，等待 Linux + gVisor 外部环境执行
+状态：自动化套件已实现，等待 Linux + gVisor 外部环境执行
 
 ## 目的
 
@@ -61,6 +61,35 @@ go run ./cmd/runtime-conformance \
 
 ## Fixture
 
-`testdata/production-conformance` 是统一黑盒示例仓库。它包含一个会失败的 Go 测试、一个明确失败的命令和一个用于 Interrupt/强杀场景的长命令。四种 Runtime 必须从同一基线分别执行，不能共享前一个 Runtime 修改后的 Workspace。
+`testdata/production-conformance` 是统一黑盒示例仓库。它包含一个会失败的 Shell 测试、一个明确失败的命令和一个用于 Interrupt/强杀场景的长命令。四种 Runtime 必须从同一基线分别执行，不能共享前一个 Runtime 修改后的 Workspace。
 
-当前命令覆盖真实 Runtime 修改、标准事件、Diff、超时/取消入口、容器清理与 Secret 持久化扫描。Clone/Push、强杀后重建、网络逃逸、OSS/MinIO Artifact 上传和汇总报告仍由 P0-08 外层套件编排；未完成前 Phase 0 保持 NO-GO。
+管理员使用 `scripts/conformance/prepare-production-repository.sh` 把 Fixture 推送到一个新的远端基线分支；脚本拒绝覆盖已有分支。
+
+## 完整套件
+
+`scripts/conformance/production-preflight.sh` 在任何模型调用前检查 Linux、`runsc`、公网 Egress Network、四个 RepoDigest、四组模型/Git 凭证、单行 Canary、Git 仓库、MinIO、阿里云 OSS，以及 Redirect、DNS Rebinding 和控制面拒绝测试地址。检查只输出缺失配置名称，不输出凭证值。
+
+通过预检后执行：
+
+```bash
+scripts/conformance/production.sh
+```
+
+外层套件对四种 Runtime 分别自动执行：
+
+1. 在 gVisor Sandbox 内通过固定 SSH Key 和 `known_hosts` Clone 同一 Fixture；
+2. 运行失败命令、Secret Canary Probe、代码修改和成功测试；
+3. 在测试通过后强杀 Container；
+4. 把 Workspace Snapshot 分别上传到 MinIO 和阿里云 OSS并执行回读校验；
+5. 从两个 Provider 分别恢复，比较归档 SHA-256，并从 MinIO 恢复的 Workspace 继续 Runtime；
+6. 在 Sandbox 内复测、Commit 并 Push 独立 Review Branch；
+7. 对长命令分别执行 Interrupt、Cancel、Timeout，验证错误分类和 Container 清理；
+8. 扫描 Workspace 与全部 Evidence，确认 Canary 没有持久化；
+9. 上传脱敏 Evidence Artifact 到两个 Provider；
+10. 汇总镜像 RepoDigest、实际 CLI 版本、Capability、耗时、Usage、预期失败、Snapshot 和 Review Branch。
+
+Sandbox 网络测试同时要求公网可达，并拒绝 Loopback、Docker Host Gateway、云元数据、RFC1918 私网、公共 URL 到私网的重定向、解析到私网的 DNS Rebinding 地址和平台控制面地址。
+
+`cmd/conformance-artifact` 使用统一 Object Storage Provider 创建 tar Snapshot。归档上传后立即回读并核验大小和 SHA-256；恢复器拒绝绝对路径、`..` 穿越、重复路径、特殊文件和越界 Symlink。Evidence 和 Workspace 都通过相同路径验证，不使用 Provider 专有对象地址。
+
+只有所有命令成功后，`summary.json` 才写入 `decision: "GO"`。任何 Runtime、网络、Git、Secret、Snapshot 或 Provider 场景失败都会让脚本非零退出，不生成成功决策。真实套件未执行前，仓库内 Phase 0 决策仍保持 NO-GO。

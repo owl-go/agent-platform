@@ -4,6 +4,9 @@ set -euo pipefail
 image="${SANDBOX_TEST_IMAGE:-}"
 network_name="${AGENT_EGRESS_NETWORK:-agent-public-egress}"
 public_url="${SANDBOX_PUBLIC_TEST_URL:-https://example.com}"
+redirect_url="${SANDBOX_REDIRECT_TEST_URL:-}"
+rebind_url="${SANDBOX_REBIND_TEST_URL:-}"
+control_plane_url="${SANDBOX_CONTROL_PLANE_TEST_URL:-}"
 test_entrypoint="${SANDBOX_TEST_ENTRYPOINT:-/usr/local/bin/runtime-entrypoint}"
 container_name="agent-sandbox-conformance-$$"
 volume_name="agent-sandbox-workspace-$$"
@@ -22,6 +25,10 @@ if [[ "$(uname -s)" != "Linux" ]]; then
 fi
 if [[ -z "${image}" || "${image}" != *@sha256:* ]]; then
   echo "SANDBOX_TEST_IMAGE must be an immutable image digest with sh, curl, and id" >&2
+  exit 1
+fi
+if [[ -z "${redirect_url}" || -z "${rebind_url}" || -z "${control_plane_url}" ]]; then
+  echo "SANDBOX_REDIRECT_TEST_URL, SANDBOX_REBIND_TEST_URL, and SANDBOX_CONTROL_PLANE_TEST_URL are required" >&2
   exit 1
 fi
 if ! docker info --format '{{json .Runtimes}}' | grep -q '"runsc"'; then
@@ -69,12 +76,15 @@ docker create \
     test ! -S /var/run/docker.sock
     if touch /rootfs-write-probe 2>/dev/null; then exit 20; fi
     touch /workspace/workspace-write-probe
-    curl -fsS --connect-timeout 5 "'"${public_url}"'" >/dev/null
-    for target in http://169.254.169.254/ http://10.0.0.1/ http://172.16.0.1/ http://192.168.0.1/; do
-      if curl -fsS --connect-timeout 2 "$target" >/dev/null 2>&1; then exit 21; fi
+    curl --noproxy "*" -fsS --connect-timeout 5 "$1" >/dev/null
+    for target in \
+      http://127.0.0.1/ http://host.docker.internal/ http://169.254.169.254/ \
+      http://10.0.0.1/ http://172.16.0.1/ http://172.17.0.1/ http://192.168.0.1/ \
+      "$2" "$3" "$4"; do
+      if curl --noproxy "*" -LfsS --connect-timeout 2 --max-time 5 "$target" >/dev/null 2>&1; then exit 21; fi
     done
     sleep 300
-  ' >/dev/null
+  ' sh "${public_url}" "${redirect_url}" "${rebind_url}" "${control_plane_url}" >/dev/null
 
 runtime="$(docker inspect --format '{{.HostConfig.Runtime}}' "${container_name}")"
 readonly_root="$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "${container_name}")"

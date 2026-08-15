@@ -18,11 +18,13 @@ fi
 for name in \
   CONFORMANCE_REPOSITORY_URL CONFORMANCE_BASE_BRANCH \
   CONFORMANCE_WORK_ROOT CONFORMANCE_EVIDENCE_ROOT \
+  SANDBOX_REDIRECT_TEST_URL SANDBOX_REBIND_TEST_URL SANDBOX_CONTROL_PLANE_TEST_URL \
   CONFORMANCE_CLAUDE_IMAGE CONFORMANCE_CLAUDE_MODEL CONFORMANCE_CLAUDE_CREDENTIAL_DIR \
   CONFORMANCE_CODEX_IMAGE CONFORMANCE_CODEX_MODEL CONFORMANCE_CODEX_CREDENTIAL_DIR \
   CONFORMANCE_HERMES_IMAGE CONFORMANCE_HERMES_MODEL CONFORMANCE_HERMES_CREDENTIAL_DIR \
   CONFORMANCE_OPENCLAW_IMAGE CONFORMANCE_OPENCLAW_MODEL CONFORMANCE_OPENCLAW_CREDENTIAL_DIR \
-  ALIYUN_OSS_ENDPOINT ALIYUN_OSS_ACCESS_KEY ALIYUN_OSS_SECRET_KEY ALIYUN_OSS_BUCKET; do
+  ALIYUN_OSS_ENDPOINT ALIYUN_OSS_ACCESS_KEY ALIYUN_OSS_SECRET_KEY ALIYUN_OSS_BUCKET \
+  MINIO_ENDPOINT MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_BUCKET; do
   require_value "${name}"
 done
 
@@ -39,6 +41,10 @@ for runtime in CLAUDE CODEX HERMES OPENCLAW; do
     [[ -f "${credential_dir}/git/id_ed25519" ]] || failures+=("${credential_name} is missing git/id_ed25519")
     [[ -f "${credential_dir}/git/known_hosts" ]] || failures+=("${credential_name} is missing git/known_hosts")
     [[ -f "${credential_dir}/env/CONFORMANCE_CANARY_SECRET" ]] || failures+=("${credential_name} is missing env/CONFORMANCE_CANARY_SECRET")
+    if [[ -f "${credential_dir}/env/CONFORMANCE_CANARY_SECRET" ]]; then
+      canary="$(<"${credential_dir}/env/CONFORMANCE_CANARY_SECRET")"
+      [[ ${#canary} -ge 16 && "${canary}" != *$'\n'* ]] || failures+=("${credential_name} canary must be a single line with at least 16 characters")
+    fi
     if [[ -d "${credential_dir}/env" ]] && ! find "${credential_dir}/env" -type f -mindepth 1 -maxdepth 1 | read -r; then
       failures+=("${credential_name}/env contains no model credential")
     fi
