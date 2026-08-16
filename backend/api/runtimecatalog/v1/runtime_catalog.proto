@@ -1,0 +1,46 @@
+syntax = "proto3";
+package runtimecatalog.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "agent-platform/backend/api/runtimecatalog/v1;runtimecatalogv1";
+
+service RuntimeCatalogService {
+  rpc ListRuntimeImages(ListRuntimeImagesRequest) returns (ListRuntimeImagesResponse) { option (google.api.http) = {get: "/v1/runtime-images"}; }
+  rpc GetRuntimeImage(GetRuntimeImageRequest) returns (RuntimeImage) { option (google.api.http) = {get: "/v1/runtime-images/{runtime_image_id}"}; }
+  rpc RegisterRuntimeImage(RegisterRuntimeImageRequest) returns (RuntimeImage) { option (google.api.http) = {post: "/v1/runtime-images" body: "*"}; }
+  rpc ChangeRuntimeImageStatus(ChangeRuntimeImageStatusRequest) returns (RuntimeImage) { option (google.api.http) = {patch: "/v1/runtime-images/{runtime_image_id}/status" body: "*"}; }
+}
+
+message ListRuntimeImagesRequest {}
+message ListRuntimeImagesResponse { repeated RuntimeImage items = 1; }
+message GetRuntimeImageRequest { string runtime_image_id = 1; }
+message GetRuntimeImageResponse { RuntimeImage runtime_image = 1; }
+message RegisterRuntimeImageRequest {
+  string runtime = 1;
+  string cli_version = 2;
+  string adapter_version = 3;
+  string image_digest = 4;
+  map<string, bool> capabilities = 5;
+}
+message RegisterRuntimeImageResponse { RuntimeImage runtime_image = 1; }
+message ChangeRuntimeImageStatusRequest {
+  string runtime_image_id = 1;
+  string status = 2;
+  string blocked_reason = 3;
+}
+message ChangeRuntimeImageStatusResponse { RuntimeImage runtime_image = 1; }
+message RuntimeImage {
+  string id = 1;
+  string runtime = 2;
+  string cli_version = 3;
+  string adapter_version = 4;
+  string image_digest = 5;
+  map<string, bool> capabilities = 6;
+  string status = 7;
+  optional string blocked_reason = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  int64 version = 11;
+}

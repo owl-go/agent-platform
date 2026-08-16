@@ -1,0 +1,50 @@
+api:
+  address: ":8080"
+  read_header_timeout: 5s
+  idle_timeout: 60s
+  shutdown_timeout: 10s
+
+authentication:
+  mode: deny_all
+
+worker:
+  management_address: "127.0.0.1:9090"
+  shutdown_timeout: 10s
+  reconcile_interval: 5s
+  max_attempts: 3
+  execution_enabled: false
+
+webhook:
+  enabled: false
+
+retention:
+  enabled: false
+  sweep_interval: 1h
+  batch_size: 500
+  run_event_period: 2160h
+  artifact_period: 2160h
+  workspace_period: 720h
+  audit_period: 8760h
+  idempotency_grace: 1h
+
+database:
+  dsn: "${DATABASE_URL}"
+  max_open_connections: 20
+  max_idle_connections: 10
+  connection_max_idle: 5m
+  connection_max_lifetime: 30m
+
+object_store:
+  provider: minio
+  minio:
+    endpoint: minio:9000
+    access_key: "${MINIO_ROOT_USER}"
+    secret_key: "${MINIO_ROOT_PASSWORD}"
+    bucket: "${MINIO_BUCKET}"
+    secure: false
+  aliyun_oss: {}
+
+sandbox:
+  runtime: runsc
+  egress_network: agent-public-egress
+  resolver_config: /etc/agent-platform/sandbox-resolv.conf

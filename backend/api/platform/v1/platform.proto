@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package platform.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "agent-platform/backend/api/platform/v1;platformv1";
+
+service HealthService {
+  rpc Health(HealthRequest) returns (HealthResponse) {
+    option (google.api.http) = {get: "/healthz"};
+  }
+
+  rpc Ready(ReadyRequest) returns (ReadyResponse) {
+    option (google.api.http) = {get: "/readyz"};
+  }
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+}
+
+message ReadyRequest {}
+
+message ReadyResponse {
+  string status = 1;
+}

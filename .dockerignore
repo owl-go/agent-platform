@@ -1,0 +1,13 @@
+.git
+.scratch
+.DS_Store
+**/.DS_Store
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+build
+output
+.env
+.env.*
+!.env.example

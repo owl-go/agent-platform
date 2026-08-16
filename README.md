@@ -4,12 +4,15 @@ Internal platform for configuring, running, and operating governed Coding Agents
 
 ## Workspace
 
-- `apps/web` - Vue and TypeScript product surfaces
-- `cmd/api` - Go HTTP control plane
-- `cmd/worker` - Go Run worker
-- `internal/agentruntime` - Runtime Adapter seam
-- `internal/sandbox` - Docker + gVisor Sandbox lifecycle seam
-- `internal/objectstore` - Aliyun OSS and MinIO provider seam
+- `frontend` - standalone Vue and TypeScript product surfaces
+- `backend` - standalone Go Kratos control plane and Worker module
+- `backend/cmd/api` - Wire-built Kratos HTTP control plane
+- `backend/cmd/worker` - Wire-built Kratos Worker App
+- `backend/internal/biz` - bounded-context models, use cases, and workflow ports
+- `backend/internal/data` - GORM and external-system adapters
+- `backend/internal/service` - generated API adapters and Gin Run Event SSE
+- `backend/internal/server` - Kratos HTTP and Worker lifecycle servers
+- `backend/api` - authoritative Protobuf contracts and generated Go transports
 - `deploy/runtimes` - isolated Claude, Codex, Hermes, and OpenClaw images
 - `docs/product` - confirmed product requirements and MVP scope
 - `docs/technical` - implementation specifications
@@ -18,7 +21,9 @@ Internal platform for configuring, running, and operating governed Coding Agents
 ## Local checks
 
 ```bash
-pnpm install
+cd frontend && pnpm install
+cd ..
+make generate
 make test
 make build
 make web-typecheck

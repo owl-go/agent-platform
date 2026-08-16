@@ -1,0 +1,23 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: api
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go:v1.6.2
+    out: api
+    opt:
+      - paths=source_relative
+  - local:
+      - go
+      - run
+      - github.com/go-kratos/kratos/cmd/protoc-gen-go-http/v3@v3.0.0-20260626125723-668db92c2c00
+    out: api
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.30.0
+    out: gen/openapi
+    opt:
+      - allow_merge=true
+      - merge_file_name=agent-platform
+      - json_names_for_fields=false

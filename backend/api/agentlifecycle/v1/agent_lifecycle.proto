@@ -1,0 +1,82 @@
+syntax = "proto3";
+package agentlifecycle.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "types/v1/types.proto";
+
+option go_package = "agent-platform/backend/api/agentlifecycle/v1;agentlifecyclev1";
+
+service AgentLifecycleService {
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) { option (google.api.http) = {get: "/v1/agents"}; }
+  rpc CreateAgent(CreateAgentRequest) returns (Agent) { option (google.api.http) = {post: "/v1/agents" body: "*"}; }
+  rpc GetAgent(GetAgentRequest) returns (Agent) { option (google.api.http) = {get: "/v1/agents/{agent_id}"}; }
+  rpc UpdateAgent(UpdateAgentRequest) returns (Agent) { option (google.api.http) = {patch: "/v1/agents/{agent_id}" body: "*"}; }
+  rpc ListAgentDrafts(ListAgentDraftsRequest) returns (ListAgentDraftsResponse) { option (google.api.http) = {get: "/v1/agents/{agent_id}/drafts"}; }
+  rpc CreateAgentDraft(CreateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts" body: "*"}; }
+  rpc GetAgentDraft(GetAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {get: "/v1/agents/{agent_id}/drafts/{draft_id}"}; }
+  rpc UpdateAgentDraft(UpdateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}" body: "*"}; }
+  rpc ValidateAgentDraft(ValidateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/validation" body: "*"}; }
+  rpc RequestAgentDraftApproval(RequestAgentDraftApprovalRequest) returns (ReleaseApproval) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"}; }
+  rpc DecideAgentDraftApproval(DecideAgentDraftApprovalRequest) returns (ReleaseApproval) { option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"}; }
+  rpc PublishAgentDraft(PublishAgentDraftRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/release" body: "*"}; }
+  rpc ListAgentReleases(ListAgentReleasesRequest) returns (ListAgentReleasesResponse) { option (google.api.http) = {get: "/v1/agents/{agent_id}/releases"}; }
+  rpc GetAgentRelease(GetAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {get: "/v1/agents/{agent_id}/releases/{release_id}"}; }
+  rpc DeprecateAgentRelease(DeprecateAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/deprecation" body: "*"}; }
+  rpc BlockAgentRelease(BlockAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/block" body: "*"}; }
+}
+
+message ListAgentsRequest { string team_id = 1; }
+message ListAgentsResponse { repeated Agent items = 1; }
+message CreateAgentRequest { string team_id = 1; string name = 2; string description = 3; }
+message CreateAgentResponse { Agent agent = 1; }
+message GetAgentRequest { string agent_id = 1; string team_id = 2; }
+message GetAgentResponse { Agent agent = 1; }
+message UpdateAgentRequest { string agent_id = 1; string team_id = 2; string name = 3; string description = 4; }
+message UpdateAgentResponse { Agent agent = 1; }
+message ListAgentDraftsRequest { string agent_id = 1; string team_id = 2; }
+message ListAgentDraftsResponse { repeated AgentDraft items = 1; }
+message CreateAgentDraftRequest { string agent_id = 1; string team_id = 2; types.v1.AgentConfiguration configuration = 3; string release_risk = 4; }
+message CreateAgentDraftResponse { AgentDraft draft = 1; }
+message GetAgentDraftRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; }
+message GetAgentDraftResponse { AgentDraft draft = 1; }
+message UpdateAgentDraftRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; types.v1.AgentConfiguration configuration = 4; string release_risk = 5; }
+message UpdateAgentDraftResponse { AgentDraft draft = 1; }
+message ValidateAgentDraftRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; }
+message ValidateAgentDraftResponse { AgentDraft draft = 1; }
+message RequestAgentDraftApprovalRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; }
+message RequestAgentDraftApprovalResponse { ReleaseApproval approval = 1; }
+message DecideAgentDraftApprovalRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; bool approved = 4; string reason = 5; }
+message DecideAgentDraftApprovalResponse { ReleaseApproval approval = 1; }
+message PublishAgentDraftRequest { string agent_id = 1; string draft_id = 2; string team_id = 3; }
+message PublishAgentDraftResponse { AgentRelease release = 1; }
+message ListAgentReleasesRequest { string agent_id = 1; string team_id = 2; }
+message ListAgentReleasesResponse { repeated AgentRelease items = 1; }
+message GetAgentReleaseRequest { string agent_id = 1; string release_id = 2; string team_id = 3; }
+message GetAgentReleaseResponse { AgentRelease release = 1; }
+message DeprecateAgentReleaseRequest { string agent_id = 1; string release_id = 2; string team_id = 3; }
+message DeprecateAgentReleaseResponse { AgentRelease release = 1; }
+message BlockAgentReleaseRequest { string agent_id = 1; string release_id = 2; string team_id = 3; }
+message BlockAgentReleaseResponse { AgentRelease release = 1; }
+
+message Agent {
+  string id = 1; string team_id = 2; string name = 3; string description = 4; string created_by = 5;
+  google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8;
+}
+message AgentDraft {
+  string id = 1; string agent_id = 2; int64 revision = 3; string state = 4;
+  types.v1.AgentConfiguration configuration = 5; string release_risk = 6;
+  optional types.v1.ValidationReport validation_report = 7; string created_by = 8;
+  google.protobuf.Timestamp created_at = 9; google.protobuf.Timestamp updated_at = 10; int64 version = 11;
+}
+message ReleaseApproval {
+  string id = 1; string draft_id = 2; int64 draft_version = 3; string requested_by = 4; string state = 5;
+  google.protobuf.Timestamp requested_at = 6; optional string decided_by = 7;
+  optional google.protobuf.Timestamp decided_at = 8; string reason = 9; int64 version = 10;
+}
+message AgentRelease {
+  string id = 1; string agent_id = 2; int64 release_number = 3; string source_draft_id = 4;
+  string runtime_image_id = 5; string configured_model_id = 6; string repository_binding_id = 7;
+  types.v1.AgentConfiguration configuration = 8; string status = 9; string released_by = 10;
+  google.protobuf.Timestamp released_at = 11; optional google.protobuf.Timestamp deprecated_at = 12; int64 version = 13;
+}

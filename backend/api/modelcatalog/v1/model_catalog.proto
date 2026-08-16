@@ -1,0 +1,67 @@
+syntax = "proto3";
+package modelcatalog.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "agent-platform/backend/api/modelcatalog/v1;modelcatalogv1";
+
+service ModelCatalogService {
+  rpc ListCredentialProfiles(ListCredentialProfilesRequest) returns (ListCredentialProfilesResponse) { option (google.api.http) = {get: "/v1/credential-profiles"}; }
+  rpc GetCredentialProfile(GetCredentialProfileRequest) returns (CredentialProfile) { option (google.api.http) = {get: "/v1/credential-profiles/{credential_profile_id}"}; }
+  rpc RegisterCredentialProfile(RegisterCredentialProfileRequest) returns (CredentialProfile) { option (google.api.http) = {post: "/v1/credential-profiles" body: "*"}; }
+  rpc ChangeCredentialProfileStatus(ChangeCredentialProfileStatusRequest) returns (CredentialProfile) { option (google.api.http) = {patch: "/v1/credential-profiles/{credential_profile_id}/status" body: "*"}; }
+  rpc ListConfiguredModels(ListConfiguredModelsRequest) returns (ListConfiguredModelsResponse) { option (google.api.http) = {get: "/v1/configured-models"}; }
+  rpc GetConfiguredModel(GetConfiguredModelRequest) returns (ConfiguredModel) { option (google.api.http) = {get: "/v1/configured-models/{configured_model_id}"}; }
+  rpc RegisterConfiguredModel(RegisterConfiguredModelRequest) returns (ConfiguredModel) { option (google.api.http) = {post: "/v1/configured-models" body: "*"}; }
+  rpc ChangeConfiguredModelStatus(ChangeConfiguredModelStatusRequest) returns (ConfiguredModel) { option (google.api.http) = {patch: "/v1/configured-models/{configured_model_id}/status" body: "*"}; }
+}
+
+message ListCredentialProfilesRequest {}
+message ListCredentialProfilesResponse { repeated CredentialProfile items = 1; }
+message GetCredentialProfileRequest { string credential_profile_id = 1; }
+message GetCredentialProfileResponse { CredentialProfile credential_profile = 1; }
+message RegisterCredentialProfileRequest {
+  optional string team_id = 1;
+  string name = 2;
+  string kind = 3;
+  string secret_ref = 4;
+}
+message RegisterCredentialProfileResponse { CredentialProfile credential_profile = 1; }
+message ChangeCredentialProfileStatusRequest { string credential_profile_id = 1; bool enabled = 2; }
+message ChangeCredentialProfileStatusResponse { CredentialProfile credential_profile = 1; }
+message ListConfiguredModelsRequest {}
+message ListConfiguredModelsResponse { repeated ConfiguredModel items = 1; }
+message GetConfiguredModelRequest { string configured_model_id = 1; }
+message GetConfiguredModelResponse { ConfiguredModel configured_model = 1; }
+message RegisterConfiguredModelRequest {
+  string name = 1;
+  string model_id = 2;
+  string endpoint = 3;
+  string credential_profile_id = 4;
+}
+message RegisterConfiguredModelResponse { ConfiguredModel configured_model = 1; }
+message ChangeConfiguredModelStatusRequest { string configured_model_id = 1; bool enabled = 2; }
+message ChangeConfiguredModelStatusResponse { ConfiguredModel configured_model = 1; }
+message CredentialProfile {
+  string id = 1;
+  optional string team_id = 2;
+  string name = 3;
+  string kind = 4;
+  bool secret_configured = 5;
+  bool enabled = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  int64 version = 9;
+}
+message ConfiguredModel {
+  string id = 1;
+  string name = 2;
+  string model_id = 3;
+  string endpoint = 4;
+  string credential_profile_id = 5;
+  bool enabled = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  int64 version = 9;
+}

@@ -1,0 +1,98 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  generated-and-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm --dir frontend install --frozen-lockfile
+      - run: make verify-generated
+      - if: github.event_name == 'pull_request'
+        run: make breaking
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: agent_platform_test
+          POSTGRES_USER: agent_platform
+          POSTGRES_PASSWORD: agent-platform-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agent_platform -d agent_platform_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      AGENT_PLATFORM_BLACKBOX_DATABASE_DSN: postgres://agent_platform:agent-platform-test@127.0.0.1:5432/agent_platform_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go test ./...
+        working-directory: backend
+      - run: go test -race ./internal/service/api ./internal/server ./internal/architecture ./internal/biz/workflow ./internal/data/workflow/gormtx ./tests/blackbox
+        working-directory: backend
+      - run: go vet ./...
+        working-directory: backend
+      - run: go build ./...
+        working-directory: backend
+
+  deployment:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_IMAGE: postgres:17.6-alpine
+      POSTGRES_PASSWORD: compose-validation-only
+      MINIO_IMAGE: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+      MINIO_ROOT_USER: compose-validation-only
+      MINIO_ROOT_PASSWORD: compose-validation-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f deploy/platform/compose.yaml config --quiet
+      - run: docker compose -f deploy/platform/compose.yaml build api worker web
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm typecheck
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend

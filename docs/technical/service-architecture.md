@@ -1,0 +1,127 @@
+# 服务端领域架构
+
+## 目标结构
+
+后端采用 Go Kratos 的全局职责分层，并在每层内部保留限界上下文。业务边界不以 HTTP、数据库表或框架命名；依赖保持单向：
+
+```text
+Service / Server (Proto HTTP / Gin SSE / Worker)
+              |
+              v
+              Biz
+              |
+              v
+   Aggregate / Usecase / Port
+              ^
+              |
+Data (GORM / Runtime CLI / Object Storage)
+```
+
+`backend/internal/biz` 定义聚合、实体、值对象、领域规则、Repository 端口和用例；`backend/internal/data` 实现端口；`backend/internal/service` 负责 Proto/HTTP 转换、身份与授权调用及公开错误映射；`backend/internal/server` 负责 Kratos 生命周期。`backend/cmd/api` 与 `backend/cmd/worker` 只加载严格配置、调用 Wire Injector 并运行 App。GORM Model、YAML Config 和 HTTP DTO 不得作为领域实体复用。
+
+## 限界上下文
+
+| 上下文 | 当前核心模型 | 代码位置 | 状态 |
+|---|---|---|---|
+| Execution | Run 聚合、Attempt、Run Lease、Run Event | `backend/internal/biz/execution`, `backend/internal/data/execution` | Phase 1：领取、续租、恢复、查询与 Worker 编排已实现 |
+| Runtime | Agent Runtime、Runtime Adapter、Capability、标准 Event Contract | `backend/internal/agentruntime`, `backend/internal/runworker` | Phase 0 |
+| Runtime Catalog | Runtime Image、不可变 Digest、Capability、生产状态与封禁 | `backend/internal/biz/runtimecatalog`, `backend/internal/data/runtimecatalog` | Phase 1：Biz、Data 与 Proto HTTP 已实现 |
+| Model Catalog | Credential Profile、Configured Model、Secret Ref、凭证撤销 | `backend/internal/biz/modelcatalog`, `backend/internal/data/modelcatalog` | Phase 1：Biz、Data 与 Proto HTTP 已实现 |
+| Source Control | GitHub.com、自建 GitLab、Git SSH 来源、Repository Binding | `backend/internal/biz/sourcecontrol`, `backend/internal/data/sourcecontrol` | Provider 与 Binding 已实现 |
+| Workspace | Code Workspace、Sandbox、Workspace Snapshot、Write Lease | `backend/internal/sandbox`, `backend/internal/conformanceartifact` | Phase 0/骨架 |
+| Artifact | Artifact、Object Key、保留与临时访问 | `backend/internal/biz/artifact`, `backend/internal/objectstore` | 授权列表、下载与保留清理已实现 |
+| Run Approval | 高风险计划请求、审批决定、Run 等待状态 | `backend/internal/biz/approval` | 中立事务 Workflow、RBAC 与 Proto HTTP 已实现 |
+| Webhook | Webhook Delivery、签名、重试与 Delivery Lease | `backend/internal/biz/webhook`, `backend/internal/data/webhook` | 投递循环与事务事件源已实现 |
+| Agent Lifecycle | Agent、Agent Draft、Validation、Release Approval、Agent Release | `backend/internal/biz/agentlifecycle`, `backend/internal/data/agentlifecycle` | Biz、Data 与 Proto HTTP 已实现 |
+| Collaboration | Coding Task、Session、Session Memory、Memory Candidate、Agent Memory | `backend/internal/biz/collaboration`, `backend/internal/data/collaboration` | Proto HTTP、Workspace Write Lease 与 Git Workflow 已实现；真实外部 Git/Runtime 联调后置 |
+| Identity & Governance | Organization、Team、User、Role Grant、Audit | `backend/internal/biz/identity`, `backend/internal/biz/audit` | RBAC、范围查询与审计已实现；OIDC Adapter 后置 |
+
+未实现上下文不会因为数据库中已有预留表就视为已交付。实现新能力时先在对应上下文建立 Domain 和 Application，再增加 HTTP/GORM 等 Adapter。
+
+## Execution 聚合边界
+
+`Run` 是聚合根，负责以下不变量：
+
+- Run 状态只能按领域状态机转换；终态不可继续推进。
+- Claim 只允许从 `queued` 或 `resuming` 进入 `provisioning`，并产生唯一的新 Attempt。
+- 一个 Run 同时最多有一个有效 Run Lease；续租和推进必须持有未过期 Token。
+- 完成结果只能为 `completed`、`failed` 或 `cancelled`，Usage 与 Error 必须是合法 JSON，模型成本必须是非负十进制金额。
+- 过期 Lease 只在已知基础设施故障语义下进入 `resuming`；达到 Attempt 上限后进入 `failed`。
+- 聚合状态、Attempt、Run Lease 与对应 Run Event 在同一 PostgreSQL 事务中提交。
+
+`backend/internal/biz/execution/domain` 不依赖 GORM。`backend/internal/biz/execution/application` 通过 Repository 端口执行用例。`backend/internal/data/execution/gormrepo` 使用 GORM Transaction 和 PostgreSQL `FOR UPDATE SKIP LOCKED` 实现原子领取与 Reconcile。
+
+Application Worker 统一编排 `Claim -> MarkRunning -> Renew -> Finish`。租约丢失时取消 Runtime Processor，且不再提交终态，由 Reconciler 决定安全恢复或失败；Runtime Processor 返回的内部错误不会原样写入持久化终态。
+
+Run 控制命令使用 Version 乐观锁和 Idempotency Key。Interrupt 将活跃 Run 切换到 `interrupting`；Worker 在最长五秒的续租检查周期内取消 Runtime，随后确认 `interrupted` 并释放 Run/Workspace Lease。Resume 只允许 `interrupted -> resuming`，由普通 Claim 创建新 Attempt。Cancel 和 Operator Kill 立即提交终态、取消活跃 Attempt 并撤销 Lease；Kill 额外记录安全的 `operator_killed` 终态错误。Agent User、Agent Builder 和 Platform Administrator 可协作式 Interrupt/Resume/Cancel；Run Operator 可 Interrupt/Cancel/Kill，但不能代替用户 Resume。
+
+Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run 的高风险计划或变更请求：创建 Pending Approval 与 `running -> waiting_confirmation` 在同一事务提交，批准后恢复 `running`，拒绝后以 `approval_rejected` 终止 Run、取消 Attempt 并撤销 Lease。只有 Agent User、Agent Builder 和 Platform Administrator 可申请或决定；Run Operator 只保留运行控制职责。Runtime Adapter 只有在确实暂停风险动作后才能发起该请求，Runtime 事件到此应用用例的适配随真实四 Runtime 联调完成。
+
+## 身份与授权边界
+
+HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。具体 OIDC Provider 尚未选择，因此当前部署使用显式 `deny_all` Adapter，所有业务 API 默认拒绝，不使用可伪造的组织 Header 或开发后门。
+
+Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog 与 Source Control Provider 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改平台目录。
+
+## Runtime Catalog 聚合边界
+
+Runtime Image 注册后，Runtime、CLI Version、Adapter Version、Capabilities 与镜像 Repo Digest 不可变；更新必须注册新镜像。可变字段仅为 `experimental`、`production`、`blocked`、`deprecated` 状态和 Blocked Reason，并使用 Version 乐观锁。Deprecated 为不可逆终态；Blocked 必须携带原因。
+
+Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
+
+## 幂等写事务
+
+所有 POST/PATCH 要求 `Idempotency-Key`，可变资源额外要求 `If-Match` Version。`backend/internal/data/controlplane/gormuow` 在同一个 PostgreSQL Transaction 内提供事务作用域服务；Coding Task Launch/Continue、Run Completion 与 Run Approval 由 `backend/internal/biz/workflow` 端口和 `backend/internal/data/workflow/gormtx` 适配器协调：
+
+1. 通过 Organization、Key、Operation 获取行锁；
+2. 校验原始请求 Body 与 Version 的 SHA-256；
+3. 执行对应限界上下文 Application Service；
+4. 保存 HTTP Status 和脱敏后的 JSON Response Snapshot；
+5. 追加不含请求/响应正文的 Audit Event，并在配置 Webhook 时创建待投递的安全元数据事件；
+6. 一次提交 Key、领域变更、Audit Event、Webhook Delivery 和响应。
+
+并发相同请求只有一个 Handler 执行，其余请求重放完全相同的持久化响应。相同 Key/Operation 配合不同请求哈希返回 Conflict；领域事务失败时 Key 占位也回滚。
+
+## 配置边界
+
+API 与 Worker 使用同一份严格 YAML Schema，由 `backend/internal/conf` 经 Kratos Config Source/Load/Scan 接入，并复用 `backend/internal/platformconfig` 的 fail-closed 校验。启动流程会拒绝：
+
+- 未知字段；
+- 未设置的 `${ENV_VAR}`；
+- 空 DSN、空监听地址；
+- 非正数 Timeout、Reconcile Interval 或 Attempt 上限；
+- 不一致的数据库连接池上下限。
+
+Secret 不提交到 YAML；部署 YAML 只保存 `${ENV_VAR}` 占位符。MinIO 与阿里云 OSS 使用不同的部署 YAML，Object Store Provider 仍通过统一领域端口供上层使用。
+
+## Webhook 投递边界
+
+Webhook Delivery 是持久化投递单元。Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 原子领取并持有 Delivery Lease；崩溃后由后续 Worker 回收过期 Lease。非 2xx 响应按指数退避重试，达到上限后进入 `cancelled`，不会无限重试。
+
+目标必须是无 User Info 的 HTTPS URL。请求体保持领域事件 JSON 的原始字节，签名为 `HMAC-SHA256(secret, timestamp + "." + payload)`，通过 `X-Agent-Platform-Timestamp` 和 `X-Agent-Platform-Signature: sha256=<hex>` 传递；Delivery ID 和 Event Type 使用独立 Header。HTTP 响应 Body 不写入错误或日志。
+
+Webhook Worker 默认关闭，启用时严格校验 HTTPS `target_url`、请求超时、Delivery Lease、退避上限、Attempt 上限和至少 32 字节的环境注入 Signing Secret。Control Plane 幂等写入已在同一事务内创建 Audit Event 和 Webhook Delivery；幂等重放不重复创建。Task、Run 等后续上下文仍必须在各自业务事务中接入事件源，不能仅因投递器存在而视为已交付。
+
+## Web 产品边界
+
+`frontend` 是独立的 Vue + TypeScript Interface Adapter，提供 Agent Studio、Conversation Workspace 和 Operations Console 三个产品界面。前端使用生成的 OpenAPI 类型，不复制服务端领域模型，也不承担授权、幂等或状态机不变量。
+
+外部身份尚未配置时，页面只调用无身份的健康接口并展示明确的 Interface Preview；业务写入保持不可用，不注入伪造 Bearer Token、组织 Header 或本地管理员身份。接入 OIDC 后，所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
+
+## Retention 边界
+
+Retention Worker 按严格 YAML 策略分批清理过期 Run Event、Artifact、Audit Event 和 Idempotency Key。Artifact 遵循“先删除 Object Store 对象，再软删除 PostgreSQL 元数据”的顺序；对象删除失败时保留元数据以便下次重试，对象已经不存在则按幂等成功处理。
+
+默认配置关闭 Retention，防止开发环境或未完成对象存储验证的部署误删数据。启用时默认保留普通 Run Event 与 Artifact 90 天、安全与授权 Audit 一年；每轮批量上限为 500，避免长事务影响 Run 调度。`workspace_snapshot` Artifact 与 Session Docker Volume 按 Coding Task 关闭时间单独保留 30 天，删除成功后记录 `workspace_purged_at`；Volume 名称不符合平台 UUID 命名规则时拒绝执行 Docker 删除。
+
+## Artifact 边界
+
+Runtime stdout/stderr 先以 Attempt 唯一对象键写入 Object Store，再在 PostgreSQL 创建 Artifact 元数据；元数据提交失败时补偿删除刚上传的对象，避免无法授权和追溯的孤儿数据。重试 Attempt 不覆盖前一次输出。Artifact REST 只返回 ID、Run、Kind、大小、校验和、Content Type、安全 Metadata 和保留时间，不暴露 Provider Object Key；下载前按所属 Run 重新授权，并只签发五分钟访问地址。
+
+## Agent Lifecycle 聚合边界
+
+Agent 是 Team 范围的稳定身份；Agent Draft 是可编辑、可验证的版本；Agent Release 是发布时冻结的不可变快照。Draft 每次编辑都会递增 Version 并清除验证结果。发布时不仅检查此前验证结果，还会重新验证 Repository Binding、Runtime Image、Configured Model、Budget、Egress 和 Runtime Capability，避免依赖在验证后发生变化。
+
+低风险 Draft 验证成功后可直接发布。启用 Runtime Subagent 等高风险能力时必须先申请 Release Approval，由另一名具有 Agent Builder 权限的人员决定；审批绑定精确 Draft Version，申请人不能自批，Draft 编辑后旧审批不会授权新版本。
+
+同一 Draft 只能产生一个 Agent Release。Release 内容不可修改，仅允许使用 Version 乐观锁进入 `deprecated` 或 `blocked` 状态；Blocked 必须记录原因。Agent Builder 可完成常规生命周期操作，Release Block 仅允许 Organization 级 Platform Administrator。

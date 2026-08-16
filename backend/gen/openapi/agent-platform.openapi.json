@@ -1,0 +1,4912 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "types/v1/types.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AgentLifecycleService"
+    },
+    {
+      "name": "RunApprovalService"
+    },
+    {
+      "name": "ArtifactService"
+    },
+    {
+      "name": "AuditService"
+    },
+    {
+      "name": "CollaborationService"
+    },
+    {
+      "name": "ExecutionService"
+    },
+    {
+      "name": "RunEventStreamService"
+    },
+    {
+      "name": "ModelCatalogService"
+    },
+    {
+      "name": "HealthService"
+    },
+    {
+      "name": "RuntimeCatalogService"
+    },
+    {
+      "name": "SourceControlService"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "HealthService_Health",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1HealthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "HealthService"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "HealthService_Ready",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ReadyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "HealthService"
+        ]
+      }
+    },
+    "/v1/agent-memories/{memory_id}": {
+      "patch": {
+        "operationId": "CollaborationService_UpdateAgentMemory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentMemory"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceUpdateAgentMemoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/agent-memories/{memory_id}/deletion": {
+      "post": {
+        "operationId": "CollaborationService_DeleteAgentMemory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentMemory"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceDeleteAgentMemoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/agents": {
+      "get": {
+        "operationId": "AgentLifecycleService_ListAgents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentLifecycleService_CreateAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Agent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}": {
+      "get": {
+        "operationId": "AgentLifecycleService_GetAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Agent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentLifecycleService_UpdateAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Agent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceUpdateAgentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/drafts": {
+      "get": {
+        "operationId": "AgentLifecycleService_ListAgentDrafts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentDraftsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentLifecycleService_CreateAgentDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceCreateAgentDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/drafts/{draft_id}": {
+      "get": {
+        "operationId": "AgentLifecycleService_GetAgentDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentLifecycleService_UpdateAgentDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceUpdateAgentDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/drafts/{draft_id}/approval": {
+      "post": {
+        "operationId": "AgentLifecycleService_RequestAgentDraftApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ReleaseApproval"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceRequestAgentDraftApprovalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentLifecycleService_DecideAgentDraftApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ReleaseApproval"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceDecideAgentDraftApprovalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/drafts/{draft_id}/release": {
+      "post": {
+        "operationId": "AgentLifecycleService_PublishAgentDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentRelease"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServicePublishAgentDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/drafts/{draft_id}/validation": {
+      "post": {
+        "operationId": "AgentLifecycleService_ValidateAgentDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceValidateAgentDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/memories": {
+      "get": {
+        "operationId": "CollaborationService_ListAgentMemories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentMemoriesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/releases": {
+      "get": {
+        "operationId": "AgentLifecycleService_ListAgentReleases",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAgentReleasesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/releases/{release_id}": {
+      "get": {
+        "operationId": "AgentLifecycleService_GetAgentRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentRelease"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/releases/{release_id}/block": {
+      "post": {
+        "operationId": "AgentLifecycleService_BlockAgentRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentRelease"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceBlockAgentReleaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/agents/{agent_id}/releases/{release_id}/deprecation": {
+      "post": {
+        "operationId": "AgentLifecycleService_DeprecateAgentRelease",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1AgentRelease"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentLifecycleServiceDeprecateAgentReleaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      }
+    },
+    "/v1/approvals/{approval_id}": {
+      "get": {
+        "operationId": "RunApprovalService_GetRunApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RunApproval"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "RunApprovalService"
+        ]
+      }
+    },
+    "/v1/approvals/{approval_id}/decision": {
+      "post": {
+        "operationId": "RunApprovalService_DecideRunApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RunApproval"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunApprovalServiceDecideRunApprovalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "RunApprovalService"
+        ]
+      }
+    },
+    "/v1/artifacts/{artifact_id}/download": {
+      "get": {
+        "operationId": "ArtifactService_GetArtifactDownload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1GetArtifactDownloadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ArtifactService"
+        ]
+      }
+    },
+    "/v1/audit-events": {
+      "get": {
+        "operationId": "AuditService_ListAuditEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListAuditEventsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor_user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "AuditService"
+        ]
+      }
+    },
+    "/v1/coding-tasks": {
+      "get": {
+        "operationId": "CollaborationService_ListCodingTasks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCodingTasksResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      },
+      "post": {
+        "operationId": "CollaborationService_CreateCodingTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateCodingTaskResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateCodingTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/coding-tasks/{task_id}": {
+      "get": {
+        "operationId": "CollaborationService_GetCodingTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CodingTask"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      },
+      "patch": {
+        "operationId": "CollaborationService_UpdateCodingTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CodingTask"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceUpdateCodingTaskBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/coding-tasks/{task_id}/memory-candidates": {
+      "get": {
+        "operationId": "CollaborationService_ListMemoryCandidates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListMemoryCandidatesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      },
+      "post": {
+        "operationId": "CollaborationService_ProposeMemoryCandidate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1MemoryCandidate"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceProposeMemoryCandidateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/coding-tasks/{task_id}/messages": {
+      "get": {
+        "operationId": "CollaborationService_ListSessionMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionMessagesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/coding-tasks/{task_id}/runs": {
+      "post": {
+        "operationId": "CollaborationService_ContinueCodingTask",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ContinueCodingTaskResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceContinueCodingTaskBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/coding-tasks/{task_id}/session": {
+      "get": {
+        "operationId": "CollaborationService_GetCodingTaskSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Session"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      },
+      "patch": {
+        "operationId": "CollaborationService_UpdateCodingTaskSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Session"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceUpdateCodingTaskSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/configured-models": {
+      "get": {
+        "operationId": "ModelCatalogService_ListConfiguredModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListConfiguredModelsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      },
+      "post": {
+        "operationId": "ModelCatalogService_RegisterConfiguredModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfiguredModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterConfiguredModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/configured-models/{configured_model_id}": {
+      "get": {
+        "operationId": "ModelCatalogService_GetConfiguredModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfiguredModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configured_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/configured-models/{configured_model_id}/status": {
+      "patch": {
+        "operationId": "ModelCatalogService_ChangeConfiguredModelStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConfiguredModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "configured_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelCatalogServiceChangeConfiguredModelStatusBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/credential-profiles": {
+      "get": {
+        "operationId": "ModelCatalogService_ListCredentialProfiles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCredentialProfilesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      },
+      "post": {
+        "operationId": "ModelCatalogService_RegisterCredentialProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CredentialProfile"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterCredentialProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/credential-profiles/{credential_profile_id}": {
+      "get": {
+        "operationId": "ModelCatalogService_GetCredentialProfile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CredentialProfile"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "credential_profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/credential-profiles/{credential_profile_id}/status": {
+      "patch": {
+        "operationId": "ModelCatalogService_ChangeCredentialProfileStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CredentialProfile"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "credential_profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelCatalogServiceChangeCredentialProfileStatusBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "ModelCatalogService"
+        ]
+      }
+    },
+    "/v1/memory-candidates/{candidate_id}": {
+      "patch": {
+        "operationId": "CollaborationService_DecideMemoryCandidate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DecideMemoryCandidateResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaborationServiceDecideMemoryCandidateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
+    "/v1/repository-bindings": {
+      "get": {
+        "operationId": "SourceControlService_ListRepositoryBindings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRepositoryBindingsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "SourceControlService"
+        ]
+      },
+      "post": {
+        "operationId": "SourceControlService_RegisterRepositoryBinding",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RepositoryBinding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/v1RepositoryBindingInput"
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    },
+    "/v1/repository-bindings/{repository_binding_id}": {
+      "get": {
+        "operationId": "SourceControlService_GetRepositoryBinding",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RepositoryBinding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "repository_binding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "SourceControlService"
+        ]
+      },
+      "patch": {
+        "operationId": "SourceControlService_UpdateRepositoryBinding",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RepositoryBinding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "repository_binding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/v1RepositoryBindingInput"
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    },
+    "/v1/repository-bindings/{repository_binding_id}/validation": {
+      "post": {
+        "operationId": "SourceControlService_ValidateRepositoryBinding",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RepositoryBinding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "repository_binding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceControlServiceValidateRepositoryBindingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    },
+    "/v1/runs": {
+      "get": {
+        "operationId": "ExecutionService_ListRuns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRunsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repository_binding_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "runtime",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}": {
+      "get": {
+        "operationId": "ExecutionService_GetRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/approvals": {
+      "get": {
+        "operationId": "RunApprovalService_ListRunApprovals",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRunApprovalsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "RunApprovalService"
+        ]
+      },
+      "post": {
+        "operationId": "RunApprovalService_RequestRunApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RunApproval"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunApprovalServiceRequestRunApprovalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "RunApprovalService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/artifacts": {
+      "get": {
+        "operationId": "ArtifactService_ListRunArtifacts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRunArtifactsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ArtifactService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "ExecutionService_CancelRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/events": {
+      "get": {
+        "operationId": "RunEventStreamService_Stream",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "$ref": "#/components/schemas/v1StreamResponse"
+                    },
+                    "error": {
+                      "$ref": "#/components/schemas/rpcStatus"
+                    }
+                  },
+                  "title": "Stream result of v1StreamResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "tags": [
+          "RunEventStreamService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/interrupt": {
+      "post": {
+        "operationId": "ExecutionService_InterruptRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/kill": {
+      "post": {
+        "operationId": "ExecutionService_KillRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/resume": {
+      "post": {
+        "operationId": "ExecutionService_ResumeRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runtime-images": {
+      "get": {
+        "operationId": "RuntimeCatalogService_ListRuntimeImages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRuntimeImagesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RuntimeCatalogService"
+        ]
+      },
+      "post": {
+        "operationId": "RuntimeCatalogService_RegisterRuntimeImage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RuntimeImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterRuntimeImageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "RuntimeCatalogService"
+        ]
+      }
+    },
+    "/v1/runtime-images/{runtime_image_id}": {
+      "get": {
+        "operationId": "RuntimeCatalogService_GetRuntimeImage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RuntimeImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "runtime_image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "RuntimeCatalogService"
+        ]
+      }
+    },
+    "/v1/runtime-images/{runtime_image_id}/status": {
+      "patch": {
+        "operationId": "RuntimeCatalogService_ChangeRuntimeImageStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RuntimeImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "runtime_image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuntimeCatalogServiceChangeRuntimeImageStatusBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "RuntimeCatalogService"
+        ]
+      }
+    },
+    "/v1/source-control-providers": {
+      "get": {
+        "operationId": "SourceControlService_ListSourceControlProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSourceControlProvidersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      },
+      "post": {
+        "operationId": "SourceControlService_RegisterSourceControlProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SourceControlProvider"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterSourceControlProviderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    },
+    "/v1/source-control-providers/{source_control_provider_id}": {
+      "get": {
+        "operationId": "SourceControlService_GetSourceControlProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SourceControlProvider"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "source_control_provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    },
+    "/v1/source-control-providers/{source_control_provider_id}/status": {
+      "patch": {
+        "operationId": "SourceControlService_ChangeSourceControlProviderStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SourceControlProvider"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "source_control_provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceControlServiceChangeSourceControlProviderStatusBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "SourceControlService"
+        ]
+      }
+    }
+  },
+  "components": {
+    "requestBodies": {
+      "v1RepositoryBindingInput": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/v1RepositoryBindingInput"
+            }
+          }
+        },
+        "required": true
+      }
+    },
+    "schemas": {
+      "AgentLifecycleServiceBlockAgentReleaseBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceCreateAgentDraftBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/v1AgentConfiguration"
+          },
+          "release_risk": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceDecideAgentDraftApprovalBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceDeprecateAgentReleaseBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServicePublishAgentDraftBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceRequestAgentDraftApprovalBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceUpdateAgentBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceUpdateAgentDraftBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/v1AgentConfiguration"
+          },
+          "release_risk": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentLifecycleServiceValidateAgentDraftBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CollaborationServiceContinueCodingTaskBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "request_text": {
+            "type": "string"
+          },
+          "expected_session_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CollaborationServiceDecideMemoryCandidateBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "approve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollaborationServiceDeleteAgentMemoryBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "CollaborationServiceProposeMemoryCandidateBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "CollaborationServiceUpdateAgentMemoryBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollaborationServiceUpdateCodingTaskBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "CollaborationServiceUpdateCodingTaskSessionBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/v1SessionMemory"
+          }
+        }
+      },
+      "ModelCatalogServiceChangeConfiguredModelStatusBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ModelCatalogServiceChangeCredentialProfileStatusBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RunApprovalServiceDecideRunApprovalBody": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RunApprovalServiceRequestRunApprovalBody": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "request": {
+            "type": "object"
+          }
+        }
+      },
+      "RuntimeCatalogServiceChangeRuntimeImageStatusBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "blocked_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "SourceControlServiceChangeSourceControlProviderStatusBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SourceControlServiceValidateRepositoryBindingBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          }
+        }
+      },
+      "protobufAny": {
+        "type": "object",
+        "properties": {
+          "@type": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {}
+      },
+      "protobufNullValue": {
+        "type": "string",
+        "enum": [
+          "NULL_VALUE"
+        ],
+        "default": "NULL_VALUE",
+        "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+      },
+      "rpcStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/protobufAny"
+            }
+          }
+        }
+      },
+      "v1Agent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1AgentConfiguration": {
+        "type": "object",
+        "properties": {
+          "instructions": {
+            "type": "string"
+          },
+          "repository_binding_id": {
+            "type": "string"
+          },
+          "runtime_image_id": {
+            "type": "string"
+          },
+          "configured_model_id": {
+            "type": "string"
+          },
+          "model_budget": {
+            "$ref": "#/components/schemas/v1ModelBudget"
+          },
+          "execution_limits": {
+            "$ref": "#/components/schemas/v1ExecutionLimits"
+          },
+          "native_subagents": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1AgentDraft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "state": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/v1AgentConfiguration"
+          },
+          "release_risk": {
+            "type": "string"
+          },
+          "validation_report": {
+            "$ref": "#/components/schemas/v1ValidationReport"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1AgentMemory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "approved_by": {
+            "type": "string"
+          },
+          "source_task_id": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1AgentRelease": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "release_number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "source_draft_id": {
+            "type": "string"
+          },
+          "runtime_image_id": {
+            "type": "string"
+          },
+          "configured_model_id": {
+            "type": "string"
+          },
+          "repository_binding_id": {
+            "type": "string"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/v1AgentConfiguration"
+          },
+          "status": {
+            "type": "string"
+          },
+          "released_by": {
+            "type": "string"
+          },
+          "released_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deprecated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1Artifact": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1Attempt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "worker_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "infrastructure_failure": {
+            "type": "boolean"
+          },
+          "error": {
+            "$ref": "#/components/schemas/v1ExecutionError"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1AuditEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1CodingTask": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "agent_release_id": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "request_text": {
+            "type": "string"
+          },
+          "issue_snapshot": {
+            "$ref": "#/components/schemas/v1IssueSnapshot"
+          },
+          "state": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1ConfiguredModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "credential_profile_id": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1ContinueCodingTaskResponse": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/v1CodingTask"
+          },
+          "session": {
+            "$ref": "#/components/schemas/v1Session"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CreateAgentRequest": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CreateCodingTaskRequest": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "agent_release_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "request_text": {
+            "type": "string"
+          },
+          "issue_snapshot": {
+            "$ref": "#/components/schemas/v1IssueSnapshot"
+          }
+        }
+      },
+      "v1CreateCodingTaskResponse": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/v1CodingTask"
+          },
+          "session": {
+            "$ref": "#/components/schemas/v1Session"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        }
+      },
+      "v1CredentialProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "secret_configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1DecideMemoryCandidateResponse": {
+        "type": "object",
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/v1MemoryCandidate"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/v1AgentMemory"
+          }
+        }
+      },
+      "v1EgressPolicy": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExecutionError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExecutionLimits": {
+        "type": "object",
+        "properties": {
+          "timeout_seconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cpus": {
+            "type": "number",
+            "format": "double"
+          },
+          "memory_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pids": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "temp_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "egress": {
+            "type": "string"
+          }
+        }
+      },
+      "v1GetArtifactDownloadResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "v1IssueSnapshot": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ListAgentDraftsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentDraft"
+            }
+          }
+        }
+      },
+      "v1ListAgentMemoriesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentMemory"
+            }
+          }
+        }
+      },
+      "v1ListAgentReleasesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AgentRelease"
+            }
+          }
+        }
+      },
+      "v1ListAgentsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Agent"
+            }
+          }
+        }
+      },
+      "v1ListAuditEventsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1AuditEvent"
+            }
+          }
+        }
+      },
+      "v1ListCodingTasksResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CodingTask"
+            }
+          }
+        }
+      },
+      "v1ListConfiguredModelsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ConfiguredModel"
+            }
+          }
+        }
+      },
+      "v1ListCredentialProfilesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CredentialProfile"
+            }
+          }
+        }
+      },
+      "v1ListMemoryCandidatesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1MemoryCandidate"
+            }
+          }
+        }
+      },
+      "v1ListRepositoryBindingsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RepositoryBinding"
+            }
+          }
+        }
+      },
+      "v1ListRunApprovalsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RunApproval"
+            }
+          }
+        }
+      },
+      "v1ListRunArtifactsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Artifact"
+            }
+          }
+        }
+      },
+      "v1ListRunsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Run"
+            }
+          }
+        }
+      },
+      "v1ListRuntimeImagesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RuntimeImage"
+            }
+          }
+        }
+      },
+      "v1ListSessionMessagesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionMessage"
+            }
+          }
+        }
+      },
+      "v1ListSourceControlProvidersResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SourceControlProvider"
+            }
+          }
+        }
+      },
+      "v1MemoryCandidate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "coding_task_id": {
+            "type": "string"
+          },
+          "proposed_content": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "proposed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resulting_memory_id": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ModelBinding": {
+        "type": "object",
+        "properties": {
+          "model_id": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ModelBudget": {
+        "type": "object",
+        "properties": {
+          "max_input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_cost_amount": {
+            "type": "string"
+          }
+        }
+      },
+      "v1QualityCommand": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "executable": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "v1ReadyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "v1RegisterConfiguredModelRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "credential_profile_id": {
+            "type": "string"
+          }
+        }
+      },
+      "v1RegisterCredentialProfileRequest": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "secret_ref": {
+            "type": "string"
+          }
+        }
+      },
+      "v1RegisterRuntimeImageRequest": {
+        "type": "object",
+        "properties": {
+          "runtime": {
+            "type": "string"
+          },
+          "cli_version": {
+            "type": "string"
+          },
+          "adapter_version": {
+            "type": "string"
+          },
+          "image_digest": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "v1RegisterSourceControlProviderRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ReleaseApproval": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "draft_id": {
+            "type": "string"
+          },
+          "draft_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "requested_by": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1RepositoryBinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          },
+          "source_control_provider_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repository_ssh_url": {
+            "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "ssh_credential_profile_id": {
+            "type": "string"
+          },
+          "build_credential_profile_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "git_author_name": {
+            "type": "string"
+          },
+          "git_author_email": {
+            "type": "string"
+          },
+          "allowed_runtime_image_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_runtime_image_id": {
+            "type": "string"
+          },
+          "default_model_id": {
+            "type": "string"
+          },
+          "model_budget": {
+            "$ref": "#/components/schemas/v1ModelBudget"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "quality_commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1QualityCommand"
+            }
+          },
+          "egress_policy": {
+            "$ref": "#/components/schemas/v1EgressPolicy"
+          },
+          "validation_report": {
+            "$ref": "#/components/schemas/v1ValidationReport"
+          },
+          "validated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1RepositoryBindingInput": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "source_control_provider_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repository_ssh_url": {
+            "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
+          },
+          "ssh_credential_profile_id": {
+            "type": "string"
+          },
+          "build_credential_profile_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "git_author_name": {
+            "type": "string"
+          },
+          "git_author_email": {
+            "type": "string"
+          },
+          "allowed_runtime_image_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_runtime_image_id": {
+            "type": "string"
+          },
+          "default_model_id": {
+            "type": "string"
+          },
+          "model_budget": {
+            "$ref": "#/components/schemas/v1ModelBudget"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "quality_commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1QualityCommand"
+            }
+          },
+          "egress_policy": {
+            "$ref": "#/components/schemas/v1EgressPolicy"
+          }
+        }
+      },
+      "v1Run": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "agent_release_id": {
+            "type": "string"
+          },
+          "runtime_image_id": {
+            "type": "string"
+          },
+          "request_text": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "model_binding": {
+            "$ref": "#/components/schemas/v1ModelBinding"
+          },
+          "model_budget": {
+            "$ref": "#/components/schemas/v1ModelBudget"
+          },
+          "execution_limits": {
+            "$ref": "#/components/schemas/v1ExecutionLimits"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/v1Usage"
+          },
+          "cost_amount": {
+            "type": "string"
+          },
+          "terminal_error": {
+            "$ref": "#/components/schemas/v1ExecutionError"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Attempt"
+            }
+          }
+        }
+      },
+      "v1RunApproval": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "request": {
+            "type": "object"
+          },
+          "state": {
+            "type": "string"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_by": {
+            "type": "string"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision_reason": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1RuntimeImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "runtime": {
+            "type": "string"
+          },
+          "cli_version": {
+            "type": "string"
+          },
+          "adapter_version": {
+            "type": "string"
+          },
+          "image_digest": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "blocked_reason": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "coding_task_id": {
+            "type": "string"
+          },
+          "repository_binding_id": {
+            "type": "string"
+          },
+          "target_branch": {
+            "type": "string"
+          },
+          "review_branch": {
+            "type": "string"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/v1SessionMemory"
+          },
+          "run_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1SessionMemory": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "confirmed_decisions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workspace_snapshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "v1SessionMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "author_user_id": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/v1SessionMessageContent"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SessionMessageContent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "review_branch": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SourceControlProvider": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1StreamResponse": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "payload": {},
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1Usage": {
+        "type": "object",
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cost_amount": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ValidationReport": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

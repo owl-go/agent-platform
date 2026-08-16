@@ -1,16 +1,27 @@
 .PHONY: build test web-build web-typecheck runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
 
 build:
-	go build ./...
+	cd backend && go build ./...
 
 test:
-	go test ./...
+	cd backend && go test ./...
 
 web-build:
-	pnpm web:build
+	pnpm --dir frontend build
 
 web-typecheck:
-	pnpm web:typecheck
+	pnpm --dir frontend typecheck
+
+.PHONY: breaking generate verify-generated
+
+breaking:
+	cd backend && $(MAKE) breaking
+
+generate:
+	cd backend && $(MAKE) generate
+
+verify-generated:
+	cd backend && $(MAKE) verify-generated
 
 runtime-images:
 	scripts/build-runtime-images.sh

@@ -1,0 +1,148 @@
+name: agent-platform
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE must be an immutable repository digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agent_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-agent_platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  minio:
+    image: ${MINIO_IMAGE:?MINIO_IMAGE must be an immutable repository digest}
+    command: ["server", "/data", "--console-address", ":9001"]
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    volumes:
+      - minio-data:/data
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    image: agent-platform-api:local
+    build:
+      context: ../..
+      dockerfile: deploy/platform/Dockerfile.service
+      args:
+        SERVICE: api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-agent_platform}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_platform}?sslmode=disable
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
+    command: ["-config", "/etc/agent-platform/platform.yaml"]
+    volumes:
+      - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - control
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    image: agent-platform-worker:local
+    build:
+      context: ../..
+      dockerfile: deploy/platform/Dockerfile.service
+      args:
+        SERVICE: worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-agent_platform}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_platform}?sslmode=disable
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
+    command: ["-config", "/etc/agent-platform/platform.yaml"]
+    volumes:
+      - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - control
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    image: agent-platform-web:local
+    build:
+      context: ../..
+      dockerfile: deploy/platform/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - ${HTTP_BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-80}:8080
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+networks:
+  control:
+    internal: true
+  edge:
+
+volumes:
+  postgres-data:
+  minio-data:
