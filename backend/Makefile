@@ -1,11 +1,12 @@
 .PHONY: breaking build test generate verify-generated wire
 
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.72.0
-BUF_BREAKING_AGAINST ?= ../.git#branch=main,subdir=backend
+BUF_BREAKING_REF ?= $(shell git -C .. show-ref --verify --quiet refs/remotes/origin/main && echo refs/remotes/origin/main || echo main)
+BUF_BREAKING_AGAINST ?= ../.git\#ref=$(BUF_BREAKING_REF),subdir=backend
 GENERATED_PATHS := api gen/openapi cmd/api/wire_gen.go cmd/worker/wire_gen.go ../frontend/src/api/generated.d.ts
 
 breaking:
-	@if git -C .. cat-file -e main:backend/buf.yaml 2>/dev/null; then \
+	@if git -C .. cat-file -e '$(BUF_BREAKING_REF):backend/buf.yaml' 2>/dev/null; then \
 		$(BUF) breaking --against '$(BUF_BREAKING_AGAINST)'; \
 	else \
 		echo "main has no Protobuf baseline yet; buf lint establishes the initial contract"; \
