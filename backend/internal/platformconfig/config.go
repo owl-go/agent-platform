@@ -28,7 +28,16 @@ type Config struct {
 }
 
 type AuthenticationConfig struct {
-	Mode string `yaml:"mode"`
+	Mode              string   `yaml:"mode"`
+	Issuer            string   `yaml:"issuer"`
+	Audience          string   `yaml:"audience"`
+	ClientID          string   `yaml:"client_id"`
+	OrganizationClaim string   `yaml:"organization_claim"`
+	RedirectURI       string   `yaml:"redirect_uri"`
+	LogoutRedirectURI string   `yaml:"logout_redirect_uri"`
+	SigningAlgorithms []string `yaml:"signing_algorithms"`
+	DiscoveryTimeout  Duration `yaml:"discovery_timeout"`
+	JWKSTimeout       Duration `yaml:"jwks_timeout"`
 }
 
 type RetentionConfig struct {
@@ -200,13 +209,80 @@ func (config Config) ValidateAPI() error {
 	if config.API.ReadHeaderTimeout.Value() <= 0 || config.API.IdleTimeout.Value() <= 0 || config.API.ShutdownTimeout.Value() <= 0 {
 		return fmt.Errorf("API timeouts must be positive")
 	}
-	if config.Authentication.Mode != "deny_all" {
-		return fmt.Errorf("authentication.mode must be deny_all until an enterprise OIDC verifier is configured")
+	if err := config.Authentication.Validate(); err != nil {
+		return err
 	}
 	if err := config.validateWebhook(); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (config AuthenticationConfig) Validate() error {
+	switch config.Mode {
+	case "deny_all":
+		return nil
+	case "oidc":
+	default:
+		return fmt.Errorf("authentication.mode must be deny_all or oidc")
+	}
+	if err := validateHTTPSURL("authentication.issuer", config.Issuer, true); err != nil {
+		return err
+	}
+	if strings.TrimSpace(config.Audience) == "" || strings.TrimSpace(config.ClientID) == "" || strings.TrimSpace(config.OrganizationClaim) == "" {
+		return fmt.Errorf("authentication audience, client_id, and organization_claim are required in oidc mode")
+	}
+	registeredClaims := map[string]bool{
+		"iss": true, "sub": true, "aud": true, "exp": true, "nbf": true,
+		"iat": true, "auth_time": true, "nonce": true, "acr": true, "amr": true, "azp": true,
+	}
+	if registeredClaims[config.OrganizationClaim] {
+		return fmt.Errorf("authentication.organization_claim must be a dedicated Organization claim")
+	}
+	if err := validateHTTPSURL("authentication.redirect_uri", config.RedirectURI, true); err != nil {
+		return err
+	}
+	if err := validateHTTPSURL("authentication.logout_redirect_uri", config.LogoutRedirectURI, true); err != nil {
+		return err
+	}
+	if config.DiscoveryTimeout.Value() <= 0 || config.DiscoveryTimeout.Value() > 30*time.Second || config.JWKSTimeout.Value() <= 0 || config.JWKSTimeout.Value() > 30*time.Second {
+		return fmt.Errorf("authentication discovery_timeout and jwks_timeout must be positive and no greater than 30s")
+	}
+	if len(config.SigningAlgorithms) == 0 {
+		return fmt.Errorf("authentication.signing_algorithms is required in oidc mode")
+	}
+	allowed := map[string]bool{
+		"RS256": true, "RS384": true, "RS512": true,
+		"PS256": true, "PS384": true, "PS512": true,
+		"ES256": true, "ES384": true, "ES512": true,
+		"EdDSA": true,
+	}
+	seen := make(map[string]struct{}, len(config.SigningAlgorithms))
+	for _, algorithm := range config.SigningAlgorithms {
+		if !allowed[algorithm] {
+			return fmt.Errorf("authentication signing algorithm %q is not allowed", algorithm)
+		}
+		if _, duplicate := seen[algorithm]; duplicate {
+			return fmt.Errorf("authentication signing algorithm %q is duplicated", algorithm)
+		}
+		seen[algorithm] = struct{}{}
+	}
+	return nil
+}
+
+func validateHTTPSURL(field, value string, allowLoopbackHTTP bool) error {
+	parsed, err := url.ParseRequestURI(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("%s must be an absolute HTTPS URL without user info, query, or fragment", field)
+	}
+	if parsed.Scheme == "https" {
+		return nil
+	}
+	hostname := parsed.Hostname()
+	if allowLoopbackHTTP && parsed.Scheme == "http" && (hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1") {
+		return nil
+	}
+	return fmt.Errorf("%s must use HTTPS except for a loopback redirect", field)
 }
 
 func (config Config) ValidateWorker() error {

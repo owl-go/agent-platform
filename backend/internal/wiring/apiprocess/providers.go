@@ -53,7 +53,8 @@ func NewDependencies(
 		ModelCatalog: models, SourceControl: source, RepositoryBindings: bindings,
 		AgentLifecycle: agents, Collaboration: collaboration, CatalogWrites: writes,
 		RunSearchAccess: access, Access: access, ResourceAccess: access, RunControlAccess: access,
-		AuditAccess: access, RuntimeAccess: access, ModelAccess: access, AgentAccess: access,
+		CurrentUserAccess: access,
+		AuditAccess:       access, RuntimeAccess: access, ModelAccess: access, AgentAccess: access,
 		CollaborationAccess: access, CatalogWriteAccess: access,
 	}
 }

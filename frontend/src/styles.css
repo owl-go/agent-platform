@@ -14,6 +14,17 @@
   --serif: "Iowan Old Style", Baskerville, "Palatino Linotype", serif;
 }
 
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 18% 20%, rgba(198,255,51,.32), transparent 28%), linear-gradient(135deg,#ece7dc 0 52%,#111915 52%); }
+.auth-card { width: min(560px,100%); padding: clamp(34px,7vw,72px); border: 1px solid var(--line); background: #fff; box-shadow: 14px 14px 0 var(--orange); }
+.auth-code { color: var(--orange); font: 600 .62rem var(--mono); letter-spacing: .14em; }
+.auth-card h1 { max-width: 440px; margin: 18px 0 12px; font: 500 clamp(2.2rem,7vw,4.7rem)/.9 var(--serif); letter-spacing: -.05em; }
+.auth-card p { max-width: 430px; color: var(--muted); font-size: .78rem; line-height: 1.7; }
+.auth-action { margin-top: 20px; }
+.auth-error { box-shadow: 14px 14px 0 #d94635; }
+.current-user { display: grid; margin-left: 12px; text-align: right; }
+.current-user strong { font: 600 .62rem var(--mono); }
+.current-user small { color: var(--muted); font: .5rem var(--mono); }
+
 * { box-sizing: border-box; }
 button { color: inherit; font: inherit; }
 button:focus-visible { outline: 3px solid rgba(240, 100, 59, .34); outline-offset: 2px; }

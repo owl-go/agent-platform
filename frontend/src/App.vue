@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref } from "vue";
 import { getHealth } from "./api/client";
+import { authContextKey } from "./auth/session";
 
 type Surface = "studio" | "workspace" | "operations";
+
+const auth = inject(authContextKey);
+if (!auth) throw new Error("Authentication context is required");
+const authState = auth.session.state;
+const currentUser = computed(() => authState.value.kind === "authenticated" ? authState.value.currentUser : undefined);
+const userInitials = computed(() => {
+  const displayName = currentUser.value?.display_name?.trim() ?? "";
+  return displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U";
+});
 
 const activeSurface = ref<Surface>("workspace");
 const health = ref<"checking" | "online" | "offline">("checking");
@@ -43,6 +53,7 @@ const formattedTime = computed(() => now.value.toLocaleTimeString("en-GB", { hou
 let clock: number | undefined;
 
 onMounted(() => {
+	void auth.session.initialize(auth.isCallback);
   const controller = new AbortController();
   getHealth(controller.signal)
     .then(() => { health.value = "online"; })
@@ -51,6 +62,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+	auth.session.dispose();
   if (clock !== undefined) window.clearInterval(clock);
 });
 
@@ -61,7 +73,25 @@ function selectSurface(surface: Surface) {
 </script>
 
 <template>
-  <div class="shell">
+  <section v-if="authState.kind === 'checking'" class="auth-screen" aria-live="polite">
+    <div class="auth-card"><span class="auth-code">IDENTITY / CHECK</span><h1>Restoring your session</h1><p>Verifying your enterprise identity with the configured OIDC Provider.</p></div>
+  </section>
+
+  <section v-else-if="authState.kind === 'unauthenticated'" class="auth-screen" data-testid="sign-in">
+    <div class="auth-card">
+      <span class="auth-code">IDENTITY / REQUIRED</span>
+      <h1>Enter Agent Platform</h1>
+      <p v-if="authState.reason === 'expired'">Your session expired. Sign in again to continue.</p>
+      <p v-else>Sign in with your enterprise identity to access governed Agents and Runs.</p>
+      <button class="primary-action auth-action" data-testid="sign-in-button" @click="auth.session.signIn()">Sign in with OIDC <span>↗</span></button>
+    </div>
+  </section>
+
+  <section v-else-if="authState.kind === 'error'" class="auth-screen" role="alert">
+    <div class="auth-card auth-error"><span class="auth-code">IDENTITY / UNAVAILABLE</span><h1>Authentication is unavailable</h1><p>{{ authState.message }}</p></div>
+  </section>
+
+  <div v-else class="shell">
     <aside class="rail" :class="{ open: mobileNavOpen }">
       <button class="brand" aria-label="Agent Platform home" @click="selectSurface('workspace')">
         <span class="brand-mark"><i></i><i></i><i></i></span>
@@ -98,7 +128,8 @@ function selectSurface(surface: Surface) {
           <span class="health-dot" :class="health"></span>
           <span>API {{ health }}</span>
           <time>{{ formattedTime }}</time>
-          <span class="avatar">FK</span>
+          <div class="current-user" data-testid="current-user"><strong>{{ currentUser?.display_name }}</strong><small>{{ currentUser?.organization?.name }}</small></div>
+          <button class="avatar" data-testid="sign-out" :aria-label="`Sign out ${currentUser?.display_name}`" @click="auth.session.signOut()">{{ userInitials }}</button>
         </div>
       </header>
 

@@ -24,6 +24,57 @@ func TestLoadExpandsEnvironmentAndValidatesAPI(t *testing.T) {
 	}
 }
 
+func TestOIDCAuthenticationConfigurationIsStrictAndFailClosed(t *testing.T) {
+	config, err := Load(writeConfig(t, validOIDCYAML("postgres://database/platform")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.ValidateAPI(); err != nil {
+		t.Fatalf("ValidateAPI() rejected valid OIDC configuration: %v", err)
+	}
+	if config.Authentication.OrganizationClaim != "organization" || config.Authentication.DiscoveryTimeout.Value() != 5*time.Second || config.Authentication.JWKSTimeout.Value() != 3*time.Second {
+		t.Fatalf("unexpected OIDC configuration: %+v", config.Authentication)
+	}
+	loopback := config
+	loopback.Authentication.Issuer = "http://127.0.0.1:18091/realms/agent-platform"
+	loopback.Authentication.RedirectURI = "http://127.0.0.1:18092/auth/callback"
+	loopback.Authentication.LogoutRedirectURI = "http://127.0.0.1:18092"
+	if err := loopback.ValidateAPI(); err != nil {
+		t.Fatalf("ValidateAPI() rejected loopback OIDC development URLs: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*AuthenticationConfig)
+	}{
+		{name: "missing issuer", mutate: func(value *AuthenticationConfig) { value.Issuer = "" }},
+		{name: "insecure issuer", mutate: func(value *AuthenticationConfig) { value.Issuer = "http://identity.example.test" }},
+		{name: "issuer query", mutate: func(value *AuthenticationConfig) { value.Issuer = "https://identity.example.test?issuer=other" }},
+		{name: "missing audience", mutate: func(value *AuthenticationConfig) { value.Audience = "" }},
+		{name: "missing client", mutate: func(value *AuthenticationConfig) { value.ClientID = "" }},
+		{name: "missing organization claim", mutate: func(value *AuthenticationConfig) { value.OrganizationClaim = "" }},
+		{name: "registered organization claim", mutate: func(value *AuthenticationConfig) { value.OrganizationClaim = "sub" }},
+		{name: "unsafe redirect", mutate: func(value *AuthenticationConfig) { value.RedirectURI = "http://app.example.test/callback" }},
+		{name: "unsafe logout redirect", mutate: func(value *AuthenticationConfig) { value.LogoutRedirectURI = "http://app.example.test" }},
+		{name: "missing signing algorithms", mutate: func(value *AuthenticationConfig) { value.SigningAlgorithms = nil }},
+		{name: "unsupported signing algorithm", mutate: func(value *AuthenticationConfig) { value.SigningAlgorithms = []string{"none"} }},
+		{name: "zero discovery timeout", mutate: func(value *AuthenticationConfig) { value.DiscoveryTimeout = 0 }},
+		{name: "zero JWKS timeout", mutate: func(value *AuthenticationConfig) { value.JWKSTimeout = 0 }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := config.Authentication
+			candidate.SigningAlgorithms = append([]string(nil), config.Authentication.SigningAlgorithms...)
+			test.mutate(&candidate)
+			invalid := config
+			invalid.Authentication = candidate
+			if err := invalid.ValidateAPI(); err == nil {
+				t.Fatal("ValidateAPI() accepted unsafe OIDC configuration")
+			}
+		})
+	}
+}
+
 func TestLoadRejectsUnknownFieldsAndMissingEnvironment(t *testing.T) {
 	for _, fixture := range []string{
 		validYAML("${MISSING_DATABASE_DSN}"),
@@ -202,4 +253,18 @@ sandbox:
   egress_network: agent-public-egress
   resolver_config: /etc/agent-platform/sandbox-resolv.conf
 `) + "\n"
+}
+
+func validOIDCYAML(dsn string) string {
+	return strings.Replace(validYAML(dsn), "authentication:\n  mode: deny_all", `authentication:
+  mode: oidc
+  issuer: https://identity.example.test
+  audience: agent-platform-api
+  client_id: agent-platform-web
+  organization_claim: organization
+  redirect_uri: https://app.example.test/auth/callback
+  logout_redirect_uri: https://app.example.test
+  signing_algorithms: [RS256]
+  discovery_timeout: 5s
+  jwks_timeout: 3s`, 1)
 }

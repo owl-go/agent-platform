@@ -168,6 +168,10 @@ func (service *AccessService) Authenticate(ctx context.Context, token string) (d
 	return service.authenticate(ctx, token)
 }
 
+func (service *AccessService) CurrentUser(ctx context.Context) (domain.Principal, error) {
+	return service.authenticate(ctx, "")
+}
+
 func (service *AccessService) authenticate(ctx context.Context, token string) (domain.Principal, error) {
 	if principal, ok := PrincipalFromContext(ctx); ok {
 		return principal, nil

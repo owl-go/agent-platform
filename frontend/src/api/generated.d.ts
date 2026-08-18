@@ -516,6 +516,22 @@ export interface paths {
         patch: operations["ModelCatalogService_ChangeCredentialProfileStatus"];
         trace?: never;
     };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IdentityService_GetCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memory-candidates/{candidate_id}": {
         parameters: {
             query?: never;
@@ -1119,6 +1135,13 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1CurrentUser: {
+            user_id?: string;
+            email?: string;
+            display_name?: string;
+            organization?: components["schemas"]["v1Organization"];
+            role_grants?: components["schemas"]["v1RoleGrant"][];
+        };
         v1DecideMemoryCandidateResponse: {
             candidate?: components["schemas"]["v1MemoryCandidate"];
             memory?: components["schemas"]["v1AgentMemory"];
@@ -1227,6 +1250,11 @@ export interface components {
             max_output_tokens?: number;
             max_cost_amount?: string;
         };
+        v1Organization: {
+            id?: string;
+            slug?: string;
+            name?: string;
+        };
         v1QualityCommand: {
             name?: string;
             kind?: string;
@@ -1325,6 +1353,10 @@ export interface components {
             instructions?: string;
             quality_commands?: components["schemas"]["v1QualityCommand"][];
             egress_policy?: components["schemas"]["v1EgressPolicy"];
+        };
+        v1RoleGrant: {
+            team_id?: string;
+            role?: string;
         };
         v1Run: {
             id?: string;
@@ -2908,6 +2940,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CredentialProfile"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    IdentityService_GetCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CurrentUser"];
                 };
             };
             /** @description An unexpected error response. */

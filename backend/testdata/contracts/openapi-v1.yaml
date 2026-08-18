@@ -27,6 +27,9 @@
       "name": "RunEventStreamService"
     },
     {
+      "name": "IdentityService"
+    },
+    {
       "name": "ModelCatalogService"
     },
     {
@@ -2115,6 +2118,36 @@
         ]
       }
     },
+    "/v1/me": {
+      "get": {
+        "operationId": "IdentityService_GetCurrentUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CurrentUser"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IdentityService"
+        ]
+      }
+    },
     "/v1/memory-candidates/{candidate_id}": {
       "patch": {
         "operationId": "CollaborationService_DecideMemoryCandidate",
@@ -3944,6 +3977,29 @@
           }
         }
       },
+      "v1CurrentUser": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "organization": {
+            "$ref": "#/components/schemas/v1Organization"
+          },
+          "role_grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RoleGrant"
+            }
+          }
+        }
+      },
       "v1DecideMemoryCandidateResponse": {
         "type": "object",
         "properties": {
@@ -4270,6 +4326,20 @@
           }
         }
       },
+      "v1Organization": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "v1QualityCommand": {
         "type": "object",
         "properties": {
@@ -4555,6 +4625,17 @@
           },
           "egress_policy": {
             "$ref": "#/components/schemas/v1EgressPolicy"
+          }
+        }
+      },
+      "v1RoleGrant": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
           }
         }
       },

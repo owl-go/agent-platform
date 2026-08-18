@@ -9,6 +9,7 @@ import (
 	auditv1 "agent-platform/backend/api/audit/v1"
 	collaborationv1 "agent-platform/backend/api/collaboration/v1"
 	executionv1 "agent-platform/backend/api/execution/v1"
+	identityv1 "agent-platform/backend/api/identity/v1"
 	modelcatalogv1 "agent-platform/backend/api/modelcatalog/v1"
 	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
 	sourcecontrolv1 "agent-platform/backend/api/sourcecontrol/v1"
@@ -34,6 +35,7 @@ func (service *GeneratedServices) RegisterHTTP(server *kratoshttp.Server) {
 	auditv1.RegisterAuditServiceHTTPServer(server, service)
 	collaborationv1.RegisterCollaborationServiceHTTPServer(server, service)
 	executionv1.RegisterExecutionServiceHTTPServer(server, service)
+	identityv1.RegisterIdentityServiceHTTPServer(server, service)
 	modelcatalogv1.RegisterModelCatalogServiceHTTPServer(server, service)
 	runtimecatalogv1.RegisterRuntimeCatalogServiceHTTPServer(server, service)
 	sourcecontrolv1.RegisterSourceControlServiceHTTPServer(server, service)
@@ -46,7 +48,7 @@ func (dependencies Dependencies) validateProtectedAPI() error {
 		dependencies.AgentLifecycle == nil || dependencies.Collaboration == nil || dependencies.CatalogWrites == nil {
 		return fmt.Errorf("all API query, command, and Unit of Work dependencies are required")
 	}
-	if dependencies.Access == nil || dependencies.ResourceAccess == nil || dependencies.RunSearchAccess == nil ||
+	if dependencies.Access == nil || dependencies.ResourceAccess == nil || dependencies.CurrentUserAccess == nil || dependencies.RunSearchAccess == nil ||
 		dependencies.RunControlAccess == nil || dependencies.AuditAccess == nil || dependencies.RuntimeAccess == nil ||
 		dependencies.ModelAccess == nil || dependencies.AgentAccess == nil || dependencies.CollaborationAccess == nil ||
 		dependencies.CatalogWriteAccess == nil {

@@ -48,7 +48,9 @@ func TestRepositoryResolvesOrganizationScopedIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if principal.OrganizationID != organizationID || principal.UserID != userID || len(principal.Grants) != 1 || principal.Grants[0].Role != domain.RunOperator {
+	if principal.OrganizationID != organizationID || principal.OrganizationSlug != suffix || principal.OrganizationName != "Identity Test" ||
+		principal.UserID != userID || principal.Email != suffix+"@example.test" || principal.DisplayName != "Identity Test" ||
+		len(principal.Grants) != 1 || principal.Grants[0].Role != domain.RunOperator {
 		t.Fatalf("Principal = %+v", principal)
 	}
 	if _, err := repository.FindPrincipal(context.Background(), domain.VerifiedIdentity{Subject: suffix, OrganizationSlug: "other"}); err != domain.ErrUserNotFound {

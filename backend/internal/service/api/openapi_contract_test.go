@@ -35,6 +35,7 @@ func TestOpenAPIPathsMatchRegisteredRoutes(t *testing.T) {
 		"GET /v1/artifacts/{artifact_id}/download",
 		"GET /healthz",
 		"GET /readyz",
+		"GET /v1/me",
 		"GET /v1/coding-tasks",
 		"GET /v1/coding-tasks/{task_id}",
 		"GET /v1/coding-tasks/{task_id}/memory-candidates",

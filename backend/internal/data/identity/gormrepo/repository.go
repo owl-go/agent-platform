@@ -26,12 +26,18 @@ func (repository *Repository) FindPrincipal(ctx context.Context, identity domain
 	var principal domain.Principal
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user struct {
-			ID             string `gorm:"column:id"`
-			OrganizationID string `gorm:"column:organization_id"`
-			Disabled       bool   `gorm:"column:disabled"`
+			ID               string `gorm:"column:id"`
+			Email            string `gorm:"column:email"`
+			DisplayName      string `gorm:"column:display_name"`
+			OrganizationID   string `gorm:"column:organization_id"`
+			OrganizationSlug string `gorm:"column:organization_slug"`
+			OrganizationName string `gorm:"column:organization_name"`
+			Disabled         bool   `gorm:"column:disabled"`
 		}
 		query := `
-			SELECT u.id, u.organization_id, (u.disabled_at IS NOT NULL) AS disabled
+			SELECT u.id, u.email, u.display_name, u.organization_id,
+			       o.slug AS organization_slug, o.name AS organization_name,
+			       (u.disabled_at IS NOT NULL) AS disabled
 			FROM users u
 			JOIN organizations o ON o.id = u.organization_id
 			WHERE o.slug = ? AND u.oidc_subject = ?`
@@ -59,7 +65,9 @@ func (repository *Repository) FindPrincipal(ctx context.Context, identity domain
 			grants = append(grants, domain.Grant{TeamID: record.TeamID, Role: role})
 		}
 		principal = domain.Principal{
-			UserID: user.ID, OrganizationID: user.OrganizationID, Disabled: user.Disabled, Grants: grants,
+			UserID: user.ID, Email: user.Email, DisplayName: user.DisplayName,
+			OrganizationID: user.OrganizationID, OrganizationSlug: user.OrganizationSlug, OrganizationName: user.OrganizationName,
+			Disabled: user.Disabled, Grants: grants,
 		}
 		return nil
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})

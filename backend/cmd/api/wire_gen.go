@@ -38,7 +38,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	}
 	manager := workflow.NewManager(database)
 	applicationService := execution.NewService(database, manager)
-	accessService, err := identity.NewAccessService(database)
+	accessService, err := identity.NewAccessService(config, database)
 	if err != nil {
 		return nil, err
 	}

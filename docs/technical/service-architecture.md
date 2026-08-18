@@ -34,7 +34,7 @@ Data (GORM / Runtime CLI / Object Storage)
 | Webhook | Webhook Delivery、签名、重试与 Delivery Lease | `backend/internal/biz/webhook`, `backend/internal/data/webhook` | 投递循环与事务事件源已实现 |
 | Agent Lifecycle | Agent、Agent Draft、Validation、Release Approval、Agent Release | `backend/internal/biz/agentlifecycle`, `backend/internal/data/agentlifecycle` | Biz、Data 与 Proto HTTP 已实现 |
 | Collaboration | Coding Task、Session、Session Memory、Memory Candidate、Agent Memory | `backend/internal/biz/collaboration`, `backend/internal/data/collaboration` | Proto HTTP、Workspace Write Lease 与 Git Workflow 已实现；真实外部 Git/Runtime 联调后置 |
-| Identity & Governance | Organization、Team、User、Role Grant、Audit | `backend/internal/biz/identity`, `backend/internal/biz/audit` | RBAC、范围查询与审计已实现；OIDC Adapter 后置 |
+| Identity & Governance | Organization、Team、User、Role Grant、Audit | `backend/internal/biz/identity`, `backend/internal/biz/audit` | RBAC、范围查询、审计、OIDC Token 验证与当前 User 引导已实现 |
 
 未实现上下文不会因为数据库中已有预留表就视为已交付。实现新能力时先在对应上下文建立 Domain 和 Application，再增加 HTTP/GORM 等 Adapter。
 
@@ -59,7 +59,7 @@ Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run
 
 ## 身份与授权边界
 
-HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。具体 OIDC Provider 尚未选择，因此当前部署使用显式 `deny_all` Adapter，所有业务 API 默认拒绝，不使用可伪造的组织 Header 或开发后门。
+HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。部署可以选择显式 `deny_all` 或严格 YAML 配置的通用 OIDC Adapter；后者通过 Provider Discovery 和 JWKS 验证签名、Issuer、Audience、有效期、Subject 与 Organization Claim。JWKS 暂时不可用与未知签名 Key 分别映射为基础设施不可用和未认证，不使用可伪造的组织 Header 或开发后门。`GET /v1/me` 根据已验证身份从 PostgreSQL 引导 User、Organization 与 Role Grant 的安全投影。
 
 Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog 与 Source Control Provider 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改平台目录。
 
@@ -106,7 +106,7 @@ Webhook Worker 默认关闭，启用时严格校验 HTTPS `target_url`、请求�
 
 `frontend` 是独立的 Vue + TypeScript Interface Adapter，提供 Agent Studio、Conversation Workspace 和 Operations Console 三个产品界面。前端使用生成的 OpenAPI 类型，不复制服务端领域模型，也不承担授权、幂等或状态机不变量。
 
-外部身份尚未配置时，页面只调用无身份的健康接口并展示明确的 Interface Preview；业务写入保持不可用，不注入伪造 Bearer Token、组织 Header 或本地管理员身份。接入 OIDC 后，所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
+页面只在未认证状态调用无身份的健康接口；受保护界面在 OIDC Authorization Code + PKCE 完成并且 `GET /v1/me` 成功前不会渲染。OIDC 状态与 Token 仅保存在浏览器 `sessionStorage`，刷新时重新引导当前 User，Token 过期或退出后立即隐藏受保护界面。所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
 
 ## Retention 边界
 

@@ -33,10 +33,14 @@ type VerifiedIdentity struct {
 }
 
 type Principal struct {
-	UserID         string
-	OrganizationID string
-	Disabled       bool
-	Grants         []Grant
+	UserID           string
+	Email            string
+	DisplayName      string
+	OrganizationID   string
+	OrganizationSlug string
+	OrganizationName string
+	Disabled         bool
+	Grants           []Grant
 }
 
 type Actor struct {

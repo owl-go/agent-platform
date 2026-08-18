@@ -41,6 +41,9 @@ type RunAccessController interface {
 type ResourceScopeController interface {
 	ResolveReadScope(context.Context, string) (authz.ReadScope, error)
 }
+type CurrentUserAccessController interface {
+	CurrentUser(context.Context) (identitydomain.Principal, error)
+}
 type RunControlAccessController interface {
 	AuthorizeRunControl(context.Context, string, string, string) (identitydomain.Actor, error)
 }
@@ -118,6 +121,7 @@ type Dependencies struct {
 	RunSearchAccess     RunSearchAccessController
 	Access              RunAccessController
 	ResourceAccess      ResourceScopeController
+	CurrentUserAccess   CurrentUserAccessController
 	RunControls         RunController
 	RunControlAccess    RunControlAccessController
 	Approvals           ApprovalService
