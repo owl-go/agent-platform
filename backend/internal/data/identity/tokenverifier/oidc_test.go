@@ -100,7 +100,7 @@ func TestOIDCVerifierDistinguishesUnknownKeyFromUnavailableJWKS(t *testing.T) {
 func TestOIDCVerifierRejectsUnsafeJWKSURI(t *testing.T) {
 	for _, jwksURI := range []string{
 		"http://metadata.internal/keys",
-		"https://keys.example.test/keys?target=other",
+		"https://keys.example.test/keys#fragment",
 		"https://user@keys.example.test/keys",
 		"/relative/keys",
 	} {
@@ -111,6 +111,14 @@ func TestOIDCVerifierRejectsUnsafeJWKSURI(t *testing.T) {
 				t.Fatal("NewOIDC accepted an unsafe jwks_uri")
 			}
 		})
+	}
+}
+
+func TestOIDCVerifierAllowsHTTPSJWKSURIQuery(t *testing.T) {
+	provider := newTestOIDCProvider(t)
+	provider.jwksURI = provider.server.URL + "/keys?tenant=acme"
+	if _, err := NewOIDC(context.Background(), provider.config(), provider.server.Client().Transport); err != nil {
+		t.Fatalf("NewOIDC rejected a standards-compliant jwks_uri query: %v", err)
 	}
 }
 

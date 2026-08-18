@@ -66,9 +66,9 @@ func NewOIDC(ctx context.Context, config platformconfig.AuthenticationConfig, tr
 }
 
 func validateJWKSURI(value string) error {
-	parsed, err := url.ParseRequestURI(strings.TrimSpace(value))
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("OIDC Provider jwks_uri must be an absolute HTTPS URL without user info, query, or fragment")
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || !parsed.IsAbs() || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
+		return fmt.Errorf("OIDC Provider jwks_uri must be an absolute HTTPS URL without user info or fragment")
 	}
 	if parsed.Scheme == "https" {
 		return nil
