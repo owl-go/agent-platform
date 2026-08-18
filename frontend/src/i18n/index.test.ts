@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCount, formatDuration, formatModelCost, formatTokenUsage, resolveInitialLocale } from "./index";
+import { formatCount, formatDuration, formatModelCost, formatTokenUsage, resolveInitialLocale, runStateLabel, runStates } from "./index";
 
 describe("locale boundary", () => {
   it("uses a persisted supported locale, browser Chinese, then deterministic English fallback", () => {
@@ -15,5 +15,13 @@ describe("locale boundary", () => {
     expect(formatCount(12_500, "en-US")).toBe("12,500");
     expect(formatModelCost(3.18, "en-US")).toContain("$3.18");
     expect(formatModelCost(3.18, "zh-CN")).toContain("3.18");
+  });
+
+  it("maps every stable backend Run state without changing its enum value", () => {
+    expect(runStates).toEqual(["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "completed", "failed", "cancelled"]);
+    for (const state of runStates) {
+      expect(runStateLabel(state, "zh-CN")).not.toBe("");
+      expect(runStateLabel(state, "en-US")).not.toBe("");
+    }
   });
 });

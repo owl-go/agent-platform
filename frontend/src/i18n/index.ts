@@ -2,6 +2,8 @@ import { createI18n } from "vue-i18n";
 
 export type SupportedLocale = "zh-CN" | "en-US";
 export const localeStorageKey = "agent-platform.locale";
+export const runStates = ["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "completed", "failed", "cancelled"] as const;
+export type RunState = typeof runStates[number];
 
 const messages = {
   "zh-CN": {
@@ -28,7 +30,7 @@ const messages = {
       workspace: { kicker: "协作 / 执行 / 审阅", title: "协作工作区", body: "在当前 Team 中管理 Coding Task、Session、Run 和 Memory。", emptyTitle: "尚无 Coding Task 数据", emptyBody: "真实协作 API 将在后续票据中接入；这里不会展示模拟会话。" },
       operations: { kicker: "观察 / 干预 / 恢复", title: "运维控制台", body: "检索并诊断当前 Team 的 Run。", emptyTitle: "尚无 Run 数据", emptyBody: "真实 Run 查询将在后续票据中接入；这里不会展示模拟运行记录。" },
     },
-    status: { queued: "排队中", running: "运行中", waiting_confirmation: "等待确认", completed: "已完成", failed: "失败", cancelled: "已取消" },
+    status: { queued: "排队中", provisioning: "准备环境", running: "运行中", waiting_confirmation: "等待确认", interrupting: "正在中断", interrupted: "已中断", resuming: "正在恢复", completed: "已完成", failed: "失败", cancelled: "已取消" },
     errors: { authentication: "无法完成身份验证，请重试或联系平台管理员。", offline: "服务离线", forbidden: "无权访问", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
   },
   "en-US": {
@@ -55,7 +57,7 @@ const messages = {
       workspace: { kicker: "COLLABORATE / EXECUTE / REVIEW", title: "Conversation Workspace", body: "Manage Coding Tasks, Sessions, Runs, and Memory for the active Team.", emptyTitle: "No Coding Task data yet", emptyBody: "Real collaboration APIs are connected in later tickets; this page does not show mock sessions." },
       operations: { kicker: "OBSERVE / INTERVENE / RECOVER", title: "Operations Console", body: "Search and diagnose Runs for the active Team.", emptyTitle: "No Run data yet", emptyBody: "The real Run search is connected in a later ticket; this page does not show mock runs." },
     },
-    status: { queued: "Queued", running: "Running", waiting_confirmation: "Waiting for confirmation", completed: "Completed", failed: "Failed", cancelled: "Cancelled" },
+    status: { queued: "Queued", provisioning: "Provisioning", running: "Running", waiting_confirmation: "Waiting for confirmation", interrupting: "Interrupting", interrupted: "Interrupted", resuming: "Resuming", completed: "Completed", failed: "Failed", cancelled: "Cancelled" },
     errors: { authentication: "Authentication could not be completed. Try again or contact a platform administrator.", offline: "Service is offline", forbidden: "Access denied", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
   },
 } as const;
@@ -88,4 +90,8 @@ export function formatCount(value: number, locale: SupportedLocale): string {
 
 export function formatModelCost(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(value);
+}
+
+export function runStateLabel(state: RunState, locale: SupportedLocale): string {
+  return messages[locale].status[state];
 }
