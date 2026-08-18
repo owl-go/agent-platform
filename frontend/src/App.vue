@@ -78,7 +78,7 @@ function routeFor(surface: Surface) {
     <div class="auth-card"><span class="auth-code">{{ t('auth.requiredCode') }}</span><h1>{{ t('auth.requiredTitle') }}</h1><p>{{ t(authState.reason === 'expired' ? 'auth.expiredBody' : 'auth.requiredBody') }}</p><button class="primary-action auth-action" data-testid="sign-in-button" @click="auth.session.signIn()">{{ t('auth.signIn') }} <span>↗</span></button></div>
   </section>
   <section v-else-if="authState.kind === 'error'" class="auth-screen" role="alert">
-    <div class="auth-card auth-error"><span class="auth-code">{{ t('auth.unavailableCode') }}</span><h1>{{ t('auth.unavailableTitle') }}</h1><p>{{ authState.message }}</p></div>
+    <div class="auth-card auth-error"><span class="auth-code">{{ t('auth.unavailableCode') }}</span><h1>{{ t('auth.unavailableTitle') }}</h1><p>{{ t('errors.authentication') }}</p></div>
   </section>
 
   <div v-else class="shell">

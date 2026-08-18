@@ -79,6 +79,22 @@ func TestRepositoryResolvesOrganizationScopedIdentity(t *testing.T) {
 	if len(scoped.Teams) != 1 || scoped.Teams[0].Slug != suffix+"-a" {
 		t.Fatalf("scoped Principal Teams = %+v", scoped.Teams)
 	}
+	var foreignTeamID string
+	foreignQuery := `
+		WITH foreign_org AS (
+			INSERT INTO organizations (slug, name) VALUES (?, 'Foreign Organization') RETURNING id
+		)
+		INSERT INTO teams (organization_id, slug, name)
+		SELECT id, ?, 'Foreign Team' FROM foreign_org RETURNING id`
+	if err := tx.Raw(foreignQuery, suffix+"-foreign", suffix+"-foreign").Scan(&foreignTeamID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Exec(`INSERT INTO role_grants (organization_id, team_id, user_id, role) VALUES (?, ?, ?, 'agent_user')`, organizationID, foreignTeamID, userID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FindPrincipal(context.Background(), domain.VerifiedIdentity{Subject: suffix, OrganizationSlug: suffix}); err == nil {
+		t.Fatal("FindPrincipal accepted a cross-Organization Team Role Grant")
+	}
 	if _, err := repository.FindPrincipal(context.Background(), domain.VerifiedIdentity{Subject: suffix, OrganizationSlug: "other"}); err != domain.ErrUserNotFound {
 		t.Fatalf("other Organization error = %v", err)
 	}

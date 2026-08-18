@@ -50,14 +50,24 @@ func (repository *Repository) FindPrincipal(ctx context.Context, identity domain
 		}
 
 		var records []struct {
-			TeamID *string `gorm:"column:team_id"`
-			Role   string  `gorm:"column:role"`
+			TeamID             *string `gorm:"column:team_id"`
+			TeamOrganizationID *string `gorm:"column:team_organization_id"`
+			Role               string  `gorm:"column:role"`
 		}
-		if err := tx.Raw(`SELECT team_id, role FROM role_grants WHERE organization_id = ? AND user_id = ? ORDER BY created_at, id`, user.OrganizationID, user.ID).Scan(&records).Error; err != nil {
+		grantQuery := `
+			SELECT grant_row.team_id, grant_row.role, team.organization_id AS team_organization_id
+			FROM role_grants grant_row
+			LEFT JOIN teams team ON team.id = grant_row.team_id
+			WHERE grant_row.organization_id = ? AND grant_row.user_id = ?
+			ORDER BY grant_row.created_at, grant_row.id`
+		if err := tx.Raw(grantQuery, user.OrganizationID, user.ID).Scan(&records).Error; err != nil {
 			return fmt.Errorf("load User Role Grants: %w", err)
 		}
 		grants := make([]domain.Grant, 0, len(records))
 		for _, record := range records {
+			if record.TeamID != nil && (record.TeamOrganizationID == nil || *record.TeamOrganizationID != user.OrganizationID) {
+				return fmt.Errorf("Role Grant Team crosses Organization boundary")
+			}
 			role, err := domain.ParseRole(record.Role)
 			if err != nil {
 				return err

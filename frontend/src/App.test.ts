@@ -56,13 +56,21 @@ describe("App identity, Team, route, and locale boundaries", () => {
     const { wrapper } = await mountApp(session, "/operations?team=team-a");
     expect(wrapper.get("[data-testid='access-denied']").text()).toContain("unavailable");
   });
+
+  it("translates authentication failures at the presentation boundary", async () => {
+    localStorage.setItem(localeStorageKey, "zh-CN");
+    const { session } = authSession({ kind: "error", message: "internal provider detail" });
+    const { wrapper } = await mountApp(session);
+    expect(wrapper.get("[role='alert']").text()).toContain("无法完成身份验证");
+    expect(wrapper.text()).not.toContain("internal provider detail");
+  });
 });
 
 async function mountApp(session: AuthSession, path = "/workspace") {
   const router = createAppRouter(createMemoryHistory());
   await router.push(path);
   await router.isReady();
-  const i18n = createAppI18n({ getItem: () => null }, "en-US");
+  const i18n = createAppI18n(localStorage, "en-US");
   const wrapper = mount(App, { global: { plugins: [router, i18n], provide: { [authContextKey as symbol]: { session, isCallback: false } } } });
   await flushPromises();
   return { wrapper, router };

@@ -29,7 +29,7 @@ const messages = {
       operations: { kicker: "观察 / 干预 / 恢复", title: "运维控制台", body: "检索并诊断当前 Team 的 Run。", emptyTitle: "尚无 Run 数据", emptyBody: "真实 Run 查询将在后续票据中接入；这里不会展示模拟运行记录。" },
     },
     status: { queued: "排队中", running: "运行中", waiting_confirmation: "等待确认", completed: "已完成", failed: "失败", cancelled: "已取消" },
-    errors: { offline: "服务离线", forbidden: "无权访问", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
+    errors: { authentication: "无法完成身份验证，请重试或联系平台管理员。", offline: "服务离线", forbidden: "无权访问", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
   },
   "en-US": {
     auth: {
@@ -56,7 +56,7 @@ const messages = {
       operations: { kicker: "OBSERVE / INTERVENE / RECOVER", title: "Operations Console", body: "Search and diagnose Runs for the active Team.", emptyTitle: "No Run data yet", emptyBody: "The real Run search is connected in a later ticket; this page does not show mock runs." },
     },
     status: { queued: "Queued", running: "Running", waiting_confirmation: "Waiting for confirmation", completed: "Completed", failed: "Failed", cancelled: "Cancelled" },
-    errors: { offline: "Service is offline", forbidden: "Access denied", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
+    errors: { authentication: "Authentication could not be completed. Try again or contact a platform administrator.", offline: "Service is offline", forbidden: "Access denied", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
   },
 } as const;
 
@@ -80,6 +80,10 @@ export function formatDuration(milliseconds: number, locale: SupportedLocale): s
 
 export function formatTokenUsage(value: number, locale: SupportedLocale): string {
   return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+export function formatCount(value: number, locale: SupportedLocale): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatModelCost(value: number, locale: SupportedLocale): string {

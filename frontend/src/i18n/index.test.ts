@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, formatModelCost, formatTokenUsage, resolveInitialLocale } from "./index";
+import { formatCount, formatDuration, formatModelCost, formatTokenUsage, resolveInitialLocale } from "./index";
 
 describe("locale boundary", () => {
   it("uses a persisted supported locale, browser Chinese, then deterministic English fallback", () => {
@@ -12,6 +12,7 @@ describe("locale boundary", () => {
   it("formats duration, Token Usage, and Model Cost without changing backend values", () => {
     expect(formatDuration(90_000, "en-US")).toMatch(/2 min/);
     expect(formatTokenUsage(12_500, "en-US")).toMatch(/12\.5K/i);
+    expect(formatCount(12_500, "en-US")).toBe("12,500");
     expect(formatModelCost(3.18, "en-US")).toContain("$3.18");
     expect(formatModelCost(3.18, "zh-CN")).toContain("3.18");
   });
