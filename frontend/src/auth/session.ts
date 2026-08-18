@@ -63,8 +63,16 @@ export function createAuthSession(
     async initialize(isCallback: boolean) {
       state.value = { kind: "checking" };
       try {
-        const user = isCallback ? await client.completeSignIn() : await client.getUser();
-        if (isCallback) replaceCallbackURL();
+        let user: OIDCUser | null;
+        if (isCallback) {
+          try {
+            user = await client.completeSignIn();
+          } finally {
+            replaceCallbackURL();
+          }
+        } else {
+          user = await client.getUser();
+        }
         if (!user || user.expired) {
           state.value = { kind: "unauthenticated", reason: "missing" };
           return;
@@ -79,6 +87,7 @@ export function createAuthSession(
       await client.signIn();
     },
     async signOut() {
+      state.value = { kind: "unauthenticated", reason: "missing" };
       await client.signOut();
     },
     dispose() {

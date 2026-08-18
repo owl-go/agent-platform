@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	identitydomain "agent-platform/backend/internal/biz/identity/domain"
@@ -47,6 +48,9 @@ func NewOIDC(ctx context.Context, config platformconfig.AuthenticationConfig, tr
 	if err := provider.Claims(&metadata); err != nil || strings.TrimSpace(metadata.JWKSURI) == "" {
 		return nil, fmt.Errorf("OIDC Provider discovery did not return a valid jwks_uri")
 	}
+	if err := validateJWKSURI(metadata.JWKSURI); err != nil {
+		return nil, err
+	}
 
 	jwksClient := &http.Client{
 		Transport: unavailableTransport{base: transport},
@@ -59,6 +63,21 @@ func NewOIDC(ctx context.Context, config platformconfig.AuthenticationConfig, tr
 		SupportedSigningAlgs: append([]string(nil), config.SigningAlgorithms...),
 	})
 	return &OIDCVerifier{verifier: verifier, organizationClaim: config.OrganizationClaim}, nil
+}
+
+func validateJWKSURI(value string) error {
+	parsed, err := url.ParseRequestURI(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("OIDC Provider jwks_uri must be an absolute HTTPS URL without user info, query, or fragment")
+	}
+	if parsed.Scheme == "https" {
+		return nil
+	}
+	hostname := parsed.Hostname()
+	if parsed.Scheme == "http" && (hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1") {
+		return nil
+	}
+	return fmt.Errorf("OIDC Provider jwks_uri must use HTTPS except on loopback")
 }
 
 func (verifier *OIDCVerifier) Verify(ctx context.Context, rawToken string) (identitydomain.VerifiedIdentity, error) {

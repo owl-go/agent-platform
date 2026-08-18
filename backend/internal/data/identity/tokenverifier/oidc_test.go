@@ -97,10 +97,28 @@ func TestOIDCVerifierDistinguishesUnknownKeyFromUnavailableJWKS(t *testing.T) {
 	}
 }
 
+func TestOIDCVerifierRejectsUnsafeJWKSURI(t *testing.T) {
+	for _, jwksURI := range []string{
+		"http://metadata.internal/keys",
+		"https://keys.example.test/keys?target=other",
+		"https://user@keys.example.test/keys",
+		"/relative/keys",
+	} {
+		t.Run(jwksURI, func(t *testing.T) {
+			provider := newTestOIDCProvider(t)
+			provider.jwksURI = jwksURI
+			if _, err := NewOIDC(context.Background(), provider.config(), provider.server.Client().Transport); err == nil {
+				t.Fatal("NewOIDC accepted an unsafe jwks_uri")
+			}
+		})
+	}
+}
+
 type testOIDCProvider struct {
 	server          *httptest.Server
 	key             *rsa.PrivateKey
 	jwksUnavailable bool
+	jwksURI         string
 }
 
 func newTestOIDCProvider(t *testing.T) *testOIDCProvider {
@@ -114,8 +132,12 @@ func newTestOIDCProvider(t *testing.T) *testOIDCProvider {
 	provider.server = httptest.NewTLSServer(mux)
 	t.Cleanup(provider.server.Close)
 	mux.HandleFunc("/.well-known/openid-configuration", func(writer http.ResponseWriter, _ *http.Request) {
+		jwksURI := provider.jwksURI
+		if jwksURI == "" {
+			jwksURI = provider.server.URL + "/keys"
+		}
 		writeJSON(t, writer, map[string]any{
-			"issuer": provider.server.URL, "jwks_uri": provider.server.URL + "/keys",
+			"issuer": provider.server.URL, "jwks_uri": jwksURI,
 			"authorization_endpoint": provider.server.URL + "/authorize", "token_endpoint": provider.server.URL + "/token",
 			"id_token_signing_alg_values_supported": []string{"RS256"},
 		})

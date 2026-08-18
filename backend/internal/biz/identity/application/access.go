@@ -174,7 +174,7 @@ func (service *AccessService) CurrentUser(ctx context.Context) (domain.Principal
 
 func (service *AccessService) authenticate(ctx context.Context, token string) (domain.Principal, error) {
 	if principal, ok := PrincipalFromContext(ctx); ok {
-		return principal, nil
+		return authenticatedPrincipal(principal)
 	}
 	if strings.TrimSpace(token) == "" {
 		return domain.Principal{}, domain.ErrUnauthenticated
@@ -195,6 +195,13 @@ func (service *AccessService) authenticate(ctx context.Context, token string) (d
 	}
 	if err != nil {
 		return domain.Principal{}, fmt.Errorf("resolve authenticated User: %w", err)
+	}
+	return authenticatedPrincipal(principal)
+}
+
+func authenticatedPrincipal(principal domain.Principal) (domain.Principal, error) {
+	if principal.Disabled || strings.TrimSpace(principal.UserID) == "" || strings.TrimSpace(principal.OrganizationID) == "" {
+		return domain.Principal{}, domain.ErrUnauthenticated
 	}
 	return principal, nil
 }

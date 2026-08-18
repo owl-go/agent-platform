@@ -85,3 +85,22 @@ func TestAccessServiceFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestAccessServiceRejectsDisabledPrincipalAtAuthenticationBoundary(t *testing.T) {
+	service, err := NewAccessService(
+		verifierFunc(func(context.Context, string) (domain.VerifiedIdentity, error) {
+			return domain.VerifiedIdentity{Subject: "subject", OrganizationSlug: "acme"}, nil
+		}),
+		identityRepositoryStub{principal: domain.Principal{UserID: "user-1", OrganizationID: "org-1", Disabled: true}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Authenticate(context.Background(), "token"); !errors.Is(err, domain.ErrUnauthenticated) {
+		t.Fatalf("Authenticate() error = %v, want ErrUnauthenticated", err)
+	}
+	ctx := WithPrincipal(context.Background(), domain.Principal{UserID: "user-1", OrganizationID: "org-1", Disabled: true})
+	if _, err := service.CurrentUser(ctx); !errors.Is(err, domain.ErrUnauthenticated) {
+		t.Fatalf("CurrentUser() error = %v, want ErrUnauthenticated", err)
+	}
+}
