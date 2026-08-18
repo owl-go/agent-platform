@@ -20,9 +20,14 @@ func (service *GeneratedServices) GetCurrentUser(ctx context.Context, _ *identit
 		}
 		grants = append(grants, item)
 	}
+	teams := make([]*identityv1.Team, 0, len(principal.Teams))
+	for _, team := range principal.Teams {
+		teams = append(teams, &identityv1.Team{Id: team.ID, Slug: team.Slug, Name: team.Name})
+	}
 	return &identityv1.CurrentUser{
 		UserId: principal.UserID, Email: principal.Email, DisplayName: principal.DisplayName,
 		Organization: &identityv1.Organization{Id: principal.OrganizationID, Slug: principal.OrganizationSlug, Name: principal.OrganizationName},
 		RoleGrants:   grants,
+		Teams:        teams,
 	}, nil
 }

@@ -3228,6 +3228,13 @@
             "type": "object",
             "$ref": "#/definitions/v1RoleGrant"
           }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Team"
+          }
         }
       }
     },
@@ -4201,6 +4208,20 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1Team": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
         }
       }
     },

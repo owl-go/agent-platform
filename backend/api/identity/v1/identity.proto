@@ -20,6 +20,7 @@ message CurrentUser {
   string display_name = 3;
   Organization organization = 4;
   repeated RoleGrant role_grants = 5;
+  repeated Team teams = 6;
 }
 
 message Organization {
@@ -31,4 +32,10 @@ message Organization {
 message RoleGrant {
   optional string team_id = 1;
   string role = 2;
+}
+
+message Team {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
 }

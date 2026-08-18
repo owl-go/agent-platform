@@ -3997,6 +3997,12 @@
             "items": {
               "$ref": "#/components/schemas/v1RoleGrant"
             }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1Team"
+            }
           }
         }
       },
@@ -4951,6 +4957,20 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "v1Team": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },

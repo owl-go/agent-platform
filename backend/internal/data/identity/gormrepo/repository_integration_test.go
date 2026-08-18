@@ -24,6 +24,11 @@ func TestRepositoryResolvesOrganizationScopedIdentity(t *testing.T) {
 	query := `
 		WITH org AS (
 			INSERT INTO organizations (slug, name) VALUES (?, 'Identity Test') RETURNING id
+		), own_teams AS (
+			INSERT INTO teams (organization_id, slug, name)
+			SELECT id, ? || '-a', 'Alpha Team' FROM org
+			UNION ALL
+			SELECT id, ? || '-b', 'Beta Team' FROM org
 		), platform_user AS (
 			INSERT INTO users (organization_id, oidc_subject, email, display_name)
 			SELECT id, ?, ? || '@example.test', 'Identity Test' FROM org RETURNING id, organization_id
@@ -36,7 +41,7 @@ func TestRepositoryResolvesOrganizationScopedIdentity(t *testing.T) {
 		OrganizationID string `gorm:"column:organization_id"`
 		UserID         string `gorm:"column:user_id"`
 	}
-	if err := tx.Raw(query, suffix, suffix, suffix).Scan(&row).Error; err != nil {
+	if err := tx.Raw(query, suffix, suffix, suffix, suffix, suffix).Scan(&row).Error; err != nil {
 		t.Fatal(err)
 	}
 	organizationID, userID = row.OrganizationID, row.UserID
@@ -50,8 +55,29 @@ func TestRepositoryResolvesOrganizationScopedIdentity(t *testing.T) {
 	}
 	if principal.OrganizationID != organizationID || principal.OrganizationSlug != suffix || principal.OrganizationName != "Identity Test" ||
 		principal.UserID != userID || principal.Email != suffix+"@example.test" || principal.DisplayName != "Identity Test" ||
-		len(principal.Grants) != 1 || principal.Grants[0].Role != domain.RunOperator {
+		len(principal.Grants) != 1 || principal.Grants[0].Role != domain.RunOperator ||
+		len(principal.Teams) != 2 || principal.Teams[0].Name != "Alpha Team" || principal.Teams[1].Name != "Beta Team" {
 		t.Fatalf("Principal = %+v", principal)
+	}
+	scopedSubject := suffix + "-scoped"
+	scopedQuery := `
+		WITH scoped_user AS (
+			INSERT INTO users (organization_id, oidc_subject, email, display_name)
+			VALUES (?, ?, ? || '@example.test', 'Scoped User') RETURNING id
+		)
+		INSERT INTO role_grants (organization_id, team_id, user_id, role)
+		SELECT ?, team.id, scoped_user.id, 'agent_user'
+		FROM scoped_user
+		JOIN teams team ON team.organization_id = ? AND team.slug = ?`
+	if err := tx.Exec(scopedQuery, organizationID, scopedSubject, scopedSubject, organizationID, organizationID, suffix+"-a").Error; err != nil {
+		t.Fatal(err)
+	}
+	scoped, err := repository.FindPrincipal(context.Background(), domain.VerifiedIdentity{Subject: scopedSubject, OrganizationSlug: suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scoped.Teams) != 1 || scoped.Teams[0].Slug != suffix+"-a" {
+		t.Fatalf("scoped Principal Teams = %+v", scoped.Teams)
 	}
 	if _, err := repository.FindPrincipal(context.Background(), domain.VerifiedIdentity{Subject: suffix, OrganizationSlug: "other"}); err != domain.ErrUserNotFound {
 		t.Fatalf("other Organization error = %v", err)

@@ -27,6 +27,12 @@ type Grant struct {
 	Role   Role
 }
 
+type Team struct {
+	ID   string
+	Slug string
+	Name string
+}
+
 type VerifiedIdentity struct {
 	Subject          string
 	OrganizationSlug string
@@ -41,6 +47,7 @@ type Principal struct {
 	OrganizationName string
 	Disabled         bool
 	Grants           []Grant
+	Teams            []Team
 }
 
 type Actor struct {

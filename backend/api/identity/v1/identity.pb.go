@@ -65,6 +65,7 @@ type CurrentUser struct {
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	Organization  *Organization          `protobuf:"bytes,4,opt,name=organization,proto3" json:"organization,omitempty"`
 	RoleGrants    []*RoleGrant           `protobuf:"bytes,5,rep,name=role_grants,json=roleGrants,proto3" json:"role_grants,omitempty"`
+	Teams         []*Team                `protobuf:"bytes,6,rep,name=teams,proto3" json:"teams,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,6 +131,13 @@ func (x *CurrentUser) GetOrganization() *Organization {
 func (x *CurrentUser) GetRoleGrants() []*RoleGrant {
 	if x != nil {
 		return x.RoleGrants
+	}
+	return nil
+}
+
+func (x *CurrentUser) GetTeams() []*Team {
+	if x != nil {
+		return x.Teams
 	}
 	return nil
 }
@@ -246,19 +254,80 @@ func (x *RoleGrant) GetRole() string {
 	return ""
 }
 
+type Team struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Slug          string                 `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Team) Reset() {
+	*x = Team{}
+	mi := &file_identity_v1_identity_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Team) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Team) ProtoMessage() {}
+
+func (x *Team) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_v1_identity_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Team.ProtoReflect.Descriptor instead.
+func (*Team) Descriptor() ([]byte, []int) {
+	return file_identity_v1_identity_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Team) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Team) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *Team) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 var File_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
 	"\x1aidentity/v1/identity.proto\x12\videntity.v1\x1a\x1cgoogle/api/annotations.proto\"\x17\n" +
-	"\x15GetCurrentUserRequest\"\xd7\x01\n" +
+	"\x15GetCurrentUserRequest\"\x80\x02\n" +
 	"\vCurrentUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12=\n" +
 	"\forganization\x18\x04 \x01(\v2\x19.identity.v1.OrganizationR\forganization\x127\n" +
 	"\vrole_grants\x18\x05 \x03(\v2\x16.identity.v1.RoleGrantR\n" +
-	"roleGrants\"F\n" +
+	"roleGrants\x12'\n" +
+	"\x05teams\x18\x06 \x03(\v2\x11.identity.v1.TeamR\x05teams\"F\n" +
 	"\fOrganization\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x12\n" +
@@ -267,7 +336,11 @@ const file_identity_v1_identity_proto_rawDesc = "" +
 	"\ateam_id\x18\x01 \x01(\tH\x00R\x06teamId\x88\x01\x01\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04roleB\n" +
 	"\n" +
-	"\b_team_id2q\n" +
+	"\b_team_id\">\n" +
+	"\x04Team\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name2q\n" +
 	"\x0fIdentityService\x12^\n" +
 	"\x0eGetCurrentUser\x12\".identity.v1.GetCurrentUserRequest\x1a\x18.identity.v1.CurrentUser\"\x0e\x82\xd3\xe4\x93\x02\b\x12\x06/v1/meB3Z1agent-platform/backend/api/identity/v1;identityv1b\x06proto3"
 
@@ -283,23 +356,25 @@ func file_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_identity_v1_identity_proto_rawDescData
 }
 
-var file_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_identity_v1_identity_proto_goTypes = []any{
 	(*GetCurrentUserRequest)(nil), // 0: identity.v1.GetCurrentUserRequest
 	(*CurrentUser)(nil),           // 1: identity.v1.CurrentUser
 	(*Organization)(nil),          // 2: identity.v1.Organization
 	(*RoleGrant)(nil),             // 3: identity.v1.RoleGrant
+	(*Team)(nil),                  // 4: identity.v1.Team
 }
 var file_identity_v1_identity_proto_depIdxs = []int32{
 	2, // 0: identity.v1.CurrentUser.organization:type_name -> identity.v1.Organization
 	3, // 1: identity.v1.CurrentUser.role_grants:type_name -> identity.v1.RoleGrant
-	0, // 2: identity.v1.IdentityService.GetCurrentUser:input_type -> identity.v1.GetCurrentUserRequest
-	1, // 3: identity.v1.IdentityService.GetCurrentUser:output_type -> identity.v1.CurrentUser
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 2: identity.v1.CurrentUser.teams:type_name -> identity.v1.Team
+	0, // 3: identity.v1.IdentityService.GetCurrentUser:input_type -> identity.v1.GetCurrentUserRequest
+	1, // 4: identity.v1.IdentityService.GetCurrentUser:output_type -> identity.v1.CurrentUser
+	4, // [4:5] is the sub-list for method output_type
+	3, // [3:4] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_identity_v1_identity_proto_init() }
@@ -314,7 +389,7 @@ func file_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_identity_v1_identity_proto_rawDesc), len(file_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -64,10 +64,41 @@ func (repository *Repository) FindPrincipal(ctx context.Context, identity domain
 			}
 			grants = append(grants, domain.Grant{TeamID: record.TeamID, Role: role})
 		}
+		var teamRecords []struct {
+			ID   string `gorm:"column:id"`
+			Slug string `gorm:"column:slug"`
+			Name string `gorm:"column:name"`
+		}
+		teamQuery := `
+			SELECT t.id, t.slug, t.name
+			FROM teams t
+			WHERE t.organization_id = ?
+			  AND (
+			    EXISTS (
+			      SELECT 1 FROM role_grants organization_grant
+			      WHERE organization_grant.organization_id = t.organization_id
+			        AND organization_grant.user_id = ?
+			        AND organization_grant.team_id IS NULL
+			    )
+			    OR EXISTS (
+			      SELECT 1 FROM role_grants team_grant
+			      WHERE team_grant.organization_id = t.organization_id
+			        AND team_grant.user_id = ?
+			        AND team_grant.team_id = t.id
+			    )
+			  )
+			ORDER BY t.name, t.id`
+		if err := tx.Raw(teamQuery, user.OrganizationID, user.ID, user.ID).Scan(&teamRecords).Error; err != nil {
+			return fmt.Errorf("load accessible Teams: %w", err)
+		}
+		teams := make([]domain.Team, 0, len(teamRecords))
+		for _, record := range teamRecords {
+			teams = append(teams, domain.Team{ID: record.ID, Slug: record.Slug, Name: record.Name})
+		}
 		principal = domain.Principal{
 			UserID: user.ID, Email: user.Email, DisplayName: user.DisplayName,
 			OrganizationID: user.OrganizationID, OrganizationSlug: user.OrganizationSlug, OrganizationName: user.OrganizationName,
-			Disabled: user.Disabled, Grants: grants,
+			Disabled: user.Disabled, Grants: grants, Teams: teams,
 		}
 		return nil
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})

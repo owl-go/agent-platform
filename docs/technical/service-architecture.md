@@ -59,7 +59,7 @@ Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run
 
 ## 身份与授权边界
 
-HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。部署可以选择显式 `deny_all` 或严格 YAML 配置的通用 OIDC Adapter；后者通过 Provider Discovery 和 JWKS 验证签名、Issuer、Audience、有效期、Subject 与 Organization Claim。JWKS 暂时不可用与未知签名 Key 分别映射为基础设施不可用和未认证，不使用可伪造的组织 Header 或开发后门。`GET /v1/me` 根据已验证身份从 PostgreSQL 引导 User、Organization 与 Role Grant 的安全投影。
+HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。部署可以选择显式 `deny_all` 或严格 YAML 配置的通用 OIDC Adapter；后者通过 Provider Discovery 和 JWKS 验证签名、Issuer、Audience、有效期、Subject 与 Organization Claim。JWKS 暂时不可用与未知签名 Key 分别映射为基础设施不可用和未认证，不使用可伪造的组织 Header 或开发后门。`GET /v1/me` 根据已验证身份从 PostgreSQL 引导 User、Organization、Role Grant 与可访问 Team 的安全投影；Organization 范围 Grant 可见本 Organization 的全部 Team，Team 范围 Grant 只投影对应 Team。
 
 Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog 与 Source Control Provider 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改平台目录。
 
@@ -106,7 +106,7 @@ Webhook Worker 默认关闭，启用时严格校验 HTTPS `target_url`、请求�
 
 `frontend` 是独立的 Vue + TypeScript Interface Adapter，提供 Agent Studio、Conversation Workspace 和 Operations Console 三个产品界面。前端使用生成的 OpenAPI 类型，不复制服务端领域模型，也不承担授权、幂等或状态机不变量。
 
-页面只在未认证状态调用无身份的健康接口；受保护界面在 OIDC Authorization Code + PKCE 完成并且 `GET /v1/me` 成功前不会渲染。OIDC 状态与 Token 仅保存在浏览器 `sessionStorage`，刷新时重新引导当前 User，Token 过期或退出后立即隐藏受保护界面。所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
+页面只在未认证状态调用无身份的健康接口；受保护界面在 OIDC Authorization Code + PKCE 完成并且 `GET /v1/me` 成功前不会渲染。OIDC 状态与 Token 仅保存在浏览器 `sessionStorage`，刷新时重新引导当前 User，Token 过期或退出后立即隐藏受保护界面。Agent Studio、Conversation Workspace 与 Operations Console 使用真实路由，active Team 通过 `team` 查询参数从启动上下文 allowlist 中选择，不使用 Team Header。切换 Team 会通过带 Team Key 的路由视图销毁旧页面状态。展示边界支持 `zh-CN` 与 `en-US`，语言偏好可写入 `localStorage`，但 Token 和 Secret 不得写入。导航可按 Role Grant 提示可用能力，所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
 
 ## Retention 边界
 

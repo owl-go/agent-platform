@@ -21,6 +21,7 @@ func TestGetCurrentUserReturnsAuthenticatedIdentityProjection(t *testing.T) {
 		UserID: "00000000-0000-4000-8000-000000000002", Email: "user@example.test", DisplayName: "Platform User",
 		OrganizationID: "00000000-0000-4000-8000-000000000001", OrganizationSlug: "acme", OrganizationName: "Acme",
 		Grants: []identitydomain.Grant{{Role: identitydomain.PlatformAdministrator}, {TeamID: &teamID, Role: identitydomain.AgentBuilder}},
+		Teams:  []identitydomain.Team{{ID: teamID, Slug: "platform", Name: "Platform"}},
 	}
 	service := &GeneratedServices{dependencies: Dependencies{CurrentUserAccess: currentUserAccessStub{principal: principal}}}
 	response, err := service.GetCurrentUser(identityapplication.WithPrincipal(context.Background(), principal), &identityv1.GetCurrentUserRequest{})
@@ -35,6 +36,9 @@ func TestGetCurrentUserReturnsAuthenticatedIdentityProjection(t *testing.T) {
 	}
 	if len(response.RoleGrants) != 2 || response.RoleGrants[0].TeamId != nil || response.RoleGrants[0].Role != string(identitydomain.PlatformAdministrator) || response.RoleGrants[1].GetTeamId() != teamID {
 		t.Fatalf("Role Grants = %+v", response.RoleGrants)
+	}
+	if len(response.Teams) != 1 || response.Teams[0].Id != teamID || response.Teams[0].Slug != "platform" {
+		t.Fatalf("Teams = %+v", response.Teams)
 	}
 }
 

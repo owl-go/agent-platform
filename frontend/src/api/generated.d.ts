@@ -1141,6 +1141,7 @@ export interface components {
             display_name?: string;
             organization?: components["schemas"]["v1Organization"];
             role_grants?: components["schemas"]["v1RoleGrant"][];
+            teams?: components["schemas"]["v1Team"][];
         };
         v1DecideMemoryCandidateResponse: {
             candidate?: components["schemas"]["v1MemoryCandidate"];
@@ -1478,6 +1479,11 @@ export interface components {
             payload?: unknown;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1Team: {
+            id?: string;
+            slug?: string;
+            name?: string;
         };
         v1Usage: {
             /** Format: int64 */
