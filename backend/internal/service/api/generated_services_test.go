@@ -7,8 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	modelcatalogv1 "agent-platform/backend/api/modelcatalog/v1"
 	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
 	identitydomain "agent-platform/backend/internal/biz/identity/domain"
+	modeldomain "agent-platform/backend/internal/biz/modelcatalog/domain"
 	runtimeapplication "agent-platform/backend/internal/biz/runtimecatalog/application"
 	runtimedomain "agent-platform/backend/internal/biz/runtimecatalog/domain"
 
@@ -89,6 +91,54 @@ func TestRuntimeImageListReturnsPaginationToken(t *testing.T) {
 	if reader.query.OrganizationID != "org-1" {
 		t.Fatalf("List query Organization = %q", reader.query.OrganizationID)
 	}
+}
+
+func TestModelCatalogListHidesTeamScopedCredentials(t *testing.T) {
+	teamID := "team-2"
+	reader := modelCatalogReaderStub{credentials: []modeldomain.CredentialProfile{
+		{ID: "organization-model", OrganizationID: "org-1", Name: "shared", Kind: modeldomain.ModelCredential},
+		{ID: "team-model", OrganizationID: "org-1", TeamID: &teamID, Name: "private", Kind: modeldomain.ModelCredential},
+		{ID: "organization-git", OrganizationID: "org-1", Name: "git", Kind: modeldomain.GitSSHCredential},
+	}}
+	service := &GeneratedServices{dependencies: Dependencies{ModelCatalog: reader, ModelAccess: allowModelCatalogRead}}
+
+	response, err := service.ListCredentialProfiles(context.Background(), &modelcatalogv1.ListCredentialProfilesRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Items) != 1 || response.Items[0].Id != "organization-model" {
+		t.Fatalf("visible Credential Profiles = %+v", response.Items)
+	}
+}
+
+type modelCatalogReaderStub struct {
+	credentials []modeldomain.CredentialProfile
+}
+
+func (stub modelCatalogReaderStub) GetCredential(context.Context, string, string) (modeldomain.CredentialProfile, error) {
+	return stub.credentials[0], nil
+}
+
+func (stub modelCatalogReaderStub) ListCredentials(context.Context, string) ([]modeldomain.CredentialProfile, error) {
+	return stub.credentials, nil
+}
+
+func (modelCatalogReaderStub) GetModel(context.Context, string, string) (modeldomain.ConfiguredModel, error) {
+	return modeldomain.ConfiguredModel{}, nil
+}
+
+func (modelCatalogReaderStub) ListModels(context.Context, string) ([]modeldomain.ConfiguredModel, error) {
+	return nil, nil
+}
+
+type modelCatalogAccessFunc func(context.Context, string) (identitydomain.Actor, error)
+
+func (function modelCatalogAccessFunc) AuthorizeModelCatalogRead(ctx context.Context, token string) (identitydomain.Actor, error) {
+	return function(ctx, token)
+}
+
+var allowModelCatalogRead modelCatalogAccessFunc = func(context.Context, string) (identitydomain.Actor, error) {
+	return identitydomain.Actor{UserID: "user-1", OrganizationID: "org-1"}, nil
 }
 
 type recordingRuntimeImageReader struct {

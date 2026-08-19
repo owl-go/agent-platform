@@ -64,9 +64,12 @@ func RestoreModel(id, organizationID, name, modelID, endpoint, credentialProfile
 	}, nil
 }
 
-func (model *ConfiguredModel) SetEnabled(enabled bool, now time.Time) error {
+func (model *ConfiguredModel) SetEnabled(enabled bool, credential CredentialProfile, now time.Time) error {
 	if model.Enabled == enabled {
 		return nil
+	}
+	if enabled && (credential.ID != model.CredentialProfileID || credential.OrganizationID != model.OrganizationID || credential.TeamID != nil || credential.Kind != ModelCredential || !credential.Enabled()) {
+		return invalidf("Configured Model cannot be enabled without its enabled Organization-scoped model Credential Profile")
 	}
 	if now.IsZero() {
 		return invalidf("status change time is required")

@@ -3,18 +3,37 @@ package modelcatalog.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 option go_package = "agent-platform/backend/api/modelcatalog/v1;modelcatalogv1";
 
 service ModelCatalogService {
   rpc ListCredentialProfiles(ListCredentialProfilesRequest) returns (ListCredentialProfilesResponse) { option (google.api.http) = {get: "/v1/credential-profiles"}; }
   rpc GetCredentialProfile(GetCredentialProfileRequest) returns (CredentialProfile) { option (google.api.http) = {get: "/v1/credential-profiles/{credential_profile_id}"}; }
-  rpc RegisterCredentialProfile(RegisterCredentialProfileRequest) returns (CredentialProfile) { option (google.api.http) = {post: "/v1/credential-profiles" body: "*"}; }
-  rpc ChangeCredentialProfileStatus(ChangeCredentialProfileStatusRequest) returns (CredentialProfile) { option (google.api.http) = {patch: "/v1/credential-profiles/{credential_profile_id}/status" body: "*"}; }
+  rpc RegisterCredentialProfile(RegisterCredentialProfileRequest) returns (CredentialProfile) {
+    option (google.api.http) = {post: "/v1/credential-profiles" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc ChangeCredentialProfileStatus(ChangeCredentialProfileStatusRequest) returns (CredentialProfile) {
+    option (google.api.http) = {patch: "/v1/credential-profiles/{credential_profile_id}/status" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
   rpc ListConfiguredModels(ListConfiguredModelsRequest) returns (ListConfiguredModelsResponse) { option (google.api.http) = {get: "/v1/configured-models"}; }
   rpc GetConfiguredModel(GetConfiguredModelRequest) returns (ConfiguredModel) { option (google.api.http) = {get: "/v1/configured-models/{configured_model_id}"}; }
-  rpc RegisterConfiguredModel(RegisterConfiguredModelRequest) returns (ConfiguredModel) { option (google.api.http) = {post: "/v1/configured-models" body: "*"}; }
-  rpc ChangeConfiguredModelStatus(ChangeConfiguredModelStatusRequest) returns (ConfiguredModel) { option (google.api.http) = {patch: "/v1/configured-models/{configured_model_id}/status" body: "*"}; }
+  rpc RegisterConfiguredModel(RegisterConfiguredModelRequest) returns (ConfiguredModel) {
+    option (google.api.http) = {post: "/v1/configured-models" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc ChangeConfiguredModelStatus(ChangeConfiguredModelStatusRequest) returns (ConfiguredModel) {
+    option (google.api.http) = {patch: "/v1/configured-models/{configured_model_id}/status" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
 }
 
 message ListCredentialProfilesRequest {}

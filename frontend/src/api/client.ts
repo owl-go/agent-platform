@@ -6,6 +6,10 @@ export type CurrentUser = components["schemas"]["v1CurrentUser"];
 export type RuntimeImage = components["schemas"]["v1RuntimeImage"];
 export type RegisterRuntimeImageInput = components["schemas"]["v1RegisterRuntimeImageRequest"];
 export type RuntimeImageStatusInput = components["schemas"]["RuntimeCatalogServiceChangeRuntimeImageStatusBody"];
+export type CredentialProfile = components["schemas"]["v1CredentialProfile"];
+export type ConfiguredModel = components["schemas"]["v1ConfiguredModel"];
+export type RegisterCredentialProfileInput = components["schemas"]["v1RegisterCredentialProfileRequest"];
+export type RegisterConfiguredModelInput = components["schemas"]["v1RegisterConfiguredModelRequest"];
 
 export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
 
@@ -31,6 +35,14 @@ export interface PlatformApi {
   getRuntimeImage(id: string, signal?: AbortSignal): Promise<RuntimeImage>;
   registerRuntimeImage(input: RegisterRuntimeImageInput, idempotencyKey: string, signal?: AbortSignal): Promise<RuntimeImage>;
   changeRuntimeImageStatus(id: string, input: RuntimeImageStatusInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RuntimeImage>;
+  listCredentialProfiles(signal?: AbortSignal): Promise<CredentialProfile[]>;
+  getCredentialProfile(id: string, signal?: AbortSignal): Promise<CredentialProfile>;
+  registerCredentialProfile(input: RegisterCredentialProfileInput, idempotencyKey: string, signal?: AbortSignal): Promise<CredentialProfile>;
+  changeCredentialProfileStatus(id: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<CredentialProfile>;
+  listConfiguredModels(signal?: AbortSignal): Promise<ConfiguredModel[]>;
+  getConfiguredModel(id: string, signal?: AbortSignal): Promise<ConfiguredModel>;
+  registerConfiguredModel(input: RegisterConfiguredModelInput, idempotencyKey: string, signal?: AbortSignal): Promise<ConfiguredModel>;
+  changeConfiguredModelStatus(id: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<ConfiguredModel>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -71,6 +83,44 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     changeRuntimeImageStatus(id, input, version, idempotencyKey, signal) {
       return authorizedRequest<RuntimeImage>(`/api/v1/runtime-images/${encodeURIComponent(id)}/status`, {
         method: "PATCH", body: JSON.stringify(input), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    async listCredentialProfiles(signal) {
+      const body = await authorizedRequest<components["schemas"]["v1ListCredentialProfilesResponse"]>("/api/v1/credential-profiles", { signal });
+      return body.items ?? [];
+    },
+    getCredentialProfile(id, signal) {
+      return authorizedRequest<CredentialProfile>(`/api/v1/credential-profiles/${encodeURIComponent(id)}`, { signal });
+    },
+    registerCredentialProfile(input, idempotencyKey, signal) {
+      return authorizedRequest<CredentialProfile>("/api/v1/credential-profiles", {
+        method: "POST", body: JSON.stringify(input), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    changeCredentialProfileStatus(id, enabled, version, idempotencyKey, signal) {
+      return authorizedRequest<CredentialProfile>(`/api/v1/credential-profiles/${encodeURIComponent(id)}/status`, {
+        method: "PATCH", body: JSON.stringify({ enabled }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    async listConfiguredModels(signal) {
+      const body = await authorizedRequest<components["schemas"]["v1ListConfiguredModelsResponse"]>("/api/v1/configured-models", { signal });
+      return body.items ?? [];
+    },
+    getConfiguredModel(id, signal) {
+      return authorizedRequest<ConfiguredModel>(`/api/v1/configured-models/${encodeURIComponent(id)}`, { signal });
+    },
+    registerConfiguredModel(input, idempotencyKey, signal) {
+      return authorizedRequest<ConfiguredModel>("/api/v1/configured-models", {
+        method: "POST", body: JSON.stringify(input), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    changeConfiguredModelStatus(id, enabled, version, idempotencyKey, signal) {
+      return authorizedRequest<ConfiguredModel>(`/api/v1/configured-models/${encodeURIComponent(id)}/status`, {
+        method: "PATCH", body: JSON.stringify({ enabled }), signal,
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
       });
     },

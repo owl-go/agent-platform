@@ -9,6 +9,7 @@ import (
 	"agent-platform/backend/internal/biz/modelcatalog/domain"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository struct{ db *gorm.DB }
@@ -117,9 +118,17 @@ func (repository *Repository) CreateModel(ctx context.Context, model domain.Conf
 		Endpoint: model.Endpoint, CredentialProfileID: model.CredentialProfileID, Enabled: model.Enabled,
 		CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt, Version: model.Version,
 	}
-	if err := repository.db.WithContext(ctx).Create(&record).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockEnabledModelCredential(tx, model.OrganizationID, model.CredentialProfileID); err != nil {
+			return err
+		}
+		return tx.Create(&record).Error
+	}); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return domain.ErrCatalogNameExists
+		}
+		if errors.Is(err, domain.ErrInvalidCatalogInput) {
+			return err
 		}
 		return fmt.Errorf("create Configured Model: %w", err)
 	}
@@ -154,14 +163,35 @@ func (repository *Repository) ListModels(ctx context.Context, organizationID str
 }
 
 func (repository *Repository) UpdateModelStatus(ctx context.Context, model domain.ConfiguredModel, expectedVersion int64) error {
-	result := repository.db.WithContext(ctx).Model(&modelRecord{}).
-		Where("organization_id = ? AND id = ? AND version = ?", model.OrganizationID, model.ID, expectedVersion).
-		Updates(map[string]any{"enabled": model.Enabled, "updated_at": model.UpdatedAt, "version": model.Version})
-	if result.Error != nil {
-		return fmt.Errorf("update Configured Model status: %w", result.Error)
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if model.Enabled {
+			if err := lockEnabledModelCredential(tx, model.OrganizationID, model.CredentialProfileID); err != nil {
+				return err
+			}
+		}
+		result := tx.Model(&modelRecord{}).
+			Where("organization_id = ? AND id = ? AND version = ?", model.OrganizationID, model.ID, expectedVersion).
+			Updates(map[string]any{"enabled": model.Enabled, "updated_at": model.UpdatedAt, "version": model.Version})
+		if result.Error != nil {
+			return fmt.Errorf("update Configured Model status: %w", result.Error)
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConcurrentUpdate
+		}
+		return nil
+	})
+}
+
+func lockEnabledModelCredential(tx *gorm.DB, organizationID, credentialID string) error {
+	var record credentialRecord
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("organization_id = ? AND id = ? AND team_id IS NULL AND kind = ? AND disabled_at IS NULL", organizationID, credentialID, domain.ModelCredential).
+		Take(&record).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("%w: Configured Model requires an enabled Organization-scoped model Credential Profile", domain.ErrInvalidCatalogInput)
 	}
-	if result.RowsAffected != 1 {
-		return domain.ErrConcurrentUpdate
+	if err != nil {
+		return fmt.Errorf("lock Configured Model Credential Profile: %w", err)
 	}
 	return nil
 }

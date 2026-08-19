@@ -160,7 +160,14 @@ func (service *Service) ChangeModelStatus(ctx context.Context, command ChangeSta
 		return domain.ConfiguredModel{}, domain.ErrConcurrentUpdate
 	}
 	originalVersion := model.Version
-	if err := model.SetEnabled(command.Enabled, service.clock.Now()); err != nil {
+	credential := domain.CredentialProfile{}
+	if command.Enabled && !model.Enabled {
+		credential, err = service.repository.GetCredential(ctx, command.OrganizationID, model.CredentialProfileID)
+		if err != nil {
+			return domain.ConfiguredModel{}, err
+		}
+	}
+	if err := model.SetEnabled(command.Enabled, credential, service.clock.Now()); err != nil {
 		return domain.ConfiguredModel{}, err
 	}
 	if model.Version != originalVersion {

@@ -80,6 +80,87 @@ func TestRepositoryCredentialAndModelLifecycle(t *testing.T) {
 	}); !errors.Is(err, domain.ErrConcurrentUpdate) {
 		t.Fatalf("stale model update error = %v", err)
 	}
+	if _, err := service.ChangeModelStatus(context.Background(), application.ChangeStatusCommand{
+		OrganizationID: organizationID, ID: model.ID, ExpectedVersion: 2, Enabled: true,
+	}); !errors.Is(err, domain.ErrInvalidCatalogInput) {
+		t.Fatalf("enable with disabled Credential Profile error = %v", err)
+	}
+}
+
+func TestRepositorySerializesCredentialDisableAndModelEnable(t *testing.T) {
+	database := openIntegrationDatabase(t)
+	ctx := context.Background()
+	suffix := fmt.Sprintf("model-catalog-race-%d", time.Now().UnixNano())
+	var organizationID string
+	if err := database.ORM().Raw(`INSERT INTO organizations (slug, name) VALUES (?, 'Model Catalog Race Test') RETURNING id::text`, suffix).Scan(&organizationID).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.ORM().Exec("DELETE FROM organizations WHERE id = ?", organizationID) })
+
+	now := time.Now().UTC()
+	credentialID, modelID := uuid.NewString(), uuid.NewString()
+	service := application.NewWithDependencies(modelgorm.New(database.ORM()), fixedClock(now), &sequenceIDs{values: []string{credentialID, modelID}})
+	credential, err := service.RegisterCredential(ctx, application.RegisterCredentialCommand{
+		OrganizationID: organizationID, Name: "race-model-key", Kind: domain.ModelCredential, SecretRef: "vault://agent-platform/race-model-key",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	model, err := service.RegisterModel(ctx, application.RegisterModelCommand{
+		OrganizationID: organizationID, Name: "race-model", ModelID: "race-model-id", Endpoint: "https://models.example.test/v1", CredentialProfileID: credential.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.ChangeModelStatus(ctx, application.ChangeStatusCommand{
+		OrganizationID: organizationID, ID: model.ID, ExpectedVersion: model.Version, Enabled: false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	disableTx := database.ORM().Begin()
+	if disableTx.Error != nil {
+		t.Fatal(disableTx.Error)
+	}
+	disableService := application.NewWithDependencies(modelgorm.New(disableTx), fixedClock(now.Add(time.Second)), &sequenceIDs{})
+	if _, err := disableService.ChangeCredentialStatus(ctx, application.ChangeStatusCommand{
+		OrganizationID: organizationID, ID: credential.ID, ExpectedVersion: credential.Version, Enabled: false,
+	}); err != nil {
+		disableTx.Rollback()
+		t.Fatal(err)
+	}
+
+	enableResult := make(chan error, 1)
+	go func() {
+		_, enableErr := service.ChangeModelStatus(ctx, application.ChangeStatusCommand{
+			OrganizationID: organizationID, ID: model.ID, ExpectedVersion: 2, Enabled: true,
+		})
+		enableResult <- enableErr
+	}()
+	select {
+	case err := <-enableResult:
+		disableTx.Rollback()
+		t.Fatalf("model enable completed before Credential Profile transaction committed: %v", err)
+	case <-time.After(150 * time.Millisecond):
+	}
+	if err := disableTx.Commit().Error; err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-enableResult:
+		if !errors.Is(err, domain.ErrInvalidCatalogInput) {
+			t.Fatalf("concurrent model enable error = %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("concurrent model enable did not finish after Credential Profile commit")
+	}
+	persisted, err := service.GetModel(ctx, organizationID, model.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Enabled {
+		t.Fatal("Configured Model remained enabled after its Credential Profile was disabled")
+	}
 }
 
 func openIntegrationDatabase(t *testing.T) *gormdb.Database {

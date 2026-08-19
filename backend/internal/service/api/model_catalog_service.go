@@ -25,6 +25,9 @@ func (service *GeneratedServices) ListCredentialProfiles(ctx context.Context, _ 
 	}
 	items := make([]credentialProfileResponse, 0, len(values))
 	for _, value := range values {
+		if !isOrganizationModelCredential(value) {
+			continue
+		}
 		items = append(items, newCredentialProfileResponse(value))
 	}
 	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items}, &modelcatalogv1.ListCredentialProfilesResponse{})
@@ -45,7 +48,14 @@ func (service *GeneratedServices) GetCredentialProfile(ctx context.Context, requ
 	if err != nil {
 		return nil, publicError(500, "model_catalog_query_failed")
 	}
+	if !isOrganizationModelCredential(value) {
+		return nil, publicError(404, "credential_profile_not_found")
+	}
 	return mappedResponse(ctx, http.StatusOK, newCredentialProfileResponse(value), &modelcatalogv1.CredentialProfile{})
+}
+
+func isOrganizationModelCredential(profile modeldomain.CredentialProfile) bool {
+	return profile.TeamID == nil && profile.Kind == modeldomain.ModelCredential
 }
 
 func (service *GeneratedServices) RegisterCredentialProfile(ctx context.Context, request *modelcatalogv1.RegisterCredentialProfileRequest) (*modelcatalogv1.CredentialProfile, error) {

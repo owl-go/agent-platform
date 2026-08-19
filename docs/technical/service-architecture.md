@@ -95,7 +95,7 @@ WHERE organization_id IS NULL
    OR status = 'production' AND (conformance_evidence_key IS NULL OR conformance_evidence_sha256 IS NULL);
 ```
 
-Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
+Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Model Catalog 的读取接口只投影 Organization Scope、类型为 `model` 的 Credential Profile，避免 Team 范围凭证元数据跨 Team 暴露。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile；注册或从禁用状态重新启用 Configured Model 时，Repository 会锁定对应 Credential Profile 并在写入前重新检查这个约束，使并发禁用与模型写入串行。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
 
 ## 幂等写事务
 

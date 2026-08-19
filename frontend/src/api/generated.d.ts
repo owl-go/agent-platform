@@ -2739,7 +2739,9 @@ export interface operations {
     ModelCatalogService_RegisterConfiguredModel: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2803,7 +2805,10 @@ export interface operations {
     ModelCatalogService_ChangeConfiguredModelStatus: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 configured_model_id: string;
             };
@@ -2867,7 +2872,9 @@ export interface operations {
     ModelCatalogService_RegisterCredentialProfile: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2931,7 +2938,10 @@ export interface operations {
     ModelCatalogService_ChangeCredentialProfileStatus: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 credential_profile_id: string;
             };

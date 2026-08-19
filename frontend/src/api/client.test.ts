@@ -71,6 +71,21 @@ describe("PlatformApi", () => {
     expect(error).toMatchObject({ kind: "conflict", status: 412, code: "version_conflict", requestID: "request-1" });
   });
 
+  it("keeps Credential Profile references out of URLs and adds write controls", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "credential-1", enabled: true, version: 1 }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.registerCredentialProfile({ name: "primary", kind: "model", secret_ref: "vault://platform/model" }, "credential-intent");
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/v1/credential-profiles");
+    expect(String(url)).not.toContain("vault://platform/model");
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("credential-intent");
+    expect(init?.body).toContain("vault://platform/model");
+  });
+
   it("fails before fetch when the authenticated token is unavailable", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

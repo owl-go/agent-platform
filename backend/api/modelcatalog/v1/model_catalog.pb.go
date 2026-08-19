@@ -7,6 +7,7 @@
 package modelcatalogv1
 
 import (
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -995,7 +996,7 @@ var File_modelcatalog_v1_model_catalog_proto protoreflect.FileDescriptor
 
 const file_modelcatalog_v1_model_catalog_proto_rawDesc = "" +
 	"\n" +
-	"#modelcatalog/v1/model_catalog.proto\x12\x0fmodelcatalog.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1f\n" +
+	"#modelcatalog/v1/model_catalog.proto\x12\x0fmodelcatalog.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\x1f\n" +
 	"\x1dListCredentialProfilesRequest\"Z\n" +
 	"\x1eListCredentialProfilesResponse\x128\n" +
 	"\x05items\x18\x01 \x03(\v2\".modelcatalog.v1.CredentialProfileR\x05items\"Q\n" +
@@ -1062,17 +1063,28 @@ const file_modelcatalog_v1_model_catalog_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\t \x01(\x03R\aversion2\xa5\n" +
-	"\n" +
+	"\aversion\x18\t \x01(\x03R\aversion2\xb5\v\n" +
 	"\x13ModelCatalogService\x12\x9a\x01\n" +
 	"\x16ListCredentialProfiles\x12..modelcatalog.v1.ListCredentialProfilesRequest\x1a/.modelcatalog.v1.ListCredentialProfilesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/credential-profiles\x12\xa1\x01\n" +
-	"\x14GetCredentialProfile\x12,.modelcatalog.v1.GetCredentialProfileRequest\x1a\".modelcatalog.v1.CredentialProfile\"7\x82\xd3\xe4\x93\x021\x12//v1/credential-profiles/{credential_profile_id}\x12\x96\x01\n" +
-	"\x19RegisterCredentialProfile\x121.modelcatalog.v1.RegisterCredentialProfileRequest\x1a\".modelcatalog.v1.CredentialProfile\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/credential-profiles\x12\xbd\x01\n" +
-	"\x1dChangeCredentialProfileStatus\x125.modelcatalog.v1.ChangeCredentialProfileStatusRequest\x1a\".modelcatalog.v1.CredentialProfile\"A\x82\xd3\xe4\x93\x02;:\x01*26/v1/credential-profiles/{credential_profile_id}/status\x12\x92\x01\n" +
+	"\x14GetCredentialProfile\x12,.modelcatalog.v1.GetCredentialProfileRequest\x1a\".modelcatalog.v1.CredentialProfile\"7\x82\xd3\xe4\x93\x021\x12//v1/credential-profiles/{credential_profile_id}\x12\xb2\x01\n" +
+	"\x19RegisterCredentialProfile\x121.modelcatalog.v1.RegisterCredentialProfileRequest\x1a\".modelcatalog.v1.CredentialProfile\">\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/credential-profiles\x12\xe9\x01\n" +
+	"\x1dChangeCredentialProfileStatus\x125.modelcatalog.v1.ChangeCredentialProfileStatusRequest\x1a\".modelcatalog.v1.CredentialProfile\"m\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02;:\x01*26/v1/credential-profiles/{credential_profile_id}/status\x12\x92\x01\n" +
 	"\x14ListConfiguredModels\x12,.modelcatalog.v1.ListConfiguredModelsRequest\x1a-.modelcatalog.v1.ListConfiguredModelsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/configured-models\x12\x97\x01\n" +
-	"\x12GetConfiguredModel\x12*.modelcatalog.v1.GetConfiguredModelRequest\x1a .modelcatalog.v1.ConfiguredModel\"3\x82\xd3\xe4\x93\x02-\x12+/v1/configured-models/{configured_model_id}\x12\x8e\x01\n" +
-	"\x17RegisterConfiguredModel\x12/.modelcatalog.v1.RegisterConfiguredModelRequest\x1a .modelcatalog.v1.ConfiguredModel\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/configured-models\x12\xb3\x01\n" +
-	"\x1bChangeConfiguredModelStatus\x123.modelcatalog.v1.ChangeConfiguredModelStatusRequest\x1a .modelcatalog.v1.ConfiguredModel\"=\x82\xd3\xe4\x93\x027:\x01*22/v1/configured-models/{configured_model_id}/statusB;Z9agent-platform/backend/api/modelcatalog/v1;modelcatalogv1b\x06proto3"
+	"\x12GetConfiguredModel\x12*.modelcatalog.v1.GetConfiguredModelRequest\x1a .modelcatalog.v1.ConfiguredModel\"3\x82\xd3\xe4\x93\x02-\x12+/v1/configured-models/{configured_model_id}\x12\xaa\x01\n" +
+	"\x17RegisterConfiguredModel\x12/.modelcatalog.v1.RegisterConfiguredModelRequest\x1a .modelcatalog.v1.ConfiguredModel\"<\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/configured-models\x12\xdf\x01\n" +
+	"\x1bChangeConfiguredModelStatus\x123.modelcatalog.v1.ChangeConfiguredModelStatusRequest\x1a .modelcatalog.v1.ConfiguredModel\"i\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x027:\x01*22/v1/configured-models/{configured_model_id}/statusB;Z9agent-platform/backend/api/modelcatalog/v1;modelcatalogv1b\x06proto3"
 
 var (
 	file_modelcatalog_v1_model_catalog_proto_rawDescOnce sync.Once

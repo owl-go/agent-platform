@@ -105,4 +105,6 @@ const platformApiStub: PlatformApi = {
   getRuntimeImage: vi.fn(),
   registerRuntimeImage: vi.fn(),
   changeRuntimeImageStatus: vi.fn(),
+  listCredentialProfiles: vi.fn(async () => []), getCredentialProfile: vi.fn(), registerCredentialProfile: vi.fn(), changeCredentialProfileStatus: vi.fn(),
+  listConfiguredModels: vi.fn(async () => []), getConfiguredModel: vi.fn(), registerConfiguredModel: vi.fn(), changeConfiguredModelStatus: vi.fn(),
 };

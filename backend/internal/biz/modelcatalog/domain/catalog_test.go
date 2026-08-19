@@ -30,11 +30,38 @@ func TestCredentialAndConfiguredModelRegistration(t *testing.T) {
 	if credential.Enabled() || credential.Version != 2 {
 		t.Fatalf("disabled Credential Profile = %+v", credential)
 	}
-	if err := model.SetEnabled(false, now.Add(time.Minute)); err != nil {
+	if err := model.SetEnabled(false, CredentialProfile{}, now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	if model.Enabled || model.Version != 2 {
 		t.Fatalf("disabled Configured Model = %+v", model)
+	}
+}
+
+func TestConfiguredModelCannotBeEnabledWithDisabledCredential(t *testing.T) {
+	now := time.Now().UTC()
+	credential, err := RegisterCredential(CredentialRegistration{
+		ID: "credential-1", OrganizationID: "org-1", Name: "model-key", Kind: ModelCredential,
+		SecretRef: "vault://agent-platform/model-key", Now: now,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	model, err := RegisterModel(ModelRegistration{
+		ID: "model-1", OrganizationID: "org-1", Name: "primary", ModelID: "model-name",
+		Endpoint: "https://models.example.test/v1", Credential: credential, Now: now,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := model.SetEnabled(false, CredentialProfile{}, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := credential.SetEnabled(false, now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := model.SetEnabled(true, credential, now.Add(3*time.Minute)); err == nil {
+		t.Fatal("Configured Model was enabled with a disabled Credential Profile")
 	}
 }
 
