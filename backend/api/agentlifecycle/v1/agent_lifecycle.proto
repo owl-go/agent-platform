@@ -3,27 +3,76 @@ package agentlifecycle.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 import "types/v1/types.proto";
 
 option go_package = "agent-platform/backend/api/agentlifecycle/v1;agentlifecyclev1";
 
 service AgentLifecycleService {
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse) { option (google.api.http) = {get: "/v1/agents"}; }
-  rpc CreateAgent(CreateAgentRequest) returns (Agent) { option (google.api.http) = {post: "/v1/agents" body: "*"}; }
+  rpc CreateAgent(CreateAgentRequest) returns (Agent) {
+    option (google.api.http) = {post: "/v1/agents" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
   rpc GetAgent(GetAgentRequest) returns (Agent) { option (google.api.http) = {get: "/v1/agents/{agent_id}"}; }
-  rpc UpdateAgent(UpdateAgentRequest) returns (Agent) { option (google.api.http) = {patch: "/v1/agents/{agent_id}" body: "*"}; }
+  rpc UpdateAgent(UpdateAgentRequest) returns (Agent) {
+    option (google.api.http) = {patch: "/v1/agents/{agent_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
   rpc ListAgentDrafts(ListAgentDraftsRequest) returns (ListAgentDraftsResponse) { option (google.api.http) = {get: "/v1/agents/{agent_id}/drafts"}; }
-  rpc CreateAgentDraft(CreateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts" body: "*"}; }
+  rpc CreateAgentDraft(CreateAgentDraftRequest) returns (AgentDraft) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
   rpc GetAgentDraft(GetAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {get: "/v1/agents/{agent_id}/drafts/{draft_id}"}; }
-  rpc UpdateAgentDraft(UpdateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}" body: "*"}; }
-  rpc ValidateAgentDraft(ValidateAgentDraftRequest) returns (AgentDraft) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/validation" body: "*"}; }
-  rpc RequestAgentDraftApproval(RequestAgentDraftApprovalRequest) returns (ReleaseApproval) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"}; }
-  rpc DecideAgentDraftApproval(DecideAgentDraftApprovalRequest) returns (ReleaseApproval) { option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"}; }
-  rpc PublishAgentDraft(PublishAgentDraftRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/release" body: "*"}; }
+  rpc UpdateAgentDraft(UpdateAgentDraftRequest) returns (AgentDraft) {
+    option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc ValidateAgentDraft(ValidateAgentDraftRequest) returns (AgentDraft) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/validation" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc RequestAgentDraftApproval(RequestAgentDraftApprovalRequest) returns (ReleaseApproval) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc DecideAgentDraftApproval(DecideAgentDraftApprovalRequest) returns (ReleaseApproval) {
+    option (google.api.http) = {patch: "/v1/agents/{agent_id}/drafts/{draft_id}/approval" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc PublishAgentDraft(PublishAgentDraftRequest) returns (AgentRelease) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/drafts/{draft_id}/release" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
   rpc ListAgentReleases(ListAgentReleasesRequest) returns (ListAgentReleasesResponse) { option (google.api.http) = {get: "/v1/agents/{agent_id}/releases"}; }
   rpc GetAgentRelease(GetAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {get: "/v1/agents/{agent_id}/releases/{release_id}"}; }
-  rpc DeprecateAgentRelease(DeprecateAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/deprecation" body: "*"}; }
-  rpc BlockAgentRelease(BlockAgentReleaseRequest) returns (AgentRelease) { option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/block" body: "*"}; }
+  rpc DeprecateAgentRelease(DeprecateAgentReleaseRequest) returns (AgentRelease) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/deprecation" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc BlockAgentRelease(BlockAgentReleaseRequest) returns (AgentRelease) {
+    option (google.api.http) = {post: "/v1/agents/{agent_id}/releases/{release_id}/block" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
 }
 
 message ListAgentsRequest { string team_id = 1; }

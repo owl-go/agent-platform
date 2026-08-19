@@ -198,10 +198,27 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 			t.Fatalf("%s registration does not declare Idempotency-Key", path)
 		}
 	}
+	for _, path := range []string{
+		"/v1/agents",
+		"/v1/agents/{agent_id}/drafts",
+		"/v1/agents/{agent_id}/drafts/{draft_id}/approval",
+		"/v1/agents/{agent_id}/drafts/{draft_id}/release",
+	} {
+		operation := paths[path].(map[string]any)["post"].(map[string]any)
+		if !hasParameter(operation["parameters"].([]any), "header", "Idempotency-Key", true) {
+			t.Fatalf("%s creation does not declare Idempotency-Key", path)
+		}
+	}
 	for path, method := range map[string]string{
 		"/v1/source-control-providers/{source_control_provider_id}/status": "patch",
 		"/v1/repository-bindings/{repository_binding_id}":                  "patch",
 		"/v1/repository-bindings/{repository_binding_id}/validation":       "post",
+		"/v1/agents/{agent_id}":                                   "patch",
+		"/v1/agents/{agent_id}/drafts/{draft_id}":                 "patch",
+		"/v1/agents/{agent_id}/drafts/{draft_id}/validation":      "post",
+		"/v1/agents/{agent_id}/drafts/{draft_id}/approval":        "patch",
+		"/v1/agents/{agent_id}/releases/{release_id}/deprecation": "post",
+		"/v1/agents/{agent_id}/releases/{release_id}/block":       "post",
 	} {
 		operation := paths[path].(map[string]any)[method].(map[string]any)
 		parameters := operation["parameters"].([]any)

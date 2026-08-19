@@ -55,6 +55,9 @@ func (validator *Validator) Validate(ctx context.Context, agent domain.Agent, dr
 	var bindingReport sourcedomain.ValidationReport
 	if len(binding.ValidationReport) == 0 || json.Unmarshal(binding.ValidationReport, &bindingReport) != nil || !bindingReport.Valid {
 		errorsByField["repository_binding_id"] = "Repository Binding does not have a valid Validation Report"
+		for field, message := range bindingReport.Errors {
+			errorsByField[field] = message
+		}
 	}
 	var allowedRuntimes []string
 	if err := json.Unmarshal(binding.AllowedRuntimeImageIDs, &allowedRuntimes); err != nil {

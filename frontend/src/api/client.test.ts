@@ -103,6 +103,22 @@ describe("PlatformApi", () => {
     expect(headers.get("If-Match")).toBe('"2"');
   });
 
+  it("scopes Agent Draft writes and sends Version plus stable intent headers", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "draft-1", version: 3 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+    const input = { release_risk: "low", configuration: { instructions: "Ship safely", repository_binding_id: "binding-1", runtime_image_id: "runtime-1", configured_model_id: "model-1" } };
+
+    await api.updateAgentDraft("agent-1", "draft-1", "team-1", input, 2, "draft-intent");
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/v1/agents/agent-1/drafts/draft-1");
+    expect(JSON.parse(String(init?.body))).toMatchObject({ team_id: "team-1", release_risk: "low" });
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("draft-intent");
+    expect(headers.get("If-Match")).toBe('"2"');
+  });
+
   it("fails before fetch when the authenticated token is unavailable", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

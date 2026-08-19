@@ -313,6 +313,65 @@ browser --session "$playwright_session" run-code 'async (page) => {
 }'
 
 browser --session "$playwright_session" run-code 'async (page) => {
+  const teamID = "66666666-6666-4666-8666-666666666666";
+  const providerRecord = page.locator(".catalog-record[data-testid^=provider-]").filter({ hasText: "acceptance-github" });
+  const providerID = (await providerRecord.getAttribute("data-testid")).replace("provider-", "");
+  await page.getByTestId(`toggle-provider-${providerID}`).click();
+  await page.getByTestId("repository-notice").waitFor();
+  const bindingRecord = page.locator(".binding-record").filter({ hasText: "acceptance-repository" });
+  const bindingID = (await bindingRecord.getAttribute("data-testid")).replace("binding-", "");
+  await page.getByTestId(`validate-binding-${bindingID}`).click();
+  await page.getByTestId("repository-notice").waitFor();
+  if (!(await bindingRecord.textContent()).match(/Validated|验证通过/)) throw new Error("Repository Binding was not ready for Agent Draft validation");
+
+  await page.getByTestId("create-agent").click();
+  await page.getByTestId("agent-name").fill("acceptance-coding-agent");
+  await page.getByTestId("agent-description").fill("Browser acceptance Agent");
+  await page.getByTestId("submit-agent").click();
+  await page.getByTestId("agent-notice").waitFor();
+  const agentButton = page.locator(".agent-list > button").filter({ hasText: "acceptance-coding-agent" });
+  const agentID = (await agentButton.getAttribute("data-testid")).replace("agent-", "");
+  await page.getByTestId("create-draft").click();
+  await page.getByTestId("draft-instructions").fill("Implement, test, and push the requested change.");
+  await page.getByTestId("submit-draft").click();
+  await page.getByTestId("agent-notice").waitFor();
+  const draftCard = page.locator(".draft-card").first();
+  const draftID = (await draftCard.getAttribute("data-testid")).replace("draft-", "");
+
+  await page.getByTestId(`edit-draft-${draftID}`).click();
+  await page.getByTestId("draft-input-budget").fill("100001");
+  await page.getByTestId("submit-draft").click();
+  await page.getByTestId("agent-notice").waitFor();
+  await page.getByTestId(`validate-draft-${draftID}`).click();
+  await page.getByTestId("agent-notice").waitFor();
+  if (!(await page.getByTestId(`draft-${draftID}`).textContent()).includes("model_budget")) throw new Error("invalid Draft budget did not produce a field-level Validation Report");
+
+  await page.getByTestId(`edit-draft-${draftID}`).click();
+  await page.getByTestId("draft-input-budget").fill("100000");
+  await page.getByTestId("submit-draft").click();
+  await page.getByTestId("agent-notice").waitFor();
+  const editedText = await page.getByTestId(`draft-${draftID}`).textContent();
+  if (editedText.includes("model_budget") || !editedText.match(/Unvalidated|未保存验证/)) throw new Error("Draft edit retained a stale Validation Report");
+
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const current = await page.evaluate(async ({ accessToken, agentID, draftID, teamID }) => fetch(`/api/v1/agents/${agentID}/drafts/${draftID}?team_id=${teamID}`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((response) => response.json()), { accessToken, agentID, draftID, teamID });
+  const validationHeaders = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "agent-draft-validation-replay", "If-Match": `"${current.version}"` };
+  const validate = async () => page.evaluate(async ({ accessToken, agentID, draftID, teamID, validationHeaders }) => { const response = await fetch(`/api/v1/agents/${agentID}/drafts/${draftID}/validation`, { method: "POST", headers: validationHeaders, body: JSON.stringify({ team_id: teamID }) }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed"), body: await response.json() }; }, { accessToken, agentID, draftID, teamID, validationHeaders });
+  const firstValidation = await validate();
+  const replayedValidation = await validate();
+  if (firstValidation.status !== 200 || firstValidation.body.state !== "ready" || replayedValidation.status !== 200 || replayedValidation.replayed !== "true" || replayedValidation.body.version !== firstValidation.body.version) throw new Error("Agent Draft validation was not idempotently replayed");
+
+  const staleUpdate = await page.evaluate(async ({ accessToken, agentID, draftID, teamID, current }) => { const response = await fetch(`/api/v1/agents/${agentID}/drafts/${draftID}`, { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "agent-draft-stale-update", "If-Match": "1" }, body: JSON.stringify({ team_id: teamID, configuration: current.configuration, release_risk: current.release_risk }) }); return { status: response.status, body: await response.json() }; }, { accessToken, agentID, draftID, teamID, current });
+  if (staleUpdate.status !== 412 || staleUpdate.body.error !== "version_conflict") throw new Error("stale Agent Draft Version was not rejected");
+  const crossTeam = await page.evaluate(async ({ accessToken, agentID }) => fetch(`/api/v1/agents/${agentID}?team_id=55555555-5555-4555-8555-555555555555`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((response) => response.status), { accessToken, agentID });
+  if (crossTeam !== 404) throw new Error("cross-Team Agent lookup disclosed the resource");
+  await page.reload();
+  await page.getByTestId(`draft-${draftID}`).waitFor();
+  const persisted = await page.getByTestId(`draft-${draftID}`).textContent();
+  if (!persisted.match(/Ready/) || !(await page.locator("body").textContent()).includes("acceptance-coding-agent")) throw new Error("Agent or ready Draft did not persist across refresh");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
   const runtimeButton = page.locator(".catalog-list > button").first();
   const runtimeID = (await runtimeButton.getAttribute("data-testid")).replace("runtime-", "");
   const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
@@ -333,6 +392,7 @@ docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d a
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/runtime-images", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "browser-denied-intent" }, body: JSON.stringify({ runtime: "openclaw", cli_version: "1", adapter_version: "1", image_digest: "registry.example/openclaw@sha256:" + "e".repeat(64) }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified the Organization Runtime Catalog"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/credential-profiles", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "model-catalog-denied" }, body: JSON.stringify({ name: "denied-model-key", kind: "model", secret_ref: "vault://denied/model" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified the Model Catalog"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/repository-bindings", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "binding-denied" }, body: JSON.stringify({ binding: { team_id: "66666666-6666-4666-8666-666666666666", name: "denied" } }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified a Repository Binding"); }'
+browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/agents", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "agent-build-denied" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", name: "denied-agent" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "agent_build_access_denied") throw new Error("out-of-Team administrator created an Agent"); }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = NULL WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null

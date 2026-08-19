@@ -1683,7 +1683,9 @@ export interface operations {
     AgentLifecycleService_CreateAgent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1749,7 +1751,10 @@ export interface operations {
     AgentLifecycleService_UpdateAgent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
             };
@@ -1817,7 +1822,9 @@ export interface operations {
     AgentLifecycleService_CreateAgentDraft: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 agent_id: string;
             };
@@ -1886,7 +1893,10 @@ export interface operations {
     AgentLifecycleService_UpdateAgentDraft: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
                 draft_id: string;
@@ -1922,7 +1932,9 @@ export interface operations {
     AgentLifecycleService_RequestAgentDraftApproval: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 agent_id: string;
                 draft_id: string;
@@ -1958,7 +1970,10 @@ export interface operations {
     AgentLifecycleService_DecideAgentDraftApproval: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
                 draft_id: string;
@@ -1994,7 +2009,9 @@ export interface operations {
     AgentLifecycleService_PublishAgentDraft: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 agent_id: string;
                 draft_id: string;
@@ -2030,7 +2047,10 @@ export interface operations {
     AgentLifecycleService_ValidateAgentDraft: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
                 draft_id: string;
@@ -2167,7 +2187,10 @@ export interface operations {
     AgentLifecycleService_BlockAgentRelease: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
                 release_id: string;
@@ -2203,7 +2226,10 @@ export interface operations {
     AgentLifecycleService_DeprecateAgentRelease: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 agent_id: string;
                 release_id: string;

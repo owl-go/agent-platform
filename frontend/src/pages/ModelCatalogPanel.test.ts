@@ -88,5 +88,6 @@ function apiStub(): PlatformApi {
     listConfiguredModels: vi.fn(async () => [model]), getConfiguredModel: vi.fn(async () => model), registerConfiguredModel: vi.fn(async () => model), changeConfiguredModelStatus: vi.fn(async () => model),
     listSourceControlProviders: vi.fn(async () => []), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(), changeSourceControlProviderStatus: vi.fn(),
     listRepositoryBindings: vi.fn(async () => []), getRepositoryBinding: vi.fn(), registerRepositoryBinding: vi.fn(), updateRepositoryBinding: vi.fn(), validateRepositoryBinding: vi.fn(),
+    listAgents: vi.fn(async () => []), getAgent: vi.fn(), createAgent: vi.fn(), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => []), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(), updateAgentDraft: vi.fn(), validateAgentDraft: vi.fn(),
   };
 }

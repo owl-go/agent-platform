@@ -8,6 +8,7 @@ package agentlifecyclev1
 
 import (
 	v1 "agent-platform/backend/api/types/v1"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -2180,7 +2181,7 @@ var File_agentlifecycle_v1_agent_lifecycle_proto protoreflect.FileDescriptor
 
 const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\n" +
-	"'agentlifecycle/v1/agent_lifecycle.proto\x12\x11agentlifecycle.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14types/v1/types.proto\",\n" +
+	"'agentlifecycle/v1/agent_lifecycle.proto\x12\x11agentlifecycle.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\",\n" +
 	"\x11ListAgentsRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\"D\n" +
 	"\x12ListAgentsResponse\x12.\n" +
@@ -2344,27 +2345,59 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"releasedAt\x12D\n" +
 	"\rdeprecated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x00R\fdeprecatedAt\x88\x01\x01\x12\x18\n" +
 	"\aversion\x18\r \x01(\x03R\aversionB\x10\n" +
-	"\x0e_deprecated_at2\xaa\x12\n" +
+	"\x0e_deprecated_at2\xa4\x15\n" +
 	"\x15AgentLifecycleService\x12m\n" +
 	"\n" +
 	"ListAgents\x12$.agentlifecycle.v1.ListAgentsRequest\x1a%.agentlifecycle.v1.ListAgentsResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
-	"/v1/agents\x12e\n" +
-	"\vCreateAgent\x12%.agentlifecycle.v1.CreateAgentRequest\x1a\x18.agentlifecycle.v1.Agent\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
+	"/v1/agents\x12\x81\x01\n" +
+	"\vCreateAgent\x12%.agentlifecycle.v1.CreateAgentRequest\x1a\x18.agentlifecycle.v1.Agent\"1\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/agents\x12g\n" +
-	"\bGetAgent\x12\".agentlifecycle.v1.GetAgentRequest\x1a\x18.agentlifecycle.v1.Agent\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/agents/{agent_id}\x12p\n" +
-	"\vUpdateAgent\x12%.agentlifecycle.v1.UpdateAgentRequest\x1a\x18.agentlifecycle.v1.Agent\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/agents/{agent_id}\x12\x8e\x01\n" +
-	"\x0fListAgentDrafts\x12).agentlifecycle.v1.ListAgentDraftsRequest\x1a*.agentlifecycle.v1.ListAgentDraftsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/agents/{agent_id}/drafts\x12\x86\x01\n" +
-	"\x10CreateAgentDraft\x12*.agentlifecycle.v1.CreateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/agents/{agent_id}/drafts\x12\x88\x01\n" +
-	"\rGetAgentDraft\x12'.agentlifecycle.v1.GetAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"/\x82\xd3\xe4\x93\x02)\x12'/v1/agents/{agent_id}/drafts/{draft_id}\x12\x91\x01\n" +
-	"\x10UpdateAgentDraft\x12*.agentlifecycle.v1.UpdateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"2\x82\xd3\xe4\x93\x02,:\x01*2'/v1/agents/{agent_id}/drafts/{draft_id}\x12\xa0\x01\n" +
-	"\x12ValidateAgentDraft\x12,.agentlifecycle.v1.ValidateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"=\x82\xd3\xe4\x93\x027:\x01*\"2/v1/agents/{agent_id}/drafts/{draft_id}/validation\x12\xb1\x01\n" +
-	"\x19RequestAgentDraftApproval\x123.agentlifecycle.v1.RequestAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\";\x82\xd3\xe4\x93\x025:\x01*\"0/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xaf\x01\n" +
-	"\x18DecideAgentDraftApproval\x122.agentlifecycle.v1.DecideAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\";\x82\xd3\xe4\x93\x025:\x01*20/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\x9d\x01\n" +
-	"\x11PublishAgentDraft\x12+.agentlifecycle.v1.PublishAgentDraftRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\":\x82\xd3\xe4\x93\x024:\x01*\"//v1/agents/{agent_id}/drafts/{draft_id}/release\x12\x96\x01\n" +
+	"\bGetAgent\x12\".agentlifecycle.v1.GetAgentRequest\x1a\x18.agentlifecycle.v1.Agent\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/agents/{agent_id}\x12\x9c\x01\n" +
+	"\vUpdateAgent\x12%.agentlifecycle.v1.UpdateAgentRequest\x1a\x18.agentlifecycle.v1.Agent\"L\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/agents/{agent_id}\x12\x8e\x01\n" +
+	"\x0fListAgentDrafts\x12).agentlifecycle.v1.ListAgentDraftsRequest\x1a*.agentlifecycle.v1.ListAgentDraftsResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/agents/{agent_id}/drafts\x12\xa2\x01\n" +
+	"\x10CreateAgentDraft\x12*.agentlifecycle.v1.CreateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"C\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/agents/{agent_id}/drafts\x12\x88\x01\n" +
+	"\rGetAgentDraft\x12'.agentlifecycle.v1.GetAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"/\x82\xd3\xe4\x93\x02)\x12'/v1/agents/{agent_id}/drafts/{draft_id}\x12\xbd\x01\n" +
+	"\x10UpdateAgentDraft\x12*.agentlifecycle.v1.UpdateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"^\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02,:\x01*2'/v1/agents/{agent_id}/drafts/{draft_id}\x12\xcc\x01\n" +
+	"\x12ValidateAgentDraft\x12,.agentlifecycle.v1.ValidateAgentDraftRequest\x1a\x1d.agentlifecycle.v1.AgentDraft\"i\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x027:\x01*\"2/v1/agents/{agent_id}/drafts/{draft_id}/validation\x12\xcd\x01\n" +
+	"\x19RequestAgentDraftApproval\x123.agentlifecycle.v1.RequestAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\"W\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xdb\x01\n" +
+	"\x18DecideAgentDraftApproval\x122.agentlifecycle.v1.DecideAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\"g\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x025:\x01*20/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xb9\x01\n" +
+	"\x11PublishAgentDraft\x12+.agentlifecycle.v1.PublishAgentDraftRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"V\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x024:\x01*\"//v1/agents/{agent_id}/drafts/{draft_id}/release\x12\x96\x01\n" +
 	"\x11ListAgentReleases\x12+.agentlifecycle.v1.ListAgentReleasesRequest\x1a,.agentlifecycle.v1.ListAgentReleasesResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/agents/{agent_id}/releases\x12\x92\x01\n" +
-	"\x0fGetAgentRelease\x12).agentlifecycle.v1.GetAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"3\x82\xd3\xe4\x93\x02-\x12+/v1/agents/{agent_id}/releases/{release_id}\x12\xad\x01\n" +
-	"\x15DeprecateAgentRelease\x12/.agentlifecycle.v1.DeprecateAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"B\x82\xd3\xe4\x93\x02<:\x01*\"7/v1/agents/{agent_id}/releases/{release_id}/deprecation\x12\x9f\x01\n" +
-	"\x11BlockAgentRelease\x12+.agentlifecycle.v1.BlockAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"<\x82\xd3\xe4\x93\x026:\x01*\"1/v1/agents/{agent_id}/releases/{release_id}/blockB?Z=agent-platform/backend/api/agentlifecycle/v1;agentlifecyclev1b\x06proto3"
+	"\x0fGetAgentRelease\x12).agentlifecycle.v1.GetAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"3\x82\xd3\xe4\x93\x02-\x12+/v1/agents/{agent_id}/releases/{release_id}\x12\xd9\x01\n" +
+	"\x15DeprecateAgentRelease\x12/.agentlifecycle.v1.DeprecateAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"n\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02<:\x01*\"7/v1/agents/{agent_id}/releases/{release_id}/deprecation\x12\xcb\x01\n" +
+	"\x11BlockAgentRelease\x12+.agentlifecycle.v1.BlockAgentReleaseRequest\x1a\x1f.agentlifecycle.v1.AgentRelease\"h\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x026:\x01*\"1/v1/agents/{agent_id}/releases/{release_id}/blockB?Z=agent-platform/backend/api/agentlifecycle/v1;agentlifecyclev1b\x06proto3"
 
 var (
 	file_agentlifecycle_v1_agent_lifecycle_proto_rawDescOnce sync.Once

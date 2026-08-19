@@ -150,7 +150,11 @@ Runtime stdout/stderr 先以 Attempt 唯一对象键写入 Object Store，再在
 
 ## Agent Lifecycle 聚合边界
 
-Agent 是 Team 范围的稳定身份；Agent Draft 是可编辑、可验证的版本；Agent Release 是发布时冻结的不可变快照。Draft 每次编辑都会递增 Version 并清除验证结果。发布时不仅检查此前验证结果，还会重新验证 Repository Binding、Runtime Image、Configured Model、Budget、Egress 和 Runtime Capability，避免依赖在验证后发生变化。
+Agent 是 Team 范围的稳定身份；Agent Draft 是可编辑、可验证的版本；Agent Release 是发布时冻结的不可变快照。Agent Studio 的 Agent Catalog、Agent 详情以及 Draft 列表和详情都通过 Team-scoped API 读取；服务端同时使用认证身份的 Organization 和请求 Team 查询聚合，使跨 Team 查询与不存在资源返回相同的 Not Found 语义。Draft 表单中的 Repository Binding、Runtime Image 与 Configured Model 来自各自的真实目录 API，不使用浏览器内置样例。
+
+Agent 和 Draft 创建、Draft 编辑与验证都要求 `Idempotency-Key`；编辑和验证还要求 `If-Match` 传递期望 Version。相同意图重试复用 Key，而输入或 Version 变化形成新意图。Draft 每次编辑都会递增 Version、回到 `draft` 状态并清除旧 Validation Report；Version 不匹配返回显式 Precondition Failed，浏览器保留安全表单输入并重新加载权威 Version，不静默覆盖。
+
+Draft Validation 使用当前 Repository Binding、Runtime Image 和 Configured Model 投影生成字段级 Validation Report。它会检查 Binding 的最新 Validation Report（其中包含 Git SSH、Credential、Egress、Required Runtime Capabilities 与质量命令结果）、Runtime allowlist 与 Production 状态、Configured Model 策略与启用状态、Draft 相对 Binding 收紧的 Model Budget，以及原生 Subagent 所需 Runtime Capability。发布时不仅检查此前验证结果，还会重新执行同一依赖验证，避免依赖在验证后发生变化。
 
 低风险 Draft 验证成功后可直接发布。启用 Runtime Subagent 等高风险能力时必须先申请 Release Approval，由另一名具有 Agent Builder 权限的人员决定；审批绑定精确 Draft Version，申请人不能自批，Draft 编辑后旧审批不会授权新版本。
 

@@ -64,6 +64,13 @@ const messages = {
       valid: "验证通过", invalid: "验证失败", unvalidated: "尚未验证", validationErrors: "Repository Binding 验证错误", validate: "重新验证", edit: "编辑", save: "保存", missingDependency: "依赖不可用",
       notice: { providerRegistered: "Source Control Provider 已注册。", providerChanged: "Source Control Provider 状态已更新。", bindingSaved: "Repository Binding 已保存，验证状态已清除。", bindingValidated: "Repository Binding 已使用当前依赖重新验证。" },
     },
+    agentCatalog: {
+      kicker: "Agent 生命周期 / 可验证配置", title: "Agent 与 Draft", body: "为当前 Team 创建稳定 Agent 身份，并编辑、验证可发布的 Draft。", readOnly: "只读 Agent 目录", loading: "正在读取真实 Agent Catalog", errorBody: "Agent 操作未完成，服务端没有应用未经确认的更改。", conflictBody: "已重新加载服务端权威 Version；安全表单内容仍保留，请核对后重试。",
+      agents: "Agent 目录", drafts: "Agent Draft", noAgents: "当前 Team 尚无 Agent。", noDrafts: "此 Agent 尚无 Draft。", selectAgent: "选择 Agent", createAgent: "创建 Agent", createDraft: "创建 Draft", newAgent: "新建 / AGENT", newDraft: "新建 / DRAFT", editDraft: "编辑 / DRAFT", description: "描述", instructions: "Agent 指令", releaseRisk: "发布风险", nativeSubagents: "启用 Runtime 原生 Subagent（高风险）", timeout: "最长运行秒数", create: "创建", save: "保存", edit: "编辑", validate: "验证",
+      repositoryBinding: "Repository Binding", runtimeImage: "Runtime Image", configuredModel: "Configured Model", cpu: "CPU 核数", memoryBytes: "内存字节数", pids: "进程数上限", tempBytes: "临时空间字节数", egress: "Egress Policy", publicEgress: "仅公网", validated: "已验证", unvalidated: "未验证", enabled: "已启用", disabled: "已禁用", risk: { low: "低风险", high: "高风险" },
+      state: { draft: "未保存验证", validating: "验证中", ready: "Ready", blocked: "Blocked" },
+      notice: { agentCreated: "Agent 已创建。", draftSaved: "Agent Draft 已保存，旧 Validation Report 已清除。", validated: "Agent Draft 已使用当前依赖完成验证。" },
+    },
     errors: { authentication: "无法完成身份验证，请重试或联系平台管理员。", offline: "服务离线", forbidden: "无权访问", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
   },
   "en-US": {
@@ -123,6 +130,13 @@ const messages = {
       inputBudget: "Maximum input tokens", outputBudget: "Maximum output tokens", costBudget: "Maximum model cost", budget: "Model budget (input / output / cost)", instructions: "Repository instructions", qualityCommand: "Quality command {number}", qualityKind: "Quality command kind", qualityName: "Quality command name", executable: "Executable", arguments: "Structured arguments", argument: "Argument {number}", addArgument: "Add argument", removeArgument: "Remove argument", addQualityCommand: "Add quality command", removeQualityCommand: "Remove quality command", timeout: "Timeout seconds", egress: "Egress Policy", publicOnly: "public internet only",
       valid: "Validated", invalid: "Validation failed", unvalidated: "Not validated", validationErrors: "Repository Binding validation errors", validate: "Validate again", edit: "Edit", save: "Save", missingDependency: "Dependency unavailable",
       notice: { providerRegistered: "Source Control Provider registered.", providerChanged: "Source Control Provider status updated.", bindingSaved: "Repository Binding saved; validation state cleared.", bindingValidated: "Repository Binding revalidated against current dependencies." },
+    },
+    agentCatalog: {
+      kicker: "AGENT LIFECYCLE / VALIDATED CONFIG", title: "Agents & Drafts", body: "Create stable Agent identities for the active Team, then edit and validate release-ready Drafts.", readOnly: "Read-only Agent catalog", loading: "Loading the real Agent Catalog", errorBody: "The Agent operation did not complete. The server did not apply an unconfirmed change.", conflictBody: "The authoritative server Version was reloaded. Review the preserved safe form before retrying.",
+      agents: "Agent catalog", drafts: "Agent Drafts", noAgents: "No Agents exist for this Team.", noDrafts: "This Agent has no Drafts.", selectAgent: "Select an Agent", createAgent: "Create Agent", createDraft: "Create Draft", newAgent: "NEW / AGENT", newDraft: "NEW / DRAFT", editDraft: "EDIT / DRAFT", description: "Description", instructions: "Agent instructions", releaseRisk: "Release risk", nativeSubagents: "Enable Runtime-native Subagents (high risk)", timeout: "Maximum runtime seconds", create: "Create", save: "Save", edit: "Edit", validate: "Validate",
+      repositoryBinding: "Repository Binding", runtimeImage: "Runtime Image", configuredModel: "Configured Model", cpu: "CPU cores", memoryBytes: "Memory bytes", pids: "Process limit", tempBytes: "Temporary storage bytes", egress: "Egress Policy", publicEgress: "public internet only", validated: "Validated", unvalidated: "Not validated", enabled: "Enabled", disabled: "Disabled", risk: { low: "Low risk", high: "High risk" },
+      state: { draft: "Unvalidated", validating: "Validating", ready: "Ready", blocked: "Blocked" },
+      notice: { agentCreated: "Agent created.", draftSaved: "Agent Draft saved; the previous Validation Report was cleared.", validated: "Agent Draft validated against current dependencies." },
     },
     errors: { authentication: "Authentication could not be completed. Try again or contact a platform administrator.", offline: "Service is offline", forbidden: "Access denied", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
   },

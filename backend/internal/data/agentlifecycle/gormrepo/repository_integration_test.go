@@ -97,6 +97,49 @@ func TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases(t *testing.T) {
 	if err != nil || blocked.Status != domain.ReleaseStatusBlocked || blocked.Version != 2 {
 		t.Fatalf("BlockRelease() = (%+v, %v)", blocked, err)
 	}
+	if _, err := service.GetAgent(context.Background(), fixture.organizationID, uuid.NewString(), agent.ID); !errors.Is(err, domain.ErrAgentNotFound) {
+		t.Fatalf("cross-Team GetAgent error = %v", err)
+	}
+
+	overBudgetConfiguration := lifecycleConfiguration(fixture, false)
+	overBudgetConfiguration.ModelBudget.MaxInputTokens = 2001
+	overBudget, err := service.CreateDraft(context.Background(), application.CreateDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, CreatedBy: fixture.builderID, Configuration: overBudgetConfiguration, ReleaseRisk: domain.ReleaseRiskLow})
+	if err != nil {
+		t.Fatal(err)
+	}
+	overBudget, err = service.ValidateDraft(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, overBudget.ID, overBudget.Version)
+	if err != nil || overBudget.State != domain.DraftStateBlocked || overBudget.ValidationReport == nil || overBudget.ValidationReport.Errors["model_budget"] == "" {
+		t.Fatalf("over-budget ValidateDraft() = (%+v, %v)", overBudget, err)
+	}
+	edited, err := service.EditDraft(context.Background(), application.EditDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, DraftID: overBudget.ID, Configuration: lifecycleConfiguration(fixture, false), ReleaseRisk: domain.ReleaseRiskLow, ExpectedVersion: overBudget.Version})
+	if err != nil || edited.State != domain.DraftStateDraft || edited.ValidationReport != nil || edited.Version != overBudget.Version+1 {
+		t.Fatalf("EditDraft() did not clear Validation Report = (%+v, %v)", edited, err)
+	}
+
+	if err := tx.Exec(`UPDATE runtime_images SET capabilities = '{"subagents":false}'::jsonb WHERE id = ?`, fixture.runtimeID).Error; err != nil {
+		t.Fatal(err)
+	}
+	missingCapability, err := service.CreateDraft(context.Background(), application.CreateDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, CreatedBy: fixture.builderID, Configuration: lifecycleConfiguration(fixture, true), ReleaseRisk: domain.ReleaseRiskHigh})
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingCapability, err = service.ValidateDraft(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, missingCapability.ID, missingCapability.Version)
+	if err != nil || missingCapability.State != domain.DraftStateBlocked || missingCapability.ValidationReport == nil || missingCapability.ValidationReport.Errors["native_subagents"] == "" {
+		t.Fatalf("missing-capability ValidateDraft() = (%+v, %v)", missingCapability, err)
+	}
+
+	invalidBindingReport := fmt.Sprintf(`{"valid":false,"errors":{"egress_policy":"Egress Policy is invalid","quality_commands":"quality command is invalid"},"checked_at":%q}`, now.Format(time.RFC3339Nano))
+	if err := tx.Exec(`UPDATE repository_bindings SET validation_report = ?::jsonb WHERE id = ?`, invalidBindingReport, fixture.bindingID).Error; err != nil {
+		t.Fatal(err)
+	}
+	bindingBlocked, err := service.CreateDraft(context.Background(), application.CreateDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, CreatedBy: fixture.builderID, Configuration: lifecycleConfiguration(fixture, false), ReleaseRisk: domain.ReleaseRiskLow})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindingBlocked, err = service.ValidateDraft(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, bindingBlocked.ID, bindingBlocked.Version)
+	if err != nil || bindingBlocked.ValidationReport == nil || bindingBlocked.ValidationReport.Errors["egress_policy"] == "" || bindingBlocked.ValidationReport.Errors["quality_commands"] == "" {
+		t.Fatalf("Binding field errors were not preserved by ValidateDraft() = (%+v, %v)", bindingBlocked, err)
+	}
 }
 
 func lifecycleConfiguration(fixture lifecycleFixture, subagents bool) domain.Configuration {

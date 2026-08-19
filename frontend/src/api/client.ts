@@ -14,6 +14,11 @@ export type SourceControlProvider = components["schemas"]["v1SourceControlProvid
 export type RegisterSourceControlProviderInput = components["schemas"]["v1RegisterSourceControlProviderRequest"];
 export type RepositoryBinding = components["schemas"]["v1RepositoryBinding"];
 export type RepositoryBindingInput = components["schemas"]["v1RepositoryBindingInput"];
+export type Agent = components["schemas"]["v1Agent"];
+export type AgentDraft = components["schemas"]["v1AgentDraft"];
+export type AgentConfiguration = components["schemas"]["v1AgentConfiguration"];
+export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
+export type DraftInput = { configuration: AgentConfiguration; release_risk: string };
 
 export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
 
@@ -56,6 +61,15 @@ export interface PlatformApi {
   registerRepositoryBinding(input: RepositoryBindingInput, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
   updateRepositoryBinding(id: string, input: RepositoryBindingInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
   validateRepositoryBinding(id: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
+  listAgents(teamID: string, signal?: AbortSignal): Promise<Agent[]>;
+  getAgent(id: string, teamID: string, signal?: AbortSignal): Promise<Agent>;
+  createAgent(teamID: string, input: CreateAgentInput, idempotencyKey: string, signal?: AbortSignal): Promise<Agent>;
+  updateAgent(id: string, teamID: string, input: CreateAgentInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<Agent>;
+  listAgentDrafts(agentID: string, teamID: string, signal?: AbortSignal): Promise<AgentDraft[]>;
+  getAgentDraft(agentID: string, draftID: string, teamID: string, signal?: AbortSignal): Promise<AgentDraft>;
+  createAgentDraft(agentID: string, teamID: string, input: DraftInput, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
+  updateAgentDraft(agentID: string, draftID: string, teamID: string, input: DraftInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
+  validateAgentDraft(agentID: string, draftID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -182,6 +196,39 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         method: "POST", body: JSON.stringify({ team_id: teamID }), signal,
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
       });
+    },
+    async listAgents(teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListAgentsResponse"]>(`/api/v1/agents?${query}`, { signal });
+      return body.items ?? [];
+    },
+    getAgent(id, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<Agent>(`/api/v1/agents/${encodeURIComponent(id)}?${query}`, { signal });
+    },
+    createAgent(teamID, input, idempotencyKey, signal) {
+      return authorizedRequest<Agent>("/api/v1/agents", { method: "POST", body: JSON.stringify({ team_id: teamID, ...input }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey } });
+    },
+    updateAgent(id, teamID, input, version, idempotencyKey, signal) {
+      return authorizedRequest<Agent>(`/api/v1/agents/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ team_id: teamID, ...input }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    async listAgentDrafts(agentID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListAgentDraftsResponse"]>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts?${query}`, { signal });
+      return body.items ?? [];
+    },
+    getAgentDraft(agentID, draftID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<AgentDraft>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}?${query}`, { signal });
+    },
+    createAgentDraft(agentID, teamID, input, idempotencyKey, signal) {
+      return authorizedRequest<AgentDraft>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts`, { method: "POST", body: JSON.stringify({ team_id: teamID, ...input }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey } });
+    },
+    updateAgentDraft(agentID, draftID, teamID, input, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentDraft>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}`, { method: "PATCH", body: JSON.stringify({ team_id: teamID, ...input }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    validateAgentDraft(agentID, draftID, teamID, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentDraft>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/validation`, { method: "POST", body: JSON.stringify({ team_id: teamID }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
     },
   };
 }

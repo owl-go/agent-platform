@@ -222,6 +222,12 @@
             "schema": {
               "$ref": "#/definitions/v1CreateAgentRequest"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -294,6 +300,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceUpdateAgentBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -366,6 +384,12 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceCreateAgentDraftBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -450,6 +474,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceUpdateAgentDraftBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -494,6 +530,12 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceRequestAgentDraftApprovalBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -536,6 +578,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceDecideAgentDraftApprovalBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -580,6 +634,12 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServicePublishAgentDraftBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -624,6 +684,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceValidateAgentDraftBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -788,6 +860,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceBlockAgentReleaseBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -832,6 +916,18 @@
             "schema": {
               "$ref": "#/definitions/AgentLifecycleServiceDeprecateAgentReleaseBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
