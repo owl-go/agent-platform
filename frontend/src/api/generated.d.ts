@@ -928,6 +928,9 @@ export interface components {
         SourceControlServiceChangeSourceControlProviderStatusBody: {
             enabled?: boolean;
         };
+        SourceControlServiceUpdateRepositoryBindingBody: {
+            binding?: components["schemas"]["v1RepositoryBindingInput"];
+        };
         SourceControlServiceValidateRepositoryBindingBody: {
             team_id?: string;
         };
@@ -1281,6 +1284,9 @@ export interface components {
             kind?: string;
             secret_ref?: string;
         };
+        v1RegisterRepositoryBindingRequest: {
+            binding?: components["schemas"]["v1RepositoryBindingInput"];
+        };
         v1RegisterRuntimeImageRequest: {
             runtime?: string;
             cli_version?: string;
@@ -1338,6 +1344,7 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            required_runtime_capabilities?: string[];
         };
         v1RepositoryBindingInput: {
             team_id?: string;
@@ -1356,6 +1363,7 @@ export interface components {
             instructions?: string;
             quality_commands?: components["schemas"]["v1QualityCommand"][];
             egress_policy?: components["schemas"]["v1EgressPolicy"];
+            required_runtime_capabilities?: string[];
         };
         v1RoleGrant: {
             team_id?: string;
@@ -1507,13 +1515,7 @@ export interface components {
     };
     responses: never;
     parameters: never;
-    requestBodies: {
-        v1RepositoryBindingInput: {
-            content: {
-                "application/json": components["schemas"]["v1RepositoryBindingInput"];
-            };
-        };
-    };
+    requestBodies: never;
     headers: never;
     pathItems: never;
 }
@@ -3071,11 +3073,17 @@ export interface operations {
     SourceControlService_RegisterRepositoryBinding: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody: components["requestBodies"]["v1RepositoryBindingInput"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1RegisterRepositoryBindingRequest"];
+            };
+        };
         responses: {
             /** @description A successful response. */
             200: {
@@ -3133,13 +3141,20 @@ export interface operations {
     SourceControlService_UpdateRepositoryBinding: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 repository_binding_id: string;
             };
             cookie?: never;
         };
-        requestBody: components["requestBodies"]["v1RepositoryBindingInput"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceControlServiceUpdateRepositoryBindingBody"];
+            };
+        };
         responses: {
             /** @description A successful response. */
             200: {
@@ -3164,7 +3179,10 @@ export interface operations {
     SourceControlService_ValidateRepositoryBinding: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 repository_binding_id: string;
             };
@@ -3694,7 +3712,9 @@ export interface operations {
     SourceControlService_RegisterSourceControlProvider: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3758,7 +3778,10 @@ export interface operations {
     SourceControlService_ChangeSourceControlProviderStatus: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 source_control_provider_id: string;
             };

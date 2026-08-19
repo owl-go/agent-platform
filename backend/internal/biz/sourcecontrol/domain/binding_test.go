@@ -28,9 +28,6 @@ func TestRepositoryBindingRejectsUnsafeConfiguration(t *testing.T) {
 		func(value *BindingRegistration) { value.RepositorySSHURL = "https://github.com/acme/repo.git" },
 		func(value *BindingRegistration) { value.RepositorySSHURL = "ssh://root@github.com/acme/repo.git" },
 		func(value *BindingRegistration) { value.DefaultBranch = "../main" },
-		func(value *BindingRegistration) { value.DefaultRuntimeImageID = "runtime-2" },
-		func(value *BindingRegistration) { value.ModelBudget.MaxCostAmount = "0" },
-		func(value *BindingRegistration) { value.QualityCommands[0].Executable = "sh -c" },
 		func(value *BindingRegistration) { value.EgressPolicy.Mode = "private" },
 	}
 	for index, mutate := range tests {
@@ -38,6 +35,22 @@ func TestRepositoryBindingRejectsUnsafeConfiguration(t *testing.T) {
 		mutate(&registration)
 		if _, err := RegisterBinding(registration); !errors.Is(err, ErrInvalidBinding) {
 			t.Fatalf("case %d error = %v, want ErrInvalidBinding", index, err)
+		}
+	}
+}
+
+func TestRepositoryBindingRecordsPolicyErrorsForExplicitValidation(t *testing.T) {
+	registration := validBindingRegistration()
+	registration.DefaultRuntimeImageID = "runtime-2"
+	registration.ModelBudget.MaxCostAmount = "0"
+	registration.QualityCommands[0].Executable = "sh -c"
+	binding, err := RegisterBinding(registration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"default_runtime_image_id", "model_budget", "quality_commands"} {
+		if binding.PolicyErrors()[field] == "" {
+			t.Fatalf("missing %s policy error: %+v", field, binding.PolicyErrors())
 		}
 	}
 }
@@ -51,6 +64,22 @@ func TestRepositoryBindingAcceptsGitLabSCPURL(t *testing.T) {
 	}
 }
 
+func TestBindingPolicyErrorsAreFieldScoped(t *testing.T) {
+	binding, err := RegisterBinding(validBindingRegistration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding.ModelBudget.MaxCostAmount = "0"
+	binding.QualityCommands = nil
+	binding.DefaultRuntimeImageID = "other-runtime"
+	errorsByField := binding.PolicyErrors()
+	for _, field := range []string{"model_budget", "quality_commands", "default_runtime_image_id"} {
+		if errorsByField[field] == "" {
+			t.Fatalf("missing %s policy error: %+v", field, errorsByField)
+		}
+	}
+}
+
 func validBindingRegistration() BindingRegistration {
 	return BindingRegistration{
 		ID: "binding-1", OrganizationID: "organization-1", TeamID: "team-1",
@@ -59,10 +88,11 @@ func validBindingRegistration() BindingRegistration {
 		SSHCredentialProfileID: "credential-1", BuildCredentialProfileIDs: []string{"credential-2"},
 		GitAuthorName: "Agent Platform", GitAuthorEmail: "agent@example.test",
 		AllowedRuntimeImageIDs: []string{"runtime-1"}, DefaultRuntimeImageID: "runtime-1",
-		DefaultModelID:  "model-1",
-		ModelBudget:     ModelBudget{MaxInputTokens: 100_000, MaxOutputTokens: 20_000, MaxCostAmount: "50.00"},
-		Instructions:    "Follow repository instructions.",
-		QualityCommands: []QualityCommand{{Name: "test", Kind: QualityTest, Executable: "go", Arguments: []string{"test", "./..."}, TimeoutSeconds: 600}},
-		EgressPolicy:    EgressPolicy{Mode: "public"}, Now: time.Now().UTC(),
+		RequiredRuntimeCapabilities: []string{"streaming"},
+		DefaultModelID:              "model-1",
+		ModelBudget:                 ModelBudget{MaxInputTokens: 100_000, MaxOutputTokens: 20_000, MaxCostAmount: "50.00"},
+		Instructions:                "Follow repository instructions.",
+		QualityCommands:             []QualityCommand{{Name: "test", Kind: QualityTest, Executable: "go", Arguments: []string{"test", "./..."}, TimeoutSeconds: 600}},
+		EgressPolicy:                EgressPolicy{Mode: "public"}, Now: time.Now().UTC(),
 	}
 }

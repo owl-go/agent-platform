@@ -169,32 +169,33 @@ func newSourceControlProviderResponse(value sourcedomain.Provider) sourceControl
 }
 
 type repositoryBindingResponse struct {
-	ID                        string                         `json:"id"`
-	TeamID                    string                         `json:"team_id"`
-	SourceControlProviderID   string                         `json:"source_control_provider_id"`
-	Name                      string                         `json:"name"`
-	RepositorySSHURL          string                         `json:"repository_ssh_url"`
-	DefaultBranch             string                         `json:"default_branch"`
-	SSHCredentialProfileID    string                         `json:"ssh_credential_profile_id"`
-	BuildCredentialProfileIDs []string                       `json:"build_credential_profile_ids"`
-	GitAuthorName             string                         `json:"git_author_name"`
-	GitAuthorEmail            string                         `json:"git_author_email"`
-	AllowedRuntimeImageIDs    []string                       `json:"allowed_runtime_image_ids"`
-	DefaultRuntimeImageID     string                         `json:"default_runtime_image_id"`
-	DefaultModelID            string                         `json:"default_model_id"`
-	ModelBudget               sourcedomain.ModelBudget       `json:"model_budget"`
-	Instructions              string                         `json:"instructions"`
-	QualityCommands           []sourcedomain.QualityCommand  `json:"quality_commands"`
-	EgressPolicy              sourcedomain.EgressPolicy      `json:"egress_policy"`
-	ValidationReport          *sourcedomain.ValidationReport `json:"validation_report"`
-	ValidatedAt               *time.Time                     `json:"validated_at"`
-	CreatedAt                 time.Time                      `json:"created_at"`
-	UpdatedAt                 time.Time                      `json:"updated_at"`
-	Version                   int64                          `json:"version"`
+	ID                          string                         `json:"id"`
+	TeamID                      string                         `json:"team_id"`
+	SourceControlProviderID     string                         `json:"source_control_provider_id"`
+	Name                        string                         `json:"name"`
+	RepositorySSHURL            string                         `json:"repository_ssh_url"`
+	DefaultBranch               string                         `json:"default_branch"`
+	SSHCredentialProfileID      string                         `json:"ssh_credential_profile_id"`
+	BuildCredentialProfileIDs   []string                       `json:"build_credential_profile_ids"`
+	GitAuthorName               string                         `json:"git_author_name"`
+	GitAuthorEmail              string                         `json:"git_author_email"`
+	AllowedRuntimeImageIDs      []string                       `json:"allowed_runtime_image_ids"`
+	DefaultRuntimeImageID       string                         `json:"default_runtime_image_id"`
+	RequiredRuntimeCapabilities []string                       `json:"required_runtime_capabilities"`
+	DefaultModelID              string                         `json:"default_model_id"`
+	ModelBudget                 sourcedomain.ModelBudget       `json:"model_budget"`
+	Instructions                string                         `json:"instructions"`
+	QualityCommands             []sourcedomain.QualityCommand  `json:"quality_commands"`
+	EgressPolicy                sourcedomain.EgressPolicy      `json:"egress_policy"`
+	ValidationReport            *sourcedomain.ValidationReport `json:"validation_report"`
+	ValidatedAt                 *time.Time                     `json:"validated_at"`
+	CreatedAt                   time.Time                      `json:"created_at"`
+	UpdatedAt                   time.Time                      `json:"updated_at"`
+	Version                     int64                          `json:"version"`
 }
 
 func newRepositoryBindingResponse(value sourcedomain.RepositoryBinding) repositoryBindingResponse {
-	return repositoryBindingResponse{ID: value.ID, TeamID: value.TeamID, SourceControlProviderID: value.SourceControlProviderID, Name: value.Name, RepositorySSHURL: value.RepositorySSHURL, DefaultBranch: value.DefaultBranch, SSHCredentialProfileID: value.SSHCredentialProfileID, BuildCredentialProfileIDs: append([]string(nil), value.BuildCredentialProfileIDs...), GitAuthorName: value.GitAuthorName, GitAuthorEmail: value.GitAuthorEmail, AllowedRuntimeImageIDs: append([]string(nil), value.AllowedRuntimeImageIDs...), DefaultRuntimeImageID: value.DefaultRuntimeImageID, DefaultModelID: value.DefaultModelID, ModelBudget: value.ModelBudget, Instructions: value.Instructions, QualityCommands: append([]sourcedomain.QualityCommand(nil), value.QualityCommands...), EgressPolicy: value.EgressPolicy, ValidationReport: value.ValidationReport, ValidatedAt: value.ValidatedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
+	return repositoryBindingResponse{ID: value.ID, TeamID: value.TeamID, SourceControlProviderID: value.SourceControlProviderID, Name: value.Name, RepositorySSHURL: value.RepositorySSHURL, DefaultBranch: value.DefaultBranch, SSHCredentialProfileID: value.SSHCredentialProfileID, BuildCredentialProfileIDs: append([]string(nil), value.BuildCredentialProfileIDs...), GitAuthorName: value.GitAuthorName, GitAuthorEmail: value.GitAuthorEmail, AllowedRuntimeImageIDs: append([]string(nil), value.AllowedRuntimeImageIDs...), DefaultRuntimeImageID: value.DefaultRuntimeImageID, RequiredRuntimeCapabilities: append([]string(nil), value.RequiredRuntimeCapabilities...), DefaultModelID: value.DefaultModelID, ModelBudget: value.ModelBudget, Instructions: value.Instructions, QualityCommands: append([]sourcedomain.QualityCommand(nil), value.QualityCommands...), EgressPolicy: value.EgressPolicy, ValidationReport: value.ValidationReport, ValidatedAt: value.ValidatedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 
 type agentResponse struct {

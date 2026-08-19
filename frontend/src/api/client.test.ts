@@ -86,6 +86,23 @@ describe("PlatformApi", () => {
     expect(init?.body).toContain("vault://platform/model");
   });
 
+  it("scopes Repository Binding reads and protects updates with Version and intent", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "binding-1", version: 3 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.listRepositoryBindings("team-1");
+    await api.updateRepositoryBinding("binding-1", { team_id: "team-1", name: "repository" }, 2, "binding-intent");
+
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/repository-bindings?team_id=team-1");
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe("/api/v1/repository-bindings/binding-1");
+    expect(JSON.parse(String(init?.body))).toEqual({ binding: { team_id: "team-1", name: "repository" } });
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("binding-intent");
+    expect(headers.get("If-Match")).toBe('"2"');
+  });
+
   it("fails before fetch when the authenticated token is unavailable", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

@@ -178,10 +178,7 @@ func _SourceControlService_GetRepositoryBinding0_HTTP_Handler(srv SourceControlS
 func _SourceControlService_RegisterRepositoryBinding0_HTTP_Handler(srv SourceControlServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in RegisterRepositoryBindingRequest
-		if err := ctx.Bind(&in.Binding); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
+		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationSourceControlServiceRegisterRepositoryBinding)
@@ -200,10 +197,7 @@ func _SourceControlService_RegisterRepositoryBinding0_HTTP_Handler(srv SourceCon
 func _SourceControlService_UpdateRepositoryBinding0_HTTP_Handler(srv SourceControlServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in UpdateRepositoryBindingRequest
-		if err := ctx.Bind(&in.Binding); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
+		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindVars(&in); err != nil {
@@ -348,14 +342,14 @@ func (c *SourceControlServiceHTTPClientImpl) ListSourceControlProviders(ctx cont
 func (c *SourceControlServiceHTTPClientImpl) RegisterRepositoryBinding(ctx context.Context, in *RegisterRepositoryBindingRequest, opts ...http.CallOption) (*RepositoryBinding, error) {
 	var out RepositoryBinding
 	pattern := "/v1/repository-bindings"
-	path := http.BuildPath(pattern, in, http.WithQueryParams(), http.WithOmitFields("binding"))
+	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationSourceControlServiceRegisterRepositoryBinding),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, in.Binding, &out, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -382,14 +376,14 @@ func (c *SourceControlServiceHTTPClientImpl) RegisterSourceControlProvider(ctx c
 func (c *SourceControlServiceHTTPClientImpl) UpdateRepositoryBinding(ctx context.Context, in *UpdateRepositoryBindingRequest, opts ...http.CallOption) (*RepositoryBinding, error) {
 	var out RepositoryBinding
 	pattern := "/v1/repository-bindings/{repository_binding_id}"
-	path := http.BuildPath(pattern, in, http.WithQueryParams(), http.WithOmitFields("binding"))
+	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationSourceControlServiceUpdateRepositoryBinding),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "PATCH", path, in.Binding, &out, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

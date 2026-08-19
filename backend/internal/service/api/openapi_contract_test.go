@@ -192,6 +192,23 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 			t.Fatalf("%s status headers = %#v", path, parameters)
 		}
 	}
+	for _, path := range []string{"/v1/source-control-providers", "/v1/repository-bindings"} {
+		operation := paths[path].(map[string]any)["post"].(map[string]any)
+		if !hasParameter(operation["parameters"].([]any), "header", "Idempotency-Key", true) {
+			t.Fatalf("%s registration does not declare Idempotency-Key", path)
+		}
+	}
+	for path, method := range map[string]string{
+		"/v1/source-control-providers/{source_control_provider_id}/status": "patch",
+		"/v1/repository-bindings/{repository_binding_id}":                  "patch",
+		"/v1/repository-bindings/{repository_binding_id}/validation":       "post",
+	} {
+		operation := paths[path].(map[string]any)[method].(map[string]any)
+		parameters := operation["parameters"].([]any)
+		if !hasParameter(parameters, "header", "Idempotency-Key", true) || !hasParameter(parameters, "header", "If-Match", true) {
+			t.Fatalf("%s write headers = %#v", path, parameters)
+		}
+	}
 }
 
 func hasParameter(parameters []any, location, name string, required bool) bool {

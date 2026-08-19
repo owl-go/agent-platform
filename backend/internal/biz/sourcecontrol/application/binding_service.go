@@ -21,23 +21,24 @@ type BindingService struct {
 }
 
 type RegisterBindingCommand struct {
-	OrganizationID            string
-	TeamID                    string
-	SourceControlProviderID   string
-	Name                      string
-	RepositorySSHURL          string
-	DefaultBranch             string
-	SSHCredentialProfileID    string
-	BuildCredentialProfileIDs []string
-	GitAuthorName             string
-	GitAuthorEmail            string
-	AllowedRuntimeImageIDs    []string
-	DefaultRuntimeImageID     string
-	DefaultModelID            string
-	ModelBudget               domain.ModelBudget
-	Instructions              string
-	QualityCommands           []domain.QualityCommand
-	EgressPolicy              domain.EgressPolicy
+	OrganizationID              string
+	TeamID                      string
+	SourceControlProviderID     string
+	Name                        string
+	RepositorySSHURL            string
+	DefaultBranch               string
+	SSHCredentialProfileID      string
+	BuildCredentialProfileIDs   []string
+	GitAuthorName               string
+	GitAuthorEmail              string
+	AllowedRuntimeImageIDs      []string
+	DefaultRuntimeImageID       string
+	RequiredRuntimeCapabilities []string
+	DefaultModelID              string
+	ModelBudget                 domain.ModelBudget
+	Instructions                string
+	QualityCommands             []domain.QualityCommand
+	EgressPolicy                domain.EgressPolicy
 }
 
 type UpdateBindingCommand struct {
@@ -65,7 +66,8 @@ func (service *BindingService) Register(ctx context.Context, command RegisterBin
 		SSHCredentialProfileID: command.SSHCredentialProfileID, BuildCredentialProfileIDs: command.BuildCredentialProfileIDs,
 		GitAuthorName: command.GitAuthorName, GitAuthorEmail: command.GitAuthorEmail,
 		AllowedRuntimeImageIDs: command.AllowedRuntimeImageIDs, DefaultRuntimeImageID: command.DefaultRuntimeImageID,
-		DefaultModelID: command.DefaultModelID, ModelBudget: command.ModelBudget, Instructions: command.Instructions,
+		RequiredRuntimeCapabilities: command.RequiredRuntimeCapabilities,
+		DefaultModelID:              command.DefaultModelID, ModelBudget: command.ModelBudget, Instructions: command.Instructions,
 		QualityCommands: command.QualityCommands, EgressPolicy: command.EgressPolicy, Now: service.clock.Now(),
 	})
 	if err != nil {
@@ -140,7 +142,8 @@ func (service *BindingService) Update(ctx context.Context, command UpdateBinding
 		SSHCredentialProfileID: input.SSHCredentialProfileID, BuildCredentialProfileIDs: input.BuildCredentialProfileIDs,
 		GitAuthorName: input.GitAuthorName, GitAuthorEmail: input.GitAuthorEmail,
 		AllowedRuntimeImageIDs: input.AllowedRuntimeImageIDs, DefaultRuntimeImageID: input.DefaultRuntimeImageID,
-		DefaultModelID: input.DefaultModelID, ModelBudget: input.ModelBudget, Instructions: input.Instructions,
+		RequiredRuntimeCapabilities: input.RequiredRuntimeCapabilities,
+		DefaultModelID:              input.DefaultModelID, ModelBudget: input.ModelBudget, Instructions: input.Instructions,
 		QualityCommands: input.QualityCommands, EgressPolicy: input.EgressPolicy, Now: service.clock.Now(),
 	}); err != nil {
 		return domain.RepositoryBinding{}, err

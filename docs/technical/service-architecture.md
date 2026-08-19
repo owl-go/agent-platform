@@ -61,7 +61,7 @@ Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run
 
 HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。部署可以选择显式 `deny_all` 或严格 YAML 配置的通用 OIDC Adapter；后者通过 Provider Discovery 和 JWKS 验证签名、Issuer、Audience、有效期、Subject 与 Organization Claim。JWKS 暂时不可用与未知签名 Key 分别映射为基础设施不可用和未认证，不使用可伪造的组织 Header 或开发后门。`GET /v1/me` 根据已验证身份从 PostgreSQL 引导 User、Organization、Role Grant 与可访问 Team 的安全投影；Organization 范围 Grant 可见本 Organization 的全部 Team，Team 范围 Grant 只投影对应 Team。
 
-Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog 与 Source Control Provider 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改平台目录。
+Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog、Source Control Provider 与 Repository Binding 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改这些治理配置。
 
 ## Runtime Catalog 聚合边界
 
@@ -96,6 +96,8 @@ WHERE organization_id IS NULL
 ```
 
 Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Model Catalog 的读取接口只投影 Organization Scope、类型为 `model` 的 Credential Profile，避免 Team 范围凭证元数据跨 Team 暴露。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile；注册或从禁用状态重新启用 Configured Model 时，Repository 会锁定对应 Credential Profile 并在写入前重新检查这个约束，使并发禁用与模型写入串行。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
+
+Repository Binding 保存 Git SSH 地址以及 SSH/Build Credential Profile 的安全引用，不保存或返回私钥、`known_hosts` 内容和构建 Secret。注册与更新先校验 Organization/Team、凭证 Kind/Scope、Runtime、模型和 Provider 引用；显式 Validation 会按当前依赖状态重新检查 Provider、仓库 Host、Credential、Production Runtime、Required Runtime Capabilities、Configured Model、Model Budget 和结构化质量命令，并以字段为 Key 保存可定位的 Validation Report。每个 Allowed Runtime Image 都必须提供 Binding 声明的全部 Required Runtime Capabilities。配置更新清除旧报告，依赖禁用后再次验证会如实变为失败。Agent Draft 对所选 Runtime 的额外 Capability 要求及其相对 Repository Binding 的预算收紧由 Draft Validation 继续校验。
 
 ## 幂等写事务
 

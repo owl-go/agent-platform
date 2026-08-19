@@ -8,6 +8,7 @@ package sourcecontrolv1
 
 import (
 	v1 "agent-platform/backend/api/types/v1"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -577,25 +578,26 @@ func (x *GetRepositoryBindingResponse) GetRepositoryBinding() *RepositoryBinding
 }
 
 type RepositoryBindingInput struct {
-	state                     protoimpl.MessageState `protogen:"open.v1"`
-	TeamId                    string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
-	SourceControlProviderId   string                 `protobuf:"bytes,2,opt,name=source_control_provider_id,json=sourceControlProviderId,proto3" json:"source_control_provider_id,omitempty"`
-	Name                      string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	RepositorySshUrl          string                 `protobuf:"bytes,4,opt,name=repository_ssh_url,json=repositorySshUrl,proto3" json:"repository_ssh_url,omitempty"`
-	DefaultBranch             string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
-	SshCredentialProfileId    string                 `protobuf:"bytes,6,opt,name=ssh_credential_profile_id,json=sshCredentialProfileId,proto3" json:"ssh_credential_profile_id,omitempty"`
-	BuildCredentialProfileIds []string               `protobuf:"bytes,7,rep,name=build_credential_profile_ids,json=buildCredentialProfileIds,proto3" json:"build_credential_profile_ids,omitempty"`
-	GitAuthorName             string                 `protobuf:"bytes,8,opt,name=git_author_name,json=gitAuthorName,proto3" json:"git_author_name,omitempty"`
-	GitAuthorEmail            string                 `protobuf:"bytes,9,opt,name=git_author_email,json=gitAuthorEmail,proto3" json:"git_author_email,omitempty"`
-	AllowedRuntimeImageIds    []string               `protobuf:"bytes,10,rep,name=allowed_runtime_image_ids,json=allowedRuntimeImageIds,proto3" json:"allowed_runtime_image_ids,omitempty"`
-	DefaultRuntimeImageId     string                 `protobuf:"bytes,11,opt,name=default_runtime_image_id,json=defaultRuntimeImageId,proto3" json:"default_runtime_image_id,omitempty"`
-	DefaultModelId            string                 `protobuf:"bytes,12,opt,name=default_model_id,json=defaultModelId,proto3" json:"default_model_id,omitempty"`
-	ModelBudget               *v1.ModelBudget        `protobuf:"bytes,13,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
-	Instructions              string                 `protobuf:"bytes,14,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	QualityCommands           []*v1.QualityCommand   `protobuf:"bytes,15,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
-	EgressPolicy              *v1.EgressPolicy       `protobuf:"bytes,16,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	TeamId                      string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	SourceControlProviderId     string                 `protobuf:"bytes,2,opt,name=source_control_provider_id,json=sourceControlProviderId,proto3" json:"source_control_provider_id,omitempty"`
+	Name                        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	RepositorySshUrl            string                 `protobuf:"bytes,4,opt,name=repository_ssh_url,json=repositorySshUrl,proto3" json:"repository_ssh_url,omitempty"`
+	DefaultBranch               string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
+	SshCredentialProfileId      string                 `protobuf:"bytes,6,opt,name=ssh_credential_profile_id,json=sshCredentialProfileId,proto3" json:"ssh_credential_profile_id,omitempty"`
+	BuildCredentialProfileIds   []string               `protobuf:"bytes,7,rep,name=build_credential_profile_ids,json=buildCredentialProfileIds,proto3" json:"build_credential_profile_ids,omitempty"`
+	GitAuthorName               string                 `protobuf:"bytes,8,opt,name=git_author_name,json=gitAuthorName,proto3" json:"git_author_name,omitempty"`
+	GitAuthorEmail              string                 `protobuf:"bytes,9,opt,name=git_author_email,json=gitAuthorEmail,proto3" json:"git_author_email,omitempty"`
+	AllowedRuntimeImageIds      []string               `protobuf:"bytes,10,rep,name=allowed_runtime_image_ids,json=allowedRuntimeImageIds,proto3" json:"allowed_runtime_image_ids,omitempty"`
+	DefaultRuntimeImageId       string                 `protobuf:"bytes,11,opt,name=default_runtime_image_id,json=defaultRuntimeImageId,proto3" json:"default_runtime_image_id,omitempty"`
+	DefaultModelId              string                 `protobuf:"bytes,12,opt,name=default_model_id,json=defaultModelId,proto3" json:"default_model_id,omitempty"`
+	ModelBudget                 *v1.ModelBudget        `protobuf:"bytes,13,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
+	Instructions                string                 `protobuf:"bytes,14,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	QualityCommands             []*v1.QualityCommand   `protobuf:"bytes,15,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
+	EgressPolicy                *v1.EgressPolicy       `protobuf:"bytes,16,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
+	RequiredRuntimeCapabilities []string               `protobuf:"bytes,17,rep,name=required_runtime_capabilities,json=requiredRuntimeCapabilities,proto3" json:"required_runtime_capabilities,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *RepositoryBindingInput) Reset() {
@@ -736,6 +738,13 @@ func (x *RepositoryBindingInput) GetQualityCommands() []*v1.QualityCommand {
 func (x *RepositoryBindingInput) GetEgressPolicy() *v1.EgressPolicy {
 	if x != nil {
 		return x.EgressPolicy
+	}
+	return nil
+}
+
+func (x *RepositoryBindingInput) GetRequiredRuntimeCapabilities() []string {
+	if x != nil {
+		return x.RequiredRuntimeCapabilities
 	}
 	return nil
 }
@@ -1121,31 +1130,32 @@ func (x *SourceControlProvider) GetVersion() int64 {
 }
 
 type RepositoryBinding struct {
-	state                     protoimpl.MessageState `protogen:"open.v1"`
-	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TeamId                    string                 `protobuf:"bytes,2,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
-	SourceControlProviderId   string                 `protobuf:"bytes,3,opt,name=source_control_provider_id,json=sourceControlProviderId,proto3" json:"source_control_provider_id,omitempty"`
-	Name                      string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	RepositorySshUrl          string                 `protobuf:"bytes,5,opt,name=repository_ssh_url,json=repositorySshUrl,proto3" json:"repository_ssh_url,omitempty"`
-	DefaultBranch             string                 `protobuf:"bytes,6,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
-	SshCredentialProfileId    string                 `protobuf:"bytes,7,opt,name=ssh_credential_profile_id,json=sshCredentialProfileId,proto3" json:"ssh_credential_profile_id,omitempty"`
-	BuildCredentialProfileIds []string               `protobuf:"bytes,8,rep,name=build_credential_profile_ids,json=buildCredentialProfileIds,proto3" json:"build_credential_profile_ids,omitempty"`
-	GitAuthorName             string                 `protobuf:"bytes,9,opt,name=git_author_name,json=gitAuthorName,proto3" json:"git_author_name,omitempty"`
-	GitAuthorEmail            string                 `protobuf:"bytes,10,opt,name=git_author_email,json=gitAuthorEmail,proto3" json:"git_author_email,omitempty"`
-	AllowedRuntimeImageIds    []string               `protobuf:"bytes,11,rep,name=allowed_runtime_image_ids,json=allowedRuntimeImageIds,proto3" json:"allowed_runtime_image_ids,omitempty"`
-	DefaultRuntimeImageId     string                 `protobuf:"bytes,12,opt,name=default_runtime_image_id,json=defaultRuntimeImageId,proto3" json:"default_runtime_image_id,omitempty"`
-	DefaultModelId            string                 `protobuf:"bytes,13,opt,name=default_model_id,json=defaultModelId,proto3" json:"default_model_id,omitempty"`
-	ModelBudget               *v1.ModelBudget        `protobuf:"bytes,14,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
-	Instructions              string                 `protobuf:"bytes,15,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	QualityCommands           []*v1.QualityCommand   `protobuf:"bytes,16,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
-	EgressPolicy              *v1.EgressPolicy       `protobuf:"bytes,17,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
-	ValidationReport          *v1.ValidationReport   `protobuf:"bytes,18,opt,name=validation_report,json=validationReport,proto3,oneof" json:"validation_report,omitempty"`
-	ValidatedAt               *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=validated_at,json=validatedAt,proto3,oneof" json:"validated_at,omitempty"`
-	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Version                   int64                  `protobuf:"varint,22,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TeamId                      string                 `protobuf:"bytes,2,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	SourceControlProviderId     string                 `protobuf:"bytes,3,opt,name=source_control_provider_id,json=sourceControlProviderId,proto3" json:"source_control_provider_id,omitempty"`
+	Name                        string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	RepositorySshUrl            string                 `protobuf:"bytes,5,opt,name=repository_ssh_url,json=repositorySshUrl,proto3" json:"repository_ssh_url,omitempty"`
+	DefaultBranch               string                 `protobuf:"bytes,6,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
+	SshCredentialProfileId      string                 `protobuf:"bytes,7,opt,name=ssh_credential_profile_id,json=sshCredentialProfileId,proto3" json:"ssh_credential_profile_id,omitempty"`
+	BuildCredentialProfileIds   []string               `protobuf:"bytes,8,rep,name=build_credential_profile_ids,json=buildCredentialProfileIds,proto3" json:"build_credential_profile_ids,omitempty"`
+	GitAuthorName               string                 `protobuf:"bytes,9,opt,name=git_author_name,json=gitAuthorName,proto3" json:"git_author_name,omitempty"`
+	GitAuthorEmail              string                 `protobuf:"bytes,10,opt,name=git_author_email,json=gitAuthorEmail,proto3" json:"git_author_email,omitempty"`
+	AllowedRuntimeImageIds      []string               `protobuf:"bytes,11,rep,name=allowed_runtime_image_ids,json=allowedRuntimeImageIds,proto3" json:"allowed_runtime_image_ids,omitempty"`
+	DefaultRuntimeImageId       string                 `protobuf:"bytes,12,opt,name=default_runtime_image_id,json=defaultRuntimeImageId,proto3" json:"default_runtime_image_id,omitempty"`
+	DefaultModelId              string                 `protobuf:"bytes,13,opt,name=default_model_id,json=defaultModelId,proto3" json:"default_model_id,omitempty"`
+	ModelBudget                 *v1.ModelBudget        `protobuf:"bytes,14,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
+	Instructions                string                 `protobuf:"bytes,15,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	QualityCommands             []*v1.QualityCommand   `protobuf:"bytes,16,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
+	EgressPolicy                *v1.EgressPolicy       `protobuf:"bytes,17,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
+	ValidationReport            *v1.ValidationReport   `protobuf:"bytes,18,opt,name=validation_report,json=validationReport,proto3,oneof" json:"validation_report,omitempty"`
+	ValidatedAt                 *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=validated_at,json=validatedAt,proto3,oneof" json:"validated_at,omitempty"`
+	CreatedAt                   *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                   *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Version                     int64                  `protobuf:"varint,22,opt,name=version,proto3" json:"version,omitempty"`
+	RequiredRuntimeCapabilities []string               `protobuf:"bytes,23,rep,name=required_runtime_capabilities,json=requiredRuntimeCapabilities,proto3" json:"required_runtime_capabilities,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *RepositoryBinding) Reset() {
@@ -1332,11 +1342,18 @@ func (x *RepositoryBinding) GetVersion() int64 {
 	return 0
 }
 
+func (x *RepositoryBinding) GetRequiredRuntimeCapabilities() []string {
+	if x != nil {
+		return x.RequiredRuntimeCapabilities
+	}
+	return nil
+}
+
 var File_sourcecontrol_v1_source_control_proto protoreflect.FileDescriptor
 
 const file_sourcecontrol_v1_source_control_proto_rawDesc = "" +
 	"\n" +
-	"%sourcecontrol/v1/source_control.proto\x12\x10sourcecontrol.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14types/v1/types.proto\"#\n" +
+	"%sourcecontrol/v1/source_control.proto\x12\x10sourcecontrol.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\"#\n" +
 	"!ListSourceControlProvidersRequest\"c\n" +
 	"\"ListSourceControlProvidersResponse\x12=\n" +
 	"\x05items\x18\x01 \x03(\v2'.sourcecontrol.v1.SourceControlProviderR\x05items\"^\n" +
@@ -1363,7 +1380,7 @@ const file_sourcecontrol_v1_source_control_proto_rawDesc = "" +
 	"\x15repository_binding_id\x18\x01 \x01(\tR\x13repositoryBindingId\x12\x17\n" +
 	"\ateam_id\x18\x02 \x01(\tR\x06teamId\"r\n" +
 	"\x1cGetRepositoryBindingResponse\x12R\n" +
-	"\x12repository_binding\x18\x01 \x01(\v2#.sourcecontrol.v1.RepositoryBindingR\x11repositoryBinding\"\xa3\x06\n" +
+	"\x12repository_binding\x18\x01 \x01(\v2#.sourcecontrol.v1.RepositoryBindingR\x11repositoryBinding\"\xe7\x06\n" +
 	"\x16RepositoryBindingInput\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12;\n" +
 	"\x1asource_control_provider_id\x18\x02 \x01(\tR\x17sourceControlProviderId\x12\x12\n" +
@@ -1381,7 +1398,8 @@ const file_sourcecontrol_v1_source_control_proto_rawDesc = "" +
 	"\fmodel_budget\x18\r \x01(\v2\x15.types.v1.ModelBudgetR\vmodelBudget\x12\"\n" +
 	"\finstructions\x18\x0e \x01(\tR\finstructions\x12C\n" +
 	"\x10quality_commands\x18\x0f \x03(\v2\x18.types.v1.QualityCommandR\x0fqualityCommands\x12;\n" +
-	"\regress_policy\x18\x10 \x01(\v2\x16.types.v1.EgressPolicyR\fegressPolicy\"f\n" +
+	"\regress_policy\x18\x10 \x01(\v2\x16.types.v1.EgressPolicyR\fegressPolicy\x12B\n" +
+	"\x1drequired_runtime_capabilities\x18\x11 \x03(\tR\x1brequiredRuntimeCapabilities\"f\n" +
 	" RegisterRepositoryBindingRequest\x12B\n" +
 	"\abinding\x18\x01 \x01(\v2(.sourcecontrol.v1.RepositoryBindingInputR\abinding\"w\n" +
 	"!RegisterRepositoryBindingResponse\x12R\n" +
@@ -1406,7 +1424,7 @@ const file_sourcecontrol_v1_source_control_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\b \x01(\x03R\aversion\"\xf7\b\n" +
+	"\aversion\x18\b \x01(\x03R\aversion\"\xbb\t\n" +
 	"\x11RepositoryBinding\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\ateam_id\x18\x02 \x01(\tR\x06teamId\x12;\n" +
@@ -1432,19 +1450,36 @@ const file_sourcecontrol_v1_source_control_proto_rawDesc = "" +
 	"created_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\x16 \x01(\x03R\aversionB\x14\n" +
+	"\aversion\x18\x16 \x01(\x03R\aversion\x12B\n" +
+	"\x1drequired_runtime_capabilities\x18\x17 \x03(\tR\x1brequiredRuntimeCapabilitiesB\x14\n" +
 	"\x12_validation_reportB\x0f\n" +
-	"\r_validated_at2\xdf\f\n" +
+	"\r_validated_at2\x8f\x0e\n" +
 	"\x14SourceControlService\x12\xad\x01\n" +
 	"\x1aListSourceControlProviders\x123.sourcecontrol.v1.ListSourceControlProvidersRequest\x1a4.sourcecontrol.v1.ListSourceControlProvidersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/source-control-providers\x12\xb9\x01\n" +
-	"\x18GetSourceControlProvider\x121.sourcecontrol.v1.GetSourceControlProviderRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"A\x82\xd3\xe4\x93\x02;\x129/v1/source-control-providers/{source_control_provider_id}\x12\xa9\x01\n" +
-	"\x1dRegisterSourceControlProvider\x126.sourcecontrol.v1.RegisterSourceControlProviderRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/source-control-providers\x12\xd5\x01\n" +
-	"!ChangeSourceControlProviderStatus\x12:.sourcecontrol.v1.ChangeSourceControlProviderStatusRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"K\x82\xd3\xe4\x93\x02E:\x01*2@/v1/source-control-providers/{source_control_provider_id}/status\x12\x9c\x01\n" +
+	"\x18GetSourceControlProvider\x121.sourcecontrol.v1.GetSourceControlProviderRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"A\x82\xd3\xe4\x93\x02;\x129/v1/source-control-providers/{source_control_provider_id}\x12\xc5\x01\n" +
+	"\x1dRegisterSourceControlProvider\x126.sourcecontrol.v1.RegisterSourceControlProviderRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"C\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/source-control-providers\x12\x81\x02\n" +
+	"!ChangeSourceControlProviderStatus\x12:.sourcecontrol.v1.ChangeSourceControlProviderStatusRequest\x1a'.sourcecontrol.v1.SourceControlProvider\"w\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02E:\x01*2@/v1/source-control-providers/{source_control_provider_id}/status\x12\x9c\x01\n" +
 	"\x16ListRepositoryBindings\x12/.sourcecontrol.v1.ListRepositoryBindingsRequest\x1a0.sourcecontrol.v1.ListRepositoryBindingsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/repository-bindings\x12\xa3\x01\n" +
-	"\x14GetRepositoryBinding\x12-.sourcecontrol.v1.GetRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"7\x82\xd3\xe4\x93\x021\x12//v1/repository-bindings/{repository_binding_id}\x12\x9e\x01\n" +
-	"\x19RegisterRepositoryBinding\x122.sourcecontrol.v1.RegisterRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"(\x82\xd3\xe4\x93\x02\":\abinding\"\x17/v1/repository-bindings\x12\xb2\x01\n" +
-	"\x17UpdateRepositoryBinding\x120.sourcecontrol.v1.UpdateRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"@\x82\xd3\xe4\x93\x02::\abinding2//v1/repository-bindings/{repository_binding_id}\x12\xbb\x01\n" +
-	"\x19ValidateRepositoryBinding\x122.sourcecontrol.v1.ValidateRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"E\x82\xd3\xe4\x93\x02?:\x01*\":/v1/repository-bindings/{repository_binding_id}/validationB=Z;agent-platform/backend/api/sourcecontrol/v1;sourcecontrolv1b\x06proto3"
+	"\x14GetRepositoryBinding\x12-.sourcecontrol.v1.GetRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"7\x82\xd3\xe4\x93\x021\x12//v1/repository-bindings/{repository_binding_id}\x12\xb4\x01\n" +
+	"\x19RegisterRepositoryBinding\x122.sourcecontrol.v1.RegisterRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\">\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/repository-bindings\x12\xd8\x01\n" +
+	"\x17UpdateRepositoryBinding\x120.sourcecontrol.v1.UpdateRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"f\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x024:\x01*2//v1/repository-bindings/{repository_binding_id}\x12\xe7\x01\n" +
+	"\x19ValidateRepositoryBinding\x122.sourcecontrol.v1.ValidateRepositoryBindingRequest\x1a#.sourcecontrol.v1.RepositoryBinding\"q\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02?:\x01*\":/v1/repository-bindings/{repository_binding_id}/validationB=Z;agent-platform/backend/api/sourcecontrol/v1;sourcecontrolv1b\x06proto3"
 
 var (
 	file_sourcecontrol_v1_source_control_proto_rawDescOnce sync.Once

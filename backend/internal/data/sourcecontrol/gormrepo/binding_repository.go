@@ -39,29 +39,30 @@ func (bindingJSON) GormDataType() string                          { return "json
 func (bindingJSON) GormDBDataType(*gorm.DB, *schema.Field) string { return "JSONB" }
 
 type bindingRecord struct {
-	ID                        string      `gorm:"column:id;primaryKey"`
-	OrganizationID            string      `gorm:"column:organization_id"`
-	TeamID                    string      `gorm:"column:team_id"`
-	SourceControlProviderID   string      `gorm:"column:source_control_provider_id"`
-	Name                      string      `gorm:"column:name"`
-	RepositorySSHURL          string      `gorm:"column:repository_ssh_url"`
-	DefaultBranch             string      `gorm:"column:default_branch"`
-	SSHCredentialProfileID    string      `gorm:"column:ssh_credential_profile_id"`
-	BuildCredentialProfileIDs bindingJSON `gorm:"column:build_credential_profile_ids;type:jsonb"`
-	GitAuthorName             string      `gorm:"column:git_author_name"`
-	GitAuthorEmail            string      `gorm:"column:git_author_email"`
-	AllowedRuntimeImageIDs    bindingJSON `gorm:"column:allowed_runtime_image_ids;type:jsonb"`
-	DefaultRuntimeImageID     string      `gorm:"column:default_runtime_image_id"`
-	DefaultModelID            string      `gorm:"column:default_model_id"`
-	ModelBudget               bindingJSON `gorm:"column:model_budget;type:jsonb"`
-	Instructions              string      `gorm:"column:instructions"`
-	QualityCommands           bindingJSON `gorm:"column:quality_commands;type:jsonb"`
-	EgressPolicy              bindingJSON `gorm:"column:egress_policy;type:jsonb"`
-	ValidationReport          bindingJSON `gorm:"column:validation_report;type:jsonb"`
-	ValidatedAt               *time.Time  `gorm:"column:validated_at"`
-	CreatedAt                 time.Time   `gorm:"column:created_at"`
-	UpdatedAt                 time.Time   `gorm:"column:updated_at"`
-	Version                   int64       `gorm:"column:version"`
+	ID                          string      `gorm:"column:id;primaryKey"`
+	OrganizationID              string      `gorm:"column:organization_id"`
+	TeamID                      string      `gorm:"column:team_id"`
+	SourceControlProviderID     string      `gorm:"column:source_control_provider_id"`
+	Name                        string      `gorm:"column:name"`
+	RepositorySSHURL            string      `gorm:"column:repository_ssh_url"`
+	DefaultBranch               string      `gorm:"column:default_branch"`
+	SSHCredentialProfileID      string      `gorm:"column:ssh_credential_profile_id"`
+	BuildCredentialProfileIDs   bindingJSON `gorm:"column:build_credential_profile_ids;type:jsonb"`
+	GitAuthorName               string      `gorm:"column:git_author_name"`
+	GitAuthorEmail              string      `gorm:"column:git_author_email"`
+	AllowedRuntimeImageIDs      bindingJSON `gorm:"column:allowed_runtime_image_ids;type:jsonb"`
+	DefaultRuntimeImageID       string      `gorm:"column:default_runtime_image_id"`
+	RequiredRuntimeCapabilities bindingJSON `gorm:"column:required_runtime_capabilities;type:jsonb"`
+	DefaultModelID              string      `gorm:"column:default_model_id"`
+	ModelBudget                 bindingJSON `gorm:"column:model_budget;type:jsonb"`
+	Instructions                string      `gorm:"column:instructions"`
+	QualityCommands             bindingJSON `gorm:"column:quality_commands;type:jsonb"`
+	EgressPolicy                bindingJSON `gorm:"column:egress_policy;type:jsonb"`
+	ValidationReport            bindingJSON `gorm:"column:validation_report;type:jsonb"`
+	ValidatedAt                 *time.Time  `gorm:"column:validated_at"`
+	CreatedAt                   time.Time   `gorm:"column:created_at"`
+	UpdatedAt                   time.Time   `gorm:"column:updated_at"`
+	Version                     int64       `gorm:"column:version"`
 }
 
 func (bindingRecord) TableName() string { return "repository_bindings" }
@@ -137,7 +138,8 @@ func (repository *Repository) UpdateBinding(ctx context.Context, binding domain.
 			"ssh_credential_profile_id": record.SSHCredentialProfileID, "build_credential_profile_ids": record.BuildCredentialProfileIDs,
 			"git_author_name": record.GitAuthorName, "git_author_email": record.GitAuthorEmail,
 			"allowed_runtime_image_ids": record.AllowedRuntimeImageIDs, "default_runtime_image_id": record.DefaultRuntimeImageID,
-			"default_model_id": record.DefaultModelID, "model_budget": record.ModelBudget,
+			"required_runtime_capabilities": record.RequiredRuntimeCapabilities,
+			"default_model_id":              record.DefaultModelID, "model_budget": record.ModelBudget,
 			"instructions": record.Instructions, "quality_commands": record.QualityCommands, "egress_policy": record.EgressPolicy,
 			"validation_report": nil, "validated_at": nil, "updated_at": record.UpdatedAt, "version": record.Version,
 		})
@@ -162,6 +164,10 @@ func bindingToRecord(binding domain.RepositoryBinding) (bindingRecord, error) {
 	if err != nil {
 		return bindingRecord{}, err
 	}
+	capabilities, err := json.Marshal(binding.RequiredRuntimeCapabilities)
+	if err != nil {
+		return bindingRecord{}, err
+	}
 	budget, err := json.Marshal(binding.ModelBudget)
 	if err != nil {
 		return bindingRecord{}, err
@@ -181,14 +187,15 @@ func bindingToRecord(binding domain.RepositoryBinding) (bindingRecord, error) {
 		SSHCredentialProfileID: binding.SSHCredentialProfileID, BuildCredentialProfileIDs: buildCredentials,
 		GitAuthorName: binding.GitAuthorName, GitAuthorEmail: binding.GitAuthorEmail,
 		AllowedRuntimeImageIDs: runtimes, DefaultRuntimeImageID: binding.DefaultRuntimeImageID,
-		DefaultModelID: binding.DefaultModelID, ModelBudget: budget, Instructions: binding.Instructions,
+		RequiredRuntimeCapabilities: capabilities,
+		DefaultModelID:              binding.DefaultModelID, ModelBudget: budget, Instructions: binding.Instructions,
 		QualityCommands: commands, EgressPolicy: egress, CreatedAt: binding.CreatedAt,
 		UpdatedAt: binding.UpdatedAt, Version: binding.Version,
 	}, nil
 }
 
 func restoreBindingRecord(record bindingRecord) (domain.RepositoryBinding, error) {
-	var buildCredentials, runtimes []string
+	var buildCredentials, runtimes, capabilities []string
 	var budget domain.ModelBudget
 	var commands []domain.QualityCommand
 	var egress domain.EgressPolicy
@@ -196,7 +203,7 @@ func restoreBindingRecord(record bindingRecord) (domain.RepositoryBinding, error
 		data   []byte
 		target any
 	}{
-		{record.BuildCredentialProfileIDs, &buildCredentials}, {record.AllowedRuntimeImageIDs, &runtimes},
+		{record.BuildCredentialProfileIDs, &buildCredentials}, {record.AllowedRuntimeImageIDs, &runtimes}, {record.RequiredRuntimeCapabilities, &capabilities},
 		{record.ModelBudget, &budget}, {record.QualityCommands, &commands}, {record.EgressPolicy, &egress},
 	} {
 		if err := json.Unmarshal(decode.data, decode.target); err != nil {
@@ -218,7 +225,8 @@ func restoreBindingRecord(record bindingRecord) (domain.RepositoryBinding, error
 			SSHCredentialProfileID: record.SSHCredentialProfileID, BuildCredentialProfileIDs: buildCredentials,
 			GitAuthorName: record.GitAuthorName, GitAuthorEmail: record.GitAuthorEmail,
 			AllowedRuntimeImageIDs: runtimes, DefaultRuntimeImageID: record.DefaultRuntimeImageID,
-			DefaultModelID: record.DefaultModelID, ModelBudget: budget, Instructions: record.Instructions,
+			RequiredRuntimeCapabilities: capabilities,
+			DefaultModelID:              record.DefaultModelID, ModelBudget: budget, Instructions: record.Instructions,
 			QualityCommands: commands, EgressPolicy: egress,
 		},
 		ValidationReport: report, ValidatedAt: record.ValidatedAt,

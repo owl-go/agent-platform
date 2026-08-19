@@ -1759,12 +1759,18 @@
         },
         "parameters": [
           {
-            "name": "binding",
+            "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1RepositoryBindingInput"
+              "$ref": "#/definitions/v1RegisterRepositoryBindingRequest"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1831,12 +1837,24 @@
             "type": "string"
           },
           {
-            "name": "binding",
+            "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1RepositoryBindingInput"
+              "$ref": "#/definitions/SourceControlServiceUpdateRepositoryBindingBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1875,6 +1893,18 @@
             "schema": {
               "$ref": "#/definitions/SourceControlServiceValidateRepositoryBindingBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2456,6 +2486,12 @@
             "schema": {
               "$ref": "#/definitions/v1RegisterSourceControlProviderRequest"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2524,6 +2560,18 @@
             "schema": {
               "$ref": "#/definitions/SourceControlServiceChangeSourceControlProviderStatusBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2770,6 +2818,14 @@
       "properties": {
         "enabled": {
           "type": "boolean"
+        }
+      }
+    },
+    "SourceControlServiceUpdateRepositoryBindingBody": {
+      "type": "object",
+      "properties": {
+        "binding": {
+          "$ref": "#/definitions/v1RepositoryBindingInput"
         }
       }
     },
@@ -3738,6 +3794,14 @@
         }
       }
     },
+    "v1RegisterRepositoryBindingRequest": {
+      "type": "object",
+      "properties": {
+        "binding": {
+          "$ref": "#/definitions/v1RepositoryBindingInput"
+        }
+      }
+    },
     "v1RegisterRuntimeImageRequest": {
       "type": "object",
       "properties": {
@@ -3896,6 +3960,12 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "required_runtime_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -3959,6 +4029,12 @@
         },
         "egress_policy": {
           "$ref": "#/definitions/v1EgressPolicy"
+        },
+        "required_runtime_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

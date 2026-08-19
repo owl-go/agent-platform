@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,12 +50,55 @@ func TestRepositoryBindingLifecycleAndTenantBoundary(t *testing.T) {
 	if _, err := service.Get(context.Background(), fixture.organizationID, uuid.NewString(), binding.ID); !errors.Is(err, sourcedomain.ErrBindingNotFound) {
 		t.Fatalf("cross-Team read error = %v", err)
 	}
+	invalidCommand := bindingCommand(fixture)
+	invalidCommand.Name = "invalid-policy-" + fixture.teamID
+	invalidCommand.ModelBudget.MaxCostAmount = "0"
+	invalidCommand.QualityCommands = nil
+	invalidService := sourceapplication.NewBindingServiceWithDependencies(sourcegorm.New(tx), bindingvalidator.New(tx), fixedClock(now), fixedID(uuid.NewString()))
+	invalidBinding, err := invalidService.Register(context.Background(), invalidCommand)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidBinding, err = invalidService.Validate(context.Background(), fixture.organizationID, fixture.teamID, invalidBinding.ID, 1)
+	if err != nil || invalidBinding.ValidationReport == nil || invalidBinding.ValidationReport.Errors["model_budget"] == "" || invalidBinding.ValidationReport.Errors["quality_commands"] == "" {
+		t.Fatalf("field-scoped policy Validation Report = (%+v, %v)", invalidBinding.ValidationReport, err)
+	}
 	validated, err := service.Validate(context.Background(), fixture.organizationID, fixture.teamID, binding.ID, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if validated.ValidationReport == nil || validated.ValidationReport.Valid || validated.ValidationReport.Errors["allowed_runtime_image_ids"] == "" {
 		t.Fatalf("experimental Runtime should block validation: %+v", validated.ValidationReport)
+	}
+	if err := tx.Exec("UPDATE runtime_images SET status = 'production', capabilities = '{}', conformance_evidence_key = 'phase-0/test/evidence.tar', conformance_evidence_sha256 = ? WHERE id = ?", strings.Repeat("a", 64), fixture.runtimeID).Error; err != nil {
+		t.Fatal(err)
+	}
+	validated, err = service.Validate(context.Background(), fixture.organizationID, fixture.teamID, binding.ID, validated.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validated.ValidationReport == nil || validated.ValidationReport.Valid || validated.ValidationReport.Errors["required_runtime_capabilities"] == "" {
+		t.Fatalf("missing required Runtime Capability should block validation: %+v", validated.ValidationReport)
+	}
+	if err := tx.Exec("UPDATE runtime_images SET capabilities = '{\"streaming\":true}' WHERE id = ?", fixture.runtimeID).Error; err != nil {
+		t.Fatal(err)
+	}
+	validated, err = service.Validate(context.Background(), fixture.organizationID, fixture.teamID, binding.ID, validated.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validated.ValidationReport == nil || !validated.ValidationReport.Valid || len(validated.ValidationReport.Errors) != 0 {
+		t.Fatalf("valid dependencies should pass validation: %+v", validated.ValidationReport)
+	}
+	if err := tx.Exec("UPDATE credential_profiles SET disabled_at = now() WHERE id = ?", fixture.sshCredential).Error; err != nil {
+		t.Fatal(err)
+	}
+	validated, err = service.Validate(context.Background(), fixture.organizationID, fixture.teamID, binding.ID, validated.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validated.ValidationReport == nil || validated.ValidationReport.Valid || validated.ValidationReport.Errors["ssh_credential_profile_id"] == "" {
+		t.Fatalf("disabled SSH Credential Profile should invalidate Binding: %+v", validated.ValidationReport)
 	}
 	update := bindingCommand(fixture)
 	update.Instructions = "Updated instructions invalidate the previous report."
@@ -64,7 +108,7 @@ func TestRepositoryBindingLifecycleAndTenantBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Version != 3 || updated.ValidationReport != nil || updated.ValidatedAt != nil {
+	if updated.Version != 6 || updated.ValidationReport != nil || updated.ValidatedAt != nil {
 		t.Fatalf("updated Binding retained stale validation: %+v", updated)
 	}
 
@@ -85,11 +129,12 @@ func bindingCommand(fixture bindingFixture) sourceapplication.RegisterBindingCom
 		SSHCredentialProfileID: fixture.sshCredential, BuildCredentialProfileIDs: []string{fixture.buildCredential},
 		GitAuthorName: "Agent Platform", GitAuthorEmail: "agent@example.test",
 		AllowedRuntimeImageIDs: []string{fixture.runtimeID}, DefaultRuntimeImageID: fixture.runtimeID,
-		DefaultModelID:  fixture.modelID,
-		ModelBudget:     sourcedomain.ModelBudget{MaxInputTokens: 1000, MaxOutputTokens: 500, MaxCostAmount: "10.00"},
-		Instructions:    "Follow repository instructions.",
-		QualityCommands: []sourcedomain.QualityCommand{{Name: "test", Kind: sourcedomain.QualityTest, Executable: "go", Arguments: []string{"test", "./..."}, TimeoutSeconds: 600}},
-		EgressPolicy:    sourcedomain.EgressPolicy{Mode: "public"},
+		RequiredRuntimeCapabilities: []string{"streaming"},
+		DefaultModelID:              fixture.modelID,
+		ModelBudget:                 sourcedomain.ModelBudget{MaxInputTokens: 1000, MaxOutputTokens: 500, MaxCostAmount: "10.00"},
+		Instructions:                "Follow repository instructions.",
+		QualityCommands:             []sourcedomain.QualityCommand{{Name: "test", Kind: sourcedomain.QualityTest, Executable: "go", Arguments: []string{"test", "./..."}, TimeoutSeconds: 600}},
+		EgressPolicy:                sourcedomain.EgressPolicy{Mode: "public"},
 	}
 }
 
@@ -113,7 +158,7 @@ func seedBindingFixture(t *testing.T, db *gorm.DB) bindingFixture {
 		{`INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES (?, ?, ?, ?, 'build', 'secret://build')`, []any{fixture.buildCredential, fixture.organizationID, fixture.teamID, suffix + "-build"}},
 		{`INSERT INTO credential_profiles (id, organization_id, name, kind, secret_ref) VALUES (?, ?, ?, 'model', 'secret://model')`, []any{modelCredential, fixture.organizationID, suffix + "-model"}},
 		{`INSERT INTO configured_models (id, organization_id, name, model_id, endpoint, credential_profile_id) VALUES (?, ?, ?, 'model', 'https://model.example.test', ?)`, []any{fixture.modelID, fixture.organizationID, suffix, modelCredential}},
-		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, ?, 'claude', '1', '1', ?, '{}', 'experimental')`, []any{fixture.runtimeID, fixture.organizationID, digest}},
+		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, ?, 'claude', '1', '1', ?, '{"streaming":true}', 'experimental')`, []any{fixture.runtimeID, fixture.organizationID, digest}},
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement.query, statement.args...).Error; err != nil {

@@ -2313,8 +2313,25 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/v1RepositoryBindingInput"
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RegisterRepositoryBindingRequest"
+              }
+            }
+          },
+          "required": true
         },
         "tags": [
           "SourceControlService"
@@ -2400,10 +2417,33 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/v1RepositoryBindingInput"
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceControlServiceUpdateRepositoryBindingBody"
+              }
+            }
+          },
+          "required": true
         },
         "tags": [
           "SourceControlService"
@@ -2439,6 +2479,22 @@
           {
             "name": "repository_binding_id",
             "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
             "required": true,
             "schema": {
               "type": "string"
@@ -3212,6 +3268,16 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3300,6 +3366,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3319,18 +3401,6 @@
     }
   },
   "components": {
-    "requestBodies": {
-      "v1RepositoryBindingInput": {
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/v1RepositoryBindingInput"
-            }
-          }
-        },
-        "required": true
-      }
-    },
     "schemas": {
       "AgentLifecycleServiceBlockAgentReleaseBody": {
         "type": "object",
@@ -3569,6 +3639,14 @@
         "properties": {
           "enabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "SourceControlServiceUpdateRepositoryBindingBody": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "$ref": "#/components/schemas/v1RepositoryBindingInput"
           }
         }
       },
@@ -4518,6 +4596,14 @@
           }
         }
       },
+      "v1RegisterRepositoryBindingRequest": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "$ref": "#/components/schemas/v1RepositoryBindingInput"
+          }
+        }
+      },
       "v1RegisterRuntimeImageRequest": {
         "type": "object",
         "properties": {
@@ -4675,6 +4761,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "required_runtime_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -4737,6 +4829,12 @@
           },
           "egress_policy": {
             "$ref": "#/components/schemas/v1EgressPolicy"
+          },
+          "required_runtime_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

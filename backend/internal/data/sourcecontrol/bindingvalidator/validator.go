@@ -2,9 +2,11 @@ package bindingvalidator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"agent-platform/backend/internal/biz/sourcecontrol/domain"
 
@@ -22,16 +24,17 @@ type providerProjection struct {
 }
 
 type credentialProjection struct {
-	ID             string  `gorm:"column:id"`
-	OrganizationID string  `gorm:"column:organization_id"`
-	TeamID         *string `gorm:"column:team_id"`
-	Kind           string  `gorm:"column:kind"`
-	Enabled        bool    `gorm:"column:enabled"`
+	ID             string     `gorm:"column:id"`
+	OrganizationID string     `gorm:"column:organization_id"`
+	TeamID         *string    `gorm:"column:team_id"`
+	Kind           string     `gorm:"column:kind"`
+	DisabledAt     *time.Time `gorm:"column:disabled_at"`
 }
 
 type runtimeProjection struct {
-	ID     string `gorm:"column:id"`
-	Status string `gorm:"column:status"`
+	ID           string          `gorm:"column:id"`
+	Status       string          `gorm:"column:status"`
+	Capabilities json.RawMessage `gorm:"column:capabilities"`
 }
 
 type modelProjection struct {
@@ -82,6 +85,9 @@ func (validator *Validator) Validate(ctx context.Context, binding domain.Reposit
 		return nil, err
 	}
 	errorsByField := make(map[string]string)
+	for field, message := range binding.PolicyErrors() {
+		errorsByField[field] = message
+	}
 	if !loaded.provider.Enabled {
 		errorsByField["source_control_provider_id"] = "Source Control Provider is disabled"
 	}
@@ -89,11 +95,11 @@ func (validator *Validator) Validate(ctx context.Context, binding domain.Reposit
 	if err != nil || !strings.EqualFold(providerURL.Hostname(), binding.RepositoryHost) {
 		errorsByField["repository_ssh_url"] = "repository host does not match Source Control Provider"
 	}
-	if !loaded.ssh.Enabled {
+	if loaded.ssh.DisabledAt != nil {
 		errorsByField["ssh_credential_profile_id"] = "SSH Credential Profile is disabled"
 	}
 	for _, credential := range loaded.build {
-		if !credential.Enabled {
+		if credential.DisabledAt != nil {
 			errorsByField["build_credential_profile_ids"] = "one or more build Credential Profiles are disabled"
 			break
 		}
@@ -101,7 +107,16 @@ func (validator *Validator) Validate(ctx context.Context, binding domain.Reposit
 	for _, runtime := range loaded.runtimes {
 		if runtime.Status != "production" {
 			errorsByField["allowed_runtime_image_ids"] = "all allowed Runtime Images must be production"
-			break
+		}
+		var capabilities map[string]bool
+		if err := json.Unmarshal(runtime.Capabilities, &capabilities); err != nil {
+			return nil, fmt.Errorf("decode Runtime Image Capabilities: %w", err)
+		}
+		for _, required := range binding.RequiredRuntimeCapabilities {
+			if !capabilities[required] {
+				errorsByField["required_runtime_capabilities"] = "all allowed Runtime Images must provide every required Runtime Capability"
+				break
+			}
 		}
 	}
 	if !loaded.model.Enabled {

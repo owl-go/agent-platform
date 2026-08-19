@@ -3,6 +3,7 @@ package sourcecontrol.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 import "types/v1/types.proto";
 
 option go_package = "agent-platform/backend/api/sourcecontrol/v1;sourcecontrolv1";
@@ -10,13 +11,37 @@ option go_package = "agent-platform/backend/api/sourcecontrol/v1;sourcecontrolv1
 service SourceControlService {
   rpc ListSourceControlProviders(ListSourceControlProvidersRequest) returns (ListSourceControlProvidersResponse) { option (google.api.http) = {get: "/v1/source-control-providers"}; }
   rpc GetSourceControlProvider(GetSourceControlProviderRequest) returns (SourceControlProvider) { option (google.api.http) = {get: "/v1/source-control-providers/{source_control_provider_id}"}; }
-  rpc RegisterSourceControlProvider(RegisterSourceControlProviderRequest) returns (SourceControlProvider) { option (google.api.http) = {post: "/v1/source-control-providers" body: "*"}; }
-  rpc ChangeSourceControlProviderStatus(ChangeSourceControlProviderStatusRequest) returns (SourceControlProvider) { option (google.api.http) = {patch: "/v1/source-control-providers/{source_control_provider_id}/status" body: "*"}; }
+  rpc RegisterSourceControlProvider(RegisterSourceControlProviderRequest) returns (SourceControlProvider) {
+    option (google.api.http) = {post: "/v1/source-control-providers" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc ChangeSourceControlProviderStatus(ChangeSourceControlProviderStatusRequest) returns (SourceControlProvider) {
+    option (google.api.http) = {patch: "/v1/source-control-providers/{source_control_provider_id}/status" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
   rpc ListRepositoryBindings(ListRepositoryBindingsRequest) returns (ListRepositoryBindingsResponse) { option (google.api.http) = {get: "/v1/repository-bindings"}; }
   rpc GetRepositoryBinding(GetRepositoryBindingRequest) returns (RepositoryBinding) { option (google.api.http) = {get: "/v1/repository-bindings/{repository_binding_id}"}; }
-  rpc RegisterRepositoryBinding(RegisterRepositoryBindingRequest) returns (RepositoryBinding) { option (google.api.http) = {post: "/v1/repository-bindings" body: "binding"}; }
-  rpc UpdateRepositoryBinding(UpdateRepositoryBindingRequest) returns (RepositoryBinding) { option (google.api.http) = {patch: "/v1/repository-bindings/{repository_binding_id}" body: "binding"}; }
-  rpc ValidateRepositoryBinding(ValidateRepositoryBindingRequest) returns (RepositoryBinding) { option (google.api.http) = {post: "/v1/repository-bindings/{repository_binding_id}/validation" body: "*"}; }
+  rpc RegisterRepositoryBinding(RegisterRepositoryBindingRequest) returns (RepositoryBinding) {
+    option (google.api.http) = {post: "/v1/repository-bindings" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc UpdateRepositoryBinding(UpdateRepositoryBindingRequest) returns (RepositoryBinding) {
+    option (google.api.http) = {patch: "/v1/repository-bindings/{repository_binding_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc ValidateRepositoryBinding(ValidateRepositoryBindingRequest) returns (RepositoryBinding) {
+    option (google.api.http) = {post: "/v1/repository-bindings/{repository_binding_id}/validation" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
 }
 
 message ListSourceControlProvidersRequest {}
@@ -49,6 +74,7 @@ message RepositoryBindingInput {
   string instructions = 14;
   repeated types.v1.QualityCommand quality_commands = 15;
   types.v1.EgressPolicy egress_policy = 16;
+  repeated string required_runtime_capabilities = 17;
 }
 message RegisterRepositoryBindingRequest { RepositoryBindingInput binding = 1; }
 message RegisterRepositoryBindingResponse { RepositoryBinding repository_binding = 1; }
@@ -90,4 +116,5 @@ message RepositoryBinding {
   google.protobuf.Timestamp created_at = 20;
   google.protobuf.Timestamp updated_at = 21;
   int64 version = 22;
+  repeated string required_runtime_capabilities = 23;
 }

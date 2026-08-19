@@ -10,6 +10,10 @@ export type CredentialProfile = components["schemas"]["v1CredentialProfile"];
 export type ConfiguredModel = components["schemas"]["v1ConfiguredModel"];
 export type RegisterCredentialProfileInput = components["schemas"]["v1RegisterCredentialProfileRequest"];
 export type RegisterConfiguredModelInput = components["schemas"]["v1RegisterConfiguredModelRequest"];
+export type SourceControlProvider = components["schemas"]["v1SourceControlProvider"];
+export type RegisterSourceControlProviderInput = components["schemas"]["v1RegisterSourceControlProviderRequest"];
+export type RepositoryBinding = components["schemas"]["v1RepositoryBinding"];
+export type RepositoryBindingInput = components["schemas"]["v1RepositoryBindingInput"];
 
 export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
 
@@ -43,6 +47,15 @@ export interface PlatformApi {
   getConfiguredModel(id: string, signal?: AbortSignal): Promise<ConfiguredModel>;
   registerConfiguredModel(input: RegisterConfiguredModelInput, idempotencyKey: string, signal?: AbortSignal): Promise<ConfiguredModel>;
   changeConfiguredModelStatus(id: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<ConfiguredModel>;
+  listSourceControlProviders(signal?: AbortSignal): Promise<SourceControlProvider[]>;
+  getSourceControlProvider(id: string, signal?: AbortSignal): Promise<SourceControlProvider>;
+  registerSourceControlProvider(input: RegisterSourceControlProviderInput, idempotencyKey: string, signal?: AbortSignal): Promise<SourceControlProvider>;
+  changeSourceControlProviderStatus(id: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<SourceControlProvider>;
+  listRepositoryBindings(teamID: string, signal?: AbortSignal): Promise<RepositoryBinding[]>;
+  getRepositoryBinding(id: string, teamID: string, signal?: AbortSignal): Promise<RepositoryBinding>;
+  registerRepositoryBinding(input: RepositoryBindingInput, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
+  updateRepositoryBinding(id: string, input: RepositoryBindingInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
+  validateRepositoryBinding(id: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RepositoryBinding>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -121,6 +134,52 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     changeConfiguredModelStatus(id, enabled, version, idempotencyKey, signal) {
       return authorizedRequest<ConfiguredModel>(`/api/v1/configured-models/${encodeURIComponent(id)}/status`, {
         method: "PATCH", body: JSON.stringify({ enabled }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    async listSourceControlProviders(signal) {
+      const body = await authorizedRequest<components["schemas"]["v1ListSourceControlProvidersResponse"]>("/api/v1/source-control-providers", { signal });
+      return body.items ?? [];
+    },
+    getSourceControlProvider(id, signal) {
+      return authorizedRequest<SourceControlProvider>(`/api/v1/source-control-providers/${encodeURIComponent(id)}`, { signal });
+    },
+    registerSourceControlProvider(input, idempotencyKey, signal) {
+      return authorizedRequest<SourceControlProvider>("/api/v1/source-control-providers", {
+        method: "POST", body: JSON.stringify(input), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    changeSourceControlProviderStatus(id, enabled, version, idempotencyKey, signal) {
+      return authorizedRequest<SourceControlProvider>(`/api/v1/source-control-providers/${encodeURIComponent(id)}/status`, {
+        method: "PATCH", body: JSON.stringify({ enabled }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    async listRepositoryBindings(teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListRepositoryBindingsResponse"]>(`/api/v1/repository-bindings?${query}`, { signal });
+      return body.items ?? [];
+    },
+    getRepositoryBinding(id, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<RepositoryBinding>(`/api/v1/repository-bindings/${encodeURIComponent(id)}?${query}`, { signal });
+    },
+    registerRepositoryBinding(input, idempotencyKey, signal) {
+      return authorizedRequest<RepositoryBinding>("/api/v1/repository-bindings", {
+        method: "POST", body: JSON.stringify({ binding: input }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    updateRepositoryBinding(id, input, version, idempotencyKey, signal) {
+      return authorizedRequest<RepositoryBinding>(`/api/v1/repository-bindings/${encodeURIComponent(id)}`, {
+        method: "PATCH", body: JSON.stringify({ binding: input }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    validateRepositoryBinding(id, teamID, version, idempotencyKey, signal) {
+      return authorizedRequest<RepositoryBinding>(`/api/v1/repository-bindings/${encodeURIComponent(id)}/validation`, {
+        method: "POST", body: JSON.stringify({ team_id: teamID }), signal,
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
       });
     },

@@ -58,52 +58,54 @@ type ValidationReport struct {
 }
 
 type RepositoryBinding struct {
-	ID                        string
-	OrganizationID            string
-	TeamID                    string
-	SourceControlProviderID   string
-	Name                      string
-	RepositorySSHURL          string
-	RepositoryHost            string
-	DefaultBranch             string
-	SSHCredentialProfileID    string
-	BuildCredentialProfileIDs []string
-	GitAuthorName             string
-	GitAuthorEmail            string
-	AllowedRuntimeImageIDs    []string
-	DefaultRuntimeImageID     string
-	DefaultModelID            string
-	ModelBudget               ModelBudget
-	Instructions              string
-	QualityCommands           []QualityCommand
-	EgressPolicy              EgressPolicy
-	ValidationReport          *ValidationReport
-	ValidatedAt               *time.Time
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
-	Version                   int64
+	ID                          string
+	OrganizationID              string
+	TeamID                      string
+	SourceControlProviderID     string
+	Name                        string
+	RepositorySSHURL            string
+	RepositoryHost              string
+	DefaultBranch               string
+	SSHCredentialProfileID      string
+	BuildCredentialProfileIDs   []string
+	GitAuthorName               string
+	GitAuthorEmail              string
+	AllowedRuntimeImageIDs      []string
+	DefaultRuntimeImageID       string
+	RequiredRuntimeCapabilities []string
+	DefaultModelID              string
+	ModelBudget                 ModelBudget
+	Instructions                string
+	QualityCommands             []QualityCommand
+	EgressPolicy                EgressPolicy
+	ValidationReport            *ValidationReport
+	ValidatedAt                 *time.Time
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	Version                     int64
 }
 
 type BindingRegistration struct {
-	ID                        string
-	OrganizationID            string
-	TeamID                    string
-	SourceControlProviderID   string
-	Name                      string
-	RepositorySSHURL          string
-	DefaultBranch             string
-	SSHCredentialProfileID    string
-	BuildCredentialProfileIDs []string
-	GitAuthorName             string
-	GitAuthorEmail            string
-	AllowedRuntimeImageIDs    []string
-	DefaultRuntimeImageID     string
-	DefaultModelID            string
-	ModelBudget               ModelBudget
-	Instructions              string
-	QualityCommands           []QualityCommand
-	EgressPolicy              EgressPolicy
-	Now                       time.Time
+	ID                          string
+	OrganizationID              string
+	TeamID                      string
+	SourceControlProviderID     string
+	Name                        string
+	RepositorySSHURL            string
+	DefaultBranch               string
+	SSHCredentialProfileID      string
+	BuildCredentialProfileIDs   []string
+	GitAuthorName               string
+	GitAuthorEmail              string
+	AllowedRuntimeImageIDs      []string
+	DefaultRuntimeImageID       string
+	RequiredRuntimeCapabilities []string
+	DefaultModelID              string
+	ModelBudget                 ModelBudget
+	Instructions                string
+	QualityCommands             []QualityCommand
+	EgressPolicy                EgressPolicy
+	Now                         time.Time
 }
 
 type PersistedBinding struct {
@@ -140,20 +142,18 @@ func RegisterBinding(registration BindingRegistration) (RepositoryBinding, error
 		return RepositoryBinding{}, invalidBindingf("Git author email must be a plain email address")
 	}
 	runtimes, err := normalizedIDs(registration.AllowedRuntimeImageIDs, "allowed Runtime Images")
-	if err != nil || !contains(runtimes, registration.DefaultRuntimeImageID) {
-		return RepositoryBinding{}, invalidBindingf("default Runtime Image must belong to the non-empty allowed Runtime Image set")
+	if err != nil {
+		return RepositoryBinding{}, err
+	}
+	capabilities, err := normalizedCapabilities(registration.RequiredRuntimeCapabilities)
+	if err != nil {
+		return RepositoryBinding{}, err
 	}
 	buildCredentials, err := normalizedIDsAllowEmpty(registration.BuildCredentialProfileIDs, "build Credential Profiles")
 	if err != nil {
 		return RepositoryBinding{}, err
 	}
-	if err := registration.ModelBudget.validate(); err != nil {
-		return RepositoryBinding{}, err
-	}
-	commands, err := validateQualityCommands(registration.QualityCommands)
-	if err != nil {
-		return RepositoryBinding{}, err
-	}
+	commands := cloneQualityCommands(registration.QualityCommands)
 	if registration.EgressPolicy.Mode != "public" {
 		return RepositoryBinding{}, invalidBindingf("Egress Policy mode must be public")
 	}
@@ -168,7 +168,8 @@ func RegisterBinding(registration BindingRegistration) (RepositoryBinding, error
 		SSHCredentialProfileID: registration.SSHCredentialProfileID, BuildCredentialProfileIDs: buildCredentials,
 		GitAuthorName: strings.TrimSpace(registration.GitAuthorName), GitAuthorEmail: registration.GitAuthorEmail,
 		AllowedRuntimeImageIDs: runtimes, DefaultRuntimeImageID: registration.DefaultRuntimeImageID,
-		DefaultModelID: registration.DefaultModelID, ModelBudget: registration.ModelBudget,
+		RequiredRuntimeCapabilities: capabilities,
+		DefaultModelID:              registration.DefaultModelID, ModelBudget: registration.ModelBudget,
 		Instructions: registration.Instructions, QualityCommands: commands, EgressPolicy: registration.EgressPolicy,
 		CreatedAt: now, UpdatedAt: now, Version: 1,
 	}, nil
@@ -242,6 +243,20 @@ func (binding *RepositoryBinding) Reconfigure(registration BindingRegistration) 
 	return nil
 }
 
+func (binding RepositoryBinding) PolicyErrors() map[string]string {
+	errorsByField := make(map[string]string)
+	if err := binding.ModelBudget.validate(); err != nil {
+		errorsByField["model_budget"] = "Model Budget must use positive token and cost limits"
+	}
+	if _, err := validateQualityCommands(binding.QualityCommands); err != nil {
+		errorsByField["quality_commands"] = "one to twenty valid structured quality commands are required"
+	}
+	if len(binding.AllowedRuntimeImageIDs) == 0 || !contains(binding.AllowedRuntimeImageIDs, binding.DefaultRuntimeImageID) {
+		errorsByField["default_runtime_image_id"] = "default Runtime Image must belong to the allowed Runtime Image set"
+	}
+	return errorsByField
+}
+
 func (budget ModelBudget) validate() error {
 	if budget.MaxInputTokens <= 0 || budget.MaxOutputTokens <= 0 || !validPositiveDecimal(budget.MaxCostAmount) {
 		return invalidBindingf("Model Budget requires positive input tokens, output tokens, and cost amount")
@@ -294,6 +309,29 @@ func validateQualityCommands(input []QualityCommand) ([]QualityCommand, error) {
 		commands[index] = command
 	}
 	return commands, nil
+}
+
+func cloneQualityCommands(input []QualityCommand) []QualityCommand {
+	commands := make([]QualityCommand, len(input))
+	for index, command := range input {
+		command.Arguments = append([]string(nil), command.Arguments...)
+		commands[index] = command
+	}
+	return commands
+}
+
+func normalizedCapabilities(input []string) ([]string, error) {
+	capabilities, err := normalizedIDsAllowEmpty(input, "required Runtime Capabilities")
+	if err != nil {
+		return nil, err
+	}
+	known := map[string]bool{"streaming": true, "structured_final": true, "native_resume": true, "subagents": true, "usage": true}
+	for _, capability := range capabilities {
+		if !known[capability] {
+			return nil, invalidBindingf("required Runtime Capability %q is unsupported", capability)
+		}
+	}
+	return capabilities, nil
 }
 
 func repositoryHost(value string) (string, error) {

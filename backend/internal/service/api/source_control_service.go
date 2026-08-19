@@ -123,10 +123,11 @@ func (service *GeneratedServices) RegisterRepositoryBinding(ctx context.Context,
 	if request.Binding == nil {
 		return nil, publicError(400, "invalid_request_body")
 	}
-	actor, err := service.authorizeAgentBuild(ctx, request.Binding.TeamId)
+	actor, err := service.dependencies.CatalogWriteAccess.AuthorizeModelCatalogWrite(ctx, "")
 	if err != nil {
-		return nil, err
+		return nil, mapAuthorizationError(err, "catalog_write_access_denied")
 	}
+	actor.TeamID = request.Binding.TeamId
 	command := bindingCommand(request.Binding, actor.OrganizationID, actor.TeamID)
 	result, err := service.executeWrite(ctx, actor, "repository-binding.register", "", request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		value, err := services.Bindings.Register(ctx, command)
@@ -146,10 +147,11 @@ func (service *GeneratedServices) UpdateRepositoryBinding(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
-	actor, err := service.authorizeAgentBuild(ctx, request.Binding.TeamId)
+	actor, err := service.dependencies.CatalogWriteAccess.AuthorizeModelCatalogWrite(ctx, "")
 	if err != nil {
-		return nil, err
+		return nil, mapAuthorizationError(err, "catalog_write_access_denied")
 	}
+	actor.TeamID = request.Binding.TeamId
 	command := sourceapplication.UpdateBindingCommand{ID: request.RepositoryBindingId, ExpectedVersion: version, RegisterBindingCommand: bindingCommand(request.Binding, actor.OrganizationID, actor.TeamID)}
 	result, err := service.executeWrite(ctx, actor, "repository-binding.update:"+request.RepositoryBindingId, strconv.FormatInt(version, 10), request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		value, err := services.Bindings.Update(ctx, command)
@@ -169,10 +171,11 @@ func (service *GeneratedServices) ValidateRepositoryBinding(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	actor, err := service.authorizeAgentBuild(ctx, request.TeamId)
+	actor, err := service.dependencies.CatalogWriteAccess.AuthorizeModelCatalogWrite(ctx, "")
 	if err != nil {
-		return nil, err
+		return nil, mapAuthorizationError(err, "catalog_write_access_denied")
 	}
+	actor.TeamID = request.TeamId
 	result, err := service.executeWrite(ctx, actor, "repository-binding.validate:"+request.RepositoryBindingId, strconv.FormatInt(version, 10), request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		value, err := services.Bindings.Validate(ctx, actor.OrganizationID, actor.TeamID, request.RepositoryBindingId, version)
 		return encodeWriteResult(http.StatusOK, newRepositoryBindingResponse(value), err)
@@ -184,7 +187,7 @@ func (service *GeneratedServices) ValidateRepositoryBinding(ctx context.Context,
 }
 
 func bindingCommand(input *sourcecontrolv1.RepositoryBindingInput, organizationID, teamID string) sourceapplication.RegisterBindingCommand {
-	command := sourceapplication.RegisterBindingCommand{OrganizationID: organizationID, TeamID: teamID, SourceControlProviderID: input.SourceControlProviderId, Name: input.Name, RepositorySSHURL: input.RepositorySshUrl, DefaultBranch: input.DefaultBranch, SSHCredentialProfileID: input.SshCredentialProfileId, BuildCredentialProfileIDs: input.BuildCredentialProfileIds, GitAuthorName: input.GitAuthorName, GitAuthorEmail: input.GitAuthorEmail, AllowedRuntimeImageIDs: input.AllowedRuntimeImageIds, DefaultRuntimeImageID: input.DefaultRuntimeImageId, DefaultModelID: input.DefaultModelId, Instructions: input.Instructions}
+	command := sourceapplication.RegisterBindingCommand{OrganizationID: organizationID, TeamID: teamID, SourceControlProviderID: input.SourceControlProviderId, Name: input.Name, RepositorySSHURL: input.RepositorySshUrl, DefaultBranch: input.DefaultBranch, SSHCredentialProfileID: input.SshCredentialProfileId, BuildCredentialProfileIDs: input.BuildCredentialProfileIds, GitAuthorName: input.GitAuthorName, GitAuthorEmail: input.GitAuthorEmail, AllowedRuntimeImageIDs: input.AllowedRuntimeImageIds, DefaultRuntimeImageID: input.DefaultRuntimeImageId, RequiredRuntimeCapabilities: input.RequiredRuntimeCapabilities, DefaultModelID: input.DefaultModelId, Instructions: input.Instructions}
 	if input.ModelBudget != nil {
 		command.ModelBudget = sourcedomain.ModelBudget{MaxInputTokens: input.ModelBudget.MaxInputTokens, MaxOutputTokens: input.ModelBudget.MaxOutputTokens, MaxCostAmount: input.ModelBudget.MaxCostAmount}
 	}
