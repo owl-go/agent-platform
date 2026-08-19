@@ -2926,6 +2926,25 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "page_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "tags": [
           "RuntimeCatalogService"
         ]
@@ -2954,6 +2973,17 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "description": "Stable key for one user intent.",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3038,6 +3068,24 @@
           {
             "name": "runtime_image_id",
             "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "description": "Stable key for one user intent.",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "description": "Current Runtime Image Version.",
+            "in": "header",
             "required": true,
             "schema": {
               "type": "string"
@@ -3457,6 +3505,9 @@
             "type": "string"
           },
           "blocked_reason": {
+            "type": "string"
+          },
+          "conformance_evidence_key": {
             "type": "string"
           }
         }
@@ -4249,6 +4300,9 @@
             "items": {
               "$ref": "#/components/schemas/v1RuntimeImage"
             }
+          },
+          "next_page_token": {
+            "type": "string"
           }
         }
       },
@@ -4798,6 +4852,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "conformance_evidence_key": {
+            "type": "string"
+          },
+          "conformance_evidence_sha256": {
+            "type": "string"
           }
         }
       },

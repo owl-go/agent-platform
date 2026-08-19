@@ -73,10 +73,10 @@ func (service *AccessService) AuthorizeRunControl(ctx context.Context, token, ru
 	return principal.AuthorizeRunControl(scope, action)
 }
 
-func (service *AccessService) AuthorizeRuntimeImageRead(ctx context.Context, token string) error {
+func (service *AccessService) AuthorizeRuntimeImageRead(ctx context.Context, token string) (domain.Actor, error) {
 	principal, err := service.authenticate(ctx, token)
 	if err != nil {
-		return err
+		return domain.Actor{}, err
 	}
 	return principal.AuthorizeRuntimeImageRead()
 }

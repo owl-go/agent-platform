@@ -75,7 +75,7 @@ func (validator *Validator) Validate(ctx context.Context, agent domain.Agent, dr
 	}
 
 	var runtime runtimeProjection
-	err = validator.db.WithContext(ctx).Table("runtime_images").Where("id = ?", draft.Configuration.RuntimeImageID).Take(&runtime).Error
+	err = validator.db.WithContext(ctx).Table("runtime_images").Where("id = ? AND organization_id = ?", draft.Configuration.RuntimeImageID, agent.OrganizationID).Take(&runtime).Error
 	if err == gorm.ErrRecordNotFound {
 		errorsByField["runtime_image_id"] = "Runtime Image does not exist"
 	} else if err != nil {

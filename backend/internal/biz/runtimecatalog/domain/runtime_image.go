@@ -14,6 +14,7 @@ var (
 	ErrImageDigestExists    = errors.New("Runtime Image digest is already registered")
 	ErrInvalidRuntimeImage  = errors.New("invalid Runtime Image input")
 	imageDigestPattern      = regexp.MustCompile(`^[^\s@]+@sha256:[a-f0-9]{64}$`)
+	sha256Pattern           = regexp.MustCompile(`^[a-f0-9]{64}$`)
 )
 
 type Runtime string
@@ -39,21 +40,25 @@ var knownCapabilities = map[string]struct{}{
 }
 
 type RuntimeImage struct {
-	ID             string
-	Runtime        Runtime
-	CLIVersion     string
-	AdapterVersion string
-	ImageDigest    string
-	Capabilities   map[string]bool
-	Status         Status
-	BlockedReason  string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	Version        int64
+	ID                        string
+	OrganizationID            string
+	Runtime                   Runtime
+	CLIVersion                string
+	AdapterVersion            string
+	ImageDigest               string
+	Capabilities              map[string]bool
+	Status                    Status
+	BlockedReason             string
+	ConformanceEvidenceKey    string
+	ConformanceEvidenceSHA256 string
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	Version                   int64
 }
 
 type Registration struct {
 	ID             string
+	OrganizationID string
 	Runtime        Runtime
 	CLIVersion     string
 	AdapterVersion string
@@ -63,8 +68,8 @@ type Registration struct {
 }
 
 func Register(registration Registration) (RuntimeImage, error) {
-	if strings.TrimSpace(registration.ID) == "" || strings.TrimSpace(registration.CLIVersion) == "" || strings.TrimSpace(registration.AdapterVersion) == "" {
-		return RuntimeImage{}, invalidf("Runtime Image ID, CLI version, and Adapter version are required")
+	if strings.TrimSpace(registration.ID) == "" || strings.TrimSpace(registration.OrganizationID) == "" || strings.TrimSpace(registration.CLIVersion) == "" || strings.TrimSpace(registration.AdapterVersion) == "" {
+		return RuntimeImage{}, invalidf("Runtime Image ID, Organization ID, CLI version, and Adapter version are required")
 	}
 	if err := validateRuntime(registration.Runtime); err != nil {
 		return RuntimeImage{}, err
@@ -81,13 +86,13 @@ func Register(registration Registration) (RuntimeImage, error) {
 		return RuntimeImage{}, invalidf("registration time is required")
 	}
 	return RuntimeImage{
-		ID: registration.ID, Runtime: registration.Runtime, CLIVersion: registration.CLIVersion,
+		ID: registration.ID, OrganizationID: registration.OrganizationID, Runtime: registration.Runtime, CLIVersion: registration.CLIVersion,
 		AdapterVersion: registration.AdapterVersion, ImageDigest: registration.ImageDigest,
 		Capabilities: capabilities, Status: Experimental, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}, nil
 }
 
-func Restore(id, runtimeValue, cliVersion, adapterVersion, imageDigest string, capabilities map[string]bool, statusValue, blockedReason string, createdAt, updatedAt time.Time, version int64) (RuntimeImage, error) {
+func Restore(id, organizationID, runtimeValue, cliVersion, adapterVersion, imageDigest string, capabilities map[string]bool, statusValue, blockedReason, conformanceEvidenceKey, conformanceEvidenceSHA256 string, createdAt, updatedAt time.Time, version int64) (RuntimeImage, error) {
 	runtime := Runtime(runtimeValue)
 	if err := validateRuntime(runtime); err != nil {
 		return RuntimeImage{}, err
@@ -100,20 +105,27 @@ func Restore(id, runtimeValue, cliVersion, adapterVersion, imageDigest string, c
 	if err != nil {
 		return RuntimeImage{}, err
 	}
-	if id == "" || cliVersion == "" || adapterVersion == "" || !imageDigestPattern.MatchString(imageDigest) || version <= 0 || createdAt.IsZero() || updatedAt.IsZero() {
+	if id == "" || organizationID == "" || cliVersion == "" || adapterVersion == "" || !imageDigestPattern.MatchString(imageDigest) || version <= 0 || createdAt.IsZero() || updatedAt.IsZero() {
 		return RuntimeImage{}, invalidf("invalid persisted Runtime Image")
 	}
 	if status == Blocked && strings.TrimSpace(blockedReason) == "" || status != Blocked && blockedReason != "" {
 		return RuntimeImage{}, invalidf("invalid persisted Runtime Image block reason")
 	}
+	if status == Production && (!validEvidenceKey(conformanceEvidenceKey) || !validSHA256(conformanceEvidenceSHA256)) {
+		return RuntimeImage{}, invalidf("Production Runtime requires verified Conformance evidence")
+	}
+	if (conformanceEvidenceKey == "") != (conformanceEvidenceSHA256 == "") {
+		return RuntimeImage{}, invalidf("Conformance evidence key and SHA-256 must be stored together")
+	}
 	return RuntimeImage{
-		ID: id, Runtime: runtime, CLIVersion: cliVersion, AdapterVersion: adapterVersion,
+		ID: id, OrganizationID: organizationID, Runtime: runtime, CLIVersion: cliVersion, AdapterVersion: adapterVersion,
 		ImageDigest: imageDigest, Capabilities: cloned, Status: status, BlockedReason: blockedReason,
+		ConformanceEvidenceKey: conformanceEvidenceKey, ConformanceEvidenceSHA256: conformanceEvidenceSHA256,
 		CreatedAt: createdAt, UpdatedAt: updatedAt, Version: version,
 	}, nil
 }
 
-func (image *RuntimeImage) ChangeStatus(status Status, reason string, now time.Time) error {
+func (image *RuntimeImage) ChangeStatus(status Status, reason, conformanceEvidenceKey, conformanceEvidenceSHA256 string, now time.Time) error {
 	if _, err := ParseStatus(string(status)); err != nil {
 		return err
 	}
@@ -124,10 +136,22 @@ func (image *RuntimeImage) ChangeStatus(status Status, reason string, now time.T
 	if status != Blocked && reason != "" {
 		return invalidf("block reason is only valid for blocked Runtime Images")
 	}
+	conformanceEvidenceKey = strings.TrimSpace(conformanceEvidenceKey)
+	if status == Production {
+		if conformanceEvidenceKey == "" {
+			conformanceEvidenceKey = image.ConformanceEvidenceKey
+			conformanceEvidenceSHA256 = image.ConformanceEvidenceSHA256
+		}
+		if !validEvidenceKey(conformanceEvidenceKey) || !validSHA256(conformanceEvidenceSHA256) {
+			return invalidf("Production Runtime requires verified Conformance evidence")
+		}
+	} else if conformanceEvidenceKey != "" || conformanceEvidenceSHA256 != "" {
+		return invalidf("Conformance evidence can only certify Production status")
+	}
 	if image.Status == Deprecated && status != Deprecated {
 		return invalidf("deprecated Runtime Image cannot be reactivated")
 	}
-	if image.Status == status && image.BlockedReason == reason {
+	if image.Status == status && image.BlockedReason == reason && (status != Production || image.ConformanceEvidenceKey == conformanceEvidenceKey && image.ConformanceEvidenceSHA256 == conformanceEvidenceSHA256) {
 		return nil
 	}
 	if now.IsZero() {
@@ -135,9 +159,22 @@ func (image *RuntimeImage) ChangeStatus(status Status, reason string, now time.T
 	}
 	image.Status = status
 	image.BlockedReason = reason
+	if status == Production {
+		image.ConformanceEvidenceKey = conformanceEvidenceKey
+		image.ConformanceEvidenceSHA256 = conformanceEvidenceSHA256
+	}
 	image.UpdatedAt = now.UTC()
 	image.Version++
 	return nil
+}
+
+func validSHA256(value string) bool {
+	return sha256Pattern.MatchString(value)
+}
+
+func validEvidenceKey(value string) bool {
+	value = strings.TrimSpace(value)
+	return value != "" && len(value) <= 512 && !strings.HasPrefix(value, "/") && !strings.Contains(value, "://") && !strings.Contains(value, "..")
 }
 
 func ParseStatus(value string) (Status, error) {

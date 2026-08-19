@@ -24,6 +24,7 @@ export type AuthState =
 
 export interface AuthSession {
   state: Readonly<Ref<AuthState>>;
+  accessToken(): string | undefined;
   initialize(isCallback: boolean): Promise<void>;
   signIn(): Promise<void>;
   signOut(): Promise<void>;
@@ -41,6 +42,7 @@ export function createUnavailableAuthSession(message: string): AuthSession {
   const state = ref<AuthState>({ kind: "error", message });
   return {
     state,
+    accessToken: () => undefined,
     async initialize() {},
     async signIn() { throw new Error(message); },
     async signOut() {},
@@ -54,13 +56,17 @@ export function createAuthSession(
   replaceCallbackURL: () => void,
 ): AuthSession {
   const state = ref<AuthState>({ kind: "checking" });
+  let activeAccessToken: string | undefined;
   const removeExpiredListener = client.onExpired(() => {
+    activeAccessToken = undefined;
     state.value = { kind: "unauthenticated", reason: "expired" };
   });
 
   return {
     state,
+    accessToken: () => activeAccessToken,
     async initialize(isCallback: boolean) {
+      activeAccessToken = undefined;
       state.value = { kind: "checking" };
       try {
         let user: OIDCUser | null;
@@ -78,8 +84,10 @@ export function createAuthSession(
           return;
         }
         const currentUser = await loadCurrentUser(user.accessToken);
+        activeAccessToken = user.accessToken;
         state.value = { kind: "authenticated", currentUser };
       } catch (error) {
+        activeAccessToken = undefined;
         state.value = { kind: "error", message: safeErrorMessage(error) };
       }
     },
@@ -87,6 +95,7 @@ export function createAuthSession(
       await client.signIn();
     },
     async signOut() {
+      activeAccessToken = undefined;
       state.value = { kind: "unauthenticated", reason: "missing" };
       await client.signOut();
     },

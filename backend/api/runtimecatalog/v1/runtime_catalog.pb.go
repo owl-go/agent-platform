@@ -7,6 +7,7 @@
 package runtimecatalogv1
 
 import (
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -25,6 +26,8 @@ const (
 
 type ListRuntimeImagesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -59,9 +62,24 @@ func (*ListRuntimeImagesRequest) Descriptor() ([]byte, []int) {
 	return file_runtimecatalog_v1_runtime_catalog_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *ListRuntimeImagesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListRuntimeImagesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListRuntimeImagesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*RuntimeImage        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -101,6 +119,13 @@ func (x *ListRuntimeImagesResponse) GetItems() []*RuntimeImage {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *ListRuntimeImagesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetRuntimeImageRequest struct {
@@ -312,12 +337,13 @@ func (x *RegisterRuntimeImageResponse) GetRuntimeImage() *RuntimeImage {
 }
 
 type ChangeRuntimeImageStatusRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	RuntimeImageId string                 `protobuf:"bytes,1,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
-	Status         string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	BlockedReason  string                 `protobuf:"bytes,3,opt,name=blocked_reason,json=blockedReason,proto3" json:"blocked_reason,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	RuntimeImageId         string                 `protobuf:"bytes,1,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
+	Status                 string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	BlockedReason          string                 `protobuf:"bytes,3,opt,name=blocked_reason,json=blockedReason,proto3" json:"blocked_reason,omitempty"`
+	ConformanceEvidenceKey string                 `protobuf:"bytes,4,opt,name=conformance_evidence_key,json=conformanceEvidenceKey,proto3" json:"conformance_evidence_key,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ChangeRuntimeImageStatusRequest) Reset() {
@@ -371,6 +397,13 @@ func (x *ChangeRuntimeImageStatusRequest) GetBlockedReason() string {
 	return ""
 }
 
+func (x *ChangeRuntimeImageStatusRequest) GetConformanceEvidenceKey() string {
+	if x != nil {
+		return x.ConformanceEvidenceKey
+	}
+	return ""
+}
+
 type ChangeRuntimeImageStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RuntimeImage  *RuntimeImage          `protobuf:"bytes,1,opt,name=runtime_image,json=runtimeImage,proto3" json:"runtime_image,omitempty"`
@@ -416,20 +449,22 @@ func (x *ChangeRuntimeImageStatusResponse) GetRuntimeImage() *RuntimeImage {
 }
 
 type RuntimeImage struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Runtime        string                 `protobuf:"bytes,2,opt,name=runtime,proto3" json:"runtime,omitempty"`
-	CliVersion     string                 `protobuf:"bytes,3,opt,name=cli_version,json=cliVersion,proto3" json:"cli_version,omitempty"`
-	AdapterVersion string                 `protobuf:"bytes,4,opt,name=adapter_version,json=adapterVersion,proto3" json:"adapter_version,omitempty"`
-	ImageDigest    string                 `protobuf:"bytes,5,opt,name=image_digest,json=imageDigest,proto3" json:"image_digest,omitempty"`
-	Capabilities   map[string]bool        `protobuf:"bytes,6,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	Status         string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
-	BlockedReason  *string                `protobuf:"bytes,8,opt,name=blocked_reason,json=blockedReason,proto3,oneof" json:"blocked_reason,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Version        int64                  `protobuf:"varint,11,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Runtime                   string                 `protobuf:"bytes,2,opt,name=runtime,proto3" json:"runtime,omitempty"`
+	CliVersion                string                 `protobuf:"bytes,3,opt,name=cli_version,json=cliVersion,proto3" json:"cli_version,omitempty"`
+	AdapterVersion            string                 `protobuf:"bytes,4,opt,name=adapter_version,json=adapterVersion,proto3" json:"adapter_version,omitempty"`
+	ImageDigest               string                 `protobuf:"bytes,5,opt,name=image_digest,json=imageDigest,proto3" json:"image_digest,omitempty"`
+	Capabilities              map[string]bool        `protobuf:"bytes,6,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Status                    string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	BlockedReason             *string                `protobuf:"bytes,8,opt,name=blocked_reason,json=blockedReason,proto3,oneof" json:"blocked_reason,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Version                   int64                  `protobuf:"varint,11,opt,name=version,proto3" json:"version,omitempty"`
+	ConformanceEvidenceKey    *string                `protobuf:"bytes,12,opt,name=conformance_evidence_key,json=conformanceEvidenceKey,proto3,oneof" json:"conformance_evidence_key,omitempty"`
+	ConformanceEvidenceSha256 *string                `protobuf:"bytes,13,opt,name=conformance_evidence_sha256,json=conformanceEvidenceSha256,proto3,oneof" json:"conformance_evidence_sha256,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *RuntimeImage) Reset() {
@@ -539,14 +574,32 @@ func (x *RuntimeImage) GetVersion() int64 {
 	return 0
 }
 
+func (x *RuntimeImage) GetConformanceEvidenceKey() string {
+	if x != nil && x.ConformanceEvidenceKey != nil {
+		return *x.ConformanceEvidenceKey
+	}
+	return ""
+}
+
+func (x *RuntimeImage) GetConformanceEvidenceSha256() string {
+	if x != nil && x.ConformanceEvidenceSha256 != nil {
+		return *x.ConformanceEvidenceSha256
+	}
+	return ""
+}
+
 var File_runtimecatalog_v1_runtime_catalog_proto protoreflect.FileDescriptor
 
 const file_runtimecatalog_v1_runtime_catalog_proto_rawDesc = "" +
 	"\n" +
-	"'runtimecatalog/v1/runtime_catalog.proto\x12\x11runtimecatalog.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1a\n" +
-	"\x18ListRuntimeImagesRequest\"R\n" +
+	"'runtimecatalog/v1/runtime_catalog.proto\x12\x11runtimecatalog.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"V\n" +
+	"\x18ListRuntimeImagesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"z\n" +
 	"\x19ListRuntimeImagesResponse\x125\n" +
-	"\x05items\x18\x01 \x03(\v2\x1f.runtimecatalog.v1.RuntimeImageR\x05items\"B\n" +
+	"\x05items\x18\x01 \x03(\v2\x1f.runtimecatalog.v1.RuntimeImageR\x05items\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"B\n" +
 	"\x16GetRuntimeImageRequest\x12(\n" +
 	"\x10runtime_image_id\x18\x01 \x01(\tR\x0eruntimeImageId\"_\n" +
 	"\x17GetRuntimeImageResponse\x12D\n" +
@@ -562,13 +615,14 @@ const file_runtimecatalog_v1_runtime_catalog_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"d\n" +
 	"\x1cRegisterRuntimeImageResponse\x12D\n" +
-	"\rruntime_image\x18\x01 \x01(\v2\x1f.runtimecatalog.v1.RuntimeImageR\fruntimeImage\"\x8a\x01\n" +
+	"\rruntime_image\x18\x01 \x01(\v2\x1f.runtimecatalog.v1.RuntimeImageR\fruntimeImage\"\xc4\x01\n" +
 	"\x1fChangeRuntimeImageStatusRequest\x12(\n" +
 	"\x10runtime_image_id\x18\x01 \x01(\tR\x0eruntimeImageId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12%\n" +
-	"\x0eblocked_reason\x18\x03 \x01(\tR\rblockedReason\"h\n" +
+	"\x0eblocked_reason\x18\x03 \x01(\tR\rblockedReason\x128\n" +
+	"\x18conformance_evidence_key\x18\x04 \x01(\tR\x16conformanceEvidenceKey\"h\n" +
 	" ChangeRuntimeImageStatusResponse\x12D\n" +
-	"\rruntime_image\x18\x01 \x01(\v2\x1f.runtimecatalog.v1.RuntimeImageR\fruntimeImage\"\xa4\x04\n" +
+	"\rruntime_image\x18\x01 \x01(\v2\x1f.runtimecatalog.v1.RuntimeImageR\fruntimeImage\"\xe5\x05\n" +
 	"\fRuntimeImage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aruntime\x18\x02 \x01(\tR\aruntime\x12\x1f\n" +
@@ -584,16 +638,26 @@ const file_runtimecatalog_v1_runtime_catalog_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\v \x01(\x03R\aversion\x1a?\n" +
+	"\aversion\x18\v \x01(\x03R\aversion\x12=\n" +
+	"\x18conformance_evidence_key\x18\f \x01(\tH\x01R\x16conformanceEvidenceKey\x88\x01\x01\x12C\n" +
+	"\x1bconformance_evidence_sha256\x18\r \x01(\tH\x02R\x19conformanceEvidenceSha256\x88\x01\x01\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01B\x11\n" +
-	"\x0f_blocked_reason2\xe7\x04\n" +
+	"\x0f_blocked_reasonB\x1b\n" +
+	"\x19_conformance_evidence_keyB\x1e\n" +
+	"\x1c_conformance_evidence_sha2562\x92\x06\n" +
 	"\x15RuntimeCatalogService\x12\x8a\x01\n" +
 	"\x11ListRuntimeImages\x12+.runtimecatalog.v1.ListRuntimeImagesRequest\x1a,.runtimecatalog.v1.ListRuntimeImagesResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/runtime-images\x12\x8c\x01\n" +
-	"\x0fGetRuntimeImage\x12).runtimecatalog.v1.GetRuntimeImageRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"-\x82\xd3\xe4\x93\x02'\x12%/v1/runtime-images/{runtime_image_id}\x12\x86\x01\n" +
-	"\x14RegisterRuntimeImage\x12..runtimecatalog.v1.RegisterRuntimeImageRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/runtime-images\x12\xa8\x01\n" +
-	"\x18ChangeRuntimeImageStatus\x122.runtimecatalog.v1.ChangeRuntimeImageStatusRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"7\x82\xd3\xe4\x93\x021:\x01*2,/v1/runtime-images/{runtime_image_id}/statusB?Z=agent-platform/backend/api/runtimecatalog/v1;runtimecatalogv1b\x06proto3"
+	"\x0fGetRuntimeImage\x12).runtimecatalog.v1.GetRuntimeImageRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"-\x82\xd3\xe4\x93\x02'\x12%/v1/runtime-images/{runtime_image_id}\x12\xc3\x01\n" +
+	"\x14RegisterRuntimeImage\x12..runtimecatalog.v1.RegisterRuntimeImageRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"Z\x92A:r8\n" +
+	"6\n" +
+	"\x0fIdempotency-Key\x12\x1fStable key for one user intent.\x18\x01(\x01\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/runtime-images\x12\x96\x02\n" +
+	"\x18ChangeRuntimeImageStatus\x122.runtimecatalog.v1.ChangeRuntimeImageStatusRequest\x1a\x1f.runtimecatalog.v1.RuntimeImage\"\xa4\x01\x92Ajrh\n" +
+	"6\n" +
+	"\x0fIdempotency-Key\x12\x1fStable key for one user intent.\x18\x01(\x01\n" +
+	".\n" +
+	"\bIf-Match\x12\x1eCurrent Runtime Image Version.\x18\x01(\x01\x82\xd3\xe4\x93\x021:\x01*2,/v1/runtime-images/{runtime_image_id}/statusB?Z=agent-platform/backend/api/runtimecatalog/v1;runtimecatalogv1b\x06proto3"
 
 var (
 	file_runtimecatalog_v1_runtime_catalog_proto_rawDescOnce sync.Once

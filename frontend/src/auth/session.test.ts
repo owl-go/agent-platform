@@ -24,6 +24,7 @@ describe("AuthSession", () => {
     expect(replaceCallback).toHaveBeenCalledOnce();
     expect(loadCurrentUser).toHaveBeenCalledWith("access-token");
     expect(session.state.value).toEqual({ kind: "authenticated", currentUser });
+    expect(session.accessToken()).toBe("access-token");
   });
 
   it("restores a valid session and clears it when the access token expires", async () => {
@@ -36,6 +37,7 @@ describe("AuthSession", () => {
 
     client.expire();
     expect(session.state.value).toEqual({ kind: "unauthenticated", reason: "expired" });
+    expect(session.accessToken()).toBeUndefined();
   });
 
   it("never calls the API for a missing or expired OIDC session", async () => {
@@ -48,6 +50,7 @@ describe("AuthSession", () => {
 
     expect(loadCurrentUser).not.toHaveBeenCalled();
     expect(session.state.value).toEqual({ kind: "unauthenticated", reason: "missing" });
+    expect(session.accessToken()).toBeUndefined();
   });
 
   it("delegates sign-in and sign-out without persisting tokens", async () => {

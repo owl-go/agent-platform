@@ -132,7 +132,7 @@ func (validator *Validator) load(ctx context.Context, binding domain.RepositoryB
 			return dependencies{}, fmt.Errorf("load build Credential Profiles: %w", err)
 		}
 	}
-	if err := db.Table("runtime_images").Where("id IN ?", binding.AllowedRuntimeImageIDs).Find(&loaded.runtimes).Error; err != nil {
+	if err := db.Table("runtime_images").Where("organization_id = ? AND id IN ?", binding.OrganizationID, binding.AllowedRuntimeImageIDs).Find(&loaded.runtimes).Error; err != nil {
 		return dependencies{}, fmt.Errorf("load allowed Runtime Images: %w", err)
 	}
 	if err := db.Table("configured_models").Where("id = ?", binding.DefaultModelID).Take(&loaded.model).Error; err != nil {

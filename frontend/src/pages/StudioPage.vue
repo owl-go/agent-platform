@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
-import SurfaceEmptyState from "./SurfaceEmptyState.vue";
+import RuntimeCatalogPanel from "./RuntimeCatalogPanel.vue";
 const { t } = useI18n();
 </script>
-<template><SurfaceEmptyState :kicker="t('surfaces.studio.kicker')" :title="t('surfaces.studio.title')" :body="t('surfaces.studio.body')" :empty-title="t('surfaces.studio.emptyTitle')" :empty-body="t('surfaces.studio.emptyBody')" /></template>
+<template><section class="surface"><header class="surface-heading reveal"><div><p class="kicker">{{ t('surfaces.studio.kicker') }}</p><h1>{{ t('surfaces.studio.title') }}</h1><p>{{ t('surfaces.studio.body') }}</p></div></header><RuntimeCatalogPanel class="reveal delay-1" /></section></template>

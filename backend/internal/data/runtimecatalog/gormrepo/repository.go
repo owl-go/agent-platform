@@ -19,17 +19,20 @@ type Repository struct {
 var _ domain.Repository = (*Repository)(nil)
 
 type runtimeImageRecord struct {
-	ID             string          `gorm:"column:id;primaryKey"`
-	Runtime        string          `gorm:"column:runtime"`
-	CLIVersion     string          `gorm:"column:cli_version"`
-	AdapterVersion string          `gorm:"column:adapter_version"`
-	ImageDigest    string          `gorm:"column:image_digest"`
-	Capabilities   json.RawMessage `gorm:"column:capabilities;type:jsonb"`
-	Status         string          `gorm:"column:status"`
-	BlockedReason  *string         `gorm:"column:blocked_reason"`
-	CreatedAt      time.Time       `gorm:"column:created_at"`
-	UpdatedAt      time.Time       `gorm:"column:updated_at"`
-	Version        int64           `gorm:"column:version"`
+	ID                        string          `gorm:"column:id;primaryKey"`
+	OrganizationID            string          `gorm:"column:organization_id"`
+	Runtime                   string          `gorm:"column:runtime"`
+	CLIVersion                string          `gorm:"column:cli_version"`
+	AdapterVersion            string          `gorm:"column:adapter_version"`
+	ImageDigest               string          `gorm:"column:image_digest"`
+	Capabilities              json.RawMessage `gorm:"column:capabilities;type:jsonb"`
+	Status                    string          `gorm:"column:status"`
+	BlockedReason             *string         `gorm:"column:blocked_reason"`
+	ConformanceEvidenceKey    *string         `gorm:"column:conformance_evidence_key"`
+	ConformanceEvidenceSHA256 *string         `gorm:"column:conformance_evidence_sha256"`
+	CreatedAt                 time.Time       `gorm:"column:created_at"`
+	UpdatedAt                 time.Time       `gorm:"column:updated_at"`
+	Version                   int64           `gorm:"column:version"`
 }
 
 func (runtimeImageRecord) TableName() string { return "runtime_images" }
@@ -52,9 +55,9 @@ func (repository *Repository) Create(ctx context.Context, image domain.RuntimeIm
 	return nil
 }
 
-func (repository *Repository) Get(ctx context.Context, id string) (domain.RuntimeImage, error) {
+func (repository *Repository) Get(ctx context.Context, organizationID, id string) (domain.RuntimeImage, error) {
 	var record runtimeImageRecord
-	if err := repository.db.WithContext(ctx).Where("id = ?", id).Take(&record).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("organization_id = ? AND id = ?", organizationID, id).Take(&record).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return domain.RuntimeImage{}, domain.ErrRuntimeImageNotFound
 		}
@@ -63,20 +66,31 @@ func (repository *Repository) Get(ctx context.Context, id string) (domain.Runtim
 	return restore(record)
 }
 
-func (repository *Repository) List(ctx context.Context) ([]domain.RuntimeImage, error) {
+func (repository *Repository) List(ctx context.Context, query domain.PageQuery) (domain.Page, error) {
 	var records []runtimeImageRecord
-	if err := repository.db.WithContext(ctx).Order("runtime, created_at DESC, id").Find(&records).Error; err != nil {
-		return nil, fmt.Errorf("list Runtime Images: %w", err)
+	database := repository.db.WithContext(ctx).Where("organization_id = ?", query.OrganizationID)
+	if query.After != nil {
+		database = database.Where(
+			"runtime > ? OR (runtime = ? AND created_at < ?) OR (runtime = ? AND created_at = ? AND id > ?)",
+			query.After.Runtime, query.After.Runtime, query.After.CreatedAt, query.After.Runtime, query.After.CreatedAt, query.After.ID,
+		)
+	}
+	if err := database.Order("runtime, created_at DESC, id").Limit(query.Limit + 1).Find(&records).Error; err != nil {
+		return domain.Page{}, fmt.Errorf("list Runtime Images: %w", err)
+	}
+	hasMore := len(records) > query.Limit
+	if hasMore {
+		records = records[:query.Limit]
 	}
 	images := make([]domain.RuntimeImage, 0, len(records))
 	for _, record := range records {
 		image, err := restore(record)
 		if err != nil {
-			return nil, err
+			return domain.Page{}, err
 		}
 		images = append(images, image)
 	}
-	return images, nil
+	return domain.Page{Items: images, HasMore: hasMore}, nil
 }
 
 func (repository *Repository) UpdateStatus(ctx context.Context, image domain.RuntimeImage, expectedVersion int64) error {
@@ -85,10 +99,12 @@ func (repository *Repository) UpdateStatus(ctx context.Context, image domain.Run
 		blockedReason = image.BlockedReason
 	}
 	result := repository.db.WithContext(ctx).Model(&runtimeImageRecord{}).
-		Where("id = ? AND version = ?", image.ID, expectedVersion).
+		Where("organization_id = ? AND id = ? AND version = ?", image.OrganizationID, image.ID, expectedVersion).
 		Updates(map[string]any{
 			"status": image.Status, "blocked_reason": blockedReason,
-			"updated_at": image.UpdatedAt, "version": image.Version,
+			"conformance_evidence_key":    nullableString(image.ConformanceEvidenceKey),
+			"conformance_evidence_sha256": nullableString(image.ConformanceEvidenceSHA256),
+			"updated_at":                  image.UpdatedAt, "version": image.Version,
 		})
 	if result.Error != nil {
 		return fmt.Errorf("update Runtime Image status: %w", result.Error)
@@ -110,10 +126,10 @@ func toRecord(image domain.RuntimeImage) (runtimeImageRecord, error) {
 		blockedReason = &reason
 	}
 	return runtimeImageRecord{
-		ID: image.ID, Runtime: string(image.Runtime), CLIVersion: image.CLIVersion,
+		ID: image.ID, OrganizationID: image.OrganizationID, Runtime: string(image.Runtime), CLIVersion: image.CLIVersion,
 		AdapterVersion: image.AdapterVersion, ImageDigest: image.ImageDigest,
 		Capabilities: capabilities, Status: string(image.Status), BlockedReason: blockedReason,
-		CreatedAt: image.CreatedAt, UpdatedAt: image.UpdatedAt, Version: image.Version,
+		ConformanceEvidenceKey: nullableString(image.ConformanceEvidenceKey), ConformanceEvidenceSHA256: nullableString(image.ConformanceEvidenceSHA256), CreatedAt: image.CreatedAt, UpdatedAt: image.UpdatedAt, Version: image.Version,
 	}, nil
 }
 
@@ -126,8 +142,23 @@ func restore(record runtimeImageRecord) (domain.RuntimeImage, error) {
 	if record.BlockedReason != nil {
 		blockedReason = *record.BlockedReason
 	}
+	conformanceEvidenceKey := ""
+	if record.ConformanceEvidenceKey != nil {
+		conformanceEvidenceKey = *record.ConformanceEvidenceKey
+	}
+	conformanceEvidenceSHA256 := ""
+	if record.ConformanceEvidenceSHA256 != nil {
+		conformanceEvidenceSHA256 = *record.ConformanceEvidenceSHA256
+	}
 	return domain.Restore(
-		record.ID, record.Runtime, record.CLIVersion, record.AdapterVersion, record.ImageDigest,
-		capabilities, record.Status, blockedReason, record.CreatedAt, record.UpdatedAt, record.Version,
+		record.ID, record.OrganizationID, record.Runtime, record.CLIVersion, record.AdapterVersion, record.ImageDigest,
+		capabilities, record.Status, blockedReason, conformanceEvidenceKey, conformanceEvidenceSHA256, record.CreatedAt, record.UpdatedAt, record.Version,
 	)
+}
+
+func nullableString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }

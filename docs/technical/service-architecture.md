@@ -65,7 +65,35 @@ Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Gran
 
 ## Runtime Catalog 聚合边界
 
-Runtime Image 注册后，Runtime、CLI Version、Adapter Version、Capabilities 与镜像 Repo Digest 不可变；更新必须注册新镜像。可变字段仅为 `experimental`、`production`、`blocked`、`deprecated` 状态和 Blocked Reason，并使用 Version 乐观锁。Deprecated 为不可逆终态；Blocked 必须携带原因。
+Runtime Image 属于一个 Organization。读取、注册、状态治理和被 Agent/Repository Binding 引用时都必须使用同一个 Organization 范围；同一 Repo Digest 可以分别注册在不同 Organization，但不得跨 Organization 可见或复用。注册后 Runtime、CLI Version、Adapter Version、Capabilities 与镜像 Repo Digest 不可变；更新必须注册新镜像。可变字段仅为 `experimental`、`production`、`blocked`、`deprecated` 状态和 Blocked Reason，并使用 Version 乐观锁。Deprecated 为不可逆终态；Blocked 必须携带原因。
+
+Runtime Image 只有在进入 `production` 时关联并验证对应的逻辑 Conformance Evidence Object Key，才能称为 Production Runtime；仅注册、声明 Capability 或提交任意 Object Key 不代表已通过验证。服务端从配置的 MinIO 或阿里云 OSS 读取 `application/x-tar` Evidence，核验对象 Size、SHA-256 和 `artifact-kind=production-conformance`，再解析唯一的 `scenario-summary.json`；其中 Runtime、镜像 RepoDigest、CLI Version、Capability、强杀恢复、Interrupt、Cancel、Timeout、Review Branch 及 MinIO/阿里云 OSS Snapshot 必须与注册记录和 Production Conformance 契约一致。验证通过后同时保存逻辑 Object Key 与当时对象内容的 SHA-256，形成不可变证据快照；不保存 Provider URL 或签名参数。Blocked 和 Deprecated 会保留此前的证据引用与摘要供审计，界面将其显示为“已记录证据”而非“无证据”。
+
+Runtime Image 列表按 Runtime、注册时间倒序和 ID 提供确定性排序，并通过不透明 `page_token` 分页；默认每页 20 条，单页最多 100 条。注册请求必须声明 `Idempotency-Key`，状态变更同时声明 `Idempotency-Key` 与 `If-Match`，这些 Header 是生成 OpenAPI 契约的一部分。
+
+从旧版 Runtime Catalog 升级时，如果数据库已有 Runtime Image 且存在多个 Organization，平台不会猜测归属；如果已有 `production` 记录，也不会伪造证据。运维人员应先停写并备份数据库，再执行以下可审计的预迁移步骤，逐行填写真实 Organization 与已验证 Evidence，确认查询返回零行后再启动新版 API。Migration 使用 `ADD COLUMN IF NOT EXISTS`，因此失败后可按同一路径修复并安全重试：
+
+```sql
+ALTER TABLE runtime_images
+  ADD COLUMN IF NOT EXISTS organization_id uuid REFERENCES organizations(id),
+  ADD COLUMN IF NOT EXISTS conformance_evidence_key text,
+  ADD COLUMN IF NOT EXISTS conformance_evidence_sha256 text;
+
+-- 按企业自己的归属清单逐行执行；禁止用任意默认 Organization 批量代填。
+UPDATE runtime_images
+SET organization_id = '<verified-organization-uuid>'
+WHERE id = '<runtime-image-uuid>' AND organization_id IS NULL;
+
+-- 仅填写已由 Production Conformance 验证的逻辑 Key 与对象内容 SHA-256。
+UPDATE runtime_images
+SET conformance_evidence_key = '<verified-object-key>',
+    conformance_evidence_sha256 = '<lowercase-64-char-sha256>'
+WHERE id = '<production-runtime-image-uuid>' AND status = 'production';
+
+SELECT id, status FROM runtime_images
+WHERE organization_id IS NULL
+   OR status = 'production' AND (conformance_evidence_key IS NULL OR conformance_evidence_sha256 IS NULL);
+```
 
 Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
 

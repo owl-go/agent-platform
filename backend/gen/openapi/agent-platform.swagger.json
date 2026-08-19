@@ -2236,6 +2236,21 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
           "RuntimeCatalogService"
         ]
@@ -2264,6 +2279,13 @@
             "schema": {
               "$ref": "#/definitions/v1RegisterRuntimeImageRequest"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "description": "Stable key for one user intent.",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2332,6 +2354,20 @@
             "schema": {
               "$ref": "#/definitions/RuntimeCatalogServiceChangeRuntimeImageStatusBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "description": "Stable key for one user intent.",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "description": "Current Runtime Image Version.",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2686,6 +2722,9 @@
           "type": "string"
         },
         "blocked_reason": {
+          "type": "string"
+        },
+        "conformance_evidence_key": {
           "type": "string"
         }
       }
@@ -3495,6 +3534,9 @@
             "type": "object",
             "$ref": "#/definitions/v1RuntimeImage"
           }
+        },
+        "next_page_token": {
+          "type": "string"
         }
       }
     },
@@ -4049,6 +4091,12 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "conformance_evidence_key": {
+          "type": "string"
+        },
+        "conformance_evidence_sha256": {
+          "type": "string"
         }
       }
     },

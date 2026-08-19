@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,7 +121,7 @@ func seedLifecycleFixture(t *testing.T, db *gorm.DB) lifecycleFixture {
 		{`INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES (?, ?, ?, ?, 'git_ssh', 'secret://git')`, []any{sshCredentialID, fixture.organizationID, fixture.teamID, suffix + "-ssh"}},
 		{`INSERT INTO credential_profiles (id, organization_id, name, kind, secret_ref) VALUES (?, ?, ?, 'model', 'secret://model')`, []any{modelCredentialID, fixture.organizationID, suffix + "-model"}},
 		{`INSERT INTO configured_models (id, organization_id, name, model_id, endpoint, credential_profile_id) VALUES (?, ?, ?, 'model', 'https://model.example.test', ?)`, []any{fixture.modelID, fixture.organizationID, suffix, modelCredentialID}},
-		{`INSERT INTO runtime_images (id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, 'claude', '1', '1', ?, '{"subagents":true}', 'production')`, []any{fixture.runtimeID, digest}},
+		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status, conformance_evidence_key, conformance_evidence_sha256) VALUES (?, ?, 'claude', '1', '1', ?, '{"subagents":true}', 'production', 'test/lifecycle/evidence.tar', ?)`, []any{fixture.runtimeID, fixture.organizationID, digest, strings.Repeat("e", 64)}},
 		{`INSERT INTO repository_bindings (id, organization_id, team_id, source_control_provider_id, name, repository_ssh_url, default_branch, ssh_credential_profile_id, git_author_name, git_author_email, allowed_runtime_image_ids, default_runtime_image_id, default_model_id, model_budget, instructions, quality_commands, egress_policy, validation_report, validated_at) VALUES (?, ?, ?, ?, ?, 'git@github.com:acme/repository.git', 'main', ?, 'Agent', 'agent@example.test', ?::jsonb, ?, ?, '{"max_input_tokens":2000,"max_output_tokens":1000,"max_cost_amount":"20.00"}', '', '[]', '{"mode":"public"}', ?::jsonb, ?)`, []any{fixture.bindingID, fixture.organizationID, fixture.teamID, providerID, suffix, sshCredentialID, `["` + fixture.runtimeID + `"]`, fixture.runtimeID, fixture.modelID, `{"valid":true,"errors":{},"checked_at":"` + now + `"}`, now}},
 	}
 	for _, statement := range statements {

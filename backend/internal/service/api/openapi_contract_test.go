@@ -149,6 +149,15 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 	if version["type"] != "integer" || version["format"] != "int64" {
 		t.Fatalf("Runtime Image Version schema = %#v, want an int64 JSON number", version)
 	}
+	if _, exposed := runtimeImage["organization_id"]; exposed {
+		t.Fatal("Runtime Image response exposes its authorization scope")
+	}
+	if _, present := runtimeImage["conformance_evidence_key"]; !present {
+		t.Fatal("Runtime Image response omits its logical Conformance evidence key")
+	}
+	if _, present := runtimeImage["conformance_evidence_sha256"]; !present {
+		t.Fatal("Runtime Image response omits its immutable Conformance evidence SHA-256")
+	}
 	paths := document["paths"].(map[string]any)
 	getRuntime := paths["/v1/runtime-images/{runtime_image_id}"].(map[string]any)["get"].(map[string]any)
 	response := getRuntime["responses"].(map[string]any)["200"].(map[string]any)
@@ -156,6 +165,30 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 	if schema["$ref"] != "#/components/schemas/v1RuntimeImage" {
 		t.Fatalf("Runtime Image response schema = %#v", schema)
 	}
+	listRuntime := paths["/v1/runtime-images"].(map[string]any)["get"].(map[string]any)
+	parameters := listRuntime["parameters"].([]any)
+	if !hasParameter(parameters, "query", "page_size", false) || !hasParameter(parameters, "query", "page_token", false) {
+		t.Fatalf("Runtime Image list pagination parameters = %#v", parameters)
+	}
+	registerRuntime := paths["/v1/runtime-images"].(map[string]any)["post"].(map[string]any)
+	if !hasParameter(registerRuntime["parameters"].([]any), "header", "Idempotency-Key", true) {
+		t.Fatal("Runtime Image registration does not declare Idempotency-Key")
+	}
+	changeStatus := paths["/v1/runtime-images/{runtime_image_id}/status"].(map[string]any)["patch"].(map[string]any)
+	statusParameters := changeStatus["parameters"].([]any)
+	if !hasParameter(statusParameters, "header", "Idempotency-Key", true) || !hasParameter(statusParameters, "header", "If-Match", true) {
+		t.Fatalf("Runtime Image status headers = %#v", statusParameters)
+	}
+}
+
+func hasParameter(parameters []any, location, name string, required bool) bool {
+	for _, raw := range parameters {
+		parameter, ok := raw.(map[string]any)
+		if ok && parameter["in"] == location && parameter["name"] == name && (parameter["required"] == true) == required {
+			return true
+		}
+	}
+	return false
 }
 
 func loadOpenAPIDocument(t *testing.T) openAPIDocument {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -153,7 +154,7 @@ func seedFixture(t *testing.T, db *gorm.DB) (organizationID, teamID, userID, age
 		{`INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES (?, ?, ?, ?, 'git_ssh', 'secret://git')`, []any{sshCredentialID, organizationID, teamID, suffix + "-ssh"}},
 		{`INSERT INTO credential_profiles (id, organization_id, name, kind, secret_ref) VALUES (?, ?, ?, 'model', 'secret://model')`, []any{modelCredentialID, organizationID, suffix + "-model"}},
 		{`INSERT INTO configured_models (id, organization_id, name, model_id, endpoint, credential_profile_id) VALUES (?, ?, ?, 'model-a', 'https://model.example.test', ?)`, []any{modelID, organizationID, suffix, modelCredentialID}},
-		{`INSERT INTO runtime_images (id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, 'codex', '1', '1', ?, '{}', 'production')`, []any{runtimeID, digest}},
+		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status, conformance_evidence_key, conformance_evidence_sha256) VALUES (?, ?, 'codex', '1', '1', ?, '{}', 'production', 'test/collaboration/evidence.tar', ?)`, []any{runtimeID, organizationID, digest, strings.Repeat("e", 64)}},
 		{`INSERT INTO repository_bindings (id, organization_id, team_id, source_control_provider_id, name, repository_ssh_url, default_branch, ssh_credential_profile_id, git_author_name, git_author_email, allowed_runtime_image_ids, default_runtime_image_id, default_model_id, model_budget, instructions, quality_commands, egress_policy, validation_report, validated_at) VALUES (?, ?, ?, ?, ?, 'git@github.com:acme/repository.git', 'main', ?, 'Agent', 'agent@example.test', ?::jsonb, ?, ?, '{"max_input_tokens":2000,"max_output_tokens":1000,"max_cost_amount":"20.00"}', '', '[]', '{"mode":"public"}', ?::jsonb, ?)`, []any{bindingID, organizationID, teamID, providerID, suffix, sshCredentialID, `["` + runtimeID + `"]`, runtimeID, modelID, `{"valid":true,"errors":{},"checked_at":"` + now + `"}`, now}},
 		{`INSERT INTO agents (id, organization_id, team_id, name, created_by) VALUES (?, ?, ?, ?, ?)`, []any{agentID, organizationID, teamID, suffix, userID}},
 		{`INSERT INTO agent_drafts (id, agent_id, revision, state, configuration, release_risk, validation_report, created_by) VALUES (?, ?, 1, 'ready', '{}', 'low', ?::jsonb, ?)`, []any{draftID, agentID, `{"valid":true,"errors":{},"checked_at":"` + now + `"}`, userID}},

@@ -3,6 +3,7 @@ package platform
 import (
 	transaction "agent-platform/backend/internal/biz/transaction"
 	"agent-platform/backend/internal/data/controlplane/gormuow"
+	"agent-platform/backend/internal/data/runtimecatalog/evidenceverifier"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/objectstore/aliyunoss"
@@ -29,9 +30,10 @@ func NewObjectStore(config platformconfig.Config) (objectstore.Provider, error) 
 	})
 }
 
-func NewCatalogWrites(database *gormdb.Database, config platformconfig.Config) transaction.IdempotentTransactionManager {
+func NewCatalogWrites(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider) transaction.IdempotentTransactionManager {
+	verifier := evidenceverifier.New(objects)
 	if config.Webhook.Enabled {
-		return gormuow.NewWithWebhook(database.ORM(), config.Webhook.TargetURL)
+		return gormuow.NewWithWebhookAndEvidenceVerifier(database.ORM(), config.Webhook.TargetURL, verifier)
 	}
-	return gormuow.New(database.ORM())
+	return gormuow.NewWithEvidenceVerifier(database.ORM(), verifier)
 }

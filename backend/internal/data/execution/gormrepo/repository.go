@@ -169,7 +169,7 @@ func (repository *Repository) Search(ctx context.Context, query domain.SearchQue
 		Joins("JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id").
 		Joins("JOIN agent_releases ON agent_releases.id = runs.agent_release_id").
 		Joins("JOIN runtime_images ON runtime_images.id = runs.runtime_image_id").
-		Where("coding_tasks.organization_id = ? AND coding_tasks.team_id = ?", query.OrganizationID, query.TeamID)
+		Where("coding_tasks.organization_id = ? AND coding_tasks.team_id = ? AND runtime_images.organization_id = coding_tasks.organization_id", query.OrganizationID, query.TeamID)
 	if query.AgentID != "" {
 		database = database.Where("agent_releases.agent_id = ?", query.AgentID)
 	}

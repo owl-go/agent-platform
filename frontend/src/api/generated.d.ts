@@ -923,6 +923,7 @@ export interface components {
         RuntimeCatalogServiceChangeRuntimeImageStatusBody: {
             status?: string;
             blocked_reason?: string;
+            conformance_evidence_key?: string;
         };
         SourceControlServiceChangeSourceControlProviderStatusBody: {
             enabled?: boolean;
@@ -1221,6 +1222,7 @@ export interface components {
         };
         v1ListRuntimeImagesResponse: {
             items?: components["schemas"]["v1RuntimeImage"][];
+            next_page_token?: string;
         };
         v1ListSessionMessagesResponse: {
             items?: components["schemas"]["v1SessionMessage"][];
@@ -1419,6 +1421,8 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            conformance_evidence_key?: string;
+            conformance_evidence_sha256?: string;
         };
         v1Session: {
             id?: string;
@@ -3511,7 +3515,10 @@ export interface operations {
     };
     RuntimeCatalogService_ListRuntimeImages: {
         parameters: {
-            query?: never;
+            query?: {
+                page_size?: number;
+                page_token?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3541,7 +3548,10 @@ export interface operations {
     RuntimeCatalogService_RegisterRuntimeImage: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Stable key for one user intent. */
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3605,7 +3615,12 @@ export interface operations {
     RuntimeCatalogService_ChangeRuntimeImageStatus: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Stable key for one user intent. */
+                "Idempotency-Key": string;
+                /** @description Current Runtime Image Version. */
+                "If-Match": string;
+            };
             path: {
                 runtime_image_id: string;
             };

@@ -52,13 +52,13 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 		return nil, err
 	}
 	service4 := audit.NewService(database)
-	service5 := runtimecatalog.NewService(database)
+	service5 := runtimecatalog.NewService(database, provider)
 	service6 := modelcatalog.NewService(database)
 	service7 := sourcecontrol.NewService(database)
 	bindingService := sourcecontrol.NewBindingService(database)
 	service8 := agentlifecycle.NewService(database)
 	service9 := collaboration.NewService(database, manager)
-	idempotentTransactionManager := platform2.NewCatalogWrites(database, config)
+	idempotentTransactionManager := platform2.NewCatalogWrites(database, config, provider)
 	dependencies := apiprocess.NewDependencies(database, applicationService, accessService, service2, service3, service4, service5, service6, service7, bindingService, service8, service9, idempotentTransactionManager)
 	generatedServices, err := apiprocess.NewGeneratedServices(dependencies)
 	if err != nil {

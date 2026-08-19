@@ -14,29 +14,34 @@ import (
 	"github.com/google/uuid"
 )
 
-func (service *GeneratedServices) ListRuntimeImages(ctx context.Context, _ *runtimecatalogv1.ListRuntimeImagesRequest) (*runtimecatalogv1.ListRuntimeImagesResponse, error) {
-	if err := service.dependencies.RuntimeAccess.AuthorizeRuntimeImageRead(ctx, ""); err != nil {
+func (service *GeneratedServices) ListRuntimeImages(ctx context.Context, request *runtimecatalogv1.ListRuntimeImagesRequest) (*runtimecatalogv1.ListRuntimeImagesResponse, error) {
+	actor, err := service.dependencies.RuntimeAccess.AuthorizeRuntimeImageRead(ctx, "")
+	if err != nil {
 		return nil, mapAuthorizationError(err, "runtime_catalog_access_denied")
 	}
-	images, err := service.dependencies.RuntimeImages.List(ctx)
+	page, err := service.dependencies.RuntimeImages.List(ctx, runtimeapplication.ListQuery{OrganizationID: actor.OrganizationID, PageSize: int(request.PageSize), Token: request.PageToken})
+	if errors.Is(err, runtimeapplication.ErrInvalidPage) {
+		return nil, publicError(400, "invalid_runtime_image_page")
+	}
 	if err != nil {
 		return nil, publicError(500, "runtime_catalog_query_failed")
 	}
-	items := make([]runtimeImageResponse, 0, len(images))
-	for _, image := range images {
+	items := make([]runtimeImageResponse, 0, len(page.Items))
+	for _, image := range page.Items {
 		items = append(items, newRuntimeImageResponse(image))
 	}
-	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items}, &runtimecatalogv1.ListRuntimeImagesResponse{})
+	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items, "next_page_token": page.NextToken}, &runtimecatalogv1.ListRuntimeImagesResponse{})
 }
 
 func (service *GeneratedServices) GetRuntimeImage(ctx context.Context, request *runtimecatalogv1.GetRuntimeImageRequest) (*runtimecatalogv1.RuntimeImage, error) {
 	if _, err := uuid.Parse(request.RuntimeImageId); err != nil {
 		return nil, publicError(400, "invalid_runtime_image_id")
 	}
-	if err := service.dependencies.RuntimeAccess.AuthorizeRuntimeImageRead(ctx, ""); err != nil {
+	actor, err := service.dependencies.RuntimeAccess.AuthorizeRuntimeImageRead(ctx, "")
+	if err != nil {
 		return nil, mapAuthorizationError(err, "runtime_catalog_access_denied")
 	}
-	image, err := service.dependencies.RuntimeImages.Get(ctx, request.RuntimeImageId)
+	image, err := service.dependencies.RuntimeImages.Get(ctx, actor.OrganizationID, request.RuntimeImageId)
 	if errors.Is(err, runtimedomain.ErrRuntimeImageNotFound) {
 		return nil, publicError(404, "runtime_image_not_found")
 	}
@@ -53,7 +58,7 @@ func (service *GeneratedServices) RegisterRuntimeImage(ctx context.Context, requ
 	}
 	result, err := service.executeWrite(ctx, actor, "runtime-image.register", "", request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		image, err := services.RuntimeImages.Register(ctx, runtimeapplication.RegisterCommand{
-			Runtime: runtimedomain.Runtime(request.Runtime), CLIVersion: request.CliVersion,
+			OrganizationID: actor.OrganizationID, Runtime: runtimedomain.Runtime(request.Runtime), CLIVersion: request.CliVersion,
 			AdapterVersion: request.AdapterVersion, ImageDigest: request.ImageDigest,
 			Capabilities: request.Capabilities,
 		})
@@ -79,8 +84,8 @@ func (service *GeneratedServices) ChangeRuntimeImageStatus(ctx context.Context, 
 	}
 	result, err := service.executeWrite(ctx, actor, "runtime-image.status:"+request.RuntimeImageId, strconv.FormatInt(version, 10), request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		image, err := services.RuntimeImages.ChangeStatus(ctx, runtimeapplication.ChangeStatusCommand{
-			ID: request.RuntimeImageId, ExpectedVersion: version, Status: runtimedomain.Status(request.Status),
-			BlockedReason: request.BlockedReason,
+			OrganizationID: actor.OrganizationID, ID: request.RuntimeImageId, ExpectedVersion: version, Status: runtimedomain.Status(request.Status),
+			BlockedReason: request.BlockedReason, ConformanceEvidenceKey: request.ConformanceEvidenceKey,
 		})
 		return encodeWriteResult(http.StatusOK, newRuntimeImageResponse(image), err)
 	})

@@ -365,8 +365,8 @@ func seedRun(t *testing.T, db *gorm.DB, label string) string {
 			INSERT INTO configured_models (organization_id, name, model_id, endpoint, credential_profile_id)
 			SELECT organization_id, 'configured-model', 'model-id', 'https://models.example.test', id FROM model_credential RETURNING id
 		), runtime AS (
-			INSERT INTO runtime_images (runtime, cli_version, adapter_version, image_digest)
-			VALUES ('claude', 'test', 'test', ?) RETURNING id
+			INSERT INTO runtime_images (organization_id, runtime, cli_version, adapter_version, image_digest)
+			SELECT organization_id, 'claude', 'test', 'test', ? FROM platform_user RETURNING id
 		), provider AS (
 			INSERT INTO source_control_providers (organization_id, name, kind, base_url)
 			SELECT organization_id, 'github', 'github_com', 'https://github.com' FROM platform_user RETURNING id

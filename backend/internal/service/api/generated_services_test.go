@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
+	identitydomain "agent-platform/backend/internal/biz/identity/domain"
+	runtimeapplication "agent-platform/backend/internal/biz/runtimecatalog/application"
 	runtimedomain "agent-platform/backend/internal/biz/runtimecatalog/domain"
 
 	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
@@ -16,7 +18,7 @@ import (
 func TestGeneratedServiceCanBeCalledWithoutHTTPContext(t *testing.T) {
 	id := "00000000-0000-4000-8000-000000000001"
 	service := &GeneratedServices{dependencies: Dependencies{
-		RuntimeImages: runtimeImageReaderStub{image: runtimedomain.RuntimeImage{ID: id, Version: 1}},
+		RuntimeImages: runtimeImageReaderStub{image: runtimedomain.RuntimeImage{ID: id, OrganizationID: "org-1", Version: 1}},
 		RuntimeAccess: allowRuntimeImageRead,
 	}}
 	response, err := service.GetRuntimeImage(context.Background(), &runtimecatalogv1.GetRuntimeImageRequest{RuntimeImageId: id})
@@ -30,26 +32,28 @@ func TestGeneratedServiceCanBeCalledWithoutHTTPContext(t *testing.T) {
 
 type runtimeImageReaderStub struct{ image runtimedomain.RuntimeImage }
 
-func (stub runtimeImageReaderStub) Get(context.Context, string) (runtimedomain.RuntimeImage, error) {
+func (stub runtimeImageReaderStub) Get(context.Context, string, string) (runtimedomain.RuntimeImage, error) {
 	return stub.image, nil
 }
 
-func (stub runtimeImageReaderStub) List(context.Context) ([]runtimedomain.RuntimeImage, error) {
-	return []runtimedomain.RuntimeImage{stub.image}, nil
+func (stub runtimeImageReaderStub) List(context.Context, runtimeapplication.ListQuery) (runtimeapplication.Page, error) {
+	return runtimeapplication.Page{Items: []runtimedomain.RuntimeImage{stub.image}}, nil
 }
 
-type runtimeAccessFunc func(context.Context, string) error
+type runtimeAccessFunc func(context.Context, string) (identitydomain.Actor, error)
 
-func (function runtimeAccessFunc) AuthorizeRuntimeImageRead(ctx context.Context, token string) error {
+func (function runtimeAccessFunc) AuthorizeRuntimeImageRead(ctx context.Context, token string) (identitydomain.Actor, error) {
 	return function(ctx, token)
 }
 
-var allowRuntimeImageRead runtimeAccessFunc = func(context.Context, string) error { return nil }
+var allowRuntimeImageRead runtimeAccessFunc = func(context.Context, string) (identitydomain.Actor, error) {
+	return identitydomain.Actor{UserID: "user-1", OrganizationID: "org-1"}, nil
+}
 
 func TestGeneratedRuntimeRoutePreservesLegacyHTTPContract(t *testing.T) {
 	id := "00000000-0000-4000-8000-000000000001"
 	service := &GeneratedServices{dependencies: Dependencies{
-		RuntimeImages: runtimeImageReaderStub{image: runtimedomain.RuntimeImage{ID: id}},
+		RuntimeImages: runtimeImageReaderStub{image: runtimedomain.RuntimeImage{ID: id, OrganizationID: "org-1"}},
 		RuntimeAccess: allowRuntimeImageRead,
 	}}
 	server := kratoshttp.NewServer(kratoshttp.ResponseEncoder(func(writer http.ResponseWriter, _ *http.Request, _ any) error {
@@ -68,6 +72,38 @@ func TestGeneratedRuntimeRoutePreservesLegacyHTTPContract(t *testing.T) {
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), id) {
 		t.Fatalf("GET generated Runtime Image route = (%d, %q)", response.Code, response.Body.String())
 	}
+}
+
+func TestRuntimeImageListReturnsPaginationToken(t *testing.T) {
+	id := "00000000-0000-4000-8000-000000000001"
+	reader := &recordingRuntimeImageReader{image: runtimedomain.RuntimeImage{ID: id}, nextToken: "next-page"}
+	service := &GeneratedServices{dependencies: Dependencies{RuntimeImages: reader, RuntimeAccess: allowRuntimeImageRead}}
+
+	response, err := service.ListRuntimeImages(context.Background(), &runtimecatalogv1.ListRuntimeImagesRequest{PageSize: 7, PageToken: "current-page"})
+	if err != nil || response.NextPageToken != "next-page" || len(response.Items) != 1 {
+		t.Fatalf("ListRuntimeImages() = (%+v, %v)", response, err)
+	}
+	if reader.query.PageSize != 7 || reader.query.Token != "current-page" {
+		t.Fatalf("List query = %+v", reader.query)
+	}
+	if reader.query.OrganizationID != "org-1" {
+		t.Fatalf("List query Organization = %q", reader.query.OrganizationID)
+	}
+}
+
+type recordingRuntimeImageReader struct {
+	image     runtimedomain.RuntimeImage
+	nextToken string
+	query     runtimeapplication.ListQuery
+}
+
+func (reader *recordingRuntimeImageReader) Get(context.Context, string, string) (runtimedomain.RuntimeImage, error) {
+	return reader.image, nil
+}
+
+func (reader *recordingRuntimeImageReader) List(_ context.Context, query runtimeapplication.ListQuery) (runtimeapplication.Page, error) {
+	reader.query = query
+	return runtimeapplication.Page{Items: []runtimedomain.RuntimeImage{reader.image}, NextToken: reader.nextToken}, nil
 }
 
 func TestGeneratedServicesRejectMissingSecurityGraph(t *testing.T) {

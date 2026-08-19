@@ -16,6 +16,7 @@ import (
 	executiondomain "agent-platform/backend/internal/biz/execution/domain"
 	identitydomain "agent-platform/backend/internal/biz/identity/domain"
 	modeldomain "agent-platform/backend/internal/biz/modelcatalog/domain"
+	runtimeapplication "agent-platform/backend/internal/biz/runtimecatalog/application"
 	runtimedomain "agent-platform/backend/internal/biz/runtimecatalog/domain"
 	sourcedomain "agent-platform/backend/internal/biz/sourcecontrol/domain"
 	transaction "agent-platform/backend/internal/biz/transaction"
@@ -203,6 +204,10 @@ func mapWriteError(err error) error {
 	case errors.Is(err, runtimedomain.ErrInvalidRuntimeImage), errors.Is(err, modeldomain.ErrInvalidCatalogInput),
 		errors.Is(err, sourcedomain.ErrInvalidProvider), errors.Is(err, sourcedomain.ErrInvalidBinding):
 		return publicError(422, "invalid_catalog_resource")
+	case errors.Is(err, runtimeapplication.ErrInvalidEvidence):
+		return publicError(422, "invalid_conformance_evidence")
+	case errors.Is(err, runtimeapplication.ErrEvidenceUnavailable):
+		return publicError(503, "conformance_evidence_unavailable")
 	case errors.Is(err, agentdomain.ErrInvalidAgent), errors.Is(err, agentdomain.ErrDraftNotReady):
 		return publicError(422, "invalid_agent_lifecycle_resource")
 	case errors.Is(err, collaborationdomain.ErrReleaseUnavailable), errors.Is(err, collaborationdomain.ErrTaskStateConflict),

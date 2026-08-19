@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.vue";
+import { platformApiKey, type PlatformApi } from "./api/client";
 import { authContextKey, type AuthSession, type AuthState } from "./auth/session";
 import { createAppI18n, localeStorageKey } from "./i18n";
 import { createAppRouter } from "./router";
@@ -71,7 +72,10 @@ async function mountApp(session: AuthSession, path = "/workspace") {
   await router.push(path);
   await router.isReady();
   const i18n = createAppI18n(localStorage, "en-US");
-  const wrapper = mount(App, { global: { plugins: [router, i18n], provide: { [authContextKey as symbol]: { session, isCallback: false } } } });
+  const wrapper = mount(App, { global: { plugins: [router, i18n], provide: {
+    [authContextKey as symbol]: { session, isCallback: false },
+    [platformApiKey as symbol]: platformApiStub,
+  } } });
   await flushPromises();
   return { wrapper, router };
 }
@@ -92,6 +96,13 @@ function authSession(initial: AuthState) {
   const state = ref<AuthState>(initial);
   const signIn = vi.fn(async () => undefined);
   const signOut = vi.fn(async () => undefined);
-  const session: AuthSession = { state, initialize: vi.fn(async () => undefined), signIn, signOut, dispose: vi.fn() };
+  const session: AuthSession = { state, accessToken: () => "test-token", initialize: vi.fn(async () => undefined), signIn, signOut, dispose: vi.fn() };
   return { session, signIn, signOut };
 }
+
+const platformApiStub: PlatformApi = {
+  listRuntimeImages: vi.fn(async () => ({ items: [], nextPageToken: "" })),
+  getRuntimeImage: vi.fn(),
+  registerRuntimeImage: vi.fn(),
+  changeRuntimeImageStatus: vi.fn(),
+};

@@ -43,6 +43,7 @@ type UnitOfWork struct {
 	db               *gorm.DB
 	clock            Clock
 	webhookTargetURL string
+	evidenceVerifier runtimeapplication.EvidenceVerifier
 }
 
 var _ transaction.IdempotentTransactionManager = (*UnitOfWork)(nil)
@@ -51,6 +52,14 @@ func New(db *gorm.DB) *UnitOfWork { return NewWithClock(db, systemClock{}) }
 
 func NewWithWebhook(db *gorm.DB, targetURL string) *UnitOfWork {
 	return &UnitOfWork{db: db, clock: systemClock{}, webhookTargetURL: targetURL}
+}
+
+func NewWithEvidenceVerifier(db *gorm.DB, verifier runtimeapplication.EvidenceVerifier) *UnitOfWork {
+	return &UnitOfWork{db: db, clock: systemClock{}, evidenceVerifier: verifier}
+}
+
+func NewWithWebhookAndEvidenceVerifier(db *gorm.DB, targetURL string, verifier runtimeapplication.EvidenceVerifier) *UnitOfWork {
+	return &UnitOfWork{db: db, clock: systemClock{}, webhookTargetURL: targetURL, evidenceVerifier: verifier}
 }
 
 func NewWithClock(db *gorm.DB, clock Clock) *UnitOfWork {
@@ -153,7 +162,7 @@ func (unit *UnitOfWork) Execute(ctx context.Context, request transaction.Idempot
 
 		workflows := gormtx.New(tx)
 		result, err := handler(transaction.TransactionServices{
-			RuntimeImages: runtimeapplication.New(runtimegorm.New(tx)),
+			RuntimeImages: runtimeapplication.NewWithEvidenceVerifier(runtimegorm.New(tx), unit.evidenceVerifier),
 			Models:        modelapplication.New(modelgorm.New(tx)),
 			SourceControl: sourceapplication.New(sourcegorm.New(tx)),
 			Bindings:      sourceapplication.NewBindingService(sourcegorm.New(tx), bindingvalidator.New(tx)),

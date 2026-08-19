@@ -113,7 +113,7 @@ func seedBindingFixture(t *testing.T, db *gorm.DB) bindingFixture {
 		{`INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES (?, ?, ?, ?, 'build', 'secret://build')`, []any{fixture.buildCredential, fixture.organizationID, fixture.teamID, suffix + "-build"}},
 		{`INSERT INTO credential_profiles (id, organization_id, name, kind, secret_ref) VALUES (?, ?, ?, 'model', 'secret://model')`, []any{modelCredential, fixture.organizationID, suffix + "-model"}},
 		{`INSERT INTO configured_models (id, organization_id, name, model_id, endpoint, credential_profile_id) VALUES (?, ?, ?, 'model', 'https://model.example.test', ?)`, []any{fixture.modelID, fixture.organizationID, suffix, modelCredential}},
-		{`INSERT INTO runtime_images (id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, 'claude', '1', '1', ?, '{}', 'experimental')`, []any{fixture.runtimeID, digest}},
+		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status) VALUES (?, ?, 'claude', '1', '1', ?, '{}', 'experimental')`, []any{fixture.runtimeID, fixture.organizationID, digest}},
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement.query, statement.args...).Error; err != nil {

@@ -13,6 +13,7 @@ import (
 	executiondomain "agent-platform/backend/internal/biz/execution/domain"
 	identitydomain "agent-platform/backend/internal/biz/identity/domain"
 	modeldomain "agent-platform/backend/internal/biz/modelcatalog/domain"
+	runtimeapplication "agent-platform/backend/internal/biz/runtimecatalog/application"
 	runtimedomain "agent-platform/backend/internal/biz/runtimecatalog/domain"
 	sourcedomain "agent-platform/backend/internal/biz/sourcecontrol/domain"
 	transaction "agent-platform/backend/internal/biz/transaction"
@@ -62,11 +63,11 @@ type AuditSearcher interface {
 	Search(context.Context, auditdomain.Query) ([]auditdomain.Event, error)
 }
 type RuntimeImageReader interface {
-	Get(context.Context, string) (runtimedomain.RuntimeImage, error)
-	List(context.Context) ([]runtimedomain.RuntimeImage, error)
+	Get(context.Context, string, string) (runtimedomain.RuntimeImage, error)
+	List(context.Context, runtimeapplication.ListQuery) (runtimeapplication.Page, error)
 }
 type RuntimeImageAccessController interface {
-	AuthorizeRuntimeImageRead(context.Context, string) error
+	AuthorizeRuntimeImageRead(context.Context, string) (identitydomain.Actor, error)
 }
 type ModelCatalogReader interface {
 	GetCredential(context.Context, string, string) (modeldomain.CredentialProfile, error)

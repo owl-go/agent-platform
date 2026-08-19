@@ -102,21 +102,23 @@ type auditEventResponse struct {
 }
 
 type runtimeImageResponse struct {
-	ID             string                `json:"id"`
-	Runtime        runtimedomain.Runtime `json:"runtime"`
-	CLIVersion     string                `json:"cli_version"`
-	AdapterVersion string                `json:"adapter_version"`
-	ImageDigest    string                `json:"image_digest"`
-	Capabilities   map[string]bool       `json:"capabilities"`
-	Status         runtimedomain.Status  `json:"status"`
-	BlockedReason  string                `json:"blocked_reason,omitempty"`
-	CreatedAt      time.Time             `json:"created_at"`
-	UpdatedAt      time.Time             `json:"updated_at"`
-	Version        int64                 `json:"version"`
+	ID                        string                `json:"id"`
+	Runtime                   runtimedomain.Runtime `json:"runtime"`
+	CLIVersion                string                `json:"cli_version"`
+	AdapterVersion            string                `json:"adapter_version"`
+	ImageDigest               string                `json:"image_digest"`
+	Capabilities              map[string]bool       `json:"capabilities"`
+	Status                    runtimedomain.Status  `json:"status"`
+	BlockedReason             string                `json:"blocked_reason,omitempty"`
+	ConformanceEvidenceKey    string                `json:"conformance_evidence_key,omitempty"`
+	ConformanceEvidenceSHA256 string                `json:"conformance_evidence_sha256,omitempty"`
+	CreatedAt                 time.Time             `json:"created_at"`
+	UpdatedAt                 time.Time             `json:"updated_at"`
+	Version                   int64                 `json:"version"`
 }
 
 func newRuntimeImageResponse(value runtimedomain.RuntimeImage) runtimeImageResponse {
-	return runtimeImageResponse{ID: value.ID, Runtime: value.Runtime, CLIVersion: value.CLIVersion, AdapterVersion: value.AdapterVersion, ImageDigest: value.ImageDigest, Capabilities: value.Capabilities, Status: value.Status, BlockedReason: value.BlockedReason, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
+	return runtimeImageResponse{ID: value.ID, Runtime: value.Runtime, CLIVersion: value.CLIVersion, AdapterVersion: value.AdapterVersion, ImageDigest: value.ImageDigest, Capabilities: value.Capabilities, Status: value.Status, BlockedReason: value.BlockedReason, ConformanceEvidenceKey: value.ConformanceEvidenceKey, ConformanceEvidenceSHA256: value.ConformanceEvidenceSHA256, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 
 type credentialProfileResponse struct {

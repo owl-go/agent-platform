@@ -178,17 +178,17 @@ func (principal Principal) AuthorizeRunControl(scope RunScope, action string) (A
 	return Actor{}, ErrForbidden
 }
 
-func (principal Principal) AuthorizeRuntimeImageRead() error {
+func (principal Principal) AuthorizeRuntimeImageRead() (Actor, error) {
 	if principal.Disabled || principal.UserID == "" || principal.OrganizationID == "" {
-		return ErrUnauthenticated
+		return Actor{}, ErrUnauthenticated
 	}
 	for _, grant := range principal.Grants {
 		switch grant.Role {
 		case PlatformAdministrator, AgentBuilder, AgentUser, RunOperator:
-			return nil
+			return Actor{UserID: principal.UserID, OrganizationID: principal.OrganizationID}, nil
 		}
 	}
-	return ErrForbidden
+	return Actor{}, ErrForbidden
 }
 
 func (principal Principal) AuthorizeRuntimeImageWrite() error {
@@ -204,7 +204,7 @@ func (principal Principal) AuthorizeRuntimeImageWrite() error {
 }
 
 func (principal Principal) AuthorizeModelCatalogRead() (Actor, error) {
-	if err := principal.AuthorizeRuntimeImageRead(); err != nil {
+	if _, err := principal.AuthorizeRuntimeImageRead(); err != nil {
 		return Actor{}, err
 	}
 	return Actor{UserID: principal.UserID, OrganizationID: principal.OrganizationID}, nil

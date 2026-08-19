@@ -44,7 +44,7 @@ func TestPrincipalRestrictsRuntimeImageWritesToOrganizationAdministrators(t *tes
 			t.Fatalf("write error = %v for %+v", err, principal)
 		}
 	}
-	if err := (Principal{UserID: "u", OrganizationID: "o", Grants: []Grant{{TeamID: &team, Role: AgentUser}}}).AuthorizeRuntimeImageRead(); err != nil {
+	if _, err := (Principal{UserID: "u", OrganizationID: "o", Grants: []Grant{{TeamID: &team, Role: AgentUser}}}).AuthorizeRuntimeImageRead(); err != nil {
 		t.Fatalf("team user read: %v", err)
 	}
 }

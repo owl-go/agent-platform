@@ -175,7 +175,7 @@ func loadLaunchSelection(tx *gorm.DB, organizationID, teamID, releaseID string) 
 		JOIN credential_profiles model_credential ON model_credential.id = cm.credential_profile_id
 		JOIN credential_profiles git_credential ON git_credential.id = rb.ssh_credential_profile_id
 		WHERE ar.id = ? AND a.organization_id = ? AND a.team_id = ?
-		  AND rb.organization_id = ? AND rb.team_id = ?
+		  AND rb.organization_id = ? AND rb.team_id = ? AND ri.organization_id = a.organization_id
 		  AND ar.status = 'released' AND ri.status = 'production' AND cm.enabled = true
 		  AND model_credential.disabled_at IS NULL AND git_credential.disabled_at IS NULL
 		  AND rb.validation_report IS NOT NULL AND (rb.validation_report->>'valid')::boolean = true

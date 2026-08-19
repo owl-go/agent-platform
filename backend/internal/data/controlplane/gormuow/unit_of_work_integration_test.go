@@ -51,7 +51,7 @@ func TestUnitOfWorkExecutesConcurrentIdempotentWriteOnce(t *testing.T) {
 	handler := func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
 		executions.Add(1)
 		image, err := services.RuntimeImages.Register(context.Background(), runtimeapplication.RegisterCommand{
-			Runtime: domain.Claude, CLIVersion: "test", AdapterVersion: "test", ImageDigest: digest,
+			OrganizationID: organizationID, Runtime: domain.Claude, CLIVersion: "test", AdapterVersion: "test", ImageDigest: digest,
 		})
 		if err != nil {
 			return transaction.IdempotencyResult{}, err

@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
-import { getCurrentUser } from "./api/client";
+import { createPlatformApi, getCurrentUser, platformApiKey } from "./api/client";
 import { createBrowserOIDC } from "./auth/oidc";
 import { authContextKey, createAuthSession, createUnavailableAuthSession, type AuthContext } from "./auth/session";
 import { createAppI18n } from "./i18n";
@@ -21,6 +21,7 @@ try {
 
 const app = createApp(App);
 app.provide(authContextKey, authContext);
+app.provide(platformApiKey, createPlatformApi(() => authContext.session.accessToken()));
 app.use(createAppI18n());
 app.use(createAppRouter());
 app.mount("#app");
