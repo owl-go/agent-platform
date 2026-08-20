@@ -124,6 +124,22 @@ func (service *BindingService) Validate(ctx context.Context, organizationID, tea
 	return binding, nil
 }
 
+// InspectCurrent evaluates a Binding without mutating its saved Validation Report.
+func (service *BindingService) InspectCurrent(ctx context.Context, organizationID, teamID, id string) (domain.RepositoryBinding, map[string]string, error) {
+	binding, err := service.Get(ctx, organizationID, teamID, id)
+	if err != nil {
+		return domain.RepositoryBinding{}, nil, err
+	}
+	if service.validator == nil {
+		return domain.RepositoryBinding{}, nil, fmt.Errorf("Repository Binding Validator is required")
+	}
+	errorsByField, err := service.validator.Validate(ctx, binding)
+	if err != nil {
+		return domain.RepositoryBinding{}, nil, fmt.Errorf("inspect current Repository Binding dependencies: %w", err)
+	}
+	return binding, errorsByField, nil
+}
+
 func (service *BindingService) Update(ctx context.Context, command UpdateBindingCommand) (domain.RepositoryBinding, error) {
 	if command.ExpectedVersion <= 0 || service.validator == nil || service.clock == nil {
 		return domain.RepositoryBinding{}, fmt.Errorf("Repository Binding Validator, Clock, and expected Version are required")

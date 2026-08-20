@@ -56,7 +56,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	service6 := modelcatalog.NewService(database)
 	service7 := sourcecontrol.NewService(database)
 	bindingService := sourcecontrol.NewBindingService(database)
-	service8 := agentlifecycle.NewService(database)
+	service8 := agentlifecycle.NewService(database, bindingService)
 	service9 := collaboration.NewService(database, manager)
 	idempotentTransactionManager := platform2.NewCatalogWrites(database, config, provider)
 	dependencies := apiprocess.NewDependencies(database, applicationService, accessService, service2, service3, service4, service5, service6, service7, bindingService, service8, service9, idempotentTransactionManager)

@@ -154,8 +154,45 @@ Agent 是 Team 范围的稳定身份；Agent Draft 是可编辑、可验证的�
 
 Agent 和 Draft 创建、Draft 编辑与验证都要求 `Idempotency-Key`；编辑和验证还要求 `If-Match` 传递期望 Version。相同意图重试复用 Key，而输入或 Version 变化形成新意图。Draft 每次编辑都会递增 Version、回到 `draft` 状态并清除旧 Validation Report；Version 不匹配返回显式 Precondition Failed，浏览器保留安全表单输入并重新加载权威 Version，不静默覆盖。
 
-Draft Validation 使用当前 Repository Binding、Runtime Image 和 Configured Model 投影生成字段级 Validation Report。它会检查 Binding 的最新 Validation Report（其中包含 Git SSH、Credential、Egress、Required Runtime Capabilities 与质量命令结果）、Runtime allowlist 与 Production 状态、Configured Model 策略与启用状态、Draft 相对 Binding 收紧的 Model Budget，以及原生 Subagent 所需 Runtime Capability。发布时不仅检查此前验证结果，还会重新执行同一依赖验证，避免依赖在验证后发生变化。
+Draft Validation 使用当前 Repository Binding、Runtime Image 和 Configured Model 投影生成字段级 Validation Report。它会检查 Binding 的最新 Validation Report（其中包含 Git SSH、Credential、Egress、Required Runtime Capabilities 与质量命令结果）、Runtime allowlist 与 Production 状态、Configured Model 策略与启用状态、Draft 相对 Binding 收紧的 Model Budget，以及原生 Subagent 所需 Runtime Capability。发布时不仅检查此前验证结果，还会在幂等写事务内锁定 Binding、Provider、Credential Profile、Runtime Image 与 Configured Model 的依赖行并重新执行同一验证，依赖在验证后被禁用或变更时发布会 fail closed。
 
-低风险 Draft 验证成功后可直接发布。启用 Runtime Subagent 等高风险能力时必须先申请 Release Approval，由另一名具有 Agent Builder 权限的人员决定；审批绑定精确 Draft Version，申请人不能自批，Draft 编辑后旧审批不会授权新版本。
+低风险 Draft 验证成功后可直接发布。启用 Runtime Subagent 等高风险能力时必须先申请 Release Approval，由另一名具有相应 Team 权限的 Agent Builder 决定；申请记录包含申请人、精确 Draft Version 和风险原因，申请人不能自批，Draft 编辑后旧审批不会授权新版本。Release Approval 使用 Agent Draft 路由和聚合；它不复用、也不改变 Run Approval 的路由、状态机或职责。
 
-同一 Draft 只能产生一个 Agent Release。Release 内容不可修改，仅允许使用 Version 乐观锁进入 `deprecated` 或 `blocked` 状态；Blocked 必须记录原因。Agent Builder 可完成常规生命周期操作，Release Block 仅允许 Organization 级 Platform Administrator。
+同一 Draft 只能产生一个 Agent Release；相同发布意图的网络重试从 Idempotency Key 记录重放同一响应。Release 冻结 Configuration、Model Budget、Repository Binding（含质量命令、Egress 与 Required Runtime Capabilities）、Runtime Image RepoDigest 与 Capability、Configured Model，以及高风险审批证据，发布后不再从可变目录拼装这些字段。Release 内容不可修改，仅允许使用 Version 乐观锁进入 `deprecated` 或 `blocked` 状态；Blocked 必须记录原因。Agent Builder 可完成常规生命周期操作，Release Block 仅允许 Organization 级 Platform Administrator。
+
+从未保存上述冻结字段的旧版 Agent Lifecycle 升级时，Migration 不会用当前可变目录冒充历史发布快照，也不会猜测 Release Approval 或 Block 原因。运维人员必须先停写并备份数据库，依据发布审计记录逐个 Release 回填发布当时的真实值；无法证明的历史记录必须先隔离或保留在旧系统，不能迁入为可执行 Release。Migration 使用 `ADD COLUMN IF NOT EXISTS`，失败后可执行以下预迁移骨架并安全重试：
+
+```sql
+ALTER TABLE agent_release_approvals ADD COLUMN IF NOT EXISTS risk_reason text;
+ALTER TABLE agent_releases
+  ADD COLUMN IF NOT EXISTS release_risk text,
+  ADD COLUMN IF NOT EXISTS repository_binding_snapshot jsonb,
+  ADD COLUMN IF NOT EXISTS runtime_image_snapshot jsonb,
+  ADD COLUMN IF NOT EXISTS configured_model_snapshot jsonb,
+  ADD COLUMN IF NOT EXISTS approval_evidence jsonb,
+  ADD COLUMN IF NOT EXISTS blocked_reason text;
+
+-- 以下值必须来自发布时审计记录；禁止从当前 Repository Binding、Runtime 或 Model 批量拼装。
+UPDATE agent_release_approvals
+SET risk_reason = '<audited-risk-reason>'
+WHERE id = '<approval-uuid>' AND risk_reason IS NULL;
+
+UPDATE agent_releases
+SET release_risk = '<low-or-high>',
+    repository_binding_snapshot = '<audited-binding-json>'::jsonb,
+    runtime_image_snapshot = '<audited-runtime-json>'::jsonb,
+    configured_model_snapshot = '<audited-model-json>'::jsonb,
+    approval_evidence = NULL, -- 高风险 Release 改为与精确审批行一致的审计 JSON。
+    blocked_reason = NULL     -- Blocked Release 改为真实审计原因。
+WHERE id = '<release-uuid>' AND release_risk IS NULL;
+
+SELECT id FROM agent_release_approvals
+WHERE risk_reason IS NULL OR length(btrim(risk_reason)) = 0;
+SELECT id FROM agent_releases
+WHERE release_risk IS NULL
+   OR repository_binding_snapshot IS NULL
+   OR runtime_image_snapshot IS NULL
+   OR configured_model_snapshot IS NULL
+   OR release_risk = 'high' AND approval_evidence IS NULL
+   OR status = 'blocked' AND (blocked_reason IS NULL OR length(btrim(blocked_reason)) = 0);
+```

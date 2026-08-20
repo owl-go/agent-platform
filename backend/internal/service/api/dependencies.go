@@ -98,6 +98,7 @@ type AgentLifecycleReader interface {
 	ListAgents(context.Context, string, string) ([]agentdomain.Agent, error)
 	GetDraft(context.Context, string, string, string, string) (agentdomain.Draft, error)
 	ListDrafts(context.Context, string, string, string) ([]agentdomain.Draft, error)
+	GetApproval(context.Context, string, string, string, string) (agentdomain.ReleaseApproval, error)
 	GetRelease(context.Context, string, string, string, string) (agentdomain.Release, error)
 	ListReleases(context.Context, string, string, string) ([]agentdomain.Release, error)
 }

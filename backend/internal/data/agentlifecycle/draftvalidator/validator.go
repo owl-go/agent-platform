@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	"agent-platform/backend/internal/biz/agentlifecycle/domain"
-	sourcedomain "agent-platform/backend/internal/biz/sourcecontrol/domain"
 
 	"gorm.io/gorm"
 )
@@ -35,6 +34,17 @@ type modelProjection struct {
 	Enabled        bool   `gorm:"column:enabled"`
 }
 
+type bindingValidationReport struct {
+	Valid  bool              `json:"valid"`
+	Errors map[string]string `json:"errors"`
+}
+
+type bindingBudget struct {
+	MaxInputTokens  int64  `json:"max_input_tokens"`
+	MaxOutputTokens int64  `json:"max_output_tokens"`
+	MaxCostAmount   string `json:"max_cost_amount"`
+}
+
 func (validator *Validator) Validate(ctx context.Context, agent domain.Agent, draft domain.Draft) (map[string]string, error) {
 	if validator == nil || validator.db == nil {
 		return nil, fmt.Errorf("Agent Draft validation database is required")
@@ -52,7 +62,7 @@ func (validator *Validator) Validate(ctx context.Context, agent domain.Agent, dr
 	if binding.OrganizationID != agent.OrganizationID || binding.TeamID != agent.TeamID {
 		errorsByField["repository_binding_id"] = "Repository Binding is outside the Agent Organization/Team scope"
 	}
-	var bindingReport sourcedomain.ValidationReport
+	var bindingReport bindingValidationReport
 	if len(binding.ValidationReport) == 0 || json.Unmarshal(binding.ValidationReport, &bindingReport) != nil || !bindingReport.Valid {
 		errorsByField["repository_binding_id"] = "Repository Binding does not have a valid Validation Report"
 		for field, message := range bindingReport.Errors {
@@ -69,11 +79,11 @@ func (validator *Validator) Validate(ctx context.Context, agent domain.Agent, dr
 	if binding.DefaultModelID != draft.Configuration.ConfiguredModelID {
 		errorsByField["configured_model_id"] = "Configured Model does not match Repository Binding Model policy"
 	}
-	var bindingBudget sourcedomain.ModelBudget
-	if err := json.Unmarshal(binding.ModelBudget, &bindingBudget); err != nil {
+	var budgetPolicy bindingBudget
+	if err := json.Unmarshal(binding.ModelBudget, &budgetPolicy); err != nil {
 		return nil, fmt.Errorf("decode Repository Binding Model Budget: %w", err)
 	}
-	if draft.Configuration.ModelBudget.MaxInputTokens > bindingBudget.MaxInputTokens || draft.Configuration.ModelBudget.MaxOutputTokens > bindingBudget.MaxOutputTokens || decimalGreater(draft.Configuration.ModelBudget.MaxCostAmount, bindingBudget.MaxCostAmount) {
+	if draft.Configuration.ModelBudget.MaxInputTokens > budgetPolicy.MaxInputTokens || draft.Configuration.ModelBudget.MaxOutputTokens > budgetPolicy.MaxOutputTokens || decimalGreater(draft.Configuration.ModelBudget.MaxCostAmount, budgetPolicy.MaxCostAmount) {
 		errorsByField["model_budget"] = "Draft Model Budget exceeds Repository Binding limits"
 	}
 

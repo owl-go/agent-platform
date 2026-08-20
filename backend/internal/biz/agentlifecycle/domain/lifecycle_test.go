@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -21,7 +22,7 @@ func TestDraftMustValidateBeforeRelease(t *testing.T) {
 	if err := draft.FinishValidation(ValidationReport{Valid: true, Errors: map[string]string{}, CheckedAt: now.Add(2 * time.Second)}, now.Add(2*time.Second)); err != nil {
 		t.Fatal(err)
 	}
-	release, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Now: now.Add(3 * time.Second)})
+	release, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Dependencies: validDependencies(), Now: now.Add(3 * time.Second)})
 	if err != nil || release.Status != ReleaseStatusReleased || release.Configuration.RuntimeImageID != "runtime" {
 		t.Fatalf("Publish() = (%+v, %v)", release, err)
 	}
@@ -37,15 +38,18 @@ func TestHighRiskReleaseRequiresDifferentApprover(t *testing.T) {
 	_ = draft.FinishValidation(ValidationReport{Valid: true, Errors: map[string]string{}, CheckedAt: now.Add(2 * time.Second)}, now.Add(2*time.Second))
 	for _, approval := range []*RiskApproval{
 		nil,
-		{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", ApprovedBy: "builder", ApprovedAt: now},
+		{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", RiskReason: "native Subagents", ApprovedBy: "builder", ApprovedAt: now},
 	} {
-		if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Now: now.Add(3 * time.Second)}); !errors.Is(err, ErrApprovalRequired) {
+		if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Dependencies: validDependencies(), Now: now.Add(3 * time.Second)}); !errors.Is(err, ErrApprovalRequired) {
 			t.Fatalf("Publish approval error = %v", err)
 		}
 	}
-	approval := &RiskApproval{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", ApprovedBy: "reviewer", ApprovedAt: now}
-	if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Now: now.Add(3 * time.Second)}); err != nil {
+	approval := &RiskApproval{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", RiskReason: "native Subagents", ApprovedBy: "reviewer", ApprovedAt: now}
+	if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Dependencies: validDependencies(), Now: now.Add(3 * time.Second)}); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := Publish(ReleaseRegistration{ID: "reviewer-release", ReleaseNumber: 2, Draft: draft, ReleasedBy: "reviewer", Approval: approval, Dependencies: validDependencies(), Now: now.Add(3 * time.Second)}); err != nil {
+		t.Fatalf("a Builder other than the requester could not publish an approved Draft: %v", err)
 	}
 }
 
@@ -69,14 +73,22 @@ func TestEditingHighRiskDraftInvalidatesApproval(t *testing.T) {
 	draft, _ := CreateDraft(DraftRegistration{ID: "draft", AgentID: "agent", Revision: 1, Configuration: validConfiguration(), ReleaseRisk: ReleaseRiskHigh, CreatedBy: "builder", Now: now})
 	_ = draft.StartValidation(now.Add(time.Second))
 	_ = draft.FinishValidation(ValidationReport{Valid: true, Errors: map[string]string{}, CheckedAt: now.Add(2 * time.Second)}, now.Add(2*time.Second))
-	approval := &RiskApproval{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", ApprovedBy: "reviewer", ApprovedAt: now.Add(3 * time.Second)}
+	approval := &RiskApproval{ID: "approval", DraftID: draft.ID, DraftVersion: draft.Version, RequestedBy: "builder", RiskReason: "native Subagents", ApprovedBy: "reviewer", ApprovedAt: now.Add(3 * time.Second)}
 	configuration := validConfiguration()
 	configuration.Instructions = "materially changed after approval"
 	_ = draft.Edit(configuration, ReleaseRiskHigh, now.Add(4*time.Second))
 	_ = draft.StartValidation(now.Add(5 * time.Second))
 	_ = draft.FinishValidation(ValidationReport{Valid: true, Errors: map[string]string{}, CheckedAt: now.Add(6 * time.Second)}, now.Add(6*time.Second))
-	if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Now: now.Add(7 * time.Second)}); !errors.Is(err, ErrApprovalRequired) {
+	if _, err := Publish(ReleaseRegistration{ID: "release", ReleaseNumber: 1, Draft: draft, ReleasedBy: "builder", Approval: approval, Dependencies: validDependencies(), Now: now.Add(7 * time.Second)}); !errors.Is(err, ErrApprovalRequired) {
 		t.Fatalf("Publish with stale Approval error = %v", err)
+	}
+}
+
+func validDependencies() ReleaseDependencies {
+	return ReleaseDependencies{
+		RepositoryBinding: RepositoryBindingSnapshot{ID: "binding", Name: "Repository", RepositorySSHURL: "git@example.test:acme/repository.git", DefaultBranch: "main", EgressPolicy: "public"},
+		RuntimeImage:      RuntimeImageSnapshot{ID: "runtime", Runtime: "codex", CLIVersion: "1", AdapterVersion: "1", ImageDigest: "registry/runtime@sha256:" + strings.Repeat("a", 64), Capabilities: map[string]bool{"subagents": true}},
+		ConfiguredModel:   ConfiguredModelSnapshot{ID: "model", Name: "Primary", ModelID: "model-v1", Endpoint: "https://models.example.test"},
 	}
 }
 

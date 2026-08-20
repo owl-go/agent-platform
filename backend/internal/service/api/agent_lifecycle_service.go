@@ -18,7 +18,7 @@ import (
 )
 
 func agentQueryError(err error) error {
-	if errors.Is(err, agentdomain.ErrAgentNotFound) || errors.Is(err, agentdomain.ErrDraftNotFound) || errors.Is(err, agentdomain.ErrReleaseNotFound) {
+	if errors.Is(err, agentdomain.ErrAgentNotFound) || errors.Is(err, agentdomain.ErrDraftNotFound) || errors.Is(err, agentdomain.ErrReleaseNotFound) || errors.Is(err, agentdomain.ErrApprovalNotFound) {
 		return publicError(404, "agent_lifecycle_resource_not_found")
 	}
 	return publicError(500, "agent_lifecycle_query_failed")
@@ -177,8 +177,23 @@ func (service *GeneratedServices) RequestAgentDraftApproval(ctx context.Context,
 		return nil, err
 	}
 	return agentWrite(service, ctx, actor, "agent-draft.approval.request:"+request.DraftId, "", request, http.StatusCreated, &agentlifecyclev1.ReleaseApproval{}, func(services transaction.TransactionServices) (any, error) {
-		return services.Agents.RequestApproval(ctx, actor.OrganizationID, actor.TeamID, request.AgentId, request.DraftId, actor.UserID)
+		return services.Agents.RequestApproval(ctx, actor.OrganizationID, actor.TeamID, request.AgentId, request.DraftId, actor.UserID, request.RiskReason)
 	}, func(value any) any { return newApprovalResponse(value.(agentdomain.ReleaseApproval)) })
+}
+
+func (service *GeneratedServices) GetAgentDraftApproval(ctx context.Context, request *agentlifecyclev1.GetAgentDraftApprovalRequest) (*agentlifecyclev1.ReleaseApproval, error) {
+	if err := validAgentIDs(request.AgentId, request.DraftId); err != nil {
+		return nil, err
+	}
+	actor, err := service.authorizeTeamRead(ctx, request.TeamId)
+	if err != nil {
+		return nil, err
+	}
+	value, err := service.dependencies.AgentLifecycle.GetApproval(ctx, actor.OrganizationID, actor.TeamID, request.AgentId, request.DraftId)
+	if err != nil {
+		return nil, agentQueryError(err)
+	}
+	return mappedResponse(ctx, http.StatusOK, newApprovalResponse(value), &agentlifecyclev1.ReleaseApproval{})
 }
 
 func (service *GeneratedServices) DecideAgentDraftApproval(ctx context.Context, request *agentlifecyclev1.DecideAgentDraftApprovalRequest) (*agentlifecyclev1.ReleaseApproval, error) {
@@ -235,10 +250,10 @@ func (service *GeneratedServices) GetAgentRelease(ctx context.Context, request *
 }
 
 func (service *GeneratedServices) DeprecateAgentRelease(ctx context.Context, request *agentlifecyclev1.DeprecateAgentReleaseRequest) (*agentlifecyclev1.AgentRelease, error) {
-	return releaseStatus(service, ctx, request, request.AgentId, request.ReleaseId, request.TeamId, false)
+	return releaseStatus(service, ctx, request, request.AgentId, request.ReleaseId, request.TeamId, false, "")
 }
 func (service *GeneratedServices) BlockAgentRelease(ctx context.Context, request *agentlifecyclev1.BlockAgentReleaseRequest) (*agentlifecyclev1.AgentRelease, error) {
-	return releaseStatus(service, ctx, request, request.AgentId, request.ReleaseId, request.TeamId, true)
+	return releaseStatus(service, ctx, request, request.AgentId, request.ReleaseId, request.TeamId, true, request.Reason)
 }
 
 func agentConfiguration(input *typesv1.AgentConfiguration) (agentdomain.Configuration, error) {
@@ -285,7 +300,7 @@ func draftAction[T proto.Message](service *GeneratedServices, ctx context.Contex
 	return agentWrite(service, ctx, actor, operation+draftID, strconv.FormatInt(version, 10), request, http.StatusOK, output, func(services transaction.TransactionServices) (any, error) { return call(services, actor, version) }, convert)
 }
 
-func releaseStatus(service *GeneratedServices, ctx context.Context, request proto.Message, agentID, releaseID, teamID string, block bool) (*agentlifecyclev1.AgentRelease, error) {
+func releaseStatus(service *GeneratedServices, ctx context.Context, request proto.Message, agentID, releaseID, teamID string, block bool, reason string) (*agentlifecyclev1.AgentRelease, error) {
 	if err := validAgentIDs(agentID, releaseID); err != nil {
 		return nil, err
 	}
@@ -307,7 +322,7 @@ func releaseStatus(service *GeneratedServices, ctx context.Context, request prot
 	}
 	return agentWrite(service, ctx, actor, operation+releaseID, strconv.FormatInt(version, 10), request, http.StatusOK, &agentlifecyclev1.AgentRelease{}, func(services transaction.TransactionServices) (any, error) {
 		if block {
-			return services.Agents.BlockRelease(ctx, actor.OrganizationID, actor.TeamID, agentID, releaseID, version)
+			return services.Agents.BlockRelease(ctx, actor.OrganizationID, actor.TeamID, agentID, releaseID, version, reason)
 		}
 		return services.Agents.DeprecateRelease(ctx, actor.OrganizationID, actor.TeamID, agentID, releaseID, version)
 	}, func(value any) any { return newReleaseResponse(value.(agentdomain.Release)) })

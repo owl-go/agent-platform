@@ -494,6 +494,46 @@
       }
     },
     "/v1/agents/{agent_id}/drafts/{draft_id}/approval": {
+      "get": {
+        "operationId": "AgentLifecycleService_GetAgentDraftApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReleaseApproval"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentLifecycleService"
+        ]
+      },
       "post": {
         "operationId": "AgentLifecycleService_RequestAgentDraftApproval",
         "responses": {
@@ -2682,6 +2722,9 @@
       "properties": {
         "team_id": {
           "type": "string"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     },
@@ -2733,6 +2776,9 @@
       "type": "object",
       "properties": {
         "team_id": {
+          "type": "string"
+        },
+        "risk_reason": {
           "type": "string"
         }
       }
@@ -3153,6 +3199,24 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "release_risk": {
+          "type": "string"
+        },
+        "repository_binding_snapshot": {
+          "$ref": "#/definitions/v1ReleaseRepositoryBindingSnapshot"
+        },
+        "runtime_image_snapshot": {
+          "$ref": "#/definitions/v1ReleaseRuntimeImageSnapshot"
+        },
+        "configured_model_snapshot": {
+          "$ref": "#/definitions/v1ReleaseConfiguredModelSnapshot"
+        },
+        "approval_evidence": {
+          "$ref": "#/definitions/v1ReleaseApprovalEvidence"
+        },
+        "blocked_reason": {
+          "type": "string"
         }
       }
     },
@@ -3971,6 +4035,116 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "risk_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ReleaseApprovalEvidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "draft_id": {
+          "type": "string"
+        },
+        "draft_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "requested_by": {
+          "type": "string"
+        },
+        "risk_reason": {
+          "type": "string"
+        },
+        "approved_by": {
+          "type": "string"
+        },
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ReleaseConfiguredModelSnapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ReleaseRepositoryBindingSnapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "repository_ssh_url": {
+          "type": "string"
+        },
+        "default_branch": {
+          "type": "string"
+        },
+        "instructions": {
+          "type": "string"
+        },
+        "quality_commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1QualityCommand"
+          }
+        },
+        "egress_policy": {
+          "type": "string"
+        },
+        "required_runtime_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1ReleaseRuntimeImageSnapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "runtime": {
+          "type": "string"
+        },
+        "cli_version": {
+          "type": "string"
+        },
+        "adapter_version": {
+          "type": "string"
+        },
+        "image_digest": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
         }
       }
     },

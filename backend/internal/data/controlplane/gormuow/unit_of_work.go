@@ -21,6 +21,7 @@ import (
 	agentgorm "agent-platform/backend/internal/data/agentlifecycle/gormrepo"
 	approvalgorm "agent-platform/backend/internal/data/approval/gormrepo"
 	collaborationgorm "agent-platform/backend/internal/data/collaboration/gormrepo"
+	"agent-platform/backend/internal/data/controlplane/releasedependency"
 	executiongorm "agent-platform/backend/internal/data/execution/gormrepo"
 	modelgorm "agent-platform/backend/internal/data/modelcatalog/gormrepo"
 	runtimegorm "agent-platform/backend/internal/data/runtimecatalog/gormrepo"
@@ -161,12 +162,15 @@ func (unit *UnitOfWork) Execute(ctx context.Context, request transaction.Idempot
 		}
 
 		workflows := gormtx.New(tx)
+		drafts := draftvalidator.New(tx)
+		bindings := sourceapplication.NewBindingService(sourcegorm.New(tx), bindingvalidator.New(tx))
+		releaseDependencies := releasedependency.New(tx, drafts, bindings)
 		result, err := handler(transaction.TransactionServices{
 			RuntimeImages: runtimeapplication.NewWithEvidenceVerifier(runtimegorm.New(tx), unit.evidenceVerifier),
 			Models:        modelapplication.New(modelgorm.New(tx)),
 			SourceControl: sourceapplication.New(sourcegorm.New(tx)),
-			Bindings:      sourceapplication.NewBindingService(sourcegorm.New(tx), bindingvalidator.New(tx)),
-			Agents:        agentapplication.New(agentgorm.New(tx), draftvalidator.New(tx)),
+			Bindings:      bindings,
+			Agents:        agentapplication.New(agentgorm.New(tx), drafts, releaseDependencies),
 			Approvals:     approvalapplication.New(approvalgorm.New(tx), bizworkflow.NewApproval(workflows)),
 			Collaboration: collaborationapplication.NewWithLaunchCoordinator(collaborationgorm.New(tx), bizworkflow.NewLaunch(workflows)),
 			Runs:          executionapplication.New(executiongorm.New(tx), bizworkflow.NewCompletion(workflows)),

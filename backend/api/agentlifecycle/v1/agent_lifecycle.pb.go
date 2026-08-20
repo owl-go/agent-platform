@@ -966,6 +966,7 @@ type RequestAgentDraftApprovalRequest struct {
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	DraftId       string                 `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
 	TeamId        string                 `protobuf:"bytes,3,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	RiskReason    string                 `protobuf:"bytes,4,opt,name=risk_reason,json=riskReason,proto3" json:"risk_reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1021,6 +1022,13 @@ func (x *RequestAgentDraftApprovalRequest) GetTeamId() string {
 	return ""
 }
 
+func (x *RequestAgentDraftApprovalRequest) GetRiskReason() string {
+	if x != nil {
+		return x.RiskReason
+	}
+	return ""
+}
+
 type RequestAgentDraftApprovalResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Approval      *ReleaseApproval       `protobuf:"bytes,1,opt,name=approval,proto3" json:"approval,omitempty"`
@@ -1065,6 +1073,110 @@ func (x *RequestAgentDraftApprovalResponse) GetApproval() *ReleaseApproval {
 	return nil
 }
 
+type GetAgentDraftApprovalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	DraftId       string                 `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	TeamId        string                 `protobuf:"bytes,3,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentDraftApprovalRequest) Reset() {
+	*x = GetAgentDraftApprovalRequest{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentDraftApprovalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentDraftApprovalRequest) ProtoMessage() {}
+
+func (x *GetAgentDraftApprovalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentDraftApprovalRequest.ProtoReflect.Descriptor instead.
+func (*GetAgentDraftApprovalRequest) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetAgentDraftApprovalRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *GetAgentDraftApprovalRequest) GetDraftId() string {
+	if x != nil {
+		return x.DraftId
+	}
+	return ""
+}
+
+func (x *GetAgentDraftApprovalRequest) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+type GetAgentDraftApprovalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Approval      *ReleaseApproval       `protobuf:"bytes,1,opt,name=approval,proto3" json:"approval,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentDraftApprovalResponse) Reset() {
+	*x = GetAgentDraftApprovalResponse{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentDraftApprovalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentDraftApprovalResponse) ProtoMessage() {}
+
+func (x *GetAgentDraftApprovalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentDraftApprovalResponse.ProtoReflect.Descriptor instead.
+func (*GetAgentDraftApprovalResponse) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetAgentDraftApprovalResponse) GetApproval() *ReleaseApproval {
+	if x != nil {
+		return x.Approval
+	}
+	return nil
+}
+
 type DecideAgentDraftApprovalRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -1078,7 +1190,7 @@ type DecideAgentDraftApprovalRequest struct {
 
 func (x *DecideAgentDraftApprovalRequest) Reset() {
 	*x = DecideAgentDraftApprovalRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[20]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1202,7 @@ func (x *DecideAgentDraftApprovalRequest) String() string {
 func (*DecideAgentDraftApprovalRequest) ProtoMessage() {}
 
 func (x *DecideAgentDraftApprovalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[20]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1215,7 @@ func (x *DecideAgentDraftApprovalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideAgentDraftApprovalRequest.ProtoReflect.Descriptor instead.
 func (*DecideAgentDraftApprovalRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{20}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DecideAgentDraftApprovalRequest) GetAgentId() string {
@@ -1150,7 +1262,7 @@ type DecideAgentDraftApprovalResponse struct {
 
 func (x *DecideAgentDraftApprovalResponse) Reset() {
 	*x = DecideAgentDraftApprovalResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[21]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1162,7 +1274,7 @@ func (x *DecideAgentDraftApprovalResponse) String() string {
 func (*DecideAgentDraftApprovalResponse) ProtoMessage() {}
 
 func (x *DecideAgentDraftApprovalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[21]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1175,7 +1287,7 @@ func (x *DecideAgentDraftApprovalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideAgentDraftApprovalResponse.ProtoReflect.Descriptor instead.
 func (*DecideAgentDraftApprovalResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{21}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DecideAgentDraftApprovalResponse) GetApproval() *ReleaseApproval {
@@ -1196,7 +1308,7 @@ type PublishAgentDraftRequest struct {
 
 func (x *PublishAgentDraftRequest) Reset() {
 	*x = PublishAgentDraftRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[22]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1208,7 +1320,7 @@ func (x *PublishAgentDraftRequest) String() string {
 func (*PublishAgentDraftRequest) ProtoMessage() {}
 
 func (x *PublishAgentDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[22]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1221,7 +1333,7 @@ func (x *PublishAgentDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishAgentDraftRequest.ProtoReflect.Descriptor instead.
 func (*PublishAgentDraftRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{22}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *PublishAgentDraftRequest) GetAgentId() string {
@@ -1254,7 +1366,7 @@ type PublishAgentDraftResponse struct {
 
 func (x *PublishAgentDraftResponse) Reset() {
 	*x = PublishAgentDraftResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[23]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1266,7 +1378,7 @@ func (x *PublishAgentDraftResponse) String() string {
 func (*PublishAgentDraftResponse) ProtoMessage() {}
 
 func (x *PublishAgentDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[23]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1279,7 +1391,7 @@ func (x *PublishAgentDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishAgentDraftResponse.ProtoReflect.Descriptor instead.
 func (*PublishAgentDraftResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{23}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PublishAgentDraftResponse) GetRelease() *AgentRelease {
@@ -1299,7 +1411,7 @@ type ListAgentReleasesRequest struct {
 
 func (x *ListAgentReleasesRequest) Reset() {
 	*x = ListAgentReleasesRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[24]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1311,7 +1423,7 @@ func (x *ListAgentReleasesRequest) String() string {
 func (*ListAgentReleasesRequest) ProtoMessage() {}
 
 func (x *ListAgentReleasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[24]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1324,7 +1436,7 @@ func (x *ListAgentReleasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentReleasesRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentReleasesRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{24}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListAgentReleasesRequest) GetAgentId() string {
@@ -1350,7 +1462,7 @@ type ListAgentReleasesResponse struct {
 
 func (x *ListAgentReleasesResponse) Reset() {
 	*x = ListAgentReleasesResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[25]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1362,7 +1474,7 @@ func (x *ListAgentReleasesResponse) String() string {
 func (*ListAgentReleasesResponse) ProtoMessage() {}
 
 func (x *ListAgentReleasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[25]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1375,7 +1487,7 @@ func (x *ListAgentReleasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentReleasesResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentReleasesResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{25}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListAgentReleasesResponse) GetItems() []*AgentRelease {
@@ -1396,7 +1508,7 @@ type GetAgentReleaseRequest struct {
 
 func (x *GetAgentReleaseRequest) Reset() {
 	*x = GetAgentReleaseRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[26]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1408,7 +1520,7 @@ func (x *GetAgentReleaseRequest) String() string {
 func (*GetAgentReleaseRequest) ProtoMessage() {}
 
 func (x *GetAgentReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[26]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1421,7 +1533,7 @@ func (x *GetAgentReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentReleaseRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{26}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetAgentReleaseRequest) GetAgentId() string {
@@ -1454,7 +1566,7 @@ type GetAgentReleaseResponse struct {
 
 func (x *GetAgentReleaseResponse) Reset() {
 	*x = GetAgentReleaseResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[27]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1466,7 +1578,7 @@ func (x *GetAgentReleaseResponse) String() string {
 func (*GetAgentReleaseResponse) ProtoMessage() {}
 
 func (x *GetAgentReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[27]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1479,7 +1591,7 @@ func (x *GetAgentReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentReleaseResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{27}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetAgentReleaseResponse) GetRelease() *AgentRelease {
@@ -1500,7 +1612,7 @@ type DeprecateAgentReleaseRequest struct {
 
 func (x *DeprecateAgentReleaseRequest) Reset() {
 	*x = DeprecateAgentReleaseRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[28]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1512,7 +1624,7 @@ func (x *DeprecateAgentReleaseRequest) String() string {
 func (*DeprecateAgentReleaseRequest) ProtoMessage() {}
 
 func (x *DeprecateAgentReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[28]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1525,7 +1637,7 @@ func (x *DeprecateAgentReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeprecateAgentReleaseRequest.ProtoReflect.Descriptor instead.
 func (*DeprecateAgentReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{28}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *DeprecateAgentReleaseRequest) GetAgentId() string {
@@ -1558,7 +1670,7 @@ type DeprecateAgentReleaseResponse struct {
 
 func (x *DeprecateAgentReleaseResponse) Reset() {
 	*x = DeprecateAgentReleaseResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[29]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1570,7 +1682,7 @@ func (x *DeprecateAgentReleaseResponse) String() string {
 func (*DeprecateAgentReleaseResponse) ProtoMessage() {}
 
 func (x *DeprecateAgentReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[29]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1583,7 +1695,7 @@ func (x *DeprecateAgentReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeprecateAgentReleaseResponse.ProtoReflect.Descriptor instead.
 func (*DeprecateAgentReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{29}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *DeprecateAgentReleaseResponse) GetRelease() *AgentRelease {
@@ -1598,13 +1710,14 @@ type BlockAgentReleaseRequest struct {
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ReleaseId     string                 `protobuf:"bytes,2,opt,name=release_id,json=releaseId,proto3" json:"release_id,omitempty"`
 	TeamId        string                 `protobuf:"bytes,3,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BlockAgentReleaseRequest) Reset() {
 	*x = BlockAgentReleaseRequest{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[30]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1616,7 +1729,7 @@ func (x *BlockAgentReleaseRequest) String() string {
 func (*BlockAgentReleaseRequest) ProtoMessage() {}
 
 func (x *BlockAgentReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[30]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1629,7 +1742,7 @@ func (x *BlockAgentReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockAgentReleaseRequest.ProtoReflect.Descriptor instead.
 func (*BlockAgentReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{30}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *BlockAgentReleaseRequest) GetAgentId() string {
@@ -1653,6 +1766,13 @@ func (x *BlockAgentReleaseRequest) GetTeamId() string {
 	return ""
 }
 
+func (x *BlockAgentReleaseRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 type BlockAgentReleaseResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Release       *AgentRelease          `protobuf:"bytes,1,opt,name=release,proto3" json:"release,omitempty"`
@@ -1662,7 +1782,7 @@ type BlockAgentReleaseResponse struct {
 
 func (x *BlockAgentReleaseResponse) Reset() {
 	*x = BlockAgentReleaseResponse{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[31]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1674,7 +1794,7 @@ func (x *BlockAgentReleaseResponse) String() string {
 func (*BlockAgentReleaseResponse) ProtoMessage() {}
 
 func (x *BlockAgentReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[31]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1687,7 +1807,7 @@ func (x *BlockAgentReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockAgentReleaseResponse.ProtoReflect.Descriptor instead.
 func (*BlockAgentReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{31}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *BlockAgentReleaseResponse) GetRelease() *AgentRelease {
@@ -1713,7 +1833,7 @@ type Agent struct {
 
 func (x *Agent) Reset() {
 	*x = Agent{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[32]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +1845,7 @@ func (x *Agent) String() string {
 func (*Agent) ProtoMessage() {}
 
 func (x *Agent) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[32]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +1858,7 @@ func (x *Agent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Agent.ProtoReflect.Descriptor instead.
 func (*Agent) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{32}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *Agent) GetId() string {
@@ -1816,7 +1936,7 @@ type AgentDraft struct {
 
 func (x *AgentDraft) Reset() {
 	*x = AgentDraft{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[33]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1828,7 +1948,7 @@ func (x *AgentDraft) String() string {
 func (*AgentDraft) ProtoMessage() {}
 
 func (x *AgentDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[33]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1841,7 +1961,7 @@ func (x *AgentDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentDraft.ProtoReflect.Descriptor instead.
 func (*AgentDraft) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{33}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AgentDraft) GetId() string {
@@ -1933,13 +2053,14 @@ type ReleaseApproval struct {
 	DecidedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
 	Reason        string                 `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
 	Version       int64                  `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
+	RiskReason    string                 `protobuf:"bytes,11,opt,name=risk_reason,json=riskReason,proto3" json:"risk_reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ReleaseApproval) Reset() {
 	*x = ReleaseApproval{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[34]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1951,7 +2072,7 @@ func (x *ReleaseApproval) String() string {
 func (*ReleaseApproval) ProtoMessage() {}
 
 func (x *ReleaseApproval) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[34]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1964,7 +2085,7 @@ func (x *ReleaseApproval) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseApproval.ProtoReflect.Descriptor instead.
 func (*ReleaseApproval) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{34}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ReleaseApproval) GetId() string {
@@ -2037,28 +2158,41 @@ func (x *ReleaseApproval) GetVersion() int64 {
 	return 0
 }
 
+func (x *ReleaseApproval) GetRiskReason() string {
+	if x != nil {
+		return x.RiskReason
+	}
+	return ""
+}
+
 type AgentRelease struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AgentId             string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	ReleaseNumber       int64                  `protobuf:"varint,3,opt,name=release_number,json=releaseNumber,proto3" json:"release_number,omitempty"`
-	SourceDraftId       string                 `protobuf:"bytes,4,opt,name=source_draft_id,json=sourceDraftId,proto3" json:"source_draft_id,omitempty"`
-	RuntimeImageId      string                 `protobuf:"bytes,5,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
-	ConfiguredModelId   string                 `protobuf:"bytes,6,opt,name=configured_model_id,json=configuredModelId,proto3" json:"configured_model_id,omitempty"`
-	RepositoryBindingId string                 `protobuf:"bytes,7,opt,name=repository_binding_id,json=repositoryBindingId,proto3" json:"repository_binding_id,omitempty"`
-	Configuration       *v1.AgentConfiguration `protobuf:"bytes,8,opt,name=configuration,proto3" json:"configuration,omitempty"`
-	Status              string                 `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
-	ReleasedBy          string                 `protobuf:"bytes,10,opt,name=released_by,json=releasedBy,proto3" json:"released_by,omitempty"`
-	ReleasedAt          *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=released_at,json=releasedAt,proto3" json:"released_at,omitempty"`
-	DeprecatedAt        *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=deprecated_at,json=deprecatedAt,proto3,oneof" json:"deprecated_at,omitempty"`
-	Version             int64                  `protobuf:"varint,13,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                     protoimpl.MessageState            `protogen:"open.v1"`
+	Id                        string                            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId                   string                            `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ReleaseNumber             int64                             `protobuf:"varint,3,opt,name=release_number,json=releaseNumber,proto3" json:"release_number,omitempty"`
+	SourceDraftId             string                            `protobuf:"bytes,4,opt,name=source_draft_id,json=sourceDraftId,proto3" json:"source_draft_id,omitempty"`
+	RuntimeImageId            string                            `protobuf:"bytes,5,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
+	ConfiguredModelId         string                            `protobuf:"bytes,6,opt,name=configured_model_id,json=configuredModelId,proto3" json:"configured_model_id,omitempty"`
+	RepositoryBindingId       string                            `protobuf:"bytes,7,opt,name=repository_binding_id,json=repositoryBindingId,proto3" json:"repository_binding_id,omitempty"`
+	Configuration             *v1.AgentConfiguration            `protobuf:"bytes,8,opt,name=configuration,proto3" json:"configuration,omitempty"`
+	Status                    string                            `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
+	ReleasedBy                string                            `protobuf:"bytes,10,opt,name=released_by,json=releasedBy,proto3" json:"released_by,omitempty"`
+	ReleasedAt                *timestamppb.Timestamp            `protobuf:"bytes,11,opt,name=released_at,json=releasedAt,proto3" json:"released_at,omitempty"`
+	DeprecatedAt              *timestamppb.Timestamp            `protobuf:"bytes,12,opt,name=deprecated_at,json=deprecatedAt,proto3,oneof" json:"deprecated_at,omitempty"`
+	Version                   int64                             `protobuf:"varint,13,opt,name=version,proto3" json:"version,omitempty"`
+	ReleaseRisk               string                            `protobuf:"bytes,14,opt,name=release_risk,json=releaseRisk,proto3" json:"release_risk,omitempty"`
+	RepositoryBindingSnapshot *ReleaseRepositoryBindingSnapshot `protobuf:"bytes,15,opt,name=repository_binding_snapshot,json=repositoryBindingSnapshot,proto3" json:"repository_binding_snapshot,omitempty"`
+	RuntimeImageSnapshot      *ReleaseRuntimeImageSnapshot      `protobuf:"bytes,16,opt,name=runtime_image_snapshot,json=runtimeImageSnapshot,proto3" json:"runtime_image_snapshot,omitempty"`
+	ConfiguredModelSnapshot   *ReleaseConfiguredModelSnapshot   `protobuf:"bytes,17,opt,name=configured_model_snapshot,json=configuredModelSnapshot,proto3" json:"configured_model_snapshot,omitempty"`
+	ApprovalEvidence          *ReleaseApprovalEvidence          `protobuf:"bytes,18,opt,name=approval_evidence,json=approvalEvidence,proto3,oneof" json:"approval_evidence,omitempty"`
+	BlockedReason             *string                           `protobuf:"bytes,19,opt,name=blocked_reason,json=blockedReason,proto3,oneof" json:"blocked_reason,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *AgentRelease) Reset() {
 	*x = AgentRelease{}
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[35]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2070,7 +2204,7 @@ func (x *AgentRelease) String() string {
 func (*AgentRelease) ProtoMessage() {}
 
 func (x *AgentRelease) ProtoReflect() protoreflect.Message {
-	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[35]
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2083,7 +2217,7 @@ func (x *AgentRelease) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentRelease.ProtoReflect.Descriptor instead.
 func (*AgentRelease) Descriptor() ([]byte, []int) {
-	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{35}
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *AgentRelease) GetId() string {
@@ -2177,6 +2311,392 @@ func (x *AgentRelease) GetVersion() int64 {
 	return 0
 }
 
+func (x *AgentRelease) GetReleaseRisk() string {
+	if x != nil {
+		return x.ReleaseRisk
+	}
+	return ""
+}
+
+func (x *AgentRelease) GetRepositoryBindingSnapshot() *ReleaseRepositoryBindingSnapshot {
+	if x != nil {
+		return x.RepositoryBindingSnapshot
+	}
+	return nil
+}
+
+func (x *AgentRelease) GetRuntimeImageSnapshot() *ReleaseRuntimeImageSnapshot {
+	if x != nil {
+		return x.RuntimeImageSnapshot
+	}
+	return nil
+}
+
+func (x *AgentRelease) GetConfiguredModelSnapshot() *ReleaseConfiguredModelSnapshot {
+	if x != nil {
+		return x.ConfiguredModelSnapshot
+	}
+	return nil
+}
+
+func (x *AgentRelease) GetApprovalEvidence() *ReleaseApprovalEvidence {
+	if x != nil {
+		return x.ApprovalEvidence
+	}
+	return nil
+}
+
+func (x *AgentRelease) GetBlockedReason() string {
+	if x != nil && x.BlockedReason != nil {
+		return *x.BlockedReason
+	}
+	return ""
+}
+
+type ReleaseRepositoryBindingSnapshot struct {
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	RepositorySshUrl            string                 `protobuf:"bytes,3,opt,name=repository_ssh_url,json=repositorySshUrl,proto3" json:"repository_ssh_url,omitempty"`
+	DefaultBranch               string                 `protobuf:"bytes,4,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
+	Instructions                string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	QualityCommands             []*v1.QualityCommand   `protobuf:"bytes,6,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
+	EgressPolicy                string                 `protobuf:"bytes,7,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
+	RequiredRuntimeCapabilities []string               `protobuf:"bytes,8,rep,name=required_runtime_capabilities,json=requiredRuntimeCapabilities,proto3" json:"required_runtime_capabilities,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) Reset() {
+	*x = ReleaseRepositoryBindingSnapshot{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseRepositoryBindingSnapshot) ProtoMessage() {}
+
+func (x *ReleaseRepositoryBindingSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseRepositoryBindingSnapshot.ProtoReflect.Descriptor instead.
+func (*ReleaseRepositoryBindingSnapshot) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetRepositorySshUrl() string {
+	if x != nil {
+		return x.RepositorySshUrl
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetDefaultBranch() string {
+	if x != nil {
+		return x.DefaultBranch
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetInstructions() string {
+	if x != nil {
+		return x.Instructions
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetQualityCommands() []*v1.QualityCommand {
+	if x != nil {
+		return x.QualityCommands
+	}
+	return nil
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetEgressPolicy() string {
+	if x != nil {
+		return x.EgressPolicy
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetRequiredRuntimeCapabilities() []string {
+	if x != nil {
+		return x.RequiredRuntimeCapabilities
+	}
+	return nil
+}
+
+type ReleaseRuntimeImageSnapshot struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Runtime        string                 `protobuf:"bytes,2,opt,name=runtime,proto3" json:"runtime,omitempty"`
+	CliVersion     string                 `protobuf:"bytes,3,opt,name=cli_version,json=cliVersion,proto3" json:"cli_version,omitempty"`
+	AdapterVersion string                 `protobuf:"bytes,4,opt,name=adapter_version,json=adapterVersion,proto3" json:"adapter_version,omitempty"`
+	ImageDigest    string                 `protobuf:"bytes,5,opt,name=image_digest,json=imageDigest,proto3" json:"image_digest,omitempty"`
+	Capabilities   map[string]bool        `protobuf:"bytes,6,rep,name=capabilities,proto3" json:"capabilities,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReleaseRuntimeImageSnapshot) Reset() {
+	*x = ReleaseRuntimeImageSnapshot{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseRuntimeImageSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseRuntimeImageSnapshot) ProtoMessage() {}
+
+func (x *ReleaseRuntimeImageSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseRuntimeImageSnapshot.ProtoReflect.Descriptor instead.
+func (*ReleaseRuntimeImageSnapshot) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetRuntime() string {
+	if x != nil {
+		return x.Runtime
+	}
+	return ""
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetCliVersion() string {
+	if x != nil {
+		return x.CliVersion
+	}
+	return ""
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetAdapterVersion() string {
+	if x != nil {
+		return x.AdapterVersion
+	}
+	return ""
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetImageDigest() string {
+	if x != nil {
+		return x.ImageDigest
+	}
+	return ""
+}
+
+func (x *ReleaseRuntimeImageSnapshot) GetCapabilities() map[string]bool {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type ReleaseConfiguredModelSnapshot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ModelId       string                 `protobuf:"bytes,3,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Endpoint      string                 `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseConfiguredModelSnapshot) Reset() {
+	*x = ReleaseConfiguredModelSnapshot{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseConfiguredModelSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseConfiguredModelSnapshot) ProtoMessage() {}
+
+func (x *ReleaseConfiguredModelSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseConfiguredModelSnapshot.ProtoReflect.Descriptor instead.
+func (*ReleaseConfiguredModelSnapshot) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ReleaseConfiguredModelSnapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReleaseConfiguredModelSnapshot) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ReleaseConfiguredModelSnapshot) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *ReleaseConfiguredModelSnapshot) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+type ReleaseApprovalEvidence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	DraftId       string                 `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	DraftVersion  int64                  `protobuf:"varint,3,opt,name=draft_version,json=draftVersion,proto3" json:"draft_version,omitempty"`
+	RequestedBy   string                 `protobuf:"bytes,4,opt,name=requested_by,json=requestedBy,proto3" json:"requested_by,omitempty"`
+	RiskReason    string                 `protobuf:"bytes,5,opt,name=risk_reason,json=riskReason,proto3" json:"risk_reason,omitempty"`
+	ApprovedBy    string                 `protobuf:"bytes,6,opt,name=approved_by,json=approvedBy,proto3" json:"approved_by,omitempty"`
+	ApprovedAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=approved_at,json=approvedAt,proto3" json:"approved_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseApprovalEvidence) Reset() {
+	*x = ReleaseApprovalEvidence{}
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseApprovalEvidence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseApprovalEvidence) ProtoMessage() {}
+
+func (x *ReleaseApprovalEvidence) ProtoReflect() protoreflect.Message {
+	mi := &file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseApprovalEvidence.ProtoReflect.Descriptor instead.
+func (*ReleaseApprovalEvidence) Descriptor() ([]byte, []int) {
+	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ReleaseApprovalEvidence) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReleaseApprovalEvidence) GetDraftId() string {
+	if x != nil {
+		return x.DraftId
+	}
+	return ""
+}
+
+func (x *ReleaseApprovalEvidence) GetDraftVersion() int64 {
+	if x != nil {
+		return x.DraftVersion
+	}
+	return 0
+}
+
+func (x *ReleaseApprovalEvidence) GetRequestedBy() string {
+	if x != nil {
+		return x.RequestedBy
+	}
+	return ""
+}
+
+func (x *ReleaseApprovalEvidence) GetRiskReason() string {
+	if x != nil {
+		return x.RiskReason
+	}
+	return ""
+}
+
+func (x *ReleaseApprovalEvidence) GetApprovedBy() string {
+	if x != nil {
+		return x.ApprovedBy
+	}
+	return ""
+}
+
+func (x *ReleaseApprovalEvidence) GetApprovedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return nil
+}
+
 var File_agentlifecycle_v1_agent_lifecycle_proto protoreflect.FileDescriptor
 
 const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
@@ -2235,12 +2755,20 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12\x17\n" +
 	"\ateam_id\x18\x03 \x01(\tR\x06teamId\"Q\n" +
 	"\x1aValidateAgentDraftResponse\x123\n" +
-	"\x05draft\x18\x01 \x01(\v2\x1d.agentlifecycle.v1.AgentDraftR\x05draft\"q\n" +
+	"\x05draft\x18\x01 \x01(\v2\x1d.agentlifecycle.v1.AgentDraftR\x05draft\"\x92\x01\n" +
 	" RequestAgentDraftApprovalRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x19\n" +
 	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12\x17\n" +
-	"\ateam_id\x18\x03 \x01(\tR\x06teamId\"c\n" +
+	"\ateam_id\x18\x03 \x01(\tR\x06teamId\x12\x1f\n" +
+	"\vrisk_reason\x18\x04 \x01(\tR\n" +
+	"riskReason\"c\n" +
 	"!RequestAgentDraftApprovalResponse\x12>\n" +
+	"\bapproval\x18\x01 \x01(\v2\".agentlifecycle.v1.ReleaseApprovalR\bapproval\"m\n" +
+	"\x1cGetAgentDraftApprovalRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x19\n" +
+	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12\x17\n" +
+	"\ateam_id\x18\x03 \x01(\tR\x06teamId\"_\n" +
+	"\x1dGetAgentDraftApprovalResponse\x12>\n" +
 	"\bapproval\x18\x01 \x01(\v2\".agentlifecycle.v1.ReleaseApprovalR\bapproval\"\xa4\x01\n" +
 	"\x1fDecideAgentDraftApprovalRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x19\n" +
@@ -2274,12 +2802,13 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"release_id\x18\x02 \x01(\tR\treleaseId\x12\x17\n" +
 	"\ateam_id\x18\x03 \x01(\tR\x06teamId\"Z\n" +
 	"\x1dDeprecateAgentReleaseResponse\x129\n" +
-	"\arelease\x18\x01 \x01(\v2\x1f.agentlifecycle.v1.AgentReleaseR\arelease\"m\n" +
+	"\arelease\x18\x01 \x01(\v2\x1f.agentlifecycle.v1.AgentReleaseR\arelease\"\x85\x01\n" +
 	"\x18BlockAgentReleaseRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +
 	"release_id\x18\x02 \x01(\tR\treleaseId\x12\x17\n" +
-	"\ateam_id\x18\x03 \x01(\tR\x06teamId\"V\n" +
+	"\ateam_id\x18\x03 \x01(\tR\x06teamId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"V\n" +
 	"\x19BlockAgentReleaseResponse\x129\n" +
 	"\arelease\x18\x01 \x01(\v2\x1f.agentlifecycle.v1.AgentReleaseR\arelease\"\x95\x02\n" +
 	"\x05Agent\x12\x0e\n" +
@@ -2311,7 +2840,7 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\v \x01(\x03R\aversionB\x14\n" +
-	"\x12_validation_report\"\x8d\x03\n" +
+	"\x12_validation_report\"\xae\x03\n" +
 	"\x0fReleaseApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12#\n" +
@@ -2325,9 +2854,11 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tdecidedAt\x88\x01\x01\x12\x16\n" +
 	"\x06reason\x18\t \x01(\tR\x06reason\x12\x18\n" +
 	"\aversion\x18\n" +
-	" \x01(\x03R\aversionB\r\n" +
+	" \x01(\x03R\aversion\x12\x1f\n" +
+	"\vrisk_reason\x18\v \x01(\tR\n" +
+	"riskReasonB\r\n" +
 	"\v_decided_byB\r\n" +
-	"\v_decided_at\"\xc2\x04\n" +
+	"\v_decided_at\"\xe2\b\n" +
 	"\fAgentRelease\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12%\n" +
@@ -2344,8 +2875,52 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\vreleased_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"releasedAt\x12D\n" +
 	"\rdeprecated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x00R\fdeprecatedAt\x88\x01\x01\x12\x18\n" +
-	"\aversion\x18\r \x01(\x03R\aversionB\x10\n" +
-	"\x0e_deprecated_at2\xa4\x15\n" +
+	"\aversion\x18\r \x01(\x03R\aversion\x12!\n" +
+	"\frelease_risk\x18\x0e \x01(\tR\vreleaseRisk\x12s\n" +
+	"\x1brepository_binding_snapshot\x18\x0f \x01(\v23.agentlifecycle.v1.ReleaseRepositoryBindingSnapshotR\x19repositoryBindingSnapshot\x12d\n" +
+	"\x16runtime_image_snapshot\x18\x10 \x01(\v2..agentlifecycle.v1.ReleaseRuntimeImageSnapshotR\x14runtimeImageSnapshot\x12m\n" +
+	"\x19configured_model_snapshot\x18\x11 \x01(\v21.agentlifecycle.v1.ReleaseConfiguredModelSnapshotR\x17configuredModelSnapshot\x12\\\n" +
+	"\x11approval_evidence\x18\x12 \x01(\v2*.agentlifecycle.v1.ReleaseApprovalEvidenceH\x01R\x10approvalEvidence\x88\x01\x01\x12*\n" +
+	"\x0eblocked_reason\x18\x13 \x01(\tH\x02R\rblockedReason\x88\x01\x01B\x10\n" +
+	"\x0e_deprecated_atB\x14\n" +
+	"\x12_approval_evidenceB\x11\n" +
+	"\x0f_blocked_reason\"\xed\x02\n" +
+	" ReleaseRepositoryBindingSnapshot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
+	"\x12repository_ssh_url\x18\x03 \x01(\tR\x10repositorySshUrl\x12%\n" +
+	"\x0edefault_branch\x18\x04 \x01(\tR\rdefaultBranch\x12\"\n" +
+	"\finstructions\x18\x05 \x01(\tR\finstructions\x12C\n" +
+	"\x10quality_commands\x18\x06 \x03(\v2\x18.types.v1.QualityCommandR\x0fqualityCommands\x12#\n" +
+	"\regress_policy\x18\a \x01(\tR\fegressPolicy\x12B\n" +
+	"\x1drequired_runtime_capabilities\x18\b \x03(\tR\x1brequiredRuntimeCapabilities\"\xdb\x02\n" +
+	"\x1bReleaseRuntimeImageSnapshot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
+	"\aruntime\x18\x02 \x01(\tR\aruntime\x12\x1f\n" +
+	"\vcli_version\x18\x03 \x01(\tR\n" +
+	"cliVersion\x12'\n" +
+	"\x0fadapter_version\x18\x04 \x01(\tR\x0eadapterVersion\x12!\n" +
+	"\fimage_digest\x18\x05 \x01(\tR\vimageDigest\x12d\n" +
+	"\fcapabilities\x18\x06 \x03(\v2@.agentlifecycle.v1.ReleaseRuntimeImageSnapshot.CapabilitiesEntryR\fcapabilities\x1a?\n" +
+	"\x11CapabilitiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"{\n" +
+	"\x1eReleaseConfiguredModelSnapshot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
+	"\bmodel_id\x18\x03 \x01(\tR\amodelId\x12\x1a\n" +
+	"\bendpoint\x18\x04 \x01(\tR\bendpoint\"\x8b\x02\n" +
+	"\x17ReleaseApprovalEvidence\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12#\n" +
+	"\rdraft_version\x18\x03 \x01(\x03R\fdraftVersion\x12!\n" +
+	"\frequested_by\x18\x04 \x01(\tR\vrequestedBy\x12\x1f\n" +
+	"\vrisk_reason\x18\x05 \x01(\tR\n" +
+	"riskReason\x12\x1f\n" +
+	"\vapproved_by\x18\x06 \x01(\tR\n" +
+	"approvedBy\x12;\n" +
+	"\vapproved_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"approvedAt2\xcd\x16\n" +
 	"\x15AgentLifecycleService\x12m\n" +
 	"\n" +
 	"ListAgents\x12$.agentlifecycle.v1.ListAgentsRequest\x1a%.agentlifecycle.v1.ListAgentsResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
@@ -2377,7 +2952,8 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x027:\x01*\"2/v1/agents/{agent_id}/drafts/{draft_id}/validation\x12\xcd\x01\n" +
 	"\x19RequestAgentDraftApproval\x123.agentlifecycle.v1.RequestAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\"W\x92A\x19r\x17\n" +
 	"\x15\n" +
-	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xdb\x01\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x025:\x01*\"0/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xa6\x01\n" +
+	"\x15GetAgentDraftApproval\x12/.agentlifecycle.v1.GetAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\"8\x82\xd3\xe4\x93\x022\x120/v1/agents/{agent_id}/drafts/{draft_id}/approval\x12\xdb\x01\n" +
 	"\x18DecideAgentDraftApproval\x122.agentlifecycle.v1.DecideAgentDraftApprovalRequest\x1a\".agentlifecycle.v1.ReleaseApproval\"g\x92A)r'\n" +
 	"\x15\n" +
 	"\x0fIdempotency-Key\x18\x01(\x01\n" +
@@ -2411,7 +2987,7 @@ func file_agentlifecycle_v1_agent_lifecycle_proto_rawDescGZIP() []byte {
 	return file_agentlifecycle_v1_agent_lifecycle_proto_rawDescData
 }
 
-var file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_agentlifecycle_v1_agent_lifecycle_proto_goTypes = []any{
 	(*ListAgentsRequest)(nil),                 // 0: agentlifecycle.v1.ListAgentsRequest
 	(*ListAgentsResponse)(nil),                // 1: agentlifecycle.v1.ListAgentsResponse
@@ -2433,93 +3009,111 @@ var file_agentlifecycle_v1_agent_lifecycle_proto_goTypes = []any{
 	(*ValidateAgentDraftResponse)(nil),        // 17: agentlifecycle.v1.ValidateAgentDraftResponse
 	(*RequestAgentDraftApprovalRequest)(nil),  // 18: agentlifecycle.v1.RequestAgentDraftApprovalRequest
 	(*RequestAgentDraftApprovalResponse)(nil), // 19: agentlifecycle.v1.RequestAgentDraftApprovalResponse
-	(*DecideAgentDraftApprovalRequest)(nil),   // 20: agentlifecycle.v1.DecideAgentDraftApprovalRequest
-	(*DecideAgentDraftApprovalResponse)(nil),  // 21: agentlifecycle.v1.DecideAgentDraftApprovalResponse
-	(*PublishAgentDraftRequest)(nil),          // 22: agentlifecycle.v1.PublishAgentDraftRequest
-	(*PublishAgentDraftResponse)(nil),         // 23: agentlifecycle.v1.PublishAgentDraftResponse
-	(*ListAgentReleasesRequest)(nil),          // 24: agentlifecycle.v1.ListAgentReleasesRequest
-	(*ListAgentReleasesResponse)(nil),         // 25: agentlifecycle.v1.ListAgentReleasesResponse
-	(*GetAgentReleaseRequest)(nil),            // 26: agentlifecycle.v1.GetAgentReleaseRequest
-	(*GetAgentReleaseResponse)(nil),           // 27: agentlifecycle.v1.GetAgentReleaseResponse
-	(*DeprecateAgentReleaseRequest)(nil),      // 28: agentlifecycle.v1.DeprecateAgentReleaseRequest
-	(*DeprecateAgentReleaseResponse)(nil),     // 29: agentlifecycle.v1.DeprecateAgentReleaseResponse
-	(*BlockAgentReleaseRequest)(nil),          // 30: agentlifecycle.v1.BlockAgentReleaseRequest
-	(*BlockAgentReleaseResponse)(nil),         // 31: agentlifecycle.v1.BlockAgentReleaseResponse
-	(*Agent)(nil),                             // 32: agentlifecycle.v1.Agent
-	(*AgentDraft)(nil),                        // 33: agentlifecycle.v1.AgentDraft
-	(*ReleaseApproval)(nil),                   // 34: agentlifecycle.v1.ReleaseApproval
-	(*AgentRelease)(nil),                      // 35: agentlifecycle.v1.AgentRelease
-	(*v1.AgentConfiguration)(nil),             // 36: types.v1.AgentConfiguration
-	(*timestamppb.Timestamp)(nil),             // 37: google.protobuf.Timestamp
-	(*v1.ValidationReport)(nil),               // 38: types.v1.ValidationReport
+	(*GetAgentDraftApprovalRequest)(nil),      // 20: agentlifecycle.v1.GetAgentDraftApprovalRequest
+	(*GetAgentDraftApprovalResponse)(nil),     // 21: agentlifecycle.v1.GetAgentDraftApprovalResponse
+	(*DecideAgentDraftApprovalRequest)(nil),   // 22: agentlifecycle.v1.DecideAgentDraftApprovalRequest
+	(*DecideAgentDraftApprovalResponse)(nil),  // 23: agentlifecycle.v1.DecideAgentDraftApprovalResponse
+	(*PublishAgentDraftRequest)(nil),          // 24: agentlifecycle.v1.PublishAgentDraftRequest
+	(*PublishAgentDraftResponse)(nil),         // 25: agentlifecycle.v1.PublishAgentDraftResponse
+	(*ListAgentReleasesRequest)(nil),          // 26: agentlifecycle.v1.ListAgentReleasesRequest
+	(*ListAgentReleasesResponse)(nil),         // 27: agentlifecycle.v1.ListAgentReleasesResponse
+	(*GetAgentReleaseRequest)(nil),            // 28: agentlifecycle.v1.GetAgentReleaseRequest
+	(*GetAgentReleaseResponse)(nil),           // 29: agentlifecycle.v1.GetAgentReleaseResponse
+	(*DeprecateAgentReleaseRequest)(nil),      // 30: agentlifecycle.v1.DeprecateAgentReleaseRequest
+	(*DeprecateAgentReleaseResponse)(nil),     // 31: agentlifecycle.v1.DeprecateAgentReleaseResponse
+	(*BlockAgentReleaseRequest)(nil),          // 32: agentlifecycle.v1.BlockAgentReleaseRequest
+	(*BlockAgentReleaseResponse)(nil),         // 33: agentlifecycle.v1.BlockAgentReleaseResponse
+	(*Agent)(nil),                             // 34: agentlifecycle.v1.Agent
+	(*AgentDraft)(nil),                        // 35: agentlifecycle.v1.AgentDraft
+	(*ReleaseApproval)(nil),                   // 36: agentlifecycle.v1.ReleaseApproval
+	(*AgentRelease)(nil),                      // 37: agentlifecycle.v1.AgentRelease
+	(*ReleaseRepositoryBindingSnapshot)(nil),  // 38: agentlifecycle.v1.ReleaseRepositoryBindingSnapshot
+	(*ReleaseRuntimeImageSnapshot)(nil),       // 39: agentlifecycle.v1.ReleaseRuntimeImageSnapshot
+	(*ReleaseConfiguredModelSnapshot)(nil),    // 40: agentlifecycle.v1.ReleaseConfiguredModelSnapshot
+	(*ReleaseApprovalEvidence)(nil),           // 41: agentlifecycle.v1.ReleaseApprovalEvidence
+	nil,                                       // 42: agentlifecycle.v1.ReleaseRuntimeImageSnapshot.CapabilitiesEntry
+	(*v1.AgentConfiguration)(nil),             // 43: types.v1.AgentConfiguration
+	(*timestamppb.Timestamp)(nil),             // 44: google.protobuf.Timestamp
+	(*v1.ValidationReport)(nil),               // 45: types.v1.ValidationReport
+	(*v1.QualityCommand)(nil),                 // 46: types.v1.QualityCommand
 }
 var file_agentlifecycle_v1_agent_lifecycle_proto_depIdxs = []int32{
-	32, // 0: agentlifecycle.v1.ListAgentsResponse.items:type_name -> agentlifecycle.v1.Agent
-	32, // 1: agentlifecycle.v1.CreateAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
-	32, // 2: agentlifecycle.v1.GetAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
-	32, // 3: agentlifecycle.v1.UpdateAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
-	33, // 4: agentlifecycle.v1.ListAgentDraftsResponse.items:type_name -> agentlifecycle.v1.AgentDraft
-	36, // 5: agentlifecycle.v1.CreateAgentDraftRequest.configuration:type_name -> types.v1.AgentConfiguration
-	33, // 6: agentlifecycle.v1.CreateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
-	33, // 7: agentlifecycle.v1.GetAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
-	36, // 8: agentlifecycle.v1.UpdateAgentDraftRequest.configuration:type_name -> types.v1.AgentConfiguration
-	33, // 9: agentlifecycle.v1.UpdateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
-	33, // 10: agentlifecycle.v1.ValidateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
-	34, // 11: agentlifecycle.v1.RequestAgentDraftApprovalResponse.approval:type_name -> agentlifecycle.v1.ReleaseApproval
-	34, // 12: agentlifecycle.v1.DecideAgentDraftApprovalResponse.approval:type_name -> agentlifecycle.v1.ReleaseApproval
-	35, // 13: agentlifecycle.v1.PublishAgentDraftResponse.release:type_name -> agentlifecycle.v1.AgentRelease
-	35, // 14: agentlifecycle.v1.ListAgentReleasesResponse.items:type_name -> agentlifecycle.v1.AgentRelease
-	35, // 15: agentlifecycle.v1.GetAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
-	35, // 16: agentlifecycle.v1.DeprecateAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
-	35, // 17: agentlifecycle.v1.BlockAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
-	37, // 18: agentlifecycle.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
-	37, // 19: agentlifecycle.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 20: agentlifecycle.v1.AgentDraft.configuration:type_name -> types.v1.AgentConfiguration
-	38, // 21: agentlifecycle.v1.AgentDraft.validation_report:type_name -> types.v1.ValidationReport
-	37, // 22: agentlifecycle.v1.AgentDraft.created_at:type_name -> google.protobuf.Timestamp
-	37, // 23: agentlifecycle.v1.AgentDraft.updated_at:type_name -> google.protobuf.Timestamp
-	37, // 24: agentlifecycle.v1.ReleaseApproval.requested_at:type_name -> google.protobuf.Timestamp
-	37, // 25: agentlifecycle.v1.ReleaseApproval.decided_at:type_name -> google.protobuf.Timestamp
-	36, // 26: agentlifecycle.v1.AgentRelease.configuration:type_name -> types.v1.AgentConfiguration
-	37, // 27: agentlifecycle.v1.AgentRelease.released_at:type_name -> google.protobuf.Timestamp
-	37, // 28: agentlifecycle.v1.AgentRelease.deprecated_at:type_name -> google.protobuf.Timestamp
-	0,  // 29: agentlifecycle.v1.AgentLifecycleService.ListAgents:input_type -> agentlifecycle.v1.ListAgentsRequest
-	2,  // 30: agentlifecycle.v1.AgentLifecycleService.CreateAgent:input_type -> agentlifecycle.v1.CreateAgentRequest
-	4,  // 31: agentlifecycle.v1.AgentLifecycleService.GetAgent:input_type -> agentlifecycle.v1.GetAgentRequest
-	6,  // 32: agentlifecycle.v1.AgentLifecycleService.UpdateAgent:input_type -> agentlifecycle.v1.UpdateAgentRequest
-	8,  // 33: agentlifecycle.v1.AgentLifecycleService.ListAgentDrafts:input_type -> agentlifecycle.v1.ListAgentDraftsRequest
-	10, // 34: agentlifecycle.v1.AgentLifecycleService.CreateAgentDraft:input_type -> agentlifecycle.v1.CreateAgentDraftRequest
-	12, // 35: agentlifecycle.v1.AgentLifecycleService.GetAgentDraft:input_type -> agentlifecycle.v1.GetAgentDraftRequest
-	14, // 36: agentlifecycle.v1.AgentLifecycleService.UpdateAgentDraft:input_type -> agentlifecycle.v1.UpdateAgentDraftRequest
-	16, // 37: agentlifecycle.v1.AgentLifecycleService.ValidateAgentDraft:input_type -> agentlifecycle.v1.ValidateAgentDraftRequest
-	18, // 38: agentlifecycle.v1.AgentLifecycleService.RequestAgentDraftApproval:input_type -> agentlifecycle.v1.RequestAgentDraftApprovalRequest
-	20, // 39: agentlifecycle.v1.AgentLifecycleService.DecideAgentDraftApproval:input_type -> agentlifecycle.v1.DecideAgentDraftApprovalRequest
-	22, // 40: agentlifecycle.v1.AgentLifecycleService.PublishAgentDraft:input_type -> agentlifecycle.v1.PublishAgentDraftRequest
-	24, // 41: agentlifecycle.v1.AgentLifecycleService.ListAgentReleases:input_type -> agentlifecycle.v1.ListAgentReleasesRequest
-	26, // 42: agentlifecycle.v1.AgentLifecycleService.GetAgentRelease:input_type -> agentlifecycle.v1.GetAgentReleaseRequest
-	28, // 43: agentlifecycle.v1.AgentLifecycleService.DeprecateAgentRelease:input_type -> agentlifecycle.v1.DeprecateAgentReleaseRequest
-	30, // 44: agentlifecycle.v1.AgentLifecycleService.BlockAgentRelease:input_type -> agentlifecycle.v1.BlockAgentReleaseRequest
-	1,  // 45: agentlifecycle.v1.AgentLifecycleService.ListAgents:output_type -> agentlifecycle.v1.ListAgentsResponse
-	32, // 46: agentlifecycle.v1.AgentLifecycleService.CreateAgent:output_type -> agentlifecycle.v1.Agent
-	32, // 47: agentlifecycle.v1.AgentLifecycleService.GetAgent:output_type -> agentlifecycle.v1.Agent
-	32, // 48: agentlifecycle.v1.AgentLifecycleService.UpdateAgent:output_type -> agentlifecycle.v1.Agent
-	9,  // 49: agentlifecycle.v1.AgentLifecycleService.ListAgentDrafts:output_type -> agentlifecycle.v1.ListAgentDraftsResponse
-	33, // 50: agentlifecycle.v1.AgentLifecycleService.CreateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
-	33, // 51: agentlifecycle.v1.AgentLifecycleService.GetAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
-	33, // 52: agentlifecycle.v1.AgentLifecycleService.UpdateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
-	33, // 53: agentlifecycle.v1.AgentLifecycleService.ValidateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
-	34, // 54: agentlifecycle.v1.AgentLifecycleService.RequestAgentDraftApproval:output_type -> agentlifecycle.v1.ReleaseApproval
-	34, // 55: agentlifecycle.v1.AgentLifecycleService.DecideAgentDraftApproval:output_type -> agentlifecycle.v1.ReleaseApproval
-	35, // 56: agentlifecycle.v1.AgentLifecycleService.PublishAgentDraft:output_type -> agentlifecycle.v1.AgentRelease
-	25, // 57: agentlifecycle.v1.AgentLifecycleService.ListAgentReleases:output_type -> agentlifecycle.v1.ListAgentReleasesResponse
-	35, // 58: agentlifecycle.v1.AgentLifecycleService.GetAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
-	35, // 59: agentlifecycle.v1.AgentLifecycleService.DeprecateAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
-	35, // 60: agentlifecycle.v1.AgentLifecycleService.BlockAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
-	45, // [45:61] is the sub-list for method output_type
-	29, // [29:45] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	34, // 0: agentlifecycle.v1.ListAgentsResponse.items:type_name -> agentlifecycle.v1.Agent
+	34, // 1: agentlifecycle.v1.CreateAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
+	34, // 2: agentlifecycle.v1.GetAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
+	34, // 3: agentlifecycle.v1.UpdateAgentResponse.agent:type_name -> agentlifecycle.v1.Agent
+	35, // 4: agentlifecycle.v1.ListAgentDraftsResponse.items:type_name -> agentlifecycle.v1.AgentDraft
+	43, // 5: agentlifecycle.v1.CreateAgentDraftRequest.configuration:type_name -> types.v1.AgentConfiguration
+	35, // 6: agentlifecycle.v1.CreateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
+	35, // 7: agentlifecycle.v1.GetAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
+	43, // 8: agentlifecycle.v1.UpdateAgentDraftRequest.configuration:type_name -> types.v1.AgentConfiguration
+	35, // 9: agentlifecycle.v1.UpdateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
+	35, // 10: agentlifecycle.v1.ValidateAgentDraftResponse.draft:type_name -> agentlifecycle.v1.AgentDraft
+	36, // 11: agentlifecycle.v1.RequestAgentDraftApprovalResponse.approval:type_name -> agentlifecycle.v1.ReleaseApproval
+	36, // 12: agentlifecycle.v1.GetAgentDraftApprovalResponse.approval:type_name -> agentlifecycle.v1.ReleaseApproval
+	36, // 13: agentlifecycle.v1.DecideAgentDraftApprovalResponse.approval:type_name -> agentlifecycle.v1.ReleaseApproval
+	37, // 14: agentlifecycle.v1.PublishAgentDraftResponse.release:type_name -> agentlifecycle.v1.AgentRelease
+	37, // 15: agentlifecycle.v1.ListAgentReleasesResponse.items:type_name -> agentlifecycle.v1.AgentRelease
+	37, // 16: agentlifecycle.v1.GetAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
+	37, // 17: agentlifecycle.v1.DeprecateAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
+	37, // 18: agentlifecycle.v1.BlockAgentReleaseResponse.release:type_name -> agentlifecycle.v1.AgentRelease
+	44, // 19: agentlifecycle.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
+	44, // 20: agentlifecycle.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 21: agentlifecycle.v1.AgentDraft.configuration:type_name -> types.v1.AgentConfiguration
+	45, // 22: agentlifecycle.v1.AgentDraft.validation_report:type_name -> types.v1.ValidationReport
+	44, // 23: agentlifecycle.v1.AgentDraft.created_at:type_name -> google.protobuf.Timestamp
+	44, // 24: agentlifecycle.v1.AgentDraft.updated_at:type_name -> google.protobuf.Timestamp
+	44, // 25: agentlifecycle.v1.ReleaseApproval.requested_at:type_name -> google.protobuf.Timestamp
+	44, // 26: agentlifecycle.v1.ReleaseApproval.decided_at:type_name -> google.protobuf.Timestamp
+	43, // 27: agentlifecycle.v1.AgentRelease.configuration:type_name -> types.v1.AgentConfiguration
+	44, // 28: agentlifecycle.v1.AgentRelease.released_at:type_name -> google.protobuf.Timestamp
+	44, // 29: agentlifecycle.v1.AgentRelease.deprecated_at:type_name -> google.protobuf.Timestamp
+	38, // 30: agentlifecycle.v1.AgentRelease.repository_binding_snapshot:type_name -> agentlifecycle.v1.ReleaseRepositoryBindingSnapshot
+	39, // 31: agentlifecycle.v1.AgentRelease.runtime_image_snapshot:type_name -> agentlifecycle.v1.ReleaseRuntimeImageSnapshot
+	40, // 32: agentlifecycle.v1.AgentRelease.configured_model_snapshot:type_name -> agentlifecycle.v1.ReleaseConfiguredModelSnapshot
+	41, // 33: agentlifecycle.v1.AgentRelease.approval_evidence:type_name -> agentlifecycle.v1.ReleaseApprovalEvidence
+	46, // 34: agentlifecycle.v1.ReleaseRepositoryBindingSnapshot.quality_commands:type_name -> types.v1.QualityCommand
+	42, // 35: agentlifecycle.v1.ReleaseRuntimeImageSnapshot.capabilities:type_name -> agentlifecycle.v1.ReleaseRuntimeImageSnapshot.CapabilitiesEntry
+	44, // 36: agentlifecycle.v1.ReleaseApprovalEvidence.approved_at:type_name -> google.protobuf.Timestamp
+	0,  // 37: agentlifecycle.v1.AgentLifecycleService.ListAgents:input_type -> agentlifecycle.v1.ListAgentsRequest
+	2,  // 38: agentlifecycle.v1.AgentLifecycleService.CreateAgent:input_type -> agentlifecycle.v1.CreateAgentRequest
+	4,  // 39: agentlifecycle.v1.AgentLifecycleService.GetAgent:input_type -> agentlifecycle.v1.GetAgentRequest
+	6,  // 40: agentlifecycle.v1.AgentLifecycleService.UpdateAgent:input_type -> agentlifecycle.v1.UpdateAgentRequest
+	8,  // 41: agentlifecycle.v1.AgentLifecycleService.ListAgentDrafts:input_type -> agentlifecycle.v1.ListAgentDraftsRequest
+	10, // 42: agentlifecycle.v1.AgentLifecycleService.CreateAgentDraft:input_type -> agentlifecycle.v1.CreateAgentDraftRequest
+	12, // 43: agentlifecycle.v1.AgentLifecycleService.GetAgentDraft:input_type -> agentlifecycle.v1.GetAgentDraftRequest
+	14, // 44: agentlifecycle.v1.AgentLifecycleService.UpdateAgentDraft:input_type -> agentlifecycle.v1.UpdateAgentDraftRequest
+	16, // 45: agentlifecycle.v1.AgentLifecycleService.ValidateAgentDraft:input_type -> agentlifecycle.v1.ValidateAgentDraftRequest
+	18, // 46: agentlifecycle.v1.AgentLifecycleService.RequestAgentDraftApproval:input_type -> agentlifecycle.v1.RequestAgentDraftApprovalRequest
+	20, // 47: agentlifecycle.v1.AgentLifecycleService.GetAgentDraftApproval:input_type -> agentlifecycle.v1.GetAgentDraftApprovalRequest
+	22, // 48: agentlifecycle.v1.AgentLifecycleService.DecideAgentDraftApproval:input_type -> agentlifecycle.v1.DecideAgentDraftApprovalRequest
+	24, // 49: agentlifecycle.v1.AgentLifecycleService.PublishAgentDraft:input_type -> agentlifecycle.v1.PublishAgentDraftRequest
+	26, // 50: agentlifecycle.v1.AgentLifecycleService.ListAgentReleases:input_type -> agentlifecycle.v1.ListAgentReleasesRequest
+	28, // 51: agentlifecycle.v1.AgentLifecycleService.GetAgentRelease:input_type -> agentlifecycle.v1.GetAgentReleaseRequest
+	30, // 52: agentlifecycle.v1.AgentLifecycleService.DeprecateAgentRelease:input_type -> agentlifecycle.v1.DeprecateAgentReleaseRequest
+	32, // 53: agentlifecycle.v1.AgentLifecycleService.BlockAgentRelease:input_type -> agentlifecycle.v1.BlockAgentReleaseRequest
+	1,  // 54: agentlifecycle.v1.AgentLifecycleService.ListAgents:output_type -> agentlifecycle.v1.ListAgentsResponse
+	34, // 55: agentlifecycle.v1.AgentLifecycleService.CreateAgent:output_type -> agentlifecycle.v1.Agent
+	34, // 56: agentlifecycle.v1.AgentLifecycleService.GetAgent:output_type -> agentlifecycle.v1.Agent
+	34, // 57: agentlifecycle.v1.AgentLifecycleService.UpdateAgent:output_type -> agentlifecycle.v1.Agent
+	9,  // 58: agentlifecycle.v1.AgentLifecycleService.ListAgentDrafts:output_type -> agentlifecycle.v1.ListAgentDraftsResponse
+	35, // 59: agentlifecycle.v1.AgentLifecycleService.CreateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
+	35, // 60: agentlifecycle.v1.AgentLifecycleService.GetAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
+	35, // 61: agentlifecycle.v1.AgentLifecycleService.UpdateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
+	35, // 62: agentlifecycle.v1.AgentLifecycleService.ValidateAgentDraft:output_type -> agentlifecycle.v1.AgentDraft
+	36, // 63: agentlifecycle.v1.AgentLifecycleService.RequestAgentDraftApproval:output_type -> agentlifecycle.v1.ReleaseApproval
+	36, // 64: agentlifecycle.v1.AgentLifecycleService.GetAgentDraftApproval:output_type -> agentlifecycle.v1.ReleaseApproval
+	36, // 65: agentlifecycle.v1.AgentLifecycleService.DecideAgentDraftApproval:output_type -> agentlifecycle.v1.ReleaseApproval
+	37, // 66: agentlifecycle.v1.AgentLifecycleService.PublishAgentDraft:output_type -> agentlifecycle.v1.AgentRelease
+	27, // 67: agentlifecycle.v1.AgentLifecycleService.ListAgentReleases:output_type -> agentlifecycle.v1.ListAgentReleasesResponse
+	37, // 68: agentlifecycle.v1.AgentLifecycleService.GetAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
+	37, // 69: agentlifecycle.v1.AgentLifecycleService.DeprecateAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
+	37, // 70: agentlifecycle.v1.AgentLifecycleService.BlockAgentRelease:output_type -> agentlifecycle.v1.AgentRelease
+	54, // [54:71] is the sub-list for method output_type
+	37, // [37:54] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_agentlifecycle_v1_agent_lifecycle_proto_init() }
@@ -2527,16 +3121,16 @@ func file_agentlifecycle_v1_agent_lifecycle_proto_init() {
 	if File_agentlifecycle_v1_agent_lifecycle_proto != nil {
 		return
 	}
-	file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[33].OneofWrappers = []any{}
-	file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[34].OneofWrappers = []any{}
 	file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[35].OneofWrappers = []any{}
+	file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[36].OneofWrappers = []any{}
+	file_agentlifecycle_v1_agent_lifecycle_proto_msgTypes[37].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc), len(file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -16,6 +16,8 @@ export type RepositoryBinding = components["schemas"]["v1RepositoryBinding"];
 export type RepositoryBindingInput = components["schemas"]["v1RepositoryBindingInput"];
 export type Agent = components["schemas"]["v1Agent"];
 export type AgentDraft = components["schemas"]["v1AgentDraft"];
+export type ReleaseApproval = components["schemas"]["v1ReleaseApproval"];
+export type AgentRelease = components["schemas"]["v1AgentRelease"];
 export type AgentConfiguration = components["schemas"]["v1AgentConfiguration"];
 export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
 export type DraftInput = { configuration: AgentConfiguration; release_risk: string };
@@ -70,6 +72,14 @@ export interface PlatformApi {
   createAgentDraft(agentID: string, teamID: string, input: DraftInput, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
   updateAgentDraft(agentID: string, draftID: string, teamID: string, input: DraftInput, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
   validateAgentDraft(agentID: string, draftID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentDraft>;
+  getAgentDraftApproval(agentID: string, draftID: string, teamID: string, signal?: AbortSignal): Promise<ReleaseApproval>;
+  requestAgentDraftApproval(agentID: string, draftID: string, teamID: string, riskReason: string, idempotencyKey: string, signal?: AbortSignal): Promise<ReleaseApproval>;
+  decideAgentDraftApproval(agentID: string, draftID: string, teamID: string, approved: boolean, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<ReleaseApproval>;
+  publishAgentDraft(agentID: string, draftID: string, teamID: string, idempotencyKey: string, signal?: AbortSignal): Promise<AgentRelease>;
+  listAgentReleases(agentID: string, teamID: string, signal?: AbortSignal): Promise<AgentRelease[]>;
+  getAgentRelease(agentID: string, releaseID: string, teamID: string, signal?: AbortSignal): Promise<AgentRelease>;
+  deprecateAgentRelease(agentID: string, releaseID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentRelease>;
+  blockAgentRelease(agentID: string, releaseID: string, teamID: string, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentRelease>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -229,6 +239,34 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     validateAgentDraft(agentID, draftID, teamID, version, idempotencyKey, signal) {
       return authorizedRequest<AgentDraft>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/validation`, { method: "POST", body: JSON.stringify({ team_id: teamID }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    getAgentDraftApproval(agentID, draftID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<ReleaseApproval>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/approval?${query}`, { signal });
+    },
+    requestAgentDraftApproval(agentID, draftID, teamID, riskReason, idempotencyKey, signal) {
+      return authorizedRequest<ReleaseApproval>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/approval`, { method: "POST", body: JSON.stringify({ team_id: teamID, risk_reason: riskReason }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey } });
+    },
+    decideAgentDraftApproval(agentID, draftID, teamID, approved, reason, version, idempotencyKey, signal) {
+      return authorizedRequest<ReleaseApproval>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/approval`, { method: "PATCH", body: JSON.stringify({ team_id: teamID, approved, reason }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    publishAgentDraft(agentID, draftID, teamID, idempotencyKey, signal) {
+      return authorizedRequest<AgentRelease>(`/api/v1/agents/${encodeURIComponent(agentID)}/drafts/${encodeURIComponent(draftID)}/release`, { method: "POST", body: JSON.stringify({ team_id: teamID }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey } });
+    },
+    async listAgentReleases(agentID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListAgentReleasesResponse"]>(`/api/v1/agents/${encodeURIComponent(agentID)}/releases?${query}`, { signal });
+      return body.items ?? [];
+    },
+    getAgentRelease(agentID, releaseID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<AgentRelease>(`/api/v1/agents/${encodeURIComponent(agentID)}/releases/${encodeURIComponent(releaseID)}?${query}`, { signal });
+    },
+    deprecateAgentRelease(agentID, releaseID, teamID, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentRelease>(`/api/v1/agents/${encodeURIComponent(agentID)}/releases/${encodeURIComponent(releaseID)}/deprecation`, { method: "POST", body: JSON.stringify({ team_id: teamID }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    blockAgentRelease(agentID, releaseID, teamID, reason, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentRelease>(`/api/v1/agents/${encodeURIComponent(agentID)}/releases/${encodeURIComponent(releaseID)}/block`, { method: "POST", body: JSON.stringify({ team_id: teamID, reason }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
     },
   };
 }

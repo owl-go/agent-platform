@@ -61,6 +61,22 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "id": "12121212-1212-4212-8212-121212121212",
+      "username": "release-reviewer",
+      "email": "release-reviewer@example.test",
+      "firstName": "Release",
+      "lastName": "Reviewer",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "acceptance-only-password",
+          "temporary": false
+        }
+      ]
     }
   ]
 }

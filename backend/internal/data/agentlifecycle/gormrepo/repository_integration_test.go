@@ -11,8 +11,12 @@ import (
 
 	"agent-platform/backend/internal/biz/agentlifecycle/application"
 	"agent-platform/backend/internal/biz/agentlifecycle/domain"
+	sourceapplication "agent-platform/backend/internal/biz/sourcecontrol/application"
 	"agent-platform/backend/internal/data/agentlifecycle/draftvalidator"
 	"agent-platform/backend/internal/data/agentlifecycle/gormrepo"
+	"agent-platform/backend/internal/data/controlplane/releasedependency"
+	"agent-platform/backend/internal/data/sourcecontrol/bindingvalidator"
+	sourcegorm "agent-platform/backend/internal/data/sourcecontrol/gormrepo"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 
 	"github.com/google/uuid"
@@ -41,7 +45,9 @@ func TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases(t *testing.T) {
 	t.Cleanup(func() { tx.Rollback() })
 	fixture := seedLifecycleFixture(t, tx)
 	now := time.Now().UTC()
-	service := application.NewWithDependencies(gormrepo.New(tx), draftvalidator.New(tx), fixedClock(now), randomIDs{})
+	drafts := draftvalidator.New(tx)
+	bindings := sourceapplication.NewBindingService(sourcegorm.New(tx), bindingvalidator.New(tx))
+	service := application.NewWithDependencies(gormrepo.New(tx), drafts, releasedependency.New(tx, drafts, bindings), fixedClock(now), randomIDs{})
 
 	agent, err := service.CreateAgent(context.Background(), application.CreateAgentCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, Name: "Coding Agent", Description: "Test Agent", CreatedBy: fixture.builderID})
 	if err != nil {
@@ -56,7 +62,7 @@ func TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases(t *testing.T) {
 		t.Fatalf("ValidateDraft() = (%+v, %v)", ready, err)
 	}
 	release, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, ready.ID, fixture.builderID)
-	if err != nil || release.ReleaseNumber != 1 {
+	if err != nil || release.ReleaseNumber != 1 || release.Dependencies.RuntimeImage.ImageDigest == "" || release.Dependencies.RepositoryBinding.Name == "" || release.Dependencies.ConfiguredModel.ModelID != "model" {
 		t.Fatalf("Publish() = (%+v, %v)", release, err)
 	}
 	if _, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, ready.ID, fixture.builderID); !errors.Is(err, domain.ErrDraftAlreadyReleased) {
@@ -78,9 +84,13 @@ func TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases(t *testing.T) {
 	if err != nil || high.State != domain.DraftStateReady {
 		t.Fatalf("high-risk ValidateDraft() = (%+v, %v)", high, err)
 	}
-	approval, err := service.RequestApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.builderID)
+	approval, err := service.RequestApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.builderID, "Runtime-native Subagents")
 	if err != nil {
 		t.Fatal(err)
+	}
+	storedApproval, err := service.GetApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID)
+	if err != nil || storedApproval.RiskReason != "Runtime-native Subagents" || storedApproval.DraftVersion != high.Version {
+		t.Fatalf("GetApproval() = (%+v, %v)", storedApproval, err)
 	}
 	if _, err := service.DecideApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, approval.Version, true, fixture.builderID, ""); !errors.Is(err, domain.ErrInvalidAgent) {
 		t.Fatalf("self approval error = %v", err)
@@ -89,13 +99,60 @@ func TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases(t *testing.T) {
 	if err != nil || approval.State != domain.ApprovalApproved {
 		t.Fatalf("DecideApproval() = (%+v, %v)", approval, err)
 	}
-	highRelease, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.builderID)
-	if err != nil || highRelease.ReleaseNumber != 2 {
+	high, err = service.EditDraft(context.Background(), application.EditDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, DraftID: high.ID, Configuration: lifecycleConfiguration(fixture, true), ReleaseRisk: domain.ReleaseRiskHigh, ExpectedVersion: high.Version})
+	if err != nil {
+		t.Fatal(err)
+	}
+	high, err = service.ValidateDraft(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, high.Version)
+	if err != nil || high.State != domain.DraftStateReady {
+		t.Fatalf("revalidated high-risk Draft = (%+v, %v)", high, err)
+	}
+	if _, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.reviewerID); !errors.Is(err, domain.ErrApprovalRequired) {
+		t.Fatalf("Publish with stale approval error = %v", err)
+	}
+	approval, err = service.RequestApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.builderID, "Reapproved after Draft edit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	approval, err = service.DecideApproval(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, approval.Version, true, fixture.reviewerID, "reviewed edited Draft")
+	if err != nil || approval.State != domain.ApprovalApproved {
+		t.Fatalf("reapproval DecideApproval() = (%+v, %v)", approval, err)
+	}
+	highRelease, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, high.ID, fixture.reviewerID)
+	if err != nil || highRelease.ReleaseNumber != 2 || highRelease.ApprovalEvidence == nil || highRelease.ApprovalEvidence.ID != approval.ID || highRelease.ApprovalEvidence.DraftVersion != high.Version || highRelease.ApprovalEvidence.ApprovedBy != fixture.reviewerID || highRelease.ApprovalEvidence.RiskReason != "Reapproved after Draft edit" {
 		t.Fatalf("high-risk Publish() = (%+v, %v)", highRelease, err)
 	}
-	blocked, err := service.BlockRelease(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, highRelease.ID, highRelease.Version)
-	if err != nil || blocked.Status != domain.ReleaseStatusBlocked || blocked.Version != 2 {
+	if err := tx.Exec(`UPDATE repository_bindings SET name = 'changed-after-release' WHERE id = ?`, fixture.bindingID).Error; err != nil {
+		t.Fatal(err)
+	}
+	immutable, err := service.GetRelease(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, highRelease.ID)
+	if err != nil || immutable.Dependencies.RepositoryBinding.Name == "changed-after-release" {
+		t.Fatalf("Agent Release dependency snapshot changed with live catalog = (%+v, %v)", immutable, err)
+	}
+	blocked, err := service.BlockRelease(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, highRelease.ID, highRelease.Version, "Emergency policy response")
+	if err != nil || blocked.Status != domain.ReleaseStatusBlocked || blocked.BlockedReason != "Emergency policy response" || blocked.Version != 2 {
 		t.Fatalf("BlockRelease() = (%+v, %v)", blocked, err)
+	}
+	blocked, err = service.GetRelease(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, highRelease.ID)
+	if err != nil || blocked.BlockedReason != "Emergency policy response" {
+		t.Fatalf("persisted Block reason = (%+v, %v)", blocked, err)
+	}
+	dependencyChanged, err := service.CreateDraft(context.Background(), application.CreateDraftCommand{OrganizationID: fixture.organizationID, TeamID: fixture.teamID, AgentID: agent.ID, CreatedBy: fixture.builderID, Configuration: lifecycleConfiguration(fixture, false), ReleaseRisk: domain.ReleaseRiskLow})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dependencyChanged, err = service.ValidateDraft(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, dependencyChanged.ID, dependencyChanged.Version)
+	if err != nil || dependencyChanged.State != domain.DraftStateReady {
+		t.Fatalf("dependency-change Draft validation = (%+v, %v)", dependencyChanged, err)
+	}
+	if err := tx.Exec(`UPDATE configured_models SET enabled = false WHERE id = ?`, fixture.modelID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Publish(context.Background(), fixture.organizationID, fixture.teamID, agent.ID, dependencyChanged.ID, fixture.builderID); !errors.Is(err, domain.ErrDraftNotReady) {
+		t.Fatalf("Publish after dependency change error = %v", err)
+	}
+	if err := tx.Exec(`UPDATE configured_models SET enabled = true WHERE id = ?`, fixture.modelID).Error; err != nil {
+		t.Fatal(err)
 	}
 	if _, err := service.GetAgent(context.Background(), fixture.organizationID, uuid.NewString(), agent.ID); !errors.Is(err, domain.ErrAgentNotFound) {
 		t.Fatalf("cross-Team GetAgent error = %v", err)
@@ -165,7 +222,7 @@ func seedLifecycleFixture(t *testing.T, db *gorm.DB) lifecycleFixture {
 		{`INSERT INTO credential_profiles (id, organization_id, name, kind, secret_ref) VALUES (?, ?, ?, 'model', 'secret://model')`, []any{modelCredentialID, fixture.organizationID, suffix + "-model"}},
 		{`INSERT INTO configured_models (id, organization_id, name, model_id, endpoint, credential_profile_id) VALUES (?, ?, ?, 'model', 'https://model.example.test', ?)`, []any{fixture.modelID, fixture.organizationID, suffix, modelCredentialID}},
 		{`INSERT INTO runtime_images (id, organization_id, runtime, cli_version, adapter_version, image_digest, capabilities, status, conformance_evidence_key, conformance_evidence_sha256) VALUES (?, ?, 'claude', '1', '1', ?, '{"subagents":true}', 'production', 'test/lifecycle/evidence.tar', ?)`, []any{fixture.runtimeID, fixture.organizationID, digest, strings.Repeat("e", 64)}},
-		{`INSERT INTO repository_bindings (id, organization_id, team_id, source_control_provider_id, name, repository_ssh_url, default_branch, ssh_credential_profile_id, git_author_name, git_author_email, allowed_runtime_image_ids, default_runtime_image_id, default_model_id, model_budget, instructions, quality_commands, egress_policy, validation_report, validated_at) VALUES (?, ?, ?, ?, ?, 'git@github.com:acme/repository.git', 'main', ?, 'Agent', 'agent@example.test', ?::jsonb, ?, ?, '{"max_input_tokens":2000,"max_output_tokens":1000,"max_cost_amount":"20.00"}', '', '[]', '{"mode":"public"}', ?::jsonb, ?)`, []any{fixture.bindingID, fixture.organizationID, fixture.teamID, providerID, suffix, sshCredentialID, `["` + fixture.runtimeID + `"]`, fixture.runtimeID, fixture.modelID, `{"valid":true,"errors":{},"checked_at":"` + now + `"}`, now}},
+		{`INSERT INTO repository_bindings (id, organization_id, team_id, source_control_provider_id, name, repository_ssh_url, default_branch, ssh_credential_profile_id, git_author_name, git_author_email, allowed_runtime_image_ids, default_runtime_image_id, default_model_id, model_budget, instructions, quality_commands, egress_policy, validation_report, validated_at) VALUES (?, ?, ?, ?, ?, 'git@github.com:acme/repository.git', 'main', ?, 'Agent', 'agent@example.test', ?::jsonb, ?, ?, '{"max_input_tokens":2000,"max_output_tokens":1000,"max_cost_amount":"20.00"}', '', '[{"name":"test","kind":"test","executable":"go","arguments":["test","./..."],"timeout_seconds":600}]', '{"mode":"public"}', ?::jsonb, ?)`, []any{fixture.bindingID, fixture.organizationID, fixture.teamID, providerID, suffix, sshCredentialID, `["` + fixture.runtimeID + `"]`, fixture.runtimeID, fixture.modelID, `{"valid":true,"errors":{},"checked_at":"` + now + `"}`, now}},
 	}
 	for _, statement := range statements {
 		if err := db.Exec(statement.query, statement.args...).Error; err != nil {

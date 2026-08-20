@@ -67,14 +67,14 @@ type draftRecord struct {
 func (draftRecord) TableName() string { return "agent_drafts" }
 
 type approvalRecord struct {
-	ID, DraftID, RequestedBy string
-	DraftVersion             int64
-	State                    domain.ApprovalState
-	RequestedAt              time.Time
-	DecidedBy                *string
-	DecidedAt                *time.Time
-	Reason                   string
-	Version                  int64
+	ID, DraftID, RequestedBy, RiskReason string
+	DraftVersion                         int64
+	State                                domain.ApprovalState
+	RequestedAt                          time.Time
+	DecidedBy                            *string
+	DecidedAt                            *time.Time
+	Reason                               string
+	Version                              int64
 }
 
 func (approvalRecord) TableName() string { return "agent_release_approvals" }
@@ -83,9 +83,15 @@ type releaseRecord struct {
 	ID, AgentID, SourceDraftID, RuntimeImageID, ConfiguredModelID, RepositoryBindingID string
 	ReleaseNumber                                                                      int64
 	ConfigurationSnapshot                                                              jsonValue `gorm:"type:jsonb"`
+	RepositoryBindingSnapshot                                                          jsonValue `gorm:"type:jsonb"`
+	RuntimeImageSnapshot                                                               jsonValue `gorm:"type:jsonb"`
+	ConfiguredModelSnapshot                                                            jsonValue `gorm:"type:jsonb"`
+	ApprovalEvidence                                                                   jsonValue `gorm:"type:jsonb"`
 	ModelBudget                                                                        jsonValue `gorm:"type:jsonb"`
 	ExecutionLimits                                                                    jsonValue `gorm:"type:jsonb"`
+	ReleaseRisk                                                                        domain.ReleaseRisk
 	Status                                                                             domain.ReleaseStatus
+	BlockedReason                                                                      *string
 	ReleasedBy                                                                         string
 	ReleasedAt                                                                         time.Time
 	DeprecatedAt                                                                       *time.Time
@@ -229,7 +235,7 @@ func (repository *Repository) UpdateDraft(ctx context.Context, draft domain.Draf
 }
 
 func (repository *Repository) CreateApproval(ctx context.Context, approval domain.ReleaseApproval) error {
-	record := approvalRecord{ID: approval.ID, DraftID: approval.DraftID, DraftVersion: approval.DraftVersion, RequestedBy: approval.RequestedBy, State: approval.State, RequestedAt: approval.RequestedAt, Reason: approval.Reason, Version: approval.Version}
+	record := approvalRecord{ID: approval.ID, DraftID: approval.DraftID, DraftVersion: approval.DraftVersion, RequestedBy: approval.RequestedBy, RiskReason: approval.RiskReason, State: approval.State, RequestedAt: approval.RequestedAt, Reason: approval.Reason, Version: approval.Version}
 	if err := repository.db.WithContext(ctx).Create(&record).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return domain.ErrApprovalExists
@@ -286,7 +292,9 @@ func (repository *Repository) CreateRelease(ctx context.Context, registration do
 		}
 		if draft.ReleaseRisk == domain.ReleaseRiskHigh {
 			var record approvalRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("draft_id = ?", draft.ID).Take(&record).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("draft_id = ? AND draft_version = ?", draft.ID, draft.Version).
+				Take(&record).Error; err != nil {
 				return domain.ErrApprovalRequired
 			}
 			approval, err := restoreApproval(record)
@@ -348,7 +356,11 @@ func (repository *Repository) ListReleases(ctx context.Context, agentID string) 
 }
 
 func (repository *Repository) UpdateReleaseStatus(ctx context.Context, release domain.Release, expectedVersion int64) error {
-	result := repository.db.WithContext(ctx).Model(&releaseRecord{}).Where("id = ? AND version = ?", release.ID, expectedVersion).Updates(map[string]any{"status": release.Status, "deprecated_at": release.DeprecatedAt, "version": release.Version})
+	var blockedReason any
+	if release.BlockedReason != "" {
+		blockedReason = release.BlockedReason
+	}
+	result := repository.db.WithContext(ctx).Model(&releaseRecord{}).Where("id = ? AND version = ?", release.ID, expectedVersion).Updates(map[string]any{"status": release.Status, "blocked_reason": blockedReason, "deprecated_at": release.DeprecatedAt, "version": release.Version})
 	if result.Error != nil {
 		return fmt.Errorf("update Agent Release status: %w", result.Error)
 	}
@@ -386,11 +398,11 @@ func restoreDraft(record draftRecord) (domain.Draft, error) {
 }
 
 func restoreApproval(record approvalRecord) (domain.ReleaseApproval, error) {
-	approval := domain.ReleaseApproval{ID: record.ID, DraftID: record.DraftID, DraftVersion: record.DraftVersion, RequestedBy: record.RequestedBy, State: record.State, RequestedAt: record.RequestedAt, DecidedAt: record.DecidedAt, Reason: record.Reason, Version: record.Version}
+	approval := domain.ReleaseApproval{ID: record.ID, DraftID: record.DraftID, DraftVersion: record.DraftVersion, RequestedBy: record.RequestedBy, RiskReason: record.RiskReason, State: record.State, RequestedAt: record.RequestedAt, DecidedAt: record.DecidedAt, Reason: record.Reason, Version: record.Version}
 	if record.DecidedBy != nil {
 		approval.DecidedBy = *record.DecidedBy
 	}
-	if approval.ID == "" || approval.DraftID == "" || approval.DraftVersion <= 0 || approval.RequestedBy == "" || approval.RequestedAt.IsZero() || approval.Version <= 0 {
+	if approval.ID == "" || approval.DraftID == "" || approval.DraftVersion <= 0 || approval.RequestedBy == "" || approval.RiskReason == "" || approval.RequestedAt.IsZero() || approval.Version <= 0 {
 		return domain.ReleaseApproval{}, fmt.Errorf("invalid persisted Agent Release Approval")
 	}
 	return approval, nil
@@ -409,7 +421,32 @@ func releaseToRecord(release domain.Release) (releaseRecord, error) {
 	if err != nil {
 		return releaseRecord{}, err
 	}
-	return releaseRecord{ID: release.ID, AgentID: release.AgentID, ReleaseNumber: release.ReleaseNumber, SourceDraftID: release.SourceDraftID, RuntimeImageID: release.RuntimeImageID, ConfiguredModelID: release.ConfiguredModelID, RepositoryBindingID: release.RepositoryBindingID, ConfigurationSnapshot: snapshot, ModelBudget: budget, ExecutionLimits: limits, Status: release.Status, ReleasedBy: release.ReleasedBy, ReleasedAt: release.ReleasedAt, DeprecatedAt: release.DeprecatedAt, Version: release.Version}, nil
+	bindingSnapshot, err := json.Marshal(release.Dependencies.RepositoryBinding)
+	if err != nil {
+		return releaseRecord{}, err
+	}
+	runtimeSnapshot, err := json.Marshal(release.Dependencies.RuntimeImage)
+	if err != nil {
+		return releaseRecord{}, err
+	}
+	modelSnapshot, err := json.Marshal(release.Dependencies.ConfiguredModel)
+	if err != nil {
+		return releaseRecord{}, err
+	}
+	var approvalEvidence jsonValue
+	if release.ApprovalEvidence != nil {
+		encoded, err := json.Marshal(release.ApprovalEvidence)
+		if err != nil {
+			return releaseRecord{}, err
+		}
+		approvalEvidence = encoded
+	}
+	var blockedReason *string
+	if release.BlockedReason != "" {
+		value := release.BlockedReason
+		blockedReason = &value
+	}
+	return releaseRecord{ID: release.ID, AgentID: release.AgentID, ReleaseNumber: release.ReleaseNumber, SourceDraftID: release.SourceDraftID, RuntimeImageID: release.RuntimeImageID, ConfiguredModelID: release.ConfiguredModelID, RepositoryBindingID: release.RepositoryBindingID, ConfigurationSnapshot: snapshot, RepositoryBindingSnapshot: bindingSnapshot, RuntimeImageSnapshot: runtimeSnapshot, ConfiguredModelSnapshot: modelSnapshot, ApprovalEvidence: approvalEvidence, ModelBudget: budget, ExecutionLimits: limits, ReleaseRisk: release.ReleaseRisk, Status: release.Status, BlockedReason: blockedReason, ReleasedBy: release.ReleasedBy, ReleasedAt: release.ReleasedAt, DeprecatedAt: release.DeprecatedAt, Version: release.Version}, nil
 }
 
 func restoreRelease(record releaseRecord) (domain.Release, error) {
@@ -417,5 +454,26 @@ func restoreRelease(record releaseRecord) (domain.Release, error) {
 	if err := json.Unmarshal(record.ConfigurationSnapshot, &configuration); err != nil {
 		return domain.Release{}, err
 	}
-	return domain.RestoreRelease(domain.Release{ID: record.ID, AgentID: record.AgentID, ReleaseNumber: record.ReleaseNumber, SourceDraftID: record.SourceDraftID, RuntimeImageID: record.RuntimeImageID, ConfiguredModelID: record.ConfiguredModelID, RepositoryBindingID: record.RepositoryBindingID, Configuration: configuration, Status: record.Status, ReleasedBy: record.ReleasedBy, ReleasedAt: record.ReleasedAt, DeprecatedAt: record.DeprecatedAt, Version: record.Version})
+	dependencies := domain.ReleaseDependencies{}
+	if err := json.Unmarshal(record.RepositoryBindingSnapshot, &dependencies.RepositoryBinding); err != nil {
+		return domain.Release{}, err
+	}
+	if err := json.Unmarshal(record.RuntimeImageSnapshot, &dependencies.RuntimeImage); err != nil {
+		return domain.Release{}, err
+	}
+	if err := json.Unmarshal(record.ConfiguredModelSnapshot, &dependencies.ConfiguredModel); err != nil {
+		return domain.Release{}, err
+	}
+	var approval *domain.RiskApproval
+	if len(record.ApprovalEvidence) > 0 {
+		approval = &domain.RiskApproval{}
+		if err := json.Unmarshal(record.ApprovalEvidence, approval); err != nil {
+			return domain.Release{}, err
+		}
+	}
+	blockedReason := ""
+	if record.BlockedReason != nil {
+		blockedReason = *record.BlockedReason
+	}
+	return domain.RestoreRelease(domain.Release{ID: record.ID, AgentID: record.AgentID, ReleaseNumber: record.ReleaseNumber, SourceDraftID: record.SourceDraftID, RuntimeImageID: record.RuntimeImageID, ConfiguredModelID: record.ConfiguredModelID, RepositoryBindingID: record.RepositoryBindingID, Configuration: configuration, ReleaseRisk: record.ReleaseRisk, Dependencies: dependencies, ApprovalEvidence: approval, Status: record.Status, BlockedReason: blockedReason, ReleasedBy: record.ReleasedBy, ReleasedAt: record.ReleasedAt, DeprecatedAt: record.DeprecatedAt, Version: record.Version})
 }

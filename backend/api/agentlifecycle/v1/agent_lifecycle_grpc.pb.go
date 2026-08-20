@@ -29,6 +29,7 @@ const (
 	AgentLifecycleService_UpdateAgentDraft_FullMethodName          = "/agentlifecycle.v1.AgentLifecycleService/UpdateAgentDraft"
 	AgentLifecycleService_ValidateAgentDraft_FullMethodName        = "/agentlifecycle.v1.AgentLifecycleService/ValidateAgentDraft"
 	AgentLifecycleService_RequestAgentDraftApproval_FullMethodName = "/agentlifecycle.v1.AgentLifecycleService/RequestAgentDraftApproval"
+	AgentLifecycleService_GetAgentDraftApproval_FullMethodName     = "/agentlifecycle.v1.AgentLifecycleService/GetAgentDraftApproval"
 	AgentLifecycleService_DecideAgentDraftApproval_FullMethodName  = "/agentlifecycle.v1.AgentLifecycleService/DecideAgentDraftApproval"
 	AgentLifecycleService_PublishAgentDraft_FullMethodName         = "/agentlifecycle.v1.AgentLifecycleService/PublishAgentDraft"
 	AgentLifecycleService_ListAgentReleases_FullMethodName         = "/agentlifecycle.v1.AgentLifecycleService/ListAgentReleases"
@@ -51,6 +52,7 @@ type AgentLifecycleServiceClient interface {
 	UpdateAgentDraft(ctx context.Context, in *UpdateAgentDraftRequest, opts ...grpc.CallOption) (*AgentDraft, error)
 	ValidateAgentDraft(ctx context.Context, in *ValidateAgentDraftRequest, opts ...grpc.CallOption) (*AgentDraft, error)
 	RequestAgentDraftApproval(ctx context.Context, in *RequestAgentDraftApprovalRequest, opts ...grpc.CallOption) (*ReleaseApproval, error)
+	GetAgentDraftApproval(ctx context.Context, in *GetAgentDraftApprovalRequest, opts ...grpc.CallOption) (*ReleaseApproval, error)
 	DecideAgentDraftApproval(ctx context.Context, in *DecideAgentDraftApprovalRequest, opts ...grpc.CallOption) (*ReleaseApproval, error)
 	PublishAgentDraft(ctx context.Context, in *PublishAgentDraftRequest, opts ...grpc.CallOption) (*AgentRelease, error)
 	ListAgentReleases(ctx context.Context, in *ListAgentReleasesRequest, opts ...grpc.CallOption) (*ListAgentReleasesResponse, error)
@@ -167,6 +169,16 @@ func (c *agentLifecycleServiceClient) RequestAgentDraftApproval(ctx context.Cont
 	return out, nil
 }
 
+func (c *agentLifecycleServiceClient) GetAgentDraftApproval(ctx context.Context, in *GetAgentDraftApprovalRequest, opts ...grpc.CallOption) (*ReleaseApproval, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseApproval)
+	err := c.cc.Invoke(ctx, AgentLifecycleService_GetAgentDraftApproval_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentLifecycleServiceClient) DecideAgentDraftApproval(ctx context.Context, in *DecideAgentDraftApprovalRequest, opts ...grpc.CallOption) (*ReleaseApproval, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReleaseApproval)
@@ -241,6 +253,7 @@ type AgentLifecycleServiceServer interface {
 	UpdateAgentDraft(context.Context, *UpdateAgentDraftRequest) (*AgentDraft, error)
 	ValidateAgentDraft(context.Context, *ValidateAgentDraftRequest) (*AgentDraft, error)
 	RequestAgentDraftApproval(context.Context, *RequestAgentDraftApprovalRequest) (*ReleaseApproval, error)
+	GetAgentDraftApproval(context.Context, *GetAgentDraftApprovalRequest) (*ReleaseApproval, error)
 	DecideAgentDraftApproval(context.Context, *DecideAgentDraftApprovalRequest) (*ReleaseApproval, error)
 	PublishAgentDraft(context.Context, *PublishAgentDraftRequest) (*AgentRelease, error)
 	ListAgentReleases(context.Context, *ListAgentReleasesRequest) (*ListAgentReleasesResponse, error)
@@ -286,6 +299,9 @@ func (UnimplementedAgentLifecycleServiceServer) ValidateAgentDraft(context.Conte
 }
 func (UnimplementedAgentLifecycleServiceServer) RequestAgentDraftApproval(context.Context, *RequestAgentDraftApprovalRequest) (*ReleaseApproval, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestAgentDraftApproval not implemented")
+}
+func (UnimplementedAgentLifecycleServiceServer) GetAgentDraftApproval(context.Context, *GetAgentDraftApprovalRequest) (*ReleaseApproval, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentDraftApproval not implemented")
 }
 func (UnimplementedAgentLifecycleServiceServer) DecideAgentDraftApproval(context.Context, *DecideAgentDraftApprovalRequest) (*ReleaseApproval, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecideAgentDraftApproval not implemented")
@@ -506,6 +522,24 @@ func _AgentLifecycleService_RequestAgentDraftApproval_Handler(srv interface{}, c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentLifecycleService_GetAgentDraftApproval_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentDraftApprovalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentLifecycleServiceServer).GetAgentDraftApproval(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentLifecycleService_GetAgentDraftApproval_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentLifecycleServiceServer).GetAgentDraftApproval(ctx, req.(*GetAgentDraftApprovalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentLifecycleService_DecideAgentDraftApproval_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DecideAgentDraftApprovalRequest)
 	if err := dec(in); err != nil {
@@ -660,6 +694,10 @@ var AgentLifecycleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestAgentDraftApproval",
 			Handler:    _AgentLifecycleService_RequestAgentDraftApproval_Handler,
+		},
+		{
+			MethodName: "GetAgentDraftApproval",
+			Handler:    _AgentLifecycleService_GetAgentDraftApproval_Handler,
 		},
 		{
 			MethodName: "DecideAgentDraftApproval",

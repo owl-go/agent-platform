@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick, ref } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, platformApiKey, type Agent, type AgentDraft, type PlatformApi, type RepositoryBinding, type RuntimeImage, type ConfiguredModel } from "../api/client";
+import { ApiError, platformApiKey, type Agent, type AgentDraft, type AgentRelease, type PlatformApi, type ReleaseApproval, type RepositoryBinding, type RuntimeImage, type ConfiguredModel } from "../api/client";
 import { authContextKey, type AuthSession, type AuthState } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import AgentDraftPanel from "./AgentDraftPanel.vue";
@@ -15,6 +15,10 @@ const draft: AgentDraft = { id: "draft-1", agent_id: "agent-1", revision: 1, sta
   instructions: "Implement carefully", repository_binding_id: "binding-1", runtime_image_id: "runtime-1", configured_model_id: "model-1",
   model_budget: { max_input_tokens: 1000, max_output_tokens: 500, max_cost_amount: "10.00" }, execution_limits: { timeout_seconds: 1800, cpus: 2, memory_bytes: 4096, pids: 64, temp_bytes: 8192, egress: "public" }, native_subagents: false,
 }, validation_report: { valid: false, errors: { model_budget: "Draft Model Budget exceeds Repository Binding limits" } } };
+const readyDraft: AgentDraft = { ...draft, state: "ready", validation_report: { valid: true, errors: {} } };
+const highDraft: AgentDraft = { ...readyDraft, release_risk: "high" };
+const approval: ReleaseApproval = { id: "approval-1", draft_id: "draft-1", draft_version: 3, requested_by: "user-2", risk_reason: "Runtime-native Subagents", state: "pending", version: 1 };
+const release: AgentRelease = { id: "release-1", agent_id: "agent-1", release_number: 1, source_draft_id: "draft-1", status: "released", release_risk: "high", version: 1, configuration: readyDraft.configuration, repository_binding_snapshot: { id: "binding-1", name: "Repository", default_branch: "main", repository_ssh_url: "git@example.test:acme/repository.git", egress_policy: "public" }, runtime_image_snapshot: { id: "runtime-1", runtime: "codex", cli_version: "1", adapter_version: "1", image_digest: "registry/runtime@sha256:" + "a".repeat(64), capabilities: { streaming: true } }, configured_model_snapshot: { id: "model-1", name: "Primary", model_id: "model", endpoint: "https://models.example" }, approval_evidence: { id: "approval-1", draft_id: "draft-1", draft_version: 3, requested_by: "user-2", risk_reason: "Runtime-native Subagents", approved_by: "user-1" } };
 
 describe("AgentDraftPanel", () => {
   it("renders Team-scoped Agents, Drafts, and field validation from real API data", async () => {
@@ -99,6 +103,46 @@ describe("AgentDraftPanel", () => {
     expect(wrapper.get("[data-testid='draft-draft-1']").text()).toContain("Validating");
     resolveValidation({ ...draft, state: "ready", version: 5 }); await flushPromises();
   });
+
+  it("publishes a ready low-risk Draft with a stable intent", async () => {
+    const api = apiStub();
+    vi.mocked(api.listAgentDrafts).mockResolvedValue([readyDraft]);
+    vi.mocked(api.publishAgentDraft).mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce(release);
+    const wrapper = await mountPanel(api, [{ role: "agent_builder", team_id: "team-1" }]);
+    await wrapper.get("[data-testid='publish-draft-draft-1']").trigger("click"); await flushPromises();
+    await wrapper.get("[data-testid='publish-draft-draft-1']").trigger("click"); await flushPromises();
+    expect(vi.mocked(api.publishAgentDraft).mock.calls[0]![3]).toBe(vi.mocked(api.publishAgentDraft).mock.calls[1]![3]);
+  });
+
+  it("lets a different Builder decide an exact-version Release Approval", async () => {
+    const api = apiStub();
+    vi.mocked(api.listAgentDrafts).mockResolvedValue([highDraft]);
+    vi.mocked(api.getAgentDraftApproval).mockResolvedValue(approval);
+    vi.mocked(api.decideAgentDraftApproval).mockResolvedValue({ ...approval, state: "approved", decided_by: "user-1", version: 2 });
+    const wrapper = await mountPanel(api, [{ role: "agent_builder", team_id: "team-1" }]);
+    await wrapper.get("[data-testid='approve-release-draft-1']").trigger("click");
+    await wrapper.get("[data-testid='release-decision-form']").trigger("submit"); await flushPromises();
+    expect(api.decideAgentDraftApproval).toHaveBeenCalledWith("agent-1", "draft-1", "team-1", true, "", 1, expect.any(String));
+  });
+
+  it("marks an old Approval expired and requires a new request", async () => {
+    const api = apiStub();
+    vi.mocked(api.listAgentDrafts).mockResolvedValue([highDraft]);
+    vi.mocked(api.getAgentDraftApproval).mockResolvedValue({ ...approval, draft_version: 2, state: "approved" });
+    const wrapper = await mountPanel(api, [{ role: "agent_builder", team_id: "team-1" }]);
+    expect(wrapper.get("[data-testid='release-approval-draft-1']").text()).toContain("older Draft Version");
+    expect(wrapper.find("[data-testid='publish-draft-draft-1']").exists()).toBe(false);
+    expect(wrapper.find("[data-testid='request-release-approval-draft-1']").exists()).toBe(true);
+  });
+
+  it("renders immutable snapshots and restricts Block to Organization administrators", async () => {
+    const api = apiStub();
+    vi.mocked(api.listAgentReleases).mockResolvedValue([release]);
+    const wrapper = await mountPanel(api, [{ role: "platform_administrator" }]);
+    expect(wrapper.get("[data-testid='release-release-1']").text()).toContain("registry/runtime@sha256");
+    expect(wrapper.get("[data-testid='release-release-1']").text()).toContain("Runtime-native Subagents");
+    expect(wrapper.find("[data-testid='block-release-release-1']").exists()).toBe(true);
+  });
 });
 
 async function mountPanel(api: PlatformApi, grants: Array<{ role: string; team_id?: string }>) {
@@ -115,6 +159,6 @@ function apiStub(): PlatformApi {
     listRuntimeImages: vi.fn(async () => ({ items: [runtime], nextPageToken: "" })), getRuntimeImage: vi.fn(), registerRuntimeImage: vi.fn(), changeRuntimeImageStatus: vi.fn(),
     listCredentialProfiles: vi.fn(async () => []), getCredentialProfile: vi.fn(), registerCredentialProfile: vi.fn(), changeCredentialProfileStatus: vi.fn(), listConfiguredModels: vi.fn(async () => [model]), getConfiguredModel: vi.fn(), registerConfiguredModel: vi.fn(), changeConfiguredModelStatus: vi.fn(),
     listSourceControlProviders: vi.fn(async () => []), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(), changeSourceControlProviderStatus: vi.fn(), listRepositoryBindings: vi.fn(async () => [binding]), getRepositoryBinding: vi.fn(), registerRepositoryBinding: vi.fn(), updateRepositoryBinding: vi.fn(), validateRepositoryBinding: vi.fn(),
-    listAgents: vi.fn(async () => [agent]), getAgent: vi.fn(), createAgent: vi.fn(async () => agent), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => [draft]), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(async () => draft), updateAgentDraft: vi.fn(async () => draft), validateAgentDraft: vi.fn(async () => draft),
+    listAgents: vi.fn(async () => [agent]), getAgent: vi.fn(), createAgent: vi.fn(async () => agent), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => [draft]), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(async () => draft), updateAgentDraft: vi.fn(async () => draft), validateAgentDraft: vi.fn(async () => draft), getAgentDraftApproval: vi.fn(), requestAgentDraftApproval: vi.fn(), decideAgentDraftApproval: vi.fn(), publishAgentDraft: vi.fn(), listAgentReleases: vi.fn(async () => []), getAgentRelease: vi.fn(), deprecateAgentRelease: vi.fn(), blockAgentRelease: vi.fn(),
   };
 }

@@ -27,8 +27,8 @@ pwcli="${PWCLI:-playwright-cli}"
 cleanup() {
   cleanup_status=$?
   if [[ "$cleanup_status" -ne 0 ]]; then
-    [[ -f "$acceptance_tmp/api.log" ]] && redact_canaries "$acceptance_tmp/api.log" >&2
-    [[ -f "$acceptance_tmp/web.log" ]] && redact_canaries "$acceptance_tmp/web.log" >&2
+    [[ -f "$acceptance_tmp/api.log" ]] && tail -n 120 "$acceptance_tmp/api.log" | redact_canaries >&2
+    [[ -f "$acceptance_tmp/web.log" ]] && tail -n 40 "$acceptance_tmp/web.log" | redact_canaries >&2
   fi
   "$pwcli" --session "$playwright_session" close >/dev/null 2>&1 || true
   if [[ -n "$web_pid" ]]; then
@@ -61,7 +61,7 @@ fi
 
 browser() {
   if ! "$pwcli" "$@" >>"$acceptance_tmp/browser.log" 2>&1; then
-    redact_canaries "$acceptance_tmp/browser.log" >&2
+    tail -n 120 "$acceptance_tmp/browser.log" | redact_canaries >&2
     return 1
   fi
 }
@@ -152,6 +152,8 @@ fi
 
 EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
   go -C "$repository_root/backend" test -count=1 -run '^TestRepositorySerializesCredentialDisableAndModelEnable$' ./internal/data/modelcatalog/gormrepo >/dev/null
+EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
+  go -C "$repository_root/backend" test -count=1 -run '^TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases$' ./internal/data/agentlifecycle/gormrepo >/dev/null
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "INSERT INTO organizations (id, slug, name) VALUES ('22222222-2222-4222-8222-222222222222', 'acme', 'Acme');
@@ -159,8 +161,12 @@ docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d a
    INSERT INTO teams (id, organization_id, slug, name) VALUES
      ('55555555-5555-4555-8555-555555555555', '22222222-2222-4222-8222-222222222222', 'platform', 'Platform Team'),
      ('66666666-6666-4666-8666-666666666666', '22222222-2222-4222-8222-222222222222', 'runtime', 'Runtime Team');
-   INSERT INTO users (id, organization_id, oidc_subject, email, display_name) VALUES ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', '11111111-1111-4111-8111-111111111111', 'platform-user@example.test', 'Platform User');
-   INSERT INTO role_grants (id, organization_id, user_id, role) VALUES ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', 'platform_administrator');
+   INSERT INTO users (id, organization_id, oidc_subject, email, display_name) VALUES
+     ('33333333-3333-4333-8333-333333333333', '22222222-2222-4222-8222-222222222222', '11111111-1111-4111-8111-111111111111', 'platform-user@example.test', 'Platform User'),
+     ('34343434-3434-4434-8434-343434343434', '22222222-2222-4222-8222-222222222222', '12121212-1212-4212-8212-121212121212', 'release-reviewer@example.test', 'Release Reviewer');
+   INSERT INTO role_grants (id, organization_id, team_id, user_id, role) VALUES
+     ('44444444-4444-4444-8444-444444444444', '22222222-2222-4222-8222-222222222222', NULL, '33333333-3333-4333-8333-333333333333', 'platform_administrator'),
+     ('45454545-4545-4545-8545-454545454545', '22222222-2222-4222-8222-222222222222', '66666666-6666-4666-8666-666666666666', '34343434-3434-4434-8434-343434343434', 'agent_builder');
    INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES ('99999999-9999-4999-8999-999999999999', '22222222-2222-4222-8222-222222222222', '55555555-5555-4555-8555-555555555555', 'hidden-team-model-key', 'model', 'vault://acceptance/hidden-team-model');
    INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '22222222-2222-4222-8222-222222222222', '66666666-6666-4666-8666-666666666666', 'acceptance-git-ssh', 'git_ssh', 'env://GIT_PRIVATE_KEY_CANARY');
    INSERT INTO credential_profiles (id, organization_id, team_id, name, kind, secret_ref) VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '22222222-2222-4222-8222-222222222222', '66666666-6666-4666-8666-666666666666', 'acceptance-build', 'build', 'env://BUILD_SECRET_CANARY');
@@ -369,6 +375,106 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.getByTestId(`draft-${draftID}`).waitFor();
   const persisted = await page.getByTestId(`draft-${draftID}`).textContent();
   if (!persisted.match(/Ready/) || !(await page.locator("body").textContent()).includes("acceptance-coding-agent")) throw new Error("Agent or ready Draft did not persist across refresh");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const teamID = "66666666-6666-4666-8666-666666666666";
+  const agentID = (await page.locator(".agent-list > button").filter({ hasText: "acceptance-coding-agent" }).getAttribute("data-testid")).replace("agent-", "");
+  const lowDraftID = (await page.locator(".draft-card").first().getAttribute("data-testid")).replace("draft-", "");
+  const publishRequest = page.waitForRequest((request) => request.url().includes(`/api/v1/agents/${agentID}/drafts/${lowDraftID}/release`) && request.method() === "POST");
+  const publishResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/agents/${agentID}/drafts/${lowDraftID}/release`) && response.request().method() === "POST");
+  await page.getByTestId(`publish-draft-${lowDraftID}`).click();
+  const request = await publishRequest; const response = await publishResponse;
+  if (response.status() !== 201) throw new Error(`low-risk Agent Release failed: ${JSON.stringify(await response.json())}`);
+  const lowReleaseID = (await page.locator(".release-card").first().getAttribute("data-testid")).replace("release-", "");
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const replay = await page.evaluate(async ({ accessToken, agentID, lowDraftID, teamID, key }) => { const result = await fetch(`/api/v1/agents/${agentID}/drafts/${lowDraftID}/release`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ team_id: teamID }) }); return { status: result.status, replayed: result.headers.get("Idempotency-Replayed"), body: await result.json() }; }, { accessToken, agentID, lowDraftID, teamID, key: request.headers()["idempotency-key"] });
+  if (replay.status !== 201 || replay.replayed !== "true" || replay.body.id !== lowReleaseID) throw new Error("Agent Release publish was not idempotently replayed");
+
+  const createHighDraft = async (instructions) => {
+    await page.getByTestId("create-draft").click();
+    await page.getByTestId("draft-instructions").fill(instructions);
+    await page.getByTestId("draft-risk").selectOption("high");
+    const created = page.waitForResponse((result) => result.url().includes(`/api/v1/agents/${agentID}/drafts`) && result.request().method() === "POST");
+    await page.getByTestId("submit-draft").click();
+    const createdResponse = await created;
+    if (createdResponse.status() !== 201) throw new Error("high-risk Draft creation failed");
+    const draftID = (await createdResponse.json()).id;
+    const validated = page.waitForResponse((result) => result.url().includes(`/drafts/${draftID}/validation`) && result.request().method() === "POST");
+    await page.getByTestId(`validate-draft-${draftID}`).click();
+    if ((await validated).status() !== 200) throw new Error("high-risk Draft validation failed");
+    await page.getByTestId(`request-release-approval-${draftID}`).click();
+    await page.getByTestId("approval-risk-reason").fill(`High-risk capability: ${instructions}`);
+    const requested = page.waitForResponse((result) => result.url().includes(`/drafts/${draftID}/approval`) && result.request().method() === "POST");
+    await page.getByTestId("submit-release-approval").click();
+    if ((await requested).status() !== 201) throw new Error("Release Approval request failed");
+    return draftID;
+  };
+  const highA = await createHighDraft("High risk A");
+  const highB = await createHighDraft("High risk B");
+  const currentApproval = await page.evaluate(async ({ accessToken, agentID, highA, teamID }) => fetch(`/api/v1/agents/${agentID}/drafts/${highA}/approval?team_id=${teamID}`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((result) => result.json()), { accessToken, agentID, highA, teamID });
+  const selfDecision = await page.evaluate(async ({ accessToken, agentID, highA, teamID, currentApproval }) => { const result = await fetch(`/api/v1/agents/${agentID}/drafts/${highA}/approval`, { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "release-self-approval", "If-Match": `"${currentApproval.version}"` }, body: JSON.stringify({ team_id: teamID, approved: true, reason: "self" }) }); return { status: result.status, body: await result.json() }; }, { accessToken, agentID, highA, teamID, currentApproval });
+  if (selfDecision.status !== 422 || selfDecision.body.error !== "invalid_agent_lifecycle_resource") throw new Error("Release Approval requester approved their own request");
+  await page.evaluate(({ agentID, lowReleaseID, highA, highB }) => { sessionStorage.setItem("acceptance-agent-id", agentID); sessionStorage.setItem("acceptance-low-release-id", lowReleaseID); sessionStorage.setItem("acceptance-high-a", highA); sessionStorage.setItem("acceptance-high-b", highB); }, { agentID, lowReleaseID, highA, highB });
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("release-reviewer"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=66666666/); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => ({ highA: sessionStorage.getItem("acceptance-high-a"), highB: sessionStorage.getItem("acceptance-high-b"), lowReleaseID: sessionStorage.getItem("acceptance-low-release-id") }));
+  for (const draftID of [values.highA, values.highB]) {
+    const decision = page.waitForResponse((response) => response.url().includes(`/drafts/${draftID}/approval`) && response.request().method() === "PATCH");
+    await page.getByTestId(`approve-release-${draftID}`).click();
+    await page.getByTestId("submit-release-decision").click();
+    if ((await decision).status() !== 200) throw new Error("second Builder could not approve Release Approval");
+  }
+  if (await page.locator("[data-testid^=block-release-]").count()) throw new Error("Team Agent Builder was shown Organization-only Block controls");
+  const deprecated = page.waitForResponse((response) => response.url().includes(`/releases/${values.lowReleaseID}/deprecation`) && response.request().method() === "POST");
+  await page.getByTestId(`deprecate-release-${values.lowReleaseID}`).click();
+  if ((await deprecated).status() !== 200) throw new Error("Agent Builder could not deprecate a Release");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("platform-user"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=55555555/); await page.getByTestId("team-select").selectOption("66666666-6666-4666-8666-666666666666"); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => ({ agentID: sessionStorage.getItem("acceptance-agent-id"), highA: sessionStorage.getItem("acceptance-high-a"), highB: sessionStorage.getItem("acceptance-high-b") }));
+  const publishRequest = page.waitForRequest((request) => request.url().includes(`/drafts/${values.highA}/release`) && request.method() === "POST");
+  const published = page.waitForResponse((response) => response.url().includes(`/drafts/${values.highA}/release`) && response.request().method() === "POST");
+  await page.getByTestId(`publish-draft-${values.highA}`).click();
+  const request = await publishRequest; const response = await published;
+  if (response.status() !== 201) throw new Error(`approved high-risk publish failed: ${JSON.stringify(await response.json())}`);
+  const releaseBody = await response.json();
+  const releaseCard = page.getByTestId(`release-${releaseBody.id}`);
+  const releaseText = await releaseCard.textContent();
+  if (!releaseText.includes("registry.example/codex@sha256") || !releaseText.includes("acceptance-primary") || !releaseText.includes("acceptance-repository") || !releaseText.includes("High-risk capability: High risk A")) throw new Error("immutable Release snapshots or approval evidence were not rendered");
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const replay = await page.evaluate(async ({ accessToken, values, key }) => { const result = await fetch(`/api/v1/agents/${values.agentID}/drafts/${values.highA}/release`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666" }) }); return { status: result.status, replayed: result.headers.get("Idempotency-Replayed"), body: await result.json() }; }, { accessToken, values, key: request.headers()["idempotency-key"] });
+  if (replay.status !== 201 || replay.replayed !== "true" || replay.body.id !== releaseBody.id) throw new Error("high-risk Agent Release publish was not replayed");
+  await page.getByTestId(`edit-draft-${values.highB}`).click();
+  await page.getByTestId("draft-instructions").fill("High risk B edited after approval");
+  const edited = page.waitForResponse((result) => result.url().includes(`/drafts/${values.highB}`) && result.request().method() === "PATCH");
+  await page.getByTestId("submit-draft").click(); if ((await edited).status() !== 200) throw new Error("approved Draft edit failed");
+  const validated = page.waitForResponse((result) => result.url().includes(`/drafts/${values.highB}/validation`) && result.request().method() === "POST");
+  await page.getByTestId(`validate-draft-${values.highB}`).click(); if ((await validated).status() !== 200) throw new Error("edited high-risk Draft did not revalidate");
+  await page.getByTestId(`request-release-approval-${values.highB}`).waitFor();
+  await page.getByTestId(`publish-draft-${values.highB}`).waitFor({ state: "detached" });
+  await page.evaluate(({ releaseID }) => sessionStorage.setItem("acceptance-high-release-id", releaseID), { releaseID: releaseBody.id });
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("release-reviewer"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=66666666/); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => ({ agentID: sessionStorage.getItem("acceptance-agent-id"), releaseID: sessionStorage.getItem("acceptance-high-release-id") }));
+  if (await page.getByTestId(`block-release-${values.releaseID}`).count()) throw new Error("Team Agent Builder was shown Block action");
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const denied = await page.evaluate(async ({ accessToken, values }) => { const result = await fetch(`/api/v1/agents/${values.agentID}/releases/${values.releaseID}/block`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "release-block-denied", "If-Match": "1" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", reason: "unauthorized" }) }); return { status: result.status, body: await result.json() }; }, { accessToken, values });
+  if (denied.status !== 403 || denied.body.error !== "agent_build_access_denied") throw new Error("Team Agent Builder blocked an Agent Release");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("platform-user"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=55555555/); await page.getByTestId("team-select").selectOption("66666666-6666-4666-8666-666666666666"); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
+browser --session "$playwright_session" run-code 'async (page) => {
+  const releaseID = await page.evaluate(() => sessionStorage.getItem("acceptance-high-release-id"));
+  await page.getByTestId(`block-release-${releaseID}`).click(); await page.getByTestId("block-release-reason").fill("Emergency acceptance policy response");
+  const blocked = page.waitForResponse((response) => response.url().includes(`/releases/${releaseID}/block`) && response.request().method() === "POST");
+  await page.getByTestId("submit-block-release").click(); if ((await blocked).status() !== 200) throw new Error("Organization Platform Administrator could not Block Release");
+  await page.getByTestId(`release-${releaseID}`).filter({ hasText: "Emergency acceptance policy response" }).waitFor();
 }'
 
 browser --session "$playwright_session" run-code 'async (page) => {

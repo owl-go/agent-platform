@@ -27,6 +27,7 @@ func TestOpenAPIPathsMatchRegisteredRoutes(t *testing.T) {
 		"GET /v1/agents/{agent_id}",
 		"GET /v1/agents/{agent_id}/drafts",
 		"GET /v1/agents/{agent_id}/drafts/{draft_id}",
+		"GET /v1/agents/{agent_id}/drafts/{draft_id}/approval",
 		"GET /v1/agents/{agent_id}/memories",
 		"GET /v1/agents/{agent_id}/releases",
 		"GET /v1/agents/{agent_id}/releases/{release_id}",

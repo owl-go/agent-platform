@@ -119,6 +119,24 @@ describe("PlatformApi", () => {
     expect(headers.get("If-Match")).toBe('"2"');
   });
 
+  it("keeps Release Approval distinct and protects Release status writes", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "release-1", version: 3 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.requestAgentDraftApproval("agent-1", "draft-1", "team-1", "Runtime-native Subagents", "approval-intent");
+    await api.blockAgentRelease("agent-1", "release-1", "team-1", "Emergency policy response", 2, "block-intent");
+
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/agents/agent-1/drafts/draft-1/approval");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ team_id: "team-1", risk_reason: "Runtime-native Subagents" });
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(url).toBe("/api/v1/agents/agent-1/releases/release-1/block");
+    expect(JSON.parse(String(init?.body))).toEqual({ team_id: "team-1", reason: "Emergency policy response" });
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("block-intent");
+    expect(headers.get("If-Match")).toBe('"2"');
+  });
+
   it("fails before fetch when the authenticated token is unavailable", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

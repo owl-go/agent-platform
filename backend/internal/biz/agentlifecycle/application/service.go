@@ -27,19 +27,24 @@ type DraftValidator interface {
 	Validate(context.Context, domain.Agent, domain.Draft) (map[string]string, error)
 }
 
+type ReleaseDependencyResolver interface {
+	PrepareRelease(context.Context, domain.Agent, domain.Draft) (domain.ReleaseDependencies, map[string]string, error)
+}
+
 type Service struct {
-	repository domain.Repository
-	validator  DraftValidator
-	clock      Clock
-	ids        IDGenerator
+	repository          domain.Repository
+	validator           DraftValidator
+	releaseDependencies ReleaseDependencyResolver
+	clock               Clock
+	ids                 IDGenerator
 }
 
-func New(repository domain.Repository, validator DraftValidator) *Service {
-	return NewWithDependencies(repository, validator, systemClock{}, uuidGenerator{})
+func New(repository domain.Repository, validator DraftValidator, releaseDependencies ReleaseDependencyResolver) *Service {
+	return NewWithDependencies(repository, validator, releaseDependencies, systemClock{}, uuidGenerator{})
 }
 
-func NewWithDependencies(repository domain.Repository, validator DraftValidator, clock Clock, ids IDGenerator) *Service {
-	return &Service{repository: repository, validator: validator, clock: clock, ids: ids}
+func NewWithDependencies(repository domain.Repository, validator DraftValidator, releaseDependencies ReleaseDependencyResolver, clock Clock, ids IDGenerator) *Service {
+	return &Service{repository: repository, validator: validator, releaseDependencies: releaseDependencies, clock: clock, ids: ids}
 }
 
 type CreateAgentCommand struct {
@@ -193,7 +198,7 @@ func (service *Service) ValidateDraft(ctx context.Context, organizationID, teamI
 	return draft, nil
 }
 
-func (service *Service) RequestApproval(ctx context.Context, organizationID, teamID, agentID, draftID, requestedBy string) (domain.ReleaseApproval, error) {
+func (service *Service) RequestApproval(ctx context.Context, organizationID, teamID, agentID, draftID, requestedBy, riskReason string) (domain.ReleaseApproval, error) {
 	draft, err := service.GetDraft(ctx, organizationID, teamID, agentID, draftID)
 	if err != nil {
 		return domain.ReleaseApproval{}, err
@@ -201,7 +206,7 @@ func (service *Service) RequestApproval(ctx context.Context, organizationID, tea
 	if draft.ReleaseRisk != domain.ReleaseRiskHigh || draft.State != domain.DraftStateReady {
 		return domain.ReleaseApproval{}, domain.ErrApprovalRequired
 	}
-	approval, err := domain.RequestReleaseApproval(service.ids.NewID(), draft.ID, draft.Version, requestedBy, service.clock.Now())
+	approval, err := domain.RequestReleaseApproval(service.ids.NewID(), draft.ID, draft.Version, requestedBy, riskReason, service.clock.Now())
 	if err != nil {
 		return domain.ReleaseApproval{}, err
 	}
@@ -209,6 +214,13 @@ func (service *Service) RequestApproval(ctx context.Context, organizationID, tea
 		return domain.ReleaseApproval{}, err
 	}
 	return approval, nil
+}
+
+func (service *Service) GetApproval(ctx context.Context, organizationID, teamID, agentID, draftID string) (domain.ReleaseApproval, error) {
+	if _, err := service.GetDraft(ctx, organizationID, teamID, agentID, draftID); err != nil {
+		return domain.ReleaseApproval{}, err
+	}
+	return service.repository.GetApprovalByDraft(ctx, draftID)
 }
 
 func (service *Service) DecideApproval(ctx context.Context, organizationID, teamID, agentID, draftID string, expectedVersion int64, approved bool, decidedBy, reason string) (domain.ReleaseApproval, error) {
@@ -236,8 +248,8 @@ func (service *Service) DecideApproval(ctx context.Context, organizationID, team
 }
 
 func (service *Service) Publish(ctx context.Context, organizationID, teamID, agentID, draftID, releasedBy string) (domain.Release, error) {
-	if service.validator == nil {
-		return domain.Release{}, fmt.Errorf("Draft Validator is required")
+	if service.releaseDependencies == nil {
+		return domain.Release{}, fmt.Errorf("Agent Release Dependency Resolver is required")
 	}
 	agent, err := service.GetAgent(ctx, organizationID, teamID, agentID)
 	if err != nil {
@@ -250,7 +262,7 @@ func (service *Service) Publish(ctx context.Context, organizationID, teamID, age
 	if err := draft.CanRelease(); err != nil {
 		return domain.Release{}, err
 	}
-	errorsByField, err := service.validator.Validate(ctx, agent, draft)
+	dependencies, errorsByField, err := service.releaseDependencies.PrepareRelease(ctx, agent, draft)
 	if err != nil {
 		return domain.Release{}, fmt.Errorf("revalidate Agent Draft dependencies: %w", err)
 	}
@@ -269,7 +281,7 @@ func (service *Service) Publish(ctx context.Context, organizationID, teamID, age
 		approval = stored.ApprovedRiskApproval()
 	}
 	return service.repository.CreateRelease(ctx, domain.ReleaseRegistration{
-		ID: service.ids.NewID(), Draft: draft, ReleasedBy: releasedBy, Approval: approval, Now: service.clock.Now(),
+		ID: service.ids.NewID(), Draft: draft, ReleasedBy: releasedBy, Approval: approval, Dependencies: dependencies, Now: service.clock.Now(),
 	})
 }
 
@@ -305,7 +317,7 @@ func (service *Service) DeprecateRelease(ctx context.Context, organizationID, te
 	return release, nil
 }
 
-func (service *Service) BlockRelease(ctx context.Context, organizationID, teamID, agentID, releaseID string, expectedVersion int64) (domain.Release, error) {
+func (service *Service) BlockRelease(ctx context.Context, organizationID, teamID, agentID, releaseID string, expectedVersion int64, reason string) (domain.Release, error) {
 	release, err := service.GetRelease(ctx, organizationID, teamID, agentID, releaseID)
 	if err != nil {
 		return domain.Release{}, err
@@ -314,9 +326,8 @@ func (service *Service) BlockRelease(ctx context.Context, organizationID, teamID
 		return domain.Release{}, domain.ErrConcurrentUpdate
 	}
 	expected := release.Version
-	release.Block()
-	if release.Version == expected {
-		return release, nil
+	if err := release.Block(reason); err != nil {
+		return domain.Release{}, err
 	}
 	if err := service.repository.UpdateReleaseStatus(ctx, release, expected); err != nil {
 		return domain.Release{}, err

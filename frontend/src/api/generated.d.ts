@@ -139,7 +139,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AgentLifecycleService_GetAgentDraftApproval"];
         put?: never;
         post: operations["AgentLifecycleService_RequestAgentDraftApproval"];
         delete?: never;
@@ -842,6 +842,7 @@ export interface components {
     schemas: {
         AgentLifecycleServiceBlockAgentReleaseBody: {
             team_id?: string;
+            reason?: string;
         };
         AgentLifecycleServiceCreateAgentDraftBody: {
             team_id?: string;
@@ -861,6 +862,7 @@ export interface components {
         };
         AgentLifecycleServiceRequestAgentDraftApprovalBody: {
             team_id?: string;
+            risk_reason?: string;
         };
         AgentLifecycleServiceUpdateAgentBody: {
             team_id?: string;
@@ -1029,6 +1031,12 @@ export interface components {
             deprecated_at?: string;
             /** Format: int64 */
             version?: number;
+            release_risk?: string;
+            repository_binding_snapshot?: components["schemas"]["v1ReleaseRepositoryBindingSnapshot"];
+            runtime_image_snapshot?: components["schemas"]["v1ReleaseRuntimeImageSnapshot"];
+            configured_model_snapshot?: components["schemas"]["v1ReleaseConfiguredModelSnapshot"];
+            approval_evidence?: components["schemas"]["v1ReleaseApprovalEvidence"];
+            blocked_reason?: string;
         };
         v1Artifact: {
             id?: string;
@@ -1316,6 +1324,44 @@ export interface components {
             reason?: string;
             /** Format: int64 */
             version?: number;
+            risk_reason?: string;
+        };
+        v1ReleaseApprovalEvidence: {
+            id?: string;
+            draft_id?: string;
+            /** Format: int64 */
+            draft_version?: number;
+            requested_by?: string;
+            risk_reason?: string;
+            approved_by?: string;
+            /** Format: date-time */
+            approved_at?: string;
+        };
+        v1ReleaseConfiguredModelSnapshot: {
+            id?: string;
+            name?: string;
+            model_id?: string;
+            endpoint?: string;
+        };
+        v1ReleaseRepositoryBindingSnapshot: {
+            id?: string;
+            name?: string;
+            repository_ssh_url?: string;
+            default_branch?: string;
+            instructions?: string;
+            quality_commands?: components["schemas"]["v1QualityCommand"][];
+            egress_policy?: string;
+            required_runtime_capabilities?: string[];
+        };
+        v1ReleaseRuntimeImageSnapshot: {
+            id?: string;
+            runtime?: string;
+            cli_version?: string;
+            adapter_version?: string;
+            image_digest?: string;
+            capabilities?: {
+                [key: string]: boolean;
+            };
         };
         v1RepositoryBinding: {
             id?: string;
@@ -1916,6 +1962,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1AgentDraft"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentLifecycleService_GetAgentDraftApproval: {
+        parameters: {
+            query?: {
+                team_id?: string;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ReleaseApproval"];
                 };
             };
             /** @description An unexpected error response. */

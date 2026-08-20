@@ -24,6 +24,7 @@ const OperationAgentLifecycleServiceDecideAgentDraftApproval = "/agentlifecycle.
 const OperationAgentLifecycleServiceDeprecateAgentRelease = "/agentlifecycle.v1.AgentLifecycleService/DeprecateAgentRelease"
 const OperationAgentLifecycleServiceGetAgent = "/agentlifecycle.v1.AgentLifecycleService/GetAgent"
 const OperationAgentLifecycleServiceGetAgentDraft = "/agentlifecycle.v1.AgentLifecycleService/GetAgentDraft"
+const OperationAgentLifecycleServiceGetAgentDraftApproval = "/agentlifecycle.v1.AgentLifecycleService/GetAgentDraftApproval"
 const OperationAgentLifecycleServiceGetAgentRelease = "/agentlifecycle.v1.AgentLifecycleService/GetAgentRelease"
 const OperationAgentLifecycleServiceListAgentDrafts = "/agentlifecycle.v1.AgentLifecycleService/ListAgentDrafts"
 const OperationAgentLifecycleServiceListAgentReleases = "/agentlifecycle.v1.AgentLifecycleService/ListAgentReleases"
@@ -42,6 +43,7 @@ type AgentLifecycleServiceHTTPServer interface {
 	DeprecateAgentRelease(context.Context, *DeprecateAgentReleaseRequest) (*AgentRelease, error)
 	GetAgent(context.Context, *GetAgentRequest) (*Agent, error)
 	GetAgentDraft(context.Context, *GetAgentDraftRequest) (*AgentDraft, error)
+	GetAgentDraftApproval(context.Context, *GetAgentDraftApprovalRequest) (*ReleaseApproval, error)
 	GetAgentRelease(context.Context, *GetAgentReleaseRequest) (*AgentRelease, error)
 	ListAgentDrafts(context.Context, *ListAgentDraftsRequest) (*ListAgentDraftsResponse, error)
 	ListAgentReleases(context.Context, *ListAgentReleasesRequest) (*ListAgentReleasesResponse, error)
@@ -65,6 +67,7 @@ func RegisterAgentLifecycleServiceHTTPServer(s *http.Server, srv AgentLifecycleS
 	r.Handle("PATCH", "/v1/agents/{agent_id}/drafts/{draft_id}", _AgentLifecycleService_UpdateAgentDraft0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/agents/{agent_id}/drafts/{draft_id}/validation", _AgentLifecycleService_ValidateAgentDraft0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/agents/{agent_id}/drafts/{draft_id}/approval", _AgentLifecycleService_RequestAgentDraftApproval0_HTTP_Handler(srv))
+	r.Handle("GET", "/v1/agents/{agent_id}/drafts/{draft_id}/approval", _AgentLifecycleService_GetAgentDraftApproval0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/v1/agents/{agent_id}/drafts/{draft_id}/approval", _AgentLifecycleService_DecideAgentDraftApproval0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/agents/{agent_id}/drafts/{draft_id}/release", _AgentLifecycleService_PublishAgentDraft0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/agents/{agent_id}/releases", _AgentLifecycleService_ListAgentReleases0_HTTP_Handler(srv))
@@ -287,6 +290,28 @@ func _AgentLifecycleService_RequestAgentDraftApproval0_HTTP_Handler(srv AgentLif
 	}
 }
 
+func _AgentLifecycleService_GetAgentDraftApproval0_HTTP_Handler(srv AgentLifecycleServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetAgentDraftApprovalRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentLifecycleServiceGetAgentDraftApproval)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetAgentDraftApproval(ctx, req.(*GetAgentDraftApprovalRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ReleaseApproval)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentLifecycleService_DecideAgentDraftApproval0_HTTP_Handler(srv AgentLifecycleServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in DecideAgentDraftApprovalRequest
@@ -427,6 +452,7 @@ type AgentLifecycleServiceHTTPClient interface {
 	DeprecateAgentRelease(ctx context.Context, req *DeprecateAgentReleaseRequest, opts ...http.CallOption) (rsp *AgentRelease, err error)
 	GetAgent(ctx context.Context, req *GetAgentRequest, opts ...http.CallOption) (rsp *Agent, err error)
 	GetAgentDraft(ctx context.Context, req *GetAgentDraftRequest, opts ...http.CallOption) (rsp *AgentDraft, err error)
+	GetAgentDraftApproval(ctx context.Context, req *GetAgentDraftApprovalRequest, opts ...http.CallOption) (rsp *ReleaseApproval, err error)
 	GetAgentRelease(ctx context.Context, req *GetAgentReleaseRequest, opts ...http.CallOption) (rsp *AgentRelease, err error)
 	ListAgentDrafts(ctx context.Context, req *ListAgentDraftsRequest, opts ...http.CallOption) (rsp *ListAgentDraftsResponse, err error)
 	ListAgentReleases(ctx context.Context, req *ListAgentReleasesRequest, opts ...http.CallOption) (rsp *ListAgentReleasesResponse, err error)
@@ -554,6 +580,22 @@ func (c *AgentLifecycleServiceHTTPClientImpl) GetAgentDraft(ctx context.Context,
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentLifecycleServiceGetAgentDraft),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentLifecycleServiceHTTPClientImpl) GetAgentDraftApproval(ctx context.Context, in *GetAgentDraftApprovalRequest, opts ...http.CallOption) (*ReleaseApproval, error) {
+	var out ReleaseApproval
+	pattern := "/v1/agents/{agent_id}/drafts/{draft_id}/approval"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentLifecycleServiceGetAgentDraftApproval),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

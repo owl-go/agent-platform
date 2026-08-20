@@ -222,25 +222,32 @@ type draftResponse struct {
 	Version          int64                         `json:"version"`
 }
 type releaseResponse struct {
-	ID                  string                    `json:"id"`
-	AgentID             string                    `json:"agent_id"`
-	ReleaseNumber       int64                     `json:"release_number"`
-	SourceDraftID       string                    `json:"source_draft_id"`
-	RuntimeImageID      string                    `json:"runtime_image_id"`
-	ConfiguredModelID   string                    `json:"configured_model_id"`
-	RepositoryBindingID string                    `json:"repository_binding_id"`
-	Configuration       agentdomain.Configuration `json:"configuration"`
-	Status              agentdomain.ReleaseStatus `json:"status"`
-	ReleasedBy          string                    `json:"released_by"`
-	ReleasedAt          time.Time                 `json:"released_at"`
-	DeprecatedAt        *time.Time                `json:"deprecated_at"`
-	Version             int64                     `json:"version"`
+	ID                  string                                `json:"id"`
+	AgentID             string                                `json:"agent_id"`
+	ReleaseNumber       int64                                 `json:"release_number"`
+	SourceDraftID       string                                `json:"source_draft_id"`
+	RuntimeImageID      string                                `json:"runtime_image_id"`
+	ConfiguredModelID   string                                `json:"configured_model_id"`
+	RepositoryBindingID string                                `json:"repository_binding_id"`
+	Configuration       agentdomain.Configuration             `json:"configuration"`
+	ReleaseRisk         agentdomain.ReleaseRisk               `json:"release_risk"`
+	RepositoryBinding   agentdomain.RepositoryBindingSnapshot `json:"repository_binding_snapshot"`
+	RuntimeImage        agentdomain.RuntimeImageSnapshot      `json:"runtime_image_snapshot"`
+	ConfiguredModel     agentdomain.ConfiguredModelSnapshot   `json:"configured_model_snapshot"`
+	ApprovalEvidence    *agentdomain.RiskApproval             `json:"approval_evidence,omitempty"`
+	Status              agentdomain.ReleaseStatus             `json:"status"`
+	BlockedReason       string                                `json:"blocked_reason,omitempty"`
+	ReleasedBy          string                                `json:"released_by"`
+	ReleasedAt          time.Time                             `json:"released_at"`
+	DeprecatedAt        *time.Time                            `json:"deprecated_at"`
+	Version             int64                                 `json:"version"`
 }
 type approvalResponse struct {
 	ID           string                    `json:"id"`
 	DraftID      string                    `json:"draft_id"`
 	DraftVersion int64                     `json:"draft_version"`
 	RequestedBy  string                    `json:"requested_by"`
+	RiskReason   string                    `json:"risk_reason"`
 	State        agentdomain.ApprovalState `json:"state"`
 	RequestedAt  time.Time                 `json:"requested_at"`
 	DecidedBy    string                    `json:"decided_by,omitempty"`
@@ -256,10 +263,10 @@ func newDraftResponse(value agentdomain.Draft) draftResponse {
 	return draftResponse{ID: value.ID, AgentID: value.AgentID, Revision: value.Revision, State: value.State, Configuration: value.Configuration, ReleaseRisk: value.ReleaseRisk, ValidationReport: value.ValidationReport, CreatedBy: value.CreatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 func newReleaseResponse(value agentdomain.Release) releaseResponse {
-	return releaseResponse{ID: value.ID, AgentID: value.AgentID, ReleaseNumber: value.ReleaseNumber, SourceDraftID: value.SourceDraftID, RuntimeImageID: value.RuntimeImageID, ConfiguredModelID: value.ConfiguredModelID, RepositoryBindingID: value.RepositoryBindingID, Configuration: value.Configuration, Status: value.Status, ReleasedBy: value.ReleasedBy, ReleasedAt: value.ReleasedAt, DeprecatedAt: value.DeprecatedAt, Version: value.Version}
+	return releaseResponse{ID: value.ID, AgentID: value.AgentID, ReleaseNumber: value.ReleaseNumber, SourceDraftID: value.SourceDraftID, RuntimeImageID: value.RuntimeImageID, ConfiguredModelID: value.ConfiguredModelID, RepositoryBindingID: value.RepositoryBindingID, Configuration: value.Configuration, ReleaseRisk: value.ReleaseRisk, RepositoryBinding: value.Dependencies.RepositoryBinding, RuntimeImage: value.Dependencies.RuntimeImage, ConfiguredModel: value.Dependencies.ConfiguredModel, ApprovalEvidence: value.ApprovalEvidence, Status: value.Status, BlockedReason: value.BlockedReason, ReleasedBy: value.ReleasedBy, ReleasedAt: value.ReleasedAt, DeprecatedAt: value.DeprecatedAt, Version: value.Version}
 }
 func newApprovalResponse(value agentdomain.ReleaseApproval) approvalResponse {
-	return approvalResponse{ID: value.ID, DraftID: value.DraftID, DraftVersion: value.DraftVersion, RequestedBy: value.RequestedBy, State: value.State, RequestedAt: value.RequestedAt, DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt, Reason: value.Reason, Version: value.Version}
+	return approvalResponse{ID: value.ID, DraftID: value.DraftID, DraftVersion: value.DraftVersion, RequestedBy: value.RequestedBy, RiskReason: value.RiskReason, State: value.State, RequestedAt: value.RequestedAt, DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt, Reason: value.Reason, Version: value.Version}
 }
 
 type taskResponse struct {
