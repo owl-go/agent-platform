@@ -38,6 +38,7 @@ func (repository *Repository) CreateQueuedRun(ctx context.Context, queued domain
 		RuntimeImageID: queued.RuntimeImageID, RequestText: queued.RequestText, State: string(domain.Queued),
 		ModelBinding: jsonValue(queued.ModelBinding), CredentialBindings: jsonValue(queued.CredentialBindings),
 		ModelBudget: jsonValue(queued.ModelBudget), ExecutionLimits: jsonValue(queued.ExecutionLimits),
+		Usage: jsonValue(`{}`), CostAmount: "0", Version: 1,
 		CreatedBy: queued.CreatedBy, CreatedAt: queued.CreatedAt.UTC(), UpdatedAt: queued.CreatedAt.UTC(),
 	}
 	if err := repository.db.WithContext(ctx).Create(&record).Error; err != nil {
@@ -280,13 +281,32 @@ func (repository *Repository) Claim(ctx context.Context, workerID string, durati
 		}, now); err != nil {
 			return err
 		}
-		var runtimeImage runtimeImageRecord
-		if err := tx.Where("id = ?", record.RuntimeImageID).Take(&runtimeImage).Error; err != nil {
-			return fmt.Errorf("load claimed Run Runtime Image: %w", err)
+		var release releaseExecutionRecord
+		if err := tx.Where("id = ?", record.AgentReleaseID).Take(&release).Error; err != nil {
+			return fmt.Errorf("load claimed Run Agent Release snapshots: %w", err)
 		}
-		var binding repositoryBindingRecord
-		if err := tx.Where("id = ?", session.RepositoryBindingID).Take(&binding).Error; err != nil {
-			return fmt.Errorf("load claimed Run Repository Binding: %w", err)
+		var runtimeImage struct {
+			ID             string          `json:"id"`
+			Runtime        string          `json:"runtime"`
+			CLIVersion     string          `json:"cli_version"`
+			AdapterVersion string          `json:"adapter_version"`
+			ImageDigest    string          `json:"image_digest"`
+			Capabilities   json.RawMessage `json:"capabilities"`
+		}
+		if err := json.Unmarshal(release.RuntimeImageSnapshot, &runtimeImage); err != nil || runtimeImage.ID != record.RuntimeImageID ||
+			runtimeImage.Runtime == "" || runtimeImage.CLIVersion == "" || runtimeImage.AdapterVersion == "" || runtimeImage.ImageDigest == "" || len(runtimeImage.Capabilities) == 0 {
+			return fmt.Errorf("claimed Run has an invalid frozen Runtime Image snapshot")
+		}
+		var binding struct {
+			ID               string          `json:"id"`
+			RepositorySSHURL string          `json:"repository_ssh_url"`
+			GitAuthorName    string          `json:"git_author_name"`
+			GitAuthorEmail   string          `json:"git_author_email"`
+			QualityCommands  json.RawMessage `json:"quality_commands"`
+		}
+		if err := json.Unmarshal(release.RepositoryBindingSnapshot, &binding); err != nil || binding.ID != session.RepositoryBindingID ||
+			binding.RepositorySSHURL == "" || binding.GitAuthorName == "" || binding.GitAuthorEmail == "" || len(binding.QualityCommands) == 0 {
+			return fmt.Errorf("claimed Run has an invalid frozen Repository Binding snapshot")
 		}
 		claimed = domain.Lease{
 			RunID: run.ID, SessionID: run.SessionID, AttemptID: attemptID, AttemptNumber: attemptNumber,
@@ -295,10 +315,10 @@ func (repository *Repository) Claim(ctx context.Context, workerID string, durati
 			ModelBudget: cloneJSON(record.ModelBudget), ExecutionLimits: cloneJSON(record.ExecutionLimits), ExpiresAt: expiresAt,
 			RuntimeName: runtimeImage.Runtime, RuntimeCLIVersion: runtimeImage.CLIVersion,
 			AdapterVersion: runtimeImage.AdapterVersion, ImageDigest: runtimeImage.ImageDigest,
-			Capabilities: cloneJSON(runtimeImage.Capabilities), WorkspaceVolume: session.WorkspaceVolume,
+			Capabilities: cloneJSON(jsonValue(runtimeImage.Capabilities)), WorkspaceVolume: session.WorkspaceVolume,
 			RepositorySSHURL: binding.RepositorySSHURL, TargetBranch: session.TargetBranch, ReviewBranch: session.ReviewBranch,
 			GitAuthorName: binding.GitAuthorName, GitAuthorEmail: binding.GitAuthorEmail,
-			QualityCommands: cloneJSON(binding.QualityCommands),
+			QualityCommands: cloneJSON(jsonValue(binding.QualityCommands)),
 		}
 		found = true
 		return nil

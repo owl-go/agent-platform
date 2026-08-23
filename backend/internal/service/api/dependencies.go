@@ -107,6 +107,7 @@ type CollaborationAccessController interface {
 	AuthorizeTaskUse(context.Context, string, string) (identitydomain.Actor, error)
 }
 type CollaborationReader interface {
+	ListLaunchOptions(context.Context, string, string) (collaborationdomain.LaunchCatalog, error)
 	GetTask(context.Context, string, string, string) (collaborationdomain.Task, error)
 	ListTasks(context.Context, string, string) ([]collaborationdomain.Task, error)
 	GetSession(context.Context, string, string, string) (collaborationdomain.Session, error)

@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -153,6 +154,12 @@ func validateIssueSnapshot(snapshot *IssueSnapshot) error {
 	}
 	if strings.TrimSpace(snapshot.Title) == "" || len(snapshot.Title) > 500 || len(snapshot.Body) > 100_000 || len(snapshot.URL) > 2_000 {
 		return fmt.Errorf("Issue Snapshot title is required and fields must remain within limits")
+	}
+	if snapshot.URL != "" {
+		parsed, err := url.ParseRequestURI(snapshot.URL)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+			return fmt.Errorf("Issue Snapshot URL must be an absolute HTTPS URL without user information")
+		}
 	}
 	return nil
 }

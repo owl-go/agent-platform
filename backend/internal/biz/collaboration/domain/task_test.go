@@ -63,3 +63,21 @@ func TestSessionRejectsUnsafeReviewBranch(t *testing.T) {
 		t.Fatal("expected unsafe branch rejection")
 	}
 }
+
+func TestCodingTaskRejectsUntrustedIssueSnapshotURL(t *testing.T) {
+	_, err := RegisterTask(TaskRegistration{
+		ID: "task", OrganizationID: "org", TeamID: "team", AgentReleaseID: "release", CreatedBy: "user",
+		Title: "Unsafe issue", RequestText: "Do not execute this URL.",
+		IssueSnapshot: &IssueSnapshot{Title: "Unsafe issue", Body: "body", URL: "javascript:alert(1)"}, Now: time.Now(),
+	})
+	if err == nil {
+		t.Fatal("expected non-HTTPS Issue Snapshot URL rejection")
+	}
+	if _, err := RegisterTask(TaskRegistration{
+		ID: "task", OrganizationID: "org", TeamID: "team", AgentReleaseID: "release", CreatedBy: "user",
+		Title: "Safe issue", RequestText: "Use the immutable snapshot.",
+		IssueSnapshot: &IssueSnapshot{Title: "Safe issue", Body: "body", URL: "https://git.example.test/issues/42"}, Now: time.Now(),
+	}); err != nil {
+		t.Fatalf("expected HTTPS Issue Snapshot URL: %v", err)
+	}
+}

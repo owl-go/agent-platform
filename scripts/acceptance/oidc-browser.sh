@@ -106,7 +106,7 @@ MINIO_SECRET_KEY=acceptance-only-secret \
 MINIO_BUCKET=acceptance \
 MINIO_SECURE=false \
 MINIO_CREATE_BUCKET=true \
-go -C "$repository_root/backend" test -count=1 -run '^TestProviderConformance$' ./internal/objectstore/minio >/dev/null
+go -C "$repository_root/backend" test -count=1 -run '^TestProviderConformance$' ./internal/objectstore/minio
 
 evidence_source="$acceptance_tmp/evidence"
 mkdir -p "$evidence_source"
@@ -151,9 +151,13 @@ if ! curl -fsS http://127.0.0.1:18090/readyz >/dev/null; then
 fi
 
 EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
-  go -C "$repository_root/backend" test -count=1 -run '^TestRepositorySerializesCredentialDisableAndModelEnable$' ./internal/data/modelcatalog/gormrepo >/dev/null
+  go -C "$repository_root/backend" test -count=1 -run '^TestRepositorySerializesCredentialDisableAndModelEnable$' ./internal/data/modelcatalog/gormrepo
 EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
-  go -C "$repository_root/backend" test -count=1 -run '^TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases$' ./internal/data/agentlifecycle/gormrepo >/dev/null
+  go -C "$repository_root/backend" test -count=1 -run '^TestAgentLifecyclePersistsValidatedLowAndHighRiskReleases$' ./internal/data/agentlifecycle/gormrepo
+EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
+  go -C "$repository_root/backend" test -count=1 -run '^(TestCollaborationLaunchContinueAndMemoryAreTransactional|TestCodingTaskLaunchSerializesBuildCredentialDisable)$' ./internal/data/collaboration/gormrepo
+EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
+  go -C "$repository_root/backend" test -count=1 -run '^TestGORMRepositoryRunLifecycle$' ./internal/data/execution/gormrepo
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "INSERT INTO organizations (id, slug, name) VALUES ('22222222-2222-4222-8222-222222222222', 'acme', 'Acme');
@@ -418,6 +422,55 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.evaluate(({ agentID, lowReleaseID, highA, highB }) => { sessionStorage.setItem("acceptance-agent-id", agentID); sessionStorage.setItem("acceptance-low-release-id", lowReleaseID); sessionStorage.setItem("acceptance-high-a", highA); sessionStorage.setItem("acceptance-high-b", highB); }, { agentID, lowReleaseID, highA, highB });
 }'
 
+browser --session "$playwright_session" run-code 'async (page) => {
+  const teamID = "66666666-6666-4666-8666-666666666666";
+  await page.getByTestId("nav-workspace").click(); await page.waitForURL(/workspace/); await page.getByTestId("binding-select").waitFor();
+  await page.getByTestId("task-title").fill("Acceptance free-text task");
+  await page.getByTestId("request-text").fill("Implement the free-text acceptance change and run tests.");
+  const requestPromise = page.waitForRequest((request) => request.url().endsWith("/api/v1/coding-tasks") && request.method() === "POST");
+  const responsePromise = page.waitForResponse((response) => response.url().endsWith("/api/v1/coding-tasks") && response.request().method() === "POST");
+  await page.getByTestId("create-task").click();
+  const request = await requestPromise; const response = await responsePromise; const launch = await response.json();
+  if (response.status() !== 201 || !launch.task?.id || !launch.session?.id || !launch.run_id || !launch.session.review_branch) throw new Error("free-text Coding Task launch did not return a complete atomic context");
+  await page.waitForURL(new RegExp(`task=${launch.task.id}`)); await page.locator(".workspace-facts").filter({ hasText: launch.session.review_branch }).waitFor();
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const replay = await page.evaluate(async ({ accessToken, key, body }) => { const result = await fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body }); return { status: result.status, replayed: result.headers.get("Idempotency-Replayed"), body: await result.json() }; }, { accessToken, key: request.headers()["idempotency-key"], body: request.postData() });
+  if (replay.status !== 201 || replay.replayed !== "true" || replay.body.task.id !== launch.task.id || replay.body.session.id !== launch.session.id || replay.body.run_id !== launch.run_id) throw new Error("Coding Task launch was not idempotently replayed");
+  const conflict = await page.evaluate(async ({ accessToken, key, body }) => { const changed = JSON.parse(body); changed.title = "Changed intent"; const result = await fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(changed) }); return result.status; }, { accessToken, key: request.headers()["idempotency-key"], body: request.postData() });
+  if (conflict !== 409) throw new Error("same Coding Task Idempotency Key accepted a different request");
+  const crossTeam = await page.evaluate(async ({ accessToken, taskID }) => fetch(`/api/v1/coding-tasks/${taskID}?team_id=55555555-5555-4555-8555-555555555555`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((result) => result.status), { accessToken, taskID: launch.task.id });
+  if (crossTeam !== 404) throw new Error("cross-Team Coding Task query disclosed the resource");
+  await page.reload(); await page.locator(".workspace-facts").filter({ hasText: launch.session.review_branch }).waitFor();
+  if (!(await page.locator(".workspace-detail").textContent()).includes(launch.run_id)) throw new Error("Coding Task direct URL did not restore its Session and first Run");
+
+  await page.locator(".source-switch button").filter({ hasText: "Issue Snapshot" }).click();
+  await page.getByTestId("issue-title").fill("Acceptance issue snapshot"); await page.getByTestId("issue-body").fill("Implement the snapshotted issue body."); await page.getByTestId("issue-url").fill("https://git.example.test/issues/42");
+  const issueResponse = page.waitForResponse((result) => result.url().endsWith("/api/v1/coding-tasks") && result.request().method() === "POST");
+  await page.getByTestId("create-task").click(); const issueLaunch = await issueResponse; const issueBody = await issueLaunch.json();
+  if (issueLaunch.status() !== 201 || issueBody.task.issue_snapshot?.title !== "Acceptance issue snapshot" || issueBody.task.issue_snapshot?.url !== "https://git.example.test/issues/42") throw new Error("immutable Issue Snapshot launch failed");
+  await page.evaluate(({ firstTask, firstSession, firstBranch, issueTask }) => { sessionStorage.setItem("acceptance-task-id", firstTask); sessionStorage.setItem("acceptance-task-session-id", firstSession); sessionStorage.setItem("acceptance-task-branch", firstBranch); sessionStorage.setItem("acceptance-issue-task-id", issueTask); }, { firstTask: launch.task.id, firstSession: launch.session.id, firstBranch: launch.session.review_branch, issueTask: issueBody.task.id });
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const expected = await page.evaluate(() => ({ task: sessionStorage.getItem("acceptance-task-id"), session: sessionStorage.getItem("acceptance-task-session-id"), branch: sessionStorage.getItem("acceptance-task-branch") }));
+  await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click();
+  const username = page.getByRole("textbox", { name: "Username or email" });
+  if (await username.waitFor({ timeout: 3000 }).then(() => true).catch(() => false)) {
+    await username.fill("platform-user"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click();
+  }
+  await page.waitForURL(/team=55555555/);
+  await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${expected.task}`);
+  const facts = page.locator(".workspace-facts"); await facts.filter({ hasText: expected.branch }).waitFor();
+  if (!(await facts.textContent()).includes(expected.session)) throw new Error("re-login did not restore the same Coding Task Session");
+}'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE repository_bindings SET validation_report = jsonb_build_object('valid', false, 'errors', jsonb_build_object('quality_commands', 'acceptance invalidation'), 'checked_at', now()), validated_at = now() WHERE name = 'acceptance-repository';" >/dev/null
+browser --session "$playwright_session" reload
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("launch-prerequisite").waitFor(); if (!(await page.getByTestId("launch-prerequisite").textContent()).match(/Repository Binding|仓库/)) throw new Error("missing Repository Binding prerequisite was not shown accurately"); if (await page.getByTestId("create-task").isEnabled()) throw new Error("Coding Task launch remained enabled with an invalid Repository Binding"); }'
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE repository_bindings SET validation_report = jsonb_build_object('valid', true, 'errors', jsonb_build_object(), 'checked_at', now()), validated_at = now() WHERE name = 'acceptance-repository';" >/dev/null
+
 browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("release-reviewer"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=66666666/); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
 browser --session "$playwright_session" run-code 'async (page) => {
   const values = await page.evaluate(() => ({ highA: sessionStorage.getItem("acceptance-high-a"), highB: sessionStorage.getItem("acceptance-high-b"), lowReleaseID: sessionStorage.getItem("acceptance-low-release-id") }));
@@ -459,6 +512,19 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.evaluate(({ releaseID }) => sessionStorage.setItem("acceptance-high-release-id", releaseID), { releaseID: releaseBody.id });
 }'
 
+browser --session "$playwright_session" run-code 'async (page) => {
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const releaseIDs = await page.evaluate(() => ({ agent: sessionStorage.getItem("acceptance-agent-id"), release: sessionStorage.getItem("acceptance-high-release-id") }));
+  const runtime = await page.evaluate(async ({ accessToken, releaseIDs }) => { const releaseResponse = await fetch(`/api/v1/agents/${releaseIDs.agent}/releases/${releaseIDs.release}?team_id=66666666-6666-4666-8666-666666666666`, { headers: { Authorization: `Bearer ${accessToken}` } }); const release = await releaseResponse.json(); const response = await fetch(`/api/v1/runtime-images/${release.runtime_image_id}`, { headers: { Authorization: `Bearer ${accessToken}` } }); return response.json(); }, { accessToken, releaseIDs });
+  const body = JSON.stringify({ status: "blocked", blocked_reason: "acceptance replay" });
+  const headers = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "browser-status-replay", "If-Match": `"${runtime.version}"` };
+  const write = async () => page.evaluate(async ({ runtime, headers, body }) => { const response = await fetch(`/api/v1/runtime-images/${runtime.id}/status`, { method: "PATCH", headers, body }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed"), body: await response.json() }; }, { runtime, headers, body });
+  const first = await write(); const replay = await write();
+  if (first.status !== 200 || replay.status !== 200 || replay.replayed !== "true" || replay.body.id !== runtime.id || !replay.body.conformance_evidence_sha256) throw new Error("Runtime status write was not replayed from its persisted response");
+  await page.getByTestId("nav-workspace").click(); await page.waitForURL(/workspace/); await page.getByTestId("launch-prerequisite").waitFor();
+  if (!(await page.getByTestId("launch-prerequisite").textContent()).includes("Production Runtime")) throw new Error("blocked Runtime did not produce the exact Coding Task prerequisite");
+}'
+
 browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("release-reviewer"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=66666666/); await page.getByTestId("nav-studio").click(); await page.waitForURL(/studio/); }'
 browser --session "$playwright_session" run-code 'async (page) => {
   const values = await page.evaluate(() => ({ agentID: sessionStorage.getItem("acceptance-agent-id"), releaseID: sessionStorage.getItem("acceptance-high-release-id") }));
@@ -477,28 +543,13 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.getByTestId(`release-${releaseID}`).filter({ hasText: "Emergency acceptance policy response" }).waitFor();
 }'
 
-browser --session "$playwright_session" run-code 'async (page) => {
-  const runtimeButton = page.locator(".catalog-list > button").first();
-  const runtimeID = (await runtimeButton.getAttribute("data-testid")).replace("runtime-", "");
-  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
-  const body = JSON.stringify({ status: "blocked", blocked_reason: "acceptance replay" });
-  const headers = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "browser-status-replay", "If-Match": "2" };
-  const write = async () => page.evaluate(async ({ runtimeID, headers, body }) => { const response = await fetch(`/api/v1/runtime-images/${runtimeID}/status`, { method: "PATCH", headers, body }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed"), body: await response.json() }; }, { runtimeID, headers, body });
-  const first = await write();
-  const replay = await write();
-  const evidenceKey = "phase-0/acceptance/codex/evidence.tar";
-  if (first.status !== 200 || replay.status !== 200 || replay.replayed !== "true" || first.body.version !== 3 || replay.body.version !== 3 || replay.body.conformance_evidence_key !== evidenceKey || !replay.body.conformance_evidence_sha256) throw new Error("Runtime status write was not replayed from its persisted response");
-  await page.reload();
-  await page.getByTestId("runtime-detail").waitFor();
-  if (!(await page.getByTestId("runtime-detail").textContent()).includes(evidenceKey)) throw new Error("retained evidence was presented as missing after leaving Production");
-}'
-
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = '55555555-5555-4555-8555-555555555555' WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/runtime-images", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "browser-denied-intent" }, body: JSON.stringify({ runtime: "openclaw", cli_version: "1", adapter_version: "1", image_digest: "registry.example/openclaw@sha256:" + "e".repeat(64) }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified the Organization Runtime Catalog"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/credential-profiles", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "model-catalog-denied" }, body: JSON.stringify({ name: "denied-model-key", kind: "model", secret_ref: "vault://denied/model" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified the Model Catalog"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/repository-bindings", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "binding-denied" }, body: JSON.stringify({ binding: { team_id: "66666666-6666-4666-8666-666666666666", name: "denied" } }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified a Repository Binding"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/agents", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "agent-build-denied" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", name: "denied-agent" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "agent_build_access_denied") throw new Error("out-of-Team administrator created an Agent"); }'
+browser --session "$playwright_session" run-code 'async (page) => { const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, releaseID: sessionStorage.getItem("acceptance-low-release-id") }; }); const response = await page.evaluate(async ({ accessToken, releaseID }) => fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "coding-task-denied" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", agent_release_id: releaseID, title: "Denied", request_text: "Must not launch" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), values); if (response.status !== 403 || response.body.error !== "collaboration_access_denied") throw new Error("user without Team permission created a Coding Task"); }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = NULL WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null

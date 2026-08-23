@@ -3,27 +3,71 @@ package collaboration.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 import "types/v1/types.proto";
 
 option go_package = "agent-platform/backend/api/collaboration/v1;collaborationv1";
 
 service CollaborationService {
+  rpc ListCodingTaskLaunchOptions(ListCodingTaskLaunchOptionsRequest) returns (ListCodingTaskLaunchOptionsResponse) { option (google.api.http) = {get: "/v1/coding-task-launch-options"}; }
   rpc ListCodingTasks(ListCodingTasksRequest) returns (ListCodingTasksResponse) { option (google.api.http) = {get: "/v1/coding-tasks"}; }
-  rpc CreateCodingTask(CreateCodingTaskRequest) returns (CreateCodingTaskResponse) { option (google.api.http) = {post: "/v1/coding-tasks" body: "*"}; }
+  rpc CreateCodingTask(CreateCodingTaskRequest) returns (CreateCodingTaskResponse) {
+    option (google.api.http) = {post: "/v1/coding-tasks" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
   rpc GetCodingTask(GetCodingTaskRequest) returns (CodingTask) { option (google.api.http) = {get: "/v1/coding-tasks/{task_id}"}; }
-  rpc UpdateCodingTask(UpdateCodingTaskRequest) returns (CodingTask) { option (google.api.http) = {patch: "/v1/coding-tasks/{task_id}" body: "*"}; }
-  rpc ContinueCodingTask(ContinueCodingTaskRequest) returns (ContinueCodingTaskResponse) { option (google.api.http) = {post: "/v1/coding-tasks/{task_id}/runs" body: "*"}; }
+  rpc UpdateCodingTask(UpdateCodingTaskRequest) returns (CodingTask) {
+    option (google.api.http) = {patch: "/v1/coding-tasks/{task_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc ContinueCodingTask(ContinueCodingTaskRequest) returns (ContinueCodingTaskResponse) {
+    option (google.api.http) = {post: "/v1/coding-tasks/{task_id}/runs" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
   rpc GetCodingTaskSession(GetCodingTaskSessionRequest) returns (Session) { option (google.api.http) = {get: "/v1/coding-tasks/{task_id}/session"}; }
-  rpc UpdateCodingTaskSession(UpdateCodingTaskSessionRequest) returns (Session) { option (google.api.http) = {patch: "/v1/coding-tasks/{task_id}/session" body: "*"}; }
+  rpc UpdateCodingTaskSession(UpdateCodingTaskSessionRequest) returns (Session) {
+    option (google.api.http) = {patch: "/v1/coding-tasks/{task_id}/session" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
   rpc ListSessionMessages(ListSessionMessagesRequest) returns (ListSessionMessagesResponse) { option (google.api.http) = {get: "/v1/coding-tasks/{task_id}/messages"}; }
   rpc ListMemoryCandidates(ListMemoryCandidatesRequest) returns (ListMemoryCandidatesResponse) { option (google.api.http) = {get: "/v1/coding-tasks/{task_id}/memory-candidates"}; }
-  rpc ProposeMemoryCandidate(ProposeMemoryCandidateRequest) returns (MemoryCandidate) { option (google.api.http) = {post: "/v1/coding-tasks/{task_id}/memory-candidates" body: "*"}; }
-  rpc DecideMemoryCandidate(DecideMemoryCandidateRequest) returns (DecideMemoryCandidateResponse) { option (google.api.http) = {patch: "/v1/memory-candidates/{candidate_id}" body: "*"}; }
+  rpc ProposeMemoryCandidate(ProposeMemoryCandidateRequest) returns (MemoryCandidate) {
+    option (google.api.http) = {post: "/v1/coding-tasks/{task_id}/memory-candidates" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
+  rpc DecideMemoryCandidate(DecideMemoryCandidateRequest) returns (DecideMemoryCandidateResponse) {
+    option (google.api.http) = {patch: "/v1/memory-candidates/{candidate_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: { headers: { name: "Idempotency-Key" type: STRING required: true } } };
+  }
   rpc ListAgentMemories(ListAgentMemoriesRequest) returns (ListAgentMemoriesResponse) { option (google.api.http) = {get: "/v1/agents/{agent_id}/memories"}; }
-  rpc UpdateAgentMemory(UpdateAgentMemoryRequest) returns (AgentMemory) { option (google.api.http) = {patch: "/v1/agent-memories/{memory_id}" body: "*"}; }
-  rpc DeleteAgentMemory(DeleteAgentMemoryRequest) returns (AgentMemory) { option (google.api.http) = {post: "/v1/agent-memories/{memory_id}/deletion" body: "*"}; }
+  rpc UpdateAgentMemory(UpdateAgentMemoryRequest) returns (AgentMemory) {
+    option (google.api.http) = {patch: "/v1/agent-memories/{memory_id}" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc DeleteAgentMemory(DeleteAgentMemoryRequest) returns (AgentMemory) {
+    option (google.api.http) = {post: "/v1/agent-memories/{memory_id}/deletion" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
 }
 
+message ListCodingTaskLaunchOptionsRequest { string team_id = 1; }
+message ListCodingTaskLaunchOptionsResponse { repeated CodingTaskLaunchOption items = 1; string prerequisite = 2; }
+message CodingTaskLaunchOption { string agent_release_id = 1; string repository_binding_id = 2; }
 message ListCodingTasksRequest { string team_id = 1; }
 message ListCodingTasksResponse { repeated CodingTask items = 1; }
 message CreateCodingTaskRequest { string team_id = 1; string agent_release_id = 2; string title = 3; string request_text = 4; optional types.v1.IssueSnapshot issue_snapshot = 5; }

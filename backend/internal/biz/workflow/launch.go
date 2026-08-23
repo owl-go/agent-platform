@@ -24,6 +24,9 @@ func (workflow *Launch) CreateLaunch(ctx context.Context, registration collabora
 		if err := participants.Execution.CreateQueuedRun(ctx, queuedRun(plan)); err != nil {
 			return err
 		}
+		if err := participants.Collaboration.AppendLaunchMessage(ctx, plan); err != nil {
+			return err
+		}
 		result = launch
 		return nil
 	})
@@ -38,6 +41,9 @@ func (workflow *Launch) Continue(ctx context.Context, registration collaboration
 			return err
 		}
 		if err := participants.Execution.CreateQueuedRun(ctx, queuedRun(plan)); err != nil {
+			return err
+		}
+		if err := participants.Collaboration.AppendLaunchMessage(ctx, plan); err != nil {
 			return err
 		}
 		result = launch

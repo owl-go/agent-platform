@@ -12,6 +12,7 @@ import (
 type CollaborationCommands interface {
 	CreateLaunchOwned(context.Context, collaborationdomain.LaunchRegistration) (collaborationdomain.Launch, collaborationdomain.QueuedRunPlan, error)
 	ContinueOwned(context.Context, collaborationdomain.ContinueRegistration) (collaborationdomain.Launch, collaborationdomain.QueuedRunPlan, error)
+	AppendLaunchMessage(context.Context, collaborationdomain.QueuedRunPlan) error
 	ProjectCompletedRun(context.Context, string, string, time.Time) error
 }
 

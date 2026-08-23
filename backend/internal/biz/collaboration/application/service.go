@@ -106,6 +106,13 @@ func (service *Service) ListTasks(ctx context.Context, organizationID, teamID st
 	return service.repository.ListTasks(ctx, organizationID, teamID)
 }
 
+func (service *Service) ListLaunchOptions(ctx context.Context, organizationID, teamID string) (domain.LaunchCatalog, error) {
+	if service.repository == nil || organizationID == "" || teamID == "" {
+		return domain.LaunchCatalog{}, fmt.Errorf("Collaboration Repository and Team scope are required")
+	}
+	return service.repository.ListLaunchOptions(ctx, organizationID, teamID)
+}
+
 func (service *Service) GetSession(ctx context.Context, organizationID, teamID, taskID string) (domain.Session, error) {
 	if _, err := service.GetTask(ctx, organizationID, teamID, taskID); err != nil {
 		return domain.Session{}, err

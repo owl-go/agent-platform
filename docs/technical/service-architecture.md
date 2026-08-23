@@ -196,3 +196,13 @@ WHERE release_risk IS NULL
    OR release_risk = 'high' AND approval_evidence IS NULL
    OR status = 'blocked' AND (blocked_reason IS NULL OR length(btrim(blocked_reason)) = 0);
 ```
+
+## Coding Task 启动边界
+
+Agent User 从当前 Team 的已发布 Agent Release 与验证通过的 Repository Binding 启动 Coding Task。自由文本直接形成任务请求；Issue 输入在创建时复制标题、正文和可选链接为不可变 Issue Snapshot，后续不与外部 Issue 同步。浏览器只展示当前 Team 中 Release 状态为 `released`、Runtime 仍为 `production`、Configured Model 仍启用且 Repository Binding 当前验证有效的组合。
+
+创建操作要求 `Idempotency-Key`，并在 Control Plane 的幂等事务内调用 Collaboration → Workflow seam：同一个 PostgreSQL Transaction 依次创建 Coding Task、唯一 Session、稳定 Review Branch、首条用户消息、首个 Queued Run 与初始 Run Event；任一写入失败会整体回滚。相同 Key 和请求重放持久化响应，相同 Key 携带不同请求返回冲突，不会创建第二个 Task、Session 或 Run。
+
+事务内的 Launch 解析会按 Organization 和 Team 锁定/读取 Agent Release 及当前依赖，并 fail closed 检查 Release、Production Runtime、Configured Model 与模型 Credential、Repository Binding Validation、Source Control Provider、Git SSH Credential 和全部 Build Credential。Credential 行按 ID 有序加共享锁，避免并发禁用穿透启动事务；执行用 Model ID、Endpoint、Credential Profile、Git/Build Credential、仓库、Runtime RepoDigest、Capability 和质量命令均来自不可变 Release Snapshot，实时目录只决定当前是否仍允许启动。旧 Release 缺少这些可审计凭证快照时，追加 Migration 拒绝升级，不从当前目录猜测历史值。API 的 Team-scoped Launch Catalog 只返回当前可启动的 Release/Binding 组合，并对 Runtime、模型和 Repository Binding 不可用返回不同的安全前置条件；跨 Team 或跨 Organization Release/Task 使用与不存在资源相同的不可用或 Not Found 语义。
+
+Conversation Workspace 把选中的 Coding Task ID 写入 URL 查询参数。直接 URL、刷新和重新登录都通过真实 Team-scoped Task、Session、Run 查询恢复同一个业务上下文，并从不可变 Agent Release 投影展示发布时的 Runtime RepoDigest、Configured Model 和 Repository Binding；浏览器内存中的创建响应不是恢复正确性的前提。

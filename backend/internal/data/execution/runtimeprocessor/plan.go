@@ -18,13 +18,15 @@ func ParsePlan(lease domain.Lease) (Plan, []CredentialBinding, error) {
 		return Plan{}, nil, fmt.Errorf("claimed Run has an incomplete frozen Runtime binding")
 	}
 	var model struct {
-		ModelID string `json:"model_id"`
+		ModelID             string `json:"model_id"`
+		Endpoint            string `json:"endpoint"`
+		CredentialProfileID string `json:"credential_profile_id"`
 	}
 	if err := decodeStrict(lease.ModelBinding, &model); err != nil {
 		return Plan{}, nil, fmt.Errorf("decode frozen Model Binding: %w", err)
 	}
-	if model.ModelID == "" {
-		return Plan{}, nil, fmt.Errorf("frozen Model Binding has no model ID")
+	if model.ModelID == "" || model.Endpoint == "" || model.CredentialProfileID == "" {
+		return Plan{}, nil, fmt.Errorf("frozen Model Binding is incomplete")
 	}
 	budget, err := parseModelBudget(lease.ModelBudget)
 	if err != nil {

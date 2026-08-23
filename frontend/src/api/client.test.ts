@@ -119,6 +119,33 @@ describe("PlatformApi", () => {
     expect(headers.get("If-Match")).toBe('"2"');
   });
 
+  it("creates a Team-scoped Coding Task with the supplied idempotency intent", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ task: { id: "task-1" }, session: { id: "session-1" }, run_id: "run-1" }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.createCodingTask("team-1", { agent_release_id: "release-1", title: "Fix parser", request_text: "Handle empty input" }, "task-intent");
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/v1/coding-tasks");
+    expect(JSON.parse(String(init?.body))).toMatchObject({ team_id: "team-1", agent_release_id: "release-1" });
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("task-intent");
+    expect(headers.get("Authorization")).toBe("Bearer access-token");
+  });
+
+  it("loads the server-authorized Team launch catalog and prerequisite", async () => {
+	const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({
+	  items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "",
+	}), { status: 200 }));
+	vi.stubGlobal("fetch", fetchMock);
+
+	const catalog = await createPlatformApi(() => "access-token").listCodingTaskLaunchOptions("team-1");
+
+	expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/coding-task-launch-options?team_id=team-1");
+	expect(catalog).toEqual({ items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "" });
+  });
+
   it("keeps Release Approval distinct and protects Release status writes", async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "release-1", version: 3 }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

@@ -37,6 +37,7 @@ func TestOpenAPIPathsMatchRegisteredRoutes(t *testing.T) {
 		"GET /healthz",
 		"GET /readyz",
 		"GET /v1/me",
+		"GET /v1/coding-task-launch-options",
 		"GET /v1/coding-tasks",
 		"GET /v1/coding-tasks/{task_id}",
 		"GET /v1/coding-tasks/{task_id}/memory-candidates",
@@ -200,6 +201,7 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 		}
 	}
 	for _, path := range []string{
+		"/v1/coding-tasks",
 		"/v1/agents",
 		"/v1/agents/{agent_id}/drafts",
 		"/v1/agents/{agent_id}/drafts/{draft_id}/approval",
@@ -220,11 +222,25 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 		"/v1/agents/{agent_id}/drafts/{draft_id}/approval":        "patch",
 		"/v1/agents/{agent_id}/releases/{release_id}/deprecation": "post",
 		"/v1/agents/{agent_id}/releases/{release_id}/block":       "post",
+		"/v1/coding-tasks/{task_id}":                              "patch",
+		"/v1/coding-tasks/{task_id}/runs":                         "post",
+		"/v1/coding-tasks/{task_id}/session":                      "patch",
+		"/v1/agent-memories/{memory_id}":                          "patch",
+		"/v1/agent-memories/{memory_id}/deletion":                 "post",
 	} {
 		operation := paths[path].(map[string]any)[method].(map[string]any)
 		parameters := operation["parameters"].([]any)
 		if !hasParameter(parameters, "header", "Idempotency-Key", true) || !hasParameter(parameters, "header", "If-Match", true) {
 			t.Fatalf("%s write headers = %#v", path, parameters)
+		}
+	}
+	for path, method := range map[string]string{
+		"/v1/coding-tasks/{task_id}/memory-candidates": "post",
+		"/v1/memory-candidates/{candidate_id}":         "patch",
+	} {
+		operation := paths[path].(map[string]any)[method].(map[string]any)
+		if !hasParameter(operation["parameters"].([]any), "header", "Idempotency-Key", true) {
+			t.Fatalf("%s write does not declare Idempotency-Key", path)
 		}
 	}
 }

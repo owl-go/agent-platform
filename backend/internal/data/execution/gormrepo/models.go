@@ -107,16 +107,13 @@ type eventRecord struct {
 
 func (eventRecord) TableName() string { return "run_events" }
 
-type runtimeImageRecord struct {
-	ID             string    `gorm:"column:id;primaryKey"`
-	Runtime        string    `gorm:"column:runtime"`
-	CLIVersion     string    `gorm:"column:cli_version"`
-	AdapterVersion string    `gorm:"column:adapter_version"`
-	ImageDigest    string    `gorm:"column:image_digest"`
-	Capabilities   jsonValue `gorm:"column:capabilities;type:jsonb"`
+type releaseExecutionRecord struct {
+	ID                        string    `gorm:"column:id;primaryKey"`
+	RepositoryBindingSnapshot jsonValue `gorm:"column:repository_binding_snapshot;type:jsonb"`
+	RuntimeImageSnapshot      jsonValue `gorm:"column:runtime_image_snapshot;type:jsonb"`
 }
 
-func (runtimeImageRecord) TableName() string { return "runtime_images" }
+func (releaseExecutionRecord) TableName() string { return "agent_releases" }
 
 type sessionRecord struct {
 	ID                  string `gorm:"column:id;primaryKey"`
@@ -128,13 +125,3 @@ type sessionRecord struct {
 }
 
 func (sessionRecord) TableName() string { return "sessions" }
-
-type repositoryBindingRecord struct {
-	ID               string    `gorm:"column:id;primaryKey"`
-	RepositorySSHURL string    `gorm:"column:repository_ssh_url"`
-	GitAuthorName    string    `gorm:"column:git_author_name"`
-	GitAuthorEmail   string    `gorm:"column:git_author_email"`
-	QualityCommands  jsonValue `gorm:"column:quality_commands;type:jsonb"`
-}
-
-func (repositoryBindingRecord) TableName() string { return "repository_bindings" }

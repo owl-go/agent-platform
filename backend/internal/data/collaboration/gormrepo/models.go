@@ -96,8 +96,13 @@ type memoryRecord struct {
 func (memoryRecord) TableName() string { return "agent_memories" }
 
 type launchSelection struct {
-	AgentID, RepositoryBindingID, TargetBranch, RuntimeImageID string
-	ModelID, ModelSecretRef, GitSecretRef                      string
-	BuildCredentialBindings                                    jsonValue `gorm:"column:build_credential_bindings"`
-	ModelBudget, ExecutionLimits                               jsonValue
+	AgentID, RepositoryBindingID, RuntimeImageID, ConfiguredModelID string
+	RepositoryBindingSnapshot, ConfiguredModelSnapshot              jsonValue
+	ModelBudget, ExecutionLimits                                    jsonValue
+	ReleaseStatus, RuntimeStatus                                    string
+	ModelEnabled, BindingValid                                      bool
+	TargetBranch, ModelID, ModelEndpoint                            string
+	ModelCredentialProfileID                                        string
+	ModelSecretRef, GitSecretRef                                    string
+	BuildCredentialBindings                                         jsonValue
 }

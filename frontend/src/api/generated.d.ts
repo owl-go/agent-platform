@@ -324,6 +324,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coding-task-launch-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CollaborationService_ListCodingTaskLaunchOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/coding-tasks": {
         parameters: {
             query?: never;
@@ -1097,6 +1113,10 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1CodingTaskLaunchOption: {
+            agent_release_id?: string;
+            repository_binding_id?: string;
+        };
         v1ConfiguredModel: {
             id?: string;
             name?: string;
@@ -1207,6 +1227,10 @@ export interface components {
         v1ListAuditEventsResponse: {
             items?: components["schemas"]["v1AuditEvent"][];
         };
+        v1ListCodingTaskLaunchOptionsResponse: {
+            items?: components["schemas"]["v1CodingTaskLaunchOption"][];
+            prerequisite?: string;
+        };
         v1ListCodingTasksResponse: {
             items?: components["schemas"]["v1CodingTask"][];
         };
@@ -1256,6 +1280,8 @@ export interface components {
         };
         v1ModelBinding: {
             model_id?: string;
+            endpoint?: string;
+            credential_profile_id?: string;
         };
         v1ModelBudget: {
             /** Format: int64 */
@@ -1342,6 +1368,7 @@ export interface components {
             name?: string;
             model_id?: string;
             endpoint?: string;
+            credential_profile_id?: string;
         };
         v1ReleaseRepositoryBindingSnapshot: {
             id?: string;
@@ -1352,6 +1379,11 @@ export interface components {
             quality_commands?: components["schemas"]["v1QualityCommand"][];
             egress_policy?: string;
             required_runtime_capabilities?: string[];
+            source_control_provider_id?: string;
+            ssh_credential_profile_id?: string;
+            build_credential_profile_ids?: string[];
+            git_author_name?: string;
+            git_author_email?: string;
         };
         v1ReleaseRuntimeImageSnapshot: {
             id?: string;
@@ -1628,7 +1660,10 @@ export interface operations {
     CollaborationService_UpdateAgentMemory: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 memory_id: string;
             };
@@ -1663,7 +1698,10 @@ export interface operations {
     CollaborationService_DeleteAgentMemory: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 memory_id: string;
             };
@@ -2477,6 +2515,37 @@ export interface operations {
             };
         };
     };
+    CollaborationService_ListCodingTaskLaunchOptions: {
+        parameters: {
+            query?: {
+                team_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCodingTaskLaunchOptionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     CollaborationService_ListCodingTasks: {
         parameters: {
             query?: {
@@ -2511,7 +2580,9 @@ export interface operations {
     CollaborationService_CreateCodingTask: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2577,7 +2648,10 @@ export interface operations {
     CollaborationService_UpdateCodingTask: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 task_id: string;
             };
@@ -2645,7 +2719,9 @@ export interface operations {
     CollaborationService_ProposeMemoryCandidate: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 task_id: string;
             };
@@ -2715,7 +2791,10 @@ export interface operations {
     CollaborationService_ContinueCodingTask: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 task_id: string;
             };
@@ -2783,7 +2862,10 @@ export interface operations {
     CollaborationService_UpdateCodingTaskSession: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 task_id: string;
             };
@@ -3113,7 +3195,9 @@ export interface operations {
     CollaborationService_DecideMemoryCandidate: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 candidate_id: string;
             };

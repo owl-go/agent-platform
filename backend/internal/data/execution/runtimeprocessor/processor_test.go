@@ -170,7 +170,7 @@ func validLease() domain.Lease {
 		RunID: "run-1", Token: "lease-token", RequestText: "fix tests",
 		RuntimeName: "claude", RuntimeCLIVersion: "1.0.0", AdapterVersion: "adapter-1",
 		ImageDigest: "registry.example/claude@sha256:" + strings.Repeat("a", 64), WorkspaceVolume: "workspace-run-1",
-		ModelBinding:       []byte(`{"model_id":"model-id"}`),
+		ModelBinding:       []byte(`{"model_id":"model-id","endpoint":"https://models.example.test","credential_profile_id":"model-credential"}`),
 		ModelBudget:        []byte(`{"max_input_tokens":1000,"max_output_tokens":500,"max_cost_amount":"10.00"}`),
 		CredentialBindings: []byte(`[{"ref":"vault://model","purpose":"model"}]`),
 		ExecutionLimits:    []byte(`{"timeout_seconds":60,"cpus":2,"memory_bytes":1073741824,"pids":256,"temp_bytes":536870912,"egress":"public"}`),

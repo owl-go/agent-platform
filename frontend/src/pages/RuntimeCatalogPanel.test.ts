@@ -148,5 +148,6 @@ function apiStub(): PlatformApi {
     listSourceControlProviders: vi.fn(async () => []), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(), changeSourceControlProviderStatus: vi.fn(),
     listRepositoryBindings: vi.fn(async () => []), getRepositoryBinding: vi.fn(), registerRepositoryBinding: vi.fn(), updateRepositoryBinding: vi.fn(), validateRepositoryBinding: vi.fn(),
     listAgents: vi.fn(async () => []), getAgent: vi.fn(), createAgent: vi.fn(), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => []), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(), updateAgentDraft: vi.fn(), validateAgentDraft: vi.fn(), getAgentDraftApproval: vi.fn(), requestAgentDraftApproval: vi.fn(), decideAgentDraftApproval: vi.fn(), publishAgentDraft: vi.fn(), listAgentReleases: vi.fn(async () => []), getAgentRelease: vi.fn(), deprecateAgentRelease: vi.fn(), blockAgentRelease: vi.fn(),
+    listCodingTaskLaunchOptions: vi.fn(async () => ({ items: [], prerequisite: "release" })), listCodingTasks: vi.fn(async () => []), getCodingTask: vi.fn(), createCodingTask: vi.fn(), getCodingTaskSession: vi.fn(), listRuns: vi.fn(async () => []),
   };
 }

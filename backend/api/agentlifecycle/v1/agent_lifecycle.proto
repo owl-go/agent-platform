@@ -140,12 +140,14 @@ message AgentRelease {
 message ReleaseRepositoryBindingSnapshot {
   string id = 1; string name = 2; string repository_ssh_url = 3; string default_branch = 4; string instructions = 5;
   repeated types.v1.QualityCommand quality_commands = 6; string egress_policy = 7; repeated string required_runtime_capabilities = 8;
+  string source_control_provider_id = 9; string ssh_credential_profile_id = 10; repeated string build_credential_profile_ids = 11;
+  string git_author_name = 12; string git_author_email = 13;
 }
 message ReleaseRuntimeImageSnapshot {
   string id = 1; string runtime = 2; string cli_version = 3; string adapter_version = 4; string image_digest = 5;
   map<string, bool> capabilities = 6;
 }
-message ReleaseConfiguredModelSnapshot { string id = 1; string name = 2; string model_id = 3; string endpoint = 4; }
+message ReleaseConfiguredModelSnapshot { string id = 1; string name = 2; string model_id = 3; string endpoint = 4; string credential_profile_id = 5; }
 message ReleaseApprovalEvidence {
   string id = 1; string draft_id = 2; int64 draft_version = 3; string requested_by = 4; string risk_reason = 5;
   string approved_by = 6; google.protobuf.Timestamp approved_at = 7;

@@ -8,6 +8,7 @@ package collaborationv1
 
 import (
 	v1 "agent-platform/backend/api/types/v1"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -24,6 +25,154 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ListCodingTaskLaunchOptionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamId        string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCodingTaskLaunchOptionsRequest) Reset() {
+	*x = ListCodingTaskLaunchOptionsRequest{}
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCodingTaskLaunchOptionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCodingTaskLaunchOptionsRequest) ProtoMessage() {}
+
+func (x *ListCodingTaskLaunchOptionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCodingTaskLaunchOptionsRequest.ProtoReflect.Descriptor instead.
+func (*ListCodingTaskLaunchOptionsRequest) Descriptor() ([]byte, []int) {
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ListCodingTaskLaunchOptionsRequest) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+type ListCodingTaskLaunchOptionsResponse struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Items         []*CodingTaskLaunchOption `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Prerequisite  string                    `protobuf:"bytes,2,opt,name=prerequisite,proto3" json:"prerequisite,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCodingTaskLaunchOptionsResponse) Reset() {
+	*x = ListCodingTaskLaunchOptionsResponse{}
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCodingTaskLaunchOptionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCodingTaskLaunchOptionsResponse) ProtoMessage() {}
+
+func (x *ListCodingTaskLaunchOptionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCodingTaskLaunchOptionsResponse.ProtoReflect.Descriptor instead.
+func (*ListCodingTaskLaunchOptionsResponse) Descriptor() ([]byte, []int) {
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListCodingTaskLaunchOptionsResponse) GetItems() []*CodingTaskLaunchOption {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListCodingTaskLaunchOptionsResponse) GetPrerequisite() string {
+	if x != nil {
+		return x.Prerequisite
+	}
+	return ""
+}
+
+type CodingTaskLaunchOption struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	AgentReleaseId      string                 `protobuf:"bytes,1,opt,name=agent_release_id,json=agentReleaseId,proto3" json:"agent_release_id,omitempty"`
+	RepositoryBindingId string                 `protobuf:"bytes,2,opt,name=repository_binding_id,json=repositoryBindingId,proto3" json:"repository_binding_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CodingTaskLaunchOption) Reset() {
+	*x = CodingTaskLaunchOption{}
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CodingTaskLaunchOption) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CodingTaskLaunchOption) ProtoMessage() {}
+
+func (x *CodingTaskLaunchOption) ProtoReflect() protoreflect.Message {
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CodingTaskLaunchOption.ProtoReflect.Descriptor instead.
+func (*CodingTaskLaunchOption) Descriptor() ([]byte, []int) {
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CodingTaskLaunchOption) GetAgentReleaseId() string {
+	if x != nil {
+		return x.AgentReleaseId
+	}
+	return ""
+}
+
+func (x *CodingTaskLaunchOption) GetRepositoryBindingId() string {
+	if x != nil {
+		return x.RepositoryBindingId
+	}
+	return ""
+}
+
 type ListCodingTasksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TeamId        string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
@@ -33,7 +182,7 @@ type ListCodingTasksRequest struct {
 
 func (x *ListCodingTasksRequest) Reset() {
 	*x = ListCodingTasksRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[0]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +194,7 @@ func (x *ListCodingTasksRequest) String() string {
 func (*ListCodingTasksRequest) ProtoMessage() {}
 
 func (x *ListCodingTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[0]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +207,7 @@ func (x *ListCodingTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCodingTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListCodingTasksRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{0}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListCodingTasksRequest) GetTeamId() string {
@@ -77,7 +226,7 @@ type ListCodingTasksResponse struct {
 
 func (x *ListCodingTasksResponse) Reset() {
 	*x = ListCodingTasksResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[1]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -89,7 +238,7 @@ func (x *ListCodingTasksResponse) String() string {
 func (*ListCodingTasksResponse) ProtoMessage() {}
 
 func (x *ListCodingTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[1]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -102,7 +251,7 @@ func (x *ListCodingTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCodingTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListCodingTasksResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{1}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListCodingTasksResponse) GetItems() []*CodingTask {
@@ -125,7 +274,7 @@ type CreateCodingTaskRequest struct {
 
 func (x *CreateCodingTaskRequest) Reset() {
 	*x = CreateCodingTaskRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[2]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -137,7 +286,7 @@ func (x *CreateCodingTaskRequest) String() string {
 func (*CreateCodingTaskRequest) ProtoMessage() {}
 
 func (x *CreateCodingTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[2]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -150,7 +299,7 @@ func (x *CreateCodingTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCodingTaskRequest.ProtoReflect.Descriptor instead.
 func (*CreateCodingTaskRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{2}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateCodingTaskRequest) GetTeamId() string {
@@ -199,7 +348,7 @@ type CreateCodingTaskResponse struct {
 
 func (x *CreateCodingTaskResponse) Reset() {
 	*x = CreateCodingTaskResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[3]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -211,7 +360,7 @@ func (x *CreateCodingTaskResponse) String() string {
 func (*CreateCodingTaskResponse) ProtoMessage() {}
 
 func (x *CreateCodingTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[3]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -224,7 +373,7 @@ func (x *CreateCodingTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCodingTaskResponse.ProtoReflect.Descriptor instead.
 func (*CreateCodingTaskResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{3}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateCodingTaskResponse) GetTask() *CodingTask {
@@ -258,7 +407,7 @@ type GetCodingTaskRequest struct {
 
 func (x *GetCodingTaskRequest) Reset() {
 	*x = GetCodingTaskRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[4]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +419,7 @@ func (x *GetCodingTaskRequest) String() string {
 func (*GetCodingTaskRequest) ProtoMessage() {}
 
 func (x *GetCodingTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[4]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +432,7 @@ func (x *GetCodingTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCodingTaskRequest.ProtoReflect.Descriptor instead.
 func (*GetCodingTaskRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{4}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetCodingTaskRequest) GetTaskId() string {
@@ -309,7 +458,7 @@ type GetCodingTaskResponse struct {
 
 func (x *GetCodingTaskResponse) Reset() {
 	*x = GetCodingTaskResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[5]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -321,7 +470,7 @@ func (x *GetCodingTaskResponse) String() string {
 func (*GetCodingTaskResponse) ProtoMessage() {}
 
 func (x *GetCodingTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[5]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -334,7 +483,7 @@ func (x *GetCodingTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCodingTaskResponse.ProtoReflect.Descriptor instead.
 func (*GetCodingTaskResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{5}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetCodingTaskResponse) GetTask() *CodingTask {
@@ -355,7 +504,7 @@ type UpdateCodingTaskRequest struct {
 
 func (x *UpdateCodingTaskRequest) Reset() {
 	*x = UpdateCodingTaskRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[6]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +516,7 @@ func (x *UpdateCodingTaskRequest) String() string {
 func (*UpdateCodingTaskRequest) ProtoMessage() {}
 
 func (x *UpdateCodingTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[6]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +529,7 @@ func (x *UpdateCodingTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCodingTaskRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCodingTaskRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{6}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateCodingTaskRequest) GetTaskId() string {
@@ -413,7 +562,7 @@ type UpdateCodingTaskResponse struct {
 
 func (x *UpdateCodingTaskResponse) Reset() {
 	*x = UpdateCodingTaskResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[7]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +574,7 @@ func (x *UpdateCodingTaskResponse) String() string {
 func (*UpdateCodingTaskResponse) ProtoMessage() {}
 
 func (x *UpdateCodingTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[7]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +587,7 @@ func (x *UpdateCodingTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCodingTaskResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCodingTaskResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{7}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateCodingTaskResponse) GetTask() *CodingTask {
@@ -460,7 +609,7 @@ type ContinueCodingTaskRequest struct {
 
 func (x *ContinueCodingTaskRequest) Reset() {
 	*x = ContinueCodingTaskRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[8]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +621,7 @@ func (x *ContinueCodingTaskRequest) String() string {
 func (*ContinueCodingTaskRequest) ProtoMessage() {}
 
 func (x *ContinueCodingTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[8]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +634,7 @@ func (x *ContinueCodingTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueCodingTaskRequest.ProtoReflect.Descriptor instead.
 func (*ContinueCodingTaskRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{8}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ContinueCodingTaskRequest) GetTaskId() string {
@@ -527,7 +676,7 @@ type ContinueCodingTaskResponse struct {
 
 func (x *ContinueCodingTaskResponse) Reset() {
 	*x = ContinueCodingTaskResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[9]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +688,7 @@ func (x *ContinueCodingTaskResponse) String() string {
 func (*ContinueCodingTaskResponse) ProtoMessage() {}
 
 func (x *ContinueCodingTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[9]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +701,7 @@ func (x *ContinueCodingTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueCodingTaskResponse.ProtoReflect.Descriptor instead.
 func (*ContinueCodingTaskResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{9}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ContinueCodingTaskResponse) GetTask() *CodingTask {
@@ -586,7 +735,7 @@ type GetCodingTaskSessionRequest struct {
 
 func (x *GetCodingTaskSessionRequest) Reset() {
 	*x = GetCodingTaskSessionRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[10]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +747,7 @@ func (x *GetCodingTaskSessionRequest) String() string {
 func (*GetCodingTaskSessionRequest) ProtoMessage() {}
 
 func (x *GetCodingTaskSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[10]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +760,7 @@ func (x *GetCodingTaskSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCodingTaskSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetCodingTaskSessionRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{10}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetCodingTaskSessionRequest) GetTaskId() string {
@@ -637,7 +786,7 @@ type GetCodingTaskSessionResponse struct {
 
 func (x *GetCodingTaskSessionResponse) Reset() {
 	*x = GetCodingTaskSessionResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[11]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -649,7 +798,7 @@ func (x *GetCodingTaskSessionResponse) String() string {
 func (*GetCodingTaskSessionResponse) ProtoMessage() {}
 
 func (x *GetCodingTaskSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[11]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -662,7 +811,7 @@ func (x *GetCodingTaskSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCodingTaskSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetCodingTaskSessionResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{11}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetCodingTaskSessionResponse) GetSession() *Session {
@@ -683,7 +832,7 @@ type UpdateCodingTaskSessionRequest struct {
 
 func (x *UpdateCodingTaskSessionRequest) Reset() {
 	*x = UpdateCodingTaskSessionRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[12]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -695,7 +844,7 @@ func (x *UpdateCodingTaskSessionRequest) String() string {
 func (*UpdateCodingTaskSessionRequest) ProtoMessage() {}
 
 func (x *UpdateCodingTaskSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[12]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +857,7 @@ func (x *UpdateCodingTaskSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCodingTaskSessionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCodingTaskSessionRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{12}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UpdateCodingTaskSessionRequest) GetTaskId() string {
@@ -741,7 +890,7 @@ type UpdateCodingTaskSessionResponse struct {
 
 func (x *UpdateCodingTaskSessionResponse) Reset() {
 	*x = UpdateCodingTaskSessionResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[13]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -753,7 +902,7 @@ func (x *UpdateCodingTaskSessionResponse) String() string {
 func (*UpdateCodingTaskSessionResponse) ProtoMessage() {}
 
 func (x *UpdateCodingTaskSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[13]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -766,7 +915,7 @@ func (x *UpdateCodingTaskSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCodingTaskSessionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCodingTaskSessionResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{13}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateCodingTaskSessionResponse) GetSession() *Session {
@@ -788,7 +937,7 @@ type ListSessionMessagesRequest struct {
 
 func (x *ListSessionMessagesRequest) Reset() {
 	*x = ListSessionMessagesRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[14]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -800,7 +949,7 @@ func (x *ListSessionMessagesRequest) String() string {
 func (*ListSessionMessagesRequest) ProtoMessage() {}
 
 func (x *ListSessionMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[14]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -813,7 +962,7 @@ func (x *ListSessionMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListSessionMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{14}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListSessionMessagesRequest) GetTaskId() string {
@@ -853,7 +1002,7 @@ type ListSessionMessagesResponse struct {
 
 func (x *ListSessionMessagesResponse) Reset() {
 	*x = ListSessionMessagesResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[15]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -865,7 +1014,7 @@ func (x *ListSessionMessagesResponse) String() string {
 func (*ListSessionMessagesResponse) ProtoMessage() {}
 
 func (x *ListSessionMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[15]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -878,7 +1027,7 @@ func (x *ListSessionMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListSessionMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{15}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListSessionMessagesResponse) GetItems() []*SessionMessage {
@@ -898,7 +1047,7 @@ type ListMemoryCandidatesRequest struct {
 
 func (x *ListMemoryCandidatesRequest) Reset() {
 	*x = ListMemoryCandidatesRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[16]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +1059,7 @@ func (x *ListMemoryCandidatesRequest) String() string {
 func (*ListMemoryCandidatesRequest) ProtoMessage() {}
 
 func (x *ListMemoryCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[16]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +1072,7 @@ func (x *ListMemoryCandidatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemoryCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*ListMemoryCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{16}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListMemoryCandidatesRequest) GetTaskId() string {
@@ -949,7 +1098,7 @@ type ListMemoryCandidatesResponse struct {
 
 func (x *ListMemoryCandidatesResponse) Reset() {
 	*x = ListMemoryCandidatesResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[17]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -961,7 +1110,7 @@ func (x *ListMemoryCandidatesResponse) String() string {
 func (*ListMemoryCandidatesResponse) ProtoMessage() {}
 
 func (x *ListMemoryCandidatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[17]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -974,7 +1123,7 @@ func (x *ListMemoryCandidatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMemoryCandidatesResponse.ProtoReflect.Descriptor instead.
 func (*ListMemoryCandidatesResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{17}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListMemoryCandidatesResponse) GetItems() []*MemoryCandidate {
@@ -996,7 +1145,7 @@ type ProposeMemoryCandidateRequest struct {
 
 func (x *ProposeMemoryCandidateRequest) Reset() {
 	*x = ProposeMemoryCandidateRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[18]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1008,7 +1157,7 @@ func (x *ProposeMemoryCandidateRequest) String() string {
 func (*ProposeMemoryCandidateRequest) ProtoMessage() {}
 
 func (x *ProposeMemoryCandidateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[18]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1021,7 +1170,7 @@ func (x *ProposeMemoryCandidateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeMemoryCandidateRequest.ProtoReflect.Descriptor instead.
 func (*ProposeMemoryCandidateRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{18}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ProposeMemoryCandidateRequest) GetTaskId() string {
@@ -1061,7 +1210,7 @@ type ProposeMemoryCandidateResponse struct {
 
 func (x *ProposeMemoryCandidateResponse) Reset() {
 	*x = ProposeMemoryCandidateResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[19]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1073,7 +1222,7 @@ func (x *ProposeMemoryCandidateResponse) String() string {
 func (*ProposeMemoryCandidateResponse) ProtoMessage() {}
 
 func (x *ProposeMemoryCandidateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[19]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1086,7 +1235,7 @@ func (x *ProposeMemoryCandidateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeMemoryCandidateResponse.ProtoReflect.Descriptor instead.
 func (*ProposeMemoryCandidateResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{19}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ProposeMemoryCandidateResponse) GetCandidate() *MemoryCandidate {
@@ -1107,7 +1256,7 @@ type DecideMemoryCandidateRequest struct {
 
 func (x *DecideMemoryCandidateRequest) Reset() {
 	*x = DecideMemoryCandidateRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[20]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1119,7 +1268,7 @@ func (x *DecideMemoryCandidateRequest) String() string {
 func (*DecideMemoryCandidateRequest) ProtoMessage() {}
 
 func (x *DecideMemoryCandidateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[20]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1132,7 +1281,7 @@ func (x *DecideMemoryCandidateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideMemoryCandidateRequest.ProtoReflect.Descriptor instead.
 func (*DecideMemoryCandidateRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{20}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DecideMemoryCandidateRequest) GetCandidateId() string {
@@ -1166,7 +1315,7 @@ type DecideMemoryCandidateResponse struct {
 
 func (x *DecideMemoryCandidateResponse) Reset() {
 	*x = DecideMemoryCandidateResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[21]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1178,7 +1327,7 @@ func (x *DecideMemoryCandidateResponse) String() string {
 func (*DecideMemoryCandidateResponse) ProtoMessage() {}
 
 func (x *DecideMemoryCandidateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[21]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1191,7 +1340,7 @@ func (x *DecideMemoryCandidateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideMemoryCandidateResponse.ProtoReflect.Descriptor instead.
 func (*DecideMemoryCandidateResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{21}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DecideMemoryCandidateResponse) GetCandidate() *MemoryCandidate {
@@ -1219,7 +1368,7 @@ type ListAgentMemoriesRequest struct {
 
 func (x *ListAgentMemoriesRequest) Reset() {
 	*x = ListAgentMemoriesRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[22]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1231,7 +1380,7 @@ func (x *ListAgentMemoriesRequest) String() string {
 func (*ListAgentMemoriesRequest) ProtoMessage() {}
 
 func (x *ListAgentMemoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[22]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1244,7 +1393,7 @@ func (x *ListAgentMemoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentMemoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentMemoriesRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{22}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListAgentMemoriesRequest) GetAgentId() string {
@@ -1277,7 +1426,7 @@ type ListAgentMemoriesResponse struct {
 
 func (x *ListAgentMemoriesResponse) Reset() {
 	*x = ListAgentMemoriesResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[23]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1289,7 +1438,7 @@ func (x *ListAgentMemoriesResponse) String() string {
 func (*ListAgentMemoriesResponse) ProtoMessage() {}
 
 func (x *ListAgentMemoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[23]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1302,7 +1451,7 @@ func (x *ListAgentMemoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentMemoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentMemoriesResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{23}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListAgentMemoriesResponse) GetItems() []*AgentMemory {
@@ -1324,7 +1473,7 @@ type UpdateAgentMemoryRequest struct {
 
 func (x *UpdateAgentMemoryRequest) Reset() {
 	*x = UpdateAgentMemoryRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[24]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1336,7 +1485,7 @@ func (x *UpdateAgentMemoryRequest) String() string {
 func (*UpdateAgentMemoryRequest) ProtoMessage() {}
 
 func (x *UpdateAgentMemoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[24]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1349,7 +1498,7 @@ func (x *UpdateAgentMemoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentMemoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgentMemoryRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{24}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdateAgentMemoryRequest) GetMemoryId() string {
@@ -1389,7 +1538,7 @@ type UpdateAgentMemoryResponse struct {
 
 func (x *UpdateAgentMemoryResponse) Reset() {
 	*x = UpdateAgentMemoryResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[25]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1401,7 +1550,7 @@ func (x *UpdateAgentMemoryResponse) String() string {
 func (*UpdateAgentMemoryResponse) ProtoMessage() {}
 
 func (x *UpdateAgentMemoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[25]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1414,7 +1563,7 @@ func (x *UpdateAgentMemoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentMemoryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAgentMemoryResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{25}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpdateAgentMemoryResponse) GetMemory() *AgentMemory {
@@ -1434,7 +1583,7 @@ type DeleteAgentMemoryRequest struct {
 
 func (x *DeleteAgentMemoryRequest) Reset() {
 	*x = DeleteAgentMemoryRequest{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[26]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1595,7 @@ func (x *DeleteAgentMemoryRequest) String() string {
 func (*DeleteAgentMemoryRequest) ProtoMessage() {}
 
 func (x *DeleteAgentMemoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[26]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1608,7 @@ func (x *DeleteAgentMemoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentMemoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentMemoryRequest) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{26}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *DeleteAgentMemoryRequest) GetMemoryId() string {
@@ -1485,7 +1634,7 @@ type DeleteAgentMemoryResponse struct {
 
 func (x *DeleteAgentMemoryResponse) Reset() {
 	*x = DeleteAgentMemoryResponse{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[27]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1497,7 +1646,7 @@ func (x *DeleteAgentMemoryResponse) String() string {
 func (*DeleteAgentMemoryResponse) ProtoMessage() {}
 
 func (x *DeleteAgentMemoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[27]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1510,7 +1659,7 @@ func (x *DeleteAgentMemoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentMemoryResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAgentMemoryResponse) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{27}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *DeleteAgentMemoryResponse) GetMemory() *AgentMemory {
@@ -1540,7 +1689,7 @@ type CodingTask struct {
 
 func (x *CodingTask) Reset() {
 	*x = CodingTask{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[28]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1552,7 +1701,7 @@ func (x *CodingTask) String() string {
 func (*CodingTask) ProtoMessage() {}
 
 func (x *CodingTask) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[28]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1565,7 +1714,7 @@ func (x *CodingTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CodingTask.ProtoReflect.Descriptor instead.
 func (*CodingTask) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{28}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CodingTask) GetId() string {
@@ -1670,7 +1819,7 @@ type Session struct {
 
 func (x *Session) Reset() {
 	*x = Session{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[29]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1682,7 +1831,7 @@ func (x *Session) String() string {
 func (*Session) ProtoMessage() {}
 
 func (x *Session) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[29]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1695,7 +1844,7 @@ func (x *Session) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Session.ProtoReflect.Descriptor instead.
 func (*Session) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{29}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Session) GetId() string {
@@ -1782,7 +1931,7 @@ type SessionMessage struct {
 
 func (x *SessionMessage) Reset() {
 	*x = SessionMessage{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[30]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1794,7 +1943,7 @@ func (x *SessionMessage) String() string {
 func (*SessionMessage) ProtoMessage() {}
 
 func (x *SessionMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[30]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1807,7 +1956,7 @@ func (x *SessionMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SessionMessage.ProtoReflect.Descriptor instead.
 func (*SessionMessage) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{30}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *SessionMessage) GetId() int64 {
@@ -1869,7 +2018,7 @@ type MemoryCandidate struct {
 
 func (x *MemoryCandidate) Reset() {
 	*x = MemoryCandidate{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[31]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1881,7 +2030,7 @@ func (x *MemoryCandidate) String() string {
 func (*MemoryCandidate) ProtoMessage() {}
 
 func (x *MemoryCandidate) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[31]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1894,7 +2043,7 @@ func (x *MemoryCandidate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryCandidate.ProtoReflect.Descriptor instead.
 func (*MemoryCandidate) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{31}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *MemoryCandidate) GetId() string {
@@ -1978,7 +2127,7 @@ type AgentMemory struct {
 
 func (x *AgentMemory) Reset() {
 	*x = AgentMemory{}
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[32]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1990,7 +2139,7 @@ func (x *AgentMemory) String() string {
 func (*AgentMemory) ProtoMessage() {}
 
 func (x *AgentMemory) ProtoReflect() protoreflect.Message {
-	mi := &file_collaboration_v1_collaboration_proto_msgTypes[32]
+	mi := &file_collaboration_v1_collaboration_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2003,7 +2152,7 @@ func (x *AgentMemory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMemory.ProtoReflect.Descriptor instead.
 func (*AgentMemory) Descriptor() ([]byte, []int) {
-	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{32}
+	return file_collaboration_v1_collaboration_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AgentMemory) GetId() string {
@@ -2080,7 +2229,15 @@ var File_collaboration_v1_collaboration_proto protoreflect.FileDescriptor
 
 const file_collaboration_v1_collaboration_proto_rawDesc = "" +
 	"\n" +
-	"$collaboration/v1/collaboration.proto\x12\x10collaboration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14types/v1/types.proto\"1\n" +
+	"$collaboration/v1/collaboration.proto\x12\x10collaboration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\"=\n" +
+	"\"ListCodingTaskLaunchOptionsRequest\x12\x17\n" +
+	"\ateam_id\x18\x01 \x01(\tR\x06teamId\"\x89\x01\n" +
+	"#ListCodingTaskLaunchOptionsResponse\x12>\n" +
+	"\x05items\x18\x01 \x03(\v2(.collaboration.v1.CodingTaskLaunchOptionR\x05items\x12\"\n" +
+	"\fprerequisite\x18\x02 \x01(\tR\fprerequisite\"v\n" +
+	"\x16CodingTaskLaunchOption\x12(\n" +
+	"\x10agent_release_id\x18\x01 \x01(\tR\x0eagentReleaseId\x122\n" +
+	"\x15repository_binding_id\x18\x02 \x01(\tR\x13repositoryBindingId\"1\n" +
 	"\x16ListCodingTasksRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\"M\n" +
 	"\x17ListCodingTasksResponse\x122\n" +
@@ -2252,22 +2409,49 @@ const file_collaboration_v1_collaboration_proto_rawDesc = "" +
 	"\aversion\x18\n" +
 	" \x01(\x03R\aversionB\x11\n" +
 	"\x0f_source_task_idB\r\n" +
-	"\v_deleted_at2\xc3\x10\n" +
-	"\x14CollaborationService\x12\x80\x01\n" +
-	"\x0fListCodingTasks\x12(.collaboration.v1.ListCodingTasksRequest\x1a).collaboration.v1.ListCodingTasksResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/coding-tasks\x12\x86\x01\n" +
-	"\x10CreateCodingTask\x12).collaboration.v1.CreateCodingTaskRequest\x1a*.collaboration.v1.CreateCodingTaskResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/coding-tasks\x12y\n" +
-	"\rGetCodingTask\x12&.collaboration.v1.GetCodingTaskRequest\x1a\x1c.collaboration.v1.CodingTask\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/coding-tasks/{task_id}\x12\x82\x01\n" +
-	"\x10UpdateCodingTask\x12).collaboration.v1.UpdateCodingTaskRequest\x1a\x1c.collaboration.v1.CodingTask\"%\x82\xd3\xe4\x93\x02\x1f:\x01*2\x1a/v1/coding-tasks/{task_id}\x12\x9b\x01\n" +
-	"\x12ContinueCodingTask\x12+.collaboration.v1.ContinueCodingTaskRequest\x1a,.collaboration.v1.ContinueCodingTaskResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/coding-tasks/{task_id}/runs\x12\x8c\x01\n" +
-	"\x14GetCodingTaskSession\x12-.collaboration.v1.GetCodingTaskSessionRequest\x1a\x19.collaboration.v1.Session\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/coding-tasks/{task_id}/session\x12\x95\x01\n" +
-	"\x17UpdateCodingTaskSession\x120.collaboration.v1.UpdateCodingTaskSessionRequest\x1a\x19.collaboration.v1.Session\"-\x82\xd3\xe4\x93\x02':\x01*2\"/v1/coding-tasks/{task_id}/session\x12\x9f\x01\n" +
+	"\v_deleted_at2\xa8\x14\n" +
+	"\x14CollaborationService\x12\xb2\x01\n" +
+	"\x1bListCodingTaskLaunchOptions\x124.collaboration.v1.ListCodingTaskLaunchOptionsRequest\x1a5.collaboration.v1.ListCodingTaskLaunchOptionsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/coding-task-launch-options\x12\x80\x01\n" +
+	"\x0fListCodingTasks\x12(.collaboration.v1.ListCodingTasksRequest\x1a).collaboration.v1.ListCodingTasksResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/coding-tasks\x12\xa2\x01\n" +
+	"\x10CreateCodingTask\x12).collaboration.v1.CreateCodingTaskRequest\x1a*.collaboration.v1.CreateCodingTaskResponse\"7\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/coding-tasks\x12y\n" +
+	"\rGetCodingTask\x12&.collaboration.v1.GetCodingTaskRequest\x1a\x1c.collaboration.v1.CodingTask\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/coding-tasks/{task_id}\x12\xae\x01\n" +
+	"\x10UpdateCodingTask\x12).collaboration.v1.UpdateCodingTaskRequest\x1a\x1c.collaboration.v1.CodingTask\"Q\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1f:\x01*2\x1a/v1/coding-tasks/{task_id}\x12\xc7\x01\n" +
+	"\x12ContinueCodingTask\x12+.collaboration.v1.ContinueCodingTaskRequest\x1a,.collaboration.v1.ContinueCodingTaskResponse\"V\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/coding-tasks/{task_id}/runs\x12\x8c\x01\n" +
+	"\x14GetCodingTaskSession\x12-.collaboration.v1.GetCodingTaskSessionRequest\x1a\x19.collaboration.v1.Session\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/coding-tasks/{task_id}/session\x12\xc1\x01\n" +
+	"\x17UpdateCodingTaskSession\x120.collaboration.v1.UpdateCodingTaskSessionRequest\x1a\x19.collaboration.v1.Session\"Y\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02':\x01*2\"/v1/coding-tasks/{task_id}/session\x12\x9f\x01\n" +
 	"\x13ListSessionMessages\x12,.collaboration.v1.ListSessionMessagesRequest\x1a-.collaboration.v1.ListSessionMessagesResponse\"+\x82\xd3\xe4\x93\x02%\x12#/v1/coding-tasks/{task_id}/messages\x12\xab\x01\n" +
-	"\x14ListMemoryCandidates\x12-.collaboration.v1.ListMemoryCandidatesRequest\x1a..collaboration.v1.ListMemoryCandidatesResponse\"4\x82\xd3\xe4\x93\x02.\x12,/v1/coding-tasks/{task_id}/memory-candidates\x12\xa5\x01\n" +
-	"\x16ProposeMemoryCandidate\x12/.collaboration.v1.ProposeMemoryCandidateRequest\x1a!.collaboration.v1.MemoryCandidate\"7\x82\xd3\xe4\x93\x021:\x01*\",/v1/coding-tasks/{task_id}/memory-candidates\x12\xa9\x01\n" +
-	"\x15DecideMemoryCandidate\x12..collaboration.v1.DecideMemoryCandidateRequest\x1a/.collaboration.v1.DecideMemoryCandidateResponse\"/\x82\xd3\xe4\x93\x02):\x01*2$/v1/memory-candidates/{candidate_id}\x12\x94\x01\n" +
-	"\x11ListAgentMemories\x12*.collaboration.v1.ListAgentMemoriesRequest\x1a+.collaboration.v1.ListAgentMemoriesResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/agents/{agent_id}/memories\x12\x89\x01\n" +
-	"\x11UpdateAgentMemory\x12*.collaboration.v1.UpdateAgentMemoryRequest\x1a\x1d.collaboration.v1.AgentMemory\")\x82\xd3\xe4\x93\x02#:\x01*2\x1e/v1/agent-memories/{memory_id}\x12\x92\x01\n" +
-	"\x11DeleteAgentMemory\x12*.collaboration.v1.DeleteAgentMemoryRequest\x1a\x1d.collaboration.v1.AgentMemory\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/agent-memories/{memory_id}/deletionB=Z;agent-platform/backend/api/collaboration/v1;collaborationv1b\x06proto3"
+	"\x14ListMemoryCandidates\x12-.collaboration.v1.ListMemoryCandidatesRequest\x1a..collaboration.v1.ListMemoryCandidatesResponse\"4\x82\xd3\xe4\x93\x02.\x12,/v1/coding-tasks/{task_id}/memory-candidates\x12\xc1\x01\n" +
+	"\x16ProposeMemoryCandidate\x12/.collaboration.v1.ProposeMemoryCandidateRequest\x1a!.collaboration.v1.MemoryCandidate\"S\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x021:\x01*\",/v1/coding-tasks/{task_id}/memory-candidates\x12\xc5\x01\n" +
+	"\x15DecideMemoryCandidate\x12..collaboration.v1.DecideMemoryCandidateRequest\x1a/.collaboration.v1.DecideMemoryCandidateResponse\"K\x92A\x19r\x17\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\x82\xd3\xe4\x93\x02):\x01*2$/v1/memory-candidates/{candidate_id}\x12\x94\x01\n" +
+	"\x11ListAgentMemories\x12*.collaboration.v1.ListAgentMemoriesRequest\x1a+.collaboration.v1.ListAgentMemoriesResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/agents/{agent_id}/memories\x12\xb5\x01\n" +
+	"\x11UpdateAgentMemory\x12*.collaboration.v1.UpdateAgentMemoryRequest\x1a\x1d.collaboration.v1.AgentMemory\"U\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02#:\x01*2\x1e/v1/agent-memories/{memory_id}\x12\xbe\x01\n" +
+	"\x11DeleteAgentMemory\x12*.collaboration.v1.DeleteAgentMemoryRequest\x1a\x1d.collaboration.v1.AgentMemory\"^\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/agent-memories/{memory_id}/deletionB=Z;agent-platform/backend/api/collaboration/v1;collaborationv1b\x06proto3"
 
 var (
 	file_collaboration_v1_collaboration_proto_rawDescOnce sync.Once
@@ -2281,113 +2465,119 @@ func file_collaboration_v1_collaboration_proto_rawDescGZIP() []byte {
 	return file_collaboration_v1_collaboration_proto_rawDescData
 }
 
-var file_collaboration_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_collaboration_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_collaboration_v1_collaboration_proto_goTypes = []any{
-	(*ListCodingTasksRequest)(nil),          // 0: collaboration.v1.ListCodingTasksRequest
-	(*ListCodingTasksResponse)(nil),         // 1: collaboration.v1.ListCodingTasksResponse
-	(*CreateCodingTaskRequest)(nil),         // 2: collaboration.v1.CreateCodingTaskRequest
-	(*CreateCodingTaskResponse)(nil),        // 3: collaboration.v1.CreateCodingTaskResponse
-	(*GetCodingTaskRequest)(nil),            // 4: collaboration.v1.GetCodingTaskRequest
-	(*GetCodingTaskResponse)(nil),           // 5: collaboration.v1.GetCodingTaskResponse
-	(*UpdateCodingTaskRequest)(nil),         // 6: collaboration.v1.UpdateCodingTaskRequest
-	(*UpdateCodingTaskResponse)(nil),        // 7: collaboration.v1.UpdateCodingTaskResponse
-	(*ContinueCodingTaskRequest)(nil),       // 8: collaboration.v1.ContinueCodingTaskRequest
-	(*ContinueCodingTaskResponse)(nil),      // 9: collaboration.v1.ContinueCodingTaskResponse
-	(*GetCodingTaskSessionRequest)(nil),     // 10: collaboration.v1.GetCodingTaskSessionRequest
-	(*GetCodingTaskSessionResponse)(nil),    // 11: collaboration.v1.GetCodingTaskSessionResponse
-	(*UpdateCodingTaskSessionRequest)(nil),  // 12: collaboration.v1.UpdateCodingTaskSessionRequest
-	(*UpdateCodingTaskSessionResponse)(nil), // 13: collaboration.v1.UpdateCodingTaskSessionResponse
-	(*ListSessionMessagesRequest)(nil),      // 14: collaboration.v1.ListSessionMessagesRequest
-	(*ListSessionMessagesResponse)(nil),     // 15: collaboration.v1.ListSessionMessagesResponse
-	(*ListMemoryCandidatesRequest)(nil),     // 16: collaboration.v1.ListMemoryCandidatesRequest
-	(*ListMemoryCandidatesResponse)(nil),    // 17: collaboration.v1.ListMemoryCandidatesResponse
-	(*ProposeMemoryCandidateRequest)(nil),   // 18: collaboration.v1.ProposeMemoryCandidateRequest
-	(*ProposeMemoryCandidateResponse)(nil),  // 19: collaboration.v1.ProposeMemoryCandidateResponse
-	(*DecideMemoryCandidateRequest)(nil),    // 20: collaboration.v1.DecideMemoryCandidateRequest
-	(*DecideMemoryCandidateResponse)(nil),   // 21: collaboration.v1.DecideMemoryCandidateResponse
-	(*ListAgentMemoriesRequest)(nil),        // 22: collaboration.v1.ListAgentMemoriesRequest
-	(*ListAgentMemoriesResponse)(nil),       // 23: collaboration.v1.ListAgentMemoriesResponse
-	(*UpdateAgentMemoryRequest)(nil),        // 24: collaboration.v1.UpdateAgentMemoryRequest
-	(*UpdateAgentMemoryResponse)(nil),       // 25: collaboration.v1.UpdateAgentMemoryResponse
-	(*DeleteAgentMemoryRequest)(nil),        // 26: collaboration.v1.DeleteAgentMemoryRequest
-	(*DeleteAgentMemoryResponse)(nil),       // 27: collaboration.v1.DeleteAgentMemoryResponse
-	(*CodingTask)(nil),                      // 28: collaboration.v1.CodingTask
-	(*Session)(nil),                         // 29: collaboration.v1.Session
-	(*SessionMessage)(nil),                  // 30: collaboration.v1.SessionMessage
-	(*MemoryCandidate)(nil),                 // 31: collaboration.v1.MemoryCandidate
-	(*AgentMemory)(nil),                     // 32: collaboration.v1.AgentMemory
-	(*v1.IssueSnapshot)(nil),                // 33: types.v1.IssueSnapshot
-	(*v1.SessionMemory)(nil),                // 34: types.v1.SessionMemory
-	(*timestamppb.Timestamp)(nil),           // 35: google.protobuf.Timestamp
-	(*v1.SessionMessageContent)(nil),        // 36: types.v1.SessionMessageContent
+	(*ListCodingTaskLaunchOptionsRequest)(nil),  // 0: collaboration.v1.ListCodingTaskLaunchOptionsRequest
+	(*ListCodingTaskLaunchOptionsResponse)(nil), // 1: collaboration.v1.ListCodingTaskLaunchOptionsResponse
+	(*CodingTaskLaunchOption)(nil),              // 2: collaboration.v1.CodingTaskLaunchOption
+	(*ListCodingTasksRequest)(nil),              // 3: collaboration.v1.ListCodingTasksRequest
+	(*ListCodingTasksResponse)(nil),             // 4: collaboration.v1.ListCodingTasksResponse
+	(*CreateCodingTaskRequest)(nil),             // 5: collaboration.v1.CreateCodingTaskRequest
+	(*CreateCodingTaskResponse)(nil),            // 6: collaboration.v1.CreateCodingTaskResponse
+	(*GetCodingTaskRequest)(nil),                // 7: collaboration.v1.GetCodingTaskRequest
+	(*GetCodingTaskResponse)(nil),               // 8: collaboration.v1.GetCodingTaskResponse
+	(*UpdateCodingTaskRequest)(nil),             // 9: collaboration.v1.UpdateCodingTaskRequest
+	(*UpdateCodingTaskResponse)(nil),            // 10: collaboration.v1.UpdateCodingTaskResponse
+	(*ContinueCodingTaskRequest)(nil),           // 11: collaboration.v1.ContinueCodingTaskRequest
+	(*ContinueCodingTaskResponse)(nil),          // 12: collaboration.v1.ContinueCodingTaskResponse
+	(*GetCodingTaskSessionRequest)(nil),         // 13: collaboration.v1.GetCodingTaskSessionRequest
+	(*GetCodingTaskSessionResponse)(nil),        // 14: collaboration.v1.GetCodingTaskSessionResponse
+	(*UpdateCodingTaskSessionRequest)(nil),      // 15: collaboration.v1.UpdateCodingTaskSessionRequest
+	(*UpdateCodingTaskSessionResponse)(nil),     // 16: collaboration.v1.UpdateCodingTaskSessionResponse
+	(*ListSessionMessagesRequest)(nil),          // 17: collaboration.v1.ListSessionMessagesRequest
+	(*ListSessionMessagesResponse)(nil),         // 18: collaboration.v1.ListSessionMessagesResponse
+	(*ListMemoryCandidatesRequest)(nil),         // 19: collaboration.v1.ListMemoryCandidatesRequest
+	(*ListMemoryCandidatesResponse)(nil),        // 20: collaboration.v1.ListMemoryCandidatesResponse
+	(*ProposeMemoryCandidateRequest)(nil),       // 21: collaboration.v1.ProposeMemoryCandidateRequest
+	(*ProposeMemoryCandidateResponse)(nil),      // 22: collaboration.v1.ProposeMemoryCandidateResponse
+	(*DecideMemoryCandidateRequest)(nil),        // 23: collaboration.v1.DecideMemoryCandidateRequest
+	(*DecideMemoryCandidateResponse)(nil),       // 24: collaboration.v1.DecideMemoryCandidateResponse
+	(*ListAgentMemoriesRequest)(nil),            // 25: collaboration.v1.ListAgentMemoriesRequest
+	(*ListAgentMemoriesResponse)(nil),           // 26: collaboration.v1.ListAgentMemoriesResponse
+	(*UpdateAgentMemoryRequest)(nil),            // 27: collaboration.v1.UpdateAgentMemoryRequest
+	(*UpdateAgentMemoryResponse)(nil),           // 28: collaboration.v1.UpdateAgentMemoryResponse
+	(*DeleteAgentMemoryRequest)(nil),            // 29: collaboration.v1.DeleteAgentMemoryRequest
+	(*DeleteAgentMemoryResponse)(nil),           // 30: collaboration.v1.DeleteAgentMemoryResponse
+	(*CodingTask)(nil),                          // 31: collaboration.v1.CodingTask
+	(*Session)(nil),                             // 32: collaboration.v1.Session
+	(*SessionMessage)(nil),                      // 33: collaboration.v1.SessionMessage
+	(*MemoryCandidate)(nil),                     // 34: collaboration.v1.MemoryCandidate
+	(*AgentMemory)(nil),                         // 35: collaboration.v1.AgentMemory
+	(*v1.IssueSnapshot)(nil),                    // 36: types.v1.IssueSnapshot
+	(*v1.SessionMemory)(nil),                    // 37: types.v1.SessionMemory
+	(*timestamppb.Timestamp)(nil),               // 38: google.protobuf.Timestamp
+	(*v1.SessionMessageContent)(nil),            // 39: types.v1.SessionMessageContent
 }
 var file_collaboration_v1_collaboration_proto_depIdxs = []int32{
-	28, // 0: collaboration.v1.ListCodingTasksResponse.items:type_name -> collaboration.v1.CodingTask
-	33, // 1: collaboration.v1.CreateCodingTaskRequest.issue_snapshot:type_name -> types.v1.IssueSnapshot
-	28, // 2: collaboration.v1.CreateCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
-	29, // 3: collaboration.v1.CreateCodingTaskResponse.session:type_name -> collaboration.v1.Session
-	28, // 4: collaboration.v1.GetCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
-	28, // 5: collaboration.v1.UpdateCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
-	28, // 6: collaboration.v1.ContinueCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
-	29, // 7: collaboration.v1.ContinueCodingTaskResponse.session:type_name -> collaboration.v1.Session
-	29, // 8: collaboration.v1.GetCodingTaskSessionResponse.session:type_name -> collaboration.v1.Session
-	34, // 9: collaboration.v1.UpdateCodingTaskSessionRequest.memory:type_name -> types.v1.SessionMemory
-	29, // 10: collaboration.v1.UpdateCodingTaskSessionResponse.session:type_name -> collaboration.v1.Session
-	30, // 11: collaboration.v1.ListSessionMessagesResponse.items:type_name -> collaboration.v1.SessionMessage
-	31, // 12: collaboration.v1.ListMemoryCandidatesResponse.items:type_name -> collaboration.v1.MemoryCandidate
-	31, // 13: collaboration.v1.ProposeMemoryCandidateResponse.candidate:type_name -> collaboration.v1.MemoryCandidate
-	31, // 14: collaboration.v1.DecideMemoryCandidateResponse.candidate:type_name -> collaboration.v1.MemoryCandidate
-	32, // 15: collaboration.v1.DecideMemoryCandidateResponse.memory:type_name -> collaboration.v1.AgentMemory
-	32, // 16: collaboration.v1.ListAgentMemoriesResponse.items:type_name -> collaboration.v1.AgentMemory
-	32, // 17: collaboration.v1.UpdateAgentMemoryResponse.memory:type_name -> collaboration.v1.AgentMemory
-	32, // 18: collaboration.v1.DeleteAgentMemoryResponse.memory:type_name -> collaboration.v1.AgentMemory
-	33, // 19: collaboration.v1.CodingTask.issue_snapshot:type_name -> types.v1.IssueSnapshot
-	35, // 20: collaboration.v1.CodingTask.created_at:type_name -> google.protobuf.Timestamp
-	35, // 21: collaboration.v1.CodingTask.updated_at:type_name -> google.protobuf.Timestamp
-	35, // 22: collaboration.v1.CodingTask.completed_at:type_name -> google.protobuf.Timestamp
-	34, // 23: collaboration.v1.Session.memory:type_name -> types.v1.SessionMemory
-	35, // 24: collaboration.v1.Session.created_at:type_name -> google.protobuf.Timestamp
-	35, // 25: collaboration.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 26: collaboration.v1.SessionMessage.content:type_name -> types.v1.SessionMessageContent
-	35, // 27: collaboration.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
-	35, // 28: collaboration.v1.MemoryCandidate.proposed_at:type_name -> google.protobuf.Timestamp
-	35, // 29: collaboration.v1.MemoryCandidate.decided_at:type_name -> google.protobuf.Timestamp
-	35, // 30: collaboration.v1.AgentMemory.created_at:type_name -> google.protobuf.Timestamp
-	35, // 31: collaboration.v1.AgentMemory.updated_at:type_name -> google.protobuf.Timestamp
-	35, // 32: collaboration.v1.AgentMemory.deleted_at:type_name -> google.protobuf.Timestamp
-	0,  // 33: collaboration.v1.CollaborationService.ListCodingTasks:input_type -> collaboration.v1.ListCodingTasksRequest
-	2,  // 34: collaboration.v1.CollaborationService.CreateCodingTask:input_type -> collaboration.v1.CreateCodingTaskRequest
-	4,  // 35: collaboration.v1.CollaborationService.GetCodingTask:input_type -> collaboration.v1.GetCodingTaskRequest
-	6,  // 36: collaboration.v1.CollaborationService.UpdateCodingTask:input_type -> collaboration.v1.UpdateCodingTaskRequest
-	8,  // 37: collaboration.v1.CollaborationService.ContinueCodingTask:input_type -> collaboration.v1.ContinueCodingTaskRequest
-	10, // 38: collaboration.v1.CollaborationService.GetCodingTaskSession:input_type -> collaboration.v1.GetCodingTaskSessionRequest
-	12, // 39: collaboration.v1.CollaborationService.UpdateCodingTaskSession:input_type -> collaboration.v1.UpdateCodingTaskSessionRequest
-	14, // 40: collaboration.v1.CollaborationService.ListSessionMessages:input_type -> collaboration.v1.ListSessionMessagesRequest
-	16, // 41: collaboration.v1.CollaborationService.ListMemoryCandidates:input_type -> collaboration.v1.ListMemoryCandidatesRequest
-	18, // 42: collaboration.v1.CollaborationService.ProposeMemoryCandidate:input_type -> collaboration.v1.ProposeMemoryCandidateRequest
-	20, // 43: collaboration.v1.CollaborationService.DecideMemoryCandidate:input_type -> collaboration.v1.DecideMemoryCandidateRequest
-	22, // 44: collaboration.v1.CollaborationService.ListAgentMemories:input_type -> collaboration.v1.ListAgentMemoriesRequest
-	24, // 45: collaboration.v1.CollaborationService.UpdateAgentMemory:input_type -> collaboration.v1.UpdateAgentMemoryRequest
-	26, // 46: collaboration.v1.CollaborationService.DeleteAgentMemory:input_type -> collaboration.v1.DeleteAgentMemoryRequest
-	1,  // 47: collaboration.v1.CollaborationService.ListCodingTasks:output_type -> collaboration.v1.ListCodingTasksResponse
-	3,  // 48: collaboration.v1.CollaborationService.CreateCodingTask:output_type -> collaboration.v1.CreateCodingTaskResponse
-	28, // 49: collaboration.v1.CollaborationService.GetCodingTask:output_type -> collaboration.v1.CodingTask
-	28, // 50: collaboration.v1.CollaborationService.UpdateCodingTask:output_type -> collaboration.v1.CodingTask
-	9,  // 51: collaboration.v1.CollaborationService.ContinueCodingTask:output_type -> collaboration.v1.ContinueCodingTaskResponse
-	29, // 52: collaboration.v1.CollaborationService.GetCodingTaskSession:output_type -> collaboration.v1.Session
-	29, // 53: collaboration.v1.CollaborationService.UpdateCodingTaskSession:output_type -> collaboration.v1.Session
-	15, // 54: collaboration.v1.CollaborationService.ListSessionMessages:output_type -> collaboration.v1.ListSessionMessagesResponse
-	17, // 55: collaboration.v1.CollaborationService.ListMemoryCandidates:output_type -> collaboration.v1.ListMemoryCandidatesResponse
-	31, // 56: collaboration.v1.CollaborationService.ProposeMemoryCandidate:output_type -> collaboration.v1.MemoryCandidate
-	21, // 57: collaboration.v1.CollaborationService.DecideMemoryCandidate:output_type -> collaboration.v1.DecideMemoryCandidateResponse
-	23, // 58: collaboration.v1.CollaborationService.ListAgentMemories:output_type -> collaboration.v1.ListAgentMemoriesResponse
-	32, // 59: collaboration.v1.CollaborationService.UpdateAgentMemory:output_type -> collaboration.v1.AgentMemory
-	32, // 60: collaboration.v1.CollaborationService.DeleteAgentMemory:output_type -> collaboration.v1.AgentMemory
-	47, // [47:61] is the sub-list for method output_type
-	33, // [33:47] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	2,  // 0: collaboration.v1.ListCodingTaskLaunchOptionsResponse.items:type_name -> collaboration.v1.CodingTaskLaunchOption
+	31, // 1: collaboration.v1.ListCodingTasksResponse.items:type_name -> collaboration.v1.CodingTask
+	36, // 2: collaboration.v1.CreateCodingTaskRequest.issue_snapshot:type_name -> types.v1.IssueSnapshot
+	31, // 3: collaboration.v1.CreateCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
+	32, // 4: collaboration.v1.CreateCodingTaskResponse.session:type_name -> collaboration.v1.Session
+	31, // 5: collaboration.v1.GetCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
+	31, // 6: collaboration.v1.UpdateCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
+	31, // 7: collaboration.v1.ContinueCodingTaskResponse.task:type_name -> collaboration.v1.CodingTask
+	32, // 8: collaboration.v1.ContinueCodingTaskResponse.session:type_name -> collaboration.v1.Session
+	32, // 9: collaboration.v1.GetCodingTaskSessionResponse.session:type_name -> collaboration.v1.Session
+	37, // 10: collaboration.v1.UpdateCodingTaskSessionRequest.memory:type_name -> types.v1.SessionMemory
+	32, // 11: collaboration.v1.UpdateCodingTaskSessionResponse.session:type_name -> collaboration.v1.Session
+	33, // 12: collaboration.v1.ListSessionMessagesResponse.items:type_name -> collaboration.v1.SessionMessage
+	34, // 13: collaboration.v1.ListMemoryCandidatesResponse.items:type_name -> collaboration.v1.MemoryCandidate
+	34, // 14: collaboration.v1.ProposeMemoryCandidateResponse.candidate:type_name -> collaboration.v1.MemoryCandidate
+	34, // 15: collaboration.v1.DecideMemoryCandidateResponse.candidate:type_name -> collaboration.v1.MemoryCandidate
+	35, // 16: collaboration.v1.DecideMemoryCandidateResponse.memory:type_name -> collaboration.v1.AgentMemory
+	35, // 17: collaboration.v1.ListAgentMemoriesResponse.items:type_name -> collaboration.v1.AgentMemory
+	35, // 18: collaboration.v1.UpdateAgentMemoryResponse.memory:type_name -> collaboration.v1.AgentMemory
+	35, // 19: collaboration.v1.DeleteAgentMemoryResponse.memory:type_name -> collaboration.v1.AgentMemory
+	36, // 20: collaboration.v1.CodingTask.issue_snapshot:type_name -> types.v1.IssueSnapshot
+	38, // 21: collaboration.v1.CodingTask.created_at:type_name -> google.protobuf.Timestamp
+	38, // 22: collaboration.v1.CodingTask.updated_at:type_name -> google.protobuf.Timestamp
+	38, // 23: collaboration.v1.CodingTask.completed_at:type_name -> google.protobuf.Timestamp
+	37, // 24: collaboration.v1.Session.memory:type_name -> types.v1.SessionMemory
+	38, // 25: collaboration.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	38, // 26: collaboration.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
+	39, // 27: collaboration.v1.SessionMessage.content:type_name -> types.v1.SessionMessageContent
+	38, // 28: collaboration.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
+	38, // 29: collaboration.v1.MemoryCandidate.proposed_at:type_name -> google.protobuf.Timestamp
+	38, // 30: collaboration.v1.MemoryCandidate.decided_at:type_name -> google.protobuf.Timestamp
+	38, // 31: collaboration.v1.AgentMemory.created_at:type_name -> google.protobuf.Timestamp
+	38, // 32: collaboration.v1.AgentMemory.updated_at:type_name -> google.protobuf.Timestamp
+	38, // 33: collaboration.v1.AgentMemory.deleted_at:type_name -> google.protobuf.Timestamp
+	0,  // 34: collaboration.v1.CollaborationService.ListCodingTaskLaunchOptions:input_type -> collaboration.v1.ListCodingTaskLaunchOptionsRequest
+	3,  // 35: collaboration.v1.CollaborationService.ListCodingTasks:input_type -> collaboration.v1.ListCodingTasksRequest
+	5,  // 36: collaboration.v1.CollaborationService.CreateCodingTask:input_type -> collaboration.v1.CreateCodingTaskRequest
+	7,  // 37: collaboration.v1.CollaborationService.GetCodingTask:input_type -> collaboration.v1.GetCodingTaskRequest
+	9,  // 38: collaboration.v1.CollaborationService.UpdateCodingTask:input_type -> collaboration.v1.UpdateCodingTaskRequest
+	11, // 39: collaboration.v1.CollaborationService.ContinueCodingTask:input_type -> collaboration.v1.ContinueCodingTaskRequest
+	13, // 40: collaboration.v1.CollaborationService.GetCodingTaskSession:input_type -> collaboration.v1.GetCodingTaskSessionRequest
+	15, // 41: collaboration.v1.CollaborationService.UpdateCodingTaskSession:input_type -> collaboration.v1.UpdateCodingTaskSessionRequest
+	17, // 42: collaboration.v1.CollaborationService.ListSessionMessages:input_type -> collaboration.v1.ListSessionMessagesRequest
+	19, // 43: collaboration.v1.CollaborationService.ListMemoryCandidates:input_type -> collaboration.v1.ListMemoryCandidatesRequest
+	21, // 44: collaboration.v1.CollaborationService.ProposeMemoryCandidate:input_type -> collaboration.v1.ProposeMemoryCandidateRequest
+	23, // 45: collaboration.v1.CollaborationService.DecideMemoryCandidate:input_type -> collaboration.v1.DecideMemoryCandidateRequest
+	25, // 46: collaboration.v1.CollaborationService.ListAgentMemories:input_type -> collaboration.v1.ListAgentMemoriesRequest
+	27, // 47: collaboration.v1.CollaborationService.UpdateAgentMemory:input_type -> collaboration.v1.UpdateAgentMemoryRequest
+	29, // 48: collaboration.v1.CollaborationService.DeleteAgentMemory:input_type -> collaboration.v1.DeleteAgentMemoryRequest
+	1,  // 49: collaboration.v1.CollaborationService.ListCodingTaskLaunchOptions:output_type -> collaboration.v1.ListCodingTaskLaunchOptionsResponse
+	4,  // 50: collaboration.v1.CollaborationService.ListCodingTasks:output_type -> collaboration.v1.ListCodingTasksResponse
+	6,  // 51: collaboration.v1.CollaborationService.CreateCodingTask:output_type -> collaboration.v1.CreateCodingTaskResponse
+	31, // 52: collaboration.v1.CollaborationService.GetCodingTask:output_type -> collaboration.v1.CodingTask
+	31, // 53: collaboration.v1.CollaborationService.UpdateCodingTask:output_type -> collaboration.v1.CodingTask
+	12, // 54: collaboration.v1.CollaborationService.ContinueCodingTask:output_type -> collaboration.v1.ContinueCodingTaskResponse
+	32, // 55: collaboration.v1.CollaborationService.GetCodingTaskSession:output_type -> collaboration.v1.Session
+	32, // 56: collaboration.v1.CollaborationService.UpdateCodingTaskSession:output_type -> collaboration.v1.Session
+	18, // 57: collaboration.v1.CollaborationService.ListSessionMessages:output_type -> collaboration.v1.ListSessionMessagesResponse
+	20, // 58: collaboration.v1.CollaborationService.ListMemoryCandidates:output_type -> collaboration.v1.ListMemoryCandidatesResponse
+	34, // 59: collaboration.v1.CollaborationService.ProposeMemoryCandidate:output_type -> collaboration.v1.MemoryCandidate
+	24, // 60: collaboration.v1.CollaborationService.DecideMemoryCandidate:output_type -> collaboration.v1.DecideMemoryCandidateResponse
+	26, // 61: collaboration.v1.CollaborationService.ListAgentMemories:output_type -> collaboration.v1.ListAgentMemoriesResponse
+	35, // 62: collaboration.v1.CollaborationService.UpdateAgentMemory:output_type -> collaboration.v1.AgentMemory
+	35, // 63: collaboration.v1.CollaborationService.DeleteAgentMemory:output_type -> collaboration.v1.AgentMemory
+	49, // [49:64] is the sub-list for method output_type
+	34, // [34:49] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_collaboration_v1_collaboration_proto_init() }
@@ -2395,21 +2585,21 @@ func file_collaboration_v1_collaboration_proto_init() {
 	if File_collaboration_v1_collaboration_proto != nil {
 		return
 	}
-	file_collaboration_v1_collaboration_proto_msgTypes[2].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[14].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[21].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[22].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[28].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[30].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[5].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[17].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[24].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[25].OneofWrappers = []any{}
 	file_collaboration_v1_collaboration_proto_msgTypes[31].OneofWrappers = []any{}
-	file_collaboration_v1_collaboration_proto_msgTypes[32].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[33].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[34].OneofWrappers = []any{}
+	file_collaboration_v1_collaboration_proto_msgTypes[35].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_collaboration_v1_collaboration_proto_rawDesc), len(file_collaboration_v1_collaboration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -19,26 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CollaborationService_ListCodingTasks_FullMethodName         = "/collaboration.v1.CollaborationService/ListCodingTasks"
-	CollaborationService_CreateCodingTask_FullMethodName        = "/collaboration.v1.CollaborationService/CreateCodingTask"
-	CollaborationService_GetCodingTask_FullMethodName           = "/collaboration.v1.CollaborationService/GetCodingTask"
-	CollaborationService_UpdateCodingTask_FullMethodName        = "/collaboration.v1.CollaborationService/UpdateCodingTask"
-	CollaborationService_ContinueCodingTask_FullMethodName      = "/collaboration.v1.CollaborationService/ContinueCodingTask"
-	CollaborationService_GetCodingTaskSession_FullMethodName    = "/collaboration.v1.CollaborationService/GetCodingTaskSession"
-	CollaborationService_UpdateCodingTaskSession_FullMethodName = "/collaboration.v1.CollaborationService/UpdateCodingTaskSession"
-	CollaborationService_ListSessionMessages_FullMethodName     = "/collaboration.v1.CollaborationService/ListSessionMessages"
-	CollaborationService_ListMemoryCandidates_FullMethodName    = "/collaboration.v1.CollaborationService/ListMemoryCandidates"
-	CollaborationService_ProposeMemoryCandidate_FullMethodName  = "/collaboration.v1.CollaborationService/ProposeMemoryCandidate"
-	CollaborationService_DecideMemoryCandidate_FullMethodName   = "/collaboration.v1.CollaborationService/DecideMemoryCandidate"
-	CollaborationService_ListAgentMemories_FullMethodName       = "/collaboration.v1.CollaborationService/ListAgentMemories"
-	CollaborationService_UpdateAgentMemory_FullMethodName       = "/collaboration.v1.CollaborationService/UpdateAgentMemory"
-	CollaborationService_DeleteAgentMemory_FullMethodName       = "/collaboration.v1.CollaborationService/DeleteAgentMemory"
+	CollaborationService_ListCodingTaskLaunchOptions_FullMethodName = "/collaboration.v1.CollaborationService/ListCodingTaskLaunchOptions"
+	CollaborationService_ListCodingTasks_FullMethodName             = "/collaboration.v1.CollaborationService/ListCodingTasks"
+	CollaborationService_CreateCodingTask_FullMethodName            = "/collaboration.v1.CollaborationService/CreateCodingTask"
+	CollaborationService_GetCodingTask_FullMethodName               = "/collaboration.v1.CollaborationService/GetCodingTask"
+	CollaborationService_UpdateCodingTask_FullMethodName            = "/collaboration.v1.CollaborationService/UpdateCodingTask"
+	CollaborationService_ContinueCodingTask_FullMethodName          = "/collaboration.v1.CollaborationService/ContinueCodingTask"
+	CollaborationService_GetCodingTaskSession_FullMethodName        = "/collaboration.v1.CollaborationService/GetCodingTaskSession"
+	CollaborationService_UpdateCodingTaskSession_FullMethodName     = "/collaboration.v1.CollaborationService/UpdateCodingTaskSession"
+	CollaborationService_ListSessionMessages_FullMethodName         = "/collaboration.v1.CollaborationService/ListSessionMessages"
+	CollaborationService_ListMemoryCandidates_FullMethodName        = "/collaboration.v1.CollaborationService/ListMemoryCandidates"
+	CollaborationService_ProposeMemoryCandidate_FullMethodName      = "/collaboration.v1.CollaborationService/ProposeMemoryCandidate"
+	CollaborationService_DecideMemoryCandidate_FullMethodName       = "/collaboration.v1.CollaborationService/DecideMemoryCandidate"
+	CollaborationService_ListAgentMemories_FullMethodName           = "/collaboration.v1.CollaborationService/ListAgentMemories"
+	CollaborationService_UpdateAgentMemory_FullMethodName           = "/collaboration.v1.CollaborationService/UpdateAgentMemory"
+	CollaborationService_DeleteAgentMemory_FullMethodName           = "/collaboration.v1.CollaborationService/DeleteAgentMemory"
 )
 
 // CollaborationServiceClient is the client API for CollaborationService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CollaborationServiceClient interface {
+	ListCodingTaskLaunchOptions(ctx context.Context, in *ListCodingTaskLaunchOptionsRequest, opts ...grpc.CallOption) (*ListCodingTaskLaunchOptionsResponse, error)
 	ListCodingTasks(ctx context.Context, in *ListCodingTasksRequest, opts ...grpc.CallOption) (*ListCodingTasksResponse, error)
 	CreateCodingTask(ctx context.Context, in *CreateCodingTaskRequest, opts ...grpc.CallOption) (*CreateCodingTaskResponse, error)
 	GetCodingTask(ctx context.Context, in *GetCodingTaskRequest, opts ...grpc.CallOption) (*CodingTask, error)
@@ -61,6 +63,16 @@ type collaborationServiceClient struct {
 
 func NewCollaborationServiceClient(cc grpc.ClientConnInterface) CollaborationServiceClient {
 	return &collaborationServiceClient{cc}
+}
+
+func (c *collaborationServiceClient) ListCodingTaskLaunchOptions(ctx context.Context, in *ListCodingTaskLaunchOptionsRequest, opts ...grpc.CallOption) (*ListCodingTaskLaunchOptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCodingTaskLaunchOptionsResponse)
+	err := c.cc.Invoke(ctx, CollaborationService_ListCodingTaskLaunchOptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *collaborationServiceClient) ListCodingTasks(ctx context.Context, in *ListCodingTasksRequest, opts ...grpc.CallOption) (*ListCodingTasksResponse, error) {
@@ -207,6 +219,7 @@ func (c *collaborationServiceClient) DeleteAgentMemory(ctx context.Context, in *
 // All implementations must embed UnimplementedCollaborationServiceServer
 // for forward compatibility.
 type CollaborationServiceServer interface {
+	ListCodingTaskLaunchOptions(context.Context, *ListCodingTaskLaunchOptionsRequest) (*ListCodingTaskLaunchOptionsResponse, error)
 	ListCodingTasks(context.Context, *ListCodingTasksRequest) (*ListCodingTasksResponse, error)
 	CreateCodingTask(context.Context, *CreateCodingTaskRequest) (*CreateCodingTaskResponse, error)
 	GetCodingTask(context.Context, *GetCodingTaskRequest) (*CodingTask, error)
@@ -231,6 +244,9 @@ type CollaborationServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCollaborationServiceServer struct{}
 
+func (UnimplementedCollaborationServiceServer) ListCodingTaskLaunchOptions(context.Context, *ListCodingTaskLaunchOptionsRequest) (*ListCodingTaskLaunchOptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCodingTaskLaunchOptions not implemented")
+}
 func (UnimplementedCollaborationServiceServer) ListCodingTasks(context.Context, *ListCodingTasksRequest) (*ListCodingTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCodingTasks not implemented")
 }
@@ -292,6 +308,24 @@ func RegisterCollaborationServiceServer(s grpc.ServiceRegistrar, srv Collaborati
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&CollaborationService_ServiceDesc, srv)
+}
+
+func _CollaborationService_ListCodingTaskLaunchOptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCodingTaskLaunchOptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CollaborationServiceServer).ListCodingTaskLaunchOptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CollaborationService_ListCodingTaskLaunchOptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CollaborationServiceServer).ListCodingTaskLaunchOptions(ctx, req.(*ListCodingTaskLaunchOptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CollaborationService_ListCodingTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -553,6 +587,10 @@ var CollaborationService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "collaboration.v1.CollaborationService",
 	HandlerType: (*CollaborationServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListCodingTaskLaunchOptions",
+			Handler:    _CollaborationService_ListCodingTaskLaunchOptions_Handler,
+		},
 		{
 			MethodName: "ListCodingTasks",
 			Handler:    _CollaborationService_ListCodingTasks_Handler,

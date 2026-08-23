@@ -7,6 +7,8 @@ option go_package = "agent-platform/backend/api/types/v1;typesv1";
 
 message ModelBinding {
   string model_id = 1;
+  string endpoint = 2;
+  string credential_profile_id = 3;
 }
 
 message ModelBudget {

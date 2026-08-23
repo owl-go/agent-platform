@@ -30,6 +30,22 @@ func validCollaborationID(value string) error {
 	return nil
 }
 
+func (service *GeneratedServices) ListCodingTaskLaunchOptions(ctx context.Context, request *collaborationv1.ListCodingTaskLaunchOptionsRequest) (*collaborationv1.ListCodingTaskLaunchOptionsResponse, error) {
+	actor, err := service.authorizeTaskUse(ctx, request.TeamId)
+	if err != nil {
+		return nil, err
+	}
+	values, err := service.dependencies.Collaboration.ListLaunchOptions(ctx, actor.OrganizationID, actor.TeamID)
+	if err != nil {
+		return nil, collaborationQueryError(err)
+	}
+	items := make([]map[string]string, 0, len(values.Options))
+	for _, value := range values.Options {
+		items = append(items, map[string]string{"agent_release_id": value.AgentReleaseID, "repository_binding_id": value.RepositoryBindingID})
+	}
+	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items, "prerequisite": values.Prerequisite}, &collaborationv1.ListCodingTaskLaunchOptionsResponse{})
+}
+
 func (service *GeneratedServices) ListCodingTasks(ctx context.Context, request *collaborationv1.ListCodingTasksRequest) (*collaborationv1.ListCodingTasksResponse, error) {
 	actor, err := service.authorizeTeamRead(ctx, request.TeamId)
 	if err != nil {

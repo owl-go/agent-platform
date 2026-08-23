@@ -2363,6 +2363,11 @@ type ReleaseRepositoryBindingSnapshot struct {
 	QualityCommands             []*v1.QualityCommand   `protobuf:"bytes,6,rep,name=quality_commands,json=qualityCommands,proto3" json:"quality_commands,omitempty"`
 	EgressPolicy                string                 `protobuf:"bytes,7,opt,name=egress_policy,json=egressPolicy,proto3" json:"egress_policy,omitempty"`
 	RequiredRuntimeCapabilities []string               `protobuf:"bytes,8,rep,name=required_runtime_capabilities,json=requiredRuntimeCapabilities,proto3" json:"required_runtime_capabilities,omitempty"`
+	SourceControlProviderId     string                 `protobuf:"bytes,9,opt,name=source_control_provider_id,json=sourceControlProviderId,proto3" json:"source_control_provider_id,omitempty"`
+	SshCredentialProfileId      string                 `protobuf:"bytes,10,opt,name=ssh_credential_profile_id,json=sshCredentialProfileId,proto3" json:"ssh_credential_profile_id,omitempty"`
+	BuildCredentialProfileIds   []string               `protobuf:"bytes,11,rep,name=build_credential_profile_ids,json=buildCredentialProfileIds,proto3" json:"build_credential_profile_ids,omitempty"`
+	GitAuthorName               string                 `protobuf:"bytes,12,opt,name=git_author_name,json=gitAuthorName,proto3" json:"git_author_name,omitempty"`
+	GitAuthorEmail              string                 `protobuf:"bytes,13,opt,name=git_author_email,json=gitAuthorEmail,proto3" json:"git_author_email,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -2453,6 +2458,41 @@ func (x *ReleaseRepositoryBindingSnapshot) GetRequiredRuntimeCapabilities() []st
 	return nil
 }
 
+func (x *ReleaseRepositoryBindingSnapshot) GetSourceControlProviderId() string {
+	if x != nil {
+		return x.SourceControlProviderId
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetSshCredentialProfileId() string {
+	if x != nil {
+		return x.SshCredentialProfileId
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetBuildCredentialProfileIds() []string {
+	if x != nil {
+		return x.BuildCredentialProfileIds
+	}
+	return nil
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetGitAuthorName() string {
+	if x != nil {
+		return x.GitAuthorName
+	}
+	return ""
+}
+
+func (x *ReleaseRepositoryBindingSnapshot) GetGitAuthorEmail() string {
+	if x != nil {
+		return x.GitAuthorEmail
+	}
+	return ""
+}
+
 type ReleaseRuntimeImageSnapshot struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2538,13 +2578,14 @@ func (x *ReleaseRuntimeImageSnapshot) GetCapabilities() map[string]bool {
 }
 
 type ReleaseConfiguredModelSnapshot struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	ModelId       string                 `protobuf:"bytes,3,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	Endpoint      string                 `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ModelId             string                 `protobuf:"bytes,3,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Endpoint            string                 `protobuf:"bytes,4,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	CredentialProfileId string                 `protobuf:"bytes,5,opt,name=credential_profile_id,json=credentialProfileId,proto3" json:"credential_profile_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ReleaseConfiguredModelSnapshot) Reset() {
@@ -2601,6 +2642,13 @@ func (x *ReleaseConfiguredModelSnapshot) GetModelId() string {
 func (x *ReleaseConfiguredModelSnapshot) GetEndpoint() string {
 	if x != nil {
 		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *ReleaseConfiguredModelSnapshot) GetCredentialProfileId() string {
+	if x != nil {
+		return x.CredentialProfileId
 	}
 	return ""
 }
@@ -2884,7 +2932,7 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\x0eblocked_reason\x18\x13 \x01(\tH\x02R\rblockedReason\x88\x01\x01B\x10\n" +
 	"\x0e_deprecated_atB\x14\n" +
 	"\x12_approval_evidenceB\x11\n" +
-	"\x0f_blocked_reason\"\xed\x02\n" +
+	"\x0f_blocked_reason\"\xf8\x04\n" +
 	" ReleaseRepositoryBindingSnapshot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
@@ -2893,7 +2941,13 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\finstructions\x18\x05 \x01(\tR\finstructions\x12C\n" +
 	"\x10quality_commands\x18\x06 \x03(\v2\x18.types.v1.QualityCommandR\x0fqualityCommands\x12#\n" +
 	"\regress_policy\x18\a \x01(\tR\fegressPolicy\x12B\n" +
-	"\x1drequired_runtime_capabilities\x18\b \x03(\tR\x1brequiredRuntimeCapabilities\"\xdb\x02\n" +
+	"\x1drequired_runtime_capabilities\x18\b \x03(\tR\x1brequiredRuntimeCapabilities\x12;\n" +
+	"\x1asource_control_provider_id\x18\t \x01(\tR\x17sourceControlProviderId\x129\n" +
+	"\x19ssh_credential_profile_id\x18\n" +
+	" \x01(\tR\x16sshCredentialProfileId\x12?\n" +
+	"\x1cbuild_credential_profile_ids\x18\v \x03(\tR\x19buildCredentialProfileIds\x12&\n" +
+	"\x0fgit_author_name\x18\f \x01(\tR\rgitAuthorName\x12(\n" +
+	"\x10git_author_email\x18\r \x01(\tR\x0egitAuthorEmail\"\xdb\x02\n" +
 	"\x1bReleaseRuntimeImageSnapshot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aruntime\x18\x02 \x01(\tR\aruntime\x12\x1f\n" +
@@ -2904,12 +2958,13 @@ const file_agentlifecycle_v1_agent_lifecycle_proto_rawDesc = "" +
 	"\fcapabilities\x18\x06 \x03(\v2@.agentlifecycle.v1.ReleaseRuntimeImageSnapshot.CapabilitiesEntryR\fcapabilities\x1a?\n" +
 	"\x11CapabilitiesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"{\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xaf\x01\n" +
 	"\x1eReleaseConfiguredModelSnapshot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
 	"\bmodel_id\x18\x03 \x01(\tR\amodelId\x12\x1a\n" +
-	"\bendpoint\x18\x04 \x01(\tR\bendpoint\"\x8b\x02\n" +
+	"\bendpoint\x18\x04 \x01(\tR\bendpoint\x122\n" +
+	"\x15credential_profile_id\x18\x05 \x01(\tR\x13credentialProfileId\"\x8b\x02\n" +
 	"\x17ReleaseApprovalEvidence\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12#\n" +

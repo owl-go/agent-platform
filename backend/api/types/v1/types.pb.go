@@ -23,10 +23,12 @@ const (
 )
 
 type ModelBinding struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModelId       string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ModelId             string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Endpoint            string                 `protobuf:"bytes,2,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	CredentialProfileId string                 `protobuf:"bytes,3,opt,name=credential_profile_id,json=credentialProfileId,proto3" json:"credential_profile_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ModelBinding) Reset() {
@@ -62,6 +64,20 @@ func (*ModelBinding) Descriptor() ([]byte, []int) {
 func (x *ModelBinding) GetModelId() string {
 	if x != nil {
 		return x.ModelId
+	}
+	return ""
+}
+
+func (x *ModelBinding) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *ModelBinding) GetCredentialProfileId() string {
+	if x != nil {
+		return x.CredentialProfileId
 	}
 	return ""
 }
@@ -802,9 +818,11 @@ var File_types_v1_types_proto protoreflect.FileDescriptor
 
 const file_types_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x14types/v1/types.proto\x12\btypes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\")\n" +
+	"\x14types/v1/types.proto\x12\btypes.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"y\n" +
 	"\fModelBinding\x12\x19\n" +
-	"\bmodel_id\x18\x01 \x01(\tR\amodelId\"\x8b\x01\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x1a\n" +
+	"\bendpoint\x18\x02 \x01(\tR\bendpoint\x122\n" +
+	"\x15credential_profile_id\x18\x03 \x01(\tR\x13credentialProfileId\"\x8b\x01\n" +
 	"\vModelBudget\x12(\n" +
 	"\x10max_input_tokens\x18\x01 \x01(\x03R\x0emaxInputTokens\x12*\n" +
 	"\x11max_output_tokens\x18\x02 \x01(\x03R\x0fmaxOutputTokens\x12&\n" +

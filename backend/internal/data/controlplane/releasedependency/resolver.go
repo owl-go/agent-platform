@@ -102,9 +102,15 @@ func (resolver *Resolver) PrepareRelease(ctx context.Context, agent agentdomain.
 		commands[index] = agentdomain.ReleaseQualityCommand{Name: command.Name, Kind: string(command.Kind), Executable: command.Executable, Arguments: append([]string(nil), command.Arguments...), TimeoutSeconds: command.TimeoutSeconds}
 	}
 	return agentdomain.ReleaseDependencies{
-		RepositoryBinding: agentdomain.RepositoryBindingSnapshot{ID: binding.ID, Name: binding.Name, RepositorySSHURL: binding.RepositorySSHURL, DefaultBranch: binding.DefaultBranch, Instructions: binding.Instructions, QualityCommands: commands, EgressPolicy: binding.EgressPolicy.Mode, RequiredRuntimeCapabilities: append([]string(nil), binding.RequiredRuntimeCapabilities...)},
-		RuntimeImage:      agentdomain.RuntimeImageSnapshot{ID: runtime.ID, Runtime: runtime.Runtime, CLIVersion: runtime.CLIVersion, AdapterVersion: runtime.Adapter, ImageDigest: runtime.ImageDigest, Capabilities: capabilities},
-		ConfiguredModel:   agentdomain.ConfiguredModelSnapshot{ID: model.ID, Name: model.Name, ModelID: model.ModelID, Endpoint: model.Endpoint},
+		RepositoryBinding: agentdomain.RepositoryBindingSnapshot{
+			ID: binding.ID, SourceControlProviderID: binding.SourceControlProviderID, Name: binding.Name,
+			RepositorySSHURL: binding.RepositorySSHURL, DefaultBranch: binding.DefaultBranch,
+			SSHCredentialProfileID: binding.SSHCredentialProfileID, BuildCredentialProfileIDs: append([]string{}, binding.BuildCredentialProfileIDs...),
+			GitAuthorName: binding.GitAuthorName, GitAuthorEmail: binding.GitAuthorEmail, Instructions: binding.Instructions,
+			QualityCommands: commands, EgressPolicy: binding.EgressPolicy.Mode, RequiredRuntimeCapabilities: append([]string(nil), binding.RequiredRuntimeCapabilities...),
+		},
+		RuntimeImage:    agentdomain.RuntimeImageSnapshot{ID: runtime.ID, Runtime: runtime.Runtime, CLIVersion: runtime.CLIVersion, AdapterVersion: runtime.Adapter, ImageDigest: runtime.ImageDigest, Capabilities: capabilities},
+		ConfiguredModel: agentdomain.ConfiguredModelSnapshot{ID: model.ID, Name: model.Name, ModelID: model.ModelID, Endpoint: model.Endpoint, CredentialProfileID: model.CredentialProfileID},
 	}, errorsByField, nil
 }
 

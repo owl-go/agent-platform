@@ -124,6 +124,18 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceUpdateAgentMemoryBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -162,6 +174,18 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceDeleteAgentMemoryBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1148,6 +1172,36 @@
         ]
       }
     },
+    "/v1/coding-task-launch-options": {
+      "get": {
+        "operationId": "CollaborationService_ListCodingTaskLaunchOptions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCodingTaskLaunchOptionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "CollaborationService"
+        ]
+      }
+    },
     "/v1/coding-tasks": {
       "get": {
         "operationId": "CollaborationService_ListCodingTasks",
@@ -1201,6 +1255,12 @@
             "schema": {
               "$ref": "#/definitions/v1CreateCodingTaskRequest"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1273,6 +1333,18 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceUpdateCodingTaskBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1345,6 +1417,12 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceProposeMemoryCandidateBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1433,6 +1511,18 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceContinueCodingTaskBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1505,6 +1595,18 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceUpdateCodingTaskSessionBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1841,6 +1943,12 @@
             "schema": {
               "$ref": "#/definitions/CollaborationServiceDecideMemoryCandidateBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -3366,6 +3474,17 @@
         }
       }
     },
+    "v1CodingTaskLaunchOption": {
+      "type": "object",
+      "properties": {
+        "agent_release_id": {
+          "type": "string"
+        },
+        "repository_binding_id": {
+          "type": "string"
+        }
+      }
+    },
     "v1ConfiguredModel": {
       "type": "object",
       "properties": {
@@ -3681,6 +3800,21 @@
         }
       }
     },
+    "v1ListCodingTaskLaunchOptionsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CodingTaskLaunchOption"
+          }
+        },
+        "prerequisite": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListCodingTasksResponse": {
       "type": "object",
       "properties": {
@@ -3854,6 +3988,12 @@
       "type": "object",
       "properties": {
         "model_id": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "credential_profile_id": {
           "type": "string"
         }
       }
@@ -4083,6 +4223,9 @@
         },
         "endpoint": {
           "type": "string"
+        },
+        "credential_profile_id": {
+          "type": "string"
         }
       }
     },
@@ -4119,6 +4262,24 @@
           "items": {
             "type": "string"
           }
+        },
+        "source_control_provider_id": {
+          "type": "string"
+        },
+        "ssh_credential_profile_id": {
+          "type": "string"
+        },
+        "build_credential_profile_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "git_author_name": {
+          "type": "string"
+        },
+        "git_author_email": {
+          "type": "string"
         }
       }
     },

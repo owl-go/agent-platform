@@ -19,6 +19,13 @@ export type AgentDraft = components["schemas"]["v1AgentDraft"];
 export type ReleaseApproval = components["schemas"]["v1ReleaseApproval"];
 export type AgentRelease = components["schemas"]["v1AgentRelease"];
 export type AgentConfiguration = components["schemas"]["v1AgentConfiguration"];
+export type CodingTask = components["schemas"]["v1CodingTask"];
+export type CodingTaskLaunchOption = components["schemas"]["v1CodingTaskLaunchOption"];
+export type CodingTaskLaunchCatalog = { items: CodingTaskLaunchOption[]; prerequisite: string };
+export type CodingTaskSession = components["schemas"]["v1Session"];
+export type Run = components["schemas"]["v1Run"];
+export type CreateCodingTaskInput = Omit<components["schemas"]["v1CreateCodingTaskRequest"], "team_id">;
+export type CodingTaskLaunch = components["schemas"]["v1CreateCodingTaskResponse"];
 export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
 export type DraftInput = { configuration: AgentConfiguration; release_risk: string };
 
@@ -80,6 +87,12 @@ export interface PlatformApi {
   getAgentRelease(agentID: string, releaseID: string, teamID: string, signal?: AbortSignal): Promise<AgentRelease>;
   deprecateAgentRelease(agentID: string, releaseID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentRelease>;
   blockAgentRelease(agentID: string, releaseID: string, teamID: string, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentRelease>;
+  listCodingTaskLaunchOptions(teamID: string, signal?: AbortSignal): Promise<CodingTaskLaunchCatalog>;
+  listCodingTasks(teamID: string, signal?: AbortSignal): Promise<CodingTask[]>;
+  getCodingTask(id: string, teamID: string, signal?: AbortSignal): Promise<CodingTask>;
+  createCodingTask(teamID: string, input: CreateCodingTaskInput, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskLaunch>;
+  getCodingTaskSession(taskID: string, teamID: string, signal?: AbortSignal): Promise<CodingTaskSession>;
+  listRuns(teamID: string, taskID: string, signal?: AbortSignal): Promise<Run[]>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -267,6 +280,35 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     blockAgentRelease(agentID, releaseID, teamID, reason, version, idempotencyKey, signal) {
       return authorizedRequest<AgentRelease>(`/api/v1/agents/${encodeURIComponent(agentID)}/releases/${encodeURIComponent(releaseID)}/block`, { method: "POST", body: JSON.stringify({ team_id: teamID, reason }), signal, headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` } });
+    },
+    async listCodingTaskLaunchOptions(teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListCodingTaskLaunchOptionsResponse"]>(`/api/v1/coding-task-launch-options?${query}`, { signal });
+      return { items: body.items ?? [], prerequisite: body.prerequisite ?? "" };
+    },
+    async listCodingTasks(teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListCodingTasksResponse"]>(`/api/v1/coding-tasks?${query}`, { signal });
+      return body.items ?? [];
+    },
+    getCodingTask(id, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<CodingTask>(`/api/v1/coding-tasks/${encodeURIComponent(id)}?${query}`, { signal });
+    },
+    createCodingTask(teamID, input, idempotencyKey, signal) {
+      return authorizedRequest<CodingTaskLaunch>("/api/v1/coding-tasks", {
+        method: "POST", body: JSON.stringify({ team_id: teamID, ...input }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    getCodingTaskSession(taskID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      return authorizedRequest<CodingTaskSession>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/session?${query}`, { signal });
+    },
+    async listRuns(teamID, taskID, signal) {
+      const query = new URLSearchParams({ team_id: teamID, task_id: taskID, limit: "50" });
+      const body = await authorizedRequest<components["schemas"]["v1ListRunsResponse"]>(`/api/v1/runs?${query}`, { signal });
+      return body.items ?? [];
     },
   };
 }

@@ -89,9 +89,14 @@ type ReleaseQualityCommand struct {
 
 type RepositoryBindingSnapshot struct {
 	ID                          string                  `json:"id"`
+	SourceControlProviderID     string                  `json:"source_control_provider_id"`
 	Name                        string                  `json:"name"`
 	RepositorySSHURL            string                  `json:"repository_ssh_url"`
 	DefaultBranch               string                  `json:"default_branch"`
+	SSHCredentialProfileID      string                  `json:"ssh_credential_profile_id"`
+	BuildCredentialProfileIDs   []string                `json:"build_credential_profile_ids"`
+	GitAuthorName               string                  `json:"git_author_name"`
+	GitAuthorEmail              string                  `json:"git_author_email"`
 	Instructions                string                  `json:"instructions"`
 	QualityCommands             []ReleaseQualityCommand `json:"quality_commands"`
 	EgressPolicy                string                  `json:"egress_policy"`
@@ -108,10 +113,11 @@ type RuntimeImageSnapshot struct {
 }
 
 type ConfiguredModelSnapshot struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	ModelID  string `json:"model_id"`
-	Endpoint string `json:"endpoint"`
+	ID                  string `json:"id"`
+	Name                string `json:"name"`
+	ModelID             string `json:"model_id"`
+	Endpoint            string `json:"endpoint"`
+	CredentialProfileID string `json:"credential_profile_id"`
 }
 
 type ReleaseDependencies struct {
@@ -244,9 +250,10 @@ func (release *Release) Block(reason string) error {
 func (dependencies ReleaseDependencies) validate(configuration Configuration) error {
 	binding, runtime, model := dependencies.RepositoryBinding, dependencies.RuntimeImage, dependencies.ConfiguredModel
 	if binding.ID != configuration.RepositoryBindingID || runtime.ID != configuration.RuntimeImageID || model.ID != configuration.ConfiguredModelID ||
-		strings.TrimSpace(binding.Name) == "" || strings.TrimSpace(binding.RepositorySSHURL) == "" || strings.TrimSpace(binding.DefaultBranch) == "" || binding.EgressPolicy != "public" ||
+		strings.TrimSpace(binding.SourceControlProviderID) == "" || strings.TrimSpace(binding.Name) == "" || strings.TrimSpace(binding.RepositorySSHURL) == "" || strings.TrimSpace(binding.DefaultBranch) == "" ||
+		strings.TrimSpace(binding.SSHCredentialProfileID) == "" || strings.TrimSpace(binding.GitAuthorName) == "" || strings.TrimSpace(binding.GitAuthorEmail) == "" || binding.EgressPolicy != "public" ||
 		strings.TrimSpace(runtime.Runtime) == "" || strings.TrimSpace(runtime.CLIVersion) == "" || strings.TrimSpace(runtime.AdapterVersion) == "" || !validRepoDigest(runtime.ImageDigest) || runtime.Capabilities == nil ||
-		strings.TrimSpace(model.Name) == "" || strings.TrimSpace(model.ModelID) == "" || strings.TrimSpace(model.Endpoint) == "" {
+		strings.TrimSpace(model.Name) == "" || strings.TrimSpace(model.ModelID) == "" || strings.TrimSpace(model.Endpoint) == "" || strings.TrimSpace(model.CredentialProfileID) == "" {
 		return invalidAgentf("Agent Release dependency snapshots are invalid")
 	}
 	return nil
@@ -273,6 +280,7 @@ func validRepoDigest(value string) bool {
 
 func cloneReleaseDependencies(input ReleaseDependencies) ReleaseDependencies {
 	result := input
+	result.RepositoryBinding.BuildCredentialProfileIDs = append([]string{}, input.RepositoryBinding.BuildCredentialProfileIDs...)
 	result.RepositoryBinding.RequiredRuntimeCapabilities = append([]string(nil), input.RepositoryBinding.RequiredRuntimeCapabilities...)
 	result.RepositoryBinding.QualityCommands = make([]ReleaseQualityCommand, len(input.RepositoryBinding.QualityCommands))
 	for index, command := range input.RepositoryBinding.QualityCommands {

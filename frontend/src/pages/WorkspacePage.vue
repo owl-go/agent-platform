@@ -1,6 +1,230 @@
 <script setup lang="ts">
+import { computed, inject, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import SurfaceEmptyState from "./SurfaceEmptyState.vue";
-const { t } = useI18n();
+import {
+  ApiError, platformApiKey, type AgentRelease, type CodingTask, type CodingTaskSession,
+  type CodingTaskLaunchOption, type RepositoryBinding, type Run,
+} from "../api/client";
+import { authContextKey } from "../auth/session";
+
+const injectedApi = inject(platformApiKey);
+const injectedAuth = inject(authContextKey);
+if (!injectedApi || !injectedAuth) throw new Error("Conversation Workspace dependencies are required");
+const api = injectedApi;
+const auth = injectedAuth;
+const route = useRoute();
+const router = useRouter();
+const { t, d } = useI18n();
+
+const tasks = ref<CodingTask[]>([]);
+const bindings = ref<RepositoryBinding[]>([]);
+const releases = ref<AgentRelease[]>([]);
+const launchOptions = ref<CodingTaskLaunchOption[]>([]);
+const launchPrerequisite = ref("");
+const session = ref<CodingTaskSession>();
+const runs = ref<Run[]>([]);
+const loading = ref(true);
+const detailLoading = ref(false);
+const saving = ref(false);
+const error = ref<ApiError>();
+const notice = ref("");
+const form = reactive({ source: "text", bindingID: "", releaseID: "", title: "", requestText: "", issueTitle: "", issueBody: "", issueURL: "" });
+const intents = new Map<string, { fingerprint: string; key: string }>();
+let refreshSequence = 0;
+let detailSequence = 0;
+
+const teamID = computed(() => typeof route.query.team === "string" ? route.query.team : "");
+const selectedTaskID = computed(() => typeof route.query.task === "string" ? route.query.task : "");
+const currentUser = computed(() => auth.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser : undefined);
+const canUse = computed(() => (currentUser.value?.role_grants ?? []).some((grant) =>
+  (!grant.team_id || grant.team_id === teamID.value) && ["agent_user", "agent_builder", "platform_administrator"].includes(grant.role ?? ""),
+));
+const availableBindings = computed(() => bindings.value.filter((binding) => launchOptions.value.some((option) => option.repository_binding_id === binding.id)));
+const launchableReleases = computed(() => releases.value.filter((release) => {
+  const option = launchOptions.value.find((item) => item.agent_release_id === release.id && item.repository_binding_id === release.repository_binding_id);
+  return Boolean(option)
+    && (!form.bindingID || release.repository_binding_id === form.bindingID);
+}));
+const selectedTask = computed(() => tasks.value.find((task) => task.id === selectedTaskID.value));
+const selectedRelease = computed(() => releases.value.find((release) => release.id === selectedTask.value?.agent_release_id));
+const selectedRun = computed(() => runs.value[0]);
+const prerequisite = computed(() => {
+  if (launchOptions.value.length === 0) return launchPrerequisite.value || "release";
+  return "";
+});
+
+watch(teamID, () => {
+  tasks.value = []; bindings.value = []; releases.value = []; launchOptions.value = []; launchPrerequisite.value = "";
+  session.value = undefined; runs.value = []; form.bindingID = ""; form.releaseID = "";
+  void refresh();
+}, { immediate: true });
+watch(selectedTaskID, () => void loadSelectedTask());
+watch(() => form.bindingID, () => {
+  if (!launchableReleases.value.some((release) => release.id === form.releaseID)) form.releaseID = launchableReleases.value[0]?.id ?? "";
+});
+
+async function refresh() {
+  const requestedTeam = teamID.value;
+  if (!requestedTeam) return;
+  const sequence = ++refreshSequence;
+  loading.value = true; error.value = undefined;
+  try {
+    const [taskValues, bindingValues, agentValues, launchCatalog] = await Promise.all([
+      api.listCodingTasks(requestedTeam), api.listRepositoryBindings(requestedTeam), api.listAgents(requestedTeam), api.listCodingTaskLaunchOptions(requestedTeam),
+    ]);
+    const releaseValues = (await Promise.all(agentValues.filter((agent) => agent.id).map((agent) => api.listAgentReleases(agent.id!, requestedTeam)))).flat();
+    if (sequence !== refreshSequence || teamID.value !== requestedTeam) return;
+    tasks.value = taskValues; bindings.value = bindingValues; releases.value = releaseValues;
+    launchOptions.value = launchCatalog.items; launchPrerequisite.value = launchCatalog.prerequisite;
+    form.bindingID = availableBindings.value.some((binding) => binding.id === form.bindingID) ? form.bindingID : availableBindings.value[0]?.id ?? "";
+    form.releaseID = launchableReleases.value.some((release) => release.id === form.releaseID) ? form.releaseID : launchableReleases.value[0]?.id ?? "";
+    if (selectedTaskID.value && !tasks.value.some((task) => task.id === selectedTaskID.value)) {
+      tasks.value.unshift(await api.getCodingTask(selectedTaskID.value, requestedTeam));
+    }
+    await loadSelectedTask();
+  } catch (reason) {
+    if (sequence === refreshSequence) error.value = asApiError(reason);
+  } finally {
+    if (sequence === refreshSequence) loading.value = false;
+  }
+}
+
+async function loadSelectedTask() {
+  const taskID = selectedTaskID.value;
+  const requestedTeam = teamID.value;
+  const sequence = ++detailSequence;
+  session.value = undefined; runs.value = [];
+  if (!taskID || !requestedTeam) return;
+  detailLoading.value = true;
+  try {
+    const [sessionValue, runValues] = await Promise.all([api.getCodingTaskSession(taskID, requestedTeam), api.listRuns(requestedTeam, taskID)]);
+    if (sequence === detailSequence && selectedTaskID.value === taskID && teamID.value === requestedTeam) {
+      session.value = sessionValue; runs.value = runValues;
+    }
+  } catch (reason) {
+    if (sequence === detailSequence) error.value = asApiError(reason);
+  } finally {
+    if (sequence === detailSequence) detailLoading.value = false;
+  }
+}
+
+function intent(scope: string, input: unknown) {
+  const fingerprint = JSON.stringify(input);
+  const current = intents.get(scope);
+  if (current?.fingerprint === fingerprint) return current.key;
+  const key = crypto.randomUUID(); intents.set(scope, { fingerprint, key }); return key;
+}
+
+async function createTask() {
+  if (!canUse.value || saving.value || prerequisite.value || !form.releaseID) return;
+  const input = form.source === "issue"
+    ? { agent_release_id: form.releaseID, title: form.issueTitle, request_text: form.issueBody, issue_snapshot: { title: form.issueTitle, body: form.issueBody, ...(form.issueURL ? { url: form.issueURL } : {}) } }
+    : { agent_release_id: form.releaseID, title: form.title, request_text: form.requestText };
+  const scope = `coding-task.create:${teamID.value}`;
+  saving.value = true; error.value = undefined; notice.value = "";
+  try {
+    const launch = await api.createCodingTask(teamID.value, input, intent(scope, input));
+    intents.delete(scope);
+    const taskID = launch.task?.id;
+    if (!taskID) throw new Error("Coding Task launch response is incomplete");
+    Object.assign(form, { title: "", requestText: "", issueTitle: "", issueBody: "", issueURL: "" });
+    notice.value = t("workspace.notice.created");
+    await router.push({ name: "workspace", query: { team: teamID.value, task: taskID } });
+    await refresh();
+  } catch (reason) { error.value = asApiError(reason); }
+  finally { saving.value = false; }
+}
+
+async function selectTask(task: CodingTask) {
+  if (!task.id) return;
+  await router.push({ name: "workspace", query: { team: teamID.value, task: task.id } });
+}
+
+function asApiError(reason: unknown) {
+  return reason instanceof ApiError ? reason : new ApiError("unknown", 0, "workspace_failed", "");
+}
+
+function errorLabel(value: ApiError) {
+  const prerequisites: Record<string, string> = {
+    coding_task_runtime_unavailable: "workspace.prerequisite.runtime",
+    coding_task_model_unavailable: "workspace.prerequisite.model",
+    coding_task_binding_unavailable: "workspace.prerequisite.binding",
+  };
+  if (prerequisites[value.code]) return t(prerequisites[value.code]!);
+  return t(value.kind === "forbidden" ? "errors.forbidden" : value.kind === "validation" ? "errors.validation" : value.kind === "conflict" ? "errors.conflict" : "errors.server");
+}
+
+function safeIssueURL(value?: string) {
+  if (!value) return "";
+  try { const parsed = new URL(value); return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.href : ""; }
+  catch { return ""; }
+}
 </script>
-<template><SurfaceEmptyState :kicker="t('surfaces.workspace.kicker')" :title="t('surfaces.workspace.title')" :body="t('surfaces.workspace.body')" :empty-title="t('surfaces.workspace.emptyTitle')" :empty-body="t('surfaces.workspace.emptyBody')" /></template>
+
+<template>
+  <section class="surface workspace-shell">
+    <header class="catalog-header reveal">
+      <div><p class="eyebrow">{{ t('workspace.kicker') }}</p><h2>{{ t('workspace.title') }}</h2><p>{{ t('workspace.body') }}</p></div>
+      <span v-if="!canUse" class="read-only-badge">{{ t('workspace.readOnly') }}</span>
+    </header>
+    <p v-if="notice" class="catalog-notice" role="status">{{ notice }}</p>
+    <div v-if="error" class="catalog-error" role="alert"><strong>{{ errorLabel(error) }}</strong><span>{{ t('workspace.errorBody') }}</span><small v-if="error.requestID">{{ error.requestID }}</small></div>
+    <div v-if="loading" class="catalog-loading"><i></i>{{ t('workspace.loading') }}</div>
+    <template v-else>
+      <section class="launch-board reveal delay-1">
+        <div class="launch-copy"><span>01 / {{ t('workspace.launch') }}</span><h3>{{ t('workspace.newTask') }}</h3><p>{{ t('workspace.launchHint') }}</p></div>
+        <form class="task-form" @submit.prevent="createTask">
+          <div class="source-switch" role="group" :aria-label="t('workspace.source')">
+            <button type="button" :class="{ active: form.source === 'text' }" @click="form.source = 'text'">{{ t('workspace.freeText') }}</button>
+            <button type="button" :class="{ active: form.source === 'issue' }" @click="form.source = 'issue'">{{ t('workspace.issueSnapshot') }}</button>
+          </div>
+          <div class="form-grid compact-form">
+            <label><span>{{ t('workspace.repositoryBinding') }}</span><select v-model="form.bindingID" data-testid="binding-select" required><option v-for="binding in availableBindings" :key="binding.id" :value="binding.id">{{ binding.name }}</option></select></label>
+            <label><span>{{ t('workspace.agentRelease') }}</span><select v-model="form.releaseID" data-testid="release-select" required><option v-for="release in launchableReleases" :key="release.id" :value="release.id">{{ release.runtime_image_snapshot?.runtime }} / R{{ release.release_number }} / {{ release.configured_model_snapshot?.name }}</option></select></label>
+            <template v-if="form.source === 'text'">
+              <label class="wide"><span>{{ t('workspace.taskTitle') }}</span><input v-model="form.title" data-testid="task-title" maxlength="200" required></label>
+              <label class="wide"><span>{{ t('workspace.requestText') }}</span><textarea v-model="form.requestText" data-testid="request-text" maxlength="100000" required></textarea></label>
+            </template>
+            <template v-else>
+              <label><span>{{ t('workspace.issueTitle') }}</span><input v-model="form.issueTitle" data-testid="issue-title" maxlength="500" required></label>
+              <label><span>{{ t('workspace.issueURL') }}</span><input v-model="form.issueURL" data-testid="issue-url" type="url" maxlength="2000"></label>
+              <label class="wide"><span>{{ t('workspace.issueBody') }}</span><textarea v-model="form.issueBody" data-testid="issue-body" maxlength="100000" required></textarea></label>
+            </template>
+          </div>
+          <p v-if="prerequisite" class="prerequisite" data-testid="launch-prerequisite">{{ t(`workspace.prerequisite.${prerequisite}`) }}</p>
+          <button class="primary-action" data-testid="create-task" :disabled="saving || !canUse || Boolean(prerequisite)">{{ saving ? t('workspace.launching') : t('workspace.launch') }}</button>
+        </form>
+      </section>
+
+      <section class="workspace-grid">
+        <aside class="task-index" :aria-label="t('workspace.tasks')">
+          <header><span>02</span><h3>{{ t('workspace.tasks') }}</h3></header>
+          <p v-if="tasks.length === 0" class="task-empty">{{ t('workspace.noTasks') }}</p>
+          <button v-for="task in tasks" :key="task.id" :class="{ active: task.id === selectedTaskID }" @click="selectTask(task)">
+            <strong>{{ task.title }}</strong><small>{{ task.state }} · {{ task.created_at ? d(new Date(task.created_at), 'long') : '—' }}</small>
+          </button>
+        </aside>
+        <article class="workspace-detail">
+          <div v-if="!selectedTask" class="workspace-placeholder"><span>03</span><h3>{{ t('workspace.selectTask') }}</h3></div>
+          <div v-else-if="detailLoading" class="catalog-loading"><i></i>{{ t('workspace.loadingTask') }}</div>
+          <template v-else>
+            <header class="detail-title"><div><span>{{ selectedTask.state }}</span><h3>{{ selectedTask.title }}</h3></div><strong>{{ t('workspace.runCount', { count: session?.run_count ?? 0 }) }}</strong></header>
+            <p class="task-request">{{ selectedTask.request_text }}</p>
+            <dl class="workspace-facts">
+              <div><dt>{{ t('workspace.session') }}</dt><dd>{{ session?.id }}</dd></div>
+              <div><dt>{{ t('workspace.reviewBranch') }}</dt><dd>{{ session?.review_branch }}</dd></div>
+              <div><dt>{{ t('workspace.targetBranch') }}</dt><dd>{{ session?.target_branch }}</dd></div>
+              <div><dt>{{ t('workspace.repositoryBinding') }}</dt><dd>{{ selectedRelease?.repository_binding_snapshot?.name }}</dd></div>
+              <div><dt>{{ t('workspace.agentRelease') }}</dt><dd>R{{ selectedRelease?.release_number }} · {{ selectedRelease?.release_risk }}</dd></div>
+              <div><dt>{{ t('workspace.runtime') }}</dt><dd>{{ selectedRelease?.runtime_image_snapshot?.runtime }} @ {{ selectedRelease?.runtime_image_snapshot?.image_digest }}</dd></div>
+              <div><dt>{{ t('workspace.model') }}</dt><dd>{{ selectedRelease?.configured_model_snapshot?.name }} / {{ selectedRelease?.configured_model_snapshot?.model_id }}</dd></div>
+              <div><dt>{{ t('workspace.firstRun') }}</dt><dd>{{ selectedRun?.id }} · {{ selectedRun?.state }}</dd></div>
+            </dl>
+            <section v-if="selectedTask.issue_snapshot" class="issue-snapshot"><span>{{ t('workspace.immutableIssue') }}</span><h4>{{ selectedTask.issue_snapshot.title }}</h4><p>{{ selectedTask.issue_snapshot.body }}</p><a v-if="safeIssueURL(selectedTask.issue_snapshot.url)" :href="safeIssueURL(selectedTask.issue_snapshot.url)" target="_blank" rel="noreferrer">{{ selectedTask.issue_snapshot.url }}</a></section>
+          </template>
+        </article>
+      </section>
+    </template>
+  </section>
+</template>

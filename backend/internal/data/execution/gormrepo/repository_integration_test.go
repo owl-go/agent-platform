@@ -25,13 +25,19 @@ import (
 func TestGORMRepositoryRunLifecycle(t *testing.T) {
 	database := openIntegrationDatabase(t)
 	runID := seedRun(t, database.ORM(), "lifecycle")
+	if err := database.ORM().Exec(`UPDATE runtime_images SET runtime = 'codex', cli_version = 'mutated', image_digest = ? WHERE id = (SELECT runtime_image_id FROM runs WHERE id = ?)`, "registry.example/mutated@sha256:"+strings.Repeat("f", 64), runID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.ORM().Exec(`UPDATE repository_bindings SET repository_ssh_url = 'git@example.test:mutated/repository.git', git_author_name = 'Mutated' WHERE id = (SELECT session.repository_binding_id FROM runs run JOIN sessions session ON session.id = run.session_id WHERE run.id = ?)`, runID).Error; err != nil {
+		t.Fatal(err)
+	}
 	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 
 	lease, found, err := service.Claim(context.Background(), "worker-a", time.Minute)
 	if err != nil || !found {
 		t.Fatalf("Claim() = (%+v, %v, %v)", lease, found, err)
 	}
-	if lease.RunID != runID || lease.AttemptNumber != 1 || lease.Token == "" || lease.RuntimeName != "claude" || lease.ImageDigest == "" || lease.WorkspaceVolume == "" {
+	if lease.RunID != runID || lease.AttemptNumber != 1 || lease.Token == "" || lease.RuntimeName != "claude" || lease.RuntimeCLIVersion != "test" || lease.ImageDigest == "" || lease.WorkspaceVolume == "" || lease.RepositorySSHURL != "git@github.com:example/repository.git" || lease.GitAuthorName != "Agent Platform" {
 		t.Fatalf("unexpected lease: %+v", lease)
 	}
 	if _, found, err := service.Claim(context.Background(), "worker-b", time.Minute); err != nil || found {
@@ -363,10 +369,10 @@ func seedRun(t *testing.T, db *gorm.DB, label string) string {
 			SELECT organization_id, 'git', 'git_ssh', 'secret://git' FROM platform_user RETURNING id
 		), model AS (
 			INSERT INTO configured_models (organization_id, name, model_id, endpoint, credential_profile_id)
-			SELECT organization_id, 'configured-model', 'model-id', 'https://models.example.test', id FROM model_credential RETURNING id
+			SELECT organization_id, 'configured-model', 'model-id', 'https://models.example.test', id FROM model_credential RETURNING id, credential_profile_id
 		), runtime AS (
 			INSERT INTO runtime_images (organization_id, runtime, cli_version, adapter_version, image_digest)
-			SELECT organization_id, 'claude', 'test', 'test', ? FROM platform_user RETURNING id
+			SELECT organization_id, 'claude', 'test', 'test', ? FROM platform_user RETURNING id, runtime, cli_version, adapter_version, image_digest, capabilities
 		), provider AS (
 			INSERT INTO source_control_providers (organization_id, name, kind, base_url)
 			SELECT organization_id, 'github', 'github_com', 'https://github.com' FROM platform_user RETURNING id
@@ -388,11 +394,22 @@ func seedRun(t *testing.T, db *gorm.DB, label string) string {
 		), release AS (
 			INSERT INTO agent_releases (
 				agent_id, release_number, source_draft_id, runtime_image_id, configured_model_id,
-				repository_binding_id, configuration_snapshot, model_budget, execution_limits, released_by
+				repository_binding_id, configuration_snapshot, model_budget, execution_limits, release_risk,
+				repository_binding_snapshot, runtime_image_snapshot, configured_model_snapshot, released_by
 			)
 			SELECT d.agent_id, 1, d.id, r.id, m.id, b.id, '{}'::jsonb,
-			       '{"amount":10}'::jsonb, '{"duration_seconds":1800}'::jsonb, u.id
-			FROM draft d CROSS JOIN runtime r CROSS JOIN model m CROSS JOIN binding b CROSS JOIN platform_user u RETURNING id
+			       '{"amount":10}'::jsonb, '{"duration_seconds":1800}'::jsonb, 'low',
+			       jsonb_build_object('id', b.id, 'source_control_provider_id', p.id, 'name', 'repository',
+			         'repository_ssh_url', 'git@github.com:example/repository.git', 'default_branch', 'main',
+			         'ssh_credential_profile_id', gc.id, 'build_credential_profile_ids', '[]'::jsonb,
+			         'git_author_name', 'Agent Platform', 'git_author_email', 'agent@example.test',
+			         'instructions', '', 'quality_commands', '[]'::jsonb, 'egress_policy', 'public', 'required_runtime_capabilities', '[]'::jsonb),
+			       jsonb_build_object('id', r.id, 'runtime', r.runtime, 'cli_version', r.cli_version,
+			         'adapter_version', r.adapter_version, 'image_digest', r.image_digest, 'capabilities', r.capabilities),
+			       jsonb_build_object('id', m.id, 'name', 'configured-model', 'model_id', 'model-id',
+			         'endpoint', 'https://models.example.test', 'credential_profile_id', m.credential_profile_id), u.id
+			FROM draft d CROSS JOIN runtime r CROSS JOIN model m CROSS JOIN binding b CROSS JOIN provider p
+			CROSS JOIN git_credential gc CROSS JOIN platform_user u RETURNING id
 		), task AS (
 			INSERT INTO coding_tasks (organization_id, team_id, agent_release_id, created_by, title, request_text, state)
 			SELECT t.organization_id, t.id, r.id, u.id, 'Test Task', 'Change the fixture', 'active'
@@ -405,7 +422,7 @@ func seedRun(t *testing.T, db *gorm.DB, label string) string {
 			session_id, agent_release_id, runtime_image_id, model_binding, request_text,
 			model_budget, execution_limits, created_by
 		)
-		SELECT s.id, rel.id, runtime.id, '{"model":"configured-model"}'::jsonb, 'Change the fixture',
+		SELECT s.id, rel.id, runtime.id, '{"model_id":"model-id","endpoint":"https://models.example.test","credential_profile_id":"model-credential"}'::jsonb, 'Change the fixture',
 		       '{"amount":10}'::jsonb, '{"duration_seconds":1800}'::jsonb, u.id
 		FROM session s CROSS JOIN release rel CROSS JOIN runtime CROSS JOIN platform_user u
 		RETURNING id::text AS id`

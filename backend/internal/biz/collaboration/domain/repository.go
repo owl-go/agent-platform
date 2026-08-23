@@ -9,6 +9,9 @@ import (
 
 var (
 	ErrReleaseUnavailable      = errors.New("Agent Release is unavailable for Coding Task creation")
+	ErrRuntimeUnavailable      = errors.New("Production Runtime is unavailable for Coding Task creation")
+	ErrModelUnavailable        = errors.New("Configured Model is unavailable for Coding Task creation")
+	ErrBindingUnavailable      = errors.New("Repository Binding is unavailable for Coding Task creation")
 	ErrTaskStateConflict       = errors.New("Coding Task state does not allow this operation")
 	ErrMemoryCandidateNotFound = errors.New("Memory Candidate not found")
 	ErrAgentMemoryNotFound     = errors.New("Agent Memory not found")
@@ -54,6 +57,15 @@ type Launch struct {
 	RunID   string
 }
 
+type LaunchOption struct {
+	AgentReleaseID, RepositoryBindingID string
+}
+
+type LaunchCatalog struct {
+	Options      []LaunchOption
+	Prerequisite string
+}
+
 type ContinueRegistration struct {
 	OrganizationID, TeamID, TaskID string
 	Run                            RunSeed
@@ -71,6 +83,7 @@ type QueuedRunPlan struct {
 }
 
 type Repository interface {
+	ListLaunchOptions(context.Context, string, string) (LaunchCatalog, error)
 	GetTask(context.Context, string, string, string) (Task, error)
 	ListTasks(context.Context, string, string) ([]Task, error)
 	UpdateTask(context.Context, Task, int64) error

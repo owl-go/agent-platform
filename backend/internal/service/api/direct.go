@@ -213,6 +213,12 @@ func mapWriteError(err error) error {
 	case errors.Is(err, collaborationdomain.ErrReleaseUnavailable), errors.Is(err, collaborationdomain.ErrTaskStateConflict),
 		errors.Is(err, collaborationdomain.ErrRunLimitReached):
 		return publicError(409, "collaboration_conflict")
+	case errors.Is(err, collaborationdomain.ErrRuntimeUnavailable):
+		return publicError(409, "coding_task_runtime_unavailable")
+	case errors.Is(err, collaborationdomain.ErrModelUnavailable):
+		return publicError(409, "coding_task_model_unavailable")
+	case errors.Is(err, collaborationdomain.ErrBindingUnavailable):
+		return publicError(409, "coding_task_binding_unavailable")
 	case errors.Is(err, executiondomain.ErrControlRejected):
 		return publicError(409, "run_control_conflict")
 	case errors.Is(err, approvaldomain.ErrPendingExists), errors.Is(err, approvaldomain.ErrRunState):

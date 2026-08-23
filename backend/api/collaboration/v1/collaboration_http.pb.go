@@ -24,6 +24,7 @@ const OperationCollaborationServiceDeleteAgentMemory = "/collaboration.v1.Collab
 const OperationCollaborationServiceGetCodingTask = "/collaboration.v1.CollaborationService/GetCodingTask"
 const OperationCollaborationServiceGetCodingTaskSession = "/collaboration.v1.CollaborationService/GetCodingTaskSession"
 const OperationCollaborationServiceListAgentMemories = "/collaboration.v1.CollaborationService/ListAgentMemories"
+const OperationCollaborationServiceListCodingTaskLaunchOptions = "/collaboration.v1.CollaborationService/ListCodingTaskLaunchOptions"
 const OperationCollaborationServiceListCodingTasks = "/collaboration.v1.CollaborationService/ListCodingTasks"
 const OperationCollaborationServiceListMemoryCandidates = "/collaboration.v1.CollaborationService/ListMemoryCandidates"
 const OperationCollaborationServiceListSessionMessages = "/collaboration.v1.CollaborationService/ListSessionMessages"
@@ -40,6 +41,7 @@ type CollaborationServiceHTTPServer interface {
 	GetCodingTask(context.Context, *GetCodingTaskRequest) (*CodingTask, error)
 	GetCodingTaskSession(context.Context, *GetCodingTaskSessionRequest) (*Session, error)
 	ListAgentMemories(context.Context, *ListAgentMemoriesRequest) (*ListAgentMemoriesResponse, error)
+	ListCodingTaskLaunchOptions(context.Context, *ListCodingTaskLaunchOptionsRequest) (*ListCodingTaskLaunchOptionsResponse, error)
 	ListCodingTasks(context.Context, *ListCodingTasksRequest) (*ListCodingTasksResponse, error)
 	ListMemoryCandidates(context.Context, *ListMemoryCandidatesRequest) (*ListMemoryCandidatesResponse, error)
 	ListSessionMessages(context.Context, *ListSessionMessagesRequest) (*ListSessionMessagesResponse, error)
@@ -51,6 +53,7 @@ type CollaborationServiceHTTPServer interface {
 
 func RegisterCollaborationServiceHTTPServer(s *http.Server, srv CollaborationServiceHTTPServer) {
 	r := s.Route("/")
+	r.Handle("GET", "/v1/coding-task-launch-options", _CollaborationService_ListCodingTaskLaunchOptions0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/coding-tasks", _CollaborationService_ListCodingTasks0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/coding-tasks", _CollaborationService_CreateCodingTask0_HTTP_Handler(srv))
 	r.Handle("GET", "/v1/coding-tasks/{task_id}", _CollaborationService_GetCodingTask0_HTTP_Handler(srv))
@@ -65,6 +68,25 @@ func RegisterCollaborationServiceHTTPServer(s *http.Server, srv CollaborationSer
 	r.Handle("GET", "/v1/agents/{agent_id}/memories", _CollaborationService_ListAgentMemories0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/v1/agent-memories/{memory_id}", _CollaborationService_UpdateAgentMemory0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/agent-memories/{memory_id}/deletion", _CollaborationService_DeleteAgentMemory0_HTTP_Handler(srv))
+}
+
+func _CollaborationService_ListCodingTaskLaunchOptions0_HTTP_Handler(srv CollaborationServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListCodingTaskLaunchOptionsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationCollaborationServiceListCodingTaskLaunchOptions)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListCodingTaskLaunchOptions(ctx, req.(*ListCodingTaskLaunchOptionsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListCodingTaskLaunchOptionsResponse)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _CollaborationService_ListCodingTasks0_HTTP_Handler(srv CollaborationServiceHTTPServer) func(ctx http.Context) error {
@@ -377,6 +399,7 @@ type CollaborationServiceHTTPClient interface {
 	GetCodingTask(ctx context.Context, req *GetCodingTaskRequest, opts ...http.CallOption) (rsp *CodingTask, err error)
 	GetCodingTaskSession(ctx context.Context, req *GetCodingTaskSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	ListAgentMemories(ctx context.Context, req *ListAgentMemoriesRequest, opts ...http.CallOption) (rsp *ListAgentMemoriesResponse, err error)
+	ListCodingTaskLaunchOptions(ctx context.Context, req *ListCodingTaskLaunchOptionsRequest, opts ...http.CallOption) (rsp *ListCodingTaskLaunchOptionsResponse, err error)
 	ListCodingTasks(ctx context.Context, req *ListCodingTasksRequest, opts ...http.CallOption) (rsp *ListCodingTasksResponse, err error)
 	ListMemoryCandidates(ctx context.Context, req *ListMemoryCandidatesRequest, opts ...http.CallOption) (rsp *ListMemoryCandidatesResponse, err error)
 	ListSessionMessages(ctx context.Context, req *ListSessionMessagesRequest, opts ...http.CallOption) (rsp *ListSessionMessagesResponse, err error)
@@ -501,6 +524,22 @@ func (c *CollaborationServiceHTTPClientImpl) ListAgentMemories(ctx context.Conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationCollaborationServiceListAgentMemories),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *CollaborationServiceHTTPClientImpl) ListCodingTaskLaunchOptions(ctx context.Context, in *ListCodingTaskLaunchOptionsRequest, opts ...http.CallOption) (*ListCodingTaskLaunchOptionsResponse, error) {
+	var out ListCodingTaskLaunchOptionsResponse
+	pattern := "/v1/coding-task-launch-options"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationCollaborationServiceListCodingTaskLaunchOptions),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

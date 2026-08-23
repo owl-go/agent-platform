@@ -86,9 +86,12 @@ func TestEditingHighRiskDraftInvalidatesApproval(t *testing.T) {
 
 func validDependencies() ReleaseDependencies {
 	return ReleaseDependencies{
-		RepositoryBinding: RepositoryBindingSnapshot{ID: "binding", Name: "Repository", RepositorySSHURL: "git@example.test:acme/repository.git", DefaultBranch: "main", EgressPolicy: "public"},
-		RuntimeImage:      RuntimeImageSnapshot{ID: "runtime", Runtime: "codex", CLIVersion: "1", AdapterVersion: "1", ImageDigest: "registry/runtime@sha256:" + strings.Repeat("a", 64), Capabilities: map[string]bool{"subagents": true}},
-		ConfiguredModel:   ConfiguredModelSnapshot{ID: "model", Name: "Primary", ModelID: "model-v1", Endpoint: "https://models.example.test"},
+		RepositoryBinding: RepositoryBindingSnapshot{
+			ID: "binding", SourceControlProviderID: "provider", Name: "Repository", RepositorySSHURL: "git@example.test:acme/repository.git", DefaultBranch: "main",
+			SSHCredentialProfileID: "git-credential", BuildCredentialProfileIDs: []string{}, GitAuthorName: "Agent Platform", GitAuthorEmail: "agent@example.test", EgressPolicy: "public",
+		},
+		RuntimeImage:    RuntimeImageSnapshot{ID: "runtime", Runtime: "codex", CLIVersion: "1", AdapterVersion: "1", ImageDigest: "registry/runtime@sha256:" + strings.Repeat("a", 64), Capabilities: map[string]bool{"subagents": true}},
+		ConfiguredModel: ConfiguredModelSnapshot{ID: "model", Name: "Primary", ModelID: "model-v1", Endpoint: "https://models.example.test", CredentialProfileID: "model-credential"},
 	}
 }
 

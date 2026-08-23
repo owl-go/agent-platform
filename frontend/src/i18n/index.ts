@@ -30,6 +30,13 @@ const messages = {
       workspace: { kicker: "协作 / 执行 / 审阅", title: "协作工作区", body: "在当前 Team 中管理 Coding Task、Session、Run 和 Memory。", emptyTitle: "尚无 Coding Task 数据", emptyBody: "真实协作 API 将在后续票据中接入；这里不会展示模拟会话。" },
       operations: { kicker: "观察 / 干预 / 恢复", title: "运维控制台", body: "检索并诊断当前 Team 的 Run。", emptyTitle: "尚无 Run 数据", emptyBody: "真实 Run 查询将在后续票据中接入；这里不会展示模拟运行记录。" },
     },
+    workspace: {
+      kicker: "协作 / 启动 / 恢复", title: "Conversation Workspace", body: "从当前 Team 的可用 Agent Release 启动 Coding Task，并从真实 Session 与首个 Run 恢复上下文。", readOnly: "只读工作区", loading: "正在读取 Coding Task 与可用发布依赖", loadingTask: "正在恢复 Coding Task 与 Session", errorBody: "请求未完成；未确认的 Coding Task 不会被创建。",
+      launch: "启动 Coding Task", newTask: "委派新的编码任务", launchHint: "一次原子写入创建 Coding Task、Session、稳定 Review Branch 和首个 Run。", source: "任务输入来源", freeText: "自由文本", issueSnapshot: "Issue Snapshot", repositoryBinding: "Repository Binding", agentRelease: "Agent Release", taskTitle: "任务标题", requestText: "需求正文", issueTitle: "Issue 标题", issueBody: "Issue 正文", issueURL: "Issue 链接（可选）", launching: "正在启动…",
+      tasks: "Coding Task", noTasks: "当前 Team 尚无 Coding Task。", selectTask: "选择一项 Coding Task 查看可恢复上下文", session: "Session", reviewBranch: "Review Branch", targetBranch: "目标分支", runtime: "Runtime", model: "Configured Model", firstRun: "最新 Run", runCount: "{count} Runs", immutableIssue: "不可变 Issue Snapshot",
+      prerequisite: { runtime: "缺少 Production Runtime；请先完成 Runtime Conformance 与生产状态配置。", model: "缺少已启用的 Configured Model；请检查模型及其 Credential Profile。", binding: "缺少验证通过的 Repository Binding；请重新验证仓库依赖。", release: "当前 Repository Binding 没有可用的已发布 Agent Release。" },
+      notice: { created: "Coding Task、Session、Review Branch 与首个 Run 已原子创建。" },
+    },
     status: { queued: "排队中", provisioning: "准备环境", running: "运行中", waiting_confirmation: "等待确认", interrupting: "正在中断", interrupted: "已中断", resuming: "正在恢复", completed: "已完成", failed: "失败", cancelled: "已取消" },
     runtimeCatalog: {
       kicker: "平台目录 / 固定制品", title: "Runtime Image", body: "管理固定 Registry RepoDigest 及其 Runtime Adapter 声明。注册记录不可修改。",
@@ -98,6 +105,13 @@ const messages = {
       studio: { kicker: "BUILD / VALIDATE / RELEASE", title: "Agent Studio", body: "Manage Agent Drafts and immutable Releases for the active Team.", emptyTitle: "No Agent data yet", emptyBody: "The real Agent catalog is connected in the next ticket; this page does not show mock records." },
       workspace: { kicker: "COLLABORATE / EXECUTE / REVIEW", title: "Conversation Workspace", body: "Manage Coding Tasks, Sessions, Runs, and Memory for the active Team.", emptyTitle: "No Coding Task data yet", emptyBody: "Real collaboration APIs are connected in later tickets; this page does not show mock sessions." },
       operations: { kicker: "OBSERVE / INTERVENE / RECOVER", title: "Operations Console", body: "Search and diagnose Runs for the active Team.", emptyTitle: "No Run data yet", emptyBody: "The real Run search is connected in a later ticket; this page does not show mock runs." },
+    },
+    workspace: {
+      kicker: "COLLABORATE / LAUNCH / RESTORE", title: "Conversation Workspace", body: "Launch Coding Tasks from available Agent Releases in the active Team and restore their real Session and first Run context.", readOnly: "Read-only workspace", loading: "Loading Coding Tasks and available release dependencies", loadingTask: "Restoring Coding Task and Session", errorBody: "The request did not complete; no unconfirmed Coding Task is created.",
+      launch: "Launch Coding Task", newTask: "Delegate new coding work", launchHint: "One atomic write creates the Coding Task, Session, stable Review Branch, and first Run.", source: "Task input source", freeText: "Free text", issueSnapshot: "Issue Snapshot", repositoryBinding: "Repository Binding", agentRelease: "Agent Release", taskTitle: "Task title", requestText: "Request text", issueTitle: "Issue title", issueBody: "Issue body", issueURL: "Issue link (optional)", launching: "Launching…",
+      tasks: "Coding Tasks", noTasks: "No Coding Tasks exist for this Team.", selectTask: "Select a Coding Task to inspect its recoverable context", session: "Session", reviewBranch: "Review Branch", targetBranch: "Target branch", runtime: "Runtime", model: "Configured Model", firstRun: "Latest Run", runCount: "{count} Runs", immutableIssue: "Immutable Issue Snapshot",
+      prerequisite: { runtime: "No Production Runtime is available. Complete Runtime Conformance and production status first.", model: "No enabled Configured Model is available. Check the model and its Credential Profile.", binding: "No validated Repository Binding is available. Revalidate repository dependencies.", release: "This Repository Binding has no available published Agent Release." },
+      notice: { created: "Coding Task, Session, Review Branch, and first Run were created atomically." },
     },
     status: { queued: "Queued", provisioning: "Provisioning", running: "Running", waiting_confirmation: "Waiting for confirmation", interrupting: "Interrupting", interrupted: "Interrupted", resuming: "Resuming", completed: "Completed", failed: "Failed", cancelled: "Cancelled" },
     runtimeCatalog: {
