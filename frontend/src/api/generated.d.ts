@@ -1254,6 +1254,7 @@ export interface components {
         };
         v1ListRunsResponse: {
             items?: components["schemas"]["v1Run"][];
+            next_page_token?: string;
         };
         v1ListRuntimeImagesResponse: {
             items?: components["schemas"]["v1RuntimeImage"][];
@@ -1474,6 +1475,13 @@ export interface components {
             /** Format: int64 */
             version?: number;
             attempts?: components["schemas"]["v1Attempt"][];
+            coding_task_id?: string;
+            agent_id?: string;
+            repository_binding_id?: string;
+            repository_binding_snapshot?: Record<string, never>;
+            runtime_image_snapshot?: Record<string, never>;
+            configured_model_snapshot?: Record<string, never>;
+            lease?: components["schemas"]["v1RunLeaseDiagnostic"];
         };
         v1RunApproval: {
             id?: string;
@@ -1491,6 +1499,12 @@ export interface components {
             version?: number;
             requested_by?: string;
             decision_actor_type?: string;
+        };
+        v1RunLeaseDiagnostic: {
+            attempt_id?: string;
+            worker_id?: string;
+            /** Format: date-time */
+            expires_at?: string;
         };
         v1RuntimeImage: {
             id?: string;
@@ -3421,6 +3435,8 @@ export interface operations {
                 created_from?: string;
                 created_to?: string;
                 limit?: number;
+                page_token?: string;
+                sort_direction?: string;
             };
             header?: never;
             path?: never;

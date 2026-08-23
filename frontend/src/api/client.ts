@@ -35,6 +35,12 @@ export type RunEvent = { run_id: string; sequence: number; event_type: string; p
 export type RunEventStreamResult = { cursor: number; terminal: boolean };
 export type CreateCodingTaskInput = Omit<components["schemas"]["v1CreateCodingTaskRequest"], "team_id">;
 export type CodingTaskLaunch = components["schemas"]["v1CreateCodingTaskResponse"];
+export type RunSearchFilters = {
+  teamID: string; agentID?: string; repositoryBindingID?: string; taskID?: string;
+  state?: string; runtime?: string; createdFrom?: string; createdTo?: string;
+  sortDirection?: "asc" | "desc"; pageToken?: string; limit?: number;
+};
+export type RunSearchPage = { items: Run[]; nextPageToken: string };
 export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
 export type DraftInput = { configuration: AgentConfiguration; release_risk: string };
 
@@ -111,6 +117,7 @@ export interface PlatformApi {
   updateAgentMemory(memoryID: string, teamID: string, content: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentMemory>;
   deleteAgentMemory(memoryID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentMemory>;
   listRuns(teamID: string, taskID: string, signal?: AbortSignal): Promise<Run[]>;
+  searchRuns(filters: RunSearchFilters, signal?: AbortSignal): Promise<RunSearchPage>;
   getRun(runID: string, signal?: AbortSignal): Promise<Run>;
   listRunApprovals(runID: string, signal?: AbortSignal): Promise<RunApproval[]>;
   decideRunApproval(approvalID: string, approved: boolean, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RunApproval>;
@@ -385,6 +392,20 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const query = new URLSearchParams({ team_id: teamID, task_id: taskID, limit: "50" });
       const body = await authorizedRequest<components["schemas"]["v1ListRunsResponse"]>(`/api/v1/runs?${query}`, { signal });
       return body.items ?? [];
+    },
+    async searchRuns(filters, signal) {
+      const query = new URLSearchParams({ team_id: filters.teamID, limit: String(filters.limit ?? 25) });
+      if (filters.agentID) query.set("agent_id", filters.agentID);
+      if (filters.repositoryBindingID) query.set("repository_binding_id", filters.repositoryBindingID);
+      if (filters.taskID) query.set("task_id", filters.taskID);
+      if (filters.state) query.set("state", filters.state);
+      if (filters.runtime) query.set("runtime", filters.runtime);
+      if (filters.createdFrom) query.set("created_from", new Date(filters.createdFrom).toISOString());
+      if (filters.createdTo) query.set("created_to", new Date(filters.createdTo).toISOString());
+      if (filters.sortDirection) query.set("sort_direction", filters.sortDirection);
+      if (filters.pageToken) query.set("page_token", filters.pageToken);
+      const body = await authorizedRequest<components["schemas"]["v1ListRunsResponse"]>(`/api/v1/runs?${query}`, { signal });
+      return { items: body.items ?? [], nextPageToken: body.next_page_token ?? "" };
     },
     getRun(runID, signal) {
       return authorizedRequest<Run>(`/api/v1/runs/${encodeURIComponent(runID)}`, { signal });

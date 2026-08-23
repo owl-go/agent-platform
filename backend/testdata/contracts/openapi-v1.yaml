@@ -2962,6 +2962,22 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "page_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "tags": [
@@ -4894,6 +4910,9 @@
             "items": {
               "$ref": "#/components/schemas/v1Run"
             }
+          },
+          "next_page_token": {
+            "type": "string"
           }
         }
       },
@@ -5531,6 +5550,27 @@
             "items": {
               "$ref": "#/components/schemas/v1Attempt"
             }
+          },
+          "coding_task_id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "repository_binding_id": {
+            "type": "string"
+          },
+          "repository_binding_snapshot": {
+            "type": "object"
+          },
+          "runtime_image_snapshot": {
+            "type": "object"
+          },
+          "configured_model_snapshot": {
+            "type": "object"
+          },
+          "lease": {
+            "$ref": "#/components/schemas/v1RunLeaseDiagnostic"
           }
         }
       },
@@ -5575,6 +5615,21 @@
           },
           "decision_actor_type": {
             "type": "string"
+          }
+        }
+      },
+      "v1RunLeaseDiagnostic": {
+        "type": "object",
+        "properties": {
+          "attempt_id": {
+            "type": "string"
+          },
+          "worker_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

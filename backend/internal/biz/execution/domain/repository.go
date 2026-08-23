@@ -63,6 +63,10 @@ type SearchQuery struct {
 	Runtime             string
 	CreatedFrom         *time.Time
 	CreatedTo           *time.Time
+	CursorCreatedAt     *time.Time
+	CursorID            string
+	SortAscending       bool
+	IncludeNext         bool
 	Limit               int
 }
 
@@ -120,26 +124,39 @@ type LaunchCommands interface {
 // Details is the read model exposed by the Execution application service.
 // Credential bindings and lease tokens are deliberately excluded.
 type Details struct {
-	ID              string
-	SessionID       string
-	AgentReleaseID  string
-	RuntimeImageID  string
-	RequestText     string
-	State           State
-	ModelBinding    json.RawMessage
-	ModelBudget     json.RawMessage
-	ExecutionLimits json.RawMessage
-	Usage           json.RawMessage
-	Cost            string
-	TerminalError   json.RawMessage
-	AttemptCount    int
-	CreatedBy       string
-	CreatedAt       time.Time
-	StartedAt       *time.Time
-	EndedAt         *time.Time
-	UpdatedAt       time.Time
-	Version         int64
-	Attempts        []Attempt
+	ID                  string
+	SessionID           string
+	CodingTaskID        string
+	AgentID             string
+	AgentReleaseID      string
+	RuntimeImageID      string
+	RepositoryBindingID string
+	RequestText         string
+	State               State
+	ModelBinding        json.RawMessage
+	ModelBudget         json.RawMessage
+	ExecutionLimits     json.RawMessage
+	Usage               json.RawMessage
+	Cost                string
+	TerminalError       json.RawMessage
+	AttemptCount        int
+	CreatedBy           string
+	CreatedAt           time.Time
+	StartedAt           *time.Time
+	EndedAt             *time.Time
+	UpdatedAt           time.Time
+	Version             int64
+	Attempts            []Attempt
+	RepositoryBinding   json.RawMessage
+	RuntimeImage        json.RawMessage
+	ConfiguredModel     json.RawMessage
+	Lease               *LeaseDiagnostic
+}
+
+type LeaseDiagnostic struct {
+	AttemptID string
+	WorkerID  string
+	ExpiresAt time.Time
 }
 
 type Attempt struct {

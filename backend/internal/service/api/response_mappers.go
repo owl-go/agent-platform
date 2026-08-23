@@ -17,26 +17,38 @@ import (
 )
 
 type runResponse struct {
-	ID              string                `json:"id"`
-	SessionID       string                `json:"session_id"`
-	AgentReleaseID  string                `json:"agent_release_id"`
-	RuntimeImageID  string                `json:"runtime_image_id"`
-	RequestText     string                `json:"request_text"`
-	State           executiondomain.State `json:"state"`
-	ModelBinding    json.RawMessage       `json:"model_binding"`
-	ModelBudget     json.RawMessage       `json:"model_budget"`
-	ExecutionLimits json.RawMessage       `json:"execution_limits"`
-	Usage           json.RawMessage       `json:"usage"`
-	CostAmount      string                `json:"cost_amount"`
-	TerminalError   json.RawMessage       `json:"terminal_error,omitempty"`
-	AttemptCount    int                   `json:"attempt_count"`
-	CreatedBy       string                `json:"created_by"`
-	CreatedAt       time.Time             `json:"created_at"`
-	StartedAt       *time.Time            `json:"started_at,omitempty"`
-	EndedAt         *time.Time            `json:"ended_at,omitempty"`
-	UpdatedAt       time.Time             `json:"updated_at"`
-	Version         int64                 `json:"version"`
-	Attempts        []attemptResponse     `json:"attempts"`
+	ID                  string                   `json:"id"`
+	SessionID           string                   `json:"session_id"`
+	CodingTaskID        string                   `json:"coding_task_id"`
+	AgentID             string                   `json:"agent_id"`
+	AgentReleaseID      string                   `json:"agent_release_id"`
+	RuntimeImageID      string                   `json:"runtime_image_id"`
+	RepositoryBindingID string                   `json:"repository_binding_id"`
+	RequestText         string                   `json:"request_text"`
+	State               executiondomain.State    `json:"state"`
+	ModelBinding        json.RawMessage          `json:"model_binding"`
+	ModelBudget         json.RawMessage          `json:"model_budget"`
+	ExecutionLimits     json.RawMessage          `json:"execution_limits"`
+	Usage               json.RawMessage          `json:"usage"`
+	CostAmount          string                   `json:"cost_amount"`
+	TerminalError       json.RawMessage          `json:"terminal_error,omitempty"`
+	AttemptCount        int                      `json:"attempt_count"`
+	CreatedBy           string                   `json:"created_by"`
+	CreatedAt           time.Time                `json:"created_at"`
+	StartedAt           *time.Time               `json:"started_at,omitempty"`
+	EndedAt             *time.Time               `json:"ended_at,omitempty"`
+	UpdatedAt           time.Time                `json:"updated_at"`
+	Version             int64                    `json:"version"`
+	Attempts            []attemptResponse        `json:"attempts"`
+	RepositoryBinding   json.RawMessage          `json:"repository_binding_snapshot"`
+	RuntimeImage        json.RawMessage          `json:"runtime_image_snapshot"`
+	ConfiguredModel     json.RawMessage          `json:"configured_model_snapshot"`
+	Lease               *leaseDiagnosticResponse `json:"lease,omitempty"`
+}
+type leaseDiagnosticResponse struct {
+	AttemptID string    `json:"attempt_id"`
+	WorkerID  string    `json:"worker_id"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 type attemptResponse struct {
 	ID                    string                       `json:"id"`
@@ -54,7 +66,11 @@ func newRunResponse(value executiondomain.Details) runResponse {
 	for _, attempt := range value.Attempts {
 		attempts = append(attempts, attemptResponse{ID: attempt.ID, Number: attempt.Number, WorkerID: attempt.WorkerID, State: attempt.State, InfrastructureFailure: attempt.InfrastructureFailure, Error: attempt.Error, StartedAt: attempt.StartedAt, EndedAt: attempt.EndedAt})
 	}
-	return runResponse{ID: value.ID, SessionID: value.SessionID, AgentReleaseID: value.AgentReleaseID, RuntimeImageID: value.RuntimeImageID, RequestText: value.RequestText, State: value.State, ModelBinding: value.ModelBinding, ModelBudget: value.ModelBudget, ExecutionLimits: value.ExecutionLimits, Usage: value.Usage, CostAmount: value.Cost, TerminalError: value.TerminalError, AttemptCount: value.AttemptCount, CreatedBy: value.CreatedBy, CreatedAt: value.CreatedAt, StartedAt: value.StartedAt, EndedAt: value.EndedAt, UpdatedAt: value.UpdatedAt, Version: value.Version, Attempts: attempts}
+	var lease *leaseDiagnosticResponse
+	if value.Lease != nil {
+		lease = &leaseDiagnosticResponse{AttemptID: value.Lease.AttemptID, WorkerID: value.Lease.WorkerID, ExpiresAt: value.Lease.ExpiresAt}
+	}
+	return runResponse{ID: value.ID, SessionID: value.SessionID, CodingTaskID: value.CodingTaskID, AgentID: value.AgentID, AgentReleaseID: value.AgentReleaseID, RuntimeImageID: value.RuntimeImageID, RepositoryBindingID: value.RepositoryBindingID, RequestText: value.RequestText, State: value.State, ModelBinding: value.ModelBinding, ModelBudget: value.ModelBudget, ExecutionLimits: value.ExecutionLimits, Usage: value.Usage, CostAmount: value.Cost, TerminalError: value.TerminalError, AttemptCount: value.AttemptCount, CreatedBy: value.CreatedBy, CreatedAt: value.CreatedAt, StartedAt: value.StartedAt, EndedAt: value.EndedAt, UpdatedAt: value.UpdatedAt, Version: value.Version, Attempts: attempts, RepositoryBinding: value.RepositoryBinding, RuntimeImage: value.RuntimeImage, ConfiguredModel: value.ConfiguredModel, Lease: lease}
 }
 
 type runApprovalResponse struct {

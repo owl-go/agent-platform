@@ -139,7 +139,7 @@ function mountPanel(api: PlatformApi, roleGrants: Array<{ role: string; team_id?
 
 function apiStub(): PlatformApi {
   return {
-    listRuntimeImages: vi.fn(async () => ({ items: [image], nextPageToken: "" })),
+    listRuntimeImages: vi.fn(async () => ({ items: [image], nextPageToken: "" })), searchRuns: vi.fn(async () => ({ items: [], nextPageToken: "" })),
     getRuntimeImage: vi.fn(async () => image),
     registerRuntimeImage: vi.fn(async () => ({ ...image, id: "image-2" })),
     changeRuntimeImageStatus: vi.fn(async (_id, input) => ({ ...image, status: input.status, blocked_reason: input.blocked_reason, conformance_evidence_key: input.conformance_evidence_key, version: 2 })),

@@ -6,9 +6,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	executionv1 "agent-platform/backend/api/execution/v1"
 	modelcatalogv1 "agent-platform/backend/api/modelcatalog/v1"
 	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
+	executiondomain "agent-platform/backend/internal/biz/execution/domain"
 	identitydomain "agent-platform/backend/internal/biz/identity/domain"
 	modeldomain "agent-platform/backend/internal/biz/modelcatalog/domain"
 	runtimeapplication "agent-platform/backend/internal/biz/runtimecatalog/application"
@@ -16,6 +19,51 @@ import (
 
 	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
 )
+
+func TestRunSearchReturnsStableCursorAndFrozenDiagnostics(t *testing.T) {
+	firstID := "00000000-0000-4000-8000-000000000101"
+	secondID := "00000000-0000-4000-8000-000000000102"
+	createdAt := time.Date(2026, 8, 20, 1, 2, 3, 0, time.UTC)
+	searcher := &runSearcherStub{values: []executiondomain.Details{
+		{ID: firstID, SessionID: "session-1", CodingTaskID: "task-1", AgentID: "agent-1", AgentReleaseID: "release-1", RuntimeImageID: "runtime-1", RepositoryBindingID: "binding-1", State: executiondomain.Completed, CreatedAt: createdAt, UpdatedAt: createdAt, Version: 1, RepositoryBinding: []byte(`{"name":"Payments"}`), RuntimeImage: []byte(`{"runtime":"codex","image_digest":"registry/codex@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`), ConfiguredModel: []byte(`{"model_id":"gpt-enterprise"}`)},
+		{ID: secondID, SessionID: "session-2", State: executiondomain.Completed, CreatedAt: createdAt.Add(-time.Minute), UpdatedAt: createdAt, Version: 1},
+	}}
+	service := &GeneratedServices{dependencies: Dependencies{RunSearch: searcher, RunSearchAccess: allowTeamRunRead}}
+	limit := int32(1)
+	direction := "desc"
+	response, err := service.ListRuns(context.Background(), &executionv1.ListRunsRequest{TeamId: "team-1", Limit: &limit, SortDirection: &direction})
+	if err != nil || len(response.Items) != 1 || response.NextPageToken == "" {
+		t.Fatalf("ListRuns() = (%+v, %v)", response, err)
+	}
+	if response.Items[0].CodingTaskId != "task-1" || response.Items[0].RuntimeImageSnapshot.GetFields()["image_digest"].GetStringValue() == "" {
+		t.Fatalf("Run diagnostics = %+v", response.Items[0])
+	}
+	searcher.values = nil
+	response, err = service.ListRuns(context.Background(), &executionv1.ListRunsRequest{TeamId: "team-1", Limit: &limit, SortDirection: &direction, PageToken: &response.NextPageToken})
+	if err != nil || searcher.query.CursorCreatedAt == nil || searcher.query.CursorID != firstID {
+		t.Fatalf("cursor query = (%+v, %v)", searcher.query, err)
+	}
+}
+
+type runSearcherStub struct {
+	values []executiondomain.Details
+	query  executiondomain.SearchQuery
+}
+
+func (stub *runSearcherStub) Search(_ context.Context, query executiondomain.SearchQuery) ([]executiondomain.Details, error) {
+	stub.query = query
+	return stub.values, nil
+}
+
+type runSearchAccessFunc func(context.Context, string, string) (identitydomain.Actor, error)
+
+func (function runSearchAccessFunc) AuthorizeTeamRead(ctx context.Context, token, teamID string) (identitydomain.Actor, error) {
+	return function(ctx, token, teamID)
+}
+
+var allowTeamRunRead runSearchAccessFunc = func(context.Context, string, string) (identitydomain.Actor, error) {
+	return identitydomain.Actor{UserID: "user-1", OrganizationID: "org-1"}, nil
+}
 
 func TestGeneratedServiceCanBeCalledWithoutHTTPContext(t *testing.T) {
 	id := "00000000-0000-4000-8000-000000000001"

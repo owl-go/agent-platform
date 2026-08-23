@@ -57,8 +57,13 @@ message ListRunsRequest {
   optional google.protobuf.Timestamp created_from = 7;
   optional google.protobuf.Timestamp created_to = 8;
   optional int32 limit = 9;
+  optional string page_token = 10;
+  optional string sort_direction = 11;
 }
-message ListRunsResponse { repeated Run items = 1; }
+message ListRunsResponse {
+  repeated Run items = 1;
+  string next_page_token = 2;
+}
 message GetRunRequest { string run_id = 1; }
 message GetRunResponse { Run run = 1; }
 message InterruptRunRequest { string run_id = 1; }
@@ -91,6 +96,19 @@ message Run {
   google.protobuf.Timestamp updated_at = 18;
   int64 version = 19;
   repeated Attempt attempts = 20;
+  string coding_task_id = 21;
+  string agent_id = 22;
+  string repository_binding_id = 23;
+  google.protobuf.Struct repository_binding_snapshot = 24;
+  google.protobuf.Struct runtime_image_snapshot = 25;
+  google.protobuf.Struct configured_model_snapshot = 26;
+  optional RunLeaseDiagnostic lease = 27;
+}
+
+message RunLeaseDiagnostic {
+  string attempt_id = 1;
+  string worker_id = 2;
+  google.protobuf.Timestamp expires_at = 3;
 }
 
 message Attempt {

@@ -47,6 +47,19 @@ describe("PlatformApi", () => {
     expect(headers.get("Accept")).toBe("application/json");
   });
 
+  it("encodes the complete Operations Run investigation in a bounded search request", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ items: [], next_page_token: "next-run" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    const page = await api.searchRuns!({ teamID: "team-1", agentID: "agent-1", repositoryBindingID: "binding-1", taskID: "task-1", state: "failed", runtime: "codex", createdFrom: "2026-08-20T00:00", createdTo: "2026-08-21T00:00", sortDirection: "asc", pageToken: "cursor", limit: 25 });
+
+    const url = new URL(String(fetchMock.mock.calls[0]![0]), "https://platform.example");
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ team_id: "team-1", agent_id: "agent-1", repository_binding_id: "binding-1", task_id: "task-1", state: "failed", runtime: "codex", sort_direction: "asc", page_token: "cursor", limit: "25" });
+    expect(url.searchParams.get("created_from")).toBe(new Date("2026-08-20T00:00").toISOString());
+    expect(page.nextPageToken).toBe("next-run");
+  });
+
   it("uses one supplied idempotency key and the current quoted Version", async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "image-1", version: 3 }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

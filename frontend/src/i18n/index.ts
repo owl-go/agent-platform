@@ -88,7 +88,12 @@ const messages = {
       state: { draft: "未保存验证", validating: "验证中", ready: "Ready", blocked: "Blocked" },
       notice: { agentCreated: "Agent 已创建。", draftSaved: "Agent Draft 已保存，旧 Validation Report 已清除。", validated: "Agent Draft 已使用当前依赖完成验证。", approvalRequested: "Release Approval 已绑定当前 Draft Version。", approvalDecided: "Release Approval 决定已记录。", published: "不可变 Agent Release 已发布。", deprecated: "Agent Release 已进入 Deprecated。", blocked: "Agent Release 已按原因 Block。" },
     },
-    errors: { authentication: "无法完成身份验证，请重试或联系平台管理员。", offline: "服务离线", forbidden: "无权访问", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
+    operations: {
+      kicker: "运营 / 诊断 / 证据", title: "Operations Console", body: "在服务端授权范围内检索 Run，并使用冻结配置与安全执行证据定位问题。", scope: "TEAM-SCOPED / SERVER AUTHORIZED",
+      agent: "Agent ID", binding: "Repository Binding ID", task: "Coding Task ID", state: "Run 状态", runtime: "Agent Runtime", from: "开始时间", to: "结束时间", sort: "排序", newest: "最新优先", oldest: "最早优先", all: "全部", search: "检索 Run", retry: "重试", loading: "正在检索真实 Run", loadingDetail: "正在读取 Run 诊断", results: "查询结果", empty: "当前筛选条件下没有 Run。", attempts: "Attempts", next: "下一页", select: "选择一个 Run 查看冻结配置、Attempt 与执行证据", run: "RUN / DIAGNOSTICS",
+      release: "冻结 Agent Release", runtimeDigest: "冻结 Runtime Image Digest", model: "冻结 Model Binding", modelBinding: "精确 Model Binding", lease: "当前 Run Lease", noLease: "无活动 Lease", budget: "Model Budget", usageCost: "Usage / 成本", limits: "Execution Limits", error: "安全终态错误", attemptTimeline: "Attempt / Sandbox 生命周期", noAttempts: "尚无 Attempt。", active: "活动中", infrastructureFailure: "基础设施失败", applicationAttempt: "应用执行", sandboxState: "Sandbox 生命周期：{state}", events: "已授权 Runtime Events", payload: "安全 Payload", noEvents: "尚无事件。", artifacts: "Artifact 安全元数据", noArtifacts: "尚无 Artifact。"
+    },
+    errors: { authentication: "无法完成身份验证，请重试或联系平台管理员。", offline: "服务离线", forbidden: "无权访问", notFound: "资源不存在或不在授权范围", rateLimited: "请求过于频繁", validation: "请检查输入", conflict: "数据已被其他操作更新", server: "服务暂不可用" },
   },
   "en-US": {
     auth: {
@@ -172,7 +177,12 @@ const messages = {
       state: { draft: "Unvalidated", validating: "Validating", ready: "Ready", blocked: "Blocked" },
       notice: { agentCreated: "Agent created.", draftSaved: "Agent Draft saved; the previous Validation Report was cleared.", validated: "Agent Draft validated against current dependencies.", approvalRequested: "Release Approval is bound to the current Draft Version.", approvalDecided: "Release Approval decision recorded.", published: "Immutable Agent Release published.", deprecated: "Agent Release deprecated.", blocked: "Agent Release blocked with its reason." },
     },
-    errors: { authentication: "Authentication could not be completed. Try again or contact a platform administrator.", offline: "Service is offline", forbidden: "Access denied", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
+    operations: {
+      kicker: "OPERATE / DIAGNOSE / EVIDENCE", title: "Operations Console", body: "Search authorized Runs and diagnose them from frozen configuration and safe execution evidence.", scope: "TEAM-SCOPED / SERVER AUTHORIZED",
+      agent: "Agent ID", binding: "Repository Binding ID", task: "Coding Task ID", state: "Run state", runtime: "Agent Runtime", from: "Created from", to: "Created to", sort: "Sort", newest: "Newest first", oldest: "Oldest first", all: "All", search: "Search Runs", retry: "Retry", loading: "Searching real Runs", loadingDetail: "Loading Run diagnostics", results: "Search results", empty: "No Runs match these filters.", attempts: "Attempts", next: "Next page", select: "Select a Run to inspect frozen configuration, Attempts, and execution evidence", run: "RUN / DIAGNOSTICS",
+      release: "Frozen Agent Release", runtimeDigest: "Frozen Runtime Image Digest", model: "Frozen Model Binding", modelBinding: "Exact Model Binding", lease: "Current Run Lease", noLease: "No active Lease", budget: "Model Budget", usageCost: "Usage / cost", limits: "Execution Limits", error: "Safe terminal error", attemptTimeline: "Attempt / Sandbox lifecycle", noAttempts: "No Attempts yet.", active: "Active", infrastructureFailure: "Infrastructure failure", applicationAttempt: "Application execution", sandboxState: "Sandbox lifecycle: {state}", events: "Authorized Runtime Events", payload: "Safe payload", noEvents: "No events yet.", artifacts: "Artifact safe metadata", noArtifacts: "No Artifacts yet."
+    },
+    errors: { authentication: "Authentication could not be completed. Try again or contact a platform administrator.", offline: "Service is offline", forbidden: "Access denied", notFound: "Resource is absent or outside your authorized scope", rateLimited: "Too many requests", validation: "Check the entered values", conflict: "Data changed in another operation", server: "Service is unavailable" },
   },
 } as const;
 

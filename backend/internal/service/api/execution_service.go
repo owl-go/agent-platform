@@ -2,9 +2,13 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	executionv1 "agent-platform/backend/api/execution/v1"
 	executiondomain "agent-platform/backend/internal/biz/execution/domain"
@@ -14,12 +18,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type runPageCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+}
+
 func (service *GeneratedServices) ListRuns(ctx context.Context, request *executionv1.ListRunsRequest) (*executionv1.ListRunsResponse, error) {
 	actor, err := service.dependencies.RunSearchAccess.AuthorizeTeamRead(ctx, "", request.TeamId)
 	if err != nil {
 		return nil, mapAuthorizationError(err, "run_search_denied")
 	}
 	query := executiondomain.SearchQuery{OrganizationID: actor.OrganizationID, TeamID: request.TeamId, Limit: 50}
+	query.IncludeNext = true
 	if request.AgentId != nil {
 		query.AgentID = *request.AgentId
 	}
@@ -60,6 +70,22 @@ func (service *GeneratedServices) ListRuns(ctx context.Context, request *executi
 	if request.Limit != nil {
 		query.Limit = int(*request.Limit)
 	}
+	if request.SortDirection != nil {
+		switch *request.SortDirection {
+		case "asc":
+			query.SortAscending = true
+		case "desc":
+		default:
+			return nil, publicError(400, "invalid_run_search")
+		}
+	}
+	if request.PageToken != nil && strings.TrimSpace(*request.PageToken) != "" {
+		cursor, err := decodeRunPageCursor(*request.PageToken)
+		if err != nil {
+			return nil, publicError(400, "invalid_run_page_token")
+		}
+		query.CursorCreatedAt, query.CursorID = &cursor.CreatedAt, cursor.ID
+	}
 	if query.Limit <= 0 || query.Limit > 100 || query.CreatedFrom != nil && query.CreatedTo != nil && query.CreatedFrom.After(*query.CreatedTo) {
 		return nil, publicError(400, "invalid_run_search")
 	}
@@ -67,11 +93,34 @@ func (service *GeneratedServices) ListRuns(ctx context.Context, request *executi
 	if err != nil {
 		return nil, publicError(500, "run_search_failed")
 	}
+	nextPageToken := ""
+	if len(values) > query.Limit {
+		last := values[query.Limit-1]
+		nextPageToken = encodeRunPageCursor(runPageCursor{CreatedAt: last.CreatedAt, ID: last.ID})
+		values = values[:query.Limit]
+	}
 	items := make([]runResponse, 0, len(values))
 	for _, value := range values {
 		items = append(items, newRunResponse(value))
 	}
-	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items}, &executionv1.ListRunsResponse{})
+	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items, "next_page_token": nextPageToken}, &executionv1.ListRunsResponse{})
+}
+
+func encodeRunPageCursor(cursor runPageCursor) string {
+	value, _ := json.Marshal(cursor)
+	return base64.RawURLEncoding.EncodeToString(value)
+}
+
+func decodeRunPageCursor(value string) (runPageCursor, error) {
+	var cursor runPageCursor
+	decoded, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil || json.Unmarshal(decoded, &cursor) != nil || cursor.CreatedAt.IsZero() {
+		return cursor, errors.New("invalid Run page token")
+	}
+	if _, err := uuid.Parse(cursor.ID); err != nil {
+		return cursor, err
+	}
+	return cursor, nil
 }
 
 func (service *GeneratedServices) GetRun(ctx context.Context, request *executionv1.GetRunRequest) (*executionv1.Run, error) {

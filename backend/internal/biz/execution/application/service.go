@@ -81,6 +81,9 @@ func (service *Service) Search(ctx context.Context, query domain.SearchQuery) ([
 	if query.CreatedFrom != nil && query.CreatedTo != nil && query.CreatedFrom.After(*query.CreatedTo) {
 		return nil, fmt.Errorf("Run search start time must not follow end time")
 	}
+	if query.CursorCreatedAt != nil && strings.TrimSpace(query.CursorID) == "" {
+		return nil, fmt.Errorf("Run search cursor is incomplete")
+	}
 	return repository.Search(ctx, query)
 }
 

@@ -176,14 +176,32 @@ func (repository *Repository) Get(ctx context.Context, runID string) (domain.Det
 				StartedAt: record.StartedAt, EndedAt: record.EndedAt,
 			})
 		}
+		var release releaseExecutionRecord
+		if err := tx.Where("id = ?", record.AgentReleaseID).Take(&release).Error; err != nil {
+			return fmt.Errorf("load Run frozen release diagnostics: %w", err)
+		}
+		var session sessionRecord
+		if err := tx.Where("id = ?", record.SessionID).Take(&session).Error; err != nil {
+			return fmt.Errorf("load Run Session diagnostics: %w", err)
+		}
+		var lease leaseRecord
+		var leaseDiagnostic *domain.LeaseDiagnostic
+		if err := tx.Where("run_id = ?", record.ID).Take(&lease).Error; err == nil {
+			leaseDiagnostic = &domain.LeaseDiagnostic{AttemptID: lease.AttemptID, WorkerID: lease.WorkerID, ExpiresAt: lease.ExpiresAt}
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("load Run Lease diagnostics: %w", err)
+		}
 		details = domain.Details{
-			ID: record.ID, SessionID: record.SessionID, AgentReleaseID: record.AgentReleaseID,
-			RuntimeImageID: record.RuntimeImageID, RequestText: record.RequestText, State: state,
+			ID: record.ID, SessionID: record.SessionID, CodingTaskID: session.CodingTaskID, AgentID: release.AgentID,
+			AgentReleaseID: record.AgentReleaseID, RuntimeImageID: record.RuntimeImageID,
+			RepositoryBindingID: release.RepositoryBindingID, RequestText: record.RequestText, State: state,
 			ModelBinding: cloneJSON(record.ModelBinding), ModelBudget: cloneJSON(record.ModelBudget),
 			ExecutionLimits: cloneJSON(record.ExecutionLimits), Usage: cloneJSON(record.Usage),
 			Cost: record.CostAmount, TerminalError: cloneJSON(record.TerminalError), AttemptCount: record.AttemptCount,
 			CreatedBy: record.CreatedBy, CreatedAt: record.CreatedAt, StartedAt: record.StartedAt,
 			EndedAt: record.EndedAt, UpdatedAt: record.UpdatedAt, Version: record.Version, Attempts: attempts,
+			RepositoryBinding: cloneJSON(release.RepositoryBindingSnapshot), RuntimeImage: cloneJSON(release.RuntimeImageSnapshot),
+			ConfiguredModel: cloneJSON(release.ConfiguredModelSnapshot), Lease: leaseDiagnostic,
 		}
 		return nil
 	}, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
@@ -219,8 +237,23 @@ func (repository *Repository) Search(ctx context.Context, query domain.SearchQue
 	if query.CreatedTo != nil {
 		database = database.Where("runs.created_at <= ?", query.CreatedTo.UTC())
 	}
+	if query.CursorCreatedAt != nil {
+		operator := "<"
+		if query.SortAscending {
+			operator = ">"
+		}
+		database = database.Where("(runs.created_at, runs.id) "+operator+" (?, ?)", query.CursorCreatedAt.UTC(), query.CursorID)
+	}
 	var records []runRecord
-	if err := database.Order("runs.created_at DESC, runs.id DESC").Limit(query.Limit).Find(&records).Error; err != nil {
+	order := "runs.created_at DESC, runs.id DESC"
+	if query.SortAscending {
+		order = "runs.created_at ASC, runs.id ASC"
+	}
+	fetchLimit := query.Limit
+	if query.IncludeNext {
+		fetchLimit++
+	}
+	if err := database.Order(order).Limit(fetchLimit).Find(&records).Error; err != nil {
 		return nil, fmt.Errorf("search Runs: %w", err)
 	}
 	results := make([]domain.Details, 0, len(records))

@@ -37,6 +37,8 @@ type ListRunsRequest struct {
 	CreatedFrom         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_from,json=createdFrom,proto3,oneof" json:"created_from,omitempty"`
 	CreatedTo           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_to,json=createdTo,proto3,oneof" json:"created_to,omitempty"`
 	Limit               *int32                 `protobuf:"varint,9,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	PageToken           *string                `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3,oneof" json:"page_token,omitempty"`
+	SortDirection       *string                `protobuf:"bytes,11,opt,name=sort_direction,json=sortDirection,proto3,oneof" json:"sort_direction,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -134,9 +136,24 @@ func (x *ListRunsRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *ListRunsRequest) GetPageToken() string {
+	if x != nil && x.PageToken != nil {
+		return *x.PageToken
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetSortDirection() string {
+	if x != nil && x.SortDirection != nil {
+		return *x.SortDirection
+	}
+	return ""
+}
+
 type ListRunsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*Run                 `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -176,6 +193,13 @@ func (x *ListRunsResponse) GetItems() []*Run {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *ListRunsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetRunRequest struct {
@@ -619,29 +643,36 @@ func (x *KillRunResponse) GetRun() *Run {
 }
 
 type Run struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SessionId       string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	AgentReleaseId  string                 `protobuf:"bytes,3,opt,name=agent_release_id,json=agentReleaseId,proto3" json:"agent_release_id,omitempty"`
-	RuntimeImageId  string                 `protobuf:"bytes,4,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
-	RequestText     string                 `protobuf:"bytes,5,opt,name=request_text,json=requestText,proto3" json:"request_text,omitempty"`
-	State           string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`
-	ModelBinding    *v1.ModelBinding       `protobuf:"bytes,7,opt,name=model_binding,json=modelBinding,proto3" json:"model_binding,omitempty"`
-	ModelBudget     *v1.ModelBudget        `protobuf:"bytes,8,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
-	ExecutionLimits *v1.ExecutionLimits    `protobuf:"bytes,9,opt,name=execution_limits,json=executionLimits,proto3" json:"execution_limits,omitempty"`
-	Usage           *v1.Usage              `protobuf:"bytes,10,opt,name=usage,proto3" json:"usage,omitempty"`
-	CostAmount      string                 `protobuf:"bytes,11,opt,name=cost_amount,json=costAmount,proto3" json:"cost_amount,omitempty"`
-	TerminalError   *v1.ExecutionError     `protobuf:"bytes,12,opt,name=terminal_error,json=terminalError,proto3,oneof" json:"terminal_error,omitempty"`
-	AttemptCount    int32                  `protobuf:"varint,13,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
-	CreatedBy       string                 `protobuf:"bytes,14,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	EndedAt         *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=ended_at,json=endedAt,proto3,oneof" json:"ended_at,omitempty"`
-	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Version         int64                  `protobuf:"varint,19,opt,name=version,proto3" json:"version,omitempty"`
-	Attempts        []*Attempt             `protobuf:"bytes,20,rep,name=attempts,proto3" json:"attempts,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SessionId                 string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AgentReleaseId            string                 `protobuf:"bytes,3,opt,name=agent_release_id,json=agentReleaseId,proto3" json:"agent_release_id,omitempty"`
+	RuntimeImageId            string                 `protobuf:"bytes,4,opt,name=runtime_image_id,json=runtimeImageId,proto3" json:"runtime_image_id,omitempty"`
+	RequestText               string                 `protobuf:"bytes,5,opt,name=request_text,json=requestText,proto3" json:"request_text,omitempty"`
+	State                     string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`
+	ModelBinding              *v1.ModelBinding       `protobuf:"bytes,7,opt,name=model_binding,json=modelBinding,proto3" json:"model_binding,omitempty"`
+	ModelBudget               *v1.ModelBudget        `protobuf:"bytes,8,opt,name=model_budget,json=modelBudget,proto3" json:"model_budget,omitempty"`
+	ExecutionLimits           *v1.ExecutionLimits    `protobuf:"bytes,9,opt,name=execution_limits,json=executionLimits,proto3" json:"execution_limits,omitempty"`
+	Usage                     *v1.Usage              `protobuf:"bytes,10,opt,name=usage,proto3" json:"usage,omitempty"`
+	CostAmount                string                 `protobuf:"bytes,11,opt,name=cost_amount,json=costAmount,proto3" json:"cost_amount,omitempty"`
+	TerminalError             *v1.ExecutionError     `protobuf:"bytes,12,opt,name=terminal_error,json=terminalError,proto3,oneof" json:"terminal_error,omitempty"`
+	AttemptCount              int32                  `protobuf:"varint,13,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	CreatedBy                 string                 `protobuf:"bytes,14,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	StartedAt                 *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	EndedAt                   *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=ended_at,json=endedAt,proto3,oneof" json:"ended_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Version                   int64                  `protobuf:"varint,19,opt,name=version,proto3" json:"version,omitempty"`
+	Attempts                  []*Attempt             `protobuf:"bytes,20,rep,name=attempts,proto3" json:"attempts,omitempty"`
+	CodingTaskId              string                 `protobuf:"bytes,21,opt,name=coding_task_id,json=codingTaskId,proto3" json:"coding_task_id,omitempty"`
+	AgentId                   string                 `protobuf:"bytes,22,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	RepositoryBindingId       string                 `protobuf:"bytes,23,opt,name=repository_binding_id,json=repositoryBindingId,proto3" json:"repository_binding_id,omitempty"`
+	RepositoryBindingSnapshot *structpb.Struct       `protobuf:"bytes,24,opt,name=repository_binding_snapshot,json=repositoryBindingSnapshot,proto3" json:"repository_binding_snapshot,omitempty"`
+	RuntimeImageSnapshot      *structpb.Struct       `protobuf:"bytes,25,opt,name=runtime_image_snapshot,json=runtimeImageSnapshot,proto3" json:"runtime_image_snapshot,omitempty"`
+	ConfiguredModelSnapshot   *structpb.Struct       `protobuf:"bytes,26,opt,name=configured_model_snapshot,json=configuredModelSnapshot,proto3" json:"configured_model_snapshot,omitempty"`
+	Lease                     *RunLeaseDiagnostic    `protobuf:"bytes,27,opt,name=lease,proto3,oneof" json:"lease,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Run) Reset() {
@@ -814,6 +845,115 @@ func (x *Run) GetAttempts() []*Attempt {
 	return nil
 }
 
+func (x *Run) GetCodingTaskId() string {
+	if x != nil {
+		return x.CodingTaskId
+	}
+	return ""
+}
+
+func (x *Run) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Run) GetRepositoryBindingId() string {
+	if x != nil {
+		return x.RepositoryBindingId
+	}
+	return ""
+}
+
+func (x *Run) GetRepositoryBindingSnapshot() *structpb.Struct {
+	if x != nil {
+		return x.RepositoryBindingSnapshot
+	}
+	return nil
+}
+
+func (x *Run) GetRuntimeImageSnapshot() *structpb.Struct {
+	if x != nil {
+		return x.RuntimeImageSnapshot
+	}
+	return nil
+}
+
+func (x *Run) GetConfiguredModelSnapshot() *structpb.Struct {
+	if x != nil {
+		return x.ConfiguredModelSnapshot
+	}
+	return nil
+}
+
+func (x *Run) GetLease() *RunLeaseDiagnostic {
+	if x != nil {
+		return x.Lease
+	}
+	return nil
+}
+
+type RunLeaseDiagnostic struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AttemptId     string                 `protobuf:"bytes,1,opt,name=attempt_id,json=attemptId,proto3" json:"attempt_id,omitempty"`
+	WorkerId      string                 `protobuf:"bytes,2,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunLeaseDiagnostic) Reset() {
+	*x = RunLeaseDiagnostic{}
+	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunLeaseDiagnostic) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunLeaseDiagnostic) ProtoMessage() {}
+
+func (x *RunLeaseDiagnostic) ProtoReflect() protoreflect.Message {
+	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunLeaseDiagnostic.ProtoReflect.Descriptor instead.
+func (*RunLeaseDiagnostic) Descriptor() ([]byte, []int) {
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RunLeaseDiagnostic) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *RunLeaseDiagnostic) GetWorkerId() string {
+	if x != nil {
+		return x.WorkerId
+	}
+	return ""
+}
+
+func (x *RunLeaseDiagnostic) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 type Attempt struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -830,7 +970,7 @@ type Attempt struct {
 
 func (x *Attempt) Reset() {
 	*x = Attempt{}
-	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	mi := &file_execution_v1_execution_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -842,7 +982,7 @@ func (x *Attempt) String() string {
 func (*Attempt) ProtoMessage() {}
 
 func (x *Attempt) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	mi := &file_execution_v1_execution_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -855,7 +995,7 @@ func (x *Attempt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Attempt.ProtoReflect.Descriptor instead.
 func (*Attempt) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{13}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Attempt) GetId() string {
@@ -924,7 +1064,7 @@ type StreamRequest struct {
 
 func (x *StreamRequest) Reset() {
 	*x = StreamRequest{}
-	mi := &file_execution_v1_execution_proto_msgTypes[14]
+	mi := &file_execution_v1_execution_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1076,7 @@ func (x *StreamRequest) String() string {
 func (*StreamRequest) ProtoMessage() {}
 
 func (x *StreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[14]
+	mi := &file_execution_v1_execution_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1089,7 @@ func (x *StreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamRequest.ProtoReflect.Descriptor instead.
 func (*StreamRequest) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{14}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *StreamRequest) GetRunId() string {
@@ -978,7 +1118,7 @@ type StreamResponse struct {
 
 func (x *StreamResponse) Reset() {
 	*x = StreamResponse{}
-	mi := &file_execution_v1_execution_proto_msgTypes[15]
+	mi := &file_execution_v1_execution_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -990,7 +1130,7 @@ func (x *StreamResponse) String() string {
 func (*StreamResponse) ProtoMessage() {}
 
 func (x *StreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[15]
+	mi := &file_execution_v1_execution_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1003,7 +1143,7 @@ func (x *StreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamResponse.ProtoReflect.Descriptor instead.
 func (*StreamResponse) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{15}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *StreamResponse) GetSequence() int64 {
@@ -1038,7 +1178,7 @@ var File_execution_v1_execution_proto protoreflect.FileDescriptor
 
 const file_execution_v1_execution_proto_rawDesc = "" +
 	"\n" +
-	"\x1cexecution/v1/execution.proto\x12\fexecution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\"\xed\x03\n" +
+	"\x1cexecution/v1/execution.proto\x12\fexecution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\"\xdf\x04\n" +
 	"\x0fListRunsRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12\x1e\n" +
 	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x127\n" +
@@ -1049,7 +1189,11 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\fcreated_from\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x05R\vcreatedFrom\x88\x01\x01\x12>\n" +
 	"\n" +
 	"created_to\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x06R\tcreatedTo\x88\x01\x01\x12\x19\n" +
-	"\x05limit\x18\t \x01(\x05H\aR\x05limit\x88\x01\x01B\v\n" +
+	"\x05limit\x18\t \x01(\x05H\aR\x05limit\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"page_token\x18\n" +
+	" \x01(\tH\bR\tpageToken\x88\x01\x01\x12*\n" +
+	"\x0esort_direction\x18\v \x01(\tH\tR\rsortDirection\x88\x01\x01B\v\n" +
 	"\t_agent_idB\x18\n" +
 	"\x16_repository_binding_idB\n" +
 	"\n" +
@@ -1059,9 +1203,12 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\b_runtimeB\x0f\n" +
 	"\r_created_fromB\r\n" +
 	"\v_created_toB\b\n" +
-	"\x06_limit\";\n" +
+	"\x06_limitB\r\n" +
+	"\v_page_tokenB\x11\n" +
+	"\x0f_sort_direction\"c\n" +
 	"\x10ListRunsResponse\x12'\n" +
-	"\x05items\x18\x01 \x03(\v2\x11.execution.v1.RunR\x05items\"&\n" +
+	"\x05items\x18\x01 \x03(\v2\x11.execution.v1.RunR\x05items\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"&\n" +
 	"\rGetRunRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"5\n" +
 	"\x0eGetRunResponse\x12#\n" +
@@ -1081,7 +1228,8 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\x0eKillRunRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"6\n" +
 	"\x0fKillRunResponse\x12#\n" +
-	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"\xbe\a\n" +
+	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"\xf7\n" +
+	"\n" +
 	"\x03Run\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1109,10 +1257,24 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\x13 \x01(\x03R\aversion\x121\n" +
-	"\battempts\x18\x14 \x03(\v2\x15.execution.v1.AttemptR\battemptsB\x11\n" +
+	"\battempts\x18\x14 \x03(\v2\x15.execution.v1.AttemptR\battempts\x12$\n" +
+	"\x0ecoding_task_id\x18\x15 \x01(\tR\fcodingTaskId\x12\x19\n" +
+	"\bagent_id\x18\x16 \x01(\tR\aagentId\x122\n" +
+	"\x15repository_binding_id\x18\x17 \x01(\tR\x13repositoryBindingId\x12W\n" +
+	"\x1brepository_binding_snapshot\x18\x18 \x01(\v2\x17.google.protobuf.StructR\x19repositoryBindingSnapshot\x12M\n" +
+	"\x16runtime_image_snapshot\x18\x19 \x01(\v2\x17.google.protobuf.StructR\x14runtimeImageSnapshot\x12S\n" +
+	"\x19configured_model_snapshot\x18\x1a \x01(\v2\x17.google.protobuf.StructR\x17configuredModelSnapshot\x12;\n" +
+	"\x05lease\x18\x1b \x01(\v2 .execution.v1.RunLeaseDiagnosticH\x03R\x05lease\x88\x01\x01B\x11\n" +
 	"\x0f_terminal_errorB\r\n" +
 	"\v_started_atB\v\n" +
-	"\t_ended_at\"\xde\x02\n" +
+	"\t_ended_atB\b\n" +
+	"\x06_lease\"\x8b\x01\n" +
+	"\x12RunLeaseDiagnostic\x12\x1d\n" +
+	"\n" +
+	"attempt_id\x18\x01 \x01(\tR\tattemptId\x12\x1b\n" +
+	"\tworker_id\x18\x02 \x01(\tR\bworkerId\x129\n" +
+	"\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xde\x02\n" +
 	"\aAttempt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\x05R\x06number\x12\x1b\n" +
@@ -1174,7 +1336,7 @@ func file_execution_v1_execution_proto_rawDescGZIP() []byte {
 	return file_execution_v1_execution_proto_rawDescData
 }
 
-var file_execution_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_execution_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_execution_v1_execution_proto_goTypes = []any{
 	(*ListRunsRequest)(nil),       // 0: execution.v1.ListRunsRequest
 	(*ListRunsResponse)(nil),      // 1: execution.v1.ListRunsResponse
@@ -1189,60 +1351,67 @@ var file_execution_v1_execution_proto_goTypes = []any{
 	(*KillRunRequest)(nil),        // 10: execution.v1.KillRunRequest
 	(*KillRunResponse)(nil),       // 11: execution.v1.KillRunResponse
 	(*Run)(nil),                   // 12: execution.v1.Run
-	(*Attempt)(nil),               // 13: execution.v1.Attempt
-	(*StreamRequest)(nil),         // 14: execution.v1.StreamRequest
-	(*StreamResponse)(nil),        // 15: execution.v1.StreamResponse
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
-	(*v1.ModelBinding)(nil),       // 17: types.v1.ModelBinding
-	(*v1.ModelBudget)(nil),        // 18: types.v1.ModelBudget
-	(*v1.ExecutionLimits)(nil),    // 19: types.v1.ExecutionLimits
-	(*v1.Usage)(nil),              // 20: types.v1.Usage
-	(*v1.ExecutionError)(nil),     // 21: types.v1.ExecutionError
-	(*structpb.Value)(nil),        // 22: google.protobuf.Value
+	(*RunLeaseDiagnostic)(nil),    // 13: execution.v1.RunLeaseDiagnostic
+	(*Attempt)(nil),               // 14: execution.v1.Attempt
+	(*StreamRequest)(nil),         // 15: execution.v1.StreamRequest
+	(*StreamResponse)(nil),        // 16: execution.v1.StreamResponse
+	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
+	(*v1.ModelBinding)(nil),       // 18: types.v1.ModelBinding
+	(*v1.ModelBudget)(nil),        // 19: types.v1.ModelBudget
+	(*v1.ExecutionLimits)(nil),    // 20: types.v1.ExecutionLimits
+	(*v1.Usage)(nil),              // 21: types.v1.Usage
+	(*v1.ExecutionError)(nil),     // 22: types.v1.ExecutionError
+	(*structpb.Struct)(nil),       // 23: google.protobuf.Struct
+	(*structpb.Value)(nil),        // 24: google.protobuf.Value
 }
 var file_execution_v1_execution_proto_depIdxs = []int32{
-	16, // 0: execution.v1.ListRunsRequest.created_from:type_name -> google.protobuf.Timestamp
-	16, // 1: execution.v1.ListRunsRequest.created_to:type_name -> google.protobuf.Timestamp
+	17, // 0: execution.v1.ListRunsRequest.created_from:type_name -> google.protobuf.Timestamp
+	17, // 1: execution.v1.ListRunsRequest.created_to:type_name -> google.protobuf.Timestamp
 	12, // 2: execution.v1.ListRunsResponse.items:type_name -> execution.v1.Run
 	12, // 3: execution.v1.GetRunResponse.run:type_name -> execution.v1.Run
 	12, // 4: execution.v1.InterruptRunResponse.run:type_name -> execution.v1.Run
 	12, // 5: execution.v1.ResumeRunResponse.run:type_name -> execution.v1.Run
 	12, // 6: execution.v1.CancelRunResponse.run:type_name -> execution.v1.Run
 	12, // 7: execution.v1.KillRunResponse.run:type_name -> execution.v1.Run
-	17, // 8: execution.v1.Run.model_binding:type_name -> types.v1.ModelBinding
-	18, // 9: execution.v1.Run.model_budget:type_name -> types.v1.ModelBudget
-	19, // 10: execution.v1.Run.execution_limits:type_name -> types.v1.ExecutionLimits
-	20, // 11: execution.v1.Run.usage:type_name -> types.v1.Usage
-	21, // 12: execution.v1.Run.terminal_error:type_name -> types.v1.ExecutionError
-	16, // 13: execution.v1.Run.created_at:type_name -> google.protobuf.Timestamp
-	16, // 14: execution.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	16, // 15: execution.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	16, // 16: execution.v1.Run.updated_at:type_name -> google.protobuf.Timestamp
-	13, // 17: execution.v1.Run.attempts:type_name -> execution.v1.Attempt
-	21, // 18: execution.v1.Attempt.error:type_name -> types.v1.ExecutionError
-	16, // 19: execution.v1.Attempt.started_at:type_name -> google.protobuf.Timestamp
-	16, // 20: execution.v1.Attempt.ended_at:type_name -> google.protobuf.Timestamp
-	22, // 21: execution.v1.StreamResponse.payload:type_name -> google.protobuf.Value
-	16, // 22: execution.v1.StreamResponse.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 23: execution.v1.ExecutionService.ListRuns:input_type -> execution.v1.ListRunsRequest
-	2,  // 24: execution.v1.ExecutionService.GetRun:input_type -> execution.v1.GetRunRequest
-	4,  // 25: execution.v1.ExecutionService.InterruptRun:input_type -> execution.v1.InterruptRunRequest
-	6,  // 26: execution.v1.ExecutionService.ResumeRun:input_type -> execution.v1.ResumeRunRequest
-	8,  // 27: execution.v1.ExecutionService.CancelRun:input_type -> execution.v1.CancelRunRequest
-	10, // 28: execution.v1.ExecutionService.KillRun:input_type -> execution.v1.KillRunRequest
-	14, // 29: execution.v1.RunEventStreamService.Stream:input_type -> execution.v1.StreamRequest
-	1,  // 30: execution.v1.ExecutionService.ListRuns:output_type -> execution.v1.ListRunsResponse
-	12, // 31: execution.v1.ExecutionService.GetRun:output_type -> execution.v1.Run
-	12, // 32: execution.v1.ExecutionService.InterruptRun:output_type -> execution.v1.Run
-	12, // 33: execution.v1.ExecutionService.ResumeRun:output_type -> execution.v1.Run
-	12, // 34: execution.v1.ExecutionService.CancelRun:output_type -> execution.v1.Run
-	12, // 35: execution.v1.ExecutionService.KillRun:output_type -> execution.v1.Run
-	15, // 36: execution.v1.RunEventStreamService.Stream:output_type -> execution.v1.StreamResponse
-	30, // [30:37] is the sub-list for method output_type
-	23, // [23:30] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	18, // 8: execution.v1.Run.model_binding:type_name -> types.v1.ModelBinding
+	19, // 9: execution.v1.Run.model_budget:type_name -> types.v1.ModelBudget
+	20, // 10: execution.v1.Run.execution_limits:type_name -> types.v1.ExecutionLimits
+	21, // 11: execution.v1.Run.usage:type_name -> types.v1.Usage
+	22, // 12: execution.v1.Run.terminal_error:type_name -> types.v1.ExecutionError
+	17, // 13: execution.v1.Run.created_at:type_name -> google.protobuf.Timestamp
+	17, // 14: execution.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	17, // 15: execution.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	17, // 16: execution.v1.Run.updated_at:type_name -> google.protobuf.Timestamp
+	14, // 17: execution.v1.Run.attempts:type_name -> execution.v1.Attempt
+	23, // 18: execution.v1.Run.repository_binding_snapshot:type_name -> google.protobuf.Struct
+	23, // 19: execution.v1.Run.runtime_image_snapshot:type_name -> google.protobuf.Struct
+	23, // 20: execution.v1.Run.configured_model_snapshot:type_name -> google.protobuf.Struct
+	13, // 21: execution.v1.Run.lease:type_name -> execution.v1.RunLeaseDiagnostic
+	17, // 22: execution.v1.RunLeaseDiagnostic.expires_at:type_name -> google.protobuf.Timestamp
+	22, // 23: execution.v1.Attempt.error:type_name -> types.v1.ExecutionError
+	17, // 24: execution.v1.Attempt.started_at:type_name -> google.protobuf.Timestamp
+	17, // 25: execution.v1.Attempt.ended_at:type_name -> google.protobuf.Timestamp
+	24, // 26: execution.v1.StreamResponse.payload:type_name -> google.protobuf.Value
+	17, // 27: execution.v1.StreamResponse.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 28: execution.v1.ExecutionService.ListRuns:input_type -> execution.v1.ListRunsRequest
+	2,  // 29: execution.v1.ExecutionService.GetRun:input_type -> execution.v1.GetRunRequest
+	4,  // 30: execution.v1.ExecutionService.InterruptRun:input_type -> execution.v1.InterruptRunRequest
+	6,  // 31: execution.v1.ExecutionService.ResumeRun:input_type -> execution.v1.ResumeRunRequest
+	8,  // 32: execution.v1.ExecutionService.CancelRun:input_type -> execution.v1.CancelRunRequest
+	10, // 33: execution.v1.ExecutionService.KillRun:input_type -> execution.v1.KillRunRequest
+	15, // 34: execution.v1.RunEventStreamService.Stream:input_type -> execution.v1.StreamRequest
+	1,  // 35: execution.v1.ExecutionService.ListRuns:output_type -> execution.v1.ListRunsResponse
+	12, // 36: execution.v1.ExecutionService.GetRun:output_type -> execution.v1.Run
+	12, // 37: execution.v1.ExecutionService.InterruptRun:output_type -> execution.v1.Run
+	12, // 38: execution.v1.ExecutionService.ResumeRun:output_type -> execution.v1.Run
+	12, // 39: execution.v1.ExecutionService.CancelRun:output_type -> execution.v1.Run
+	12, // 40: execution.v1.ExecutionService.KillRun:output_type -> execution.v1.Run
+	16, // 41: execution.v1.RunEventStreamService.Stream:output_type -> execution.v1.StreamResponse
+	35, // [35:42] is the sub-list for method output_type
+	28, // [28:35] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_execution_v1_execution_proto_init() }
@@ -1252,14 +1421,14 @@ func file_execution_v1_execution_proto_init() {
 	}
 	file_execution_v1_execution_proto_msgTypes[0].OneofWrappers = []any{}
 	file_execution_v1_execution_proto_msgTypes[12].OneofWrappers = []any{}
-	file_execution_v1_execution_proto_msgTypes[13].OneofWrappers = []any{}
+	file_execution_v1_execution_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_execution_v1_execution_proto_rawDesc), len(file_execution_v1_execution_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

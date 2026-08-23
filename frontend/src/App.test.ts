@@ -101,7 +101,7 @@ function authSession(initial: AuthState) {
 }
 
 const platformApiStub: PlatformApi = {
-  listRuntimeImages: vi.fn(async () => ({ items: [], nextPageToken: "" })),
+  listRuntimeImages: vi.fn(async () => ({ items: [], nextPageToken: "" })), searchRuns: vi.fn(async () => ({ items: [], nextPageToken: "" })),
   getRuntimeImage: vi.fn(),
   registerRuntimeImage: vi.fn(),
   changeRuntimeImageStatus: vi.fn(),

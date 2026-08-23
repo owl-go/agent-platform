@@ -178,7 +178,7 @@ async function mountPanel(api: PlatformApi, grants: Array<{ role: string; team_i
 
 function apiStub(): PlatformApi {
   return {
-    listRuntimeImages: vi.fn(async () => ({ items: [runtime], nextPageToken: "" })), getRuntimeImage: vi.fn(), registerRuntimeImage: vi.fn(), changeRuntimeImageStatus: vi.fn(),
+    listRuntimeImages: vi.fn(async () => ({ items: [runtime], nextPageToken: "" })), searchRuns: vi.fn(async () => ({ items: [], nextPageToken: "" })), getRuntimeImage: vi.fn(), registerRuntimeImage: vi.fn(), changeRuntimeImageStatus: vi.fn(),
     listCredentialProfiles: vi.fn(async () => []), getCredentialProfile: vi.fn(), registerCredentialProfile: vi.fn(), changeCredentialProfileStatus: vi.fn(),
     listConfiguredModels: vi.fn(async () => [model]), getConfiguredModel: vi.fn(), registerConfiguredModel: vi.fn(), changeConfiguredModelStatus: vi.fn(),
     listSourceControlProviders: vi.fn(async () => [provider]), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(async () => provider), changeSourceControlProviderStatus: vi.fn(async () => provider),

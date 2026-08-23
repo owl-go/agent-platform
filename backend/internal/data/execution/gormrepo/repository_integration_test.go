@@ -157,6 +157,11 @@ func TestGORMRepositorySearchesRunsWithinTeamScope(t *testing.T) {
 	if !found {
 		t.Fatalf("seeded Run %s was not returned by scoped search", runID)
 	}
+	for _, result := range results {
+		if result.ID == runID && (result.CodingTaskID == "" || result.AgentID == "" || result.RepositoryBindingID == "" || len(result.RuntimeImage) == 0 || len(result.ConfiguredModel) == 0) {
+			t.Fatalf("Run diagnostics are incomplete: %+v", result)
+		}
+	}
 	results, err = service.Search(context.Background(), domain.SearchQuery{OrganizationID: scope.OrganizationID, TeamID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", Limit: 10})
 	if err != nil {
 		t.Fatal(err)

@@ -83,7 +83,7 @@ function mountPanel(api: PlatformApi, roleGrants: Array<{ role: string; team_id?
 
 function apiStub(): PlatformApi {
   return {
-    listRuntimeImages: vi.fn(async () => ({ items: [], nextPageToken: "" })), getRuntimeImage: vi.fn(), registerRuntimeImage: vi.fn(), changeRuntimeImageStatus: vi.fn(),
+    listRuntimeImages: vi.fn(async () => ({ items: [], nextPageToken: "" })), searchRuns: vi.fn(async () => ({ items: [], nextPageToken: "" })), getRuntimeImage: vi.fn(), registerRuntimeImage: vi.fn(), changeRuntimeImageStatus: vi.fn(),
     listCredentialProfiles: vi.fn(async () => [credential]), getCredentialProfile: vi.fn(async () => credential), registerCredentialProfile: vi.fn(async () => credential), changeCredentialProfileStatus: vi.fn(async () => credential),
     listConfiguredModels: vi.fn(async () => [model]), getConfiguredModel: vi.fn(async () => model), registerConfiguredModel: vi.fn(async () => model), changeConfiguredModelStatus: vi.fn(async () => model),
     listSourceControlProviders: vi.fn(async () => []), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(), changeSourceControlProviderStatus: vi.fn(),

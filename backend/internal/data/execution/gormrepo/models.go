@@ -109,8 +109,11 @@ func (eventRecord) TableName() string { return "run_events" }
 
 type releaseExecutionRecord struct {
 	ID                        string    `gorm:"column:id;primaryKey"`
+	AgentID                   string    `gorm:"column:agent_id"`
+	RepositoryBindingID       string    `gorm:"column:repository_binding_id"`
 	RepositoryBindingSnapshot jsonValue `gorm:"column:repository_binding_snapshot;type:jsonb"`
 	RuntimeImageSnapshot      jsonValue `gorm:"column:runtime_image_snapshot;type:jsonb"`
+	ConfiguredModelSnapshot   jsonValue `gorm:"column:configured_model_snapshot;type:jsonb"`
 }
 
 func (releaseExecutionRecord) TableName() string { return "agent_releases" }
