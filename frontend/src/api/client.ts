@@ -24,6 +24,10 @@ export type CodingTaskLaunchOption = components["schemas"]["v1CodingTaskLaunchOp
 export type CodingTaskLaunchCatalog = { items: CodingTaskLaunchOption[]; prerequisite: string };
 export type CodingTaskSession = components["schemas"]["v1Session"];
 export type Run = components["schemas"]["v1Run"];
+export type Artifact = components["schemas"]["v1Artifact"];
+export type ArtifactDownload = components["schemas"]["v1GetArtifactDownloadResponse"];
+export type RunEvent = { run_id: string; sequence: number; event_type: string; payload: unknown; created_at: string };
+export type RunEventStreamResult = { cursor: number; terminal: boolean };
 export type CreateCodingTaskInput = Omit<components["schemas"]["v1CreateCodingTaskRequest"], "team_id">;
 export type CodingTaskLaunch = components["schemas"]["v1CreateCodingTaskResponse"];
 export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
@@ -93,6 +97,9 @@ export interface PlatformApi {
   createCodingTask(teamID: string, input: CreateCodingTaskInput, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskLaunch>;
   getCodingTaskSession(taskID: string, teamID: string, signal?: AbortSignal): Promise<CodingTaskSession>;
   listRuns(teamID: string, taskID: string, signal?: AbortSignal): Promise<Run[]>;
+  streamRunEvents(runID: string, after: number, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<RunEventStreamResult>;
+  listRunArtifacts(runID: string, signal?: AbortSignal): Promise<Artifact[]>;
+  getArtifactDownload(artifactID: string, signal?: AbortSignal): Promise<ArtifactDownload>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-platform-api");
@@ -310,7 +317,67 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const body = await authorizedRequest<components["schemas"]["v1ListRunsResponse"]>(`/api/v1/runs?${query}`, { signal });
       return body.items ?? [];
     },
+    async streamRunEvents(runID, after, onEvent, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication", "");
+      const response = await fetch(`/api/v1/runs/${encodeURIComponent(runID)}/events`, {
+        headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}`, "Last-Event-ID": String(after) }, signal,
+      });
+      if (!response.ok) throw await normalizeError(response);
+      if (!response.body) throw new ApiError("unavailable", 503, "event_stream_unavailable", response.headers.get("X-Request-ID") ?? "");
+      return consumeRunEventStream(response.body, runID, after, onEvent, signal);
+    },
+    async listRunArtifacts(runID, signal) {
+      const body = await authorizedRequest<components["schemas"]["v1ListRunArtifactsResponse"]>(`/api/v1/runs/${encodeURIComponent(runID)}/artifacts`, { signal });
+      return body.items ?? [];
+    },
+    getArtifactDownload(artifactID, signal) {
+      return authorizedRequest<ArtifactDownload>(`/api/v1/artifacts/${encodeURIComponent(artifactID)}/download`, { signal });
+    },
   };
+}
+
+const terminalRunEvents = new Set(["run.completed", "run.failed", "run.cancelled", "run.killed"]);
+
+async function consumeRunEventStream(stream: ReadableStream<Uint8Array>, runID: string, after: number, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<RunEventStreamResult> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = ""; let cursor = after; let terminal = false;
+  try {
+    while (true) {
+      if (signal?.aborted) throw signal.reason;
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      buffer = buffer.replace(/\r\n/g, "\n");
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary).replace(/\r/g, ""); buffer = buffer.slice(boundary + 2);
+        if (frame && !frame.startsWith(":")) {
+          const lines = frame.split("\n");
+          const eventType = lines.find((line) => line.startsWith("event:"))?.slice(6).trim() ?? "message";
+          const data = lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
+          if (eventType === "stream_error") {
+            let code = "event_stream_failed";
+            try { code = (JSON.parse(data) as { error?: string }).error || code; } catch { /* Keep the safe generic code. */ }
+            const kind: ApiErrorKind = code === "invalid_authentication" ? "unauthenticated" : code === "run_access_denied" ? "forbidden" : "unavailable";
+            throw new ApiError(kind, kind === "unauthenticated" ? 401 : kind === "forbidden" ? 403 : 503, code, "");
+          }
+          let event: RunEvent;
+          try { event = JSON.parse(data) as RunEvent; }
+          catch { throw new ApiError("unavailable", 503, "event_contract_invalid", ""); }
+          if (event.run_id !== runID || event.event_type !== eventType) throw new ApiError("unavailable", 503, "event_contract_invalid", "");
+          if (event.sequence === cursor) { boundary = buffer.indexOf("\n\n"); continue; }
+          if (terminal || event.sequence !== cursor + 1) throw new ApiError("unavailable", 503, "event_contract_invalid", "");
+          terminal = terminalRunEvents.has(event.event_type); cursor = event.sequence; onEvent(event);
+        }
+        boundary = buffer.indexOf("\n\n");
+      }
+      if (done) {
+        if (buffer.trim()) throw new ApiError("unavailable", 503, "event_contract_invalid", "");
+        return { cursor, terminal };
+      }
+    }
+  } finally { reader.releaseLock(); }
 }
 
 async function request<T>(accessToken: string, path: string, init: RequestInit): Promise<T> {

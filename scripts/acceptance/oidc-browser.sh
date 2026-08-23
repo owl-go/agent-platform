@@ -127,6 +127,14 @@ MINIO_SECURE=false \
 go -C "$repository_root/backend" run ./cmd/conformance-artifact \
   --action upload --provider minio --source "$evidence_source" \
   --key phase-0/acceptance/codex/evidence.tar --report "$acceptance_tmp/evidence-upload.json"
+artifact_size="$(jq -r '.size' "$acceptance_tmp/evidence-upload.json")"
+artifact_sha256="$(jq -r '.sha256' "$acceptance_tmp/evidence-upload.json")"
+run_event_payload="$(RUN_EVENT_SECRET_CANARY="$model_secret_canary" go -C "$repository_root/backend" run ./testdata/oidc-browser/redact-event)"
+if [[ "$run_event_payload" == *"$model_secret_canary"* ]] || [[ "$run_event_payload" != *"[REDACTED]"* ]]; then
+  echo "Run Event acceptance fixture was not redacted" >&2
+  exit 1
+fi
+run_event_payload_base64="$(printf '%s' "$run_event_payload" | base64 | tr -d '\n')"
 
 go -C "$repository_root/backend" build -o "$acceptance_tmp/api" ./cmd/api
 
@@ -449,6 +457,70 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.getByTestId("create-task").click(); const issueLaunch = await issueResponse; const issueBody = await issueLaunch.json();
   if (issueLaunch.status() !== 201 || issueBody.task.issue_snapshot?.title !== "Acceptance issue snapshot" || issueBody.task.issue_snapshot?.url !== "https://git.example.test/issues/42") throw new Error("immutable Issue Snapshot launch failed");
   await page.evaluate(({ firstTask, firstSession, firstBranch, issueTask }) => { sessionStorage.setItem("acceptance-task-id", firstTask); sessionStorage.setItem("acceptance-task-session-id", firstSession); sessionStorage.setItem("acceptance-task-branch", firstBranch); sessionStorage.setItem("acceptance-issue-task-id", issueTask); }, { firstTask: launch.task.id, firstSession: launch.session.id, firstBranch: launch.session.review_branch, issueTask: issueBody.task.id });
+}'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "INSERT INTO run_attempts (id, run_id, attempt_number, worker_id, state, infrastructure_failure, started_at, ended_at)
+     SELECT 'abababab-abab-4bab-8bab-ababababab01', runs.id, 1, 'acceptance-worker', 'completed', false, now() - interval '2 minutes', now() - interval '1 minute'
+     FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1;
+   INSERT INTO run_events (run_id, sequence, event_type, payload, created_at)
+     SELECT runs.id, event.sequence, event.event_type, event.payload, now() - interval '90 seconds' + event.sequence * interval '1 second'
+     FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     CROSS JOIN (VALUES
+       (2::bigint, 'plan.updated', '{\"steps\":[\"inspect\",\"change\",\"verify\"]}'::jsonb),
+       (3::bigint, 'command.requested', '{\"executable\":\"go\",\"arguments\":[\"test\",\"./...\"]}'::jsonb),
+       (4::bigint, 'file.changed', '{\"path\":\"backend/parser.go\"}'::jsonb),
+       (5::bigint, 'validation.completed', '{\"name\":\"go test\",\"passed\":true}'::jsonb),
+       (6::bigint, 'diff.generated', convert_from(decode('$run_event_payload_base64', 'base64'), 'UTF8')::jsonb),
+       (7::bigint, 'approval.requested', '{\"required\":false}'::jsonb),
+       (8::bigint, 'usage.updated', '{\"input_tokens\":120,\"output_tokens\":48}'::jsonb),
+       (9::bigint, 'cost.updated', '{\"amount\":\"0.0042\",\"currency\":\"USD\"}'::jsonb),
+       (10::bigint, 'runtime.completed', '{\"result\":\"review branch pushed\"}'::jsonb),
+       (11::bigint, 'run.completed', '{\"result\":\"success\"}'::jsonb)
+     ) AS event(sequence, event_type, payload)
+     WHERE coding_tasks.title = 'Acceptance free-text task';
+   UPDATE runs SET state = 'completed', attempt_count = 1, usage = '{\"input_tokens\":120,\"output_tokens\":48}', cost_amount = 0.0042, started_at = now() - interval '2 minutes', ended_at = now(), updated_at = now(), version = version + 1
+     WHERE id = (SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1);
+   INSERT INTO artifacts (id, run_id, kind, object_key, size_bytes, sha256, content_type, metadata, expires_at)
+     SELECT 'abababab-abab-4bab-8bab-ababababab02', runs.id, 'diff', 'phase-0/acceptance/codex/evidence.tar', $artifact_size, '$artifact_sha256', 'application/x-tar', '{\"attempt\":\"1\",\"secret\":\"[REDACTED]\"}', now() + interval '1 day'
+     FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1;" >/dev/null
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const expected = await page.evaluate(() => ({ task: sessionStorage.getItem("acceptance-task-id") }));
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const targetRunID = await page.evaluate(async ({ accessToken, task }) => { const response = await fetch(`/api/v1/runs?team_id=66666666-6666-4666-8666-666666666666&task_id=${task}&limit=50`, { headers: { Authorization: `Bearer ${accessToken}` } }); const body = await response.json(); return body.items?.[0]?.id ?? ""; }, { accessToken, task: expected.task });
+  if (!targetRunID) throw new Error("target Run for reconnect acceptance was not found");
+  const streamPattern = new RegExp(`/api/v1/runs/${targetRunID}/events$`);
+  let streamCalls = 0; let reconnectCursor = "";
+  await page.route(streamPattern, async (route, request) => {
+    streamCalls += 1;
+    if (streamCalls === 1) {
+      const upstream = await route.fetch(); const body = await upstream.text();
+      const replayPrefix = body.split("\n\n").filter(Boolean).slice(0, 3).join("\n\n") + "\n\n";
+      await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" }, body: replayPrefix }); return;
+    }
+    reconnectCursor = request.headers()["last-event-id"] ?? ""; await route.continue();
+  });
+  await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${expected.task}`);
+  const evidence = page.getByTestId("run-evidence"); await evidence.waitFor(); await evidence.locator(".stream-complete").waitFor();
+  if (streamCalls !== 2 || reconnectCursor !== "3") throw new Error(`Run Event reconnect did not resume from cursor 3: calls=${streamCalls} cursor=${reconnectCursor}`);
+  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 11) throw new Error("Run Event reconnect produced a gap or duplicate");
+  if (!(await evidence.textContent()).includes("Attempt 1") || !(await evidence.textContent()).includes("acceptance-worker")) throw new Error("Run Attempt history was not rendered as part of the same Run");
+  if (!(await evidence.textContent()).includes("[display truncated at 16384 characters]")) throw new Error("oversized Run Event did not show its explicit preview boundary");
+  await page.unroute(streamPattern); await page.reload(); await evidence.locator(".stream-complete").waitFor();
+  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 11) throw new Error("refresh did not restore the complete Run Event timeline");
+  const pageText = await page.locator("body").textContent();
+  if (pageText.includes("phase-0/acceptance/codex/evidence.tar") || pageText.includes("acceptance-only-secret")) throw new Error("Artifact Object Key or Provider Credential reached the browser");
+  await page.evaluate(() => { window.open = (url) => { sessionStorage.setItem("acceptance-artifact-download", String(url)); return null; }; });
+  await evidence.locator(".artifact-grid button").filter({ hasText: "diff" }).click();
+  await page.waitForFunction(() => Boolean(sessionStorage.getItem("acceptance-artifact-download")));
+  const signedURL = await page.evaluate(() => sessionStorage.getItem("acceptance-artifact-download"));
+  if (!signedURL || !signedURL.includes("X-Amz-Signature") || !signedURL.includes("X-Amz-Expires=300")) throw new Error("Artifact download was not a five-minute signed result");
+  const downloaded = await page.request.get(signedURL);
+  if (!downloaded.ok() || (await downloaded.body()).length === 0) throw new Error("authorized Artifact download did not return the stored object");
+  await page.evaluate(() => sessionStorage.removeItem("acceptance-artifact-download"));
 }'
 
 browser --session "$playwright_session" run-code 'async (page) => {

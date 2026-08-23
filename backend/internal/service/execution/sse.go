@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,23 +21,31 @@ type EventReader interface {
 	ListEventsAfter(context.Context, string, int64, int) ([]executiondomain.Event, error)
 }
 
+type RunStateReader interface {
+	Get(context.Context, string) (executiondomain.Details, error)
+}
+
 type RunAccessController interface {
 	AuthorizeRunRead(context.Context, string, string) error
 }
 
-func NewRunEventSSE(reader EventReader, access RunAccessController) (http.Handler, error) {
-	if reader == nil || access == nil {
-		return nil, fmt.Errorf("Run Event Reader and Access Controller are required")
+func NewRunEventSSE(reader EventReader, states RunStateReader, access RunAccessController) (http.Handler, error) {
+	if reader == nil || states == nil || access == nil {
+		return nil, fmt.Errorf("Run Event Reader, State Reader, and Access Controller are required")
 	}
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	engine.GET("/v1/runs/:run_id/events", func(ctx *gin.Context) {
-		serveRunEvents(ctx, reader, access)
+		serveRunEvents(ctx, reader, states, access)
 	})
 	return engine, nil
 }
 
-func serveRunEvents(ctx *gin.Context, reader EventReader, access RunAccessController) {
+func serveRunEvents(ctx *gin.Context, reader EventReader, states RunStateReader, access RunAccessController) {
+	serveRunEventsAtIntervals(ctx, reader, states, access, time.Second, 15*time.Second)
+}
+
+func serveRunEventsAtIntervals(ctx *gin.Context, reader EventReader, states RunStateReader, access RunAccessController, pollInterval, heartbeatInterval time.Duration) {
 	runID := ctx.Param("run_id")
 	if _, err := uuid.Parse(runID); err != nil {
 		ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid_run_id"})
@@ -72,11 +81,15 @@ func serveRunEvents(ctx *gin.Context, reader EventReader, access RunAccessContro
 	ctx.Status(http.StatusOK)
 	ctx.Writer.Flush()
 
-	poll := time.NewTicker(time.Second)
+	poll := time.NewTicker(pollInterval)
 	defer poll.Stop()
-	heartbeat := time.NewTicker(15 * time.Second)
+	heartbeat := time.NewTicker(heartbeatInterval)
 	defer heartbeat.Stop()
 	for {
+		if err := access.AuthorizeRunRead(ctx.Request.Context(), token, runID); err != nil {
+			writeStreamError(ctx, authorizationStreamError(err))
+			return
+		}
 		queryCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
 		events, err := reader.ListEventsAfter(queryCtx, runID, cursor, 100)
 		cancel()
@@ -84,33 +97,72 @@ func serveRunEvents(ctx *gin.Context, reader EventReader, access RunAccessContro
 			if errors.Is(err, context.Canceled) || ctx.Request.Context().Err() != nil {
 				return
 			}
-			writeStreamError(ctx)
+			writeStreamError(ctx, "event_stream_failed")
 			return
 		}
 		previous := cursor
+		terminal := false
 		for _, event := range events {
-			if event.Sequence <= previous {
-				writeStreamError(ctx)
+			if event.Sequence != previous+1 || terminal {
+				writeStreamError(ctx, "event_contract_invalid")
 				return
 			}
 			eventType := strings.NewReplacer("\n", "", "\r", "").Replace(event.Type)
+			data, err := json.Marshal(map[string]any{
+				"run_id": runID, "sequence": event.Sequence, "event_type": event.Type,
+				"payload": json.RawMessage(event.Payload), "created_at": event.CreatedAt.UTC(),
+			})
+			if err != nil {
+				writeStreamError(ctx, "event_contract_invalid")
+				return
+			}
 			if _, err := fmt.Fprintf(ctx.Writer, "id: %d\nevent: %s\n", event.Sequence, eventType); err != nil {
 				return
 			}
-			for _, line := range strings.Split(string(event.Payload), "\n") {
-				if _, err := fmt.Fprintf(ctx.Writer, "data: %s\n", line); err != nil {
-					return
-				}
+			if _, err := fmt.Fprintf(ctx.Writer, "data: %s\n", data); err != nil {
+				return
 			}
 			if _, err := fmt.Fprint(ctx.Writer, "\n"); err != nil {
 				return
 			}
 			cursor = event.Sequence
 			previous = event.Sequence
+			terminal = isTerminalEvent(event.Type)
 		}
 		if len(events) > 0 {
 			ctx.Writer.Flush()
+			if terminal {
+				if len(events) == 100 {
+					if err := access.AuthorizeRunRead(ctx.Request.Context(), token, runID); err != nil {
+						writeStreamError(ctx, authorizationStreamError(err))
+						return
+					}
+					queryCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
+					afterTerminal, err := reader.ListEventsAfter(queryCtx, runID, cursor, 1)
+					cancel()
+					if err != nil {
+						writeStreamError(ctx, "event_stream_failed")
+						return
+					}
+					if len(afterTerminal) != 0 {
+						writeStreamError(ctx, "event_contract_invalid")
+						return
+					}
+				}
+				return
+			}
 			continue
+		}
+		stateCtx, stateCancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
+		run, err := states.Get(stateCtx, runID)
+		stateCancel()
+		if err != nil {
+			writeStreamError(ctx, "event_stream_failed")
+			return
+		}
+		if run.State == executiondomain.Completed || run.State == executiondomain.Failed || run.State == executiondomain.Cancelled {
+			writeStreamError(ctx, "event_terminal_missing")
+			return
 		}
 		select {
 		case <-ctx.Request.Context().Done():
@@ -125,8 +177,28 @@ func serveRunEvents(ctx *gin.Context, reader EventReader, access RunAccessContro
 	}
 }
 
-func writeStreamError(ctx *gin.Context) {
-	_, _ = fmt.Fprint(ctx.Writer, "event: stream_error\ndata: {\"error\":\"event_stream_failed\"}\n\n")
+func isTerminalEvent(eventType string) bool {
+	switch eventType {
+	case "run.completed", "run.failed", "run.cancelled", "run.killed":
+		return true
+	default:
+		return false
+	}
+}
+
+func authorizationStreamError(err error) string {
+	if errors.Is(err, identitydomain.ErrUnauthenticated) {
+		return "invalid_authentication"
+	}
+	if errors.Is(err, identitydomain.ErrForbidden) {
+		return "run_access_denied"
+	}
+	return "authorization_failed"
+}
+
+func writeStreamError(ctx *gin.Context, code string) {
+	data, _ := json.Marshal(map[string]string{"error": code})
+	_, _ = fmt.Fprintf(ctx.Writer, "event: stream_error\ndata: %s\n\n", data)
 	ctx.Writer.Flush()
 }
 

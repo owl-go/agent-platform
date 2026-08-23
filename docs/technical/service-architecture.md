@@ -144,6 +144,12 @@ Retention Worker 按严格 YAML 策略分批清理过期 Run Event、Artifact、
 
 默认配置关闭 Retention，防止开发环境或未完成对象存储验证的部署误删数据。启用时默认保留普通 Run Event 与 Artifact 90 天、安全与授权 Audit 一年；每轮批量上限为 500，避免长事务影响 Run 调度。`workspace_snapshot` Artifact 与 Session Docker Volume 按 Coding Task 关闭时间单独保留 30 天，删除成功后记录 `workspace_purged_at`；Volume 名称不符合平台 UUID 命名规则时拒绝执行 Docker 删除。
 
+## Run Event 展示边界
+
+Conversation Workspace 先通过同一个 Run SSE 连接重放历史事件，再持续接收实时事件。浏览器使用 `fetch` 在 `Authorization` Header 携带 Bearer Token，并以 `Last-Event-ID` 传递最后确认的 Sequence；Token 不进入查询参数。服务端在发送流 Header 前、以及每次事件读取前重新执行 Run Read 授权，事件 Envelope 包含 Run ID、Sequence、Event Type、Payload 与创建时间。客户端只接受同一 Run 从 Cursor 严格递增的事件，重连边界上的相同 Sequence 会去重；跳跃、回退、终态后的事件、认证失效或已结束 Run 缺少终态都作为显式合同错误处理。服务端在历史耗尽时读取 Run 状态验证终态完整性，并在满批次终态后额外检查下一页；唯一终态后停止连接。
+
+Attempt 只表示同一 Run 的基础设施执行历史，不创建新的用户意图。页面按计划、命令、文件、验证、Diff、Approval、错误、Usage、成本和终态呈现事件，同时展示 Release 冻结的 Runtime Capability。事件 Payload 的页面预览限制为 16384 个字符；完整大输出通过受治理的 Artifact 获取。
+
 ## Artifact 边界
 
 Runtime stdout/stderr 先以 Attempt 唯一对象键写入 Object Store，再在 PostgreSQL 创建 Artifact 元数据；元数据提交失败时补偿删除刚上传的对象，避免无法授权和追溯的孤儿数据。重试 Attempt 不覆盖前一次输出。Artifact REST 只返回 ID、Run、Kind、大小、校验和、Content Type、安全 Metadata 和保留时间，不暴露 Provider Object Key；下载前按所属 Run 重新授权，并只签发五分钟访问地址。

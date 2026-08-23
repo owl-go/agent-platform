@@ -146,6 +146,76 @@ describe("PlatformApi", () => {
 	expect(catalog).toEqual({ items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "" });
   });
 
+  it("streams Run Events with bearer auth and cursor while keeping credentials out of the URL", async () => {
+    const frames = [
+      'id: 5\r\nevent: command.started\r\ndata: {"run_id":"run-1","sequence":5,"event_type":"command.started","payload":{"command":"test"},"created_at":"2026-08-23T08:00:00Z"}\r\n\r\n',
+      'id: 6\nevent: run.completed\ndata: {"run_id":"run-1","sequence":6,"event_type":"run.completed","payload":{"result":"ok"},"created_at":"2026-08-23T08:01:00Z"}\n\n',
+    ];
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { for (const frame of frames) controller.enqueue(new TextEncoder().encode(frame)); controller.close(); },
+    });
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const received: number[] = [];
+
+    const result = await createPlatformApi(() => "private-token").streamRunEvents("run-1", 4, (event) => received.push(event.sequence));
+
+    expect(result).toEqual({ cursor: 6, terminal: true });
+    expect(received).toEqual([5, 6]);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/v1/runs/run-1/events");
+    expect(String(url)).not.toContain("private-token");
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer private-token");
+    expect(headers.get("Last-Event-ID")).toBe("4");
+    expect(headers.get("Accept")).toBe("text/event-stream");
+  });
+
+  it("deduplicates the reconnect cursor and fails closed on a Run Event gap", async () => {
+    const data = [
+      'event: run.running\ndata: {"run_id":"run-1","sequence":4,"event_type":"run.running","payload":{},"created_at":"2026-08-23T08:00:00Z"}\n\n',
+      'event: run.completed\ndata: {"run_id":"run-1","sequence":6,"event_type":"run.completed","payload":{},"created_at":"2026-08-23T08:01:00Z"}\n\n',
+    ].join("");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(data, { status: 200 })));
+    const received = vi.fn();
+
+    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 4, received)).rejects.toMatchObject({ code: "event_contract_invalid" });
+    expect(received).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mismatched Run even when its Sequence equals the reconnect cursor", async () => {
+    const data = 'event: run.running\ndata: {"run_id":"other-run","sequence":4,"event_type":"run.running","payload":{},"created_at":"2026-08-23T08:00:00Z"}\n\n';
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(data, { status: 200 })));
+
+    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 4, vi.fn())).rejects.toMatchObject({ code: "event_contract_invalid" });
+  });
+
+  it("makes authorization loss and server stream errors explicit", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":"invalid_authentication"}', { status: 401 })));
+    await expect(createPlatformApi(() => "expired").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ kind: "unauthenticated", status: 401 });
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('event: stream_error\ndata: {"error":"event_stream_failed"}\n\n', { status: 200 })));
+    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ code: "event_stream_failed" });
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('event: stream_error\ndata: {"error":"invalid_authentication"}\n\n', { status: 200 })));
+    await expect(createPlatformApi(() => "expired").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ kind: "unauthenticated", code: "invalid_authentication" });
+  });
+
+  it("lists safe Artifact metadata and resolves a short-lived download through the API", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "diff", size_bytes: "42", sha256: "abc" }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ url: "https://objects.example/download?signature=short", expires_at: "2026-08-23T08:05:00Z" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+
+    const artifacts = await api.listRunArtifacts("run-1");
+    const download = await api.getArtifactDownload("artifact-1");
+
+    expect(artifacts[0]).not.toHaveProperty("object_key");
+    expect(download.url).toContain("signature=short");
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual(["/api/v1/runs/run-1/artifacts", "/api/v1/artifacts/artifact-1/download"]);
+  });
+
   it("keeps Release Approval distinct and protects Release status writes", async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "release-1", version: 3 }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

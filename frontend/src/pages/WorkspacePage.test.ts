@@ -83,6 +83,71 @@ describe("Conversation Workspace", () => {
     expect(wrapper.find(".workspace-detail").text()).toContain("Payments API");
     expect(wrapper.find(".workspace-detail").text()).not.toContain("Renamed current binding");
   });
+
+  it("renders Attempts, categorized Run Events, usage, and authorized Artifact downloads", async () => {
+    const stream = vi.fn(async (_runID: string, _after: number, onEvent: (event: never) => void) => {
+      onEvent({ run_id: "run-1", sequence: 1, event_type: "command.started", payload: { executable: "go" }, created_at: "2026-08-23T08:00:00Z" } as never);
+      onEvent({ run_id: "run-1", sequence: 2, event_type: "run.completed", payload: { result: "ok" }, created_at: "2026-08-23T08:01:00Z" } as never);
+      return { cursor: 2, terminal: true };
+    });
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const api = platformApi({
+      listRuns: vi.fn(async () => [{ ...run, state: "completed", attempts: [{ id: "attempt-1", number: 1, state: "completed", worker_id: "worker-1", infrastructure_failure: false }], usage: { input_tokens: 120 }, cost_amount: "0.42" }]),
+      streamRunEvents: stream, listRunArtifacts: vi.fn(async () => [{ id: "artifact-1", run_id: "run-1", kind: "diff", content_type: "text/x-diff", size_bytes: 42, sha256: "abc" }]),
+      getArtifactDownload: vi.fn(async () => ({ url: "https://objects.example/short-lived", expires_at: "2026-08-23T08:05:00Z" })),
+    });
+
+    const { wrapper } = await mountWorkspace(api, "/workspace?team=team-1&task=task-1");
+
+    expect(wrapper.get("[data-testid='run-evidence']").text()).toContain("Attempt 1");
+    expect(wrapper.findAll(".event-timeline li")).toHaveLength(2);
+    expect(wrapper.get(".event-command").text()).toContain("Command");
+    expect(wrapper.get(".event-command").text()).toContain("command.started");
+    expect(wrapper.text()).toContain("120");
+    expect(wrapper.text()).not.toContain("object_key");
+    await wrapper.get(".artifact-grid button").trigger("click"); await flushPromises();
+    expect(api.getArtifactDownload).toHaveBeenCalledWith("artifact-1");
+    expect(open).toHaveBeenCalledWith("https://objects.example/short-lived", "_blank", "noopener,noreferrer");
+    open.mockRestore();
+  });
+
+  it("reconnects from the last accepted cursor without duplicating events", async () => {
+    vi.useFakeTimers();
+    try {
+      const stream = vi.fn()
+        .mockImplementationOnce(async (_runID: string, _after: number, onEvent: (event: never) => void) => {
+          onEvent({ run_id: "run-1", sequence: 1, event_type: "run.running", payload: {}, created_at: "2026-08-23T08:00:00Z" } as never);
+          return { cursor: 1, terminal: false };
+        })
+        .mockImplementationOnce(async (_runID: string, _after: number, onEvent: (event: never) => void) => {
+          onEvent({ run_id: "run-1", sequence: 2, event_type: "run.completed", payload: {}, created_at: "2026-08-23T08:01:00Z" } as never);
+          return { cursor: 2, terminal: true };
+        });
+      const api = platformApi({ streamRunEvents: stream, listRuns: vi.fn(async () => [{ ...run, state: "completed" }]) });
+      const { wrapper } = await mountWorkspace(api, "/workspace?team=team-1&task=task-1");
+      await vi.advanceTimersByTimeAsync(250); await flushPromises();
+
+      expect(stream).toHaveBeenCalledTimes(2);
+      expect(stream.mock.calls[0]![1]).toBe(0);
+      expect(stream.mock.calls[1]![1]).toBe(1);
+      expect(wrapper.findAll(".event-timeline li")).toHaveLength(2);
+      expect(wrapper.text()).toContain("Terminal event confirmed");
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("reports a missing terminal only after bounded cursor reconnect attempts", async () => {
+    vi.useFakeTimers();
+    try {
+      const stream = vi.fn(async () => ({ cursor: 0, terminal: false }));
+      const api = platformApi({ streamRunEvents: stream, listRuns: vi.fn(async () => [{ ...run, state: "completed" }]) });
+      const { wrapper } = await mountWorkspace(api, "/workspace?team=team-1&task=task-1");
+      await vi.advanceTimersByTimeAsync(500); await flushPromises();
+
+      expect(stream).toHaveBeenCalledTimes(3);
+      expect(wrapper.get(".contract-error").text()).toContain("event_terminal_missing");
+      expect(wrapper.text()).toContain("Evidence stream error");
+    } finally { vi.useRealTimers(); }
+  });
 });
 
 async function mountWorkspace(api: PlatformApi, path = "/workspace?team=team-1") {
@@ -110,6 +175,7 @@ function platformApi(overrides: Partial<PlatformApi> = {}): PlatformApi {
     listRepositoryBindings: vi.fn(async () => [binding]), getRepositoryBinding: vi.fn(), registerRepositoryBinding: vi.fn(), updateRepositoryBinding: vi.fn(), validateRepositoryBinding: vi.fn(),
     listAgents: vi.fn(async () => [agent]), getAgent: vi.fn(), createAgent: vi.fn(), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => []), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(), updateAgentDraft: vi.fn(), validateAgentDraft: vi.fn(), getAgentDraftApproval: vi.fn(), requestAgentDraftApproval: vi.fn(), decideAgentDraftApproval: vi.fn(), publishAgentDraft: vi.fn(), listAgentReleases: vi.fn(async () => [release]), getAgentRelease: vi.fn(), deprecateAgentRelease: vi.fn(), blockAgentRelease: vi.fn(),
     listCodingTaskLaunchOptions: vi.fn(async () => ({ items: [{ agent_release_id: release.id, repository_binding_id: binding.id }], prerequisite: "" })), listCodingTasks: vi.fn(async () => [task]), getCodingTask: vi.fn(async () => task), createCodingTask: vi.fn(), getCodingTaskSession: vi.fn(async () => session), listRuns: vi.fn(async () => [run]),
+    streamRunEvents: vi.fn(async () => ({ cursor: 0, terminal: true })), listRunArtifacts: vi.fn(async () => []), getArtifactDownload: vi.fn(),
     ...overrides,
   } as PlatformApi;
 }

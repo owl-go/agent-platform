@@ -66,7 +66,7 @@ func NewGeneratedServices(dependencies apiservice.Dependencies) (*apiservice.Gen
 type RunSSEHandler struct{ http.Handler }
 
 func NewRunSSEHandler(runs *executionapplication.Service, access *identityapplication.AccessService) (RunSSEHandler, error) {
-	handler, err := executionservice.NewRunEventSSE(runs, access)
+	handler, err := executionservice.NewRunEventSSE(runs, runs, access)
 	return RunSSEHandler{Handler: handler}, err
 }
 

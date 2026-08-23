@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, inject, reactive, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
   ApiError, platformApiKey, type AgentRelease, type CodingTask, type CodingTaskSession,
-  type CodingTaskLaunchOption, type RepositoryBinding, type Run,
+  type Artifact, type CodingTaskLaunchOption, type RepositoryBinding, type Run, type RunEvent,
 } from "../api/client";
 import { authContextKey } from "../auth/session";
 
@@ -24,6 +24,12 @@ const launchOptions = ref<CodingTaskLaunchOption[]>([]);
 const launchPrerequisite = ref("");
 const session = ref<CodingTaskSession>();
 const runs = ref<Run[]>([]);
+const selectedRunID = ref("");
+const runEvents = ref<RunEvent[]>([]);
+const artifacts = ref<Artifact[]>([]);
+const streamState = ref<"idle" | "connecting" | "live" | "reconnecting" | "complete" | "error">("idle");
+const streamError = ref("");
+const artifactError = ref("");
 const loading = ref(true);
 const detailLoading = ref(false);
 const saving = ref(false);
@@ -33,6 +39,7 @@ const form = reactive({ source: "text", bindingID: "", releaseID: "", title: "",
 const intents = new Map<string, { fingerprint: string; key: string }>();
 let refreshSequence = 0;
 let detailSequence = 0;
+let evidenceController: AbortController | undefined;
 
 const teamID = computed(() => typeof route.query.team === "string" ? route.query.team : "");
 const selectedTaskID = computed(() => typeof route.query.task === "string" ? route.query.task : "");
@@ -48,7 +55,7 @@ const launchableReleases = computed(() => releases.value.filter((release) => {
 }));
 const selectedTask = computed(() => tasks.value.find((task) => task.id === selectedTaskID.value));
 const selectedRelease = computed(() => releases.value.find((release) => release.id === selectedTask.value?.agent_release_id));
-const selectedRun = computed(() => runs.value[0]);
+const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunID.value) ?? runs.value[0]);
 const prerequisite = computed(() => {
   if (launchOptions.value.length === 0) return launchPrerequisite.value || "release";
   return "";
@@ -60,6 +67,8 @@ watch(teamID, () => {
   void refresh();
 }, { immediate: true });
 watch(selectedTaskID, () => void loadSelectedTask());
+watch(() => selectedRun.value?.id, (runID) => { if (runID) void loadRunEvidence(runID); });
+onBeforeUnmount(() => evidenceController?.abort());
 watch(() => form.bindingID, () => {
   if (!launchableReleases.value.some((release) => release.id === form.releaseID)) form.releaseID = launchableReleases.value[0]?.id ?? "";
 });
@@ -95,18 +104,89 @@ async function loadSelectedTask() {
   const requestedTeam = teamID.value;
   const sequence = ++detailSequence;
   session.value = undefined; runs.value = [];
+  selectedRunID.value = ""; runEvents.value = []; artifacts.value = []; evidenceController?.abort();
   if (!taskID || !requestedTeam) return;
   detailLoading.value = true;
   try {
     const [sessionValue, runValues] = await Promise.all([api.getCodingTaskSession(taskID, requestedTeam), api.listRuns(requestedTeam, taskID)]);
     if (sequence === detailSequence && selectedTaskID.value === taskID && teamID.value === requestedTeam) {
-      session.value = sessionValue; runs.value = runValues;
+      session.value = sessionValue; runs.value = runValues; selectedRunID.value = runValues[0]?.id ?? "";
     }
   } catch (reason) {
     if (sequence === detailSequence) error.value = asApiError(reason);
   } finally {
     if (sequence === detailSequence) detailLoading.value = false;
   }
+}
+
+async function loadRunEvidence(runID: string) {
+  evidenceController?.abort(); const controller = new AbortController(); evidenceController = controller;
+  runEvents.value = []; artifacts.value = []; streamError.value = ""; artifactError.value = ""; streamState.value = "connecting";
+  try { artifacts.value = await api.listRunArtifacts(runID, controller.signal); }
+  catch (reason) {
+    if (!controller.signal.aborted) artifactError.value = asApiError(reason).code || "artifact_query_failed";
+  }
+  let cursor = 0;
+  let missingTerminalRetries = 0;
+  while (!controller.signal.aborted && selectedRun.value?.id === runID) {
+    try {
+      const connectionCursor = cursor;
+      const result = await api.streamRunEvents(runID, cursor, (event) => {
+        if (!runEvents.value.some((current) => current.sequence === event.sequence)) runEvents.value.push(event);
+        cursor = event.sequence; streamState.value = "live";
+      }, controller.signal);
+      cursor = result.cursor;
+      if (result.terminal) { streamState.value = "complete"; return; }
+      if (["completed", "failed", "cancelled", "killed"].includes(selectedRun.value?.state ?? "")) {
+        missingTerminalRetries = result.cursor > connectionCursor ? 0 : missingTerminalRetries + 1;
+        if (missingTerminalRetries >= 3) throw new ApiError("unavailable", 503, "event_terminal_missing", "");
+      }
+      streamState.value = "reconnecting";
+      await reconnectDelay(controller.signal);
+    } catch (reason) {
+      if (controller.signal.aborted) return;
+      const failure = asApiError(reason); streamError.value = failure.code || "event_stream_failed"; streamState.value = "error"; return;
+    }
+  }
+}
+
+function reconnectDelay(signal: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    const timer = window.setTimeout(resolve, 250);
+    signal.addEventListener("abort", () => { window.clearTimeout(timer); resolve(); }, { once: true });
+  });
+}
+
+async function downloadArtifact(artifact: Artifact) {
+  if (!artifact.id) return;
+  try {
+    const download = await api.getArtifactDownload(artifact.id);
+    if (!download.url) throw new ApiError("unavailable", 503, "artifact_download_unavailable", "");
+    window.open(download.url, "_blank", "noopener,noreferrer");
+  } catch (reason) { error.value = asApiError(reason); }
+}
+
+function eventCategory(type: string) {
+  if (["run.completed", "run.failed", "run.cancelled", "run.killed"].includes(type)) return "terminal";
+  if (type.startsWith("approval.")) return "approval";
+  if (type.includes("plan")) return "plan";
+  if (type.includes("diff")) return "diff";
+  if (type.includes("file")) return "file";
+  if (type.includes("validation")) return "validation";
+  if (type.includes("command")) return "command";
+  if (type.includes("cost")) return "cost";
+  if (type.includes("usage")) return "usage";
+  if (type.includes("failed") || type.includes("error")) return "error";
+  return type.startsWith("run.") ? "run" : "runtime";
+}
+
+function eventPayload(event: RunEvent) {
+  return previewPayload(event.payload);
+}
+
+function previewPayload(payload: unknown) {
+  const value = JSON.stringify(payload, null, 2) ?? "null";
+  return value.length <= 16_384 ? value : `${value.slice(0, 16_384)}\n[display truncated at 16384 characters]`;
 }
 
 function intent(scope: string, input: unknown) {
@@ -221,6 +301,29 @@ function safeIssueURL(value?: string) {
               <div><dt>{{ t('workspace.model') }}</dt><dd>{{ selectedRelease?.configured_model_snapshot?.name }} / {{ selectedRelease?.configured_model_snapshot?.model_id }}</dd></div>
               <div><dt>{{ t('workspace.firstRun') }}</dt><dd>{{ selectedRun?.id }} · {{ selectedRun?.state }}</dd></div>
             </dl>
+            <section v-if="runs.length" class="run-evidence" data-testid="run-evidence">
+              <header><div><span>04</span><h4>{{ t('workspace.evidence.title') }}</h4></div><small :class="`stream-${streamState}`">{{ t(`workspace.evidence.stream.${streamState}`) }}</small></header>
+              <div class="run-tabs" role="tablist" :aria-label="t('workspace.evidence.runs')">
+                <button v-for="(run, index) in runs" :key="run.id" type="button" :class="{ active: run.id === selectedRun?.id }" @click="selectedRunID = run.id ?? ''">{{ t('workspace.evidence.run', { number: runs.length - index }) }} · {{ t(`status.${run.state}`) }}</button>
+              </div>
+              <p v-if="streamError" class="contract-error" role="alert">{{ t('workspace.evidence.contractError') }} · {{ streamError }}</p>
+              <div class="attempt-strip">
+                <article v-for="attempt in selectedRun?.attempts ?? []" :key="attempt.id"><strong>{{ t('workspace.evidence.attempt', { number: attempt.number }) }}</strong><span>{{ t(`status.${attempt.state}`) }}</span><small>{{ attempt.infrastructure_failure ? t('workspace.evidence.infrastructureFailure') : attempt.worker_id }}</small></article>
+                <p v-if="!(selectedRun?.attempts?.length)">{{ t('workspace.evidence.noAttempts') }}</p>
+              </div>
+              <ol class="event-timeline">
+                <li v-for="event in runEvents" :key="event.sequence" :class="`event-${eventCategory(event.event_type)}`">
+                  <span>{{ event.sequence }}</span><div><em>{{ t(`workspace.evidence.categories.${eventCategory(event.event_type)}`) }}</em><strong>{{ event.event_type }}</strong><time>{{ d(new Date(event.created_at), 'long') }}</time><pre>{{ eventPayload(event) }}</pre></div>
+                </li>
+                <li v-if="runEvents.length === 0" class="empty-evidence">{{ t('workspace.evidence.noEvents') }}</li>
+              </ol>
+              <div class="artifact-grid">
+                <p v-if="artifactError" class="contract-error" role="alert">{{ t('workspace.evidence.artifactError') }} · {{ artifactError }}</p>
+                <button v-for="artifact in artifacts" :key="artifact.id" type="button" @click="downloadArtifact(artifact)"><strong>{{ artifact.kind }}</strong><span>{{ artifact.content_type }} · {{ artifact.size_bytes }} B</span><small>SHA-256 {{ artifact.sha256 }}</small></button>
+                <p v-if="artifacts.length === 0">{{ t('workspace.evidence.noArtifacts') }}</p>
+              </div>
+              <dl class="run-usage"><div><dt>{{ t('workspace.evidence.usage') }}</dt><dd>{{ previewPayload(selectedRun?.usage ?? {}) }}</dd></div><div><dt>{{ t('workspace.evidence.cost') }}</dt><dd>{{ selectedRun?.cost_amount }}</dd></div><div><dt>{{ t('workspace.evidence.capabilities') }}</dt><dd>{{ previewPayload(selectedRelease?.runtime_image_snapshot?.capabilities ?? {}) }}</dd></div><div v-if="selectedRun?.terminal_error"><dt>{{ t('workspace.evidence.terminalError') }}</dt><dd>{{ previewPayload(selectedRun.terminal_error) }}</dd></div></dl>
+            </section>
             <section v-if="selectedTask.issue_snapshot" class="issue-snapshot"><span>{{ t('workspace.immutableIssue') }}</span><h4>{{ selectedTask.issue_snapshot.title }}</h4><p>{{ selectedTask.issue_snapshot.body }}</p><a v-if="safeIssueURL(selectedTask.issue_snapshot.url)" :href="safeIssueURL(selectedTask.issue_snapshot.url)" target="_blank" rel="noreferrer">{{ selectedTask.issue_snapshot.url }}</a></section>
           </template>
         </article>
