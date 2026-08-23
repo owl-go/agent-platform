@@ -8,6 +8,7 @@ package executionv1
 
 import (
 	v1 "agent-platform/backend/api/types/v1"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1037,7 +1038,7 @@ var File_execution_v1_execution_proto protoreflect.FileDescriptor
 
 const file_execution_v1_execution_proto_rawDesc = "" +
 	"\n" +
-	"\x1cexecution/v1/execution.proto\x12\fexecution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x14types/v1/types.proto\"\xed\x03\n" +
+	"\x1cexecution/v1/execution.proto\x12\fexecution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x14types/v1/types.proto\"\xed\x03\n" +
 	"\x0fListRunsRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12\x1e\n" +
 	"\bagent_id\x18\x02 \x01(\tH\x00R\aagentId\x88\x01\x01\x127\n" +
@@ -1133,15 +1134,31 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"event_type\x18\x02 \x01(\tR\teventType\x120\n" +
 	"\apayload\x18\x03 \x01(\v2\x16.google.protobuf.ValueR\apayload\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xcf\x04\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x83\x06\n" +
 	"\x10ExecutionService\x12[\n" +
 	"\bListRuns\x12\x1d.execution.v1.ListRunsRequest\x1a\x1e.execution.v1.ListRunsResponse\"\x10\x82\xd3\xe4\x93\x02\n" +
 	"\x12\b/v1/runs\x12S\n" +
-	"\x06GetRun\x12\x1b.execution.v1.GetRunRequest\x1a\x11.execution.v1.Run\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/runs/{run_id}\x12i\n" +
-	"\fInterruptRun\x12!.execution.v1.InterruptRunRequest\x1a\x11.execution.v1.Run\"#\x82\xd3\xe4\x93\x02\x1d\"\x1b/v1/runs/{run_id}/interrupt\x12`\n" +
-	"\tResumeRun\x12\x1e.execution.v1.ResumeRunRequest\x1a\x11.execution.v1.Run\" \x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/resume\x12`\n" +
-	"\tCancelRun\x12\x1e.execution.v1.CancelRunRequest\x1a\x11.execution.v1.Run\" \x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/cancel\x12Z\n" +
-	"\aKillRun\x12\x1c.execution.v1.KillRunRequest\x1a\x11.execution.v1.Run\"\x1e\x82\xd3\xe4\x93\x02\x18\"\x16/v1/runs/{run_id}/kill2\x80\x01\n" +
+	"\x06GetRun\x12\x1b.execution.v1.GetRunRequest\x1a\x11.execution.v1.Run\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/runs/{run_id}\x12\x95\x01\n" +
+	"\fInterruptRun\x12!.execution.v1.InterruptRunRequest\x1a\x11.execution.v1.Run\"O\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1d\"\x1b/v1/runs/{run_id}/interrupt\x12\x8c\x01\n" +
+	"\tResumeRun\x12\x1e.execution.v1.ResumeRunRequest\x1a\x11.execution.v1.Run\"L\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/resume\x12\x8c\x01\n" +
+	"\tCancelRun\x12\x1e.execution.v1.CancelRunRequest\x1a\x11.execution.v1.Run\"L\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/cancel\x12\x86\x01\n" +
+	"\aKillRun\x12\x1c.execution.v1.KillRunRequest\x1a\x11.execution.v1.Run\"J\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x18\"\x16/v1/runs/{run_id}/kill2\x80\x01\n" +
 	"\x15RunEventStreamService\x12g\n" +
 	"\x06Stream\x12\x1b.execution.v1.StreamRequest\x1a\x1c.execution.v1.StreamResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/runs/{run_id}/events0\x01B5Z3agent-platform/backend/api/execution/v1;executionv1b\x06proto3"
 

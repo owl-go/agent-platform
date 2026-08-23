@@ -48,14 +48,9 @@ func (factory *ContainerFactory) New(lease domain.Lease, plan Plan, environment 
 	if err := decodeStrict(lease.QualityCommands, &qualityCommands); err != nil {
 		return nil, fmt.Errorf("decode frozen quality commands: %w", err)
 	}
-	workflowPlan, err := json.Marshal(gitworkflow.Plan{
-		RunID: lease.RunID, RepositoryURL: lease.RepositorySSHURL,
-		TargetBranch: lease.TargetBranch, ReviewBranch: lease.ReviewBranch,
-		GitAuthorName: lease.GitAuthorName, GitAuthorEmail: lease.GitAuthorEmail,
-		QualityCommands: qualityCommands,
-	})
+	workflowPlan, err := encodeWorkflowPlan(lease, qualityCommands)
 	if err != nil {
-		return nil, fmt.Errorf("encode Git workflow plan: %w", err)
+		return nil, err
 	}
 	process, err := containerprocess.New(containerprocess.Config{
 		Image: lease.ImageDigest, RuntimeCommand: lease.RuntimeName, RunID: lease.RunID,
@@ -63,7 +58,7 @@ func (factory *ContainerFactory) New(lease domain.Lease, plan Plan, environment 
 		ContainerWorkspace: "/workspace", CredentialDirectory: environment.Directory(),
 		PublicEgressNetwork: factory.config.PublicEgressNetwork, ResolverConfigFile: factory.config.ResolverConfigFile,
 		Egress: plan.Egress, Limits: plan.Limits, UID: factory.config.UID, GID: factory.config.GID,
-		WorkflowPlan: base64.RawURLEncoding.EncodeToString(workflowPlan),
+		WorkflowPlan: workflowPlan,
 	})
 	if err != nil {
 		return nil, err
@@ -88,4 +83,17 @@ func (factory *ContainerFactory) New(lease domain.Lease, plan Plan, environment 
 	default:
 		return nil, fmt.Errorf("unsupported Agent Runtime %q", lease.RuntimeName)
 	}
+}
+
+func encodeWorkflowPlan(lease domain.Lease, qualityCommands []gitworkflow.QualityCommand) (string, error) {
+	workflowPlan, err := json.Marshal(gitworkflow.Plan{
+		RunID: lease.RunID, RepositoryURL: lease.RepositorySSHURL,
+		TargetBranch: lease.TargetBranch, ReviewBranch: lease.ReviewBranch,
+		GitAuthorName: lease.GitAuthorName, GitAuthorEmail: lease.GitAuthorEmail,
+		QualityCommands: qualityCommands, RequireApproval: true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("encode Git workflow plan: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(workflowPlan), nil
 }

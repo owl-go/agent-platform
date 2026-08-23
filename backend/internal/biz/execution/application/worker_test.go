@@ -19,10 +19,14 @@ type workerRepository struct {
 	markedRunning bool
 	renewals      int
 	finished      *domain.Outcome
+	details       domain.Details
 }
 
-func (*workerRepository) Get(context.Context, string) (domain.Details, error) {
-	return domain.Details{}, domain.ErrRunNotFound
+func (repository *workerRepository) Get(context.Context, string) (domain.Details, error) {
+	if repository.details.ID == "" {
+		return domain.Details{}, domain.ErrRunNotFound
+	}
+	return repository.details, nil
 }
 func (repository *workerRepository) Claim(context.Context, string, time.Duration, time.Time) (domain.Lease, bool, error) {
 	return repository.lease, repository.found, nil
@@ -105,6 +109,45 @@ func TestWorkerConvertsProcessorFailureToSafeOutcome(t *testing.T) {
 	}
 	if repository.finished == nil || repository.finished.State != domain.Failed || string(repository.finished.Error) != `{"code":"runtime_execution_failed","message":"runtime execution failed"}` {
 		t.Fatalf("failure outcome = %+v", repository.finished)
+	}
+}
+
+func TestWorkerLeavesRejectedApprovalTerminalStateUntouched(t *testing.T) {
+	repository := &workerRepository{found: true, lease: domain.Lease{RunID: "run-1", Token: "lease-1"}}
+	worker, err := NewWorker(New(repository), processorFunc(func(context.Context, domain.Lease) (domain.Outcome, error) {
+		return domain.Outcome{}, domain.ErrApprovalRejected
+	}), WorkerConfig{WorkerID: "worker-a", LeaseDuration: time.Second, RenewInterval: 100 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, gotErr := worker.ProcessNext(context.Background())
+	if !found || gotErr != nil || repository.finished != nil {
+		t.Fatalf("ProcessNext() = (%v, %v), outcome=%+v", found, gotErr, repository.finished)
+	}
+}
+
+func TestWorkerTreatsApprovalRejectionLeaseReleaseAsCompleted(t *testing.T) {
+	repository := &workerRepository{
+		found: true, lease: domain.Lease{RunID: "run-1", Token: "lease-1"}, renewError: domain.ErrLeaseLost,
+		details: domain.Details{ID: "run-1", State: domain.Failed},
+	}
+	cancelled := make(chan struct{})
+	worker, err := NewWorker(New(repository), processorFunc(func(ctx context.Context, _ domain.Lease) (domain.Outcome, error) {
+		<-ctx.Done()
+		close(cancelled)
+		return domain.Outcome{}, ctx.Err()
+	}), WorkerConfig{WorkerID: "worker-a", LeaseDuration: 50 * time.Millisecond, RenewInterval: 10 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, gotErr := worker.ProcessNext(context.Background())
+	if !found || gotErr != nil || repository.finished != nil {
+		t.Fatalf("ProcessNext() = (%v, %v), outcome=%+v", found, gotErr, repository.finished)
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(time.Second):
+		t.Fatal("processor was not cancelled after Approval released its lease")
 	}
 }
 

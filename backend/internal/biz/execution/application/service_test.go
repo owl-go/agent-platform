@@ -18,6 +18,7 @@ type repositoryStub struct {
 	getRunID      string
 	finishOutcome domain.Outcome
 	finishTime    time.Time
+	event         domain.EventInput
 }
 
 func (repository *repositoryStub) Get(_ context.Context, runID string) (domain.Details, error) {
@@ -30,7 +31,8 @@ func (*repositoryStub) Claim(context.Context, string, time.Duration, time.Time) 
 }
 func (*repositoryStub) Renew(context.Context, string, time.Duration, time.Time) error { return nil }
 func (*repositoryStub) MarkRunning(context.Context, string, time.Time) error          { return nil }
-func (*repositoryStub) AppendEvent(context.Context, string, domain.EventInput, time.Time) error {
+func (repository *repositoryStub) AppendEvent(_ context.Context, _ string, event domain.EventInput, _ time.Time) error {
+	repository.event = event
 	return nil
 }
 func (repository *repositoryStub) FinishOwned(_ context.Context, _ string, outcome domain.Outcome, now time.Time) (domain.CompletionProjection, error) {
@@ -80,5 +82,19 @@ func TestFinishValidatesAndNormalizesBeforeRepository(t *testing.T) {
 		if err := service.Finish(context.Background(), "token", outcome); err == nil {
 			t.Fatalf("Finish accepted invalid outcome %+v", outcome)
 		}
+	}
+}
+
+func TestAppendEventAcceptsTheRuntimeContractAllowlist(t *testing.T) {
+	repository := &repositoryStub{}
+	service := New(repository)
+	if err := service.AppendEvent(context.Background(), "lease", domain.EventInput{Type: "message.completed", Payload: json.RawMessage(`{"message":"done"}`)}); err != nil {
+		t.Fatal(err)
+	}
+	if repository.event.Type != "message.completed" {
+		t.Fatalf("persisted Event = %+v", repository.event)
+	}
+	if err := service.AppendEvent(context.Background(), "lease", domain.EventInput{Type: "runtime.untrusted", Payload: json.RawMessage(`{}`)}); err == nil {
+		t.Fatal("AppendEvent accepted an event outside the Runtime Contract")
 	}
 }

@@ -134,6 +134,25 @@ describe("PlatformApi", () => {
     expect(headers.get("Authorization")).toBe("Bearer access-token");
   });
 
+  it("binds Run Approval decisions and controls to one intent and quoted Version", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
+      String(input).includes("approvals") ? { id: "approval-1", state: "approved", version: 2 } : { id: "run-1", state: "interrupting", version: 4 },
+    ), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.decideRunApproval("approval-1", true, "reviewed", 1, "approval-intent");
+    await api.controlRun("run-1", "interrupt", 3, "control-intent");
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(["/api/v1/approvals/approval-1/decision", "/api/v1/runs/run-1/interrupt"]);
+    const approvalHeaders = new Headers(fetchMock.mock.calls[0]![1]?.headers);
+    expect(approvalHeaders.get("Idempotency-Key")).toBe("approval-intent");
+    expect(approvalHeaders.get("If-Match")).toBe('"1"');
+    const controlHeaders = new Headers(fetchMock.mock.calls[1]![1]?.headers);
+    expect(controlHeaders.get("Idempotency-Key")).toBe("control-intent");
+    expect(controlHeaders.get("If-Match")).toBe('"3"');
+  });
+
   it("loads the server-authorized Team launch catalog and prerequisite", async () => {
 	const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({
 	  items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "",

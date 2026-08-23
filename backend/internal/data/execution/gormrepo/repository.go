@@ -49,7 +49,7 @@ func (repository *Repository) CreateQueuedRun(ctx context.Context, queued domain
 	}, queued.CreatedAt)
 }
 
-func (repository *Repository) PauseForApproval(ctx context.Context, runID string, expectedVersion int64, approvalID, kind string, now time.Time) error {
+func (repository *Repository) PauseForApproval(ctx context.Context, runID string, expectedVersion int64, approvalID, kind, requestedBy string, now time.Time) error {
 	var run runRecord
 	if err := repository.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", runID).Take(&run).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,6 +62,21 @@ func (repository *Repository) PauseForApproval(ctx context.Context, runID string
 	}
 	if run.State != string(domain.Running) {
 		return domain.ErrApprovalRunState
+	}
+	var grants []struct{ ID string }
+	if err := repository.db.WithContext(ctx).Table("role_grants AS role_grant").
+		Select("role_grant.id").
+		Joins("JOIN sessions AS session ON session.id = ?", run.SessionID).
+		Joins("JOIN coding_tasks AS task ON task.id = session.coding_task_id").
+		Where("role_grant.organization_id = task.organization_id AND role_grant.user_id = ?", requestedBy).
+		Where("role_grant.role IN ?", []string{"agent_user", "agent_builder", "platform_administrator"}).
+		Where("role_grant.team_id IS NULL OR role_grant.team_id = task.team_id").
+		Clauses(clause.Locking{Strength: "SHARE", Table: clause.Table{Name: "role_grant"}}).
+		Find(&grants).Error; err != nil {
+		return fmt.Errorf("authorize Run Approval requester: %w", err)
+	}
+	if len(grants) == 0 {
+		return domain.ErrApprovalRequesterDenied
 	}
 	update := repository.db.WithContext(ctx).Model(&runRecord{}).Where("id = ? AND version = ?", run.ID, run.Version).Updates(map[string]any{
 		"state": string(domain.WaitingConfirmation), "updated_at": now.UTC(), "version": run.Version + 1,
@@ -92,7 +107,7 @@ func (repository *Repository) ApplyApprovalDecision(ctx context.Context, decisio
 		runUpdates["state"] = string(domain.Running)
 	} else {
 		eventType = "approval.rejected"
-		runUpdates["state"] = string(domain.Cancelled)
+		runUpdates["state"] = string(domain.Failed)
 		runUpdates["ended_at"] = now.UTC()
 		runUpdates["terminal_error"] = jsonValue(`{"code":"approval_rejected","message":"A requested high-risk operation was rejected"}`)
 	}
@@ -114,9 +129,17 @@ func (repository *Repository) ApplyApprovalDecision(ctx context.Context, decisio
 			return fmt.Errorf("release rejected Workspace lease: %w", err)
 		}
 	}
-	return appendEvent(repository.db.WithContext(ctx), run.ID, eventType, map[string]any{
-		"approval_id": decision.ApprovalID, "actor_user_id": decision.ActorUserID, "reason": decision.Reason,
-	}, now)
+	if err := appendEvent(repository.db.WithContext(ctx), run.ID, eventType, map[string]any{
+		"approval_id": decision.ApprovalID, "actor_type": decision.ActorType, "actor_user_id": decision.ActorUserID, "reason": decision.Reason,
+	}, now); err != nil {
+		return err
+	}
+	if !decision.Approved {
+		return appendEvent(repository.db.WithContext(ctx), run.ID, "run.failed", map[string]any{
+			"code": "approval_rejected", "approval_id": decision.ApprovalID,
+		}, now)
+	}
+	return nil
 }
 
 func (repository *Repository) Get(ctx context.Context, runID string) (domain.Details, error) {

@@ -227,6 +227,12 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 		"/v1/coding-tasks/{task_id}/session":                      "patch",
 		"/v1/agent-memories/{memory_id}":                          "patch",
 		"/v1/agent-memories/{memory_id}/deletion":                 "post",
+		"/v1/runs/{run_id}/approvals":                             "post",
+		"/v1/approvals/{approval_id}/decision":                    "post",
+		"/v1/runs/{run_id}/interrupt":                             "post",
+		"/v1/runs/{run_id}/resume":                                "post",
+		"/v1/runs/{run_id}/cancel":                                "post",
+		"/v1/runs/{run_id}/kill":                                  "post",
 	} {
 		operation := paths[path].(map[string]any)[method].(map[string]any)
 		parameters := operation["parameters"].([]any)

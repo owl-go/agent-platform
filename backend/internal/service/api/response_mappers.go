@@ -58,20 +58,22 @@ func newRunResponse(value executiondomain.Details) runResponse {
 }
 
 type runApprovalResponse struct {
-	ID             string               `json:"id"`
-	RunID          string               `json:"run_id"`
-	Kind           approvaldomain.Kind  `json:"kind"`
-	Request        json.RawMessage      `json:"request"`
-	State          approvaldomain.State `json:"state"`
-	RequestedAt    time.Time            `json:"requested_at"`
-	DecidedBy      string               `json:"decided_by,omitempty"`
-	DecidedAt      *time.Time           `json:"decided_at,omitempty"`
-	DecisionReason string               `json:"decision_reason"`
-	Version        int64                `json:"version"`
+	ID                string                           `json:"id"`
+	RunID             string                           `json:"run_id"`
+	Kind              approvaldomain.Kind              `json:"kind"`
+	Request           json.RawMessage                  `json:"request"`
+	State             approvaldomain.State             `json:"state"`
+	RequestedAt       time.Time                        `json:"requested_at"`
+	RequestedBy       string                           `json:"requested_by,omitempty"`
+	DecidedBy         string                           `json:"decided_by,omitempty"`
+	DecisionActorType approvaldomain.DecisionActorType `json:"decision_actor_type,omitempty"`
+	DecidedAt         *time.Time                       `json:"decided_at,omitempty"`
+	DecisionReason    string                           `json:"decision_reason"`
+	Version           int64                            `json:"version"`
 }
 
 func newRunApprovalResponse(value approvaldomain.Approval) runApprovalResponse {
-	return runApprovalResponse{ID: value.ID, RunID: value.RunID, Kind: value.Kind, Request: value.Request, State: value.State, RequestedAt: value.RequestedAt, DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt, DecisionReason: value.DecisionReason, Version: value.Version}
+	return runApprovalResponse{ID: value.ID, RunID: value.RunID, Kind: value.Kind, Request: value.Request, State: value.State, RequestedAt: value.RequestedAt, RequestedBy: value.RequestedBy, DecidedBy: value.DecidedBy, DecisionActorType: value.DecisionActorType, DecidedAt: value.DecidedAt, DecisionReason: value.DecisionReason, Version: value.Version}
 }
 
 type artifactResponse struct {

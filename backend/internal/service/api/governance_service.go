@@ -66,7 +66,7 @@ func (service *GeneratedServices) RequestRunApproval(ctx context.Context, reques
 		return nil, publicError(400, "invalid_request_body")
 	}
 	result, err := service.executeWrite(ctx, actor, "approval.request:"+request.RunId, strconv.FormatInt(version, 10), request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
-		value, err := services.Approvals.Request(ctx, request.RunId, approvaldomain.Kind(request.Kind), openRequest, version)
+		value, err := services.Approvals.Request(ctx, request.RunId, approvaldomain.Kind(request.Kind), openRequest, actor.UserID, version)
 		return encodeWriteResult(http.StatusCreated, newRunApprovalResponse(value), err)
 	})
 	if err != nil {

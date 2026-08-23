@@ -24,6 +24,7 @@ export type CodingTaskLaunchOption = components["schemas"]["v1CodingTaskLaunchOp
 export type CodingTaskLaunchCatalog = { items: CodingTaskLaunchOption[]; prerequisite: string };
 export type CodingTaskSession = components["schemas"]["v1Session"];
 export type Run = components["schemas"]["v1Run"];
+export type RunApproval = Omit<components["schemas"]["v1RunApproval"], "request"> & { request?: Record<string, unknown> };
 export type Artifact = components["schemas"]["v1Artifact"];
 export type ArtifactDownload = components["schemas"]["v1GetArtifactDownloadResponse"];
 export type RunEvent = { run_id: string; sequence: number; event_type: string; payload: unknown; created_at: string };
@@ -97,6 +98,10 @@ export interface PlatformApi {
   createCodingTask(teamID: string, input: CreateCodingTaskInput, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskLaunch>;
   getCodingTaskSession(taskID: string, teamID: string, signal?: AbortSignal): Promise<CodingTaskSession>;
   listRuns(teamID: string, taskID: string, signal?: AbortSignal): Promise<Run[]>;
+  getRun(runID: string, signal?: AbortSignal): Promise<Run>;
+  listRunApprovals(runID: string, signal?: AbortSignal): Promise<RunApproval[]>;
+  decideRunApproval(approvalID: string, approved: boolean, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RunApproval>;
+  controlRun(runID: string, action: "interrupt" | "resume" | "cancel", version: number, idempotencyKey: string, signal?: AbortSignal): Promise<Run>;
   streamRunEvents(runID: string, after: number, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<RunEventStreamResult>;
   listRunArtifacts(runID: string, signal?: AbortSignal): Promise<Artifact[]>;
   getArtifactDownload(artifactID: string, signal?: AbortSignal): Promise<ArtifactDownload>;
@@ -316,6 +321,25 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const query = new URLSearchParams({ team_id: teamID, task_id: taskID, limit: "50" });
       const body = await authorizedRequest<components["schemas"]["v1ListRunsResponse"]>(`/api/v1/runs?${query}`, { signal });
       return body.items ?? [];
+    },
+    getRun(runID, signal) {
+      return authorizedRequest<Run>(`/api/v1/runs/${encodeURIComponent(runID)}`, { signal });
+    },
+    async listRunApprovals(runID, signal) {
+      const body = await authorizedRequest<components["schemas"]["v1ListRunApprovalsResponse"]>(`/api/v1/runs/${encodeURIComponent(runID)}/approvals`, { signal });
+      return body.items ?? [];
+    },
+    decideRunApproval(approvalID, approved, reason, version, idempotencyKey, signal) {
+      return authorizedRequest<RunApproval>(`/api/v1/approvals/${encodeURIComponent(approvalID)}/decision`, {
+        method: "POST", body: JSON.stringify({ approved, reason }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    controlRun(runID, action, version, idempotencyKey, signal) {
+      return authorizedRequest<Run>(`/api/v1/runs/${encodeURIComponent(runID)}/${action}`, {
+        method: "POST", signal,
+        headers: { "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
     },
     async streamRunEvents(runID, after, onEvent, signal) {
       const token = getAccessToken();

@@ -16,6 +16,8 @@ import (
 	"agent-platform/backend/internal/credentials"
 	artifactgorm "agent-platform/backend/internal/data/artifact/gormrepo"
 	"agent-platform/backend/internal/data/artifact/outputsink"
+	"agent-platform/backend/internal/data/controlplane/gormuow"
+	"agent-platform/backend/internal/data/controlplane/runtimeapproval"
 	"agent-platform/backend/internal/data/execution/runtimeprocessor"
 	"agent-platform/backend/internal/data/retention/dockervolume"
 	retentiongorm "agent-platform/backend/internal/data/retention/gormrepo"
@@ -167,10 +169,18 @@ func newExecutionWorker(database *gorm.DB, runs *application.Service, config pla
 	if err != nil {
 		return nil, err
 	}
+	writes := gormuow.New(database)
+	if config.Webhook.Enabled {
+		writes = gormuow.NewWithWebhook(database, config.Webhook.TargetURL)
+	}
+	approvals, err := runtimeapproval.New(database, writes)
+	if err != nil {
+		return nil, err
+	}
 	processor, err := runtimeprocessor.New(runs, resolver, credentials.Materializer{
 		Root:  config.Worker.CredentialTempRoot,
 		Owner: &credentials.Owner{UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID},
-	}, factory)
+	}, factory, approvals)
 	if err != nil {
 		return nil, err
 	}

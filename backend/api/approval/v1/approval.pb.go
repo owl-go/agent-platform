@@ -7,6 +7,7 @@
 package approvalv1
 
 import (
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -409,19 +410,21 @@ func (x *DecideRunApprovalResponse) GetApproval() *RunApproval {
 }
 
 type RunApproval struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	RunId          string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	Kind           string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	Request        *structpb.Struct       `protobuf:"bytes,4,opt,name=request,proto3" json:"request,omitempty"`
-	State          string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
-	RequestedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
-	DecidedBy      *string                `protobuf:"bytes,7,opt,name=decided_by,json=decidedBy,proto3,oneof" json:"decided_by,omitempty"`
-	DecidedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
-	DecisionReason string                 `protobuf:"bytes,9,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
-	Version        int64                  `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RunId             string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Kind              string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Request           *structpb.Struct       `protobuf:"bytes,4,opt,name=request,proto3" json:"request,omitempty"`
+	State             string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	RequestedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	DecidedBy         *string                `protobuf:"bytes,7,opt,name=decided_by,json=decidedBy,proto3,oneof" json:"decided_by,omitempty"`
+	DecidedAt         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
+	DecisionReason    string                 `protobuf:"bytes,9,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
+	Version           int64                  `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
+	RequestedBy       *string                `protobuf:"bytes,11,opt,name=requested_by,json=requestedBy,proto3,oneof" json:"requested_by,omitempty"`
+	DecisionActorType *string                `protobuf:"bytes,12,opt,name=decision_actor_type,json=decisionActorType,proto3,oneof" json:"decision_actor_type,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RunApproval) Reset() {
@@ -524,11 +527,25 @@ func (x *RunApproval) GetVersion() int64 {
 	return 0
 }
 
+func (x *RunApproval) GetRequestedBy() string {
+	if x != nil && x.RequestedBy != nil {
+		return *x.RequestedBy
+	}
+	return ""
+}
+
+func (x *RunApproval) GetDecisionActorType() string {
+	if x != nil && x.DecisionActorType != nil {
+		return *x.DecisionActorType
+	}
+	return ""
+}
+
 var File_approval_v1_approval_proto protoreflect.FileDescriptor
 
 const file_approval_v1_approval_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapproval/v1/approval.proto\x12\vapproval.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"0\n" +
+	"\x1aapproval/v1/approval.proto\x12\vapproval.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"0\n" +
 	"\x17ListRunApprovalsRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"J\n" +
 	"\x18ListRunApprovalsResponse\x12.\n" +
@@ -550,7 +567,7 @@ const file_approval_v1_approval_proto_rawDesc = "" +
 	"\bapproved\x18\x02 \x01(\bR\bapproved\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"Q\n" +
 	"\x19DecideRunApprovalResponse\x124\n" +
-	"\bapproval\x18\x01 \x01(\v2\x18.approval.v1.RunApprovalR\bapproval\"\x95\x03\n" +
+	"\bapproval\x18\x01 \x01(\v2\x18.approval.v1.RunApprovalR\bapproval\"\x9b\x04\n" +
 	"\vRunApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x12\n" +
@@ -564,14 +581,26 @@ const file_approval_v1_approval_proto_rawDesc = "" +
 	"decided_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tdecidedAt\x88\x01\x01\x12'\n" +
 	"\x0fdecision_reason\x18\t \x01(\tR\x0edecisionReason\x12\x18\n" +
 	"\aversion\x18\n" +
-	" \x01(\x03R\aversionB\r\n" +
+	" \x01(\x03R\aversion\x12&\n" +
+	"\frequested_by\x18\v \x01(\tH\x02R\vrequestedBy\x88\x01\x01\x123\n" +
+	"\x13decision_actor_type\x18\f \x01(\tH\x03R\x11decisionActorType\x88\x01\x01B\r\n" +
 	"\v_decided_byB\r\n" +
-	"\v_decided_at2\x98\x04\n" +
+	"\v_decided_atB\x0f\n" +
+	"\r_requested_byB\x16\n" +
+	"\x14_decision_actor_type2\xf1\x04\n" +
 	"\x12RunApprovalService\x12\x84\x01\n" +
 	"\x10ListRunApprovals\x12$.approval.v1.ListRunApprovalsRequest\x1a%.approval.v1.ListRunApprovalsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/runs/{run_id}/approvals\x12s\n" +
-	"\x0eGetRunApproval\x12\".approval.v1.GetRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/approvals/{approval_id}\x12~\n" +
-	"\x12RequestRunApproval\x12&.approval.v1.RequestRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/runs/{run_id}/approvals\x12\x85\x01\n" +
-	"\x11DecideRunApproval\x12%.approval.v1.DecideRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/approvals/{approval_id}/decisionB3Z1agent-platform/backend/api/approval/v1;approvalv1b\x06proto3"
+	"\x0eGetRunApproval\x12\".approval.v1.GetRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/approvals/{approval_id}\x12\xaa\x01\n" +
+	"\x12RequestRunApproval\x12&.approval.v1.RequestRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"R\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/runs/{run_id}/approvals\x12\xb1\x01\n" +
+	"\x11DecideRunApproval\x12%.approval.v1.DecideRunApprovalRequest\x1a\x18.approval.v1.RunApproval\"[\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02):\x01*\"$/v1/approvals/{approval_id}/decisionB3Z1agent-platform/backend/api/approval/v1;approvalv1b\x06proto3"
 
 var (
 	file_approval_v1_approval_proto_rawDescOnce sync.Once

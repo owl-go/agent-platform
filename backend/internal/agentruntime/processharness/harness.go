@@ -37,6 +37,18 @@ type OutputObserver interface {
 	Observe(ctx context.Context, stream Stream, data []byte) error
 }
 
+// ProcessController lets an observer pause the entire process group before it
+// waits for an external decision and resume it only after that decision.
+type ProcessController interface {
+	Pause() error
+	Resume() error
+}
+
+type ProcessAwareObserver interface {
+	OutputObserver
+	BindProcess(ProcessController)
+}
+
 type Output struct {
 	Stream Stream
 	Reader io.Reader
@@ -90,9 +102,14 @@ func Run(ctx context.Context, spec Spec, sink OutputSink) (Result, error) {
 	cmd.Stdout = limit.writer(ctx, StreamStdout, stdout, spec.Observer)
 	cmd.Stderr = limit.writer(ctx, StreamStderr, stderr, spec.Observer)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	controller := &processGroupController{ready: make(chan struct{})}
+	if observer, ok := spec.Observer.(ProcessAwareObserver); ok {
+		observer.BindProcess(controller)
+	}
 	if err := cmd.Start(); err != nil {
 		return Result{}, fmt.Errorf("start process: %w", err)
 	}
+	controller.bind(cmd.Process.Pid)
 	waitCh := make(chan error, 1)
 	go func() {
 		waitCh <- cmd.Wait()
@@ -140,6 +157,48 @@ func Run(ctx context.Context, spec Spec, sink OutputSink) (Result, error) {
 		return result, err
 	}
 	return result, runErr
+}
+
+type processGroupController struct {
+	mu     sync.Mutex
+	pid    int
+	paused bool
+	ready  chan struct{}
+}
+
+func (controller *processGroupController) bind(pid int) {
+	controller.mu.Lock()
+	controller.pid = pid
+	close(controller.ready)
+	controller.mu.Unlock()
+}
+
+func (controller *processGroupController) Pause() error {
+	<-controller.ready
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if controller.paused {
+		return nil
+	}
+	if err := syscall.Kill(-controller.pid, syscall.SIGSTOP); err != nil {
+		return fmt.Errorf("pause process group: %w", err)
+	}
+	controller.paused = true
+	return nil
+}
+
+func (controller *processGroupController) Resume() error {
+	<-controller.ready
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if !controller.paused {
+		return nil
+	}
+	if err := syscall.Kill(-controller.pid, syscall.SIGCONT); err != nil {
+		return fmt.Errorf("resume process group: %w", err)
+	}
+	controller.paused = false
+	return nil
 }
 
 func terminateProcessGroup(pid int, waitCh <-chan error, gracePeriod time.Duration) error {

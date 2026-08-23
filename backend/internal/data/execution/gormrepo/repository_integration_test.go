@@ -49,7 +49,7 @@ func TestGORMRepositoryRunLifecycle(t *testing.T) {
 	if err := service.MarkRunning(context.Background(), lease.Token); err != nil {
 		t.Fatalf("MarkRunning(): %v", err)
 	}
-	if err := service.AppendEvent(context.Background(), lease.Token, domain.EventInput{Type: "runtime.message.completed", Payload: []byte(`{"message":"done"}`)}); err != nil {
+	if err := service.AppendEvent(context.Background(), lease.Token, domain.EventInput{Type: "message.completed", Payload: []byte(`{"message":"done"}`)}); err != nil {
 		t.Fatalf("AppendEvent(): %v", err)
 	}
 	details, err := service.Get(context.Background(), runID)
@@ -78,7 +78,7 @@ func TestGORMRepositoryRunLifecycle(t *testing.T) {
 	if taskProjection.State != "waiting_for_user" || taskProjection.Messages != 1 {
 		t.Fatalf("completed Run projection = %+v", taskProjection)
 	}
-	assertEventSequence(t, database.ORM(), runID, []string{"run.attempt_started", "run.running", "runtime.message.completed", "run.completed"})
+	assertEventSequence(t, database.ORM(), runID, []string{"run.attempt_started", "run.running", "message.completed", "run.completed"})
 	if err := service.Renew(context.Background(), lease.Token, time.Minute); err != domain.ErrLeaseLost {
 		t.Fatalf("renew released lease error = %v, want ErrLeaseLost", err)
 	}

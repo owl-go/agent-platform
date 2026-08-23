@@ -2,9 +2,12 @@ package runtimeprocessor_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,10 +19,16 @@ import (
 	"agent-platform/backend/internal/data/execution/runtimeprocessor"
 )
 
-type repositoryStub struct{ events []domain.EventInput }
+type repositoryStub struct {
+	details domain.Details
+	events  []domain.EventInput
+}
 
-func (*repositoryStub) Get(context.Context, string) (domain.Details, error) {
-	return domain.Details{}, domain.ErrRunNotFound
+func (repository *repositoryStub) Get(context.Context, string) (domain.Details, error) {
+	if repository.details.ID == "" {
+		return domain.Details{}, domain.ErrRunNotFound
+	}
+	return repository.details, nil
 }
 func (*repositoryStub) Claim(context.Context, string, time.Duration, time.Time) (domain.Lease, bool, error) {
 	return domain.Lease{}, false, nil
@@ -54,6 +63,39 @@ type factoryFunc func(domain.Lease, runtimeprocessor.Plan, *credentials.Environm
 func (function factoryFunc) New(lease domain.Lease, plan runtimeprocessor.Plan, environment *credentials.Environment) (agentruntime.Adapter, error) {
 	return function(lease, plan, environment)
 }
+
+type approvalRequesterStub struct {
+	mu        sync.Mutex
+	requested chan struct{}
+	approved  chan struct{}
+	request   json.RawMessage
+	sequence  int64
+}
+
+func (requester *approvalRequesterStub) AwaitDecision(ctx context.Context, request executionapplication.RuntimeApprovalRequest) error {
+	if request.RunID != "run-1" || request.AttemptID != "attempt-1" || request.Kind != "high_risk_change" {
+		return errors.New("unexpected Approval request identity")
+	}
+	requester.mu.Lock()
+	requester.request = append(json.RawMessage(nil), request.Request...)
+	requester.sequence = request.Sequence
+	requester.mu.Unlock()
+	close(requester.requested)
+	select {
+	case <-requester.approved:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+type approvalGateFunc func(context.Context, executionapplication.RuntimeApprovalRequest) error
+
+func (function approvalGateFunc) AwaitDecision(ctx context.Context, request executionapplication.RuntimeApprovalRequest) error {
+	return function(ctx, request)
+}
+
+var allowApprovals = approvalGateFunc(func(context.Context, executionapplication.RuntimeApprovalRequest) error { return nil })
 
 func TestProcessorExecutesFrozenPlanAndRedactsEvents(t *testing.T) {
 	const secret = "super-secret-model-key"
@@ -95,6 +137,7 @@ func TestProcessorExecutesFrozenPlanAndRedactsEvents(t *testing.T) {
 			credentialDirectory = environment.Directory()
 			return adapter, nil
 		}),
+		allowApprovals,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -111,6 +154,107 @@ func TestProcessorExecutesFrozenPlanAndRedactsEvents(t *testing.T) {
 	}
 	if _, err := os.Stat(credentialDirectory); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("credential directory still exists: %q error=%v", credentialDirectory, err)
+	}
+}
+
+func TestProcessorPausesRuntimeApprovalEventUntilDecision(t *testing.T) {
+	repository := &repositoryStub{}
+	requester := &approvalRequesterStub{requested: make(chan struct{}), approved: make(chan struct{})}
+	adapter := &runtimefake.Adapter{
+		DescribeResult: agentruntime.Descriptor{Name: "claude", Version: "1.0.0"},
+		ExecuteFunc: func(ctx context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			for sequence, event := range []agentruntime.Event{
+				{RunID: request.RunID, Kind: agentruntime.EventRuntimeStarted, Payload: []byte(`{}`)},
+				{RunID: request.RunID, Kind: agentruntime.EventApprovalRequested, Payload: []byte(`{"kind":"high_risk_change","request":{"risk_reason":"protected write"}}`)},
+				{RunID: request.RunID, Kind: agentruntime.EventRuntimeCompleted, Payload: []byte(`{}`)},
+			} {
+				event.Sequence = int64(sequence + 1)
+				event.OccurredAt = time.Now().UTC()
+				if err := events.Publish(ctx, event); err != nil {
+					return agentruntime.Result{}, err
+				}
+			}
+			return agentruntime.Result{}, nil
+		},
+	}
+	processor, err := runtimeprocessor.New(
+		executionapplication.New(repository),
+		resolverFunc(func(context.Context, string, []runtimeprocessor.CredentialBinding) (credentials.Request, error) {
+			return credentials.Request{Ref: "run-1", Variables: map[string]string{"MODEL_API_KEY": "secret-value"}}, nil
+		}),
+		credentials.Materializer{Root: t.TempDir()},
+		factoryFunc(func(domain.Lease, runtimeprocessor.Plan, *credentials.Environment) (agentruntime.Adapter, error) {
+			return adapter, nil
+		}),
+		requester,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, executeErr := processor.Execute(context.Background(), validLease())
+		done <- executeErr
+	}()
+	select {
+	case <-requester.requested:
+	case <-time.After(time.Second):
+		t.Fatal("Runtime Approval was not requested")
+	}
+	select {
+	case err := <-done:
+		t.Fatalf("Runtime resumed before Approval decision: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+	requester.mu.Lock()
+	if requester.sequence != 2 || !strings.Contains(string(requester.request), "protected write") {
+		t.Fatalf("Approval request sequence=%d body=%s", requester.sequence, requester.request)
+	}
+	requester.mu.Unlock()
+	close(requester.approved)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Runtime did not resume after Approval")
+	}
+}
+
+func TestProcessorPreservesRejectedApprovalCauseAfterRedaction(t *testing.T) {
+	repository := &repositoryStub{}
+	adapter := &runtimefake.Adapter{
+		DescribeResult: agentruntime.Descriptor{Name: "claude", Version: "1.0.0"},
+		ExecuteFunc: func(ctx context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			if err := events.Publish(ctx, agentruntime.Event{RunID: request.RunID, Sequence: 1, Kind: agentruntime.EventRuntimeStarted, OccurredAt: time.Now(), Payload: []byte(`{}`)}); err != nil {
+				return agentruntime.Result{}, err
+			}
+			if err := events.Publish(ctx, agentruntime.Event{RunID: request.RunID, Sequence: 2, Kind: agentruntime.EventApprovalRequested, OccurredAt: time.Now(), Payload: []byte(`{"kind":"high_risk_change","request":{"risk_reason":"protected write"}}`)}); err != nil {
+				return agentruntime.Result{}, err
+			}
+			return agentruntime.Result{}, nil
+		},
+	}
+	processor, err := runtimeprocessor.New(
+		executionapplication.New(repository),
+		resolverFunc(func(context.Context, string, []runtimeprocessor.CredentialBinding) (credentials.Request, error) {
+			return credentials.Request{Ref: "run-1", Variables: map[string]string{"MODEL_API_KEY": "secret-value"}}, nil
+		}),
+		credentials.Materializer{Root: t.TempDir()},
+		factoryFunc(func(domain.Lease, runtimeprocessor.Plan, *credentials.Environment) (agentruntime.Adapter, error) {
+			return adapter, nil
+		}),
+		approvalGateFunc(func(context.Context, executionapplication.RuntimeApprovalRequest) error {
+			return fmt.Errorf("%w: secret-value", domain.ErrApprovalRejected)
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = processor.Execute(context.Background(), validLease())
+	if !errors.Is(err, domain.ErrApprovalRejected) || strings.Contains(err.Error(), "secret-value") || !strings.Contains(err.Error(), "[REDACTED]") {
+		t.Fatalf("Processor rejection error = %v", err)
 	}
 }
 
@@ -150,6 +294,7 @@ func TestProcessorFailsRunWhenFrozenModelBudgetIsExceeded(t *testing.T) {
 		factoryFunc(func(domain.Lease, runtimeprocessor.Plan, *credentials.Environment) (agentruntime.Adapter, error) {
 			return adapter, nil
 		}),
+		allowApprovals,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -167,7 +312,7 @@ func TestProcessorFailsRunWhenFrozenModelBudgetIsExceeded(t *testing.T) {
 
 func validLease() domain.Lease {
 	return domain.Lease{
-		RunID: "run-1", Token: "lease-token", RequestText: "fix tests",
+		RunID: "run-1", AttemptID: "attempt-1", Token: "lease-token", RequestText: "fix tests",
 		RuntimeName: "claude", RuntimeCLIVersion: "1.0.0", AdapterVersion: "adapter-1",
 		ImageDigest: "registry.example/claude@sha256:" + strings.Repeat("a", 64), WorkspaceVolume: "workspace-run-1",
 		ModelBinding:       []byte(`{"model_id":"model-id","endpoint":"https://models.example.test","credential_profile_id":"model-credential"}`),

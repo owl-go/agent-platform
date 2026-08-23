@@ -27,6 +27,7 @@ type IdempotencyRequest struct {
 	OrganizationID string
 	TeamID         string
 	ActorUserID    string
+	SystemActor    bool
 	Key            string
 	Operation      string
 	RequestSHA256  string
@@ -64,6 +65,9 @@ func (request IdempotencyRequest) Validate(now time.Time) error {
 	}
 	if len(request.Key) > 200 || len(request.Operation) > 200 {
 		return fmt.Errorf("Idempotency Key or operation is too long")
+	}
+	if request.SystemActor && strings.TrimSpace(request.ActorUserID) != "" {
+		return fmt.Errorf("system Idempotency actor cannot also identify a user")
 	}
 	if !hashPattern.MatchString(request.RequestSHA256) {
 		return fmt.Errorf("request SHA-256 is invalid")

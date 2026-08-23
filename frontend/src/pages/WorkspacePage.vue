@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
   ApiError, platformApiKey, type AgentRelease, type CodingTask, type CodingTaskSession,
-  type Artifact, type CodingTaskLaunchOption, type RepositoryBinding, type Run, type RunEvent,
+  type Artifact, type CodingTaskLaunchOption, type RepositoryBinding, type Run, type RunApproval, type RunEvent,
 } from "../api/client";
 import { authContextKey } from "../auth/session";
 
@@ -27,12 +27,15 @@ const runs = ref<Run[]>([]);
 const selectedRunID = ref("");
 const runEvents = ref<RunEvent[]>([]);
 const artifacts = ref<Artifact[]>([]);
+const runApprovals = ref<RunApproval[]>([]);
+const decisionReasons = reactive<Record<string, string>>({});
 const streamState = ref<"idle" | "connecting" | "live" | "reconnecting" | "complete" | "error">("idle");
 const streamError = ref("");
 const artifactError = ref("");
 const loading = ref(true);
 const detailLoading = ref(false);
 const saving = ref(false);
+const controlling = ref(false);
 const error = ref<ApiError>();
 const notice = ref("");
 const form = reactive({ source: "text", bindingID: "", releaseID: "", title: "", requestText: "", issueTitle: "", issueBody: "", issueURL: "" });
@@ -44,9 +47,13 @@ let evidenceController: AbortController | undefined;
 const teamID = computed(() => typeof route.query.team === "string" ? route.query.team : "");
 const selectedTaskID = computed(() => typeof route.query.task === "string" ? route.query.task : "");
 const currentUser = computed(() => auth.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser : undefined);
-const canUse = computed(() => (currentUser.value?.role_grants ?? []).some((grant) =>
-  (!grant.team_id || grant.team_id === teamID.value) && ["agent_user", "agent_builder", "platform_administrator"].includes(grant.role ?? ""),
-));
+function hasRole(roles: string[]) {
+  return (currentUser.value?.role_grants ?? []).some((grant) => (!grant.team_id || grant.team_id === teamID.value) && roles.includes(grant.role ?? ""));
+}
+const canUse = computed(() => hasRole(["agent_user", "agent_builder", "platform_administrator"]));
+const canDecideApproval = computed(() => hasRole(["agent_user", "agent_builder", "platform_administrator"]));
+const canInterruptOrCancel = computed(() => hasRole(["agent_user", "agent_builder", "platform_administrator", "run_operator"]));
+const canResume = computed(() => hasRole(["agent_user", "agent_builder", "platform_administrator"]));
 const availableBindings = computed(() => bindings.value.filter((binding) => launchOptions.value.some((option) => option.repository_binding_id === binding.id)));
 const launchableReleases = computed(() => releases.value.filter((release) => {
   const option = launchOptions.value.find((item) => item.agent_release_id === release.id && item.repository_binding_id === release.repository_binding_id);
@@ -67,7 +74,10 @@ watch(teamID, () => {
   void refresh();
 }, { immediate: true });
 watch(selectedTaskID, () => void loadSelectedTask());
-watch(() => selectedRun.value?.id, (runID) => { if (runID) void loadRunEvidence(runID); });
+watch(() => selectedRun.value?.id, (runID) => {
+  runApprovals.value = [];
+  if (runID) { void loadRunEvidence(runID); void loadRunApprovals(runID); }
+});
 onBeforeUnmount(() => evidenceController?.abort());
 watch(() => form.bindingID, () => {
   if (!launchableReleases.value.some((release) => release.id === form.releaseID)) form.releaseID = launchableReleases.value[0]?.id ?? "";
@@ -104,7 +114,7 @@ async function loadSelectedTask() {
   const requestedTeam = teamID.value;
   const sequence = ++detailSequence;
   session.value = undefined; runs.value = [];
-  selectedRunID.value = ""; runEvents.value = []; artifacts.value = []; evidenceController?.abort();
+  selectedRunID.value = ""; runEvents.value = []; artifacts.value = []; runApprovals.value = []; evidenceController?.abort();
   if (!taskID || !requestedTeam) return;
   detailLoading.value = true;
   try {
@@ -117,6 +127,22 @@ async function loadSelectedTask() {
   } finally {
     if (sequence === detailSequence) detailLoading.value = false;
   }
+}
+
+async function loadRunApprovals(runID: string) {
+  try {
+    const values = await api.listRunApprovals(runID);
+    if (selectedRun.value?.id === runID) runApprovals.value = values;
+  } catch (reason) {
+    if (selectedRun.value?.id === runID) error.value = asApiError(reason);
+  }
+}
+
+async function refreshSelectedRun(runID: string) {
+  const value = await api.getRun(runID);
+  const index = runs.value.findIndex((run) => run.id === runID);
+  if (index >= 0) runs.value.splice(index, 1, value);
+  await loadRunApprovals(runID);
 }
 
 async function loadRunEvidence(runID: string) {
@@ -216,6 +242,52 @@ async function createTask() {
   finally { saving.value = false; }
 }
 
+async function decideApproval(approval: RunApproval, approved: boolean) {
+  if (!canDecideApproval.value || controlling.value || !approval.id || !approval.version) return;
+  const reason = decisionReasons[approval.id] ?? "";
+  if (!approved && !reason.trim()) return;
+  const input = { approved, reason, version: approval.version };
+  const scope = `run-approval.decide:${teamID.value}:${approval.id}`;
+  controlling.value = true; error.value = undefined; notice.value = "";
+  try {
+    await api.decideRunApproval(approval.id, approved, reason, approval.version, intent(scope, input));
+    intents.delete(scope);
+    await refreshSelectedRun(approval.run_id ?? selectedRun.value?.id ?? "");
+    notice.value = t(approved ? "workspace.notice.approved" : "workspace.notice.rejected");
+  } catch (reason) {
+    error.value = asApiError(reason);
+    if (error.value.kind === "conflict" && approval.run_id) await refreshSelectedRun(approval.run_id);
+  } finally { controlling.value = false; }
+}
+
+async function controlSelectedRun(action: "interrupt" | "resume" | "cancel") {
+  const run = selectedRun.value;
+  if (!run?.id || !run.version || controlling.value) return;
+  if (action === "cancel" && !window.confirm(t("workspace.controls.cancelConfirm"))) return;
+  const input = { action, version: run.version };
+  const scope = `run.control:${teamID.value}:${run.id}:${action}`;
+  controlling.value = true; error.value = undefined; notice.value = "";
+  try {
+    const updated = await api.controlRun(run.id, action, run.version, intent(scope, input));
+    intents.delete(scope);
+    const index = runs.value.findIndex((value) => value.id === run.id);
+    if (index >= 0) runs.value.splice(index, 1, updated);
+    notice.value = t(`workspace.notice.${action}`);
+  } catch (reason) {
+    error.value = asApiError(reason);
+    if (error.value.kind === "conflict") await refreshSelectedRun(run.id);
+  } finally { controlling.value = false; }
+}
+
+function approvalRequest(approval: RunApproval) {
+  return previewPayload(approval.request ?? {});
+}
+
+function approvalRisk(approval: RunApproval) {
+  const request = approval.request as Record<string, unknown> | undefined;
+  return String(request?.risk_reason ?? request?.reason ?? request?.summary ?? t("workspace.approval.unspecifiedRisk"));
+}
+
 async function selectTask(task: CodingTask) {
   if (!task.id) return;
   await router.push({ name: "workspace", query: { team: teamID.value, task: task.id } });
@@ -301,8 +373,32 @@ function safeIssueURL(value?: string) {
               <div><dt>{{ t('workspace.model') }}</dt><dd>{{ selectedRelease?.configured_model_snapshot?.name }} / {{ selectedRelease?.configured_model_snapshot?.model_id }}</dd></div>
               <div><dt>{{ t('workspace.firstRun') }}</dt><dd>{{ selectedRun?.id }} · {{ selectedRun?.state }}</dd></div>
             </dl>
+            <section v-if="selectedRun" class="run-controls" data-testid="run-controls">
+              <header><div><span>04</span><h4>{{ t('workspace.controls.title') }}</h4></div><small>{{ t('workspace.controls.version', { version: selectedRun.version }) }}</small></header>
+              <p>{{ t('workspace.controls.body') }}</p>
+              <div class="control-actions">
+                <button v-if="canInterruptOrCancel && ['provisioning', 'running'].includes(selectedRun.state ?? '')" type="button" data-testid="interrupt-run" :disabled="controlling" @click="controlSelectedRun('interrupt')">{{ t('workspace.controls.interrupt') }}</button>
+                <button v-if="canResume && selectedRun.state === 'interrupted'" type="button" data-testid="resume-run" :disabled="controlling" @click="controlSelectedRun('resume')">{{ t('workspace.controls.resume') }}</button>
+                <button v-if="canInterruptOrCancel && !['waiting_confirmation', 'completed', 'failed', 'cancelled'].includes(selectedRun.state ?? '')" type="button" class="danger-action" data-testid="cancel-run" :disabled="controlling" @click="controlSelectedRun('cancel')">{{ t('workspace.controls.cancel') }}</button>
+              </div>
+            </section>
+            <section v-if="runApprovals.length" class="run-approvals" data-testid="run-approvals">
+              <header><div><span>05</span><h4>{{ t('workspace.approval.title') }}</h4></div><small>{{ t('workspace.approval.distinct') }}</small></header>
+              <article v-for="approval in runApprovals" :key="approval.id" :class="`approval-${approval.state}`">
+                <div class="approval-heading"><strong>{{ t(`workspace.approval.kind.${approval.kind}`) }}</strong><span>{{ t(`workspace.approval.state.${approval.state}`) }}</span></div>
+                <dl><div><dt>{{ t('workspace.approval.run') }}</dt><dd>{{ approval.run_id }} · {{ selectedRun.state }}</dd></div><div><dt>{{ t('workspace.approval.requestedBy') }}</dt><dd>{{ approval.requested_by || '—' }}</dd></div><div><dt>{{ t('workspace.approval.risk') }}</dt><dd>{{ approvalRisk(approval) }}</dd></div></dl>
+                <details><summary>{{ t('workspace.approval.request') }}</summary><pre>{{ approvalRequest(approval) }}</pre></details>
+                <div v-if="approval.state === 'pending' && canDecideApproval" class="approval-decision">
+                  <label><span>{{ t('workspace.approval.reason') }}</span><textarea v-model="decisionReasons[approval.id!]" maxlength="4000"></textarea></label>
+                  <button type="button" :data-testid="`approve-run-${approval.id}`" :disabled="controlling" @click="decideApproval(approval, true)">{{ t('workspace.approval.approve') }}</button>
+                  <button type="button" class="danger-action" :data-testid="`reject-run-${approval.id}`" :disabled="controlling || !decisionReasons[approval.id!]?.trim()" @click="decideApproval(approval, false)">{{ t('workspace.approval.reject') }}</button>
+                </div>
+                <p v-else-if="approval.state === 'pending'" class="read-only-badge">{{ t('workspace.approval.noDecisionGrant') }}</p>
+                <p v-else>{{ approval.decision_reason || t('workspace.approval.noDecisionReason') }} · {{ approval.decided_by || t('workspace.approval.systemActor') }}</p>
+              </article>
+            </section>
             <section v-if="runs.length" class="run-evidence" data-testid="run-evidence">
-              <header><div><span>04</span><h4>{{ t('workspace.evidence.title') }}</h4></div><small :class="`stream-${streamState}`">{{ t(`workspace.evidence.stream.${streamState}`) }}</small></header>
+              <header><div><span>06</span><h4>{{ t('workspace.evidence.title') }}</h4></div><small :class="`stream-${streamState}`">{{ t(`workspace.evidence.stream.${streamState}`) }}</small></header>
               <div class="run-tabs" role="tablist" :aria-label="t('workspace.evidence.runs')">
                 <button v-for="(run, index) in runs" :key="run.id" type="button" :class="{ active: run.id === selectedRun?.id }" @click="selectedRunID = run.id ?? ''">{{ t('workspace.evidence.run', { number: runs.length - index }) }} · {{ t(`status.${run.state}`) }}</button>
               </div>

@@ -5,6 +5,7 @@ package execution.v1;
 import "google/api/annotations.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 import "types/v1/types.proto";
 
 option go_package = "agent-platform/backend/api/execution/v1;executionv1";
@@ -18,15 +19,31 @@ service ExecutionService {
   }
   rpc InterruptRun(InterruptRunRequest) returns (Run) {
     option (google.api.http) = {post: "/v1/runs/{run_id}/interrupt"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
   }
   rpc ResumeRun(ResumeRunRequest) returns (Run) {
     option (google.api.http) = {post: "/v1/runs/{run_id}/resume"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
   }
   rpc CancelRun(CancelRunRequest) returns (Run) {
     option (google.api.http) = {post: "/v1/runs/{run_id}/cancel"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
   }
   rpc KillRun(KillRunRequest) returns (Run) {
     option (google.api.http) = {post: "/v1/runs/{run_id}/kill"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
   }
 }
 

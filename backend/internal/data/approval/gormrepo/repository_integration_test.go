@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,11 +42,17 @@ func TestRunApprovalStateTransitionsWithPostgreSQL(t *testing.T) {
 	if run.ID == "" {
 		t.Skip("a Run fixture is required for Approval integration")
 	}
+	if err := tx.Exec(`INSERT INTO role_grants (organization_id, team_id, user_id, role)
+		SELECT task.organization_id, task.team_id, run.created_by, 'agent_user'
+		FROM runs run JOIN sessions session ON session.id = run.session_id
+		JOIN coding_tasks task ON task.id = session.coding_task_id WHERE run.id = ?`, run.ID).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := tx.Exec(`UPDATE runs SET state = 'running', ended_at = NULL WHERE id = ?`, run.ID).Error; err != nil {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
-	approval, err := domain.Request(uuid.NewString(), run.ID, domain.KindPlan, json.RawMessage(`{"summary":"integration plan"}`), now)
+	approval, err := domain.Request(uuid.NewString(), run.ID, domain.KindPlan, json.RawMessage(`{"summary":"integration plan"}`), run.ActorID, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,4 +73,42 @@ func TestRunApprovalStateTransitionsWithPostgreSQL(t *testing.T) {
 	if err := tx.Raw(`SELECT state FROM runs WHERE id = ?`, run.ID).Scan(&state).Error; err != nil || state != "running" {
 		t.Fatalf("Run state after approval = %q, %v", state, err)
 	}
+	var approvedVersion int64
+	if err := tx.Raw(`SELECT version FROM runs WHERE id = ?`, run.ID).Scan(&approvedVersion).Error; err != nil {
+		t.Fatal(err)
+	}
+	rejection, err := domain.Request(uuid.NewString(), run.ID, domain.KindHighRiskChange, json.RawMessage(`{"risk_reason":"unsafe network write"}`), run.ActorID, now.Add(2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := workflow.Request(context.Background(), rejection, approvedVersion, now.Add(2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := rejection.Decide(false, run.ActorID, "risk denied", now.Add(3*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := workflow.Decide(context.Background(), rejection, 1, now.Add(3*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	var rejected struct {
+		State         string
+		TerminalError []byte
+	}
+	if err := tx.Raw(`SELECT state, terminal_error FROM runs WHERE id = ?`, run.ID).Scan(&rejected).Error; err != nil {
+		t.Fatal(err)
+	}
+	if rejected.State != "failed" || !json.Valid(rejected.TerminalError) || !jsonContains(rejected.TerminalError, "approval_rejected") {
+		t.Fatalf("Run after rejection = %+v", rejected)
+	}
+	var terminalEvents int64
+	if err := tx.Raw(`SELECT count(*) FROM run_events WHERE run_id = ? AND event_type = 'run.failed'`, run.ID).Scan(&terminalEvents).Error; err != nil {
+		t.Fatal(err)
+	}
+	if terminalEvents != 1 {
+		t.Fatalf("rejected Run terminal event count = %d, want 1", terminalEvents)
+	}
+}
+
+func jsonContains(value []byte, needle string) bool {
+	return string(value) != "" && strings.Contains(string(value), needle)
 }

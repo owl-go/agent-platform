@@ -31,6 +31,7 @@ type RunHost func(context.Context, processharness.Spec, processharness.OutputSin
 type Cleanup func(context.Context, string) error
 type NameFactory func() (string, error)
 type ScratchPreparer func(string, int, int) error
+type ControlContainer func(context.Context, string, bool) error
 
 type Config struct {
 	DockerCommand       string
@@ -52,6 +53,7 @@ type Config struct {
 	Cleanup             Cleanup
 	Name                NameFactory
 	PrepareScratch      ScratchPreparer
+	ControlContainer    ControlContainer
 	WorkflowPlan        string
 }
 
@@ -76,6 +78,9 @@ func New(config Config) (cliadapter.RunProcess, error) {
 	}
 	if config.PrepareScratch == nil {
 		config.PrepareScratch = prepareScratch
+	}
+	if config.ControlContainer == nil {
+		config.ControlContainer = dockerControl(config.DockerCommand)
 	}
 
 	return func(ctx context.Context, spec processharness.Spec, sink processharness.OutputSink) (result processharness.Result, returnErr error) {
@@ -104,6 +109,12 @@ func New(config Config) (cliadapter.RunProcess, error) {
 
 		hostSpec := spec
 		hostSpec.Command = dockerCommand(config, spec, name, scratchDirectories)
+		if observer, ok := spec.Observer.(processharness.ProcessAwareObserver); ok {
+			hostSpec.Observer = &containerAwareObserver{
+				observer:   observer,
+				controller: &containerController{ctx: ctx, name: name, control: config.ControlContainer},
+			}
+		}
 		if config.WorkspaceVolume != "" {
 			hostSpec.Dir = ""
 		}
@@ -116,6 +127,54 @@ func New(config Config) (cliadapter.RunProcess, error) {
 		}
 		return result, returnErr
 	}, nil
+}
+
+type containerAwareObserver struct {
+	observer   processharness.ProcessAwareObserver
+	controller processharness.ProcessController
+}
+
+func (observer *containerAwareObserver) Observe(ctx context.Context, stream processharness.Stream, data []byte) error {
+	return observer.observer.Observe(ctx, stream, data)
+}
+
+func (observer *containerAwareObserver) BindProcess(processharness.ProcessController) {
+	observer.observer.BindProcess(observer.controller)
+}
+
+type containerController struct {
+	ctx     context.Context
+	name    string
+	control ControlContainer
+}
+
+func (controller *containerController) Pause() error  { return controller.execute(true) }
+func (controller *containerController) Resume() error { return controller.execute(false) }
+
+func (controller *containerController) execute(paused bool) error {
+	controlCtx, cancel := context.WithTimeout(context.WithoutCancel(controller.ctx), 10*time.Second)
+	defer cancel()
+	return controller.control(controlCtx, controller.name, paused)
+}
+
+func dockerControl(command string) ControlContainer {
+	return func(ctx context.Context, name string, paused bool) error {
+		if paused {
+			return runDockerControl(ctx, command, "pause", name)
+		}
+		if err := runDockerControl(ctx, command, "unpause", name); err != nil {
+			return err
+		}
+		return runDockerControl(ctx, command, "kill", "--signal", "CONT", name)
+	}
+}
+
+func runDockerControl(ctx context.Context, command string, arguments ...string) error {
+	output, err := exec.CommandContext(ctx, command, arguments...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("docker container control %v: %w: %s", arguments, err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func validateConfig(config Config) error {
@@ -233,7 +292,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		name, _, _ := strings.Cut(entry, "=")
 		args = append(args, "--env", name)
 	}
-	if config.WorkflowPlan != "" {
+	// Describe has no observer and must probe the pinned CLI directly. Only an
+	// Execute invocation can consume and resume the approval protocol.
+	if config.WorkflowPlan != "" && spec.Observer != nil {
 		args = append(args, "--env", "AGENT_PLATFORM_WORKFLOW_B64="+config.WorkflowPlan)
 	}
 	args = append(args,

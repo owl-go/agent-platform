@@ -90,6 +90,39 @@ func TestRunWrapsRuntimeCommandInHardenedContainer(t *testing.T) {
 	}
 }
 
+func TestRunBindsApprovalObserverToContainerPause(t *testing.T) {
+	var controls []string
+	observer := &processAwareRecordingObserver{}
+	config := validConfig(func(_ context.Context, spec processharness.Spec, _ processharness.OutputSink) (processharness.Result, error) {
+		aware, ok := spec.Observer.(processharness.ProcessAwareObserver)
+		if !ok {
+			t.Fatal("container observer is not process-aware")
+		}
+		aware.BindProcess(&recordingProcessController{})
+		if err := observer.process.Pause(); err != nil {
+			t.Fatal(err)
+		}
+		if err := observer.process.Resume(); err != nil {
+			t.Fatal(err)
+		}
+		return processharness.Result{}, nil
+	}, func(context.Context, string) error { return nil })
+	config.ControlContainer = func(_ context.Context, name string, paused bool) error {
+		controls = append(controls, fmt.Sprintf("%s:%t", name, paused))
+		return nil
+	}
+	runner, err := New(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runner(context.Background(), processharness.Spec{Command: []string{"claude", "--version"}, Dir: "/workspace", Observer: observer}, discardSink{}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(controls, []string{"agent-runtime-test:true", "agent-runtime-test:false"}) {
+		t.Fatalf("container controls = %#v", controls)
+	}
+}
+
 func TestRunCleansContainerWhenHostProcessFails(t *testing.T) {
 	runErr := errors.New("docker failed")
 	cleanupErr := errors.New("cleanup failed")
@@ -131,8 +164,14 @@ func TestRunSupportsNamedWorkspaceVolume(t *testing.T) {
 	if !containsPair(captured.Command, "--mount", "type=volume,src=agent-workspace-run-1,dst=/workspace,readonly=false") {
 		t.Fatalf("workspace volume mount missing from %#v", captured.Command)
 	}
+	if containsPair(captured.Command, "--env", "AGENT_PLATFORM_WORKFLOW_B64="+config.WorkflowPlan) {
+		t.Fatalf("safe version probe was wrapped in Approval workflow: %#v", captured.Command)
+	}
+	if _, err := runner(context.Background(), processharness.Spec{Command: []string{"claude", "execute"}, Dir: "/workspace", Observer: &recordingObserver{}}, discardSink{}); err != nil {
+		t.Fatal(err)
+	}
 	if !containsPair(captured.Command, "--env", "AGENT_PLATFORM_WORKFLOW_B64="+config.WorkflowPlan) {
-		t.Fatalf("Git workflow plan missing from %#v", captured.Command)
+		t.Fatalf("Execute Git workflow plan missing from %#v", captured.Command)
 	}
 }
 
@@ -253,6 +292,26 @@ func digestImage() string {
 type recordingObserver struct{}
 
 func (*recordingObserver) Observe(context.Context, processharness.Stream, []byte) error { return nil }
+
+type processAwareRecordingObserver struct {
+	process processharness.ProcessController
+}
+
+func (*processAwareRecordingObserver) Observe(context.Context, processharness.Stream, []byte) error {
+	return nil
+}
+func (observer *processAwareRecordingObserver) BindProcess(process processharness.ProcessController) {
+	observer.process = process
+}
+
+type recordingProcessController struct{}
+
+func (*recordingProcessController) Pause() error {
+	return errors.New("host process must not be paused directly")
+}
+func (*recordingProcessController) Resume() error {
+	return errors.New("host process must not be resumed directly")
+}
 
 type discardSink struct{}
 

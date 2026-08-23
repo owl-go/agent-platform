@@ -24,12 +24,14 @@ const (
 )
 
 var (
-	ErrLeaseLost              = errors.New("Run lease is missing, expired, or owned by another Worker")
-	ErrInterruptionRequested  = errors.New("Run interruption was requested")
-	ErrConcurrentModification = errors.New("Run was modified concurrently")
-	ErrControlRejected        = errors.New("Run control action is not valid in the current state")
-	moneyPattern              = regexp.MustCompile(`^(0|[1-9][0-9]*)(\.[0-9]+)?$`)
-	transitions               = map[State]map[State]struct{}{
+	ErrLeaseLost               = errors.New("Run lease is missing, expired, or owned by another Worker")
+	ErrInterruptionRequested   = errors.New("Run interruption was requested")
+	ErrConcurrentModification  = errors.New("Run was modified concurrently")
+	ErrControlRejected         = errors.New("Run control action is not valid in the current state")
+	ErrApprovalRejected        = errors.New("Run Approval rejected the requested operation")
+	ErrApprovalRequesterDenied = errors.New("Run Approval requester is no longer authorized")
+	moneyPattern               = regexp.MustCompile(`^(0|[1-9][0-9]*)(\.[0-9]+)?$`)
+	transitions                = map[State]map[State]struct{}{
 		Queued:              stateSet(Provisioning, Cancelled),
 		Provisioning:        stateSet(Running, Interrupting, Resuming, Failed, Cancelled),
 		Running:             stateSet(WaitingConfirmation, Interrupting, Resuming, Completed, Failed, Cancelled),
@@ -105,7 +107,7 @@ func (run *Run) MarkRunning() error {
 }
 
 func (run *Run) RequestInterrupt() error {
-	if run.State != Provisioning && run.State != Running && run.State != WaitingConfirmation {
+	if run.State != Provisioning && run.State != Running {
 		return fmt.Errorf("%w: Run in state %s cannot be interrupted", ErrControlRejected, run.State)
 	}
 	return run.transition(Interrupting)
@@ -127,7 +129,7 @@ func (run *Run) Resume() error {
 }
 
 func (run *Run) Cancel(now time.Time) error {
-	if run.Terminal() {
+	if run.Terminal() || run.State == WaitingConfirmation {
 		return fmt.Errorf("%w: terminal Run in state %s cannot be cancelled", ErrControlRejected, run.State)
 	}
 	if err := run.transition(Cancelled); err != nil {

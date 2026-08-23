@@ -4,14 +4,27 @@ package approval.v1;
 import "google/api/annotations.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 option go_package = "agent-platform/backend/api/approval/v1;approvalv1";
 
 service RunApprovalService {
   rpc ListRunApprovals(ListRunApprovalsRequest) returns (ListRunApprovalsResponse) { option (google.api.http) = {get: "/v1/runs/{run_id}/approvals"}; }
   rpc GetRunApproval(GetRunApprovalRequest) returns (RunApproval) { option (google.api.http) = {get: "/v1/approvals/{approval_id}"}; }
-  rpc RequestRunApproval(RequestRunApprovalRequest) returns (RunApproval) { option (google.api.http) = {post: "/v1/runs/{run_id}/approvals" body: "*"}; }
-  rpc DecideRunApproval(DecideRunApprovalRequest) returns (RunApproval) { option (google.api.http) = {post: "/v1/approvals/{approval_id}/decision" body: "*"}; }
+  rpc RequestRunApproval(RequestRunApprovalRequest) returns (RunApproval) {
+    option (google.api.http) = {post: "/v1/runs/{run_id}/approvals" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc DecideRunApproval(DecideRunApprovalRequest) returns (RunApproval) {
+    option (google.api.http) = {post: "/v1/approvals/{approval_id}/decision" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
 }
 
 message ListRunApprovalsRequest { string run_id = 1; }
@@ -41,4 +54,6 @@ message RunApproval {
   optional google.protobuf.Timestamp decided_at = 8;
   string decision_reason = 9;
   int64 version = 10;
+  optional string requested_by = 11;
+  optional string decision_actor_type = 12;
 }

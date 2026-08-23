@@ -72,6 +72,20 @@ func TestRunRejectsInvalidTransitionsAndOutcomes(t *testing.T) {
 	}
 }
 
+func TestRunWaitingForApprovalRejectsIndependentControls(t *testing.T) {
+	now := time.Now().UTC()
+	run, err := RestoreRun("run-1", "session-1", string(WaitingConfirmation), 1, 3, &now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := run.RequestInterrupt(); !errors.Is(err, ErrControlRejected) {
+		t.Fatalf("RequestInterrupt() error=%v, want ErrControlRejected", err)
+	}
+	if err := run.Cancel(now.Add(time.Minute)); !errors.Is(err, ErrControlRejected) {
+		t.Fatalf("Cancel() error=%v, want ErrControlRejected", err)
+	}
+}
+
 func TestExpiredRunIsRescheduledThenFailsAtAttemptLimit(t *testing.T) {
 	now := time.Now()
 	first, _ := RestoreRun("run-1", "session-1", string(Running), 1, 2, &now, nil)

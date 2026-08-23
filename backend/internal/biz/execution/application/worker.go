@@ -72,6 +72,9 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 			cancel()
 			return true, ctx.Err()
 		case result := <-completed:
+			if errors.Is(result.err, domain.ErrApprovalRejected) {
+				return true, nil
+			}
 			if interruptRequested {
 				outcome := interruptedExecutionOutcome()
 				if err := worker.runs.Finish(ctx, lease.Token, outcome); err != nil {
@@ -92,6 +95,13 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 					interruptRequested = true
 					cancel()
 					continue
+				}
+				if errors.Is(err, domain.ErrLeaseLost) {
+					details, getErr := worker.runs.Get(ctx, lease.RunID)
+					if getErr == nil && details.State == domain.Failed {
+						cancel()
+						return true, nil
+					}
 				}
 				cancel()
 				return true, fmt.Errorf("renew Run lease: %w", err)

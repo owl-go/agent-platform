@@ -19,7 +19,7 @@ type CollaborationCommands interface {
 type ExecutionCommands interface {
 	CreateQueuedRun(context.Context, executiondomain.QueuedRun) error
 	FinishOwned(context.Context, string, executiondomain.Outcome, time.Time) (executiondomain.CompletionProjection, error)
-	PauseForApproval(context.Context, string, int64, string, string, time.Time) error
+	PauseForApproval(context.Context, string, int64, string, string, string, time.Time) error
 	ApplyApprovalDecision(context.Context, executiondomain.ApprovalDecision, time.Time) error
 }
 

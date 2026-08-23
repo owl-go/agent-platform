@@ -36,13 +36,14 @@ type Processor struct {
 	resolver     SecretResolver
 	materializer credentials.Materializer
 	factory      RuntimeFactory
+	approvals    executionapplication.RuntimeApprovalGate
 }
 
-func New(runs *executionapplication.Service, resolver SecretResolver, materializer credentials.Materializer, factory RuntimeFactory) (*Processor, error) {
-	if runs == nil || resolver == nil || factory == nil {
-		return nil, fmt.Errorf("Run service, Secret Resolver, and Runtime Factory are required")
+func New(runs *executionapplication.Service, resolver SecretResolver, materializer credentials.Materializer, factory RuntimeFactory, approvals executionapplication.RuntimeApprovalGate) (*Processor, error) {
+	if runs == nil || resolver == nil || factory == nil || approvals == nil {
+		return nil, fmt.Errorf("Run service, Secret Resolver, Runtime Factory, and Runtime Approval Gate are required")
 	}
-	return &Processor{runs: runs, resolver: resolver, materializer: materializer, factory: factory}, nil
+	return &Processor{runs: runs, resolver: resolver, materializer: materializer, factory: factory, approvals: approvals}, nil
 }
 
 func (processor *Processor) Execute(ctx context.Context, lease domain.Lease) (outcome domain.Outcome, returnErr error) {
@@ -78,7 +79,7 @@ func (processor *Processor) Execute(ctx context.Context, lease domain.Lease) (ou
 		return domain.Outcome{}, fmt.Errorf("Runtime Image descriptor does not match frozen Run binding")
 	}
 	events := agentruntime.NewRedactingEventSink(environment.Redactor(), &eventSink{
-		runs: processor.runs, leaseToken: lease.Token, runID: lease.RunID,
+		runs: processor.runs, approvals: processor.approvals, leaseToken: lease.Token, runID: lease.RunID, attemptID: lease.AttemptID,
 	})
 	result, err := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
 		RunID: lease.RunID, WorkspacePath: "/workspace", Instruction: lease.RequestText,
@@ -112,13 +113,18 @@ func (processor *Processor) Execute(ctx context.Context, lease domain.Lease) (ou
 
 type eventSink struct {
 	runs       *executionapplication.Service
+	approvals  executionapplication.RuntimeApprovalGate
 	leaseToken string
 	runID      string
+	attemptID  string
 }
 
 func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) error {
 	if event.RunID != sink.runID {
 		return fmt.Errorf("Runtime Event Run ID does not match lease")
+	}
+	if event.Kind == agentruntime.EventApprovalRequested {
+		return sink.requestApproval(ctx, event.Sequence, event.Payload)
 	}
 	payload, err := json.Marshal(map[string]any{
 		"runtime_sequence": event.Sequence,
@@ -131,12 +137,33 @@ func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) er
 	return sink.runs.AppendEvent(ctx, sink.leaseToken, domain.EventInput{Type: string(event.Kind), Payload: payload})
 }
 
+func (sink *eventSink) requestApproval(ctx context.Context, sequence int64, payload []byte) error {
+	var request struct {
+		Kind    string          `json:"kind"`
+		Request json.RawMessage `json:"request"`
+	}
+	if err := json.Unmarshal(payload, &request); err != nil || len(request.Request) == 0 {
+		return fmt.Errorf("Runtime Approval Event must contain kind and request")
+	}
+	return sink.approvals.AwaitDecision(ctx, executionapplication.RuntimeApprovalRequest{
+		RunID: sink.runID, AttemptID: sink.attemptID, Sequence: sequence, Kind: request.Kind, Request: request.Request,
+	})
+}
+
 func redactError(redactor *credentials.Redactor, err error) error {
 	if err == nil {
 		return nil
 	}
-	return errors.New(string(redactor.Bytes([]byte(err.Error()))))
+	return redactedError{message: string(redactor.Bytes([]byte(err.Error()))), cause: err}
 }
+
+type redactedError struct {
+	message string
+	cause   error
+}
+
+func (err redactedError) Error() string { return err.message }
+func (err redactedError) Unwrap() error { return err.cause }
 
 func dollars(micros int64) string {
 	if micros == 0 {

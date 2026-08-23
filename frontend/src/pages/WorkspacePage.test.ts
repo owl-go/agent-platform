@@ -148,6 +148,40 @@ describe("Conversation Workspace", () => {
       expect(wrapper.text()).toContain("Evidence stream error");
     } finally { vi.useRealTimers(); }
   });
+
+  it("renders a pending Run Approval separately and reuses its decision intent after a retry", async () => {
+    const pendingRun = { ...run, state: "waiting_confirmation", version: 3 };
+    const approval = { id: "approval-1", run_id: "run-1", kind: "high_risk_change", request: { risk_reason: "Public network write", path: "deploy.yaml" }, state: "pending", requested_by: "user-requester", requested_at: "2026-08-23T08:00:00Z", decision_reason: "", version: 1 };
+    const decide = vi.fn().mockRejectedValueOnce(new ApiError("unavailable", 503, "temporary", "request-1")).mockResolvedValue({ ...approval, state: "approved", version: 2 });
+    const api = platformApi({ listRuns: vi.fn(async () => [pendingRun]), getRun: vi.fn(async () => ({ ...pendingRun, state: "running", version: 4 })), listRunApprovals: vi.fn(async () => [approval]), decideRunApproval: decide });
+    const { wrapper } = await mountWorkspace(api, "/workspace?team=team-1&task=task-1");
+
+    expect(wrapper.get("[data-testid='run-approvals']").text()).toContain("Public network write");
+    expect(wrapper.get("[data-testid='run-approvals']").text()).toContain("user-requester");
+    expect(wrapper.get("[data-testid='run-approvals']").text()).toContain("Distinct from Release Approval");
+    expect(wrapper.find("[data-testid='interrupt-run']").exists()).toBe(false);
+    expect(wrapper.find("[data-testid='cancel-run']").exists()).toBe(false);
+    await wrapper.get("[data-testid='approve-run-approval-1']").trigger("click"); await flushPromises();
+    await wrapper.get("[data-testid='approve-run-approval-1']").trigger("click"); await flushPromises();
+
+    expect(decide).toHaveBeenCalledTimes(2);
+    expect(decide.mock.calls[0]![4]).toBe(decide.mock.calls[1]![4]);
+    expect(api.getRun).toHaveBeenCalledWith("run-1");
+  });
+
+  it("shows only state-valid controls and refreshes the authoritative Run after a conflict", async () => {
+    const interrupted = { ...run, state: "interrupted", version: 5 };
+    const control = vi.fn().mockRejectedValue(new ApiError("conflict", 412, "version_conflict", "request-2"));
+    const api = platformApi({ listRuns: vi.fn(async () => [interrupted]), getRun: vi.fn(async () => ({ ...interrupted, version: 6 })), controlRun: control });
+    const { wrapper } = await mountWorkspace(api, "/workspace?team=team-1&task=task-1");
+
+    expect(wrapper.find("[data-testid='interrupt-run']").exists()).toBe(false);
+    expect(wrapper.get("[data-testid='resume-run']").text()).toBe("Resume");
+    await wrapper.get("[data-testid='resume-run']").trigger("click"); await flushPromises();
+    expect(control).toHaveBeenCalledWith("run-1", "resume", 5, expect.any(String));
+    expect(api.getRun).toHaveBeenCalledWith("run-1");
+    expect(wrapper.get("[data-testid='run-controls']").text()).toContain("Version 6");
+  });
 });
 
 async function mountWorkspace(api: PlatformApi, path = "/workspace?team=team-1") {
@@ -174,7 +208,7 @@ function platformApi(overrides: Partial<PlatformApi> = {}): PlatformApi {
     listSourceControlProviders: vi.fn(async () => []), getSourceControlProvider: vi.fn(), registerSourceControlProvider: vi.fn(), changeSourceControlProviderStatus: vi.fn(),
     listRepositoryBindings: vi.fn(async () => [binding]), getRepositoryBinding: vi.fn(), registerRepositoryBinding: vi.fn(), updateRepositoryBinding: vi.fn(), validateRepositoryBinding: vi.fn(),
     listAgents: vi.fn(async () => [agent]), getAgent: vi.fn(), createAgent: vi.fn(), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => []), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(), updateAgentDraft: vi.fn(), validateAgentDraft: vi.fn(), getAgentDraftApproval: vi.fn(), requestAgentDraftApproval: vi.fn(), decideAgentDraftApproval: vi.fn(), publishAgentDraft: vi.fn(), listAgentReleases: vi.fn(async () => [release]), getAgentRelease: vi.fn(), deprecateAgentRelease: vi.fn(), blockAgentRelease: vi.fn(),
-    listCodingTaskLaunchOptions: vi.fn(async () => ({ items: [{ agent_release_id: release.id, repository_binding_id: binding.id }], prerequisite: "" })), listCodingTasks: vi.fn(async () => [task]), getCodingTask: vi.fn(async () => task), createCodingTask: vi.fn(), getCodingTaskSession: vi.fn(async () => session), listRuns: vi.fn(async () => [run]),
+    listCodingTaskLaunchOptions: vi.fn(async () => ({ items: [{ agent_release_id: release.id, repository_binding_id: binding.id }], prerequisite: "" })), listCodingTasks: vi.fn(async () => [task]), getCodingTask: vi.fn(async () => task), createCodingTask: vi.fn(), getCodingTaskSession: vi.fn(async () => session), listRuns: vi.fn(async () => [run]), getRun: vi.fn(async () => run), listRunApprovals: vi.fn(async () => []), decideRunApproval: vi.fn(), controlRun: vi.fn(),
     streamRunEvents: vi.fn(async () => ({ cursor: 0, terminal: true })), listRunArtifacts: vi.fn(async () => []), getArtifactDownload: vi.fn(),
     ...overrides,
   } as PlatformApi;

@@ -1060,6 +1060,18 @@
             "schema": {
               "$ref": "#/definitions/RunApprovalServiceDecideRunApprovalBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2326,6 +2338,18 @@
             "schema": {
               "$ref": "#/definitions/RunApprovalServiceRequestRunApprovalBody"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2384,6 +2408,18 @@
           {
             "name": "run_id",
             "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
             "required": true,
             "type": "string"
           }
@@ -2462,6 +2498,18 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2492,6 +2540,18 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2520,6 +2580,18 @@
           {
             "name": "run_id",
             "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
             "required": true,
             "type": "string"
           }
@@ -4590,6 +4662,12 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "requested_by": {
+          "type": "string"
+        },
+        "decision_actor_type": {
+          "type": "string"
         }
       }
     },

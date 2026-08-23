@@ -83,11 +83,12 @@ type ApprovalDecision struct {
 	RunID       string
 	Approved    bool
 	ActorUserID string
+	ActorType   string
 	Reason      string
 }
 
 type ApprovalCommands interface {
-	PauseForApproval(context.Context, string, int64, string, string, time.Time) error
+	PauseForApproval(context.Context, string, int64, string, string, string, time.Time) error
 	ApplyApprovalDecision(context.Context, ApprovalDecision, time.Time) error
 }
 

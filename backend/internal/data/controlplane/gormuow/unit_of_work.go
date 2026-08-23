@@ -181,7 +181,7 @@ func (unit *UnitOfWork) Execute(ctx context.Context, request transaction.Idempot
 		if err := result.Validate(); err != nil {
 			return err
 		}
-		if request.ActorUserID != "" {
+		if request.ActorUserID != "" || request.SystemActor {
 			if err := appendAudit(tx, request, result, now); err != nil {
 				return err
 			}
@@ -219,18 +219,26 @@ func (unit *UnitOfWork) Execute(ctx context.Context, request transaction.Idempot
 
 func appendAudit(tx *gorm.DB, request transaction.IdempotencyRequest, result transaction.IdempotencyResult, now time.Time) error {
 	resourceType, resourceID, action := auditIdentity(request.Operation, result.Body)
-	details, err := json.Marshal(map[string]any{"response_status": result.Status, "idempotency_key": request.Key})
+	actorType := "user"
+	if request.SystemActor {
+		actorType = "system"
+	}
+	details, err := json.Marshal(map[string]any{"response_status": result.Status, "idempotency_key": request.Key, "actor_type": actorType})
 	if err != nil {
 		return fmt.Errorf("encode Audit Event details: %w", err)
 	}
-	actorID := request.ActorUserID
+	var actorID *string
+	if request.ActorUserID != "" {
+		value := request.ActorUserID
+		actorID = &value
+	}
 	var teamID *string
 	if request.TeamID != "" {
 		value := request.TeamID
 		teamID = &value
 	}
 	record := auditRecord{
-		OrganizationID: request.OrganizationID, TeamID: teamID, ActorUserID: &actorID, Action: action,
+		OrganizationID: request.OrganizationID, TeamID: teamID, ActorUserID: actorID, Action: action,
 		ResourceType: resourceType, ResourceID: resourceID, Details: details, CreatedAt: now,
 	}
 	if err := tx.Create(&record).Error; err != nil {

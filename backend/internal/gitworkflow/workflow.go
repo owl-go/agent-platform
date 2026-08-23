@@ -12,7 +12,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+
+	"agent-platform/backend/internal/agentruntime/platformprotocol"
 )
 
 type QualityCommand struct {
@@ -31,7 +34,10 @@ type Plan struct {
 	GitAuthorName   string           `json:"git_author_name"`
 	GitAuthorEmail  string           `json:"git_author_email"`
 	QualityCommands []QualityCommand `json:"quality_commands"`
+	RequireApproval bool             `json:"require_approval"`
 }
+
+type ApprovalGate func(context.Context, io.Writer, Plan) error
 
 type Workflow struct {
 	Plan           Plan
@@ -39,6 +45,7 @@ type Workflow struct {
 	CredentialRoot string
 	Stdout         io.Writer
 	Stderr         io.Writer
+	ApprovalGate   ApprovalGate
 }
 
 func DecodePlan(value string) (Plan, error) {
@@ -77,6 +84,14 @@ func (workflow Workflow) Execute(ctx context.Context, runtimeCommand []string) e
 	if err := workflow.prepare(ctx); err != nil {
 		return err
 	}
+	if workflow.Plan.RequireApproval {
+		if workflow.ApprovalGate == nil {
+			return fmt.Errorf("Run Approval Gate is required")
+		}
+		if err := workflow.ApprovalGate(ctx, workflow.Stdout, workflow.Plan); err != nil {
+			return fmt.Errorf("wait for Run Approval: %w", err)
+		}
+	}
 	if err := workflow.run(ctx, runtimeCommand[0], runtimeCommand[1:], 0); err != nil {
 		return fmt.Errorf("Agent Runtime failed: %w", err)
 	}
@@ -89,6 +104,20 @@ func (workflow Workflow) Execute(ctx context.Context, runtimeCommand []string) e
 		}
 	}
 	return workflow.deliver(ctx)
+}
+
+func PauseForApproval(ctx context.Context, output io.Writer, plan Plan) error {
+	line, err := platformprotocol.EncodeApprovalRequest("Coding Agent execution and Review Branch delivery require approval", plan.ReviewBranch)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(output, "%s\n", line); err != nil {
+		return err
+	}
+	if err := syscall.Kill(os.Getpid(), syscall.SIGSTOP); err != nil {
+		return fmt.Errorf("pause Runtime Workflow for Approval: %w", err)
+	}
+	return ctx.Err()
 }
 
 func (workflow Workflow) prepare(ctx context.Context) error {

@@ -61,12 +61,12 @@ func (service *Service) ListByRun(ctx context.Context, runID string) ([]domain.A
 	return service.repository.ListByRun(ctx, runID)
 }
 
-func (service *Service) Request(ctx context.Context, runID string, kind domain.Kind, request json.RawMessage, expectedRunVersion int64) (domain.Approval, error) {
+func (service *Service) Request(ctx context.Context, runID string, kind domain.Kind, request json.RawMessage, requestedBy string, expectedRunVersion int64) (domain.Approval, error) {
 	if service.repository == nil || service.workflow == nil || service.clock == nil || service.ids == nil || expectedRunVersion <= 0 {
 		return domain.Approval{}, fmt.Errorf("Run Approval dependencies and expected Run Version are required")
 	}
 	now := service.clock.Now()
-	approval, err := domain.Request(service.ids.NewID(), runID, kind, request, now)
+	approval, err := domain.Request(service.ids.NewID(), runID, kind, request, requestedBy, now)
 	if err != nil {
 		return domain.Approval{}, err
 	}
@@ -89,6 +89,27 @@ func (service *Service) Decide(ctx context.Context, id string, expectedVersion i
 	}
 	now := service.clock.Now()
 	if err := approval.Decide(approved, actor, reason, now); err != nil {
+		return domain.Approval{}, err
+	}
+	if err := service.workflow.Decide(ctx, approval, expectedVersion, now); err != nil {
+		return domain.Approval{}, err
+	}
+	return approval, nil
+}
+
+func (service *Service) RejectBySystem(ctx context.Context, id string, expectedVersion int64, reason string) (domain.Approval, error) {
+	if service.repository == nil || service.workflow == nil || service.clock == nil || expectedVersion <= 0 {
+		return domain.Approval{}, fmt.Errorf("Run Approval dependencies and expected Version are required")
+	}
+	approval, err := service.repository.Get(ctx, id)
+	if err != nil {
+		return domain.Approval{}, err
+	}
+	if approval.Version != expectedVersion {
+		return domain.Approval{}, domain.ErrConcurrentUpdate
+	}
+	now := service.clock.Now()
+	if err := approval.RejectBySystem(reason, now); err != nil {
 		return domain.Approval{}, err
 	}
 	if err := service.workflow.Decide(ctx, approval, expectedVersion, now); err != nil {

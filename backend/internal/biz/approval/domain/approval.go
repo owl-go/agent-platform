@@ -26,29 +26,35 @@ const (
 )
 
 type State string
+type DecisionActorType string
 
 const (
 	StatePending  State = "pending"
 	StateApproved State = "approved"
 	StateRejected State = "rejected"
+
+	DecisionActorUser   DecisionActorType = "user"
+	DecisionActorSystem DecisionActorType = "system"
 )
 
 type Approval struct {
-	ID             string
-	RunID          string
-	Kind           Kind
-	Request        json.RawMessage
-	State          State
-	RequestedAt    time.Time
-	DecidedBy      string
-	DecidedAt      *time.Time
-	DecisionReason string
-	Version        int64
+	ID                string
+	RunID             string
+	Kind              Kind
+	Request           json.RawMessage
+	State             State
+	RequestedAt       time.Time
+	RequestedBy       string
+	DecidedBy         string
+	DecisionActorType DecisionActorType
+	DecidedAt         *time.Time
+	DecisionReason    string
+	Version           int64
 }
 
-func Request(id, runID string, kind Kind, request json.RawMessage, now time.Time) (Approval, error) {
-	if strings.TrimSpace(id) == "" || strings.TrimSpace(runID) == "" || now.IsZero() {
-		return Approval{}, fmt.Errorf("Run Approval identity, Run, and request time are required")
+func Request(id, runID string, kind Kind, request json.RawMessage, requestedBy string, now time.Time) (Approval, error) {
+	if strings.TrimSpace(id) == "" || strings.TrimSpace(runID) == "" || strings.TrimSpace(requestedBy) == "" || now.IsZero() {
+		return Approval{}, fmt.Errorf("Run Approval identity, Run, requester, and request time are required")
 	}
 	if kind != KindPlan && kind != KindHighRiskChange {
 		return Approval{}, fmt.Errorf("unsupported Run Approval kind %q", kind)
@@ -56,20 +62,22 @@ func Request(id, runID string, kind Kind, request json.RawMessage, now time.Time
 	if len(request) == 0 || len(request) > 64*1024 || !json.Valid(request) || request[0] != '{' {
 		return Approval{}, fmt.Errorf("Run Approval request must be a JSON object no larger than 64 KiB")
 	}
-	return Approval{ID: id, RunID: runID, Kind: kind, Request: cloneJSON(request), State: StatePending, RequestedAt: now.UTC(), Version: 1}, nil
+	return Approval{ID: id, RunID: runID, Kind: kind, Request: cloneJSON(request), State: StatePending, RequestedAt: now.UTC(), RequestedBy: requestedBy, Version: 1}, nil
 }
 
 func Restore(value Approval) (Approval, error) {
-	if value.Version <= 0 || value.RequestedAt.IsZero() || !json.Valid(value.Request) {
+	if value.Version <= 0 || value.RequestedAt.IsZero() || strings.TrimSpace(value.RequestedBy) == "" || !json.Valid(value.Request) {
 		return Approval{}, fmt.Errorf("invalid persisted Run Approval")
 	}
 	switch value.State {
 	case StatePending:
-		if value.DecidedAt != nil || value.DecidedBy != "" {
+		if value.DecidedAt != nil || value.DecidedBy != "" || value.DecisionActorType != "" {
 			return Approval{}, fmt.Errorf("pending Run Approval has a decision")
 		}
 	case StateApproved, StateRejected:
-		if value.DecidedAt == nil || value.DecidedBy == "" {
+		validUser := value.DecisionActorType == DecisionActorUser && value.DecidedBy != ""
+		validSystem := value.DecisionActorType == DecisionActorSystem && value.DecidedBy == ""
+		if value.DecidedAt == nil || (!validUser && !validSystem) {
 			return Approval{}, fmt.Errorf("decided Run Approval is missing its decision")
 		}
 	default:
@@ -96,6 +104,25 @@ func (approval *Approval) Decide(approved bool, actor, reason string, now time.T
 	}
 	decidedAt := now.UTC()
 	approval.DecidedBy = actor
+	approval.DecisionActorType = DecisionActorUser
+	approval.DecidedAt = &decidedAt
+	approval.DecisionReason = reason
+	approval.Version++
+	return nil
+}
+
+func (approval *Approval) RejectBySystem(reason string, now time.Time) error {
+	if approval.State != StatePending || now.IsZero() || now.Before(approval.RequestedAt) {
+		return fmt.Errorf("system rejection requires a pending Approval and valid time")
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" || len(reason) > 4000 {
+		return fmt.Errorf("system rejection reason is required and cannot exceed 4000 characters")
+	}
+	decidedAt := now.UTC()
+	approval.State = StateRejected
+	approval.DecidedBy = ""
+	approval.DecisionActorType = DecisionActorSystem
 	approval.DecidedAt = &decidedAt
 	approval.DecisionReason = reason
 	approval.Version++

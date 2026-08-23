@@ -22,6 +22,7 @@ build_secret_canary_right="${build_secret_canary:23}"
 secret_canaries=("$model_secret_canary" "$git_private_key_canary" "$known_hosts_canary" "$build_secret_canary")
 api_pid=""
 web_pid=""
+runtime_approval_browser_pid=""
 pwcli="${PWCLI:-playwright-cli}"
 
 cleanup() {
@@ -38,6 +39,10 @@ cleanup() {
   if [[ -n "$api_pid" ]]; then
     kill "$api_pid" >/dev/null 2>&1 || true
     wait "$api_pid" 2>/dev/null || true
+  fi
+  if [[ -n "$runtime_approval_browser_pid" ]]; then
+    kill "$runtime_approval_browser_pid" >/dev/null 2>&1 || true
+    wait "$runtime_approval_browser_pid" 2>/dev/null || true
   fi
   docker rm -f "$keycloak_container" "$postgres_container" "$minio_container" >/dev/null 2>&1 || true
   rm -rf "$acceptance_tmp"
@@ -585,6 +590,101 @@ browser --session "$playwright_session" run-code 'async (page) => {
 }'
 
 browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, releaseID: sessionStorage.getItem("acceptance-high-release-id") }; });
+  const create = async (title, key) => page.evaluate(async ({ values, title, key }) => { const response = await fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", agent_release_id: values.releaseID, title, request_text: `${title} request` }) }); return { status: response.status, body: await response.json() }; }, { values, title, key });
+  const approval = await create("Run Approval acceptance", "run-approval-task"); const control = await create("Run Control acceptance", "run-control-task"); const concurrent = await create("Run Concurrent Control acceptance", "run-concurrent-control-task"); const operator = await create("Run Operator denial acceptance", "run-operator-task"); const abort = await create("Runtime Approval Abort acceptance", "runtime-approval-abort-task"); const browserRuntime = await create("Runtime Approval Browser acceptance", "runtime-approval-browser-task");
+  for (const result of [approval, control, concurrent, operator, abort, browserRuntime]) if (result.status !== 201) throw new Error(`Run governance fixture launch failed: ${JSON.stringify(result.body)}`);
+  await page.evaluate(({ approval, control, concurrent, operator, abort, browserRuntime }) => { sessionStorage.setItem("acceptance-run-approval-task", approval.body.task.id); sessionStorage.setItem("acceptance-run-approval", approval.body.run_id); sessionStorage.setItem("acceptance-run-control-task", control.body.task.id); sessionStorage.setItem("acceptance-run-control", control.body.run_id); sessionStorage.setItem("acceptance-run-concurrent-control", concurrent.body.run_id); sessionStorage.setItem("acceptance-run-operator-task", operator.body.task.id); sessionStorage.setItem("acceptance-run-operator", operator.body.run_id); sessionStorage.setItem("acceptance-runtime-approval-browser-task", browserRuntime.body.task.id); sessionStorage.setItem("acceptance-runtime-approval-browser-run", browserRuntime.body.run_id); }, { approval, control, concurrent, operator, abort, browserRuntime });
+}'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE runs SET state = 'running', started_at = now(), updated_at = now() WHERE id IN (
+     SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     WHERE coding_tasks.title IN ('Run Approval acceptance', 'Run Control acceptance', 'Run Concurrent Control acceptance', 'Run Operator denial acceptance', 'Runtime Approval Abort acceptance'));
+   UPDATE runs SET created_at = '2000-01-01T00:00:00Z' WHERE id = (
+     SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     WHERE coding_tasks.title = 'Runtime Approval Browser acceptance')" >/dev/null
+
+runtime_approval_abort_run_id="$(docker exec "$postgres_container" psql -At -U agent_platform -d agent_platform_oidc -c "SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Runtime Approval Abort acceptance'")"
+EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
+RUNTIME_APPROVAL_RUN_ID="$runtime_approval_abort_run_id" \
+  go -C "$repository_root/backend" test -count=1 -run '^TestRuntimeApprovalGateUsesAtomicGovernanceAndClosesAbandonedApproval$' ./internal/data/controlplane/runtimeapproval
+
+runtime_approval_browser_run_id="$(docker exec "$postgres_container" psql -At -U agent_platform -d agent_platform_oidc -c "SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Runtime Approval Browser acceptance'")"
+runtime_approval_ready="$acceptance_tmp/runtime-approval-ready"
+runtime_approval_marker="$acceptance_tmp/runtime-approval-continued"
+(
+  EXECUTION_DATABASE_DSN='postgres://agent_platform:acceptance-db-password@127.0.0.1:15432/agent_platform_oidc?sslmode=disable' \
+  RUNTIME_APPROVAL_BROWSER_RUN_ID="$runtime_approval_browser_run_id" \
+  RUNTIME_APPROVAL_READY_FILE="$runtime_approval_ready" \
+  RUNTIME_APPROVAL_MARKER_FILE="$runtime_approval_marker" \
+    go -C "$repository_root/backend" test -count=1 -run '^TestRuntimeApprovalBrowserClosedLoop$' ./internal/data/controlplane/runtimeapproval
+) >"$acceptance_tmp/runtime-approval.log" 2>&1 &
+runtime_approval_browser_pid=$!
+for _ in {1..100}; do
+  [[ -f "$runtime_approval_ready" ]] && break
+  if ! kill -0 "$runtime_approval_browser_pid" >/dev/null 2>&1; then
+    redact_canaries "$acceptance_tmp/runtime-approval.log" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+[[ -f "$runtime_approval_ready" ]] || { redact_canaries "$acceptance_tmp/runtime-approval.log" >&2; exit 1; }
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => ({ taskID: sessionStorage.getItem("acceptance-runtime-approval-browser-task"), runID: sessionStorage.getItem("acceptance-runtime-approval-browser-run") }));
+  await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${values.taskID}`, { waitUntil: "commit" });
+  const approval = page.getByTestId("run-approvals").filter({ hasText: "Browser protected write" }); await approval.waitFor();
+  const approveButton = approval.locator("[data-testid^=approve-run-]"); await approveButton.waitFor(); const response = page.waitForResponse((item) => item.url().includes("/decision") && item.request().method() === "POST"); await approveButton.click(); if ((await response).status() !== 200) throw new Error("browser did not approve the paused Runtime");
+  await page.waitForFunction((runID) => document.body.textContent.includes(runID), values.runID);
+}'
+if ! wait "$runtime_approval_browser_pid"; then
+  redact_canaries "$acceptance_tmp/runtime-approval.log" >&2
+  exit 1
+fi
+runtime_approval_browser_pid=""
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, taskID: sessionStorage.getItem("acceptance-run-approval-task"), runID: sessionStorage.getItem("acceptance-run-approval"), operatorRunID: sessionStorage.getItem("acceptance-run-operator") }; });
+  const requestApproval = async (runID, key, version, risk) => page.evaluate(async ({ values, runID, key, version, risk }) => { const response = await fetch(`/api/v1/runs/${runID}/approvals`, { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key, "If-Match": `"${version}"` }, body: JSON.stringify({ kind: "high_risk_change", request: { risk_reason: risk, command: "git push review branch" } }) }); return { status: response.status, body: await response.json() }; }, { values, runID, key, version, risk });
+  const first = await requestApproval(values.runID, "run-approval-request-1", 1, "Acceptance protected write");
+  if (first.status !== 201 || first.body.requested_by !== "33333333-3333-4333-8333-333333333333") throw new Error(`Run Approval request failed: ${JSON.stringify(first)}`);
+  await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${values.taskID}`); await page.getByTestId("run-approvals").filter({ hasText: "Acceptance protected write" }).waitFor();
+  const decisionRequest = page.waitForRequest((request) => request.url().includes(`/approvals/${first.body.id}/decision`) && request.method() === "POST"); const decisionResponse = page.waitForResponse((response) => response.url().includes(`/approvals/${first.body.id}/decision`) && response.request().method() === "POST");
+  await page.getByTestId(`approve-run-${first.body.id}`).click(); const sent = await decisionRequest; if ((await decisionResponse).status() !== 200) throw new Error("Run Approval UI approve failed");
+  const replay = await page.evaluate(async ({ values, first, key }) => { const response = await fetch(`/api/v1/approvals/${first.body.id}/decision`, { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key, "If-Match": `"${first.body.version}"` }, body: JSON.stringify({ approved: true, reason: "" }) }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed"), body: await response.json() }; }, { values, first, key: sent.headers()["idempotency-key"] });
+  if (replay.status !== 200 || replay.replayed !== "true" || replay.body.id !== first.body.id) throw new Error("Run Approval decision replay was not stable");
+  const second = await requestApproval(values.runID, "run-approval-request-2", 3, "Concurrent decision"); if (second.status !== 201) throw new Error(`second Run Approval request failed: ${JSON.stringify(second)}`);
+  const decide = (key) => page.evaluate(async ({ values, second, key }) => { const response = await fetch(`/api/v1/approvals/${second.body.id}/decision`, { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key, "If-Match": `"${second.body.version}"` }, body: JSON.stringify({ approved: true, reason: "concurrent acceptance" }) }); return response.status; }, { values, second, key });
+  const concurrent = await Promise.all([decide("run-approval-concurrent-a"), decide("run-approval-concurrent-b")]); if (concurrent.sort().join(",") !== "200,412") throw new Error(`concurrent Run Approval decisions = ${concurrent}`);
+  const third = await requestApproval(values.runID, "run-approval-request-3", 5, "Reject destructive operation"); if (third.status !== 201) throw new Error(`third Run Approval request failed: ${JSON.stringify(third)}`);
+  await page.reload(); await page.getByTestId(`reject-run-${third.body.id}`).waitFor(); const rejection = page.waitForResponse((response) => response.url().includes(`/approvals/${third.body.id}/decision`) && response.request().method() === "POST");
+  await page.locator(".approval-decision textarea").fill("Destructive operation denied"); await page.getByTestId(`reject-run-${third.body.id}`).click(); if ((await rejection).status() !== 200) throw new Error("Run Approval UI rejection failed");
+  await page.getByTestId("run-controls").filter({ hasText: "Version 7" }).waitFor(); if (!(await page.locator(".workspace-facts").textContent()).includes("failed")) throw new Error("rejected Run did not enter failed state");
+  const operatorApproval = await requestApproval(values.operatorRunID, "run-operator-approval-request", 1, "Operator must not decide"); if (operatorApproval.status !== 201) throw new Error("operator denial Approval fixture failed"); await page.evaluate((approvalID) => sessionStorage.setItem("acceptance-run-operator-approval", approvalID), operatorApproval.body.id);
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const values = await page.evaluate(() => ({ taskID: sessionStorage.getItem("acceptance-run-control-task"), runID: sessionStorage.getItem("acceptance-run-control"), concurrentRunID: sessionStorage.getItem("acceptance-run-concurrent-control") }));
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const controlConcurrent = (key) => page.evaluate(async ({ accessToken, values, key }) => fetch(`/api/v1/runs/${values.concurrentRunID}/interrupt`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Idempotency-Key": key, "If-Match": "\"1\"" } }).then((response) => response.status), { accessToken, values, key });
+  const concurrent = await Promise.all([controlConcurrent("run-control-concurrent-a"), controlConcurrent("run-control-concurrent-b")]); if (concurrent.sort().join(",") !== "200,412") throw new Error(`concurrent Run controls = ${concurrent}`);
+  await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${values.taskID}`);
+  const request = page.waitForRequest((item) => item.url().endsWith(`/runs/${values.runID}/interrupt`) && item.method() === "POST"); const response = page.waitForResponse((item) => item.url().endsWith(`/runs/${values.runID}/interrupt`) && item.request().method() === "POST"); await page.getByTestId("interrupt-run").click(); const sent = await request; if ((await response).status() !== 200) throw new Error("Run interrupt failed");
+  const replay = await page.evaluate(async ({ accessToken, values, key }) => { const headers = { Authorization: `Bearer ${accessToken}`, "Idempotency-Key": key, "If-Match": "\"1\"" }; const response = await fetch(`/api/v1/runs/${values.runID}/interrupt`, { method: "POST", headers }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed") }; }, { accessToken, values, key: sent.headers()["idempotency-key"] }); if (replay.status !== 200 || replay.replayed !== "true") throw new Error("Run interrupt replay failed");
+  const stale = await page.evaluate(async ({ accessToken, values }) => fetch(`/api/v1/runs/${values.runID}/interrupt`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Idempotency-Key": "run-interrupt-stale", "If-Match": "\"1\"" } }).then((result) => result.status), { accessToken, values }); if (stale !== 412) throw new Error(`stale Run control returned ${stale}`);
+}'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE runs SET state = 'interrupted', updated_at = now(), version = version + 1 WHERE id = (
+     SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Run Control acceptance')" >/dev/null
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  await page.reload(); await page.getByTestId("resume-run").waitFor(); const resumed = page.waitForResponse((response) => response.url().endsWith("/resume") && response.request().method() === "POST"); await page.getByTestId("resume-run").click(); if ((await resumed).status() !== 200) throw new Error("interrupted Run did not resume");
+  page.once("dialog", (dialog) => dialog.accept()); const cancelled = page.waitForResponse((response) => response.url().endsWith("/cancel") && response.request().method() === "POST"); await page.getByTestId("cancel-run").click(); if ((await cancelled).status() !== 200) throw new Error("resuming Run did not cancel"); await page.reload(); await page.getByTestId("run-controls").filter({ hasText: "Version 5" }).waitFor(); if (await page.getByTestId("cancel-run").count()) throw new Error("terminal Run still showed Cancel");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
   const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
   const releaseIDs = await page.evaluate(() => ({ agent: sessionStorage.getItem("acceptance-agent-id"), release: sessionStorage.getItem("acceptance-high-release-id") }));
   const runtime = await page.evaluate(async ({ accessToken, releaseIDs }) => { const releaseResponse = await fetch(`/api/v1/agents/${releaseIDs.agent}/releases/${releaseIDs.release}?team_id=66666666-6666-4666-8666-666666666666`, { headers: { Authorization: `Bearer ${accessToken}` } }); const release = await releaseResponse.json(); const response = await fetch(`/api/v1/runtime-images/${release.runtime_image_id}`, { headers: { Authorization: `Bearer ${accessToken}` } }); return response.json(); }, { accessToken, releaseIDs });
@@ -593,7 +693,7 @@ browser --session "$playwright_session" run-code 'async (page) => {
   const write = async () => page.evaluate(async ({ runtime, headers, body }) => { const response = await fetch(`/api/v1/runtime-images/${runtime.id}/status`, { method: "PATCH", headers, body }); return { status: response.status, replayed: response.headers.get("Idempotency-Replayed"), body: await response.json() }; }, { runtime, headers, body });
   const first = await write(); const replay = await write();
   if (first.status !== 200 || replay.status !== 200 || replay.replayed !== "true" || replay.body.id !== runtime.id || !replay.body.conformance_evidence_sha256) throw new Error("Runtime status write was not replayed from its persisted response");
-  await page.getByTestId("nav-workspace").click(); await page.waitForURL(/workspace/); await page.getByTestId("launch-prerequisite").waitFor();
+  await page.goto("http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666"); await page.getByTestId("launch-prerequisite").waitFor();
   if (!(await page.getByTestId("launch-prerequisite").textContent()).includes("Production Runtime")) throw new Error("blocked Runtime did not produce the exact Coding Task prerequisite");
 }'
 
@@ -622,6 +722,11 @@ browser --session "$playwright_session" run-code 'async (page) => { const access
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/repository-bindings", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "binding-denied" }, body: JSON.stringify({ binding: { team_id: "66666666-6666-4666-8666-666666666666", name: "denied" } }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "catalog_write_access_denied") throw new Error("Team-scoped Platform Administrator modified a Repository Binding"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const response = await page.evaluate(async (accessToken) => fetch("/api/v1/agents", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "agent-build-denied" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", name: "denied-agent" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), accessToken); if (response.status !== 403 || response.body.error !== "agent_build_access_denied") throw new Error("out-of-Team administrator created an Agent"); }'
 browser --session "$playwright_session" run-code 'async (page) => { const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, releaseID: sessionStorage.getItem("acceptance-low-release-id") }; }); const response = await page.evaluate(async ({ accessToken, releaseID }) => fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "coding-task-denied" }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", agent_release_id: releaseID, title: "Denied", request_text: "Must not launch" }) }).then(async (result) => ({ status: result.status, body: await result.json() })), values); if (response.status !== 403 || response.body.error !== "collaboration_access_denied") throw new Error("user without Team permission created a Coding Task"); }'
+browser --session "$playwright_session" run-code 'async (page) => { const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, runID: sessionStorage.getItem("acceptance-run-control") }; }); const denied = await page.evaluate(async ({ accessToken, runID }) => fetch(`/api/v1/runs/${runID}/cancel`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Idempotency-Key": "revoked-run-control", "If-Match": "\"5\"" } }).then(async (response) => ({ status: response.status, body: await response.json() })), values); if (denied.status !== 403 || denied.body.error !== "run_control_denied") throw new Error("revoked Team grant still authorized Run control"); }'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE role_grants SET role = 'run_operator' WHERE id = '45454545-4545-4545-8545-454545454545';" >/dev/null
+browser --session "$playwright_session" run-code 'async (page) => { await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click(); await page.getByRole("textbox", { name: "Username or email" }).fill("release-reviewer"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click(); await page.waitForURL(/team=66666666/); const approvalID = await page.evaluate(() => sessionStorage.getItem("acceptance-run-operator-approval")); const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; }); const denied = await page.evaluate(async ({ accessToken, approvalID }) => fetch(`/api/v1/approvals/${approvalID}/decision`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Idempotency-Key": "operator-decision-denied", "If-Match": "\"1\"" }, body: JSON.stringify({ approved: true, reason: "operator" }) }).then(async (response) => ({ status: response.status, body: await response.json() })), { accessToken, approvalID }); if (denied.status !== 403 || denied.body.error !== "run_control_denied") throw new Error("Run Operator decided a Run Approval"); }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = NULL WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null

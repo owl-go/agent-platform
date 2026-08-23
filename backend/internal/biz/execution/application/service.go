@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"agent-platform/backend/internal/agentruntime"
 	"agent-platform/backend/internal/biz/execution/domain"
 	"agent-platform/backend/internal/biz/workflow"
 )
@@ -124,10 +125,28 @@ func (service *Service) AppendEvent(ctx context.Context, token string, event dom
 	if service.repository == nil {
 		return fmt.Errorf("Run Repository is required")
 	}
-	if strings.TrimSpace(token) == "" || !strings.HasPrefix(event.Type, "runtime.") || len(event.Payload) == 0 || !json.Valid(event.Payload) {
+	if strings.TrimSpace(token) == "" || !validRuntimeEventType(event.Type) || len(event.Payload) == 0 || !json.Valid(event.Payload) {
 		return fmt.Errorf("valid lease token and Runtime Event are required")
 	}
 	return service.repository.AppendEvent(ctx, token, event, service.clock.Now())
+}
+
+func validRuntimeEventType(value string) bool {
+	switch agentruntime.EventKind(value) {
+	case agentruntime.EventRuntimeStarted,
+		agentruntime.EventMessageDelta,
+		agentruntime.EventMessageCompleted,
+		agentruntime.EventCommandRequested,
+		agentruntime.EventCommandCompleted,
+		agentruntime.EventFileChanged,
+		agentruntime.EventUsageUpdated,
+		agentruntime.EventCheckpointSaved,
+		agentruntime.EventRuntimeCompleted,
+		agentruntime.EventRuntimeFailed:
+		return true
+	default:
+		return false
+	}
 }
 
 func (service *Service) ReconcileExpired(ctx context.Context, maxAttempts int) (domain.ReconcileResult, error) {

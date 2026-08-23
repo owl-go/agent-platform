@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,6 +51,60 @@ func TestWorkflowRejectsCredentialInStagedDiff(t *testing.T) {
 	}
 	if output, err := exec.Command("git", "--git-dir", remote, "show-ref", "--verify", "refs/heads/"+plan.ReviewBranch).CombinedOutput(); err == nil {
 		t.Fatalf("rejected branch was pushed: %s", output)
+	}
+}
+
+func TestWorkflowRequiresApprovalBeforeStartingRuntime(t *testing.T) {
+	remote := seedRemote(t)
+	workspace, credentials := emptyDirectory(t), emptyDirectory(t)
+	approved := false
+	plan := Plan{
+		RunID: "run-approval", RepositoryURL: remote, TargetBranch: "main", ReviewBranch: "agent-platform/approval",
+		GitAuthorName: "Agent Platform", GitAuthorEmail: "agent@example.test", RequireApproval: true,
+	}
+	workflow := Workflow{
+		Plan: plan, Workspace: workspace, CredentialRoot: credentials, Stdout: &strings.Builder{}, Stderr: &strings.Builder{},
+		ApprovalGate: func(_ context.Context, _ io.Writer, received Plan) error {
+			if received.ReviewBranch != plan.ReviewBranch {
+				t.Fatalf("Approval plan = %+v", received)
+			}
+			approved = true
+			return nil
+		},
+	}
+	if err := workflow.Execute(context.Background(), []string{"sh", "-c", "test \"$APPROVED\" = yes && printf changed > result.txt"}); err == nil {
+		t.Fatal("runtime unexpectedly inherited test-only approval state")
+	}
+	if !approved {
+		t.Fatal("Runtime started without invoking Approval Gate")
+	}
+
+	approved = false
+	workflow.ApprovalGate = func(context.Context, io.Writer, Plan) error { approved = true; return nil }
+	if err := os.Setenv("APPROVED", "yes"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Unsetenv("APPROVED") })
+	workspace = emptyDirectory(t)
+	workflow.Workspace = workspace
+	if err := workflow.Execute(context.Background(), []string{"sh", "-c", "test \"$APPROVED\" = yes && printf changed > result.txt"}); err != nil {
+		t.Fatal(err)
+	}
+	if !approved {
+		t.Fatal("Approval Gate was not invoked")
+	}
+}
+
+func TestWorkflowFailsClosedWithoutRequiredApprovalGate(t *testing.T) {
+	remote := seedRemote(t)
+	plan := Plan{
+		RunID: "run-approval", RepositoryURL: remote, TargetBranch: "main", ReviewBranch: "agent-platform/approval-missing",
+		GitAuthorName: "Agent Platform", GitAuthorEmail: "agent@example.test", RequireApproval: true,
+	}
+	err := (Workflow{Plan: plan, Workspace: emptyDirectory(t), CredentialRoot: emptyDirectory(t), Stdout: &strings.Builder{}, Stderr: &strings.Builder{}}).
+		Execute(context.Background(), []string{"sh", "-c", "printf unsafe > result.txt"})
+	if err == nil || !strings.Contains(err.Error(), "Approval Gate is required") {
+		t.Fatalf("error = %v", err)
 	}
 }
 

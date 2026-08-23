@@ -1489,6 +1489,8 @@ export interface components {
             decision_reason?: string;
             /** Format: int64 */
             version?: number;
+            requested_by?: string;
+            decision_actor_type?: string;
         };
         v1RuntimeImage: {
             id?: string;
@@ -2414,7 +2416,10 @@ export interface operations {
     RunApprovalService_DecideRunApproval: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 approval_id: string;
             };
@@ -3508,7 +3513,10 @@ export interface operations {
     RunApprovalService_RequestRunApproval: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 run_id: string;
             };
@@ -3574,7 +3582,10 @@ export interface operations {
     ExecutionService_CancelRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 run_id: string;
             };
@@ -3641,7 +3652,10 @@ export interface operations {
     ExecutionService_InterruptRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 run_id: string;
             };
@@ -3672,7 +3686,10 @@ export interface operations {
     ExecutionService_KillRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 run_id: string;
             };
@@ -3703,7 +3720,10 @@ export interface operations {
     ExecutionService_ResumeRun: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
             path: {
                 run_id: string;
             };

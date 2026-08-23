@@ -26,7 +26,7 @@ var _ Approval = (*ApprovalService)(nil)
 
 func (workflow *ApprovalService) Request(ctx context.Context, approval approvaldomain.Approval, expectedRunVersion int64, now time.Time) error {
 	return workflow.within(ctx, func(participants Participants) error {
-		if err := participants.Execution.PauseForApproval(ctx, approval.RunID, expectedRunVersion, approval.ID, string(approval.Kind), now); err != nil {
+		if err := participants.Execution.PauseForApproval(ctx, approval.RunID, expectedRunVersion, approval.ID, string(approval.Kind), approval.RequestedBy, now); err != nil {
 			return mapExecutionApprovalError(err)
 		}
 		pending, err := participants.Approval.PendingExists(ctx, approval.RunID)
@@ -48,7 +48,7 @@ func (workflow *ApprovalService) Decide(ctx context.Context, approval approvaldo
 		err := participants.Execution.ApplyApprovalDecision(ctx, executiondomain.ApprovalDecision{
 			ApprovalID: approval.ID, RunID: approval.RunID,
 			Approved:    approval.State == approvaldomain.StateApproved,
-			ActorUserID: approval.DecidedBy, Reason: approval.DecisionReason,
+			ActorUserID: approval.DecidedBy, ActorType: string(approval.DecisionActorType), Reason: approval.DecisionReason,
 		}, now)
 		return mapExecutionApprovalError(err)
 	})

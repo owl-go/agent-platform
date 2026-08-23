@@ -35,6 +35,40 @@ func TestRunCapturesStdoutAndStderr(t *testing.T) {
 	}
 }
 
+func TestRunObserverPausesAndResumesRealProcessGroup(t *testing.T) {
+	marker := t.TempDir() + "/continued"
+	observer := &approvalPauseObserver{paused: make(chan struct{}), decision: make(chan struct{})}
+	spec := helperSpec("approval-pause")
+	spec.Env = append(spec.Env, "APPROVAL_CONTINUED_MARKER="+marker)
+	spec.Observer = observer
+	done := make(chan error, 1)
+	go func() {
+		_, err := processharness.Run(context.Background(), spec, &recordingSink{})
+		done <- err
+	}()
+	select {
+	case <-observer.paused:
+	case <-time.After(time.Second):
+		t.Fatal("process was not paused")
+	}
+	time.Sleep(300 * time.Millisecond)
+	if _, err := os.Stat(marker); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("paused process crossed the protected action boundary: %v", err)
+	}
+	close(observer.decision)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("process did not resume")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("resumed process did not continue: %v", err)
+	}
+}
+
 func TestRunClassifiesBinaryAndLargeOutputAsArtifacts(t *testing.T) {
 	tests := map[string]struct {
 		scenario string
@@ -268,6 +302,12 @@ func TestHelperProcess(t *testing.T) {
 	case "credential-output":
 		fmt.Fprintln(os.Stdout, "stdout="+os.Getenv("TEST_SECRET"))
 		fmt.Fprintln(os.Stderr, "stderr="+os.Getenv("TEST_SECRET"))
+	case "approval-pause":
+		fmt.Fprintln(os.Stdout, "approval requested")
+		time.Sleep(200 * time.Millisecond)
+		if err := os.WriteFile(os.Getenv("APPROVAL_CONTINUED_MARKER"), []byte("continued"), 0o600); err != nil {
+			os.Exit(3)
+		}
 	default:
 		os.Exit(2)
 	}
@@ -292,6 +332,25 @@ type failingSink struct {
 
 type failingObserver struct {
 	err error
+}
+
+type approvalPauseObserver struct {
+	controller processharness.ProcessController
+	paused     chan struct{}
+	decision   chan struct{}
+}
+
+func (observer *approvalPauseObserver) BindProcess(controller processharness.ProcessController) {
+	observer.controller = controller
+}
+
+func (observer *approvalPauseObserver) Observe(context.Context, processharness.Stream, []byte) error {
+	if err := observer.controller.Pause(); err != nil {
+		return err
+	}
+	close(observer.paused)
+	<-observer.decision
+	return observer.controller.Resume()
 }
 
 func (o failingObserver) Observe(context.Context, processharness.Stream, []byte) error {

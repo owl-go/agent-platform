@@ -55,7 +55,7 @@ Application Worker 统一编排 `Claim -> MarkRunning -> Renew -> Finish`。租�
 
 Run 控制命令使用 Version 乐观锁和 Idempotency Key。Interrupt 将活跃 Run 切换到 `interrupting`；Worker 在最长五秒的续租检查周期内取消 Runtime，随后确认 `interrupted` 并释放 Run/Workspace Lease。Resume 只允许 `interrupted -> resuming`，由普通 Claim 创建新 Attempt。Cancel 和 Operator Kill 立即提交终态、取消活跃 Attempt 并撤销 Lease；Kill 额外记录安全的 `operator_killed` 终态错误。Agent User、Agent Builder 和 Platform Administrator 可协作式 Interrupt/Resume/Cancel；Run Operator 可 Interrupt/Cancel/Kill，但不能代替用户 Resume。
 
-Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run 的高风险计划或变更请求：创建 Pending Approval 与 `running -> waiting_confirmation` 在同一事务提交，批准后恢复 `running`，拒绝后以 `approval_rejected` 终止 Run、取消 Attempt 并撤销 Lease。只有 Agent User、Agent Builder 和 Platform Administrator 可申请或决定；Run Operator 只保留运行控制职责。Runtime Adapter 只有在确实暂停风险动作后才能发起该请求，Runtime 事件到此应用用例的适配随真实四 Runtime 联调完成。
+Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run 的高风险计划或变更请求：创建 Pending Approval 与 `running -> waiting_confirmation` 在同一事务提交，批准后恢复 `running`，拒绝后以 `approval_rejected` 终止 Run、取消 Attempt 并撤销 Lease。只有 Agent User、Agent Builder 和 Platform Administrator 可申请或决定；Run Operator 只保留运行控制职责。四种 Production Runtime 都由受控 `runtime-workflow` 在启动真实 CLI 之前输出平台 `approval.requested` 协议帧并自行 `SIGSTOP`，因此 CLI 的 bypass 模式不能越过审批；Adapter 收到该帧后再暂停整个容器。宿主进程使用进程组 `SIGSTOP`/`SIGCONT`，Production 容器通过明确的容器名执行 `docker pause`，批准时依次执行 `docker unpause` 与 `docker kill --signal CONT`，不能只依赖 stdout 背压。Runtime Approval 的幂等身份包含 Run、Attempt 和 Runtime Event Sequence；等待被取消或连续读取失败时，平台以 `system` 决策者类型自动拒绝，`decided_by` 与 Audit `actor_user_id` 保持为空，避免伪装成用户决定。
 
 ## 身份与授权边界
 

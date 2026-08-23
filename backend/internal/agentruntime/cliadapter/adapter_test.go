@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"agent-platform/backend/internal/agentruntime"
+	"agent-platform/backend/internal/agentruntime/platformprotocol"
 	"agent-platform/backend/internal/agentruntime/processharness"
 )
 
@@ -75,6 +76,28 @@ func TestAdapterStopsWhenEventSinkFails(t *testing.T) {
 	}
 }
 
+func TestAdapterPausesForControlledWorkflowApprovalEvent(t *testing.T) {
+	runner := &approvalProcessRunner{}
+	adapter := New(fakeDriver{}, Config{Command: []string{"fake-runtime"}, ExpectedVersion: "1.2.3", RunProcess: runner.Run})
+	events := &recordingEventSink{}
+	_, err := adapter.Execute(context.Background(), agentruntime.ExecuteRequest{
+		RunID: "run-1", WorkspacePath: t.TempDir(), Instruction: "fix", Model: "model", EnvironmentRef: "env-1",
+	}, events)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runner.controller.pauses != 1 || runner.controller.resumes != 1 {
+		t.Fatalf("process controls = %+v", runner.controller)
+	}
+	found := false
+	for _, event := range events.events {
+		found = found || event.Kind == agentruntime.EventApprovalRequested
+	}
+	if !found {
+		t.Fatalf("events = %+v", events.events)
+	}
+}
+
 func TestClassifyProcessErrorPreservesRuntimeClassification(t *testing.T) {
 	cause := errors.New("provider rejected credentials")
 	authenticationError := &agentruntime.Error{
@@ -120,6 +143,34 @@ func (p *fakeParser) Result() ParsedResult { return p.result }
 type fakeProcessRunner struct {
 	calls int
 }
+
+type approvalProcessRunner struct{ controller recordingController }
+
+func (runner *approvalProcessRunner) Run(ctx context.Context, spec processharness.Spec, sink processharness.OutputSink) (processharness.Result, error) {
+	if slicesContain(spec.Command, "--version") {
+		_ = sink.Store(ctx, processharness.Output{Stream: processharness.StreamStdout, Reader: strings.NewReader("1.2.3\n"), Size: 6, UTF8: true, Inline: true})
+		return processharness.Result{}, nil
+	}
+	aware, ok := spec.Observer.(processharness.ProcessAwareObserver)
+	if !ok {
+		return processharness.Result{}, errors.New("observer is not process-aware")
+	}
+	aware.BindProcess(&runner.controller)
+	line, _ := platformprotocol.EncodeApprovalRequest("protected execution", "review")
+	line = append(line, '\n')
+	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, line); err != nil {
+		return processharness.Result{}, err
+	}
+	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, []byte(`{"final":"done"}`+"\n")); err != nil {
+		return processharness.Result{}, err
+	}
+	return processharness.Result{}, nil
+}
+
+type recordingController struct{ pauses, resumes int }
+
+func (controller *recordingController) Pause() error  { controller.pauses++; return nil }
+func (controller *recordingController) Resume() error { controller.resumes++; return nil }
 
 func (r *fakeProcessRunner) Run(ctx context.Context, spec processharness.Spec, sink processharness.OutputSink) (processharness.Result, error) {
 	r.calls++

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/agentruntime"
+	"agent-platform/backend/internal/agentruntime/platformprotocol"
 	"agent-platform/backend/internal/agentruntime/processharness"
 )
 
@@ -200,10 +201,17 @@ type lineObserver struct {
 	parser  Parser
 	emitter *eventEmitter
 	buffers map[processharness.Stream][]byte
+	process processharness.ProcessController
 }
 
 func newLineObserver(parser Parser, emitter *eventEmitter) *lineObserver {
 	return &lineObserver{parser: parser, emitter: emitter, buffers: make(map[processharness.Stream][]byte)}
+}
+
+func (o *lineObserver) BindProcess(process processharness.ProcessController) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.process = process
 }
 
 func (o *lineObserver) Observe(ctx context.Context, stream processharness.Stream, data []byte) error {
@@ -239,11 +247,32 @@ func (o *lineObserver) Flush(ctx context.Context) error {
 }
 
 func (o *lineObserver) parseLine(ctx context.Context, stream processharness.Stream, line []byte) error {
-	parsed, err := o.parser.Parse(stream, line)
+	platformEvent, recognized, err := platformprotocol.Parse(line)
+	var parsed []ParsedEvent
+	if err == nil && recognized {
+		parsed = []ParsedEvent{{Kind: agentruntime.EventKind(platformEvent.Kind), Payload: json.RawMessage(platformEvent.Payload)}}
+	} else if err == nil {
+		parsed, err = o.parser.Parse(stream, line)
+	}
 	if err != nil {
 		return runtimeError(agentruntime.ErrorInternalAdapter, "parse runtime output", err)
 	}
 	for _, event := range parsed {
+		if event.Kind == agentruntime.EventApprovalRequested {
+			if o.process == nil {
+				return runtimeError(agentruntime.ErrorInternalAdapter, "pause Runtime for Approval", errors.New("process controller is unavailable"))
+			}
+			if err := o.process.Pause(); err != nil {
+				return runtimeError(agentruntime.ErrorRuntimeUnavailable, "pause Runtime for Approval", err)
+			}
+			if err := o.emitter.publish(ctx, event.Kind, event.Payload); err != nil {
+				return err
+			}
+			if err := o.process.Resume(); err != nil {
+				return runtimeError(agentruntime.ErrorRuntimeUnavailable, "resume Runtime after Approval", err)
+			}
+			continue
+		}
 		if err := o.emitter.publish(ctx, event.Kind, event.Payload); err != nil {
 			return err
 		}

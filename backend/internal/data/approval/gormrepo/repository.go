@@ -46,16 +46,18 @@ func (jsonValue) GormDataType() string                          { return "json" 
 func (jsonValue) GormDBDataType(*gorm.DB, *schema.Field) string { return "JSONB" }
 
 type approvalRecord struct {
-	ID             string     `gorm:"column:id;primaryKey"`
-	RunID          string     `gorm:"column:run_id"`
-	Kind           string     `gorm:"column:kind"`
-	Request        jsonValue  `gorm:"column:request;type:jsonb"`
-	State          string     `gorm:"column:state"`
-	RequestedAt    time.Time  `gorm:"column:requested_at"`
-	DecidedBy      *string    `gorm:"column:decided_by"`
-	DecidedAt      *time.Time `gorm:"column:decided_at"`
-	DecisionReason string     `gorm:"column:decision_reason"`
-	Version        int64      `gorm:"column:version"`
+	ID                string     `gorm:"column:id;primaryKey"`
+	RunID             string     `gorm:"column:run_id"`
+	Kind              string     `gorm:"column:kind"`
+	Request           jsonValue  `gorm:"column:request;type:jsonb"`
+	State             string     `gorm:"column:state"`
+	RequestedAt       time.Time  `gorm:"column:requested_at"`
+	RequestedBy       *string    `gorm:"column:requested_by"`
+	DecidedBy         *string    `gorm:"column:decided_by"`
+	DecisionActorType *string    `gorm:"column:decision_actor_type"`
+	DecidedAt         *time.Time `gorm:"column:decided_at"`
+	DecisionReason    string     `gorm:"column:decision_reason"`
+	Version           int64      `gorm:"column:version"`
 }
 
 func (approvalRecord) TableName() string { return "approvals" }
@@ -120,7 +122,8 @@ func (repository *Repository) PendingExists(ctx context.Context, runID string) (
 }
 
 func (repository *Repository) Create(ctx context.Context, approval domain.Approval) error {
-	record := approvalRecord{ID: approval.ID, RunID: approval.RunID, Kind: string(approval.Kind), Request: jsonValue(approval.Request), State: string(approval.State), RequestedAt: approval.RequestedAt, Version: approval.Version}
+	requestedBy := approval.RequestedBy
+	record := approvalRecord{ID: approval.ID, RunID: approval.RunID, Kind: string(approval.Kind), Request: jsonValue(approval.Request), State: string(approval.State), RequestedAt: approval.RequestedAt, RequestedBy: &requestedBy, Version: approval.Version}
 	if err := repository.db.WithContext(ctx).Create(&record).Error; err != nil {
 		return fmt.Errorf("create Run Approval: %w", err)
 	}
@@ -128,10 +131,15 @@ func (repository *Repository) Create(ctx context.Context, approval domain.Approv
 }
 
 func (repository *Repository) Decide(ctx context.Context, approval domain.Approval, expectedVersion int64) error {
-	decidedBy := approval.DecidedBy
+	var decidedBy *string
+	if approval.DecidedBy != "" {
+		value := approval.DecidedBy
+		decidedBy = &value
+	}
+	actorType := string(approval.DecisionActorType)
 	update := repository.db.WithContext(ctx).Model(&approvalRecord{}).
 		Where("id = ? AND version = ? AND state = ?", approval.ID, expectedVersion, domain.StatePending).
-		Updates(map[string]any{"state": approval.State, "decided_by": &decidedBy, "decided_at": approval.DecidedAt, "decision_reason": approval.DecisionReason, "version": approval.Version})
+		Updates(map[string]any{"state": approval.State, "decided_by": decidedBy, "decision_actor_type": actorType, "decided_at": approval.DecidedAt, "decision_reason": approval.DecisionReason, "version": approval.Version})
 	if update.Error != nil {
 		return fmt.Errorf("decide Run Approval: %w", update.Error)
 	}
@@ -146,5 +154,13 @@ func restore(record approvalRecord) (domain.Approval, error) {
 	if record.DecidedBy != nil {
 		decidedBy = *record.DecidedBy
 	}
-	return domain.Restore(domain.Approval{ID: record.ID, RunID: record.RunID, Kind: domain.Kind(record.Kind), Request: append(json.RawMessage(nil), record.Request...), State: domain.State(record.State), RequestedAt: record.RequestedAt, DecidedBy: decidedBy, DecidedAt: record.DecidedAt, DecisionReason: record.DecisionReason, Version: record.Version})
+	requestedBy := ""
+	if record.RequestedBy != nil {
+		requestedBy = *record.RequestedBy
+	}
+	actorType := domain.DecisionActorType("")
+	if record.DecisionActorType != nil {
+		actorType = domain.DecisionActorType(*record.DecisionActorType)
+	}
+	return domain.Restore(domain.Approval{ID: record.ID, RunID: record.RunID, Kind: domain.Kind(record.Kind), Request: append(json.RawMessage(nil), record.Request...), State: domain.State(record.State), RequestedAt: record.RequestedAt, RequestedBy: requestedBy, DecidedBy: decidedBy, DecisionActorType: actorType, DecidedAt: record.DecidedAt, DecisionReason: record.DecisionReason, Version: record.Version})
 }
