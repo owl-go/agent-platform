@@ -90,6 +90,7 @@ const (
 	EventApprovalRequested EventKind = "approval.requested"
 	EventUsageUpdated      EventKind = "usage.updated"
 	EventCheckpointSaved   EventKind = "checkpoint.saved"
+	EventWorkflowDelivered EventKind = "workflow.delivered"
 	EventRuntimeCompleted  EventKind = "runtime.completed"
 	EventRuntimeFailed     EventKind = "runtime.failed"
 )

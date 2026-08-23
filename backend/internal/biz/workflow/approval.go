@@ -45,12 +45,18 @@ func (workflow *ApprovalService) Decide(ctx context.Context, approval approvaldo
 		if err := participants.Approval.Decide(ctx, approval, expectedVersion); err != nil {
 			return err
 		}
-		err := participants.Execution.ApplyApprovalDecision(ctx, executiondomain.ApprovalDecision{
+		projection, err := participants.Execution.ApplyApprovalDecision(ctx, executiondomain.ApprovalDecision{
 			ApprovalID: approval.ID, RunID: approval.RunID,
 			Approved:    approval.State == approvaldomain.StateApproved,
 			ActorUserID: approval.DecidedBy, ActorType: string(approval.DecisionActorType), Reason: approval.DecisionReason,
 		}, now)
-		return mapExecutionApprovalError(err)
+		if err != nil {
+			return mapExecutionApprovalError(err)
+		}
+		if projection.State != "" {
+			return participants.Collaboration.ProjectFinishedRun(ctx, projection.RunID, projection.SessionID, projection.State, now)
+		}
+		return nil
 	})
 }
 

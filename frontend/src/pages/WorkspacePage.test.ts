@@ -36,6 +36,20 @@ describe("Conversation Workspace", () => {
     expect(wrapper.text()).toContain("run-1");
   });
 
+  it("shows only a validated workflow delivery event as Commit evidence", async () => {
+    const commit = "0123456789abcdef0123456789abcdef01234567";
+    const stream = vi.fn(async (_runID: string, _after: number, onEvent: (event: never) => void) => {
+      onEvent({ run_id: "run-1", sequence: 1, event_type: "message.completed", payload: { commit: "ffffffffffffffffffffffffffffffffffffffff" }, created_at: "2026-08-23T08:00:00Z" } as never);
+      onEvent({ run_id: "run-1", sequence: 2, event_type: "workflow.delivered", payload: { runtime_sequence: 2, payload: { commit, review_branch: session.review_branch } }, created_at: "2026-08-23T08:00:01Z" } as never);
+      onEvent({ run_id: "run-1", sequence: 3, event_type: "run.completed", payload: {}, created_at: "2026-08-23T08:00:02Z" } as never);
+      return { cursor: 3, terminal: true };
+    });
+    const { wrapper } = await mountWorkspace(platformApi({ streamRunEvents: stream }), "/workspace?team=team-1&task=task-1");
+
+    expect(wrapper.get("[data-testid='latest-commit']").text()).toContain(commit);
+    expect(wrapper.get("[data-testid='latest-commit']").text()).not.toContain("ffffffff");
+  });
+
   it("submits an immutable Issue Snapshot and reuses the same intent key after a network retry", async () => {
     const firstFailure = new ApiError("unavailable", 503, "temporary", "request-1");
     const create = vi.fn()
@@ -210,6 +224,7 @@ function platformApi(overrides: Partial<PlatformApi> = {}): PlatformApi {
     listAgents: vi.fn(async () => [agent]), getAgent: vi.fn(), createAgent: vi.fn(), updateAgent: vi.fn(), listAgentDrafts: vi.fn(async () => []), getAgentDraft: vi.fn(), createAgentDraft: vi.fn(), updateAgentDraft: vi.fn(), validateAgentDraft: vi.fn(), getAgentDraftApproval: vi.fn(), requestAgentDraftApproval: vi.fn(), decideAgentDraftApproval: vi.fn(), publishAgentDraft: vi.fn(), listAgentReleases: vi.fn(async () => [release]), getAgentRelease: vi.fn(), deprecateAgentRelease: vi.fn(), blockAgentRelease: vi.fn(),
     listCodingTaskLaunchOptions: vi.fn(async () => ({ items: [{ agent_release_id: release.id, repository_binding_id: binding.id }], prerequisite: "" })), listCodingTasks: vi.fn(async () => [task]), getCodingTask: vi.fn(async () => task), createCodingTask: vi.fn(), getCodingTaskSession: vi.fn(async () => session), listRuns: vi.fn(async () => [run]), getRun: vi.fn(async () => run), listRunApprovals: vi.fn(async () => []), decideRunApproval: vi.fn(), controlRun: vi.fn(),
     streamRunEvents: vi.fn(async () => ({ cursor: 0, terminal: true })), listRunArtifacts: vi.fn(async () => []), getArtifactDownload: vi.fn(),
+    updateCodingTaskState: vi.fn(), continueCodingTask: vi.fn(), listSessionMessages: vi.fn(async () => []), updateSessionMemory: vi.fn(), listMemoryCandidates: vi.fn(async () => []), decideMemoryCandidate: vi.fn(), listAgentMemories: vi.fn(async () => []), updateAgentMemory: vi.fn(), deleteAgentMemory: vi.fn(),
     ...overrides,
   } as PlatformApi;
 }

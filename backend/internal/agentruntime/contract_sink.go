@@ -91,6 +91,7 @@ func knownEventKind(kind EventKind) bool {
 		EventApprovalRequested,
 		EventUsageUpdated,
 		EventCheckpointSaved,
+		EventWorkflowDelivered,
 		EventRuntimeCompleted,
 		EventRuntimeFailed:
 		return true

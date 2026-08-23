@@ -7,6 +7,7 @@ import {
   type Artifact, type CodingTaskLaunchOption, type RepositoryBinding, type Run, type RunApproval, type RunEvent,
 } from "../api/client";
 import { authContextKey } from "../auth/session";
+import TaskContinuityPanel from "./TaskContinuityPanel.vue";
 
 const injectedApi = inject(platformApiKey);
 const injectedAuth = inject(authContextKey);
@@ -63,6 +64,17 @@ const launchableReleases = computed(() => releases.value.filter((release) => {
 const selectedTask = computed(() => tasks.value.find((task) => task.id === selectedTaskID.value));
 const selectedRelease = computed(() => releases.value.find((release) => release.id === selectedTask.value?.agent_release_id));
 const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunID.value) ?? runs.value[0]);
+const deliveredCommit = computed(() => {
+  for (const event of [...runEvents.value].reverse()) {
+    if (event.event_type !== "workflow.delivered" || !event.payload || typeof event.payload !== "object") continue;
+    const envelope = event.payload as Record<string, unknown>;
+    const payload = envelope.payload && typeof envelope.payload === "object" ? envelope.payload as Record<string, unknown> : envelope;
+    const commit = typeof payload.commit === "string" ? payload.commit : "";
+    const branch = typeof payload.review_branch === "string" ? payload.review_branch : "";
+    if (/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(commit) && branch === session.value?.review_branch) return commit;
+  }
+  return "";
+});
 const prerequisite = computed(() => {
   if (launchOptions.value.length === 0) return launchPrerequisite.value || "release";
   return "";
@@ -421,6 +433,7 @@ function safeIssueURL(value?: string) {
               <dl class="run-usage"><div><dt>{{ t('workspace.evidence.usage') }}</dt><dd>{{ previewPayload(selectedRun?.usage ?? {}) }}</dd></div><div><dt>{{ t('workspace.evidence.cost') }}</dt><dd>{{ selectedRun?.cost_amount }}</dd></div><div><dt>{{ t('workspace.evidence.capabilities') }}</dt><dd>{{ previewPayload(selectedRelease?.runtime_image_snapshot?.capabilities ?? {}) }}</dd></div><div v-if="selectedRun?.terminal_error"><dt>{{ t('workspace.evidence.terminalError') }}</dt><dd>{{ previewPayload(selectedRun.terminal_error) }}</dd></div></dl>
             </section>
             <section v-if="selectedTask.issue_snapshot" class="issue-snapshot"><span>{{ t('workspace.immutableIssue') }}</span><h4>{{ selectedTask.issue_snapshot.title }}</h4><p>{{ selectedTask.issue_snapshot.body }}</p><a v-if="safeIssueURL(selectedTask.issue_snapshot.url)" :href="safeIssueURL(selectedTask.issue_snapshot.url)" target="_blank" rel="noreferrer">{{ selectedTask.issue_snapshot.url }}</a></section>
+            <TaskContinuityPanel v-if="session && selectedRelease?.agent_id" :task="selectedTask" :session="session" :team-id="teamID" :agent-id="selectedRelease.agent_id" :can-use="canUse" :delivered-commit="deliveredCommit" @changed="refresh" />
           </template>
         </article>
       </section>

@@ -84,9 +84,45 @@ func TestGORMRepositoryRunLifecycle(t *testing.T) {
 	}
 }
 
+func TestFailedRunReturnsCodingTaskToUserWithoutClosingIt(t *testing.T) {
+	database := openIntegrationDatabase(t)
+	runID := seedRun(t, database.ORM(), "failed-continuation")
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
+
+	lease, found, err := service.Claim(context.Background(), "worker-failed", time.Minute)
+	if err != nil || !found || lease.RunID != runID {
+		t.Fatalf("Claim() = (%+v, %v, %v)", lease, found, err)
+	}
+	if err := service.MarkRunning(context.Background(), lease.Token); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Finish(context.Background(), lease.Token, domain.Outcome{State: domain.Failed, Error: []byte(`{"code":"runtime_failed"}`)}); err != nil {
+		t.Fatal(err)
+	}
+
+	var projection struct {
+		TaskState   string
+		CompletedAt *time.Time
+		Status      string
+	}
+	if err := database.ORM().Raw(`
+		SELECT task.state AS task_state, task.completed_at,
+		       message.content->>'status' AS status
+		FROM runs run
+		JOIN sessions session ON session.id = run.session_id
+		JOIN coding_tasks task ON task.id = session.coding_task_id
+		JOIN session_messages message ON message.session_id = session.id AND message.run_id = run.id
+		WHERE run.id = ? AND message.content->>'type' = 'run_result'`, runID).Scan(&projection).Error; err != nil {
+		t.Fatal(err)
+	}
+	if projection.TaskState != "waiting_for_user" || projection.CompletedAt != nil || projection.Status != "failed" {
+		t.Fatalf("failed Run task projection = %+v", projection)
+	}
+}
+
 func TestGORMRepositoryGetMissingRun(t *testing.T) {
 	database := openIntegrationDatabase(t)
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 	if _, err := service.Get(context.Background(), "6ba7b810-9dad-11d1-80b4-00c04fd430c8"); err != domain.ErrRunNotFound {
 		t.Fatalf("Get missing Run error = %v, want ErrRunNotFound", err)
 	}
@@ -135,7 +171,7 @@ func TestGORMRepositorySearchesRunsWithinTeamScope(t *testing.T) {
 func TestGORMRepositoryRunControlLifecycle(t *testing.T) {
 	database := openIntegrationDatabase(t)
 	runID := seedRun(t, database.ORM(), "run-control")
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 	lease, found, err := service.Claim(context.Background(), "control-worker", time.Minute)
 	if err != nil || !found || lease.RunID != runID {
 		t.Fatalf("Claim() = (%+v, %v, %v)", lease, found, err)
@@ -180,6 +216,7 @@ func TestGORMRepositoryRunControlLifecycle(t *testing.T) {
 	if err := service.Renew(context.Background(), resumed.Token, time.Minute); !errors.Is(err, domain.ErrLeaseLost) {
 		t.Fatalf("killed Run Renew() error = %v, want ErrLeaseLost", err)
 	}
+	assertTaskRunResult(t, database.ORM(), runID, "killed")
 }
 
 func TestGORMRepositoryClaimsTenIndependentSessionsConcurrently(t *testing.T) {
@@ -188,7 +225,7 @@ func TestGORMRepositoryClaimsTenIndependentSessionsConcurrently(t *testing.T) {
 	for index := 0; index < concurrency; index++ {
 		seedRun(t, database.ORM(), fmt.Sprintf("capacity-%02d", index))
 	}
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 	start := make(chan struct{})
 	type claimResult struct {
 		lease domain.Lease
@@ -231,7 +268,7 @@ func TestGORMRepositoryClaimsTenIndependentSessionsConcurrently(t *testing.T) {
 func TestGORMRepositoryCancelBeginsWithinTenSeconds(t *testing.T) {
 	database := openIntegrationDatabase(t)
 	runID := seedRun(t, database.ORM(), "cancel-slo")
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 	lease, found, err := service.Claim(context.Background(), "cancel-slo-worker", time.Minute)
 	if err != nil || !found || lease.RunID != runID {
 		t.Fatalf("Claim() = (%+v, %v, %v)", lease, found, err)
@@ -254,6 +291,7 @@ func TestGORMRepositoryCancelBeginsWithinTenSeconds(t *testing.T) {
 	if err := service.Renew(context.Background(), lease.Token, time.Minute); !errors.Is(err, domain.ErrLeaseLost) {
 		t.Fatalf("cancelled Run Renew() error = %v, want ErrLeaseLost", err)
 	}
+	assertTaskRunResult(t, database.ORM(), runID, "cancelled")
 }
 
 func TestGORMRepositorySerializesWorkspaceWritersPerSession(t *testing.T) {
@@ -267,7 +305,7 @@ func TestGORMRepositorySerializesWorkspaceWritersPerSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	registerRunCleanup(t, database.ORM(), secondRunID)
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 	first, found, err := service.Claim(context.Background(), "worker-a", time.Minute)
 	if err != nil || !found || first.RunID != firstRunID {
 		t.Fatalf("first Claim() = (%+v, %v, %v)", first, found, err)
@@ -296,7 +334,7 @@ func TestGORMRepositorySerializesWorkspaceWritersPerSession(t *testing.T) {
 func TestGORMRepositoryReconcilesExpiredAttempts(t *testing.T) {
 	database := openIntegrationDatabase(t)
 	runID := seedRun(t, database.ORM(), "reconcile")
-	service := application.New(gormrepo.New(database.ORM()))
+	service := application.New(gormrepo.New(database.ORM()), bizworkflow.NewCompletion(gormtx.New(database.ORM())))
 
 	first, found, err := service.Claim(context.Background(), "worker-a", time.Microsecond)
 	if err != nil || !found {
@@ -323,9 +361,30 @@ func TestGORMRepositoryReconcilesExpiredAttempts(t *testing.T) {
 		t.Fatalf("second ReconcileExpired() = (%+v, %v)", result, err)
 	}
 	assertRun(t, database.ORM(), runID, domain.Failed, 2, 0)
+	assertTaskRunResult(t, database.ORM(), runID, "failed")
 	assertEventSequence(t, database.ORM(), runID, []string{
 		"run.attempt_started", "run.retry_scheduled", "run.attempt_started", "run.failed",
 	})
+}
+
+func assertTaskRunResult(t *testing.T, database *gorm.DB, runID, status string) {
+	t.Helper()
+	var projection struct {
+		TaskState string
+		Status    string
+	}
+	if err := database.Raw(`
+		SELECT task.state AS task_state, message.content->>'status' AS status
+		FROM runs run
+		JOIN sessions session ON session.id = run.session_id
+		JOIN coding_tasks task ON task.id = session.coding_task_id
+		JOIN session_messages message ON message.session_id = session.id AND message.run_id = run.id
+		WHERE run.id = ? AND message.content->>'type' = 'run_result'`, runID).Scan(&projection).Error; err != nil {
+		t.Fatal(err)
+	}
+	if projection.TaskState != "waiting_for_user" || projection.Status != status {
+		t.Fatalf("Run %s task projection = %+v, want waiting_for_user/%s", runID, projection, status)
+	}
 }
 
 func openIntegrationDatabase(t *testing.T) *gormdb.Database {

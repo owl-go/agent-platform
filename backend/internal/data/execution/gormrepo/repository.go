@@ -90,16 +90,17 @@ func (repository *Repository) PauseForApproval(ctx context.Context, runID string
 	return appendEvent(repository.db.WithContext(ctx), runID, "approval.requested", map[string]any{"approval_id": approvalID, "kind": kind}, now)
 }
 
-func (repository *Repository) ApplyApprovalDecision(ctx context.Context, decision domain.ApprovalDecision, now time.Time) error {
+func (repository *Repository) ApplyApprovalDecision(ctx context.Context, decision domain.ApprovalDecision, now time.Time) (domain.CompletionProjection, error) {
+	projection := domain.CompletionProjection{}
 	var run runRecord
 	if err := repository.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", decision.RunID).Take(&run).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.ErrRunNotFound
+			return projection, domain.ErrRunNotFound
 		}
-		return fmt.Errorf("lock approved Run: %w", err)
+		return projection, fmt.Errorf("lock approved Run: %w", err)
 	}
 	if run.State != string(domain.WaitingConfirmation) {
-		return domain.ErrApprovalRunState
+		return projection, domain.ErrApprovalRunState
 	}
 	runUpdates := map[string]any{"updated_at": now.UTC(), "version": run.Version + 1}
 	eventType := "approval.approved"
@@ -113,33 +114,36 @@ func (repository *Repository) ApplyApprovalDecision(ctx context.Context, decisio
 	}
 	update := repository.db.WithContext(ctx).Model(&runRecord{}).Where("id = ? AND version = ?", run.ID, run.Version).Updates(runUpdates)
 	if update.Error != nil {
-		return fmt.Errorf("apply Run Approval decision: %w", update.Error)
+		return projection, fmt.Errorf("apply Run Approval decision: %w", update.Error)
 	}
 	if update.RowsAffected != 1 {
-		return domain.ErrConcurrentModification
+		return projection, domain.ErrConcurrentModification
 	}
 	if !decision.Approved {
 		if err := repository.db.WithContext(ctx).Model(&attemptRecord{}).Where("run_id = ? AND state IN ?", run.ID, []string{"provisioning", "running"}).Updates(map[string]any{"state": "cancelled", "ended_at": now.UTC(), "error": runUpdates["terminal_error"]}).Error; err != nil {
-			return fmt.Errorf("cancel rejected Run Attempt: %w", err)
+			return projection, fmt.Errorf("cancel rejected Run Attempt: %w", err)
 		}
 		if err := repository.db.WithContext(ctx).Where("run_id = ?", run.ID).Delete(&leaseRecord{}).Error; err != nil {
-			return fmt.Errorf("release rejected Run lease: %w", err)
+			return projection, fmt.Errorf("release rejected Run lease: %w", err)
 		}
 		if err := repository.db.WithContext(ctx).Where("run_id = ?", run.ID).Delete(&workspaceLeaseRecord{}).Error; err != nil {
-			return fmt.Errorf("release rejected Workspace lease: %w", err)
+			return projection, fmt.Errorf("release rejected Workspace lease: %w", err)
 		}
 	}
 	if err := appendEvent(repository.db.WithContext(ctx), run.ID, eventType, map[string]any{
 		"approval_id": decision.ApprovalID, "actor_type": decision.ActorType, "actor_user_id": decision.ActorUserID, "reason": decision.Reason,
 	}, now); err != nil {
-		return err
+		return projection, err
 	}
 	if !decision.Approved {
-		return appendEvent(repository.db.WithContext(ctx), run.ID, "run.failed", map[string]any{
+		if err := appendEvent(repository.db.WithContext(ctx), run.ID, "run.failed", map[string]any{
 			"code": "approval_rejected", "approval_id": decision.ApprovalID,
-		}, now)
+		}, now); err != nil {
+			return projection, err
+		}
+		projection = domain.CompletionProjection{RunID: run.ID, SessionID: run.SessionID, State: string(domain.Failed)}
 	}
-	return nil
+	return projection, nil
 }
 
 func (repository *Repository) Get(ctx context.Context, runID string) (domain.Details, error) {
@@ -398,7 +402,8 @@ func (repository *Repository) Renew(ctx context.Context, token string, duration 
 	})
 }
 
-func (repository *Repository) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string, now time.Time) (domain.Details, error) {
+func (repository *Repository) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string, now time.Time) (domain.Details, domain.CompletionProjection, error) {
+	projection := domain.CompletionProjection{}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var record runRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", runID).Take(&record).Error; err != nil {
@@ -458,9 +463,20 @@ func (repository *Repository) Control(ctx context.Context, runID string, expecte
 		return appendEvent(tx, runID, eventType, map[string]any{"actor_user_id": actorUserID}, now)
 	})
 	if err != nil {
-		return domain.Details{}, err
+		return domain.Details{}, projection, err
 	}
-	return repository.Get(ctx, runID)
+	details, err := repository.Get(ctx, runID)
+	if err != nil {
+		return domain.Details{}, projection, err
+	}
+	if action == domain.ControlCancel || action == domain.ControlKill {
+		state := string(domain.Cancelled)
+		if action == domain.ControlKill {
+			state = "killed"
+		}
+		projection = domain.CompletionProjection{RunID: runID, SessionID: details.SessionID, State: state}
+	}
+	return details, projection, nil
 }
 
 func (repository *Repository) MarkRunning(ctx context.Context, token string, now time.Time) error {
@@ -531,7 +547,7 @@ func (repository *Repository) FinishOwned(ctx context.Context, token string, out
 			}
 			return domain.ErrLeaseLost
 		}
-		projection.Completed = outcome.State == domain.Completed
+		projection.State = string(outcome.State)
 		return appendEvent(tx, run.ID, "run."+string(outcome.State), map[string]any{"attempt_id": attemptID}, now)
 	})
 	return projection, err
@@ -543,8 +559,9 @@ func (repository *Repository) AppendEvent(ctx context.Context, token string, eve
 	})
 }
 
-func (repository *Repository) ReconcileExpired(ctx context.Context, maxAttempts int, now time.Time) (domain.ReconcileResult, error) {
+func (repository *Repository) ReconcileExpired(ctx context.Context, maxAttempts int, now time.Time) (domain.ReconcileResult, []domain.CompletionProjection, error) {
 	result := domain.ReconcileResult{}
+	projections := []domain.CompletionProjection{}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var expired []struct {
 			RunID        string     `gorm:"column:run_id"`
@@ -605,11 +622,12 @@ func (repository *Repository) ReconcileExpired(ctx context.Context, maxAttempts 
 				result.Rescheduled++
 			} else {
 				result.Failed++
+				projections = append(projections, domain.CompletionProjection{RunID: lease.RunID, SessionID: lease.SessionID, State: string(domain.Failed)})
 			}
 		}
 		return nil
 	})
-	return result, err
+	return result, projections, err
 }
 
 func (repository *Repository) ListEventsAfter(ctx context.Context, runID string, after int64, limit int) ([]domain.Event, error) {

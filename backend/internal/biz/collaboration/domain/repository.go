@@ -15,6 +15,7 @@ var (
 	ErrTaskStateConflict       = errors.New("Coding Task state does not allow this operation")
 	ErrMemoryCandidateNotFound = errors.New("Memory Candidate not found")
 	ErrAgentMemoryNotFound     = errors.New("Agent Memory not found")
+	ErrInvalidMemory           = errors.New("invalid Memory")
 )
 
 type MessageAuthor string
@@ -76,7 +77,7 @@ type ContinueRegistration struct {
 
 type QueuedRunPlan struct {
 	ID, SessionID, CodingTaskID, AgentReleaseID, RuntimeImageID string
-	RequestText, CreatedBy                                      string
+	RequestText, InstructionText, CreatedBy                     string
 	ModelBinding, CredentialBindings, ModelBudget               json.RawMessage
 	ExecutionLimits                                             json.RawMessage
 	CreatedAt                                                   time.Time
@@ -105,5 +106,5 @@ type LaunchCoordinator interface {
 }
 
 type CompletionProjector interface {
-	ProjectCompletedRun(context.Context, string, string, time.Time) error
+	ProjectFinishedRun(context.Context, string, string, string, time.Time) error
 }

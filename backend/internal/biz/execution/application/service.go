@@ -45,6 +45,16 @@ func (completion ownedCompletion) Finish(ctx context.Context, token string, outc
 	return err
 }
 
+func (completion ownedCompletion) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string, now time.Time) (domain.Details, error) {
+	details, _, err := completion.repository.Control(ctx, runID, expectedVersion, action, actorUserID, now)
+	return details, err
+}
+
+func (completion ownedCompletion) ReconcileExpired(ctx context.Context, maxAttempts int, now time.Time) (domain.ReconcileResult, error) {
+	result, _, err := completion.repository.ReconcileExpired(ctx, maxAttempts, now)
+	return result, err
+}
+
 func (service *Service) Get(ctx context.Context, runID string) (domain.Details, error) {
 	if service.repository == nil {
 		return domain.Details{}, fmt.Errorf("Run Repository is required")
@@ -141,6 +151,7 @@ func validRuntimeEventType(value string) bool {
 		agentruntime.EventFileChanged,
 		agentruntime.EventUsageUpdated,
 		agentruntime.EventCheckpointSaved,
+		agentruntime.EventWorkflowDelivered,
 		agentruntime.EventRuntimeCompleted,
 		agentruntime.EventRuntimeFailed:
 		return true
@@ -156,7 +167,7 @@ func (service *Service) ReconcileExpired(ctx context.Context, maxAttempts int) (
 	if maxAttempts <= 0 {
 		return domain.ReconcileResult{}, fmt.Errorf("maximum Attempts must be positive")
 	}
-	return service.repository.ReconcileExpired(ctx, maxAttempts, service.clock.Now())
+	return service.completion.ReconcileExpired(ctx, maxAttempts, service.clock.Now())
 }
 
 func (service *Service) ListEventsAfter(ctx context.Context, runID string, after int64, limit int) ([]domain.Event, error) {
@@ -181,5 +192,5 @@ func (service *Service) Control(ctx context.Context, runID string, expectedVersi
 	default:
 		return domain.Details{}, fmt.Errorf("unknown Run control action %q", action)
 	}
-	return service.repository.Control(ctx, runID, expectedVersion, action, actorUserID, service.clock.Now())
+	return service.completion.Control(ctx, runID, expectedVersion, action, actorUserID, service.clock.Now())
 }

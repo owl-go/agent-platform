@@ -96,9 +96,6 @@ func (workflow Workflow) Execute(ctx context.Context, runtimeCommand []string) e
 		return fmt.Errorf("Agent Runtime failed: %w", err)
 	}
 	for _, command := range workflow.Plan.QualityCommands {
-		if _, err := fmt.Fprintf(workflow.Stdout, "quality gate: %s\n", command.Name); err != nil {
-			return err
-		}
 		if err := workflow.run(ctx, command.Executable, command.Arguments, time.Duration(command.TimeoutSeconds)*time.Second); err != nil {
 			return fmt.Errorf("quality gate %q failed: %w", command.Name, err)
 		}
@@ -204,14 +201,11 @@ func (workflow Workflow) deliver(ctx context.Context) error {
 			files = append(files, name)
 		}
 	}
-	report, err := json.Marshal(map[string]any{
-		"event": "workflow.delivered", "review_branch": workflow.Plan.ReviewBranch,
-		"commit": strings.TrimSpace(commit), "changed_files": files,
-	})
+	report, err := platformprotocol.EncodeWorkflowDelivered(workflow.Plan.ReviewBranch, strings.TrimSpace(commit), files)
 	if err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(workflow.Stdout, "agent-platform-workflow: %s\n", report); err != nil {
+	if _, err := fmt.Fprintf(workflow.Stdout, "%s\n", report); err != nil {
 		return err
 	}
 	return nil
@@ -243,17 +237,66 @@ func (workflow Workflow) command(ctx context.Context, timeout time.Duration, str
 	command.Env = os.Environ()
 	var captured bytes.Buffer
 	command.Stdout = &captured
+	stdout := newProtocolEscapingWriter(workflow.Stdout)
 	if stream {
-		command.Stdout = io.MultiWriter(workflow.Stdout, &captured)
+		command.Stdout = io.MultiWriter(stdout, &captured)
 	}
-	command.Stderr = workflow.Stderr
-	if err := command.Run(); err != nil {
+	stderr := newProtocolEscapingWriter(workflow.Stderr)
+	command.Stderr = stderr
+	runErr := command.Run()
+	if err := errors.Join(stdout.Flush(), stderr.Flush()); err != nil {
+		return captured.String(), fmt.Errorf("flush command output: %w", err)
+	}
+	if runErr != nil {
 		if errors.Is(commandCtx.Err(), context.DeadlineExceeded) {
 			return captured.String(), fmt.Errorf("command timed out")
 		}
 		return captured.String(), fmt.Errorf("command exited unsuccessfully")
 	}
 	return captured.String(), nil
+}
+
+type protocolEscapingWriter struct {
+	target  io.Writer
+	pending []byte
+}
+
+func newProtocolEscapingWriter(target io.Writer) *protocolEscapingWriter {
+	return &protocolEscapingWriter{target: target}
+}
+
+func (writer *protocolEscapingWriter) Write(value []byte) (int, error) {
+	written := len(value)
+	writer.pending = append(writer.pending, value...)
+	for {
+		newline := bytes.IndexByte(writer.pending, '\n')
+		if newline < 0 {
+			return written, nil
+		}
+		if err := writer.writeLine(writer.pending[:newline+1]); err != nil {
+			return 0, err
+		}
+		writer.pending = writer.pending[newline+1:]
+	}
+}
+
+func (writer *protocolEscapingWriter) Flush() error {
+	if len(writer.pending) == 0 {
+		return nil
+	}
+	err := writer.writeLine(writer.pending)
+	writer.pending = nil
+	return err
+}
+
+func (writer *protocolEscapingWriter) writeLine(line []byte) error {
+	if bytes.HasPrefix(line, []byte(platformprotocol.Prefix)) {
+		if _, err := io.WriteString(writer.target, "untrusted-runtime-output: "); err != nil {
+			return err
+		}
+	}
+	_, err := writer.target.Write(line)
+	return err
 }
 
 func scanSecrets(diff []byte, credentialRoot string) error {

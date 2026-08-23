@@ -40,14 +40,14 @@ func (repository *repositoryStub) FinishOwned(_ context.Context, _ string, outco
 	repository.finishTime = now
 	return domain.CompletionProjection{}, nil
 }
-func (*repositoryStub) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, error) {
-	return domain.ReconcileResult{}, nil
+func (*repositoryStub) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, []domain.CompletionProjection, error) {
+	return domain.ReconcileResult{}, nil, nil
 }
 func (*repositoryStub) ListEventsAfter(context.Context, string, int64, int) ([]domain.Event, error) {
 	return nil, nil
 }
-func (repository *repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, error) {
-	return repository.details, nil
+func (repository *repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, domain.CompletionProjection, error) {
+	return repository.details, domain.CompletionProjection{}, nil
 }
 
 func TestGetValidatesRunID(t *testing.T) {

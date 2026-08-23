@@ -42,14 +42,14 @@ func (repository *repositoryStub) AppendEvent(_ context.Context, _ string, event
 	repository.events = append(repository.events, event)
 	return nil
 }
-func (*repositoryStub) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, error) {
-	return domain.ReconcileResult{}, nil
+func (*repositoryStub) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, []domain.CompletionProjection, error) {
+	return domain.ReconcileResult{}, nil, nil
 }
 func (*repositoryStub) ListEventsAfter(context.Context, string, int64, int) ([]domain.Event, error) {
 	return nil, nil
 }
-func (*repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, error) {
-	return domain.Details{}, nil
+func (*repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, domain.CompletionProjection, error) {
+	return domain.Details{}, domain.CompletionProjection{}, nil
 }
 
 type resolverFunc func(context.Context, string, []runtimeprocessor.CredentialBinding) (credentials.Request, error)

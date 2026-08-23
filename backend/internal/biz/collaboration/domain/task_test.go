@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -41,7 +42,7 @@ func TestCodingTaskAndSessionLifecycle(t *testing.T) {
 
 func TestMemoryCandidateRequiresExplicitApproval(t *testing.T) {
 	now := time.Date(2026, 8, 16, 8, 0, 0, 0, time.UTC)
-	candidate, err := ProposeMemory("candidate", "agent", "task", "Run the parser tests before committing.", now)
+	candidate, err := ProposeMemory("candidate", "agent", "task", "quality-gate:test:parser-regression", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +55,17 @@ func TestMemoryCandidateRequiresExplicitApproval(t *testing.T) {
 	}
 	if _, err := candidate.Approve("other", "user", now); err == nil {
 		t.Fatal("approved candidate must not be approved twice")
+	}
+}
+
+func TestSessionMemoryRejectsUnsupportedControlCharacters(t *testing.T) {
+	now := time.Now().UTC()
+	session, err := OpenSession(SessionRegistration{ID: "session", CodingTaskID: "task", RepositoryBindingID: "binding", TargetBranch: "main", ReviewBranch: "review", WorkspaceVolume: "workspace", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.UpdateMemory(SessionMemory{Summary: strings.Repeat("\x00", 20_000)}, now); err == nil {
+		t.Fatal("Session Memory accepted unsupported control characters")
 	}
 }
 

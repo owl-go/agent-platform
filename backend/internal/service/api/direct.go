@@ -210,6 +210,8 @@ func mapWriteError(err error) error {
 		return publicError(503, "conformance_evidence_unavailable")
 	case errors.Is(err, agentdomain.ErrInvalidAgent), errors.Is(err, agentdomain.ErrDraftNotReady):
 		return publicError(422, "invalid_agent_lifecycle_resource")
+	case errors.Is(err, collaborationdomain.ErrInvalidMemory):
+		return publicError(422, "invalid_collaboration_memory")
 	case errors.Is(err, collaborationdomain.ErrReleaseUnavailable), errors.Is(err, collaborationdomain.ErrTaskStateConflict),
 		errors.Is(err, collaborationdomain.ErrRunLimitReached):
 		return publicError(409, "collaboration_conflict")

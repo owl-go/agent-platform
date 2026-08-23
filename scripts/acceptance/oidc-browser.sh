@@ -470,7 +470,9 @@ docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d a
      FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
      WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1;
    INSERT INTO run_events (run_id, sequence, event_type, payload, created_at)
-     SELECT runs.id, event.sequence, event.event_type, event.payload, now() - interval '90 seconds' + event.sequence * interval '1 second'
+     SELECT runs.id, event.sequence, event.event_type,
+            CASE WHEN event.event_type = 'workflow.delivered' THEN jsonb_set(event.payload, '{payload,review_branch}', to_jsonb(sessions.review_branch)) ELSE event.payload END,
+            now() - interval '90 seconds' + event.sequence * interval '1 second'
      FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
      CROSS JOIN (VALUES
        (2::bigint, 'plan.updated', '{\"steps\":[\"inspect\",\"change\",\"verify\"]}'::jsonb),
@@ -481,12 +483,18 @@ docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d a
        (7::bigint, 'approval.requested', '{\"required\":false}'::jsonb),
        (8::bigint, 'usage.updated', '{\"input_tokens\":120,\"output_tokens\":48}'::jsonb),
        (9::bigint, 'cost.updated', '{\"amount\":\"0.0042\",\"currency\":\"USD\"}'::jsonb),
-       (10::bigint, 'runtime.completed', '{\"result\":\"review branch pushed\"}'::jsonb),
-       (11::bigint, 'run.completed', '{\"result\":\"success\"}'::jsonb)
+       (10::bigint, 'workflow.delivered', '{\"runtime_sequence\":10,\"payload\":{\"review_branch\":\"\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"changed_files\":[\"backend/parser.go\"]}}'::jsonb),
+       (11::bigint, 'runtime.completed', '{\"result\":\"review branch pushed\"}'::jsonb),
+       (12::bigint, 'run.completed', '{\"result\":\"success\"}'::jsonb)
      ) AS event(sequence, event_type, payload)
      WHERE coding_tasks.title = 'Acceptance free-text task';
    UPDATE runs SET state = 'completed', attempt_count = 1, usage = '{\"input_tokens\":120,\"output_tokens\":48}', cost_amount = 0.0042, started_at = now() - interval '2 minutes', ended_at = now(), updated_at = now(), version = version + 1
      WHERE id = (SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1);
+   UPDATE coding_tasks SET state = 'waiting_for_user', updated_at = now(), version = version + 1 WHERE title = 'Acceptance free-text task';
+   INSERT INTO session_messages (session_id, run_id, author_type, content, created_at)
+     SELECT sessions.id, runs.id, 'agent', jsonb_build_object('type', 'run_result', 'status', 'completed', 'run_id', runs.id, 'review_branch', sessions.review_branch), now()
+     FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
+     WHERE coding_tasks.title = 'Acceptance free-text task' ORDER BY runs.created_at LIMIT 1;
    INSERT INTO artifacts (id, run_id, kind, object_key, size_bytes, sha256, content_type, metadata, expires_at)
      SELECT 'abababab-abab-4bab-8bab-ababababab02', runs.id, 'diff', 'phase-0/acceptance/codex/evidence.tar', $artifact_size, '$artifact_sha256', 'application/x-tar', '{\"attempt\":\"1\",\"secret\":\"[REDACTED]\"}', now() + interval '1 day'
      FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
@@ -511,11 +519,11 @@ browser --session "$playwright_session" run-code 'async (page) => {
   await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${expected.task}`);
   const evidence = page.getByTestId("run-evidence"); await evidence.waitFor(); await evidence.locator(".stream-complete").waitFor();
   if (streamCalls !== 2 || reconnectCursor !== "3") throw new Error(`Run Event reconnect did not resume from cursor 3: calls=${streamCalls} cursor=${reconnectCursor}`);
-  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 11) throw new Error("Run Event reconnect produced a gap or duplicate");
+  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 12) throw new Error("Run Event reconnect produced a gap or duplicate");
   if (!(await evidence.textContent()).includes("Attempt 1") || !(await evidence.textContent()).includes("acceptance-worker")) throw new Error("Run Attempt history was not rendered as part of the same Run");
   if (!(await evidence.textContent()).includes("[display truncated at 16384 characters]")) throw new Error("oversized Run Event did not show its explicit preview boundary");
   await page.unroute(streamPattern); await page.reload(); await evidence.locator(".stream-complete").waitFor();
-  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 11) throw new Error("refresh did not restore the complete Run Event timeline");
+  if (await evidence.locator(".event-timeline li:not(.empty-evidence)").count() !== 12) throw new Error("refresh did not restore the complete Run Event timeline");
   const pageText = await page.locator("body").textContent();
   if (pageText.includes("phase-0/acceptance/codex/evidence.tar") || pageText.includes("acceptance-only-secret")) throw new Error("Artifact Object Key or Provider Credential reached the browser");
   await page.evaluate(() => { window.open = (url) => { sessionStorage.setItem("acceptance-artifact-download", String(url)); return null; }; });
@@ -530,15 +538,56 @@ browser --session "$playwright_session" run-code 'async (page) => {
 
 browser --session "$playwright_session" run-code 'async (page) => {
   const expected = await page.evaluate(() => ({ task: sessionStorage.getItem("acceptance-task-id"), session: sessionStorage.getItem("acceptance-task-session-id"), branch: sessionStorage.getItem("acceptance-task-branch") }));
-  await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click();
-  const username = page.getByRole("textbox", { name: "Username or email" });
-  if (await username.waitFor({ timeout: 3000 }).then(() => true).catch(() => false)) {
-    await username.fill("platform-user"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click();
-  }
-  await page.waitForURL(/team=55555555/);
+  const providerLogout = page.waitForResponse((response) => response.url().includes("/protocol/openid-connect/logout"));
+  await page.getByTestId("sign-out").click(); await providerLogout; await page.waitForURL(/^http:\/\/127\.0\.0\.1:18092\//); await page.getByTestId("sign-in-button").waitFor(); await page.getByTestId("sign-in-button").click();
+  await page.getByRole("textbox", { name: "Username or email" }).fill("platform-user"); await page.getByRole("textbox", { name: "Password", exact: true }).fill("acceptance-only-password"); await page.getByRole("button", { name: "Sign In" }).click();
+  await page.waitForURL(/^http:\/\/127\.0\.0\.1:18092\//); await page.waitForFunction(async () => { try { return (await fetch("/api/v1/me")).ok; } catch { return false; } });
   await page.goto(`http://127.0.0.1:18092/workspace?team=66666666-6666-4666-8666-666666666666&task=${expected.task}`);
   const facts = page.locator(".workspace-facts"); await facts.filter({ hasText: expected.branch }).waitFor();
   if (!(await facts.textContent()).includes(expected.session)) throw new Error("re-login did not restore the same Coding Task Session");
+}'
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const teamID = "66666666-6666-4666-8666-666666666666";
+  const values = await page.evaluate(() => {
+    let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} }
+    return { accessToken, taskID: sessionStorage.getItem("acceptance-task-id"), sessionID: sessionStorage.getItem("acceptance-task-session-id"), branch: sessionStorage.getItem("acceptance-task-branch"), issueTaskID: sessionStorage.getItem("acceptance-issue-task-id"), agentID: sessionStorage.getItem("acceptance-agent-id") };
+  });
+  const propose = (content, key) => page.evaluate(async ({ values, teamID, content, key }) => { const response = await fetch(`/api/v1/coding-tasks/${values.taskID}/memory-candidates`, { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ team_id: teamID, agent_id: values.agentID, content }) }); return { status: response.status, body: await response.json() }; }, { values, teamID, content, key });
+  const unsafe = await propose("Store password acceptance-only-secret for later.", "memory-candidate-secret-rejected");
+  if (unsafe.status !== 422 || JSON.stringify(unsafe.body).includes("acceptance-only-secret")) throw new Error("unsafe Agent Memory content was persisted or reflected");
+  const approved = await propose("quality-gate:test:parser-regression", "memory-candidate-approved");
+  const rejected = await propose("workflow:small-focused-changes", "memory-candidate-rejected");
+  if (approved.status !== 201 || rejected.status !== 201) throw new Error("Memory Candidate fixtures were not created through the real API");
+  const crossTeam = await page.evaluate(async ({ values }) => fetch(`/api/v1/coding-tasks/${values.taskID}/memory-candidates?team_id=55555555-5555-4555-8555-555555555555`, { headers: { Authorization: `Bearer ${values.accessToken}` } }).then((response) => response.status), { values });
+  if (crossTeam !== 404) throw new Error(`cross-Team Memory Candidate query returned ${crossTeam}`);
+
+  await page.reload(); const continuity = page.getByTestId("task-continuity"); await continuity.waitFor();
+  const latestCommit = page.getByTestId("latest-commit"); await latestCommit.waitFor(); if (!(await latestCommit.textContent()).includes("0123456789abcdef0123456789abcdef01234567")) throw new Error("real workflow delivery Commit was not rendered");
+  await page.getByTestId("session-memory-summary").fill("Acceptance continuity across Runs");
+  const savedMemory = page.waitForResponse((response) => response.url().endsWith(`/coding-tasks/${values.taskID}/session`) && response.request().method() === "PATCH");
+  await page.getByTestId("save-session-memory").click(); const savedMemoryResponse = await savedMemory; const savedSession = await savedMemoryResponse.json(); if (savedMemoryResponse.status() !== 200) throw new Error("Session Memory update failed");
+  await page.locator(".session-memory-form h5").filter({ hasText: `V${savedSession.version}` }).waitFor();
+  const approvedResponse = page.waitForResponse((response) => response.url().endsWith(`/memory-candidates/${approved.body.id}`) && response.request().method() === "PATCH");
+  await page.getByTestId(`approve-memory-${approved.body.id}`).click(); const approvedDecision = await approvedResponse; const approvedBody = await approvedDecision.json();
+  if (approvedDecision.status() !== 200 || approvedBody.candidate.state !== "approved" || !approvedBody.memory?.id) throw new Error("approved Memory Candidate did not atomically create Agent Memory");
+  const rejectedResponse = page.waitForResponse((response) => response.url().endsWith(`/memory-candidates/${rejected.body.id}`) && response.request().method() === "PATCH");
+  await page.getByTestId(`reject-memory-${rejected.body.id}`).click(); const rejectedDecision = await rejectedResponse; const rejectedBody = await rejectedDecision.json();
+  if (rejectedDecision.status() !== 200 || rejectedBody.candidate.state !== "rejected" || rejectedBody.memory) throw new Error("rejected Memory Candidate created Agent Memory");
+  await page.getByTestId(`agent-memory-content-${approvedBody.memory.id}`).selectOption("workflow:tests-before-commit");
+  const updatedAgentMemory = page.waitForResponse((response) => response.url().endsWith(`/agent-memories/${approvedBody.memory.id}`) && response.request().method() === "PATCH");
+  await page.getByTestId(`save-agent-memory-${approvedBody.memory.id}`).click(); if ((await updatedAgentMemory).status() !== 200) throw new Error("Agent Memory Version-protected update failed");
+
+  await page.getByTestId("continue-text").fill("Now add the regression coverage.");
+  const continuedResponse = page.waitForResponse((response) => response.url().endsWith(`/coding-tasks/${values.taskID}/runs`) && response.request().method() === "POST");
+  await page.getByTestId("continue-task").click(); const continuedResult = await continuedResponse; const continued = await continuedResult.json();
+  if (continuedResult.status() !== 201 || continued.session.id !== values.sessionID || continued.session.review_branch !== values.branch || continued.session.run_count !== 2) throw new Error("continuation changed the stable Session or did not create a second Run");
+  await page.locator("[data-testid=task-continuity][data-run-count=\"2\"]").waitFor(); const completedResponse = page.waitForResponse((response) => response.url().endsWith(`/coding-tasks/${values.taskID}`) && response.request().method() === "PATCH");
+  await page.getByTestId("complete-task").click(); const completed = await completedResponse; if (completed.status() !== 200 || (await completed.json()).state !== "completed") throw new Error("human Coding Task completion failed");
+
+  await page.goto(`http://127.0.0.1:18092/workspace?team=${teamID}&task=${values.issueTaskID}`); await page.getByTestId("cancel-task").waitFor(); page.once("dialog", (dialog) => dialog.accept());
+  const cancelledResponse = page.waitForResponse((response) => response.url().endsWith(`/coding-tasks/${values.issueTaskID}`) && response.request().method() === "PATCH");
+  await page.getByTestId("cancel-task").click(); const cancelled = await cancelledResponse; if (cancelled.status() !== 200 || (await cancelled.json()).state !== "cancelled") throw new Error("human Coding Task cancellation failed");
 }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \

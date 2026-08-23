@@ -13,14 +13,16 @@ type CollaborationCommands interface {
 	CreateLaunchOwned(context.Context, collaborationdomain.LaunchRegistration) (collaborationdomain.Launch, collaborationdomain.QueuedRunPlan, error)
 	ContinueOwned(context.Context, collaborationdomain.ContinueRegistration) (collaborationdomain.Launch, collaborationdomain.QueuedRunPlan, error)
 	AppendLaunchMessage(context.Context, collaborationdomain.QueuedRunPlan) error
-	ProjectCompletedRun(context.Context, string, string, time.Time) error
+	ProjectFinishedRun(context.Context, string, string, string, time.Time) error
 }
 
 type ExecutionCommands interface {
 	CreateQueuedRun(context.Context, executiondomain.QueuedRun) error
 	FinishOwned(context.Context, string, executiondomain.Outcome, time.Time) (executiondomain.CompletionProjection, error)
+	Control(context.Context, string, int64, executiondomain.ControlAction, string, time.Time) (executiondomain.Details, executiondomain.CompletionProjection, error)
+	ReconcileExpired(context.Context, int, time.Time) (executiondomain.ReconcileResult, []executiondomain.CompletionProjection, error)
 	PauseForApproval(context.Context, string, int64, string, string, string, time.Time) error
-	ApplyApprovalDecision(context.Context, executiondomain.ApprovalDecision, time.Time) error
+	ApplyApprovalDecision(context.Context, executiondomain.ApprovalDecision, time.Time) (executiondomain.CompletionProjection, error)
 }
 
 type ApprovalCommands interface {

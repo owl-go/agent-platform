@@ -89,12 +89,16 @@ func TestAdapterPausesForControlledWorkflowApprovalEvent(t *testing.T) {
 	if runner.controller.pauses != 1 || runner.controller.resumes != 1 {
 		t.Fatalf("process controls = %+v", runner.controller)
 	}
-	found := false
+	found, delivered := false, false
 	for _, event := range events.events {
 		found = found || event.Kind == agentruntime.EventApprovalRequested
+		delivered = delivered || event.Kind == agentruntime.EventWorkflowDelivered
 	}
 	if !found {
 		t.Fatalf("events = %+v", events.events)
+	}
+	if !delivered {
+		t.Fatalf("workflow delivery event was not emitted: %+v", events.events)
 	}
 }
 
@@ -159,6 +163,10 @@ func (runner *approvalProcessRunner) Run(ctx context.Context, spec processharnes
 	line, _ := platformprotocol.EncodeApprovalRequest("protected execution", "review")
 	line = append(line, '\n')
 	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, line); err != nil {
+		return processharness.Result{}, err
+	}
+	delivery, _ := platformprotocol.EncodeWorkflowDelivered("review", "0123456789abcdef0123456789abcdef01234567", []string{"main.go"})
+	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, append(delivery, '\n')); err != nil {
 		return processharness.Result{}, err
 	}
 	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, []byte(`{"final":"done"}`+"\n")); err != nil {

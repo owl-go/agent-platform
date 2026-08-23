@@ -23,6 +23,10 @@ export type CodingTask = components["schemas"]["v1CodingTask"];
 export type CodingTaskLaunchOption = components["schemas"]["v1CodingTaskLaunchOption"];
 export type CodingTaskLaunchCatalog = { items: CodingTaskLaunchOption[]; prerequisite: string };
 export type CodingTaskSession = components["schemas"]["v1Session"];
+export type SessionMemory = components["schemas"]["v1SessionMemory"];
+export type SessionMessage = components["schemas"]["v1SessionMessage"];
+export type MemoryCandidate = components["schemas"]["v1MemoryCandidate"];
+export type AgentMemory = components["schemas"]["v1AgentMemory"];
 export type Run = components["schemas"]["v1Run"];
 export type RunApproval = Omit<components["schemas"]["v1RunApproval"], "request"> & { request?: Record<string, unknown> };
 export type Artifact = components["schemas"]["v1Artifact"];
@@ -96,7 +100,16 @@ export interface PlatformApi {
   listCodingTasks(teamID: string, signal?: AbortSignal): Promise<CodingTask[]>;
   getCodingTask(id: string, teamID: string, signal?: AbortSignal): Promise<CodingTask>;
   createCodingTask(teamID: string, input: CreateCodingTaskInput, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskLaunch>;
+  updateCodingTaskState(taskID: string, teamID: string, state: "completed" | "cancelled", version: number, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTask>;
+  continueCodingTask(taskID: string, teamID: string, requestText: string, taskVersion: number, sessionVersion: number, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskLaunch>;
   getCodingTaskSession(taskID: string, teamID: string, signal?: AbortSignal): Promise<CodingTaskSession>;
+  listSessionMessages(taskID: string, teamID: string, after?: number, signal?: AbortSignal): Promise<SessionMessage[]>;
+  updateSessionMemory(taskID: string, teamID: string, memory: SessionMemory, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<CodingTaskSession>;
+  listMemoryCandidates(taskID: string, teamID: string, signal?: AbortSignal): Promise<MemoryCandidate[]>;
+  decideMemoryCandidate(candidateID: string, teamID: string, approve: boolean, idempotencyKey: string, signal?: AbortSignal): Promise<{ candidate?: MemoryCandidate; memory?: AgentMemory }>;
+  listAgentMemories(agentID: string, teamID: string, includeDeleted?: boolean, signal?: AbortSignal): Promise<AgentMemory[]>;
+  updateAgentMemory(memoryID: string, teamID: string, content: string, enabled: boolean, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentMemory>;
+  deleteAgentMemory(memoryID: string, teamID: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<AgentMemory>;
   listRuns(teamID: string, taskID: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(runID: string, signal?: AbortSignal): Promise<Run>;
   listRunApprovals(runID: string, signal?: AbortSignal): Promise<RunApproval[]>;
@@ -313,9 +326,60 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
       });
     },
+    updateCodingTaskState(taskID, teamID, state, version, idempotencyKey, signal) {
+      return authorizedRequest<CodingTask>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}`, {
+        method: "PATCH", body: JSON.stringify({ team_id: teamID, state }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    continueCodingTask(taskID, teamID, requestText, taskVersion, sessionVersion, idempotencyKey, signal) {
+      return authorizedRequest<CodingTaskLaunch>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/runs`, {
+        method: "POST", body: JSON.stringify({ team_id: teamID, request_text: requestText, expected_session_version: sessionVersion }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${taskVersion}"` },
+      });
+    },
     getCodingTaskSession(taskID, teamID, signal) {
       const query = new URLSearchParams({ team_id: teamID });
       return authorizedRequest<CodingTaskSession>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/session?${query}`, { signal });
+    },
+    async listSessionMessages(taskID, teamID, after = 0, signal) {
+      const query = new URLSearchParams({ team_id: teamID, after: String(after), limit: "200" });
+      const body = await authorizedRequest<components["schemas"]["v1ListSessionMessagesResponse"]>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/messages?${query}`, { signal });
+      return body.items ?? [];
+    },
+    updateSessionMemory(taskID, teamID, memory, version, idempotencyKey, signal) {
+      return authorizedRequest<CodingTaskSession>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/session`, {
+        method: "PATCH", body: JSON.stringify({ team_id: teamID, memory }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    async listMemoryCandidates(taskID, teamID, signal) {
+      const query = new URLSearchParams({ team_id: teamID });
+      const body = await authorizedRequest<components["schemas"]["v1ListMemoryCandidatesResponse"]>(`/api/v1/coding-tasks/${encodeURIComponent(taskID)}/memory-candidates?${query}`, { signal });
+      return body.items ?? [];
+    },
+    decideMemoryCandidate(candidateID, teamID, approve, idempotencyKey, signal) {
+      return authorizedRequest<{ candidate?: MemoryCandidate; memory?: AgentMemory }>(`/api/v1/memory-candidates/${encodeURIComponent(candidateID)}`, {
+        method: "PATCH", body: JSON.stringify({ team_id: teamID, approve }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+      });
+    },
+    async listAgentMemories(agentID, teamID, includeDeleted = false, signal) {
+      const query = new URLSearchParams({ team_id: teamID, include_deleted: String(includeDeleted) });
+      const body = await authorizedRequest<components["schemas"]["v1ListAgentMemoriesResponse"]>(`/api/v1/agents/${encodeURIComponent(agentID)}/memories?${query}`, { signal });
+      return body.items ?? [];
+    },
+    updateAgentMemory(memoryID, teamID, content, enabled, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentMemory>(`/api/v1/agent-memories/${encodeURIComponent(memoryID)}`, {
+        method: "PATCH", body: JSON.stringify({ team_id: teamID, content, enabled }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
+    },
+    deleteAgentMemory(memoryID, teamID, version, idempotencyKey, signal) {
+      return authorizedRequest<AgentMemory>(`/api/v1/agent-memories/${encodeURIComponent(memoryID)}/deletion`, {
+        method: "POST", body: JSON.stringify({ team_id: teamID }), signal,
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+      });
     },
     async listRuns(teamID, taskID, signal) {
       const query = new URLSearchParams({ team_id: teamID, task_id: taskID, limit: "50" });

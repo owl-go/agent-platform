@@ -63,7 +63,7 @@ func queuedRun(plan collaborationdomain.QueuedRunPlan) executiondomain.QueuedRun
 	return executiondomain.QueuedRun{
 		ID: plan.ID, SessionID: plan.SessionID, CodingTaskID: plan.CodingTaskID,
 		AgentReleaseID: plan.AgentReleaseID, RuntimeImageID: plan.RuntimeImageID,
-		RequestText: plan.RequestText, ModelBinding: plan.ModelBinding,
+		RequestText: plan.InstructionText, ModelBinding: plan.ModelBinding,
 		CredentialBindings: plan.CredentialBindings, ModelBudget: plan.ModelBudget,
 		ExecutionLimits: plan.ExecutionLimits, CreatedBy: plan.CreatedBy, CreatedAt: plan.CreatedAt,
 	}

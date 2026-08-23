@@ -51,6 +51,10 @@ func TestRunApprovalStateTransitionsWithPostgreSQL(t *testing.T) {
 	if err := tx.Exec(`UPDATE runs SET state = 'running', ended_at = NULL WHERE id = ?`, run.ID).Error; err != nil {
 		t.Fatal(err)
 	}
+	if err := tx.Exec(`UPDATE coding_tasks SET state = 'active', completed_at = NULL WHERE id = (
+		SELECT session.coding_task_id FROM runs run JOIN sessions session ON session.id = run.session_id WHERE run.id = ?)`, run.ID).Error; err != nil {
+		t.Fatal(err)
+	}
 	now := time.Now().UTC()
 	approval, err := domain.Request(uuid.NewString(), run.ID, domain.KindPlan, json.RawMessage(`{"summary":"integration plan"}`), run.ActorID, now)
 	if err != nil {
@@ -106,6 +110,18 @@ func TestRunApprovalStateTransitionsWithPostgreSQL(t *testing.T) {
 	}
 	if terminalEvents != 1 {
 		t.Fatalf("rejected Run terminal event count = %d, want 1", terminalEvents)
+	}
+	var projection struct{ TaskState, Status string }
+	if err := tx.Raw(`
+		SELECT task.state AS task_state, message.content->>'status' AS status
+		FROM runs run JOIN sessions session ON session.id = run.session_id
+		JOIN coding_tasks task ON task.id = session.coding_task_id
+		JOIN session_messages message ON message.session_id = session.id AND message.run_id = run.id
+		WHERE run.id = ? AND message.content->>'type' = 'run_result'`, run.ID).Scan(&projection).Error; err != nil {
+		t.Fatal(err)
+	}
+	if projection.TaskState != "waiting_for_user" || projection.Status != "failed" {
+		t.Fatalf("rejected Run task projection = %+v", projection)
 	}
 }
 

@@ -89,13 +89,13 @@ type ApprovalDecision struct {
 
 type ApprovalCommands interface {
 	PauseForApproval(context.Context, string, int64, string, string, string, time.Time) error
-	ApplyApprovalDecision(context.Context, ApprovalDecision, time.Time) error
+	ApplyApprovalDecision(context.Context, ApprovalDecision, time.Time) (CompletionProjection, error)
 }
 
 type CompletionProjection struct {
 	RunID     string
 	SessionID string
-	Completed bool
+	State     string
 }
 
 type QueuedRun struct {
@@ -181,9 +181,9 @@ type Repository interface {
 	MarkRunning(context.Context, string, time.Time) error
 	FinishOwned(context.Context, string, Outcome, time.Time) (CompletionProjection, error)
 	AppendEvent(context.Context, string, EventInput, time.Time) error
-	ReconcileExpired(context.Context, int, time.Time) (ReconcileResult, error)
+	ReconcileExpired(context.Context, int, time.Time) (ReconcileResult, []CompletionProjection, error)
 	ListEventsAfter(context.Context, string, int64, int) ([]Event, error)
-	Control(context.Context, string, int64, ControlAction, string, time.Time) (Details, error)
+	Control(context.Context, string, int64, ControlAction, string, time.Time) (Details, CompletionProjection, error)
 }
 
 type SearchRepository interface {

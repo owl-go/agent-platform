@@ -52,14 +52,14 @@ func (repository *workerRepository) FinishOwned(_ context.Context, _ string, out
 	repository.finished = &outcome
 	return domain.CompletionProjection{}, nil
 }
-func (*workerRepository) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, error) {
-	return domain.ReconcileResult{}, nil
+func (*workerRepository) ReconcileExpired(context.Context, int, time.Time) (domain.ReconcileResult, []domain.CompletionProjection, error) {
+	return domain.ReconcileResult{}, nil, nil
 }
 func (*workerRepository) ListEventsAfter(context.Context, string, int64, int) ([]domain.Event, error) {
 	return nil, nil
 }
-func (*workerRepository) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, error) {
-	return domain.Details{}, nil
+func (*workerRepository) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, domain.CompletionProjection, error) {
+	return domain.Details{}, domain.CompletionProjection{}, nil
 }
 
 type processorFunc func(context.Context, domain.Lease) (domain.Outcome, error)

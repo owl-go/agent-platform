@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const MaximumSessionRuns = 50
@@ -90,16 +91,25 @@ func (session *Session) UpdateMemory(memory SessionMemory, now time.Time) error 
 
 func validateMemory(memory SessionMemory) error {
 	if len(memory.Summary) > 20_000 || len(memory.ConfirmedDecisions) > 200 || len(memory.Results) > 200 || len(memory.WorkspaceSnapshots) > 200 {
-		return fmt.Errorf("Session Memory exceeds its limit")
+		return fmt.Errorf("%w: Session Memory exceeds its limit", ErrInvalidMemory)
+	}
+	if invalidMemoryControl(memory.Summary) {
+		return fmt.Errorf("%w: Session Memory contains unsupported control characters", ErrInvalidMemory)
 	}
 	for _, values := range [][]string{memory.ConfirmedDecisions, memory.Results, memory.WorkspaceSnapshots} {
 		for _, value := range values {
-			if strings.TrimSpace(value) == "" || len(value) > 4_000 {
-				return fmt.Errorf("Session Memory entries must be non-empty and within limits")
+			if strings.TrimSpace(value) == "" || len(value) > 4_000 || invalidMemoryControl(value) {
+				return fmt.Errorf("%w: Session Memory entries must be non-empty and within limits", ErrInvalidMemory)
 			}
 		}
 	}
 	return nil
+}
+
+func invalidMemoryControl(value string) bool {
+	return strings.IndexFunc(value, func(character rune) bool {
+		return unicode.IsControl(character) && character != '\n' && character != '\r' && character != '\t'
+	}) >= 0
 }
 
 func cloneMemory(memory SessionMemory) SessionMemory {

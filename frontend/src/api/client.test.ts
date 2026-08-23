@@ -134,6 +134,25 @@ describe("PlatformApi", () => {
     expect(headers.get("Authorization")).toBe("Bearer access-token");
   });
 
+  it("protects Session continuation and Agent Memory edits with intent and Version headers", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
+      String(input).includes("/runs") ? { task: { id: "task-1" }, session: { id: "session-1" }, run_id: "run-2" } : { id: "memory-1", version: 3 },
+    ), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.continueCodingTask("task-1", "team-1", "Next instruction", 2, 7, "continue-intent");
+    await api.updateAgentMemory("memory-1", "team-1", "Durable rule", true, 2, "memory-intent");
+
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/coding-tasks/task-1/runs");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toMatchObject({ team_id: "team-1", request_text: "Next instruction", expected_session_version: 7 });
+    expect(new Headers(fetchMock.mock.calls[0]![1]?.headers).get("Idempotency-Key")).toBe("continue-intent");
+    expect(new Headers(fetchMock.mock.calls[0]![1]?.headers).get("If-Match")).toBe('"2"');
+    expect(fetchMock.mock.calls[1]![0]).toBe("/api/v1/agent-memories/memory-1");
+    expect(new Headers(fetchMock.mock.calls[1]![1]?.headers).get("Idempotency-Key")).toBe("memory-intent");
+    expect(new Headers(fetchMock.mock.calls[1]![1]?.headers).get("If-Match")).toBe('"2"');
+  });
+
   it("binds Run Approval decisions and controls to one intent and quoted Version", async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
       String(input).includes("approvals") ? { id: "approval-1", state: "approved", version: 2 } : { id: "run-1", state: "interrupting", version: 4 },

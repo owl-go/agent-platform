@@ -6,6 +6,18 @@ import (
 	"time"
 )
 
+var allowedDurableMemories = map[string]struct{}{
+	"quality-gate:test:unit":                 {},
+	"quality-gate:test:integration":          {},
+	"quality-gate:test:parser-regression":    {},
+	"quality-gate:test:full":                 {},
+	"workflow:tests-before-commit":           {},
+	"workflow:small-focused-changes":         {},
+	"workflow:backward-compatible-changes":   {},
+	"repository:preserve-public-api":         {},
+	"repository:follow-existing-conventions": {},
+}
+
 type MemoryCandidateState string
 
 const (
@@ -37,8 +49,8 @@ func ProposeMemory(id, agentID, taskID, content string, now time.Time) (MemoryCa
 	if id == "" || agentID == "" || taskID == "" || content == "" {
 		return MemoryCandidate{}, fmt.Errorf("Memory Candidate identity, source, and content are required")
 	}
-	if len(content) > 4_000 {
-		return MemoryCandidate{}, fmt.Errorf("Memory Candidate content exceeds its limit")
+	if err := validateDurableMemory(content); err != nil {
+		return MemoryCandidate{}, err
 	}
 	return MemoryCandidate{ID: id, AgentID: agentID, CodingTaskID: taskID, ProposedContent: content, State: MemoryCandidatePending, ProposedAt: now.UTC()}, nil
 }
@@ -46,6 +58,9 @@ func ProposeMemory(id, agentID, taskID, content string, now time.Time) (MemoryCa
 func (candidate *MemoryCandidate) Approve(memoryID, decidedBy string, now time.Time) (AgentMemory, error) {
 	if candidate.State != MemoryCandidatePending || memoryID == "" || decidedBy == "" {
 		return AgentMemory{}, fmt.Errorf("pending Memory Candidate, Memory ID, and decision maker are required")
+	}
+	if err := validateDurableMemory(candidate.ProposedContent); err != nil {
+		return AgentMemory{}, err
 	}
 	decidedAt := now.UTC()
 	candidate.State = MemoryCandidateApproved
@@ -72,13 +87,23 @@ func (candidate *MemoryCandidate) Reject(decidedBy string, now time.Time) error 
 
 func (memory *AgentMemory) Edit(content string, enabled bool, now time.Time) error {
 	content = strings.TrimSpace(content)
-	if memory.DeletedAt != nil || content == "" || len(content) > 4_000 {
+	if memory.DeletedAt != nil || content == "" {
 		return fmt.Errorf("active Agent Memory and valid content are required")
+	}
+	if err := validateDurableMemory(content); err != nil {
+		return err
 	}
 	memory.Content = content
 	memory.Enabled = enabled
 	memory.UpdatedAt = now.UTC()
 	memory.Version++
+	return nil
+}
+
+func validateDurableMemory(content string) error {
+	if _, allowed := allowedDurableMemories[content]; !allowed {
+		return fmt.Errorf("%w: durable Memory must be a supported structured operating policy", ErrInvalidMemory)
+	}
 	return nil
 }
 

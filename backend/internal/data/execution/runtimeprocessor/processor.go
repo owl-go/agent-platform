@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/agentruntime"
+	"agent-platform/backend/internal/agentruntime/platformprotocol"
 	executionapplication "agent-platform/backend/internal/biz/execution/application"
 	"agent-platform/backend/internal/biz/execution/domain"
 	"agent-platform/backend/internal/credentials"
@@ -80,6 +81,7 @@ func (processor *Processor) Execute(ctx context.Context, lease domain.Lease) (ou
 	}
 	events := agentruntime.NewRedactingEventSink(environment.Redactor(), &eventSink{
 		runs: processor.runs, approvals: processor.approvals, leaseToken: lease.Token, runID: lease.RunID, attemptID: lease.AttemptID,
+		reviewBranch: lease.ReviewBranch,
 	})
 	result, err := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
 		RunID: lease.RunID, WorkspacePath: "/workspace", Instruction: lease.RequestText,
@@ -112,16 +114,23 @@ func (processor *Processor) Execute(ctx context.Context, lease domain.Lease) (ou
 }
 
 type eventSink struct {
-	runs       *executionapplication.Service
-	approvals  executionapplication.RuntimeApprovalGate
-	leaseToken string
-	runID      string
-	attemptID  string
+	runs         *executionapplication.Service
+	approvals    executionapplication.RuntimeApprovalGate
+	leaseToken   string
+	runID        string
+	attemptID    string
+	reviewBranch string
 }
 
 func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) error {
 	if event.RunID != sink.runID {
 		return fmt.Errorf("Runtime Event Run ID does not match lease")
+	}
+	if event.Kind == agentruntime.EventWorkflowDelivered {
+		delivery, err := platformprotocol.DecodeWorkflowDelivery(event.Payload)
+		if err != nil || delivery.ReviewBranch != sink.reviewBranch {
+			return fmt.Errorf("workflow delivery does not match the frozen Review Branch")
+		}
 	}
 	if event.Kind == agentruntime.EventApprovalRequested {
 		return sink.requestApproval(ctx, event.Sequence, event.Payload)

@@ -148,9 +148,14 @@ func TestCollaborationLaunchContinueAndMemoryAreTransactional(t *testing.T) {
 	if continued.Task.State != domain.TaskStateActive || continued.Session.RunCount != 2 {
 		t.Fatalf("unexpected continuation: %#v", continued)
 	}
+	if continued.Session.ID != launch.Session.ID || continued.Session.RepositoryBindingID != launch.Session.RepositoryBindingID ||
+		continued.Session.TargetBranch != launch.Session.TargetBranch || continued.Session.ReviewBranch != launch.Session.ReviewBranch ||
+		continued.Session.WorkspaceVolume != launch.Session.WorkspaceVolume {
+		t.Fatalf("continuation changed stable Session bindings: before=%#v after=%#v", launch.Session, continued.Session)
+	}
 	assertCounts(t, tx, launch.Task.ID, launch.Session.ID, continued.RunID, 2, 2, 1)
 
-	candidate, err := service.ProposeMemory(context.Background(), organizationID, teamID, launch.Task.ID, agentID, "Run parser regression tests before committing.")
+	candidate, err := service.ProposeMemory(context.Background(), organizationID, teamID, launch.Task.ID, agentID, "quality-gate:test:parser-regression")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,6 +169,69 @@ func TestCollaborationLaunchContinueAndMemoryAreTransactional(t *testing.T) {
 	persisted, err := repository.GetAgentMemory(context.Background(), organizationID, teamID, memory.ID)
 	if err != nil || persisted.Content != candidate.ProposedContent {
 		t.Fatalf("persisted Agent Memory = (%#v, %v)", persisted, err)
+	}
+	if _, err := repository.GetAgentMemory(context.Background(), organizationID, uuid.NewString(), memory.ID); !errors.Is(err, domain.ErrAgentMemoryNotFound) {
+		t.Fatalf("cross-Team Agent Memory lookup error = %v", err)
+	}
+	otherTask, err := service.CreateTask(context.Background(), application.CreateTaskCommand{
+		OrganizationID: organizationID, TeamID: teamID, AgentReleaseID: releaseID, CreatedBy: userID,
+		Title: "Apply parser convention", RequestText: "Prepare another parser change.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var otherInstruction string
+	if err := tx.Raw(`SELECT request_text FROM runs WHERE id = ?`, otherTask.RunID).Scan(&otherInstruction).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(otherInstruction, candidate.ProposedContent) {
+		t.Fatalf("approved Agent Memory did not reach a later Coding Task: %s", otherInstruction)
+	}
+	maximumRequest, err := service.CreateTask(context.Background(), application.CreateTaskCommand{
+		OrganizationID: organizationID, TeamID: teamID, AgentReleaseID: releaseID, CreatedBy: userID,
+		Title: "Maximum request", RequestText: strings.Repeat("x", 100_000),
+	})
+	if err != nil || maximumRequest.RunID == "" {
+		t.Fatalf("maximum valid Coding Task request failed: launch=%#v error=%v", maximumRequest, err)
+	}
+	rejectedCandidate, err := service.ProposeMemory(context.Background(), organizationID, teamID, launch.Task.ID, agentID, "workflow:small-focused-changes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rejected, rejectedMemory, err := service.DecideMemory(context.Background(), organizationID, teamID, rejectedCandidate.ID, userID, false)
+	if err != nil || rejected.State != domain.MemoryCandidateRejected || rejectedMemory != nil {
+		t.Fatalf("unexpected Memory rejection: candidate=%#v memory=%#v err=%v", rejected, rejectedMemory, err)
+	}
+	largeMemoryItems := make([]string, 200)
+	for index := range largeMemoryItems {
+		largeMemoryItems[index] = strings.Repeat("m", 4_000)
+	}
+	updatedSession, err := service.UpdateSessionMemory(context.Background(), organizationID, teamID, launch.Task.ID, domain.SessionMemory{
+		Summary: "Parser fix remains in progress.", ConfirmedDecisions: largeMemoryItems,
+		Results: largeMemoryItems, WorkspaceSnapshots: largeMemoryItems,
+	}, continued.Session.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitingAgain, err := service.ChangeTaskState(context.Background(), organizationID, teamID, launch.Task.ID, continued.Task.Version, domain.TaskStateWaitingForUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	third, err := service.ContinueTask(context.Background(), application.ContinueTaskCommand{
+		OrganizationID: organizationID, TeamID: teamID, TaskID: launch.Task.ID, CreatedBy: userID,
+		RequestText: "Finish the parser fix.", ExpectedTaskVersion: waitingAgain.Version, ExpectedSessionVersion: updatedSession.Version,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var frozenInstruction string
+	if err := tx.Raw(`SELECT request_text FROM runs WHERE id = ?`, third.RunID).Scan(&frozenInstruction).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Parser fix remains in progress.", "Also add a regression test.", "quality-gate:test:parser-regression", "Finish the parser fix."} {
+		if !strings.Contains(frozenInstruction, expected) {
+			t.Fatalf("continued Run instruction does not contain %q: %s", expected, frozenInstruction)
+		}
 	}
 }
 
