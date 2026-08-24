@@ -8,7 +8,7 @@ The base stack is suitable for loopback smoke tests. `compose.https.yaml` adds t
 
 API 和 Worker 只读取 YAML 配置。默认 Compose 配置使用 `config/platform.minio.yaml`；切换阿里云 OSS 时，从 `config/platform.aliyun-oss.example.yaml` 创建部署专用文件，并通过 `PLATFORM_CONFIG_FILE` 指定它。`${NAME}` 占位符在进程启动时从环境展开，未知 YAML 字段、缺失环境变量和非法值会让服务 fail closed。
 
-复制 `.env.example` 到仓库外，替换所有 Secret，并把可变基础设施 Tag 解析为 Repository Digest。配置文件权限设为 `0600`。Runtime 镜像单独管理，始终使用 Runtime Conformance 记录的 RepoDigest。
+复制 `.env.example` 到仓库外，替换所有 Secret，并把可变基础设施 Tag 解析为 Repository Digest。宿主 env 与访问交接文件保持 `root:root 0600`；API YAML 使用容器 UID `65532`、Keycloak realm import 使用容器 UID `1000`，二者保持 `0400`。Runtime 镜像单独管理，始终使用 Runtime Conformance 记录的 RepoDigest。
 
 ```bash
 docker compose --env-file /opt/agent-platform/config/platform.env \
@@ -47,9 +47,11 @@ The Keycloak realm import is deployment-owned because it contains bootstrap user
 Start the HTTPS stack with the deployment YAML outside the repository:
 
 ```bash
-chmod 600 /opt/agent-platform/config/platform.env \
-  /opt/agent-platform/config/platform.https.yaml \
-  /opt/agent-platform/config/keycloak-realm.json
+chmod 600 /opt/agent-platform/config/platform.env
+chown 65532:65532 /opt/agent-platform/config/platform.https.yaml
+chmod 400 /opt/agent-platform/config/platform.https.yaml
+chown 1000:0 /opt/agent-platform/config/keycloak-realm.json
+chmod 400 /opt/agent-platform/config/keycloak-realm.json
 
 PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.https.yaml \
 docker compose --env-file /opt/agent-platform/config/platform.env \
