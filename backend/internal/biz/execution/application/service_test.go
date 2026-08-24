@@ -46,7 +46,7 @@ func (*repositoryStub) ReconcileExpired(context.Context, int, time.Time) (domain
 func (*repositoryStub) ListEventsAfter(context.Context, string, int64, int) ([]domain.Event, error) {
 	return nil, nil
 }
-func (repository *repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, time.Time) (domain.Details, domain.CompletionProjection, error) {
+func (repository *repositoryStub) Control(context.Context, string, int64, domain.ControlAction, string, string, time.Time) (domain.Details, domain.CompletionProjection, error) {
 	return repository.details, domain.CompletionProjection{}, nil
 }
 

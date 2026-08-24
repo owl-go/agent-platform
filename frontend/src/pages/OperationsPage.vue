@@ -2,12 +2,14 @@
 import { computed, inject, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, type Artifact, type CodingTask, type Run, type RunEvent, type RunSearchFilters } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type AuditEvent, type CodingTask, type Run, type RunEvent, type RunSearchFilters } from "../api/client";
 
 const injectedApi = inject(platformApiKey);
 if (!injectedApi) throw new Error("Operations Console API is required");
 const api = injectedApi;
 const searchRuns = api.searchRuns;
+if (!api.listAuditEvents) throw new Error("Operations Audit API is required");
+const listAuditEvents = api.listAuditEvents.bind(api);
 const route = useRoute();
 const router = useRouter();
 const { t, d } = useI18n();
@@ -16,13 +18,20 @@ const selectedRun = ref<Run>();
 const relatedTask = ref<CodingTask>();
 const events = ref<RunEvent[]>([]);
 const artifacts = ref<Artifact[]>([]);
+const auditEvents = ref<AuditEvent[]>([]);
 const loading = ref(false);
 const detailLoading = ref(false);
 const error = ref<ApiError>();
 const detailError = ref<ApiError>();
+const auditError = ref<ApiError>();
+const controlling = ref(false);
+const auditLoading = ref(false);
 const nextPageToken = ref("");
 const streamState = ref<"idle" | "live" | "complete" | "error">("idle");
 const form = reactive({ agent: "", binding: "", task: "", state: "", runtime: "", from: "", to: "", sort: "desc" as "asc" | "desc" });
+const auditForm = reactive({ actor: "", operation: "", resource: "", outcome: "", from: "", to: "" });
+const controlReason = ref("");
+const intents = new Map<string, string>();
 let listSequence = 0;
 let detailSequence = 0;
 let detailController: AbortController | undefined;
@@ -33,7 +42,7 @@ const runtimeSnapshot = computed(() => selectedRun.value?.runtime_image_snapshot
 const repositorySnapshot = computed(() => selectedRun.value?.repository_binding_snapshot as Record<string, unknown> | undefined);
 const modelSnapshot = computed(() => selectedRun.value?.configured_model_snapshot as Record<string, unknown> | undefined);
 
-watch(() => route.query, () => { hydrateForm(); void search(); }, { immediate: true });
+watch(() => route.query, () => { hydrateForm(); void search(); void loadAudit(); }, { immediate: true });
 watch(selectedRunID, () => void loadDetail(), { immediate: true });
 onBeforeUnmount(() => detailController?.abort());
 
@@ -105,6 +114,49 @@ function errorLabel(value: ApiError) {
   return t(`errors.${key}`);
 }
 function json(value: unknown) { return JSON.stringify(value ?? {}, null, 2); }
+function intent(scope: string, fingerprint: unknown) {
+  const key = `${scope}:${JSON.stringify(fingerprint)}`;
+  const existing = intents.get(key);
+  if (existing) return existing;
+  const created = crypto.randomUUID(); intents.set(key, created); return created;
+}
+function clearProtectedState() {
+  listSequence++; detailSequence++; detailController?.abort();
+  runs.value = []; selectedRun.value = undefined; relatedTask.value = undefined; events.value = []; artifacts.value = []; auditEvents.value = [];
+}
+const latestAttempt = computed(() => selectedRun.value?.attempts?.at(-1));
+const canInterrupt = computed(() => ["provisioning", "running"].includes(selectedRun.value?.state ?? ""));
+const canCancelOrKill = computed(() => ["queued", "provisioning", "running", "interrupting", "interrupted", "resuming"].includes(selectedRun.value?.state ?? ""));
+const canRecover = computed(() => selectedRun.value?.state === "recovery_required" && latestAttempt.value?.infrastructure_failure === true && ["failed", "lost"].includes(latestAttempt.value.state ?? ""));
+async function control(action: "interrupt" | "cancel" | "kill" | "recover") {
+  const run = selectedRun.value;
+  const reason = controlReason.value.trim();
+  if (!run?.id || !run.version || controlling.value || ((action === "kill" || action === "recover") && (reason.length < 3 || reason.length > 500))) return;
+  if (action === "kill" && !window.confirm(t("operations.killConfirm"))) return;
+  const fingerprint = { action, version: run.version, reason };
+  const scope = `operations.control:${teamID.value}:${run.id}:${action}`;
+  controlling.value = true; detailError.value = undefined;
+  try {
+    const updated = await api.controlRun(run.id, action, run.version, intent(scope, fingerprint), reason || undefined);
+    intents.delete(`${scope}:${JSON.stringify(fingerprint)}`); selectedRun.value = updated; controlReason.value = "";
+    const index = runs.value.findIndex((value) => value.id === run.id); if (index >= 0) runs.value.splice(index, 1, updated);
+    await loadAudit();
+  } catch (reason) {
+    detailError.value = asApiError(reason);
+    if (detailError.value.kind === "conflict") await loadDetail();
+    if (detailError.value.kind === "forbidden" || detailError.value.kind === "unauthenticated") clearProtectedState();
+  } finally { controlling.value = false; }
+}
+async function loadAudit() {
+  if (!teamID.value) return;
+  auditLoading.value = true; auditError.value = undefined;
+  try {
+    auditEvents.value = await listAuditEvents({ teamID: teamID.value, actorUserID: auditForm.actor, action: auditForm.operation, resourceType: auditForm.resource, outcome: auditForm.outcome as "succeeded" | "failed" || undefined, createdFrom: auditForm.from, createdTo: auditForm.to, limit: 100 });
+  } catch (reason) {
+    auditError.value = asApiError(reason); auditEvents.value = [];
+    if (auditError.value.kind === "forbidden" || auditError.value.kind === "unauthenticated") clearProtectedState();
+  } finally { auditLoading.value = false; }
+}
 </script>
 
 <template>
@@ -114,7 +166,7 @@ function json(value: unknown) { return JSON.stringify(value ?? {}, null, 2); }
       <label><span>{{ t('operations.agent') }}</span><input v-model.trim="form.agent" data-testid="filter-agent"></label>
       <label><span>{{ t('operations.binding') }}</span><input v-model.trim="form.binding" data-testid="filter-binding"></label>
       <label><span>{{ t('operations.task') }}</span><input v-model.trim="form.task" data-testid="filter-task"></label>
-      <label><span>{{ t('operations.state') }}</span><select v-model="form.state" data-testid="filter-state"><option value="">{{ t('operations.all') }}</option><option v-for="state in ['queued','provisioning','running','waiting_confirmation','interrupting','interrupted','resuming','completed','failed','cancelled']" :key="state" :value="state">{{ state }}</option></select></label>
+      <label><span>{{ t('operations.state') }}</span><select v-model="form.state" data-testid="filter-state"><option value="">{{ t('operations.all') }}</option><option v-for="state in ['queued','provisioning','running','waiting_confirmation','interrupting','interrupted','resuming','recovery_required','completed','failed','cancelled']" :key="state" :value="state">{{ state }}</option></select></label>
       <label><span>{{ t('operations.runtime') }}</span><select v-model="form.runtime" data-testid="filter-runtime"><option value="">{{ t('operations.all') }}</option><option v-for="runtime in ['claude','codex','hermes','openclaw']" :key="runtime" :value="runtime">{{ runtime }}</option></select></label>
       <label><span>{{ t('operations.from') }}</span><input v-model="form.from" type="datetime-local" data-testid="filter-from"></label>
       <label><span>{{ t('operations.to') }}</span><input v-model="form.to" type="datetime-local" data-testid="filter-to"></label>
@@ -136,6 +188,13 @@ function json(value: unknown) { return JSON.stringify(value ?? {}, null, 2); }
         <div v-else-if="detailError && !selectedRun" class="error-state" role="alert"><strong>{{ errorLabel(detailError) }}</strong><code>{{ detailError.code }}</code></div>
         <template v-else-if="selectedRun">
           <header class="operation-run-heading"><div><span>{{ t('operations.run') }}</span><h2>{{ selectedRun.id }}</h2></div><em>{{ selectedRun.state }}</em></header>
+          <section class="operator-controls" data-testid="operator-controls">
+            <header><div><span>{{ t('operations.controlKicker') }}</span><h3>{{ t('operations.controls') }}</h3></div><code>v{{ selectedRun.version }}</code></header>
+            <p>{{ t('operations.controlBoundary') }}</p>
+            <label><span>{{ t('operations.reason') }}</span><textarea v-model.trim="controlReason" maxlength="500" :placeholder="t('operations.reasonHint')"></textarea></label>
+            <div><button :disabled="!canInterrupt || controlling" data-testid="operator-interrupt" @click="control('interrupt')">{{ t('operations.interrupt') }}</button><button :disabled="!canCancelOrKill || controlling" data-testid="operator-cancel" @click="control('cancel')">{{ t('operations.cancel') }}</button><button class="danger" :disabled="!canCancelOrKill || controlling || controlReason.length < 3" data-testid="operator-kill" @click="control('kill')">{{ t('operations.kill') }}</button><button :disabled="!canRecover || controlling || controlReason.length < 3" data-testid="operator-recover" @click="control('recover')">{{ t('operations.recover') }}</button></div>
+            <small v-if="selectedRun.state === 'failed'">{{ t('operations.notRecoverable') }}</small>
+          </section>
           <p v-if="relatedTask" class="related-task"><strong>{{ relatedTask.title }}</strong><span>{{ relatedTask.state }} · {{ relatedTask.id }}</span></p>
           <dl class="diagnostic-facts">
             <div><dt>{{ t('operations.release') }}</dt><dd><code>{{ selectedRun.agent_release_id }}</code></dd></div>
@@ -153,5 +212,11 @@ function json(value: unknown) { return JSON.stringify(value ?? {}, null, 2); }
         </template>
       </article>
     </div>
+    <section class="audit-console reveal" data-testid="audit-console">
+      <header><div><span>{{ t('operations.auditKicker') }}</span><h2>{{ t('operations.audit') }}</h2></div><strong>{{ auditEvents.length }}</strong></header>
+      <form @submit.prevent="loadAudit"><label><span>{{ t('operations.actor') }}</span><input v-model.trim="auditForm.actor"></label><label><span>{{ t('operations.operation') }}</span><input v-model.trim="auditForm.operation" placeholder="run.kill"></label><label><span>{{ t('operations.resource') }}</span><input v-model.trim="auditForm.resource" placeholder="run"></label><label><span>{{ t('operations.outcome') }}</span><select v-model="auditForm.outcome"><option value="">{{ t('operations.all') }}</option><option value="succeeded">{{ t('operations.succeeded') }}</option><option value="failed">{{ t('operations.failed') }}</option></select></label><label><span>{{ t('operations.from') }}</span><input v-model="auditForm.from" type="datetime-local"></label><label><span>{{ t('operations.to') }}</span><input v-model="auditForm.to" type="datetime-local"></label><button>{{ t('operations.searchAudit') }}</button></form>
+      <div v-if="auditError" class="error-state" role="alert"><strong>{{ errorLabel(auditError) }}</strong><code>{{ auditError.code }}</code></div><p v-else-if="auditLoading">{{ t('operations.loadingAudit') }}</p>
+      <div v-else class="audit-list"><article v-for="event in auditEvents" :key="event.id"><time>{{ d(new Date(event.created_at!), 'long') }}</time><strong>{{ event.action }}</strong><code>{{ event.resource_type }} / {{ event.resource_id }}</code><span>{{ event.actor_user_id || 'system' }} · {{ event.outcome }}</span><details><summary>{{ t('operations.safeMetadata') }}</summary><pre>{{ json(event.details) }}</pre></details></article><p v-if="auditEvents.length === 0">{{ t('operations.noAudit') }}</p></div>
+    </section>
   </section>
 </template>

@@ -91,12 +91,13 @@ waiting_confirmation
 interrupting
 interrupted
 resuming
+recovery_required
 completed
 failed
 cancelled
 ```
 
-Run 失败不会自动结束 Coding Task。Interrupt 保留可恢复状态；Cancel 永久结束当前 Run，但用户仍可在同一 Session 创建新 Run。
+Run 失败不会自动结束 Coding Task。Interrupt 保留可恢复状态；自动基础设施重试耗尽后进入非终态 `recovery_required`，只有 Run Operator 或 Organization 级 Platform Administrator 可记录安全原因并恢复。用户错误、策略错误和已经产生终态 Event 的 Run 不可恢复；Cancel 永久结束当前 Run，但用户仍可在同一 Session 创建新 Run。
 
 ### 4.4 Workspace 并发
 

@@ -86,7 +86,21 @@ func TestRunWaitingForApprovalRejectsIndependentControls(t *testing.T) {
 	}
 }
 
-func TestExpiredRunIsRescheduledThenFailsAtAttemptLimit(t *testing.T) {
+func TestRunRecoveryOnlyAcceptsInfrastructureFailure(t *testing.T) {
+	now := time.Now().UTC()
+	run, err := RestoreRun("run-1", "session-1", string(RecoveryRequired), 2, 4, &now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := run.RecoverInfrastructure(false); !errors.Is(err, ErrControlRejected) {
+		t.Fatalf("application failure recovery error=%v, want ErrControlRejected", err)
+	}
+	if err := run.RecoverInfrastructure(true); err != nil || run.State != Resuming || run.EndedAt != nil || run.Version != 5 {
+		t.Fatalf("infrastructure recovery Run=%+v error=%v", run, err)
+	}
+}
+
+func TestExpiredRunIsRescheduledThenRequiresManualRecoveryAtAttemptLimit(t *testing.T) {
 	now := time.Now()
 	first, _ := RestoreRun("run-1", "session-1", string(Running), 1, 2, &now, nil)
 	decision, err := first.ReconcileExpired(2, now)
@@ -95,7 +109,7 @@ func TestExpiredRunIsRescheduledThenFailsAtAttemptLimit(t *testing.T) {
 	}
 	second, _ := RestoreRun("run-2", "session-2", string(Running), 2, 3, &now, nil)
 	decision, err = second.ReconcileExpired(2, now)
-	if err != nil || decision.State != Failed || !second.Terminal() {
+	if err != nil || decision.State != RecoveryRequired || second.Terminal() {
 		t.Fatalf("second decision = (%+v, %v), Run = %+v", decision, err, second)
 	}
 }

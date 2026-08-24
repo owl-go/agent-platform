@@ -48,7 +48,7 @@ func NewServers(database *gormdb.Database, runs *application.Service, config pla
 
 	reconcileProcess := workerserver.FatalAfterConsecutiveFailures(func(ctx context.Context) (bool, error) {
 		result, err := runs.ReconcileExpired(ctx, config.Worker.MaxAttempts)
-		return result.Rescheduled > 0 || result.Failed > 0, err
+		return result.Rescheduled > 0 || result.AwaitingRecovery > 0 || result.Failed > 0, err
 	}, fatalFailureThreshold)
 	reconcile, err := workerserver.NewLoopWithState("reconcile", config.Worker.ReconcileInterval.Value(), reconcileProcess, state)
 	if err != nil {

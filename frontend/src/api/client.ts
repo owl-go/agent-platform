@@ -28,6 +28,7 @@ export type SessionMessage = components["schemas"]["v1SessionMessage"];
 export type MemoryCandidate = components["schemas"]["v1MemoryCandidate"];
 export type AgentMemory = components["schemas"]["v1AgentMemory"];
 export type Run = components["schemas"]["v1Run"];
+export type AuditEvent = components["schemas"]["v1AuditEvent"];
 export type RunApproval = Omit<components["schemas"]["v1RunApproval"], "request"> & { request?: Record<string, unknown> };
 export type Artifact = components["schemas"]["v1Artifact"];
 export type ArtifactDownload = components["schemas"]["v1GetArtifactDownloadResponse"];
@@ -41,6 +42,7 @@ export type RunSearchFilters = {
   sortDirection?: "asc" | "desc"; pageToken?: string; limit?: number;
 };
 export type RunSearchPage = { items: Run[]; nextPageToken: string };
+export type AuditSearchFilters = { teamID: string; actorUserID?: string; action?: string; resourceType?: string; resourceID?: string; outcome?: "succeeded" | "failed"; createdFrom?: string; createdTo?: string; limit?: number };
 export type CreateAgentInput = Omit<components["schemas"]["v1CreateAgentRequest"], "team_id">;
 export type DraftInput = { configuration: AgentConfiguration; release_risk: string };
 
@@ -121,7 +123,8 @@ export interface PlatformApi {
   getRun(runID: string, signal?: AbortSignal): Promise<Run>;
   listRunApprovals(runID: string, signal?: AbortSignal): Promise<RunApproval[]>;
   decideRunApproval(approvalID: string, approved: boolean, reason: string, version: number, idempotencyKey: string, signal?: AbortSignal): Promise<RunApproval>;
-  controlRun(runID: string, action: "interrupt" | "resume" | "cancel", version: number, idempotencyKey: string, signal?: AbortSignal): Promise<Run>;
+  controlRun(runID: string, action: "interrupt" | "resume" | "cancel" | "kill" | "recover", version: number, idempotencyKey: string, reason?: string, signal?: AbortSignal): Promise<Run>;
+  listAuditEvents?(filters: AuditSearchFilters, signal?: AbortSignal): Promise<AuditEvent[]>;
   streamRunEvents(runID: string, after: number, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<RunEventStreamResult>;
   listRunArtifacts(runID: string, signal?: AbortSignal): Promise<Artifact[]>;
   getArtifactDownload(artifactID: string, signal?: AbortSignal): Promise<ArtifactDownload>;
@@ -420,11 +423,24 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
       });
     },
-    controlRun(runID, action, version, idempotencyKey, signal) {
-      return authorizedRequest<Run>(`/api/v1/runs/${encodeURIComponent(runID)}/${action}`, {
-        method: "POST", signal,
-        headers: { "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
+    controlRun(runID, action, version, idempotencyKey, reason, signal) {
+      const endpoint = action === "recover" ? "recovery" : action;
+      return authorizedRequest<Run>(`/api/v1/runs/${encodeURIComponent(runID)}/${endpoint}`, {
+        method: "POST", body: action === "kill" || action === "recover" ? JSON.stringify({ reason }) : undefined, signal,
+        headers: { ...(action === "kill" || action === "recover" ? { "Content-Type": "application/json" } : {}), "Idempotency-Key": idempotencyKey, "If-Match": `"${version}"` },
       });
+    },
+    async listAuditEvents(filters, signal) {
+      const query = new URLSearchParams({ team_id: filters.teamID, limit: String(filters.limit ?? 100) });
+      if (filters.actorUserID) query.set("actor_user_id", filters.actorUserID);
+      if (filters.action) query.set("action", filters.action);
+      if (filters.resourceType) query.set("resource_type", filters.resourceType);
+      if (filters.resourceID) query.set("resource_id", filters.resourceID);
+      if (filters.outcome) query.set("outcome", filters.outcome);
+      if (filters.createdFrom) query.set("created_from", new Date(filters.createdFrom).toISOString());
+      if (filters.createdTo) query.set("created_to", new Date(filters.createdTo).toISOString());
+      const body = await authorizedRequest<components["schemas"]["v1ListAuditEventsResponse"]>(`/api/v1/audit-events?${query}`, { signal });
+      return body.items ?? [];
     },
     async streamRunEvents(runID, after, onEvent, signal) {
       const token = getAccessToken();

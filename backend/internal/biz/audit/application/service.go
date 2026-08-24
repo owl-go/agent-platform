@@ -22,5 +22,8 @@ func (service *Service) Search(ctx context.Context, query domain.Query) ([]domai
 	if query.CreatedFrom != nil && query.CreatedTo != nil && query.CreatedFrom.After(*query.CreatedTo) {
 		return nil, fmt.Errorf("Audit search start time must not follow end time")
 	}
+	if query.Outcome != "" && query.Outcome != "succeeded" && query.Outcome != "failed" {
+		return nil, fmt.Errorf("Audit outcome must be succeeded or failed")
+	}
 	return service.repository.Search(ctx, query)
 }

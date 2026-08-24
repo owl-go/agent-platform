@@ -435,7 +435,7 @@ func (repository *Repository) Renew(ctx context.Context, token string, duration 
 	})
 }
 
-func (repository *Repository) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string, now time.Time) (domain.Details, domain.CompletionProjection, error) {
+func (repository *Repository) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID, reason string, now time.Time) (domain.Details, domain.CompletionProjection, error) {
 	projection := domain.CompletionProjection{}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var record runRecord
@@ -469,6 +469,17 @@ func (repository *Repository) Control(ctx context.Context, runID string, expecte
 				eventType = "run.killed"
 				extra["terminal_error"] = jsonValue(`{"code":"operator_killed","message":"Run was killed by an operator"}`)
 			}
+		case domain.ControlRecover:
+			var latest attemptRecord
+			lookup := tx.Where("run_id = ?", runID).Order("attempt_number DESC").Limit(1).Take(&latest)
+			if lookup.Error != nil && !errors.Is(lookup.Error, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("load latest Run Attempt for recovery: %w", lookup.Error)
+			}
+			eligible := lookup.Error == nil && latest.InfrastructureFailure &&
+				(latest.State == string(domain.AttemptFailed) || latest.State == string(domain.AttemptLost))
+			err = run.RecoverInfrastructure(eligible)
+			eventType = "run.recovery_requested"
+			extra["terminal_error"] = nil
 		default:
 			return fmt.Errorf("unknown Run control action %q", action)
 		}
@@ -493,7 +504,11 @@ func (repository *Repository) Control(ctx context.Context, runID string, expecte
 				return fmt.Errorf("release controlled Workspace Write Lease: %w", err)
 			}
 		}
-		return appendEvent(tx, runID, eventType, map[string]any{"actor_user_id": actorUserID}, now)
+		payload := map[string]any{"actor_user_id": actorUserID}
+		if reason != "" {
+			payload["reason"] = reason
+		}
+		return appendEvent(tx, runID, eventType, payload, now)
 	})
 	if err != nil {
 		return domain.Details{}, projection, err
@@ -634,9 +649,6 @@ func (repository *Repository) ReconcileExpired(ctx context.Context, maxAttempts 
 				return fmt.Errorf("mark expired Attempt lost: %w", err)
 			}
 			extra := map[string]any{"terminal_error": nil}
-			if decision.State == domain.Failed {
-				extra["terminal_error"] = failure
-			}
 			if err := updateRun(tx, run, now, extra); err != nil {
 				return fmt.Errorf("reconcile expired Run: %w", err)
 			}
@@ -654,8 +666,7 @@ func (repository *Repository) ReconcileExpired(ctx context.Context, maxAttempts 
 			if decision.State == domain.Resuming {
 				result.Rescheduled++
 			} else {
-				result.Failed++
-				projections = append(projections, domain.CompletionProjection{RunID: lease.RunID, SessionID: lease.SessionID, State: string(domain.Failed)})
+				result.AwaitingRecovery++
 			}
 		}
 		return nil

@@ -34,6 +34,7 @@ type ListAuditEventsRequest struct {
 	CreatedFrom   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_from,json=createdFrom,proto3,oneof" json:"created_from,omitempty"`
 	CreatedTo     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_to,json=createdTo,proto3,oneof" json:"created_to,omitempty"`
 	Limit         *int32                 `protobuf:"varint,8,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	Outcome       *string                `protobuf:"bytes,9,opt,name=outcome,proto3,oneof" json:"outcome,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -124,6 +125,13 @@ func (x *ListAuditEventsRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *ListAuditEventsRequest) GetOutcome() string {
+	if x != nil && x.Outcome != nil {
+		return *x.Outcome
+	}
+	return ""
+}
+
 type ListAuditEventsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*AuditEvent          `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -178,6 +186,7 @@ type AuditEvent struct {
 	ResourceId    string                 `protobuf:"bytes,6,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 	Details       *structpb.Struct       `protobuf:"bytes,7,opt,name=details,proto3" json:"details,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Outcome       string                 `protobuf:"bytes,9,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,11 +277,18 @@ func (x *AuditEvent) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AuditEvent) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
+}
+
 var File_audit_v1_audit_proto protoreflect.FileDescriptor
 
 const file_audit_v1_audit_proto_rawDesc = "" +
 	"\n" +
-	"\x14audit/v1/audit.proto\x12\baudit.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x03\n" +
+	"\x14audit/v1/audit.proto\x12\baudit.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfa\x03\n" +
 	"\x16ListAuditEventsRequest\x12\x17\n" +
 	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12\x1b\n" +
 	"\x06action\x18\x02 \x01(\tH\x00R\x06action\x88\x01\x01\x12(\n" +
@@ -283,16 +299,19 @@ const file_audit_v1_audit_proto_rawDesc = "" +
 	"\fcreated_from\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x04R\vcreatedFrom\x88\x01\x01\x12>\n" +
 	"\n" +
 	"created_to\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x05R\tcreatedTo\x88\x01\x01\x12\x19\n" +
-	"\x05limit\x18\b \x01(\x05H\x06R\x05limit\x88\x01\x01B\t\n" +
+	"\x05limit\x18\b \x01(\x05H\x06R\x05limit\x88\x01\x01\x12\x1d\n" +
+	"\aoutcome\x18\t \x01(\tH\aR\aoutcome\x88\x01\x01B\t\n" +
 	"\a_actionB\x10\n" +
 	"\x0e_resource_typeB\x0e\n" +
 	"\f_resource_idB\x10\n" +
 	"\x0e_actor_user_idB\x0f\n" +
 	"\r_created_fromB\r\n" +
 	"\v_created_toB\b\n" +
-	"\x06_limit\"E\n" +
+	"\x06_limitB\n" +
+	"\n" +
+	"\b_outcome\"E\n" +
 	"\x17ListAuditEventsResponse\x12*\n" +
-	"\x05items\x18\x01 \x03(\v2\x14.audit.v1.AuditEventR\x05items\"\xbc\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\x14.audit.v1.AuditEventR\x05items\"\xd6\x02\n" +
 	"\n" +
 	"AuditEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
@@ -304,7 +323,8 @@ const file_audit_v1_audit_proto_rawDesc = "" +
 	"resourceId\x121\n" +
 	"\adetails\x18\a \x01(\v2\x17.google.protobuf.StructR\adetails\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x10\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x18\n" +
+	"\aoutcome\x18\t \x01(\tR\aoutcomeB\x10\n" +
 	"\x0e_actor_user_id2\x80\x01\n" +
 	"\fAuditService\x12p\n" +
 	"\x0fListAuditEvents\x12 .audit.v1.ListAuditEventsRequest\x1a!.audit.v1.ListAuditEventsResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/audit-eventsB-Z+agent-platform/backend/api/audit/v1;auditv1b\x06proto3"

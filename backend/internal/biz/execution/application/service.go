@@ -45,8 +45,8 @@ func (completion ownedCompletion) Finish(ctx context.Context, token string, outc
 	return err
 }
 
-func (completion ownedCompletion) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string, now time.Time) (domain.Details, error) {
-	details, _, err := completion.repository.Control(ctx, runID, expectedVersion, action, actorUserID, now)
+func (completion ownedCompletion) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID, reason string, now time.Time) (domain.Details, error) {
+	details, _, err := completion.repository.Control(ctx, runID, expectedVersion, action, actorUserID, reason, now)
 	return details, err
 }
 
@@ -183,7 +183,7 @@ func (service *Service) ListEventsAfter(ctx context.Context, runID string, after
 	return service.repository.ListEventsAfter(ctx, runID, after, limit)
 }
 
-func (service *Service) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID string) (domain.Details, error) {
+func (service *Service) Control(ctx context.Context, runID string, expectedVersion int64, action domain.ControlAction, actorUserID, reason string) (domain.Details, error) {
 	if service.repository == nil {
 		return domain.Details{}, fmt.Errorf("Run Repository is required")
 	}
@@ -191,9 +191,13 @@ func (service *Service) Control(ctx context.Context, runID string, expectedVersi
 		return domain.Details{}, fmt.Errorf("Run ID, expected Version, and actor are required")
 	}
 	switch action {
-	case domain.ControlInterrupt, domain.ControlResume, domain.ControlCancel, domain.ControlKill:
+	case domain.ControlInterrupt, domain.ControlResume, domain.ControlCancel:
+	case domain.ControlKill, domain.ControlRecover:
+		if len(strings.TrimSpace(reason)) < 3 || len(reason) > 500 {
+			return domain.Details{}, fmt.Errorf("%w: a safety reason between 3 and 500 bytes is required", domain.ErrControlRejected)
+		}
 	default:
 		return domain.Details{}, fmt.Errorf("unknown Run control action %q", action)
 	}
-	return service.completion.Control(ctx, runID, expectedVersion, action, actorUserID, service.clock.Now())
+	return service.completion.Control(ctx, runID, expectedVersion, action, actorUserID, strings.TrimSpace(reason), service.clock.Now())
 }

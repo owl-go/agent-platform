@@ -69,6 +69,9 @@ func (repository *Repository) Search(ctx context.Context, query domain.Query) ([
 	if query.ActorUserID != "" {
 		database = database.Where("actor_user_id = ?", query.ActorUserID)
 	}
+	if query.Outcome != "" {
+		database = database.Where("details ->> 'outcome' = ?", query.Outcome)
+	}
 	if query.CreatedFrom != nil {
 		database = database.Where("created_at >= ?", query.CreatedFrom.UTC())
 	}
@@ -82,13 +85,17 @@ func (repository *Repository) Search(ctx context.Context, query domain.Query) ([
 	values := make([]domain.Event, 0, len(records))
 	for _, record := range records {
 		teamID, actorID := "", ""
+		var details struct {
+			Outcome string `json:"outcome"`
+		}
+		_ = json.Unmarshal(record.Details, &details)
 		if record.TeamID != nil {
 			teamID = *record.TeamID
 		}
 		if record.ActorUserID != nil {
 			actorID = *record.ActorUserID
 		}
-		value, err := domain.Restore(domain.Event{ID: record.ID, OrganizationID: record.OrganizationID, TeamID: teamID, ActorUserID: actorID, Action: record.Action, ResourceType: record.ResourceType, ResourceID: record.ResourceID, Details: append(json.RawMessage(nil), record.Details...), CreatedAt: record.CreatedAt})
+		value, err := domain.Restore(domain.Event{ID: record.ID, OrganizationID: record.OrganizationID, TeamID: teamID, ActorUserID: actorID, Outcome: details.Outcome, Action: record.Action, ResourceType: record.ResourceType, ResourceID: record.ResourceID, Details: append(json.RawMessage(nil), record.Details...), CreatedAt: record.CreatedAt})
 		if err != nil {
 			return nil, err
 		}

@@ -740,6 +740,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/runs/{run_id}/recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ExecutionService_RecoverRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/runs/{run_id}/resume": {
         parameters: {
             query?: never;
@@ -924,6 +940,12 @@ export interface components {
             team_id?: string;
             memory?: components["schemas"]["v1SessionMemory"];
         };
+        ExecutionServiceKillRunBody: {
+            reason?: string;
+        };
+        ExecutionServiceRecoverRunBody: {
+            reason?: string;
+        };
         ModelCatalogServiceChangeConfiguredModelStatusBody: {
             enabled?: boolean;
         };
@@ -1094,6 +1116,7 @@ export interface components {
             details?: Record<string, never>;
             /** Format: date-time */
             created_at?: string;
+            outcome?: string;
         };
         v1CodingTask: {
             id?: string;
@@ -2507,6 +2530,7 @@ export interface operations {
                 created_from?: string;
                 created_to?: string;
                 limit?: number;
+                outcome?: string;
             };
             header?: never;
             path?: never;
@@ -3711,7 +3735,49 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionServiceKillRunBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    ExecutionService_RecoverRun: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "If-Match": string;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionServiceRecoverRunBody"];
+            };
+        };
         responses: {
             /** @description A successful response. */
             200: {

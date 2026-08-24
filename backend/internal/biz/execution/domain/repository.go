@@ -20,6 +20,7 @@ const (
 	ControlResume    ControlAction = "resume"
 	ControlCancel    ControlAction = "cancel"
 	ControlKill      ControlAction = "kill"
+	ControlRecover   ControlAction = "recover"
 )
 
 type Lease struct {
@@ -49,8 +50,9 @@ type Lease struct {
 }
 
 type ReconcileResult struct {
-	Rescheduled int
-	Failed      int
+	Rescheduled      int
+	AwaitingRecovery int
+	Failed           int
 }
 
 type SearchQuery struct {
@@ -200,7 +202,7 @@ type Repository interface {
 	AppendEvent(context.Context, string, EventInput, time.Time) error
 	ReconcileExpired(context.Context, int, time.Time) (ReconcileResult, []CompletionProjection, error)
 	ListEventsAfter(context.Context, string, int64, int) ([]Event, error)
-	Control(context.Context, string, int64, ControlAction, string, time.Time) (Details, CompletionProjection, error)
+	Control(context.Context, string, int64, ControlAction, string, string, time.Time) (Details, CompletionProjection, error)
 }
 
 type SearchRepository interface {

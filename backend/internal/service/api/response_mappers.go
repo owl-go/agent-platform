@@ -112,6 +112,7 @@ type auditEventResponse struct {
 	ID           int64           `json:"id"`
 	TeamID       string          `json:"team_id"`
 	ActorUserID  string          `json:"actor_user_id,omitempty"`
+	Outcome      string          `json:"outcome"`
 	Action       string          `json:"action"`
 	ResourceType string          `json:"resource_type"`
 	ResourceID   string          `json:"resource_id"`

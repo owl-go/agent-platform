@@ -51,11 +51,37 @@ describe("Operations Console", () => {
       mounted.wrapper.unmount();
     }
   });
+
+  it("offers only state-safe Operator controls and traces the result through Audit", async () => {
+    const failed = { ...run, state: "recovery_required", version: 7, attempts: [{ ...run.attempts![0]!, state: "lost", infrastructure_failure: true }] } as Run;
+    const recovered = { ...failed, state: "resuming", version: 8 } as Run;
+    const controlRun = vi.fn(async () => recovered);
+    const listAuditEvents = vi.fn(async () => [{ id: 1, team_id: "team-1", actor_user_id: "user-1", action: "run.recover", resource_type: "run", resource_id: failed.id, outcome: "succeeded", details: {}, created_at: "2026-08-20T00:02:00Z" }]);
+    const api = platformApi({ searchRuns: vi.fn(async () => ({ items: [failed], nextPageToken: "" })), getRun: vi.fn(async () => failed), controlRun, listAuditEvents });
+    const { wrapper } = await mountOperations(api, `/operations?team=team-1&run=${failed.id}`);
+
+    expect(wrapper.get("[data-testid='operator-interrupt']").attributes("disabled")).toBeDefined();
+    expect(wrapper.get("[data-testid='operator-recover']").attributes("disabled")).toBeDefined();
+    await wrapper.get(".operator-controls textarea").setValue("worker pool restored");
+    await wrapper.get("[data-testid='operator-recover']").trigger("click");
+    await flushPromises();
+
+    expect(controlRun).toHaveBeenCalledWith(failed.id, "recover", 7, expect.any(String), "worker pool restored");
+    expect(wrapper.get("[data-testid='audit-console']").text()).toContain("run.recover");
+  });
+
+  it("clears protected Run and Audit state when authorization is revoked", async () => {
+    const api = platformApi({ listAuditEvents: vi.fn(async () => { throw new ApiError("forbidden", 403, "audit_access_denied", "request-2"); }) });
+    const { wrapper } = await mountOperations(api, `/operations?team=team-1&run=${run.id}`);
+    expect(wrapper.find(".operation-run-heading").exists()).toBe(false);
+    expect(wrapper.get("[data-testid='audit-console']").text()).toContain("audit_access_denied");
+  });
 });
 
 function platformApi(overrides: Partial<PlatformApi> = {}) {
   return {
     searchRuns: vi.fn(async () => ({ items: [run], nextPageToken: "" })),
+    listAuditEvents: vi.fn(async () => []),
     getRun: vi.fn(async () => run), listRunArtifacts: vi.fn(async () => [{ id: "artifact-1", kind: "diff", sha256: "b".repeat(64), size_bytes: "12", content_type: "text/plain" }]),
     getCodingTask: vi.fn(async () => ({ id: run.coding_task_id, title: "Repair parser", state: "active" })),
     streamRunEvents: vi.fn(async (_id: string, _after: number, onEvent: (event: never) => void) => { onEvent({ run_id: run.id, sequence: 1, event_type: "run.completed", payload: {}, created_at: "2026-08-20T00:01:00Z" } as never); return { cursor: 1, terminal: true }; }),

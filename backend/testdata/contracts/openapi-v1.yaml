@@ -1545,6 +1545,14 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "tags": [
@@ -3390,6 +3398,82 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutionServiceKillRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "ExecutionService"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/recovery": {
+      "post": {
+        "operationId": "ExecutionService_RecoverRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutionServiceRecoverRunBody"
+              }
+            }
+          },
+          "required": true
+        },
         "tags": [
           "ExecutionService"
         ]
@@ -4030,6 +4114,22 @@
           }
         }
       },
+      "ExecutionServiceKillRunBody": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ExecutionServiceRecoverRunBody": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "ModelCatalogServiceChangeConfiguredModelStatusBody": {
         "type": "object",
         "properties": {
@@ -4444,6 +4544,9 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "outcome": {
+            "type": "string"
           }
         }
       },

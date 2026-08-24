@@ -641,15 +641,20 @@ browser --session "$playwright_session" run-code 'async (page) => {
 browser --session "$playwright_session" run-code 'async (page) => {
   const values = await page.evaluate(() => { let accessToken = ""; for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") accessToken = parsed.access_token; } catch {} } return { accessToken, releaseID: sessionStorage.getItem("acceptance-high-release-id") }; });
   const create = async (title, key) => page.evaluate(async ({ values, title, key }) => { const response = await fetch("/api/v1/coding-tasks", { method: "POST", headers: { Authorization: `Bearer ${values.accessToken}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify({ team_id: "66666666-6666-4666-8666-666666666666", agent_release_id: values.releaseID, title, request_text: `${title} request` }) }); return { status: response.status, body: await response.json() }; }, { values, title, key });
-  const approval = await create("Run Approval acceptance", "run-approval-task"); const control = await create("Run Control acceptance", "run-control-task"); const concurrent = await create("Run Concurrent Control acceptance", "run-concurrent-control-task"); const operator = await create("Run Operator denial acceptance", "run-operator-task"); const abort = await create("Runtime Approval Abort acceptance", "runtime-approval-abort-task"); const browserRuntime = await create("Runtime Approval Browser acceptance", "runtime-approval-browser-task");
-  for (const result of [approval, control, concurrent, operator, abort, browserRuntime]) if (result.status !== 201) throw new Error(`Run governance fixture launch failed: ${JSON.stringify(result.body)}`);
-  await page.evaluate(({ approval, control, concurrent, operator, abort, browserRuntime }) => { sessionStorage.setItem("acceptance-run-approval-task", approval.body.task.id); sessionStorage.setItem("acceptance-run-approval", approval.body.run_id); sessionStorage.setItem("acceptance-run-control-task", control.body.task.id); sessionStorage.setItem("acceptance-run-control", control.body.run_id); sessionStorage.setItem("acceptance-run-concurrent-control", concurrent.body.run_id); sessionStorage.setItem("acceptance-run-operator-task", operator.body.task.id); sessionStorage.setItem("acceptance-run-operator", operator.body.run_id); sessionStorage.setItem("acceptance-runtime-approval-browser-task", browserRuntime.body.task.id); sessionStorage.setItem("acceptance-runtime-approval-browser-run", browserRuntime.body.run_id); }, { approval, control, concurrent, operator, abort, browserRuntime });
+  const approval = await create("Run Approval acceptance", "run-approval-task"); const control = await create("Run Control acceptance", "run-control-task"); const concurrent = await create("Run Concurrent Control acceptance", "run-concurrent-control-task"); const operator = await create("Run Operator denial acceptance", "run-operator-task"); const operatorInterrupt = await create("Operator Interrupt acceptance", "operator-interrupt-task"); const operatorCancel = await create("Operator Cancel acceptance", "operator-cancel-task"); const operatorKill = await create("Operator Kill acceptance", "operator-kill-task"); const operatorRecovery = await create("Operator Recovery acceptance", "operator-recovery-task"); const abort = await create("Runtime Approval Abort acceptance", "runtime-approval-abort-task"); const browserRuntime = await create("Runtime Approval Browser acceptance", "runtime-approval-browser-task");
+  for (const result of [approval, control, concurrent, operator, operatorInterrupt, operatorCancel, operatorKill, operatorRecovery, abort, browserRuntime]) if (result.status !== 201) throw new Error(`Run governance fixture launch failed: ${JSON.stringify(result.body)}`);
+  await page.evaluate(({ approval, control, concurrent, operator, operatorInterrupt, operatorCancel, operatorKill, operatorRecovery, abort, browserRuntime }) => { sessionStorage.setItem("acceptance-run-approval-task", approval.body.task.id); sessionStorage.setItem("acceptance-run-approval", approval.body.run_id); sessionStorage.setItem("acceptance-run-control-task", control.body.task.id); sessionStorage.setItem("acceptance-run-control", control.body.run_id); sessionStorage.setItem("acceptance-run-concurrent-control", concurrent.body.run_id); sessionStorage.setItem("acceptance-run-operator-task", operator.body.task.id); sessionStorage.setItem("acceptance-run-operator", operator.body.run_id); sessionStorage.setItem("acceptance-operator-interrupt", operatorInterrupt.body.run_id); sessionStorage.setItem("acceptance-operator-cancel", operatorCancel.body.run_id); sessionStorage.setItem("acceptance-operator-kill", operatorKill.body.run_id); sessionStorage.setItem("acceptance-operator-recovery", operatorRecovery.body.run_id); sessionStorage.setItem("acceptance-runtime-approval-browser-task", browserRuntime.body.task.id); sessionStorage.setItem("acceptance-runtime-approval-browser-run", browserRuntime.body.run_id); }, { approval, control, concurrent, operator, operatorInterrupt, operatorCancel, operatorKill, operatorRecovery, abort, browserRuntime });
 }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE runs SET state = 'running', started_at = now(), updated_at = now() WHERE id IN (
      SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
-     WHERE coding_tasks.title IN ('Run Approval acceptance', 'Run Control acceptance', 'Run Concurrent Control acceptance', 'Run Operator denial acceptance', 'Runtime Approval Abort acceptance'));
+     WHERE coding_tasks.title IN ('Run Approval acceptance', 'Run Control acceptance', 'Run Concurrent Control acceptance', 'Run Operator denial acceptance', 'Operator Interrupt acceptance', 'Operator Cancel acceptance', 'Operator Kill acceptance', 'Runtime Approval Abort acceptance'));
+   UPDATE runs SET state = 'recovery_required', attempt_count = 1, started_at = now(), updated_at = now(), version = version + 1 WHERE id = (
+     SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Operator Recovery acceptance');
+   INSERT INTO run_attempts (id, run_id, attempt_number, worker_id, state, infrastructure_failure, error, started_at, ended_at)
+     SELECT '91919191-9191-4191-8191-919191919191', runs.id, 1, 'lost-worker', 'lost', true, jsonb_build_object('code', 'infrastructure_lease_expired'), now() - interval '1 minute', now()
+     FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id WHERE coding_tasks.title = 'Operator Recovery acceptance';
    UPDATE runs SET created_at = '2000-01-01T00:00:00Z' WHERE id = (
      SELECT runs.id FROM runs JOIN sessions ON sessions.id = runs.session_id JOIN coding_tasks ON coding_tasks.id = sessions.coding_task_id
      WHERE coding_tasks.title = 'Runtime Approval Browser acceptance')" >/dev/null
@@ -788,6 +793,38 @@ browser --session "$playwright_session" run-code 'async (page) => {
   const crossTeam = await page.evaluate(async (token) => fetch("/api/v1/runs?team_id=55555555-5555-4555-8555-555555555555&limit=25", { headers: { Authorization: `Bearer ${token}` } }).then((response) => response.status), accessToken); if (crossTeam !== 403) throw new Error(`cross-Team Operations search returned ${crossTeam}`);
   await page.getByTestId("filter-agent").fill("00000000-0000-4000-8000-000000000999"); await page.getByTestId("filter-task").fill(""); await page.getByTestId("filter-state").selectOption(""); await page.getByTestId("operations-filters").evaluate((form) => form.requestSubmit()); await page.getByTestId("operations-empty").waitFor();
 }'
+
+browser --session "$playwright_session" run-code 'async (page) => {
+  const team = "66666666-6666-4666-8666-666666666666";
+  const values = await page.evaluate(() => ({ interrupt: sessionStorage.getItem("acceptance-operator-interrupt"), cancel: sessionStorage.getItem("acceptance-operator-cancel"), kill: sessionStorage.getItem("acceptance-operator-kill"), recovery: sessionStorage.getItem("acceptance-operator-recovery"), nonRecoverable: sessionStorage.getItem("acceptance-run-operator") }));
+  const operate = async (runID, testID, initialState, expectedState, reason, action) => {
+    await page.goto(`http://127.0.0.1:18092/operations?team=${team}&state=${initialState}&run=${runID}`, { waitUntil: "commit" }); await page.locator(".operation-run-heading").waitFor();
+    if (reason) await page.locator(".operator-controls textarea").fill(reason);
+    if (testID === "operator-kill") await page.evaluate(() => { window.__acceptanceKillConfirmed = false; window.confirm = (message) => { window.__acceptanceKillConfirmed = message.includes("Kill"); return true; }; });
+    const response = page.waitForResponse((item) => item.url().includes(`/runs/${runID}/`) && item.request().method() === "POST");
+    await page.getByTestId(testID).click();
+    const result = await response; const body = await result.json();
+    if (result.status() !== 200 || body.state !== expectedState) throw new Error(`${action} failed: ${result.status()} ${JSON.stringify(body)}`);
+    if (testID === "operator-kill" && !(await page.evaluate(() => window.__acceptanceKillConfirmed))) throw new Error("Kill did not require explicit destructive confirmation");
+    await page.locator(".audit-list article").filter({ hasText: action }).first().waitFor();
+  };
+  await operate(values.interrupt, "operator-interrupt", "running", "interrupting", "", "run.interrupt");
+  await operate(values.cancel, "operator-cancel", "running", "cancelled", "", "run.cancel");
+  await operate(values.kill, "operator-kill", "running", "cancelled", "Emergency containment acceptance", "run.kill");
+  await operate(values.recovery, "operator-recover", "recovery_required", "resuming", "Worker pool restored acceptance", "run.recover");
+  await page.goto(`http://127.0.0.1:18092/operations?team=${team}&state=waiting_confirmation&run=${values.nonRecoverable}`, { waitUntil: "commit" }); await page.locator(".operation-run-heading").waitFor();
+  if (await page.getByTestId("operator-recover").isEnabled()) throw new Error("non-eligible Run exposed infrastructure recovery");
+  const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
+  const audits = await page.evaluate(async ({ accessToken, team }) => fetch(`/api/v1/audit-events?team_id=${team}&resource_type=run&outcome=succeeded&limit=100`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((response) => response.json()), { accessToken, team });
+  for (const action of ["run.interrupt", "run.cancel", "run.kill", "run.recover"]) if (!audits.items.some((event) => event.action === action && event.outcome === "succeeded")) throw new Error(`missing successful Audit trace for ${action}`);
+  if (JSON.stringify(audits).match(/access_token|refresh_token|acceptance-db-password/i)) throw new Error("Audit response leaked protected request or Token data");
+}'
+
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE role_grants SET team_id = '55555555-5555-4555-8555-555555555555' WHERE id = '45454545-4545-4545-8545-454545454545';" >/dev/null
+browser --session "$playwright_session" run-code 'async (page) => { const response = page.waitForResponse((item) => item.url().includes("/audit-events") && item.request().method() === "GET" && item.status() === 403); await page.locator(".audit-console form").evaluate((form) => form.requestSubmit()); await response; await page.locator(".audit-console [role=alert]").waitFor(); if (await page.locator(".operation-run-heading").count()) throw new Error("revoked Operations authorization left protected Run state visible"); }'
+docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
+  "UPDATE role_grants SET team_id = '66666666-6666-4666-8666-666666666666' WHERE id = '45454545-4545-4545-8545-454545454545';" >/dev/null
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = NULL WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null

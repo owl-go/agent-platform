@@ -97,11 +97,13 @@ func TestPrincipalSeparatesRunCollaborationFromOperatorKill(t *testing.T) {
 			t.Fatalf("Agent User %s: %v", action, err)
 		}
 	}
-	if _, err := user.AuthorizeRunControl(scope, "kill"); !errors.Is(err, ErrForbidden) {
-		t.Fatalf("Agent User kill error = %v", err)
+	for _, action := range []string{"kill", "recover"} {
+		if _, err := user.AuthorizeRunControl(scope, action); !errors.Is(err, ErrForbidden) {
+			t.Fatalf("Agent User %s error = %v", action, err)
+		}
 	}
 	operator := Principal{UserID: "operator", OrganizationID: "org", Grants: []Grant{{TeamID: &team, Role: RunOperator}}}
-	for _, action := range []string{"interrupt", "cancel", "kill"} {
+	for _, action := range []string{"interrupt", "cancel", "kill", "recover"} {
 		if _, err := operator.AuthorizeRunControl(scope, action); err != nil {
 			t.Fatalf("Run Operator %s: %v", action, err)
 		}

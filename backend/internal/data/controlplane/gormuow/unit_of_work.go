@@ -223,7 +223,11 @@ func appendAudit(tx *gorm.DB, request transaction.IdempotencyRequest, result tra
 	if request.SystemActor {
 		actorType = "system"
 	}
-	details, err := json.Marshal(map[string]any{"response_status": result.Status, "idempotency_key": request.Key, "actor_type": actorType})
+	outcome := "failed"
+	if result.Status >= 200 && result.Status < 300 {
+		outcome = "succeeded"
+	}
+	details, err := json.Marshal(map[string]any{"response_status": result.Status, "outcome": outcome, "idempotency_key": request.Key, "actor_type": actorType})
 	if err != nil {
 		return fmt.Errorf("encode Audit Event details: %w", err)
 	}

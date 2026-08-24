@@ -39,7 +39,14 @@ service ExecutionService {
     } };
   }
   rpc KillRun(KillRunRequest) returns (Run) {
-    option (google.api.http) = {post: "/v1/runs/{run_id}/kill"};
+    option (google.api.http) = {post: "/v1/runs/{run_id}/kill" body: "*"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
+      headers: { name: "Idempotency-Key" type: STRING required: true }
+      headers: { name: "If-Match" type: STRING required: true }
+    } };
+  }
+  rpc RecoverRun(RecoverRunRequest) returns (Run) {
+    option (google.api.http) = {post: "/v1/runs/{run_id}/recovery" body: "*"};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = { parameters: {
       headers: { name: "Idempotency-Key" type: STRING required: true }
       headers: { name: "If-Match" type: STRING required: true }
@@ -72,8 +79,10 @@ message ResumeRunRequest { string run_id = 1; }
 message ResumeRunResponse { Run run = 1; }
 message CancelRunRequest { string run_id = 1; }
 message CancelRunResponse { Run run = 1; }
-message KillRunRequest { string run_id = 1; }
+message KillRunRequest { string run_id = 1; string reason = 2; }
 message KillRunResponse { Run run = 1; }
+message RecoverRunRequest { string run_id = 1; string reason = 2; }
+message RecoverRunResponse { Run run = 1; }
 
 message Run {
   string id = 1;

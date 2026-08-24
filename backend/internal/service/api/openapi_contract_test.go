@@ -90,6 +90,7 @@ func TestOpenAPIPathsMatchRegisteredRoutes(t *testing.T) {
 		"POST /v1/runs/{run_id}/approvals",
 		"POST /v1/runs/{run_id}/interrupt",
 		"POST /v1/runs/{run_id}/kill",
+		"POST /v1/runs/{run_id}/recovery",
 		"POST /v1/runs/{run_id}/resume",
 		"POST /v1/runtime-images",
 		"POST /v1/source-control-providers",
@@ -233,6 +234,7 @@ func TestGeneratedOpenAPIModelsLegacyJSONShape(t *testing.T) {
 		"/v1/runs/{run_id}/resume":                                "post",
 		"/v1/runs/{run_id}/cancel":                                "post",
 		"/v1/runs/{run_id}/kill":                                  "post",
+		"/v1/runs/{run_id}/recovery":                              "post",
 	} {
 		operation := paths[path].(map[string]any)[method].(map[string]any)
 		parameters := operation["parameters"].([]any)

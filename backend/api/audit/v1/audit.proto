@@ -20,6 +20,7 @@ message ListAuditEventsRequest {
   optional google.protobuf.Timestamp created_from = 6;
   optional google.protobuf.Timestamp created_to = 7;
   optional int32 limit = 8;
+  optional string outcome = 9;
 }
 message ListAuditEventsResponse { repeated AuditEvent items = 1; }
 message AuditEvent {
@@ -31,4 +32,5 @@ message AuditEvent {
   string resource_id = 6;
   google.protobuf.Struct details = 7;
   google.protobuf.Timestamp created_at = 8;
+  string outcome = 9;
 }

@@ -184,6 +184,12 @@ func (service *GeneratedServices) ListAuditEvents(ctx context.Context, request *
 			return nil, publicError(400, "invalid_audit_query")
 		}
 	}
+	if request.Outcome != nil {
+		query.Outcome = *request.Outcome
+		if query.Outcome != "succeeded" && query.Outcome != "failed" {
+			return nil, publicError(400, "invalid_audit_query")
+		}
+	}
 	if request.CreatedFrom != nil {
 		value := request.CreatedFrom.AsTime().UTC()
 		query.CreatedFrom = &value
@@ -204,7 +210,7 @@ func (service *GeneratedServices) ListAuditEvents(ctx context.Context, request *
 	}
 	items := make([]auditEventResponse, 0, len(values))
 	for _, value := range values {
-		items = append(items, auditEventResponse{ID: value.ID, TeamID: value.TeamID, ActorUserID: value.ActorUserID, Action: value.Action, ResourceType: value.ResourceType, ResourceID: value.ResourceID, Details: value.Details, CreatedAt: value.CreatedAt})
+		items = append(items, auditEventResponse{ID: value.ID, TeamID: value.TeamID, ActorUserID: value.ActorUserID, Outcome: value.Outcome, Action: value.Action, ResourceType: value.ResourceType, ResourceID: value.ResourceID, Details: value.Details, CreatedAt: value.CreatedAt})
 	}
 	return mappedResponse(ctx, http.StatusOK, map[string]any{"items": items}, &auditv1.ListAuditEventsResponse{})
 }

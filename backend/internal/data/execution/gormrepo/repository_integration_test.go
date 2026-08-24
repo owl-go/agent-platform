@@ -188,7 +188,7 @@ func TestGORMRepositoryRunControlLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlInterrupt, "6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlInterrupt, "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "")
 	if err != nil || details.State != domain.Interrupting {
 		t.Fatalf("Interrupt() = (%+v, %v)", details, err)
 	}
@@ -202,7 +202,7 @@ func TestGORMRepositoryRunControlLifecycle(t *testing.T) {
 	if err != nil || details.State != domain.Interrupted || details.Attempts[0].State != domain.AttemptCancelled {
 		t.Fatalf("interrupted Run = (%+v, %v)", details, err)
 	}
-	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlResume, "6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlResume, "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "")
 	if err != nil || details.State != domain.Resuming {
 		t.Fatalf("Resume() = (%+v, %v)", details, err)
 	}
@@ -214,7 +214,7 @@ func TestGORMRepositoryRunControlLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	details, _ = service.Get(context.Background(), runID)
-	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlKill, "6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlKill, "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "emergency containment")
 	if err != nil || details.State != domain.Cancelled || !strings.Contains(string(details.TerminalError), "operator_killed") {
 		t.Fatalf("Kill() = (%+v, %v)", details, err)
 	}
@@ -286,7 +286,7 @@ func TestGORMRepositoryCancelBeginsWithinTenSeconds(t *testing.T) {
 		t.Fatal(err)
 	}
 	startedAt := time.Now()
-	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlCancel, "6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlCancel, "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "")
 	if err != nil || details.State != domain.Cancelled {
 		t.Fatalf("Cancel() = (%+v, %v)", details, err)
 	}
@@ -362,14 +362,25 @@ func TestGORMRepositoryReconcilesExpiredAttempts(t *testing.T) {
 	}
 	time.Sleep(10 * time.Millisecond)
 	result, err = service.ReconcileExpired(context.Background(), 2)
-	if err != nil || result.Rescheduled != 0 || result.Failed != 1 {
+	if err != nil || result.Rescheduled != 0 || result.AwaitingRecovery != 1 || result.Failed != 0 {
 		t.Fatalf("second ReconcileExpired() = (%+v, %v)", result, err)
 	}
-	assertRun(t, database.ORM(), runID, domain.Failed, 2, 0)
-	assertTaskRunResult(t, database.ORM(), runID, "failed")
+	assertRun(t, database.ORM(), runID, domain.RecoveryRequired, 2, 0)
 	assertEventSequence(t, database.ORM(), runID, []string{
-		"run.attempt_started", "run.retry_scheduled", "run.attempt_started", "run.failed",
+		"run.attempt_started", "run.retry_scheduled", "run.attempt_started", "run.recovery_required",
 	})
+	details, err := service.Get(context.Background(), runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	details, err = service.Control(context.Background(), runID, details.Version, domain.ControlRecover, "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "worker capacity restored")
+	if err != nil || details.State != domain.Resuming || details.TerminalError != nil {
+		t.Fatalf("Recover() = (%+v, %v)", details, err)
+	}
+	third, found, err := service.Claim(context.Background(), "worker-c", time.Minute)
+	if err != nil || !found || third.RunID != runID || third.AttemptNumber != 3 {
+		t.Fatalf("recovered Claim() = (%+v, %v, %v)", third, found, err)
+	}
 }
 
 func assertTaskRunResult(t *testing.T, database *gorm.DB, runID, status string) {

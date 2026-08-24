@@ -557,6 +557,7 @@ func (x *CancelRunResponse) GetRun() *Run {
 type KillRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -594,6 +595,13 @@ func (*KillRunRequest) Descriptor() ([]byte, []int) {
 func (x *KillRunRequest) GetRunId() string {
 	if x != nil {
 		return x.RunId
+	}
+	return ""
+}
+
+func (x *KillRunRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -642,6 +650,102 @@ func (x *KillRunResponse) GetRun() *Run {
 	return nil
 }
 
+type RecoverRunRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecoverRunRequest) Reset() {
+	*x = RecoverRunRequest{}
+	mi := &file_execution_v1_execution_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoverRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoverRunRequest) ProtoMessage() {}
+
+func (x *RecoverRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_execution_v1_execution_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoverRunRequest.ProtoReflect.Descriptor instead.
+func (*RecoverRunRequest) Descriptor() ([]byte, []int) {
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RecoverRunRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *RecoverRunRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RecoverRunResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Run           *Run                   `protobuf:"bytes,1,opt,name=run,proto3" json:"run,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecoverRunResponse) Reset() {
+	*x = RecoverRunResponse{}
+	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoverRunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoverRunResponse) ProtoMessage() {}
+
+func (x *RecoverRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoverRunResponse.ProtoReflect.Descriptor instead.
+func (*RecoverRunResponse) Descriptor() ([]byte, []int) {
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RecoverRunResponse) GetRun() *Run {
+	if x != nil {
+		return x.Run
+	}
+	return nil
+}
+
 type Run struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
 	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -677,7 +781,7 @@ type Run struct {
 
 func (x *Run) Reset() {
 	*x = Run{}
-	mi := &file_execution_v1_execution_proto_msgTypes[12]
+	mi := &file_execution_v1_execution_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -689,7 +793,7 @@ func (x *Run) String() string {
 func (*Run) ProtoMessage() {}
 
 func (x *Run) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[12]
+	mi := &file_execution_v1_execution_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -702,7 +806,7 @@ func (x *Run) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Run.ProtoReflect.Descriptor instead.
 func (*Run) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{12}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Run) GetId() string {
@@ -905,7 +1009,7 @@ type RunLeaseDiagnostic struct {
 
 func (x *RunLeaseDiagnostic) Reset() {
 	*x = RunLeaseDiagnostic{}
-	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	mi := &file_execution_v1_execution_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1021,7 @@ func (x *RunLeaseDiagnostic) String() string {
 func (*RunLeaseDiagnostic) ProtoMessage() {}
 
 func (x *RunLeaseDiagnostic) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[13]
+	mi := &file_execution_v1_execution_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1034,7 @@ func (x *RunLeaseDiagnostic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunLeaseDiagnostic.ProtoReflect.Descriptor instead.
 func (*RunLeaseDiagnostic) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{13}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RunLeaseDiagnostic) GetAttemptId() string {
@@ -970,7 +1074,7 @@ type Attempt struct {
 
 func (x *Attempt) Reset() {
 	*x = Attempt{}
-	mi := &file_execution_v1_execution_proto_msgTypes[14]
+	mi := &file_execution_v1_execution_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -982,7 +1086,7 @@ func (x *Attempt) String() string {
 func (*Attempt) ProtoMessage() {}
 
 func (x *Attempt) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[14]
+	mi := &file_execution_v1_execution_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -995,7 +1099,7 @@ func (x *Attempt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Attempt.ProtoReflect.Descriptor instead.
 func (*Attempt) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{14}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Attempt) GetId() string {
@@ -1064,7 +1168,7 @@ type StreamRequest struct {
 
 func (x *StreamRequest) Reset() {
 	*x = StreamRequest{}
-	mi := &file_execution_v1_execution_proto_msgTypes[15]
+	mi := &file_execution_v1_execution_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1076,7 +1180,7 @@ func (x *StreamRequest) String() string {
 func (*StreamRequest) ProtoMessage() {}
 
 func (x *StreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[15]
+	mi := &file_execution_v1_execution_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1089,7 +1193,7 @@ func (x *StreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamRequest.ProtoReflect.Descriptor instead.
 func (*StreamRequest) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{15}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *StreamRequest) GetRunId() string {
@@ -1118,7 +1222,7 @@ type StreamResponse struct {
 
 func (x *StreamResponse) Reset() {
 	*x = StreamResponse{}
-	mi := &file_execution_v1_execution_proto_msgTypes[16]
+	mi := &file_execution_v1_execution_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1234,7 @@ func (x *StreamResponse) String() string {
 func (*StreamResponse) ProtoMessage() {}
 
 func (x *StreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_execution_v1_execution_proto_msgTypes[16]
+	mi := &file_execution_v1_execution_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1247,7 @@ func (x *StreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamResponse.ProtoReflect.Descriptor instead.
 func (*StreamResponse) Descriptor() ([]byte, []int) {
-	return file_execution_v1_execution_proto_rawDescGZIP(), []int{16}
+	return file_execution_v1_execution_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *StreamResponse) GetSequence() int64 {
@@ -1224,10 +1328,16 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\x10CancelRunRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\"8\n" +
 	"\x11CancelRunResponse\x12#\n" +
-	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"'\n" +
+	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"?\n" +
 	"\x0eKillRunRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"6\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"6\n" +
 	"\x0fKillRunResponse\x12#\n" +
+	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"B\n" +
+	"\x11RecoverRunRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"9\n" +
+	"\x12RecoverRunResponse\x12#\n" +
 	"\x03run\x18\x01 \x01(\v2\x11.execution.v1.RunR\x03run\"\xf7\n" +
 	"\n" +
 	"\x03Run\x12\x0e\n" +
@@ -1296,7 +1406,7 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"event_type\x18\x02 \x01(\tR\teventType\x120\n" +
 	"\apayload\x18\x03 \x01(\v2\x16.google.protobuf.ValueR\apayload\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x83\x06\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x9c\a\n" +
 	"\x10ExecutionService\x12[\n" +
 	"\bListRuns\x12\x1d.execution.v1.ListRunsRequest\x1a\x1e.execution.v1.ListRunsResponse\"\x10\x82\xd3\xe4\x93\x02\n" +
 	"\x12\b/v1/runs\x12S\n" +
@@ -1315,12 +1425,18 @@ const file_execution_v1_execution_proto_rawDesc = "" +
 	"\x15\n" +
 	"\x0fIdempotency-Key\x18\x01(\x01\n" +
 	"\x0e\n" +
-	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/cancel\x12\x86\x01\n" +
-	"\aKillRun\x12\x1c.execution.v1.KillRunRequest\x1a\x11.execution.v1.Run\"J\x92A)r'\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1a\"\x18/v1/runs/{run_id}/cancel\x12\x89\x01\n" +
+	"\aKillRun\x12\x1c.execution.v1.KillRunRequest\x1a\x11.execution.v1.Run\"M\x92A)r'\n" +
 	"\x15\n" +
 	"\x0fIdempotency-Key\x18\x01(\x01\n" +
 	"\x0e\n" +
-	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x18\"\x16/v1/runs/{run_id}/kill2\x80\x01\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/runs/{run_id}/kill\x12\x93\x01\n" +
+	"\n" +
+	"RecoverRun\x12\x1f.execution.v1.RecoverRunRequest\x1a\x11.execution.v1.Run\"Q\x92A)r'\n" +
+	"\x15\n" +
+	"\x0fIdempotency-Key\x18\x01(\x01\n" +
+	"\x0e\n" +
+	"\bIf-Match\x18\x01(\x01\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/runs/{run_id}/recovery2\x80\x01\n" +
 	"\x15RunEventStreamService\x12g\n" +
 	"\x06Stream\x12\x1b.execution.v1.StreamRequest\x1a\x1c.execution.v1.StreamResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/runs/{run_id}/events0\x01B5Z3agent-platform/backend/api/execution/v1;executionv1b\x06proto3"
 
@@ -1336,7 +1452,7 @@ func file_execution_v1_execution_proto_rawDescGZIP() []byte {
 	return file_execution_v1_execution_proto_rawDescData
 }
 
-var file_execution_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_execution_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_execution_v1_execution_proto_goTypes = []any{
 	(*ListRunsRequest)(nil),       // 0: execution.v1.ListRunsRequest
 	(*ListRunsResponse)(nil),      // 1: execution.v1.ListRunsResponse
@@ -1350,68 +1466,73 @@ var file_execution_v1_execution_proto_goTypes = []any{
 	(*CancelRunResponse)(nil),     // 9: execution.v1.CancelRunResponse
 	(*KillRunRequest)(nil),        // 10: execution.v1.KillRunRequest
 	(*KillRunResponse)(nil),       // 11: execution.v1.KillRunResponse
-	(*Run)(nil),                   // 12: execution.v1.Run
-	(*RunLeaseDiagnostic)(nil),    // 13: execution.v1.RunLeaseDiagnostic
-	(*Attempt)(nil),               // 14: execution.v1.Attempt
-	(*StreamRequest)(nil),         // 15: execution.v1.StreamRequest
-	(*StreamResponse)(nil),        // 16: execution.v1.StreamResponse
-	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
-	(*v1.ModelBinding)(nil),       // 18: types.v1.ModelBinding
-	(*v1.ModelBudget)(nil),        // 19: types.v1.ModelBudget
-	(*v1.ExecutionLimits)(nil),    // 20: types.v1.ExecutionLimits
-	(*v1.Usage)(nil),              // 21: types.v1.Usage
-	(*v1.ExecutionError)(nil),     // 22: types.v1.ExecutionError
-	(*structpb.Struct)(nil),       // 23: google.protobuf.Struct
-	(*structpb.Value)(nil),        // 24: google.protobuf.Value
+	(*RecoverRunRequest)(nil),     // 12: execution.v1.RecoverRunRequest
+	(*RecoverRunResponse)(nil),    // 13: execution.v1.RecoverRunResponse
+	(*Run)(nil),                   // 14: execution.v1.Run
+	(*RunLeaseDiagnostic)(nil),    // 15: execution.v1.RunLeaseDiagnostic
+	(*Attempt)(nil),               // 16: execution.v1.Attempt
+	(*StreamRequest)(nil),         // 17: execution.v1.StreamRequest
+	(*StreamResponse)(nil),        // 18: execution.v1.StreamResponse
+	(*timestamppb.Timestamp)(nil), // 19: google.protobuf.Timestamp
+	(*v1.ModelBinding)(nil),       // 20: types.v1.ModelBinding
+	(*v1.ModelBudget)(nil),        // 21: types.v1.ModelBudget
+	(*v1.ExecutionLimits)(nil),    // 22: types.v1.ExecutionLimits
+	(*v1.Usage)(nil),              // 23: types.v1.Usage
+	(*v1.ExecutionError)(nil),     // 24: types.v1.ExecutionError
+	(*structpb.Struct)(nil),       // 25: google.protobuf.Struct
+	(*structpb.Value)(nil),        // 26: google.protobuf.Value
 }
 var file_execution_v1_execution_proto_depIdxs = []int32{
-	17, // 0: execution.v1.ListRunsRequest.created_from:type_name -> google.protobuf.Timestamp
-	17, // 1: execution.v1.ListRunsRequest.created_to:type_name -> google.protobuf.Timestamp
-	12, // 2: execution.v1.ListRunsResponse.items:type_name -> execution.v1.Run
-	12, // 3: execution.v1.GetRunResponse.run:type_name -> execution.v1.Run
-	12, // 4: execution.v1.InterruptRunResponse.run:type_name -> execution.v1.Run
-	12, // 5: execution.v1.ResumeRunResponse.run:type_name -> execution.v1.Run
-	12, // 6: execution.v1.CancelRunResponse.run:type_name -> execution.v1.Run
-	12, // 7: execution.v1.KillRunResponse.run:type_name -> execution.v1.Run
-	18, // 8: execution.v1.Run.model_binding:type_name -> types.v1.ModelBinding
-	19, // 9: execution.v1.Run.model_budget:type_name -> types.v1.ModelBudget
-	20, // 10: execution.v1.Run.execution_limits:type_name -> types.v1.ExecutionLimits
-	21, // 11: execution.v1.Run.usage:type_name -> types.v1.Usage
-	22, // 12: execution.v1.Run.terminal_error:type_name -> types.v1.ExecutionError
-	17, // 13: execution.v1.Run.created_at:type_name -> google.protobuf.Timestamp
-	17, // 14: execution.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	17, // 15: execution.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	17, // 16: execution.v1.Run.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 17: execution.v1.Run.attempts:type_name -> execution.v1.Attempt
-	23, // 18: execution.v1.Run.repository_binding_snapshot:type_name -> google.protobuf.Struct
-	23, // 19: execution.v1.Run.runtime_image_snapshot:type_name -> google.protobuf.Struct
-	23, // 20: execution.v1.Run.configured_model_snapshot:type_name -> google.protobuf.Struct
-	13, // 21: execution.v1.Run.lease:type_name -> execution.v1.RunLeaseDiagnostic
-	17, // 22: execution.v1.RunLeaseDiagnostic.expires_at:type_name -> google.protobuf.Timestamp
-	22, // 23: execution.v1.Attempt.error:type_name -> types.v1.ExecutionError
-	17, // 24: execution.v1.Attempt.started_at:type_name -> google.protobuf.Timestamp
-	17, // 25: execution.v1.Attempt.ended_at:type_name -> google.protobuf.Timestamp
-	24, // 26: execution.v1.StreamResponse.payload:type_name -> google.protobuf.Value
-	17, // 27: execution.v1.StreamResponse.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 28: execution.v1.ExecutionService.ListRuns:input_type -> execution.v1.ListRunsRequest
-	2,  // 29: execution.v1.ExecutionService.GetRun:input_type -> execution.v1.GetRunRequest
-	4,  // 30: execution.v1.ExecutionService.InterruptRun:input_type -> execution.v1.InterruptRunRequest
-	6,  // 31: execution.v1.ExecutionService.ResumeRun:input_type -> execution.v1.ResumeRunRequest
-	8,  // 32: execution.v1.ExecutionService.CancelRun:input_type -> execution.v1.CancelRunRequest
-	10, // 33: execution.v1.ExecutionService.KillRun:input_type -> execution.v1.KillRunRequest
-	15, // 34: execution.v1.RunEventStreamService.Stream:input_type -> execution.v1.StreamRequest
-	1,  // 35: execution.v1.ExecutionService.ListRuns:output_type -> execution.v1.ListRunsResponse
-	12, // 36: execution.v1.ExecutionService.GetRun:output_type -> execution.v1.Run
-	12, // 37: execution.v1.ExecutionService.InterruptRun:output_type -> execution.v1.Run
-	12, // 38: execution.v1.ExecutionService.ResumeRun:output_type -> execution.v1.Run
-	12, // 39: execution.v1.ExecutionService.CancelRun:output_type -> execution.v1.Run
-	12, // 40: execution.v1.ExecutionService.KillRun:output_type -> execution.v1.Run
-	16, // 41: execution.v1.RunEventStreamService.Stream:output_type -> execution.v1.StreamResponse
-	35, // [35:42] is the sub-list for method output_type
-	28, // [28:35] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	19, // 0: execution.v1.ListRunsRequest.created_from:type_name -> google.protobuf.Timestamp
+	19, // 1: execution.v1.ListRunsRequest.created_to:type_name -> google.protobuf.Timestamp
+	14, // 2: execution.v1.ListRunsResponse.items:type_name -> execution.v1.Run
+	14, // 3: execution.v1.GetRunResponse.run:type_name -> execution.v1.Run
+	14, // 4: execution.v1.InterruptRunResponse.run:type_name -> execution.v1.Run
+	14, // 5: execution.v1.ResumeRunResponse.run:type_name -> execution.v1.Run
+	14, // 6: execution.v1.CancelRunResponse.run:type_name -> execution.v1.Run
+	14, // 7: execution.v1.KillRunResponse.run:type_name -> execution.v1.Run
+	14, // 8: execution.v1.RecoverRunResponse.run:type_name -> execution.v1.Run
+	20, // 9: execution.v1.Run.model_binding:type_name -> types.v1.ModelBinding
+	21, // 10: execution.v1.Run.model_budget:type_name -> types.v1.ModelBudget
+	22, // 11: execution.v1.Run.execution_limits:type_name -> types.v1.ExecutionLimits
+	23, // 12: execution.v1.Run.usage:type_name -> types.v1.Usage
+	24, // 13: execution.v1.Run.terminal_error:type_name -> types.v1.ExecutionError
+	19, // 14: execution.v1.Run.created_at:type_name -> google.protobuf.Timestamp
+	19, // 15: execution.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	19, // 16: execution.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	19, // 17: execution.v1.Run.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 18: execution.v1.Run.attempts:type_name -> execution.v1.Attempt
+	25, // 19: execution.v1.Run.repository_binding_snapshot:type_name -> google.protobuf.Struct
+	25, // 20: execution.v1.Run.runtime_image_snapshot:type_name -> google.protobuf.Struct
+	25, // 21: execution.v1.Run.configured_model_snapshot:type_name -> google.protobuf.Struct
+	15, // 22: execution.v1.Run.lease:type_name -> execution.v1.RunLeaseDiagnostic
+	19, // 23: execution.v1.RunLeaseDiagnostic.expires_at:type_name -> google.protobuf.Timestamp
+	24, // 24: execution.v1.Attempt.error:type_name -> types.v1.ExecutionError
+	19, // 25: execution.v1.Attempt.started_at:type_name -> google.protobuf.Timestamp
+	19, // 26: execution.v1.Attempt.ended_at:type_name -> google.protobuf.Timestamp
+	26, // 27: execution.v1.StreamResponse.payload:type_name -> google.protobuf.Value
+	19, // 28: execution.v1.StreamResponse.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 29: execution.v1.ExecutionService.ListRuns:input_type -> execution.v1.ListRunsRequest
+	2,  // 30: execution.v1.ExecutionService.GetRun:input_type -> execution.v1.GetRunRequest
+	4,  // 31: execution.v1.ExecutionService.InterruptRun:input_type -> execution.v1.InterruptRunRequest
+	6,  // 32: execution.v1.ExecutionService.ResumeRun:input_type -> execution.v1.ResumeRunRequest
+	8,  // 33: execution.v1.ExecutionService.CancelRun:input_type -> execution.v1.CancelRunRequest
+	10, // 34: execution.v1.ExecutionService.KillRun:input_type -> execution.v1.KillRunRequest
+	12, // 35: execution.v1.ExecutionService.RecoverRun:input_type -> execution.v1.RecoverRunRequest
+	17, // 36: execution.v1.RunEventStreamService.Stream:input_type -> execution.v1.StreamRequest
+	1,  // 37: execution.v1.ExecutionService.ListRuns:output_type -> execution.v1.ListRunsResponse
+	14, // 38: execution.v1.ExecutionService.GetRun:output_type -> execution.v1.Run
+	14, // 39: execution.v1.ExecutionService.InterruptRun:output_type -> execution.v1.Run
+	14, // 40: execution.v1.ExecutionService.ResumeRun:output_type -> execution.v1.Run
+	14, // 41: execution.v1.ExecutionService.CancelRun:output_type -> execution.v1.Run
+	14, // 42: execution.v1.ExecutionService.KillRun:output_type -> execution.v1.Run
+	14, // 43: execution.v1.ExecutionService.RecoverRun:output_type -> execution.v1.Run
+	18, // 44: execution.v1.RunEventStreamService.Stream:output_type -> execution.v1.StreamResponse
+	37, // [37:45] is the sub-list for method output_type
+	29, // [29:37] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_execution_v1_execution_proto_init() }
@@ -1420,15 +1541,15 @@ func file_execution_v1_execution_proto_init() {
 		return
 	}
 	file_execution_v1_execution_proto_msgTypes[0].OneofWrappers = []any{}
-	file_execution_v1_execution_proto_msgTypes[12].OneofWrappers = []any{}
 	file_execution_v1_execution_proto_msgTypes[14].OneofWrappers = []any{}
+	file_execution_v1_execution_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_execution_v1_execution_proto_rawDesc), len(file_execution_v1_execution_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

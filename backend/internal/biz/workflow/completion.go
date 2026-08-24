@@ -10,7 +10,7 @@ import (
 
 type Completion interface {
 	Finish(context.Context, string, executiondomain.Outcome, time.Time) error
-	Control(context.Context, string, int64, executiondomain.ControlAction, string, time.Time) (executiondomain.Details, error)
+	Control(context.Context, string, int64, executiondomain.ControlAction, string, string, time.Time) (executiondomain.Details, error)
 	ReconcileExpired(context.Context, int, time.Time) (executiondomain.ReconcileResult, error)
 }
 
@@ -35,12 +35,12 @@ func (workflow *CompletionService) Finish(ctx context.Context, token string, out
 	})
 }
 
-func (workflow *CompletionService) Control(ctx context.Context, runID string, expectedVersion int64, action executiondomain.ControlAction, actorUserID string, now time.Time) (executiondomain.Details, error) {
+func (workflow *CompletionService) Control(ctx context.Context, runID string, expectedVersion int64, action executiondomain.ControlAction, actorUserID, reason string, now time.Time) (executiondomain.Details, error) {
 	var details executiondomain.Details
 	err := workflow.transactions.Within(ctx, func(participants Participants) error {
 		var projection executiondomain.CompletionProjection
 		var err error
-		details, projection, err = participants.Execution.Control(ctx, runID, expectedVersion, action, actorUserID, now)
+		details, projection, err = participants.Execution.Control(ctx, runID, expectedVersion, action, actorUserID, reason, now)
 		if err != nil || projection.State == "" {
 			return err
 		}

@@ -167,7 +167,7 @@ func (principal Principal) AuthorizeRunControl(scope RunScope, action string) (A
 			case PlatformAdministrator, AgentBuilder, AgentUser:
 				return Actor{UserID: principal.UserID, OrganizationID: principal.OrganizationID, TeamID: scope.TeamID}, nil
 			}
-		case "kill":
+		case "kill", "recover":
 			if grant.Role == RunOperator || grant.Role == PlatformAdministrator && grant.TeamID == nil {
 				return Actor{UserID: principal.UserID, OrganizationID: principal.OrganizationID, TeamID: scope.TeamID}, nil
 			}

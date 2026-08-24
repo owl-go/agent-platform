@@ -141,19 +141,22 @@ func (service *GeneratedServices) GetRun(ctx context.Context, request *execution
 }
 
 func (service *GeneratedServices) InterruptRun(ctx context.Context, request *executionv1.InterruptRunRequest) (*executionv1.Run, error) {
-	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlInterrupt)
+	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlInterrupt, "")
 }
 func (service *GeneratedServices) ResumeRun(ctx context.Context, request *executionv1.ResumeRunRequest) (*executionv1.Run, error) {
-	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlResume)
+	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlResume, "")
 }
 func (service *GeneratedServices) CancelRun(ctx context.Context, request *executionv1.CancelRunRequest) (*executionv1.Run, error) {
-	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlCancel)
+	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlCancel, "")
 }
 func (service *GeneratedServices) KillRun(ctx context.Context, request *executionv1.KillRunRequest) (*executionv1.Run, error) {
-	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlKill)
+	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlKill, request.Reason)
+}
+func (service *GeneratedServices) RecoverRun(ctx context.Context, request *executionv1.RecoverRunRequest) (*executionv1.Run, error) {
+	return service.controlRun(ctx, request, request.RunId, executiondomain.ControlRecover, request.Reason)
 }
 
-func (service *GeneratedServices) controlRun(ctx context.Context, request proto.Message, runID string, action executiondomain.ControlAction) (*executionv1.Run, error) {
+func (service *GeneratedServices) controlRun(ctx context.Context, request proto.Message, runID string, action executiondomain.ControlAction, reason string) (*executionv1.Run, error) {
 	if _, err := uuid.Parse(runID); err != nil {
 		return nil, publicError(400, "invalid_resource_id")
 	}
@@ -166,7 +169,7 @@ func (service *GeneratedServices) controlRun(ctx context.Context, request proto.
 		return nil, mapAuthorizationError(err, "run_control_denied")
 	}
 	result, err := service.executeWrite(ctx, actor, "run."+string(action)+":"+runID, strconv.FormatInt(version, 10), request, func(services transaction.TransactionServices) (transaction.IdempotencyResult, error) {
-		value, err := services.Runs.Control(ctx, runID, version, action, actor.UserID)
+		value, err := services.Runs.Control(ctx, runID, version, action, actor.UserID, reason)
 		return encodeWriteResult(http.StatusOK, newRunResponse(value), err)
 	})
 	if err != nil {

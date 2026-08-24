@@ -22,6 +22,7 @@ const OperationExecutionServiceGetRun = "/execution.v1.ExecutionService/GetRun"
 const OperationExecutionServiceInterruptRun = "/execution.v1.ExecutionService/InterruptRun"
 const OperationExecutionServiceKillRun = "/execution.v1.ExecutionService/KillRun"
 const OperationExecutionServiceListRuns = "/execution.v1.ExecutionService/ListRuns"
+const OperationExecutionServiceRecoverRun = "/execution.v1.ExecutionService/RecoverRun"
 const OperationExecutionServiceResumeRun = "/execution.v1.ExecutionService/ResumeRun"
 
 type ExecutionServiceHTTPServer interface {
@@ -30,6 +31,7 @@ type ExecutionServiceHTTPServer interface {
 	InterruptRun(context.Context, *InterruptRunRequest) (*Run, error)
 	KillRun(context.Context, *KillRunRequest) (*Run, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
+	RecoverRun(context.Context, *RecoverRunRequest) (*Run, error)
 	ResumeRun(context.Context, *ResumeRunRequest) (*Run, error)
 }
 
@@ -41,6 +43,7 @@ func RegisterExecutionServiceHTTPServer(s *http.Server, srv ExecutionServiceHTTP
 	r.Handle("POST", "/v1/runs/{run_id}/resume", _ExecutionService_ResumeRun0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/runs/{run_id}/cancel", _ExecutionService_CancelRun0_HTTP_Handler(srv))
 	r.Handle("POST", "/v1/runs/{run_id}/kill", _ExecutionService_KillRun0_HTTP_Handler(srv))
+	r.Handle("POST", "/v1/runs/{run_id}/recovery", _ExecutionService_RecoverRun0_HTTP_Handler(srv))
 }
 
 func _ExecutionService_ListRuns0_HTTP_Handler(srv ExecutionServiceHTTPServer) func(ctx http.Context) error {
@@ -153,7 +156,7 @@ func _ExecutionService_CancelRun0_HTTP_Handler(srv ExecutionServiceHTTPServer) f
 func _ExecutionService_KillRun0_HTTP_Handler(srv ExecutionServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in KillRunRequest
-		if err := ctx.BindQuery(&in); err != nil {
+		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindVars(&in); err != nil {
@@ -172,12 +175,35 @@ func _ExecutionService_KillRun0_HTTP_Handler(srv ExecutionServiceHTTPServer) fun
 	}
 }
 
+func _ExecutionService_RecoverRun0_HTTP_Handler(srv ExecutionServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in RecoverRunRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationExecutionServiceRecoverRun)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RecoverRun(ctx, req.(*RecoverRunRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*Run)
+		return ctx.Result(200, reply)
+	}
+}
+
 type ExecutionServiceHTTPClient interface {
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	InterruptRun(ctx context.Context, req *InterruptRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	KillRun(ctx context.Context, req *KillRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	ListRuns(ctx context.Context, req *ListRunsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
+	RecoverRun(ctx context.Context, req *RecoverRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	ResumeRun(ctx context.Context, req *ResumeRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 }
 
@@ -240,13 +266,14 @@ func (c *ExecutionServiceHTTPClientImpl) InterruptRun(ctx context.Context, in *I
 func (c *ExecutionServiceHTTPClientImpl) KillRun(ctx context.Context, in *KillRunRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/v1/runs/{run_id}/kill"
-	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
 		http.Operation(OperationExecutionServiceKillRun),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, nil, &out, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -263,6 +290,23 @@ func (c *ExecutionServiceHTTPClientImpl) ListRuns(ctx context.Context, in *ListR
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *ExecutionServiceHTTPClientImpl) RecoverRun(ctx context.Context, in *RecoverRunRequest, opts ...http.CallOption) (*Run, error) {
+	var out Run
+	pattern := "/v1/runs/{run_id}/recovery"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationExecutionServiceRecoverRun),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

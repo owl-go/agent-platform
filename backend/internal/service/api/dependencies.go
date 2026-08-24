@@ -34,7 +34,7 @@ type RunSearchAccessController interface {
 	AuthorizeTeamRead(context.Context, string, string) (identitydomain.Actor, error)
 }
 type RunController interface {
-	Control(context.Context, string, int64, executiondomain.ControlAction, string) (executiondomain.Details, error)
+	Control(context.Context, string, int64, executiondomain.ControlAction, string, string) (executiondomain.Details, error)
 }
 type RunAccessController interface {
 	AuthorizeRunRead(context.Context, string, string) error

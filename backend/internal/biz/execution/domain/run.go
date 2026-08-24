@@ -18,6 +18,7 @@ const (
 	Interrupting        State = "interrupting"
 	Interrupted         State = "interrupted"
 	Resuming            State = "resuming"
+	RecoveryRequired    State = "recovery_required"
 	Completed           State = "completed"
 	Failed              State = "failed"
 	Cancelled           State = "cancelled"
@@ -33,12 +34,13 @@ var (
 	moneyPattern               = regexp.MustCompile(`^(0|[1-9][0-9]*)(\.[0-9]+)?$`)
 	transitions                = map[State]map[State]struct{}{
 		Queued:              stateSet(Provisioning, Cancelled),
-		Provisioning:        stateSet(Running, Interrupting, Resuming, Failed, Cancelled),
-		Running:             stateSet(WaitingConfirmation, Interrupting, Resuming, Completed, Failed, Cancelled),
+		Provisioning:        stateSet(Running, Interrupting, Resuming, RecoveryRequired, Failed, Cancelled),
+		Running:             stateSet(WaitingConfirmation, Interrupting, Resuming, RecoveryRequired, Completed, Failed, Cancelled),
 		WaitingConfirmation: stateSet(Running, Interrupting, Cancelled, Failed),
-		Interrupting:        stateSet(Interrupted, Resuming, Failed, Cancelled),
+		Interrupting:        stateSet(Interrupted, Resuming, RecoveryRequired, Failed, Cancelled),
 		Interrupted:         stateSet(Resuming, Cancelled),
-		Resuming:            stateSet(Provisioning, Running, Failed, Cancelled),
+		Resuming:            stateSet(Provisioning, Running, RecoveryRequired, Failed, Cancelled),
+		RecoveryRequired:    stateSet(Resuming, Cancelled),
 		Completed:           {},
 		Failed:              {},
 		Cancelled:           {},
@@ -128,6 +130,14 @@ func (run *Run) Resume() error {
 	return run.transition(Resuming)
 }
 
+func (run *Run) RecoverInfrastructure(eligible bool) error {
+	if run.State != RecoveryRequired || !eligible {
+		return fmt.Errorf("%w: Run in state %s is not an infrastructure recovery candidate", ErrControlRejected, run.State)
+	}
+	run.EndedAt = nil
+	return run.transition(Resuming)
+}
+
 func (run *Run) Cancel(now time.Time) error {
 	if run.Terminal() || run.State == WaitingConfirmation {
 		return fmt.Errorf("%w: terminal Run in state %s cannot be cancelled", ErrControlRejected, run.State)
@@ -153,6 +163,7 @@ func (run *Run) Finish(outcome Outcome, now time.Time) error {
 }
 
 func (run *Run) ReconcileExpired(maxAttempts int, now time.Time) (ReconcileDecision, error) {
+	_ = now
 	if maxAttempts <= 0 {
 		return ReconcileDecision{}, fmt.Errorf("maximum Attempts must be positive")
 	}
@@ -161,17 +172,12 @@ func (run *Run) ReconcileExpired(maxAttempts int, now time.Time) (ReconcileDecis
 	}
 	decision := ReconcileDecision{State: Resuming, EventType: "run.retry_scheduled"}
 	if run.AttemptCount >= maxAttempts {
-		decision = ReconcileDecision{State: Failed, EventType: "run.failed"}
+		decision = ReconcileDecision{State: RecoveryRequired, EventType: "run.recovery_required"}
 	}
 	if err := run.transition(decision.State); err != nil {
 		return ReconcileDecision{}, err
 	}
-	if decision.State == Failed {
-		ended := now.UTC()
-		run.EndedAt = &ended
-	} else {
-		run.EndedAt = nil
-	}
+	run.EndedAt = nil
 	return decision, nil
 }
 

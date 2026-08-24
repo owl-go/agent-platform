@@ -185,6 +185,24 @@ describe("PlatformApi", () => {
     expect(controlHeaders.get("If-Match")).toBe('"3"');
   });
 
+  it("sends recovery reasons in the body and scopes Audit filters to the Team", async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
+      String(input).includes("audit-events") ? { items: [] } : { id: "run-1", state: "resuming", version: 5 },
+    ), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "access-token");
+
+    await api.controlRun("run-1", "recover", 4, "recover-intent", "worker pool restored");
+    await api.listAuditEvents!({ teamID: "team-1", action: "run.recover", resourceType: "run", outcome: "succeeded", actorUserID: "user-1" });
+
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/runs/run-1/recovery");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ reason: "worker pool restored" });
+    const headers = new Headers(fetchMock.mock.calls[0]![1]?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("recover-intent"); expect(headers.get("If-Match")).toBe('"4"');
+    const auditURL = new URL(String(fetchMock.mock.calls[1]![0]), "https://platform.example");
+    expect(Object.fromEntries(auditURL.searchParams)).toMatchObject({ team_id: "team-1", action: "run.recover", resource_type: "run", outcome: "succeeded", actor_user_id: "user-1" });
+  });
+
   it("loads the server-authorized Team launch catalog and prerequisite", async () => {
 	const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({
 	  items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "",

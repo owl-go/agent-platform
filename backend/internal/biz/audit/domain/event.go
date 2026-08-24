@@ -12,6 +12,7 @@ type Event struct {
 	OrganizationID string
 	TeamID         string
 	ActorUserID    string
+	Outcome        string
 	Action         string
 	ResourceType   string
 	ResourceID     string
@@ -26,6 +27,7 @@ type Query struct {
 	ResourceType   string
 	ResourceID     string
 	ActorUserID    string
+	Outcome        string
 	CreatedFrom    *time.Time
 	CreatedTo      *time.Time
 	Limit          int

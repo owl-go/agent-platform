@@ -25,6 +25,7 @@ const (
 	ExecutionService_ResumeRun_FullMethodName    = "/execution.v1.ExecutionService/ResumeRun"
 	ExecutionService_CancelRun_FullMethodName    = "/execution.v1.ExecutionService/CancelRun"
 	ExecutionService_KillRun_FullMethodName      = "/execution.v1.ExecutionService/KillRun"
+	ExecutionService_RecoverRun_FullMethodName   = "/execution.v1.ExecutionService/RecoverRun"
 )
 
 // ExecutionServiceClient is the client API for ExecutionService service.
@@ -37,6 +38,7 @@ type ExecutionServiceClient interface {
 	ResumeRun(ctx context.Context, in *ResumeRunRequest, opts ...grpc.CallOption) (*Run, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*Run, error)
 	KillRun(ctx context.Context, in *KillRunRequest, opts ...grpc.CallOption) (*Run, error)
+	RecoverRun(ctx context.Context, in *RecoverRunRequest, opts ...grpc.CallOption) (*Run, error)
 }
 
 type executionServiceClient struct {
@@ -107,6 +109,16 @@ func (c *executionServiceClient) KillRun(ctx context.Context, in *KillRunRequest
 	return out, nil
 }
 
+func (c *executionServiceClient) RecoverRun(ctx context.Context, in *RecoverRunRequest, opts ...grpc.CallOption) (*Run, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Run)
+	err := c.cc.Invoke(ctx, ExecutionService_RecoverRun_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExecutionServiceServer is the server API for ExecutionService service.
 // All implementations must embed UnimplementedExecutionServiceServer
 // for forward compatibility.
@@ -117,6 +129,7 @@ type ExecutionServiceServer interface {
 	ResumeRun(context.Context, *ResumeRunRequest) (*Run, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	KillRun(context.Context, *KillRunRequest) (*Run, error)
+	RecoverRun(context.Context, *RecoverRunRequest) (*Run, error)
 	mustEmbedUnimplementedExecutionServiceServer()
 }
 
@@ -144,6 +157,9 @@ func (UnimplementedExecutionServiceServer) CancelRun(context.Context, *CancelRun
 }
 func (UnimplementedExecutionServiceServer) KillRun(context.Context, *KillRunRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method KillRun not implemented")
+}
+func (UnimplementedExecutionServiceServer) RecoverRun(context.Context, *RecoverRunRequest) (*Run, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecoverRun not implemented")
 }
 func (UnimplementedExecutionServiceServer) mustEmbedUnimplementedExecutionServiceServer() {}
 func (UnimplementedExecutionServiceServer) testEmbeddedByValue()                          {}
@@ -274,6 +290,24 @@ func _ExecutionService_KillRun_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ExecutionService_RecoverRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecoverRunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExecutionServiceServer).RecoverRun(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExecutionService_RecoverRun_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExecutionServiceServer).RecoverRun(ctx, req.(*RecoverRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ExecutionService_ServiceDesc is the grpc.ServiceDesc for ExecutionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +338,10 @@ var ExecutionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "KillRun",
 			Handler:    _ExecutionService_KillRun_Handler,
+		},
+		{
+			MethodName: "RecoverRun",
+			Handler:    _ExecutionService_RecoverRun_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
