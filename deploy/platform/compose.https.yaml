@@ -17,10 +17,6 @@ services:
       - "443:443"
       - "443:443/udp"
     depends_on:
-      api:
-        condition: service_healthy
-      web:
-        condition: service_healthy
       identity:
         condition: service_started
     networks:
