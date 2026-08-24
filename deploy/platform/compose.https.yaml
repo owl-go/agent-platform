@@ -1,0 +1,91 @@
+services:
+  web:
+    ports: !reset []
+
+  caddy:
+    image: ${CADDY_IMAGE:?CADDY_IMAGE must be an immutable repository digest}
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+  identity-db:
+    image: ${KEYCLOAK_POSTGRES_IMAGE:?KEYCLOAK_POSTGRES_IMAGE must be an immutable repository digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+    volumes:
+      - identity-data:/var/lib/postgresql/data
+    networks:
+      - identity
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+  identity:
+    image: ${KEYCLOAK_IMAGE:?KEYCLOAK_IMAGE must be an immutable repository digest}
+    command: ["start", "--import-realm"]
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://identity-db:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?KEYCLOAK_ADMIN_USER is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /identity
+      KC_HOSTNAME: https://${PUBLIC_HOST:?PUBLIC_HOST is required}/identity
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ${OIDC_REALM_FILE:?OIDC_REALM_FILE is required}:/opt/keycloak/data/import/agent-platform-realm.json:ro
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    networks:
+      - identity
+      - edge
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  identity:
+    internal: true
+
+volumes:
+  caddy-data:
+  caddy-config:
+  identity-data:
