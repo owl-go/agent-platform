@@ -52,6 +52,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      OIDC_ORGANIZATION_CLAIM: ${OIDC_ORGANIZATION_CLAIM:-}
+      VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+      VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI:-}
+      VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI:-}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
@@ -89,6 +95,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      OIDC_ORGANIZATION_CLAIM: ${OIDC_ORGANIZATION_CLAIM:-}
+      VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+      VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI:-}
+      VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI:-}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
