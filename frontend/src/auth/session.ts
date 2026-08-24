@@ -80,7 +80,7 @@ export function createAuthSession(
           user = await client.getUser();
         }
         if (!user || user.expired) {
-          state.value = { kind: "unauthenticated", reason: "missing" };
+          state.value = { kind: "unauthenticated", reason: user?.expired ? "expired" : "missing" };
           return;
         }
         const currentUser = await loadCurrentUser(user.accessToken);

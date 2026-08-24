@@ -2,7 +2,7 @@ import { createI18n } from "vue-i18n";
 
 export type SupportedLocale = "zh-CN" | "en-US";
 export const localeStorageKey = "agent-platform.locale";
-export const runStates = ["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "completed", "failed", "cancelled"] as const;
+export const runStates = ["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "recovery_required", "completed", "failed", "cancelled"] as const;
 export type RunState = typeof runStates[number];
 
 const messages = {
@@ -26,9 +26,9 @@ const messages = {
     locale: { zh: "简体中文", en: "English" },
     access: { deniedTitle: "此区域不可用", deniedBody: "当前 Team 的 Role Grant 不允许访问此区域。服务端仍会对每次请求重新授权。", noTeamTitle: "没有可访问的 Team", noTeamBody: "请联系平台管理员分配 Organization 或 Team 范围的 Role Grant。" },
     surfaces: {
-      studio: { kicker: "构建 / 验证 / 发布", title: "Agent Studio", body: "为当前 Team 管理 Agent Draft 和不可变 Release。", emptyTitle: "尚无 Agent 数据", emptyBody: "真实 Agent 目录将在下一张票据中接入；这里不会展示模拟记录。" },
-      workspace: { kicker: "协作 / 执行 / 审阅", title: "协作工作区", body: "在当前 Team 中管理 Coding Task、Session、Run 和 Memory。", emptyTitle: "尚无 Coding Task 数据", emptyBody: "真实协作 API 将在后续票据中接入；这里不会展示模拟会话。" },
-      operations: { kicker: "观察 / 干预 / 恢复", title: "运维控制台", body: "检索并诊断当前 Team 的 Run。", emptyTitle: "尚无 Run 数据", emptyBody: "真实 Run 查询将在后续票据中接入；这里不会展示模拟运行记录。" },
+      studio: { kicker: "构建 / 验证 / 发布", title: "Agent Studio", body: "为当前 Team 管理 Agent Draft 和不可变 Release。", emptyTitle: "尚无 Agent 数据", emptyBody: "真实 Agent API 已连接；当前 Team 尚未创建任何记录。" },
+      workspace: { kicker: "协作 / 执行 / 审阅", title: "协作工作区", body: "在当前 Team 中管理 Coding Task、Session、Run 和 Memory。", emptyTitle: "尚无 Coding Task 数据", emptyBody: "真实协作 API 已连接；当前 Team 尚未创建任何 Coding Task。" },
+      operations: { kicker: "观察 / 干预 / 恢复", title: "运维控制台", body: "检索并诊断当前 Team 的 Run。", emptyTitle: "尚无 Run 数据", emptyBody: "真实 Run API 已连接；当前 Team 或筛选条件下没有记录。" },
     },
     workspace: {
       kicker: "协作 / 启动 / 恢复", title: "Conversation Workspace", body: "从当前 Team 的可用 Agent Release 启动 Coding Task，并从真实 Session 与首个 Run 恢复上下文。", readOnly: "只读工作区", loading: "正在读取 Coding Task 与可用发布依赖", loadingTask: "正在恢复 Coding Task 与 Session", errorBody: "请求未完成；未确认的 Coding Task 不会被创建。",
@@ -45,7 +45,7 @@ const messages = {
       prerequisite: { runtime: "缺少 Production Runtime；请先完成 Runtime Conformance 与生产状态配置。", model: "缺少已启用的 Configured Model；请检查模型及其 Credential Profile。", binding: "缺少验证通过的 Repository Binding；请重新验证仓库依赖。", release: "当前 Repository Binding 没有可用的已发布 Agent Release。" },
       notice: { created: "Coding Task、Session、Review Branch 与首个 Run 已原子创建。", approved: "Run Approval 已批准，Run 恢复执行。", rejected: "Run Approval 已拒绝，Run 已终止。", interrupt: "Run 中断请求已提交。", resume: "Run 恢复请求已提交。", cancel: "Run 已进入不可恢复的取消终态。" },
     },
-    status: { queued: "排队中", provisioning: "准备环境", running: "运行中", waiting_confirmation: "等待确认", interrupting: "正在中断", interrupted: "已中断", resuming: "正在恢复", completed: "已完成", failed: "失败", cancelled: "已取消", lost: "执行节点丢失" },
+    status: { queued: "排队中", provisioning: "准备环境", running: "运行中", waiting_confirmation: "等待确认", interrupting: "正在中断", interrupted: "已中断", resuming: "正在恢复", recovery_required: "等待基础设施恢复", completed: "已完成", failed: "失败", cancelled: "已取消", lost: "执行节点丢失" },
     runtimeCatalog: {
       kicker: "平台目录 / 固定制品", title: "Runtime Image", body: "管理固定 Registry RepoDigest 及其 Runtime Adapter 声明。注册记录不可修改。",
       register: "注册 Runtime Image", readOnly: "只读目录", retry: "重试", loading: "正在读取真实 Runtime Catalog", emptyTitle: "尚未注册 Runtime Image", emptyBody: "目录为空。Organization 范围的 Platform Administrator 可以注册第一条固定 Digest。",
@@ -117,9 +117,9 @@ const messages = {
     locale: { zh: "简体中文", en: "English" },
     access: { deniedTitle: "This surface is unavailable", deniedBody: "Role Grants for the active Team do not allow this surface. The server still authorizes every request.", noTeamTitle: "No accessible Team", noTeamBody: "Ask a platform administrator for an Organization- or Team-scoped Role Grant." },
     surfaces: {
-      studio: { kicker: "BUILD / VALIDATE / RELEASE", title: "Agent Studio", body: "Manage Agent Drafts and immutable Releases for the active Team.", emptyTitle: "No Agent data yet", emptyBody: "The real Agent catalog is connected in the next ticket; this page does not show mock records." },
-      workspace: { kicker: "COLLABORATE / EXECUTE / REVIEW", title: "Conversation Workspace", body: "Manage Coding Tasks, Sessions, Runs, and Memory for the active Team.", emptyTitle: "No Coding Task data yet", emptyBody: "Real collaboration APIs are connected in later tickets; this page does not show mock sessions." },
-      operations: { kicker: "OBSERVE / INTERVENE / RECOVER", title: "Operations Console", body: "Search and diagnose Runs for the active Team.", emptyTitle: "No Run data yet", emptyBody: "The real Run search is connected in a later ticket; this page does not show mock runs." },
+      studio: { kicker: "BUILD / VALIDATE / RELEASE", title: "Agent Studio", body: "Manage Agent Drafts and immutable Releases for the active Team.", emptyTitle: "No Agent data yet", emptyBody: "The real Agent API is connected; this Team has no records yet." },
+      workspace: { kicker: "COLLABORATE / EXECUTE / REVIEW", title: "Conversation Workspace", body: "Manage Coding Tasks, Sessions, Runs, and Memory for the active Team.", emptyTitle: "No Coding Task data yet", emptyBody: "The real collaboration API is connected; this Team has no Coding Tasks yet." },
+      operations: { kicker: "OBSERVE / INTERVENE / RECOVER", title: "Operations Console", body: "Search and diagnose Runs for the active Team.", emptyTitle: "No Run data yet", emptyBody: "The real Run API is connected; this Team or filter has no records." },
     },
     workspace: {
       kicker: "COLLABORATE / LAUNCH / RESTORE", title: "Conversation Workspace", body: "Launch Coding Tasks from available Agent Releases in the active Team and restore their real Session and first Run context.", readOnly: "Read-only workspace", loading: "Loading Coding Tasks and available release dependencies", loadingTask: "Restoring Coding Task and Session", errorBody: "The request did not complete; no unconfirmed Coding Task is created.",
@@ -136,7 +136,7 @@ const messages = {
       prerequisite: { runtime: "No Production Runtime is available. Complete Runtime Conformance and production status first.", model: "No enabled Configured Model is available. Check the model and its Credential Profile.", binding: "No validated Repository Binding is available. Revalidate repository dependencies.", release: "This Repository Binding has no available published Agent Release." },
       notice: { created: "Coding Task, Session, Review Branch, and first Run were created atomically.", approved: "Run Approval approved; execution resumed.", rejected: "Run Approval rejected; the Run terminated.", interrupt: "Run interruption requested.", resume: "Run resume requested.", cancel: "Run entered the irreversible cancelled state." },
     },
-    status: { queued: "Queued", provisioning: "Provisioning", running: "Running", waiting_confirmation: "Waiting for confirmation", interrupting: "Interrupting", interrupted: "Interrupted", resuming: "Resuming", completed: "Completed", failed: "Failed", cancelled: "Cancelled", lost: "Worker lost" },
+    status: { queued: "Queued", provisioning: "Provisioning", running: "Running", waiting_confirmation: "Waiting for confirmation", interrupting: "Interrupting", interrupted: "Interrupted", resuming: "Resuming", recovery_required: "Infrastructure recovery required", completed: "Completed", failed: "Failed", cancelled: "Cancelled", lost: "Worker lost" },
     runtimeCatalog: {
       kicker: "PLATFORM CATALOG / PINNED ARTIFACTS", title: "Runtime Images", body: "Govern pinned Registry RepoDigests and their declared Runtime Adapter behavior. Registrations are immutable.",
       register: "Register Runtime Image", readOnly: "Read-only catalog", retry: "Retry", loading: "Loading the real Runtime Catalog", emptyTitle: "No Runtime Images registered", emptyBody: "The catalog is empty. An organization-scoped Platform Administrator can register the first pinned digest.",

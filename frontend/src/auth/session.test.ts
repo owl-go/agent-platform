@@ -40,7 +40,7 @@ describe("AuthSession", () => {
     expect(session.accessToken()).toBeUndefined();
   });
 
-  it("never calls the API for a missing or expired OIDC session", async () => {
+  it("reports an expired stored OIDC session without calling the API", async () => {
     const client = new OIDCClientStub();
     client.storedUser = { accessToken: "expired-token", expired: true };
     const loadCurrentUser = vi.fn(async () => currentUser);
@@ -49,8 +49,18 @@ describe("AuthSession", () => {
     await session.initialize(false);
 
     expect(loadCurrentUser).not.toHaveBeenCalled();
-    expect(session.state.value).toEqual({ kind: "unauthenticated", reason: "missing" });
+    expect(session.state.value).toEqual({ kind: "unauthenticated", reason: "expired" });
     expect(session.accessToken()).toBeUndefined();
+  });
+
+  it("reports a missing OIDC session without calling the API", async () => {
+    const loadCurrentUser = vi.fn(async () => currentUser);
+    const session = createAuthSession(new OIDCClientStub(), loadCurrentUser, vi.fn());
+
+    await session.initialize(false);
+
+    expect(loadCurrentUser).not.toHaveBeenCalled();
+    expect(session.state.value).toEqual({ kind: "unauthenticated", reason: "missing" });
   });
 
   it("delegates sign-in and sign-out without persisting tokens", async () => {

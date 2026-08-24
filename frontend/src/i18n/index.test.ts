@@ -18,7 +18,7 @@ describe("locale boundary", () => {
   });
 
   it("maps every stable backend Run state without changing its enum value", () => {
-    expect(runStates).toEqual(["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "completed", "failed", "cancelled"]);
+    expect(runStates).toEqual(["queued", "provisioning", "running", "waiting_confirmation", "interrupting", "interrupted", "resuming", "recovery_required", "completed", "failed", "cancelled"]);
     for (const state of runStates) {
       expect(runStateLabel(state, "zh-CN")).not.toBe("");
       expect(runStateLabel(state, "en-US")).not.toBe("");

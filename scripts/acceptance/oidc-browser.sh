@@ -532,7 +532,16 @@ browser --session "$playwright_session" run-code 'async (page) => {
   const signedURL = await page.evaluate(() => sessionStorage.getItem("acceptance-artifact-download"));
   if (!signedURL || !signedURL.includes("X-Amz-Signature") || !signedURL.includes("X-Amz-Expires=300")) throw new Error("Artifact download was not a five-minute signed result");
   const downloaded = await page.request.get(signedURL);
-  if (!downloaded.ok() || (await downloaded.body()).length === 0) throw new Error("authorized Artifact download did not return the stored object");
+  const downloadedBody = await downloaded.body();
+  if (!downloaded.ok() || downloadedBody.length === 0) throw new Error("authorized Artifact download did not return the stored object");
+  const downloadedText = downloadedBody.toString();
+  const plantedSecrets = [
+    "'"$model_secret_canary_left"'" + "'"$model_secret_canary_right"'",
+    "'"$git_private_key_canary_left"'" + "'"$git_private_key_canary_right"'",
+    "'"$known_hosts_canary_left"'" + "'"$known_hosts_canary_right"'",
+    "'"$build_secret_canary_left"'" + "'"$build_secret_canary_right"'",
+  ];
+  if (plantedSecrets.some((secret) => downloadedText.includes(secret))) throw new Error("downloaded Artifact leaked a planted Secret");
   await page.evaluate(() => sessionStorage.removeItem("acceptance-artifact-download"));
 }'
 
@@ -784,6 +793,8 @@ browser --session "$playwright_session" run-code 'async (page) => { await page.g
 
 browser --session "$playwright_session" run-code 'async (page) => {
   const values = await page.evaluate(() => ({ runID: sessionStorage.getItem("acceptance-run-operator"), taskID: sessionStorage.getItem("acceptance-run-operator-task"), agentID: sessionStorage.getItem("acceptance-agent-id") }));
+  await page.getByTestId("locale-select").selectOption("zh-CN");
+  if (await page.locator("html").getAttribute("lang") !== "zh-CN") throw new Error("Run Operator main flow did not switch to Chinese");
   const query = `team=66666666-6666-4666-8666-666666666666&agent=${values.agentID}&task=${values.taskID}&state=waiting_confirmation&runtime=claude&sort=desc&run=${values.runID}`;
   await page.goto(`http://127.0.0.1:18092/operations?${query}`); await page.getByTestId(`operation-run-${values.runID}`).waitFor();
   await page.locator(".related-task").waitFor(); const accessToken = await page.evaluate(() => { for (const value of Object.values(sessionStorage)) { try { const parsed = JSON.parse(value); if (typeof parsed.access_token === "string") return parsed.access_token; } catch {} } return ""; });
@@ -818,6 +829,19 @@ browser --session "$playwright_session" run-code 'async (page) => {
   const audits = await page.evaluate(async ({ accessToken, team }) => fetch(`/api/v1/audit-events?team_id=${team}&resource_type=run&outcome=succeeded&limit=100`, { headers: { Authorization: `Bearer ${accessToken}` } }).then((response) => response.json()), { accessToken, team });
   for (const action of ["run.interrupt", "run.cancel", "run.kill", "run.recover"]) if (!audits.items.some((event) => event.action === action && event.outcome === "succeeded")) throw new Error(`missing successful Audit trace for ${action}`);
   if (JSON.stringify(audits).match(/access_token|refresh_token|acceptance-db-password/i)) throw new Error("Audit response leaked protected request or Token data");
+
+  const runSearch = /\/api\/v1\/runs\?/;
+  await page.route(runSearch, (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "rate_limited", message: "safe acceptance limit" }) }));
+  await page.goto(`http://127.0.0.1:18092/operations?team=${team}`, { waitUntil: "commit" });
+  await page.getByRole("alert").filter({ hasText: "rate_limited" }).waitFor();
+  if (!(await page.getByRole("alert").filter({ hasText: "rate_limited" }).textContent()).includes("请求过于频繁")) throw new Error("429 did not render a localized bounded error");
+  await page.unroute(runSearch);
+  await page.route(runSearch, (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "run_search_failed", message: "safe acceptance outage" }) }));
+  await page.reload(); await page.getByRole("alert").filter({ hasText: "run_search_failed" }).waitFor();
+  if (!(await page.getByRole("alert").filter({ hasText: "run_search_failed" }).textContent()).includes("服务离线")) throw new Error("offline Run search did not render a localized safe error");
+  await page.unroute(runSearch);
+  await page.goto(`http://127.0.0.1:18092/operations?team=${team}&state=waiting_confirmation&run=${values.nonRecoverable}`, { waitUntil: "commit" });
+  await page.locator(".operation-run-heading").waitFor();
 }'
 
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
@@ -829,7 +853,36 @@ docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d a
 docker exec "$postgres_container" psql -v ON_ERROR_STOP=1 -U agent_platform -d agent_platform_oidc -c \
   "UPDATE role_grants SET team_id = NULL WHERE id = '44444444-4444-4444-8444-444444444444';" >/dev/null
 browser --session "$playwright_session" reload
-browser --session "$playwright_session" run-code 'async (page) => { if (!(await page.getByTestId("current-user").textContent()).includes("Runtime Team")) throw new Error("OIDC, Team, or route state was not restored after reload"); await page.getByTestId("locale-select").selectOption("zh-CN"); if (await page.locator("html").getAttribute("lang") !== "zh-CN" || !(await page.locator("body").textContent()).includes("运维控制台")) throw new Error("Chinese locale was not applied"); await page.setViewportSize({ width: 390, height: 844 }); const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth); if (overflow) throw new Error("390px viewport has horizontal overflow"); const localValues = await page.evaluate(() => Object.values(localStorage)); if (localValues.some((value) => /access_token|refresh_token/i.test(value))) throw new Error("OIDC token data was written to localStorage"); await page.getByTestId("sign-out").click(); await page.getByTestId("sign-in-button").waitFor(); if (await page.locator(".shell").count()) throw new Error("protected shell remained visible after logout"); }'
+browser --session "$playwright_session" run-code 'async (page) => {
+  if (!(await page.getByTestId("current-user").textContent()).includes("Runtime Team")) throw new Error("OIDC, Team, or route state was not restored after reload");
+  await page.getByTestId("locale-select").selectOption("zh-CN");
+  if (await page.locator("html").getAttribute("lang") !== "zh-CN" || !(await page.locator("body").textContent()).includes("运维控制台")) throw new Error("Chinese locale was not applied");
+  await page.setViewportSize({ width: 390, height: 844 });
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error("390px viewport has horizontal overflow");
+
+  await page.getByTestId("filter-agent").focus(); await page.keyboard.press("Tab");
+  if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "filter-binding") throw new Error("Operations filters are not keyboard navigable");
+  await page.getByTestId("search-runs").focus(); await page.keyboard.press("Enter"); await page.getByTestId("operations-filters").waitFor();
+
+  const localValues = await page.evaluate(() => Object.values(localStorage));
+  if (localValues.some((value) => /access_token|refresh_token/i.test(value))) throw new Error("OIDC token data was written to localStorage");
+
+  await page.route("**/api/healthz", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ status: "unavailable" }) }));
+  await page.reload(); await page.locator(".platform-state").filter({ hasText: "离线" }).waitFor();
+  await page.unroute("**/api/healthz");
+
+  const expired = await page.evaluate(() => {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index); if (!key?.startsWith("oidc.user:")) continue;
+      const value = sessionStorage.getItem(key); if (!value) continue;
+      const parsed = JSON.parse(value); parsed.expires_at = 1; sessionStorage.setItem(key, JSON.stringify(parsed)); return true;
+    }
+    return false;
+  });
+  if (!expired) throw new Error("OIDC browser session was not available for expiry acceptance");
+  await page.reload(); await page.getByTestId("sign-in-button").waitFor();
+  if (!(await page.locator("body").textContent()).includes("会话已过期") || await page.locator(".shell").count()) throw new Error("expired OIDC session retained protected product state");
+}'
 
 for secret_canary in "${secret_canaries[@]}"; do
   if rg --fixed-strings --quiet -- "$secret_canary" "$acceptance_tmp/api.log" "$acceptance_tmp/web.log" "$acceptance_tmp/browser.log"; then
