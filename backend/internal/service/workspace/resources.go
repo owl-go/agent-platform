@@ -163,11 +163,7 @@ func (service *Service) CreateModelProviderConnection(ctx context.Context, reque
 	}
 	connection := workspacedomain.ModelProviderConnection{Name: request.Name, ProviderType: request.ProviderType, Endpoint: request.Endpoint, Protocols: append([]string(nil), request.Protocols...), VerificationStatus: "unverified", CustomEndpoint: customProviderEndpoint(request.ProviderType, request.Endpoint)}
 	models, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, request.ApiKey)
-	if discoveryErr == nil && providerUsesDynamicDiscovery(connection.ProviderType) {
-		connection.VerificationStatus = "verified"
-	} else {
-		connection.VerificationError = discoveryErr.Error()
-	}
+	models = applyDiscoveryResult(&connection, models, discoveryErr)
 	ciphertext, err := service.box.Encrypt([]byte(request.ApiKey), "model-provider:"+owner)
 	if err != nil {
 		return nil, publicError(err)
@@ -216,12 +212,7 @@ func (service *Service) UpdateModelProviderConnection(ctx context.Context, reque
 	}
 	connection := workspacedomain.ModelProviderConnection{Name: request.Name, ProviderType: existing.ProviderType, Endpoint: request.Endpoint, Protocols: append([]string(nil), request.Protocols...), VerificationStatus: "unverified", CustomEndpoint: customProviderEndpoint(existing.ProviderType, request.Endpoint)}
 	models, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, apiKey)
-	if discoveryErr == nil && providerUsesDynamicDiscovery(connection.ProviderType) {
-		connection.VerificationStatus = "verified"
-	} else {
-		connection.VerificationError = discoveryErr.Error()
-		models = nil
-	}
+	models = applyDiscoveryResult(&connection, models, discoveryErr)
 	item, err := service.workspace.Repository().UpdateModelProviderConnection(ctx, owner, request.ConnectionId, connection, ciphertext, models, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
@@ -282,6 +273,17 @@ func providerUsesDynamicDiscovery(providerType string) bool {
 		}
 	}
 	return false
+}
+
+func applyDiscoveryResult(connection *workspacedomain.ModelProviderConnection, models []workspacedomain.ProviderModel, discoveryErr error) []workspacedomain.ProviderModel {
+	if discoveryErr != nil {
+		connection.VerificationError = discoveryErr.Error()
+		return nil
+	}
+	if providerUsesDynamicDiscovery(connection.ProviderType) {
+		connection.VerificationStatus = "verified"
+	}
+	return models
 }
 
 func (service *Service) CreateProviderModel(ctx context.Context, request *workspacev1.CreateProviderModelRequest) (*workspacev1.ProviderModel, error) {
