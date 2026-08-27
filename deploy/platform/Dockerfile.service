@@ -4,16 +4,18 @@ FROM public.ecr.aws/docker/library/golang:1.25-bookworm AS build
 
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY backend .
 
 ARG SERVICE
-RUN case "${SERVICE}" in api|worker) ;; *) exit 1 ;; esac \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    case "${SERVICE}" in api|worker) ;; *) exit 1 ;; esac \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/service "./cmd/${SERVICE}"
 
 FROM public.ecr.aws/docker/library/alpine:3.23
 
-RUN apk add --no-cache ca-certificates docker-cli tzdata \
+RUN apk add --no-cache ca-certificates docker-cli git openssh-client tzdata \
     && addgroup -g 65532 -S agent \
     && adduser -u 65532 -S -D -H -G agent agent
 COPY --from=build --chown=65532:65532 /out/service /usr/local/bin/service

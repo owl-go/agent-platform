@@ -3,8 +3,10 @@ services:
     user: "0:0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${SECRET_STORE_ROOT:?SECRET_STORE_ROOT is required}:/var/lib/agent-platform/secrets:ro
-      - ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}:/var/lib/agent-platform/run-credentials
+      # Host Docker resolves bind sources outside this container, so paths must match.
+      - ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}:${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
       - ${SANDBOX_RESOLVER_FILE:?SANDBOX_RESOLVER_FILE is required}:/etc/agent-platform/sandbox-resolv.conf:ro
     cap_add:
       - CHOWN
+      # Staging switches ownership to the Runtime UID before the Worker finishes writing.
+      - DAC_OVERRIDE

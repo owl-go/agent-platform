@@ -23,7 +23,7 @@ func TestDriverBuildsSafeOneShotInvocation(t *testing.T) {
 		"--oneshot", "fix tests",
 		"--model", "provider/configured-model",
 		"--toolsets", "all",
-		"--safe-mode",
+		"--ignore-rules",
 		"--usage-file", filepath.Join(scratch, "usage.json"),
 	}
 	if !slices.Equal(invocation.Args, want) {

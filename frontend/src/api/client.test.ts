@@ -1,312 +1,144 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, createPlatformApi, getCurrentUser } from "./client";
+import { createPlatformApi } from "./client";
 
-afterEach(() => vi.unstubAllGlobals());
+describe("Agent Workspace API client", () => {
+  afterEach(() => vi.unstubAllGlobals());
 
-describe("getCurrentUser", () => {
-  it("sends the access token only in the Authorization header", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({
-      user_id: "user-1",
-      organization: { id: "org-1", slug: "acme", name: "Acme" },
-      role_grants: [],
-    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  it("projects Runtime availability from the authenticated API", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ items: [{ name: "codex", available: true, native_resume: false, cli_version: "0.147.0" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const user = await getCurrentUser("private-token");
+    const items = await createPlatformApi(() => "token").listRuntimeEngines();
 
-    expect(user.user_id).toBe("user-1");
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, request] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/me");
-    expect(JSON.stringify(url)).not.toContain("private-token");
-    const headers = new Headers((request as RequestInit).headers);
-    expect(headers.get("Accept")).toBe("application/json");
-    expect(headers.get("Authorization")).toBe("Bearer private-token");
+    expect(items).toEqual([{ name: "codex", available: true, native_resume: false, cli_version: "0.147.0" }]);
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
-  it("returns a safe status error without including the token", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":"invalid_authentication"}', { status: 401 })));
-
-    await expect(getCurrentUser("private-token")).rejects.toMatchObject({ status: 401, kind: "unauthenticated" });
-    await expect(getCurrentUser("private-token")).rejects.not.toThrow("private-token");
-  });
-});
-
-describe("PlatformApi", () => {
-  it("sends pagination, bearer auth, and safe content negotiation", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ items: [], next_page_token: "next" }), { status: 200 }));
+  it("normalizes protobuf Timestamp objects without changing ordinary JSON", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "session-1", title: "Fresh", archived: false, created_at: { seconds: 1787627045, nanos: 0 }, updated_at: { seconds: "1787627045", nanos: 120000000 }, version: 1, metadata: { seconds: 7 } }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const page = await createPlatformApi(() => "access-token").listRuntimeImages("cursor", 12);
+    const items = await createPlatformApi(() => "token").listSessions();
 
-    expect(page.nextPageToken).toBe("next");
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/runtime-images?page_size=12&page_token=cursor");
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Authorization")).toBe("Bearer access-token");
-    expect(headers.get("Accept")).toBe("application/json");
+    expect(items[0]?.created_at).toBe("2026-08-25T03:04:05.000Z");
+    expect(items[0]?.updated_at).toBe("2026-08-25T03:04:05.120Z");
+    expect((items[0] as unknown as { metadata: unknown }).metadata).toEqual({ seconds: 7 });
   });
 
-  it("encodes the complete Operations Run investigation in a bounded search request", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ items: [], next_page_token: "next-run" }), { status: 200 }));
+  it("sends Settings version only as the optimistic concurrency field", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
 
-    const page = await api.searchRuns!({ teamID: "team-1", agentID: "agent-1", repositoryBindingID: "binding-1", taskID: "task-1", state: "failed", runtime: "codex", createdFrom: "2026-08-20T00:00", createdTo: "2026-08-21T00:00", sortDirection: "asc", pageToken: "cursor", limit: 25 });
+    await createPlatformApi(() => "token").updateSettings({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 3 });
 
-    const url = new URL(String(fetchMock.mock.calls[0]![0]), "https://platform.example");
-    expect(Object.fromEntries(url.searchParams)).toMatchObject({ team_id: "team-1", agent_id: "agent-1", repository_binding_id: "binding-1", task_id: "task-1", state: "failed", runtime: "codex", sort_direction: "asc", page_token: "cursor", limit: "25" });
-    expect(url.searchParams.get("created_from")).toBe(new Date("2026-08-20T00:00").toISOString());
-    expect(page.nextPageToken).toBe("next-run");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", expected_version: 3 });
   });
 
-  it("uses one supplied idempotency key and the current quoted Version", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "image-1", version: 3 }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
+  it("normalizes omitted provider model collections from protobuf JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{
+      id: "connection-1", name: "Primary", provider_type: "openai", endpoint: "https://api.openai.com/v1",
+      api_key_configured: true, verification_status: "verified", custom_endpoint: false, created_at: "2026-08-25T00:00:00Z", updated_at: "2026-08-25T00:00:00Z", version: 1,
+    }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-    await api.changeRuntimeImageStatus("image-1", { status: "blocked", blocked_reason: "CVE" }, 2, "intent-1");
+    const result = await createPlatformApi(() => "token").listModelProviderConnections();
 
-    const headers = new Headers(fetchMock.mock.calls[0]![1]?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("intent-1");
-    expect(headers.get("If-Match")).toBe('"2"');
-    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(result[0]?.protocols).toEqual([]);
+    expect(result[0]?.models).toEqual([]);
   });
 
-  it("normalizes conflicts and keeps the request correlation ID", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "version_conflict" }), {
-      status: 412, headers: { "X-Request-ID": "request-1" },
-    })));
-
-    const error = await createPlatformApi(() => "access-token").changeRuntimeImageStatus("image-1", { status: "production" }, 1, "intent-1").catch((reason) => reason);
-
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ kind: "conflict", status: 412, code: "version_conflict", requestID: "request-1" });
-  });
-
-  it("keeps Credential Profile references out of URLs and adds write controls", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "credential-1", enabled: true, version: 1 }), { status: 201 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.registerCredentialProfile({ name: "primary", kind: "model", secret_ref: "vault://platform/model" }, "credential-intent");
-
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/credential-profiles");
-    expect(String(url)).not.toContain("vault://platform/model");
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("credential-intent");
-    expect(init?.body).toContain("vault://platform/model");
-  });
-
-  it("scopes Repository Binding reads and protects updates with Version and intent", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "binding-1", version: 3 }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.listRepositoryBindings("team-1");
-    await api.updateRepositoryBinding("binding-1", { team_id: "team-1", name: "repository" }, 2, "binding-intent");
-
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/repository-bindings?team_id=team-1");
-    const [url, init] = fetchMock.mock.calls[1]!;
-    expect(url).toBe("/api/v1/repository-bindings/binding-1");
-    expect(JSON.parse(String(init?.body))).toEqual({ binding: { team_id: "team-1", name: "repository" } });
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("binding-intent");
-    expect(headers.get("If-Match")).toBe('"2"');
-  });
-
-  it("scopes Agent Draft writes and sends Version plus stable intent headers", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "draft-1", version: 3 }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-    const input = { release_risk: "low", configuration: { instructions: "Ship safely", repository_binding_id: "binding-1", runtime_image_id: "runtime-1", configured_model_id: "model-1" } };
-
-    await api.updateAgentDraft("agent-1", "draft-1", "team-1", input, 2, "draft-intent");
-
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/agents/agent-1/drafts/draft-1");
-    expect(JSON.parse(String(init?.body))).toMatchObject({ team_id: "team-1", release_risk: "low" });
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("draft-intent");
-    expect(headers.get("If-Match")).toBe('"2"');
-  });
-
-  it("creates a Team-scoped Coding Task with the supplied idempotency intent", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ task: { id: "task-1" }, session: { id: "session-1" }, run_id: "run-1" }), { status: 201 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.createCodingTask("team-1", { agent_release_id: "release-1", title: "Fix parser", request_text: "Handle empty input" }, "task-intent");
-
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/coding-tasks");
-    expect(JSON.parse(String(init?.body))).toMatchObject({ team_id: "team-1", agent_release_id: "release-1" });
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("task-intent");
-    expect(headers.get("Authorization")).toBe("Bearer access-token");
-  });
-
-  it("protects Session continuation and Agent Memory edits with intent and Version headers", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
-      String(input).includes("/runs") ? { task: { id: "task-1" }, session: { id: "session-1" }, run_id: "run-2" } : { id: "memory-1", version: 3 },
-    ), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.continueCodingTask("task-1", "team-1", "Next instruction", 2, 7, "continue-intent");
-    await api.updateAgentMemory("memory-1", "team-1", "Durable rule", true, 2, "memory-intent");
-
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/coding-tasks/task-1/runs");
-    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toMatchObject({ team_id: "team-1", request_text: "Next instruction", expected_session_version: 7 });
-    expect(new Headers(fetchMock.mock.calls[0]![1]?.headers).get("Idempotency-Key")).toBe("continue-intent");
-    expect(new Headers(fetchMock.mock.calls[0]![1]?.headers).get("If-Match")).toBe('"2"');
-    expect(fetchMock.mock.calls[1]![0]).toBe("/api/v1/agent-memories/memory-1");
-    expect(new Headers(fetchMock.mock.calls[1]![1]?.headers).get("Idempotency-Key")).toBe("memory-intent");
-    expect(new Headers(fetchMock.mock.calls[1]![1]?.headers).get("If-Match")).toBe('"2"');
-  });
-
-  it("binds Run Approval decisions and controls to one intent and quoted Version", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
-      String(input).includes("approvals") ? { id: "approval-1", state: "approved", version: 2 } : { id: "run-1", state: "interrupting", version: 4 },
-    ), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.decideRunApproval("approval-1", true, "reviewed", 1, "approval-intent");
-    await api.controlRun("run-1", "interrupt", 3, "control-intent");
-
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(["/api/v1/approvals/approval-1/decision", "/api/v1/runs/run-1/interrupt"]);
-    const approvalHeaders = new Headers(fetchMock.mock.calls[0]![1]?.headers);
-    expect(approvalHeaders.get("Idempotency-Key")).toBe("approval-intent");
-    expect(approvalHeaders.get("If-Match")).toBe('"1"');
-    const controlHeaders = new Headers(fetchMock.mock.calls[1]![1]?.headers);
-    expect(controlHeaders.get("Idempotency-Key")).toBe("control-intent");
-    expect(controlHeaders.get("If-Match")).toBe('"3"');
-  });
-
-  it("sends recovery reasons in the body and scopes Audit filters to the Team", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async (input) => new Response(JSON.stringify(
-      String(input).includes("audit-events") ? { items: [] } : { id: "run-1", state: "resuming", version: 5 },
-    ), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
-
-    await api.controlRun("run-1", "recover", 4, "recover-intent", "worker pool restored");
-    await api.listAuditEvents!({ teamID: "team-1", action: "run.recover", resourceType: "run", outcome: "succeeded", actorUserID: "user-1" });
-
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/runs/run-1/recovery");
-    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ reason: "worker pool restored" });
-    const headers = new Headers(fetchMock.mock.calls[0]![1]?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("recover-intent"); expect(headers.get("If-Match")).toBe('"4"');
-    const auditURL = new URL(String(fetchMock.mock.calls[1]![0]), "https://platform.example");
-    expect(Object.fromEntries(auditURL.searchParams)).toMatchObject({ team_id: "team-1", action: "run.recover", resource_type: "run", outcome: "succeeded", actor_user_id: "user-1" });
-  });
-
-  it("loads the server-authorized Team launch catalog and prerequisite", async () => {
-	const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({
-	  items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "",
-	}), { status: 200 }));
-	vi.stubGlobal("fetch", fetchMock);
-
-	const catalog = await createPlatformApi(() => "access-token").listCodingTaskLaunchOptions("team-1");
-
-	expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/coding-task-launch-options?team_id=team-1");
-	expect(catalog).toEqual({ items: [{ agent_release_id: "release-1", repository_binding_id: "binding-1" }], prerequisite: "" });
-  });
-
-  it("streams Run Events with bearer auth and cursor while keeping credentials out of the URL", async () => {
-    const frames = [
-      'id: 5\r\nevent: command.started\r\ndata: {"run_id":"run-1","sequence":5,"event_type":"command.started","payload":{"command":"test"},"created_at":"2026-08-23T08:00:00Z"}\r\n\r\n',
-      'id: 6\nevent: run.completed\ndata: {"run_id":"run-1","sequence":6,"event_type":"run.completed","payload":{"result":"ok"},"created_at":"2026-08-23T08:01:00Z"}\n\n',
-    ];
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) { for (const frame of frames) controller.enqueue(new TextEncoder().encode(frame)); controller.close(); },
+  it("streams a Workspace upload as binary instead of Base64 JSON", async () => {
+    const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
+      expect(init?.body).toBeInstanceOf(Blob);
+      expect(new Headers(init?.headers).get("Content-Type")).toBe("application/octet-stream");
+      return new Response(JSON.stringify({ path: "docs/a.txt", name: "a.txt", directory: false, size: 3, modified_at: "2026-08-25T00:00:00Z" }), { status: 200 });
     });
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
     vi.stubGlobal("fetch", fetchMock);
-    const received: number[] = [];
 
-    const result = await createPlatformApi(() => "private-token").streamRunEvents("run-1", 4, (event) => received.push(event.sequence));
+    const entry = await createPlatformApi(() => "token").uploadWorkspaceFile("workflow-1", "docs/a.txt", new Blob(["abc"]));
 
-    expect(result).toEqual({ cursor: 6, terminal: true });
-    expect(received).toEqual([5, 6]);
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/v1/runs/run-1/events");
-    expect(String(url)).not.toContain("private-token");
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Authorization")).toBe("Bearer private-token");
-    expect(headers.get("Last-Event-ID")).toBe("4");
-    expect(headers.get("Accept")).toBe("text/event-stream");
+    expect(entry.path).toBe("docs/a.txt");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace/upload?path=docs%2Fa.txt");
   });
 
-  it("deduplicates the reconnect cursor and fails closed on a Run Event gap", async () => {
-    const data = [
-      'event: run.running\ndata: {"run_id":"run-1","sequence":4,"event_type":"run.running","payload":{},"created_at":"2026-08-23T08:00:00Z"}\n\n',
-      'event: run.completed\ndata: {"run_id":"run-1","sequence":6,"event_type":"run.completed","payload":{},"created_at":"2026-08-23T08:01:00Z"}\n\n',
-    ].join("");
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(data, { status: 200 })));
-    const received = vi.fn();
+  it("normalizes Workspace byte counters from protobuf JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ path: "verification.txt", name: "verification.txt", directory: false, size: 22 }], usedBytes: "22", limitBytes: "1073741824" }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 4, received)).rejects.toMatchObject({ code: "event_contract_invalid" });
-    expect(received).not.toHaveBeenCalled();
+    const result = await createPlatformApi(() => "token").listWorkspace("workflow-1");
+
+    expect(result.items[0]?.name).toBe("verification.txt");
+    expect(result.used_bytes).toBe(22);
+    expect(result.limit_bytes).toBe(1073741824);
   });
 
-  it("rejects a mismatched Run even when its Sequence equals the reconnect cursor", async () => {
-    const data = 'event: run.running\ndata: {"run_id":"other-run","sequence":4,"event_type":"run.running","payload":{},"created_at":"2026-08-23T08:00:00Z"}\n\n';
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(data, { status: 200 })));
+  it("accepts inline result Artifacts whose protobuf defaults omit sha256", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "result", name: "result.txt", path: "", text_preview: "done", expired: false, created_at: "2026-08-25T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 4, vi.fn())).rejects.toMatchObject({ code: "event_contract_invalid" });
+    const result = await createPlatformApi(() => "token").listArtifacts("workflow-1");
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sha256).toBeUndefined();
+    expect(result[0]?.size).toBe(0);
+    expect(result[0]?.text_preview).toBe("done");
   });
 
-  it("makes authorization loss and server stream errors explicit", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":"invalid_authentication"}', { status: 401 })));
-    await expect(createPlatformApi(() => "expired").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ kind: "unauthenticated", status: 401 });
+  it("normalizes an omitted queued Run duration to zero", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "run-1", workflow_id: "workflow-1", workflow_name: "Build", trigger: "manual", state: "queued", queued_at: "2026-08-25T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-    vi.stubGlobal("fetch", vi.fn(async () => new Response('event: stream_error\ndata: {"error":"event_stream_failed"}\n\n', { status: 200 })));
-    await expect(createPlatformApi(() => "token").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ code: "event_stream_failed" });
+    const result = await createPlatformApi(() => "token").listRuns("workflow-1");
 
-    vi.stubGlobal("fetch", vi.fn(async () => new Response('event: stream_error\ndata: {"error":"invalid_authentication"}\n\n', { status: 200 })));
-    await expect(createPlatformApi(() => "expired").streamRunEvents("run-1", 0, vi.fn())).rejects.toMatchObject({ kind: "unauthenticated", code: "invalid_authentication" });
+    expect(result[0]?.elapsed_ms).toBe(0);
   });
 
-  it("lists safe Artifact metadata and resolves a short-lived download through the API", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "diff", size_bytes: "42", sha256: "abc" }] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ url: "https://objects.example/download?signature=short", expires_at: "2026-08-23T08:05:00Z" }), { status: 200 }));
+  it("parses replayed and live SSE events in order", async () => {
+    const body = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode("id: 1\nevent: run.started\ndata: {}\n\nid: 2\nevent: run.succeeded\ndata: {\"message\":\"done\"}\n\n")); controller.close(); } });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));
+    const events: string[] = [];
+
+    await createPlatformApi(() => "token").streamRunEvents("workflow-1", "run-1", (event) => events.push(`${event.sequence}:${event.type}:${String(event.payload.message ?? "")}`));
+
+    expect(events).toEqual(["1:run.started:", "2:run.succeeded:done"]);
+  });
+
+  it("streams Session message snapshots with progress and partial content", async () => {
+    const body = new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode("id: 1\nevent: message.snapshot\ndata: {\"state\":\"generating\",\"content\":\"\",\"progress_stage\":\"thinking\",\"elapsed_ms\":0}\n\n"));
+      controller.enqueue(new TextEncoder().encode("id: 2\nevent: message.snapshot\ndata: {\"state\":\"generating\",\"content\":\"你好\",\"progress_stage\":\"responding\",\"elapsed_ms\":0}\n\nid: 3\nevent: message.snapshot\ndata: {\"state\":\"completed\",\"content\":\"你好！\",\"elapsed_ms\":1200}\n\n"));
+      controller.close();
+    } });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));
+    const snapshots: string[] = [];
+
+    await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, (snapshot) => snapshots.push(`${snapshot.progress_stage ?? "done"}:${snapshot.content}`));
+
+    expect(snapshots).toEqual(["thinking:", "responding:你好", "done:你好！"]);
+  });
+
+  it("requests backend cancellation for the active Session response", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ id: 2, role: "assistant", state: "generating", content: "", elapsed_ms: 0, created_at: "2026-08-25T00:00:00Z" }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "token");
 
-    const artifacts = await api.listRunArtifacts("run-1");
-    const download = await api.getArtifactDownload("artifact-1");
+    await createPlatformApi(() => "token").cancelSessionMessage("session-1", 2);
 
-    expect(artifacts[0]).not.toHaveProperty("object_key");
-    expect(download.url).toContain("signature=short");
-    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual(["/api/v1/runs/run-1/artifacts", "/api/v1/artifacts/artifact-1/download"]);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/cancellation");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
   });
 
-  it("keeps Release Approval distinct and protects Release status writes", async () => {
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ id: "release-1", version: 3 }), { status: 200 }));
+  it("loads every Session message page in ascending order", async () => {
+    const first = Array.from({ length: 200 }, (_, index) => ({ id: index + 1, role: "user", state: "completed", content: String(index + 1), elapsed_ms: 0, created_at: "2026-08-25T00:00:00Z" }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      const items = path.includes("after=200") ? [{ ...first[0], id: 201, content: "201" }] : first;
+      return new Response(JSON.stringify({ items }), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
     vi.stubGlobal("fetch", fetchMock);
-    const api = createPlatformApi(() => "access-token");
 
-    await api.requestAgentDraftApproval("agent-1", "draft-1", "team-1", "Runtime-native Subagents", "approval-intent");
-    await api.blockAgentRelease("agent-1", "release-1", "team-1", "Emergency policy response", 2, "block-intent");
+    const messages = await createPlatformApi(() => "token").listSessionMessages("session-1");
 
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/agents/agent-1/drafts/draft-1/approval");
-    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ team_id: "team-1", risk_reason: "Runtime-native Subagents" });
-    const [url, init] = fetchMock.mock.calls[1]!;
-    expect(url).toBe("/api/v1/agents/agent-1/releases/release-1/block");
-    expect(JSON.parse(String(init?.body))).toEqual({ team_id: "team-1", reason: "Emergency policy response" });
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Idempotency-Key")).toBe("block-intent");
-    expect(headers.get("If-Match")).toBe('"2"');
-  });
-
-  it("fails before fetch when the authenticated token is unavailable", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    await expect(createPlatformApi(() => undefined).listRuntimeImages()).rejects.toMatchObject({ kind: "unauthenticated" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(messages).toHaveLength(201);
+    expect(messages.at(-1)?.id).toBe(201);
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
+      "/api/v1/sessions/session-1/messages?after=0&limit=200",
+      "/api/v1/sessions/session-1/messages?after=200&limit=200",
+    ]);
   });
 });

@@ -21,7 +21,29 @@
         -Server
     }
 
-    handle_path /api/* {
+    handle /api/healthz {
+        rewrite * /healthz
+        reverse_proxy api:8080 {
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 10s
+                keepalive 30s
+            }
+        }
+    }
+
+    handle /api/readyz {
+        rewrite * /readyz
+        reverse_proxy api:8080 {
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 10s
+                keepalive 30s
+            }
+        }
+    }
+
+    handle /api/* {
         reverse_proxy api:8080 {
             flush_interval -1
             transport http {
@@ -37,6 +59,18 @@
             transport http {
                 dial_timeout 5s
                 response_header_timeout 10s
+                keepalive 30s
+            }
+        }
+    }
+
+    handle_path /model-relay/* {
+        @missingAuthorization not header Authorization *
+        respond @missingAuthorization 404
+        reverse_proxy {$MODEL_RELAY_UPSTREAM:http://host.docker.internal:3000} {
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 5m
                 keepalive 30s
             }
         }

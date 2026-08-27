@@ -2,6 +2,7 @@ package codex
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -10,12 +11,20 @@ import (
 
 func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 	driver := Driver{}
-	request := agentruntime.ExecuteRequest{Model: "configured-model", Instruction: "fix tests"}
+	request := agentruntime.ExecuteRequest{Model: "configured-model", ModelEndpoint: "https://models.example.test/openai", Instruction: "fix tests"}
 	created, err := driver.Build(request, t.TempDir())
 	if err != nil {
 		t.Fatalf("build new invocation: %v", err)
 	}
-	wantNew := []string{"exec", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "-"}
+	wantPrefix := []string{
+		"--strict-config",
+		"-c", `model_provider="agent_workspace"`,
+		"-c", `model_providers.agent_workspace.name="Agent Workspace"`,
+		"-c", `model_providers.agent_workspace.base_url="https://models.example.test/openai"`,
+		"-c", `model_providers.agent_workspace.env_key="OPENAI_API_KEY"`,
+		"-c", `model_providers.agent_workspace.wire_api="responses"`,
+	}
+	wantNew := append(slices.Clone(wantPrefix), "exec", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "-")
 	if !slices.Equal(created.Args, wantNew) || created.Stdin == nil {
 		t.Fatalf("new invocation = %+v", created)
 	}
@@ -25,9 +34,35 @@ func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build resume invocation: %v", err)
 	}
-	wantResume := []string{"exec", "resume", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "thread-1", "-"}
+	wantResume := append(slices.Clone(wantPrefix), "exec", "resume", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "thread-1", "-")
 	if !slices.Equal(resumed.Args, wantResume) {
 		t.Fatalf("resume args = %v, want %v", resumed.Args, wantResume)
+	}
+}
+
+func TestDriverRejectsUnsafeModelEndpoints(t *testing.T) {
+	for _, endpoint := range []string{
+		"http://models.example.test/openai",
+		"https://user:password@models.example.test/openai",
+		"https://models.example.test/openai?token=secret",
+		"https://models.example.test/openai#fragment",
+	} {
+		t.Run(strings.ReplaceAll(endpoint, "/", "_"), func(t *testing.T) {
+			_, err := (Driver{}).Build(agentruntime.ExecuteRequest{ModelEndpoint: endpoint}, t.TempDir())
+			if err == nil {
+				t.Fatalf("Build(%q) succeeded", endpoint)
+			}
+		})
+	}
+}
+
+func TestDriverUsesOfficialEndpointForStandaloneConformance(t *testing.T) {
+	invocation, err := (Driver{}).Build(agentruntime.ExecuteRequest{}, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(invocation.Args, `model_providers.agent_workspace.base_url="https://api.openai.com/v1"`) {
+		t.Fatalf("args = %v", invocation.Args)
 	}
 }
 
@@ -50,7 +85,7 @@ func TestParserReadsThreadItemsAndUsage(t *testing.T) {
 			kinds = append(kinds, event.Kind)
 		}
 	}
-	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted}
+	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted, agentruntime.EventMessageDelta}
 	if !slices.Equal(kinds, wantKinds) {
 		t.Fatalf("event kinds = %v, want %v", kinds, wantKinds)
 	}

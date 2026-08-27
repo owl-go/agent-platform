@@ -11,19 +11,9 @@ import (
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/server"
 	"agent-platform/backend/internal/service/platform"
-	"agent-platform/backend/internal/wiring/agentlifecycle"
-	"agent-platform/backend/internal/wiring/apiprocess"
-	"agent-platform/backend/internal/wiring/approval"
-	"agent-platform/backend/internal/wiring/artifact"
-	"agent-platform/backend/internal/wiring/audit"
-	"agent-platform/backend/internal/wiring/collaboration"
-	"agent-platform/backend/internal/wiring/execution"
-	"agent-platform/backend/internal/wiring/identity"
-	"agent-platform/backend/internal/wiring/modelcatalog"
+	"agent-platform/backend/internal/service/workspace"
+	"agent-platform/backend/internal/wiring/agentworkspace"
 	platform2 "agent-platform/backend/internal/wiring/platform"
-	"agent-platform/backend/internal/wiring/runtimecatalog"
-	"agent-platform/backend/internal/wiring/sourcecontrol"
-	"agent-platform/backend/internal/wiring/workflow"
 	"context"
 	"github.com/go-kratos/kratos/v3"
 	"log/slog"
@@ -36,43 +26,47 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	manager := workflow.NewManager(database)
-	applicationService := execution.NewService(database, manager)
-	accessService, err := identity.NewAccessService(config, database)
+	tokenVerifier, err := agentworkspace.NewTokenVerifier(contextContext, config)
 	if err != nil {
 		return nil, err
 	}
-	service2 := approval.NewService(database, manager)
-	provider, err := platform2.NewObjectStore(config)
+	provider, err := agentworkspace.NewIdentityProvider(config)
 	if err != nil {
 		return nil, err
 	}
-	service3, err := artifact.NewService(database, provider, config)
+	applicationService, err := agentworkspace.NewAccountService(contextContext, config, database, tokenVerifier, provider)
 	if err != nil {
 		return nil, err
 	}
-	service4 := audit.NewService(database)
-	service5 := runtimecatalog.NewService(database, provider)
-	service6 := modelcatalog.NewService(database)
-	service7 := sourcecontrol.NewService(database)
-	bindingService := sourcecontrol.NewBindingService(database)
-	service8 := agentlifecycle.NewService(database, bindingService)
-	service9 := collaboration.NewService(database, manager)
-	idempotentTransactionManager := platform2.NewCatalogWrites(database, config, provider)
-	dependencies := apiprocess.NewDependencies(database, applicationService, accessService, service2, service3, service4, service5, service6, service7, bindingService, service8, service9, idempotentTransactionManager)
-	generatedServices, err := apiprocess.NewGeneratedServices(dependencies)
+	service2, err := agentworkspace.NewWorkspaceService(database)
 	if err != nil {
 		return nil, err
 	}
-	runSSEHandler, err := apiprocess.NewRunSSEHandler(applicationService, accessService)
+	box, err := agentworkspace.NewSecretBox(config)
 	if err != nil {
 		return nil, err
 	}
-	filterFunc, err := apiprocess.NewAuthenticationFilter(accessService)
+	store, err := agentworkspace.NewWorkspaceFiles(config)
 	if err != nil {
 		return nil, err
 	}
-	httpHandlers, err := apiprocess.NewHTTPHandlers(generatedServices, runSSEHandler, filterFunc)
+	objectstoreProvider, err := platform2.NewObjectStore(config)
+	if err != nil {
+		return nil, err
+	}
+	skillstoreStore, err := agentworkspace.NewSkillStore(objectstoreProvider)
+	if err != nil {
+		return nil, err
+	}
+	workspaceService, err := workspace.New(applicationService, service2, box, store, skillstoreStore, objectstoreProvider, config)
+	if err != nil {
+		return nil, err
+	}
+	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service2)
+	if err != nil {
+		return nil, err
+	}
+	httpHandlers, err := agentworkspace.NewHTTPHandlers(workspaceService, filterFunc)
 	if err != nil {
 		return nil, err
 	}

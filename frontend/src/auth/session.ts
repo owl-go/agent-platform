@@ -1,7 +1,5 @@
 import { ref, type InjectionKey, type Ref } from "vue";
-import type { components } from "../api/generated";
-
-export type CurrentUser = components["schemas"]["v1CurrentUser"];
+import type { CurrentUser } from "../api/client";
 
 export interface OIDCUser {
   accessToken: string;
@@ -36,7 +34,7 @@ export interface AuthContext {
   isCallback: boolean;
 }
 
-export const authContextKey: InjectionKey<AuthContext> = Symbol("agent-platform-auth");
+export const authContextKey: InjectionKey<AuthContext> = Symbol("agent-workspace-auth");
 
 export function createUnavailableAuthSession(message: string): AuthSession {
   const state = ref<AuthState>({ kind: "error", message });

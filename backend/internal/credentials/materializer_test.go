@@ -56,6 +56,34 @@ func TestMaterializerCreatesPrivateCredentialFilesAndCleansUp(t *testing.T) {
 	}
 }
 
+func TestMaterializerReplacesWarmContainerCredentialDirectory(t *testing.T) {
+	root := t.TempDir()
+	directory := filepath.Join(root, ".runtime-containers", "slot", "credentials")
+	materializer := credentials.Materializer{Root: root}
+	first, err := materializer.CreateAt(credentials.Request{Ref: "run-1", Variables: map[string]string{"TOKEN": "first"}}, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+	second, err := materializer.CreateAt(credentials.Request{Ref: "run-2", Variables: map[string]string{"TOKEN": "second"}}, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Cleanup()
+	contents, err := os.ReadFile(filepath.Join(directory, "env", "TOKEN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "second" {
+		t.Fatalf("warm credential value = %q", contents)
+	}
+	if _, err := materializer.CreateAt(credentials.Request{Ref: "escape"}, filepath.Join(root, "..", "escape")); err == nil {
+		t.Fatal("CreateAt accepted a credential directory outside its root")
+	}
+}
+
 func TestMaterializerRejectsCredentialPathTraversal(t *testing.T) {
 	root := t.TempDir()
 	materializer := credentials.Materializer{Root: root}

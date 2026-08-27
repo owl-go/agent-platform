@@ -37,6 +37,9 @@ func (Driver) ParseVersion(output string) (string, error) {
 }
 
 func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.Invocation, error) {
+	if len(request.ModelProtocols) > 0 && !request.SupportsModelProtocol("anthropic_messages") {
+		return cliadapter.Invocation{}, fmt.Errorf("Claude Code requires the Anthropic Messages protocol")
+	}
 	args := []string{
 		"--print",
 		"--bare",
@@ -51,6 +54,9 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 	}
 	if request.CheckpointRef != "" {
 		args = append(args, "--resume", request.CheckpointRef)
+	}
+	if request.MCPConfigPath != "" {
+		args = append(args, "--mcp-config", request.MCPConfigPath)
 	}
 	return cliadapter.Invocation{Args: args, Stdin: strings.NewReader(request.Instruction)}, nil
 }

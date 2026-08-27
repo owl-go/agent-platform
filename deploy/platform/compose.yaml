@@ -39,6 +39,32 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  minio-init:
+    image: ${MINIO_IMAGE:?MINIO_IMAGE must be an immutable repository digest}
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" >/dev/null
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
+        mc anonymous set private "local/$${MINIO_BUCKET}" >/dev/null
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - control
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   api:
     image: agent-platform-api:local
     build:
@@ -54,18 +80,32 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
-      OIDC_ORGANIZATION_CLAIM: ${OIDC_ORGANIZATION_CLAIM:-}
       VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
       VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI:-}
       VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI:-}
+      KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL:?KEYCLOAK_BASE_URL is required}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}
+      KEYCLOAK_SERVICE_CLIENT_ID: ${KEYCLOAK_SERVICE_CLIENT_ID:?KEYCLOAK_SERVICE_CLIENT_ID is required}
+      KEYCLOAK_SERVICE_CLIENT_SECRET: ${KEYCLOAK_SERVICE_CLIENT_SECRET:?KEYCLOAK_SERVICE_CLIENT_SECRET is required}
+      BOOTSTRAP_ADMIN_SUBJECT: ${BOOTSTRAP_ADMIN_SUBJECT:?BOOTSTRAP_ADMIN_SUBJECT is required}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?BOOTSTRAP_ADMIN_EMAIL is required}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
+      WORKSPACE_ROOT: ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
+      CREDENTIAL_TEMP_ROOT: ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
+      CLAUDE_RUNTIME_IMAGE: ${CLAUDE_RUNTIME_IMAGE:?CLAUDE_RUNTIME_IMAGE is required}
+      CODEX_RUNTIME_IMAGE: ${CODEX_RUNTIME_IMAGE:?CODEX_RUNTIME_IMAGE is required}
+      HERMES_RUNTIME_IMAGE: ${HERMES_RUNTIME_IMAGE:?HERMES_RUNTIME_IMAGE is required}
+      OPENCLAW_RUNTIME_IMAGE: ${OPENCLAW_RUNTIME_IMAGE:?OPENCLAW_RUNTIME_IMAGE is required}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
+      - ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}:${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
+      - ${WORKSPACE_KNOWN_HOSTS:?WORKSPACE_KNOWN_HOSTS is required}:/etc/agent-workspace/known_hosts:ro
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - control
       - edge
@@ -97,18 +137,32 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-agent-platform}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
-      OIDC_ORGANIZATION_CLAIM: ${OIDC_ORGANIZATION_CLAIM:-}
       VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
       VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI:-}
       VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI:-}
+      KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL:?KEYCLOAK_BASE_URL is required}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:?KEYCLOAK_REALM is required}
+      KEYCLOAK_SERVICE_CLIENT_ID: ${KEYCLOAK_SERVICE_CLIENT_ID:?KEYCLOAK_SERVICE_CLIENT_ID is required}
+      KEYCLOAK_SERVICE_CLIENT_SECRET: ${KEYCLOAK_SERVICE_CLIENT_SECRET:?KEYCLOAK_SERVICE_CLIENT_SECRET is required}
+      BOOTSTRAP_ADMIN_SUBJECT: ${BOOTSTRAP_ADMIN_SUBJECT:?BOOTSTRAP_ADMIN_SUBJECT is required}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?BOOTSTRAP_ADMIN_EMAIL is required}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
+      WORKSPACE_ROOT: ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
+      CREDENTIAL_TEMP_ROOT: ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
+      CLAUDE_RUNTIME_IMAGE: ${CLAUDE_RUNTIME_IMAGE:?CLAUDE_RUNTIME_IMAGE is required}
+      CODEX_RUNTIME_IMAGE: ${CODEX_RUNTIME_IMAGE:?CODEX_RUNTIME_IMAGE is required}
+      HERMES_RUNTIME_IMAGE: ${HERMES_RUNTIME_IMAGE:?HERMES_RUNTIME_IMAGE is required}
+      OPENCLAW_RUNTIME_IMAGE: ${OPENCLAW_RUNTIME_IMAGE:?OPENCLAW_RUNTIME_IMAGE is required}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
+      - ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}:${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
+      - ${WORKSPACE_KNOWN_HOSTS:?WORKSPACE_KNOWN_HOSTS is required}:/etc/agent-workspace/known_hosts:ro
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - control
     read_only: true

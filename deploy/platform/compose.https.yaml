@@ -8,6 +8,9 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+      MODEL_RELAY_UPSTREAM: ${MODEL_RELAY_UPSTREAM:-http://host.docker.internal:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -61,6 +64,9 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD is required}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?KEYCLOAK_ADMIN_USER is required}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      KEYCLOAK_SERVICE_CLIENT_SECRET: ${KEYCLOAK_SERVICE_CLIENT_SECRET:?KEYCLOAK_SERVICE_CLIENT_SECRET is required}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD is required}
       KC_HTTP_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /identity
       KC_HOSTNAME: https://${PUBLIC_HOST:?PUBLIC_HOST is required}/identity

@@ -4,6 +4,630 @@
  */
 
 export interface paths {
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListUsers"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_SetUserEnabled"];
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ResetUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/experts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListExperts"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateExpert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/experts/{expert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteExpert"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateExpert"];
+        trace?: never;
+    };
+    "/api/v1/extensions/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListMCPServers"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateMCPServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/extensions/mcp/{mcp_server_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteMCPServer"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateMCPServer"];
+        trace?: never;
+    };
+    "/api/v1/extensions/mcp/{mcp_server_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_TestMCPServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/extensions/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSkills"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/extensions/skills/{skill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteSkill"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateSkill"];
+        trace?: never;
+    };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-provider-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListModelProviderConnections"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateModelProviderConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-provider-connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteModelProviderConnection"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateModelProviderConnection"];
+        trace?: never;
+    };
+    "/api/v1/model-provider-connections/{connection_id}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateProviderModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-provider-connections/{connection_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RefreshProviderModels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-provider-presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListModelProviderPresets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runtime-engines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListRuntimeEngines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSessions"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetSession"];
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteSession"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateSession"];
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/archived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_SetSessionArchived"];
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSessionMessages"];
+        put?: never;
+        post: operations["AgentWorkspaceService_SendSessionMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CancelSessionMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RetrySessionMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateSettings"];
+        trace?: never;
+    };
+    "/api/v1/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListWorkflows"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetWorkflow"];
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteWorkflow"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateWorkflow"];
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/api-credential": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_GenerateWorkflowCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListArtifacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetArtifactDownload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListRuns"];
+        put?: never;
+        post: operations["AgentWorkspaceService_RunWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CancelRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RerunWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListWorkspaceEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ClearWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace/clone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CloneWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace/directories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateWorkspaceDirectory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetWorkspaceFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/workspace/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_UploadWorkspaceFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -36,943 +660,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/agent-memories/{memory_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["CollaborationService_UpdateAgentMemory"];
-        trace?: never;
-    };
-    "/v1/agent-memories/{memory_id}/deletion": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CollaborationService_DeleteAgentMemory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_ListAgents"];
-        put?: never;
-        post: operations["AgentLifecycleService_CreateAgent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_GetAgent"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["AgentLifecycleService_UpdateAgent"];
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/drafts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_ListAgentDrafts"];
-        put?: never;
-        post: operations["AgentLifecycleService_CreateAgentDraft"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/drafts/{draft_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_GetAgentDraft"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["AgentLifecycleService_UpdateAgentDraft"];
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/drafts/{draft_id}/approval": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_GetAgentDraftApproval"];
-        put?: never;
-        post: operations["AgentLifecycleService_RequestAgentDraftApproval"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["AgentLifecycleService_DecideAgentDraftApproval"];
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/drafts/{draft_id}/release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentLifecycleService_PublishAgentDraft"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/drafts/{draft_id}/validation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentLifecycleService_ValidateAgentDraft"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/memories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_ListAgentMemories"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_ListAgentReleases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/releases/{release_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentLifecycleService_GetAgentRelease"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/releases/{release_id}/block": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentLifecycleService_BlockAgentRelease"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/agents/{agent_id}/releases/{release_id}/deprecation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentLifecycleService_DeprecateAgentRelease"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/approvals/{approval_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RunApprovalService_GetRunApproval"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/approvals/{approval_id}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["RunApprovalService_DecideRunApproval"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/artifacts/{artifact_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ArtifactService_GetArtifactDownload"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/audit-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AuditService_ListAuditEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-task-launch-options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_ListCodingTaskLaunchOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_ListCodingTasks"];
-        put?: never;
-        post: operations["CollaborationService_CreateCodingTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-tasks/{task_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_GetCodingTask"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["CollaborationService_UpdateCodingTask"];
-        trace?: never;
-    };
-    "/v1/coding-tasks/{task_id}/memory-candidates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_ListMemoryCandidates"];
-        put?: never;
-        post: operations["CollaborationService_ProposeMemoryCandidate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-tasks/{task_id}/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_ListSessionMessages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-tasks/{task_id}/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CollaborationService_ContinueCodingTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/coding-tasks/{task_id}/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["CollaborationService_GetCodingTaskSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["CollaborationService_UpdateCodingTaskSession"];
-        trace?: never;
-    };
-    "/v1/configured-models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ModelCatalogService_ListConfiguredModels"];
-        put?: never;
-        post: operations["ModelCatalogService_RegisterConfiguredModel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/configured-models/{configured_model_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ModelCatalogService_GetConfiguredModel"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/configured-models/{configured_model_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["ModelCatalogService_ChangeConfiguredModelStatus"];
-        trace?: never;
-    };
-    "/v1/credential-profiles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ModelCatalogService_ListCredentialProfiles"];
-        put?: never;
-        post: operations["ModelCatalogService_RegisterCredentialProfile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/credential-profiles/{credential_profile_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ModelCatalogService_GetCredentialProfile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/credential-profiles/{credential_profile_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["ModelCatalogService_ChangeCredentialProfileStatus"];
-        trace?: never;
-    };
-    "/v1/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["IdentityService_GetCurrentUser"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/memory-candidates/{candidate_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["CollaborationService_DecideMemoryCandidate"];
-        trace?: never;
-    };
-    "/v1/repository-bindings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["SourceControlService_ListRepositoryBindings"];
-        put?: never;
-        post: operations["SourceControlService_RegisterRepositoryBinding"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/repository-bindings/{repository_binding_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["SourceControlService_GetRepositoryBinding"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["SourceControlService_UpdateRepositoryBinding"];
-        trace?: never;
-    };
-    "/v1/repository-bindings/{repository_binding_id}/validation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["SourceControlService_ValidateRepositoryBinding"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ExecutionService_ListRuns"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ExecutionService_GetRun"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/approvals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RunApprovalService_ListRunApprovals"];
-        put?: never;
-        post: operations["RunApprovalService_RequestRunApproval"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/artifacts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ArtifactService_ListRunArtifacts"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExecutionService_CancelRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RunEventStreamService_Stream"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/interrupt": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExecutionService_InterruptRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/kill": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExecutionService_KillRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/recovery": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExecutionService_RecoverRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ExecutionService_ResumeRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runtime-images": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RuntimeCatalogService_ListRuntimeImages"];
-        put?: never;
-        post: operations["RuntimeCatalogService_RegisterRuntimeImage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runtime-images/{runtime_image_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["RuntimeCatalogService_GetRuntimeImage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runtime-images/{runtime_image_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["RuntimeCatalogService_ChangeRuntimeImageStatus"];
-        trace?: never;
-    };
-    "/v1/source-control-providers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["SourceControlService_ListSourceControlProviders"];
-        put?: never;
-        post: operations["SourceControlService_RegisterSourceControlProvider"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/source-control-providers/{source_control_provider_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["SourceControlService_GetSourceControlProvider"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/source-control-providers/{source_control_provider_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["SourceControlService_ChangeSourceControlProviderStatus"];
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        AgentLifecycleServiceBlockAgentReleaseBody: {
-            team_id?: string;
-            reason?: string;
+        AgentWorkspaceServiceCancelRunBody: Record<string, never>;
+        AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceClearWorkspaceBody: {
+            confirmation?: string;
         };
-        AgentLifecycleServiceCreateAgentDraftBody: {
-            team_id?: string;
-            configuration?: components["schemas"]["v1AgentConfiguration"];
-            release_risk?: string;
+        AgentWorkspaceServiceCloneWorkspaceBody: {
+            url?: string;
+            branch?: string;
+            ssh_private_key?: string;
         };
-        AgentLifecycleServiceDecideAgentDraftApprovalBody: {
-            team_id?: string;
-            approved?: boolean;
-            reason?: string;
+        AgentWorkspaceServiceCreateProviderModelBody: {
+            model_id?: string;
+            display_name?: string;
+            model_type?: string;
         };
-        AgentLifecycleServiceDeprecateAgentReleaseBody: {
-            team_id?: string;
+        AgentWorkspaceServiceCreateWorkspaceDirectoryBody: {
+            path?: string;
         };
-        AgentLifecycleServicePublishAgentDraftBody: {
-            team_id?: string;
+        AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
+        AgentWorkspaceServiceRefreshProviderModelsBody: Record<string, never>;
+        AgentWorkspaceServiceRerunWorkflowBody: Record<string, never>;
+        AgentWorkspaceServiceResetUserPasswordBody: Record<string, never>;
+        AgentWorkspaceServiceRetrySessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceRunWorkflowBody: {
+            text_input?: string;
+            json_input?: Record<string, never>;
         };
-        AgentLifecycleServiceRequestAgentDraftApprovalBody: {
-            team_id?: string;
-            risk_reason?: string;
+        AgentWorkspaceServiceSendSessionMessageBody: {
+            content?: string;
+            provider_model_id?: string;
         };
-        AgentLifecycleServiceUpdateAgentBody: {
-            team_id?: string;
-            name?: string;
-            description?: string;
-        };
-        AgentLifecycleServiceUpdateAgentDraftBody: {
-            team_id?: string;
-            configuration?: components["schemas"]["v1AgentConfiguration"];
-            release_risk?: string;
-        };
-        AgentLifecycleServiceValidateAgentDraftBody: {
-            team_id?: string;
-        };
-        CollaborationServiceContinueCodingTaskBody: {
-            team_id?: string;
-            request_text?: string;
+        AgentWorkspaceServiceSetSessionArchivedBody: {
+            archived?: boolean;
             /** Format: int64 */
-            expected_session_version?: number;
+            expected_version?: number;
         };
-        CollaborationServiceDecideMemoryCandidateBody: {
-            team_id?: string;
-            approve?: boolean;
+        AgentWorkspaceServiceSetUserEnabledBody: {
+            enabled?: boolean;
+            /** Format: int64 */
+            expected_version?: number;
         };
-        CollaborationServiceDeleteAgentMemoryBody: {
-            team_id?: string;
+        AgentWorkspaceServiceTestMCPServerBody: Record<string, never>;
+        AgentWorkspaceServiceUpdateExpertBody: {
+            expert?: components["schemas"]["v1ExpertInput"];
+            /** Format: int64 */
+            expected_version?: number;
         };
-        CollaborationServiceProposeMemoryCandidateBody: {
-            team_id?: string;
-            agent_id?: string;
+        AgentWorkspaceServiceUpdateMCPServerBody: {
+            mcp_server?: components["schemas"]["v1MCPServerInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateModelProviderConnectionBody: {
+            name?: string;
+            endpoint?: string;
+            protocols?: string[];
+            replacement_api_key?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateSessionBody: {
+            title?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateSkillBody: {
+            git_ref?: string;
+            /** Format: byte */
+            archive?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateWorkflowBody: {
+            workflow?: components["schemas"]["v1WorkflowInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUploadWorkspaceFileBody: {
+            path?: string;
+            /** Format: byte */
             content?: string;
-        };
-        CollaborationServiceUpdateAgentMemoryBody: {
-            team_id?: string;
-            content?: string;
-            enabled?: boolean;
-        };
-        CollaborationServiceUpdateCodingTaskBody: {
-            team_id?: string;
-            state?: string;
-        };
-        CollaborationServiceUpdateCodingTaskSessionBody: {
-            team_id?: string;
-            memory?: components["schemas"]["v1SessionMemory"];
-        };
-        ExecutionServiceKillRunBody: {
-            reason?: string;
-        };
-        ExecutionServiceRecoverRunBody: {
-            reason?: string;
-        };
-        ModelCatalogServiceChangeConfiguredModelStatusBody: {
-            enabled?: boolean;
-        };
-        ModelCatalogServiceChangeCredentialProfileStatusBody: {
-            enabled?: boolean;
-        };
-        RunApprovalServiceDecideRunApprovalBody: {
-            approved?: boolean;
-            reason?: string;
-        };
-        RunApprovalServiceRequestRunApprovalBody: {
-            kind?: string;
-            request?: Record<string, never>;
-        };
-        RuntimeCatalogServiceChangeRuntimeImageStatusBody: {
-            status?: string;
-            blocked_reason?: string;
-            conformance_evidence_key?: string;
-        };
-        SourceControlServiceChangeSourceControlProviderStatusBody: {
-            enabled?: boolean;
-        };
-        SourceControlServiceUpdateRepositoryBindingBody: {
-            binding?: components["schemas"]["v1RepositoryBindingInput"];
-        };
-        SourceControlServiceValidateRepositoryBindingBody: {
-            team_id?: string;
         };
         protobufAny: {
             "@type"?: string;
@@ -996,604 +768,334 @@ export interface components {
             message?: string;
             details?: components["schemas"]["protobufAny"][];
         };
-        v1Agent: {
-            id?: string;
-            team_id?: string;
-            name?: string;
-            description?: string;
-            created_by?: string;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1AgentConfiguration: {
-            instructions?: string;
-            repository_binding_id?: string;
-            runtime_image_id?: string;
-            configured_model_id?: string;
-            model_budget?: components["schemas"]["v1ModelBudget"];
-            execution_limits?: components["schemas"]["v1ExecutionLimits"];
-            native_subagents?: boolean;
-        };
-        v1AgentDraft: {
-            id?: string;
-            agent_id?: string;
-            /** Format: int64 */
-            revision?: number;
-            state?: string;
-            configuration?: components["schemas"]["v1AgentConfiguration"];
-            release_risk?: string;
-            validation_report?: components["schemas"]["v1ValidationReport"];
-            created_by?: string;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1AgentMemory: {
-            id?: string;
-            agent_id?: string;
-            content?: string;
-            approved_by?: string;
-            source_task_id?: string;
-            enabled?: boolean;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: date-time */
-            deleted_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1AgentRelease: {
-            id?: string;
-            agent_id?: string;
-            /** Format: int64 */
-            release_number?: number;
-            source_draft_id?: string;
-            runtime_image_id?: string;
-            configured_model_id?: string;
-            repository_binding_id?: string;
-            configuration?: components["schemas"]["v1AgentConfiguration"];
-            status?: string;
-            released_by?: string;
-            /** Format: date-time */
-            released_at?: string;
-            /** Format: date-time */
-            deprecated_at?: string;
-            /** Format: int64 */
-            version?: number;
-            release_risk?: string;
-            repository_binding_snapshot?: components["schemas"]["v1ReleaseRepositoryBindingSnapshot"];
-            runtime_image_snapshot?: components["schemas"]["v1ReleaseRuntimeImageSnapshot"];
-            configured_model_snapshot?: components["schemas"]["v1ReleaseConfiguredModelSnapshot"];
-            approval_evidence?: components["schemas"]["v1ReleaseApprovalEvidence"];
-            blocked_reason?: string;
-        };
         v1Artifact: {
             id?: string;
             run_id?: string;
             kind?: string;
+            name?: string;
+            path?: string;
             /** Format: int64 */
-            size_bytes?: number;
+            size?: number;
             sha256?: string;
-            content_type?: string;
-            metadata?: {
-                [key: string]: string;
-            };
+            text_preview?: string;
+            expired?: boolean;
+            /** Format: date-time */
+            created_at?: string;
             /** Format: date-time */
             expires_at?: string;
-            /** Format: date-time */
-            created_at?: string;
         };
-        v1Attempt: {
-            id?: string;
-            /** Format: int32 */
-            number?: number;
-            worker_id?: string;
-            state?: string;
-            infrastructure_failure?: boolean;
-            error?: components["schemas"]["v1ExecutionError"];
-            /** Format: date-time */
-            started_at?: string;
-            /** Format: date-time */
-            ended_at?: string;
-        };
-        v1AuditEvent: {
-            /** Format: int64 */
-            id?: number;
-            team_id?: string;
-            actor_user_id?: string;
-            action?: string;
-            resource_type?: string;
-            resource_id?: string;
-            details?: Record<string, never>;
-            /** Format: date-time */
-            created_at?: string;
-            outcome?: string;
-        };
-        v1CodingTask: {
-            id?: string;
-            team_id?: string;
-            agent_release_id?: string;
-            created_by?: string;
-            title?: string;
-            request_text?: string;
-            issue_snapshot?: components["schemas"]["v1IssueSnapshot"];
-            state?: string;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: date-time */
-            completed_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1CodingTaskLaunchOption: {
-            agent_release_id?: string;
-            repository_binding_id?: string;
-        };
-        v1ConfiguredModel: {
-            id?: string;
-            name?: string;
-            model_id?: string;
-            endpoint?: string;
-            credential_profile_id?: string;
-            enabled?: boolean;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1ContinueCodingTaskResponse: {
-            task?: components["schemas"]["v1CodingTask"];
-            session?: components["schemas"]["v1Session"];
-            run_id?: string;
-        };
-        v1CreateAgentRequest: {
-            team_id?: string;
-            name?: string;
-            description?: string;
-        };
-        v1CreateCodingTaskRequest: {
-            team_id?: string;
-            agent_release_id?: string;
-            title?: string;
-            request_text?: string;
-            issue_snapshot?: components["schemas"]["v1IssueSnapshot"];
-        };
-        v1CreateCodingTaskResponse: {
-            task?: components["schemas"]["v1CodingTask"];
-            session?: components["schemas"]["v1Session"];
-            run_id?: string;
-        };
-        v1CredentialProfile: {
-            id?: string;
-            team_id?: string;
-            name?: string;
-            kind?: string;
-            secret_configured?: boolean;
-            enabled?: boolean;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-        };
-        v1CurrentUser: {
-            user_id?: string;
-            email?: string;
-            display_name?: string;
-            organization?: components["schemas"]["v1Organization"];
-            role_grants?: components["schemas"]["v1RoleGrant"][];
-            teams?: components["schemas"]["v1Team"][];
-        };
-        v1DecideMemoryCandidateResponse: {
-            candidate?: components["schemas"]["v1MemoryCandidate"];
-            memory?: components["schemas"]["v1AgentMemory"];
-        };
-        v1EgressPolicy: {
-            mode?: string;
-        };
-        v1ExecutionError: {
-            code?: string;
-            message?: string;
-        };
-        v1ExecutionLimits: {
-            /** Format: int64 */
-            timeout_seconds?: number;
-            /** Format: double */
-            cpus?: number;
-            /** Format: int64 */
-            memory_bytes?: number;
-            /** Format: int64 */
-            pids?: number;
-            /** Format: int64 */
-            temp_bytes?: number;
-            egress?: string;
-        };
-        v1GetArtifactDownloadResponse: {
+        v1ArtifactDownload: {
             url?: string;
             /** Format: date-time */
             expires_at?: string;
+        };
+        v1CreateExpertRequest: {
+            expert?: components["schemas"]["v1ExpertInput"];
+        };
+        v1CreateMCPServerRequest: {
+            mcp_server?: components["schemas"]["v1MCPServerInput"];
+        };
+        v1CreateModelProviderConnectionRequest: {
+            name?: string;
+            provider_type?: string;
+            endpoint?: string;
+            protocols?: string[];
+            api_key?: string;
+        };
+        v1CreateSessionRequest: {
+            expert_id?: string;
+        };
+        v1CreateSkillRequest: {
+            name?: string;
+            source?: string;
+            git_url?: string;
+            git_ref?: string;
+            /** Format: byte */
+            archive?: string;
+        };
+        v1CreateUserRequest: {
+            username?: string;
+            display_name?: string;
+            email?: string;
+        };
+        v1CreateUserResponse: {
+            user?: components["schemas"]["v1UserAccount"];
+            temporary_password?: string;
+        };
+        v1CreateWorkflowRequest: {
+            workflow?: components["schemas"]["v1WorkflowInput"];
+        };
+        v1CurrentUser: {
+            id?: string;
+            username?: string;
+            email?: string;
+            display_name?: string;
+            administrator?: boolean;
+            settings_ready?: boolean;
+        };
+        v1DeleteResponse: {
+            deleted?: boolean;
+        };
+        v1EnvironmentVariable: {
+            name?: string;
+            value?: string;
+            secret?: boolean;
+            configured?: boolean;
+        };
+        v1Expert: {
+            id?: string;
+            name?: string;
+            description?: string;
+            mcp_server_ids?: string[];
+            skill_ids?: string[];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ExpertInput: {
+            name?: string;
+            description?: string;
+            mcp_server_ids?: string[];
+            skill_ids?: string[];
+        };
+        v1GitSource: {
+            url?: string;
+            branch?: string;
+            private_ssh?: boolean;
+            credential_configured?: boolean;
         };
         v1HealthResponse: {
             status?: string;
         };
-        v1IssueSnapshot: {
-            title?: string;
-            body?: string;
-            url?: string;
-        };
-        v1ListAgentDraftsResponse: {
-            items?: components["schemas"]["v1AgentDraft"][];
-        };
-        v1ListAgentMemoriesResponse: {
-            items?: components["schemas"]["v1AgentMemory"][];
-        };
-        v1ListAgentReleasesResponse: {
-            items?: components["schemas"]["v1AgentRelease"][];
-        };
-        v1ListAgentsResponse: {
-            items?: components["schemas"]["v1Agent"][];
-        };
-        v1ListAuditEventsResponse: {
-            items?: components["schemas"]["v1AuditEvent"][];
-        };
-        v1ListCodingTaskLaunchOptionsResponse: {
-            items?: components["schemas"]["v1CodingTaskLaunchOption"][];
-            prerequisite?: string;
-        };
-        v1ListCodingTasksResponse: {
-            items?: components["schemas"]["v1CodingTask"][];
-        };
-        v1ListConfiguredModelsResponse: {
-            items?: components["schemas"]["v1ConfiguredModel"][];
-        };
-        v1ListCredentialProfilesResponse: {
-            items?: components["schemas"]["v1CredentialProfile"][];
-        };
-        v1ListMemoryCandidatesResponse: {
-            items?: components["schemas"]["v1MemoryCandidate"][];
-        };
-        v1ListRepositoryBindingsResponse: {
-            items?: components["schemas"]["v1RepositoryBinding"][];
-        };
-        v1ListRunApprovalsResponse: {
-            items?: components["schemas"]["v1RunApproval"][];
-        };
-        v1ListRunArtifactsResponse: {
+        v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
+        };
+        v1ListExpertsResponse: {
+            items?: components["schemas"]["v1Expert"][];
+        };
+        v1ListMCPServersResponse: {
+            items?: components["schemas"]["v1MCPServer"][];
+        };
+        v1ListModelProviderConnectionsResponse: {
+            items?: components["schemas"]["v1ModelProviderConnection"][];
+        };
+        v1ListModelProviderPresetsResponse: {
+            items?: components["schemas"]["v1ModelProviderPreset"][];
         };
         v1ListRunsResponse: {
             items?: components["schemas"]["v1Run"][];
-            next_page_token?: string;
         };
-        v1ListRuntimeImagesResponse: {
-            items?: components["schemas"]["v1RuntimeImage"][];
-            next_page_token?: string;
+        v1ListRuntimeEnginesResponse: {
+            items?: components["schemas"]["v1RuntimeEngineStatus"][];
         };
         v1ListSessionMessagesResponse: {
             items?: components["schemas"]["v1SessionMessage"][];
         };
-        v1ListSourceControlProvidersResponse: {
-            items?: components["schemas"]["v1SourceControlProvider"][];
+        v1ListSessionsResponse: {
+            items?: components["schemas"]["v1Session"][];
         };
-        v1MemoryCandidate: {
-            id?: string;
-            agent_id?: string;
-            coding_task_id?: string;
-            proposed_content?: string;
-            state?: string;
-            /** Format: date-time */
-            proposed_at?: string;
-            decided_by?: string;
-            /** Format: date-time */
-            decided_at?: string;
-            resulting_memory_id?: string;
+        v1ListSkillsResponse: {
+            items?: components["schemas"]["v1Skill"][];
         };
-        v1ModelBinding: {
-            model_id?: string;
-            endpoint?: string;
-            credential_profile_id?: string;
+        v1ListUsersResponse: {
+            items?: components["schemas"]["v1UserAccount"][];
         };
-        v1ModelBudget: {
+        v1ListWorkflowsResponse: {
+            items?: components["schemas"]["v1Workflow"][];
+        };
+        v1ListWorkspaceEntriesResponse: {
+            items?: components["schemas"]["v1WorkspaceEntry"][];
             /** Format: int64 */
-            max_input_tokens?: number;
+            used_bytes?: number;
             /** Format: int64 */
-            max_output_tokens?: number;
-            max_cost_amount?: string;
+            limit_bytes?: number;
         };
-        v1Organization: {
+        v1MCPServer: {
             id?: string;
-            slug?: string;
             name?: string;
-        };
-        v1QualityCommand: {
-            name?: string;
-            kind?: string;
-            executable?: string;
+            transport?: string;
+            url?: string;
+            runner?: string;
+            package?: string;
+            package_version?: string;
             arguments?: string[];
-            /** Format: int32 */
-            timeout_seconds?: number;
+            environment?: components["schemas"]["v1EnvironmentVariable"][];
+            tested?: boolean;
+            test_error?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+            test_pending?: boolean;
+        };
+        v1MCPServerInput: {
+            name?: string;
+            transport?: string;
+            url?: string;
+            runner?: string;
+            package?: string;
+            package_version?: string;
+            arguments?: string[];
+            environment?: components["schemas"]["v1EnvironmentVariable"][];
+        };
+        v1ModelProviderConnection: {
+            id?: string;
+            name?: string;
+            provider_type?: string;
+            endpoint?: string;
+            protocols?: string[];
+            api_key_configured?: boolean;
+            verification_status?: string;
+            verification_error?: string;
+            custom_endpoint?: boolean;
+            /** Format: date-time */
+            last_synced_at?: string;
+            last_sync_error?: string;
+            models?: components["schemas"]["v1ProviderModel"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ModelProviderPreset: {
+            provider_type?: string;
+            display_name?: string;
+            official_endpoint?: string;
+            protocols?: string[];
+            dynamic_discovery?: boolean;
+        };
+        v1PersonalSettings: {
+            personality?: string;
+            personality_instructions?: string;
+            runtime_model_defaults?: components["schemas"]["v1RuntimeModelDefault"][];
+            default_runtime_engine?: string;
+            language?: string;
+            timezone?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ProviderModel: {
+            id?: string;
+            connection_id?: string;
+            model_id?: string;
+            display_name?: string;
+            model_type?: string;
+            available?: boolean;
+            manually_added?: boolean;
+            compatibility?: components["schemas"]["v1RuntimeModelCompatibility"][];
         };
         v1ReadyResponse: {
             status?: string;
         };
-        v1RegisterConfiguredModelRequest: {
-            name?: string;
+        v1ResetUserPasswordResponse: {
+            temporary_password?: string;
+        };
+        v1ResponseSnapshot: {
+            provider_model_id?: string;
+            connection_id?: string;
+            connection_name?: string;
+            provider_type?: string;
             model_id?: string;
+            model_name?: string;
             endpoint?: string;
-            credential_profile_id?: string;
-        };
-        v1RegisterCredentialProfileRequest: {
-            team_id?: string;
-            name?: string;
-            kind?: string;
-            secret_ref?: string;
-        };
-        v1RegisterRepositoryBindingRequest: {
-            binding?: components["schemas"]["v1RepositoryBindingInput"];
-        };
-        v1RegisterRuntimeImageRequest: {
-            runtime?: string;
-            cli_version?: string;
-            adapter_version?: string;
-            image_digest?: string;
-            capabilities?: {
-                [key: string]: boolean;
-            };
-        };
-        v1RegisterSourceControlProviderRequest: {
-            name?: string;
-            kind?: string;
-            base_url?: string;
-        };
-        v1ReleaseApproval: {
-            id?: string;
-            draft_id?: string;
+            protocols?: string[];
+            runtime_engine?: string;
+            compatibility?: string;
             /** Format: int64 */
-            draft_version?: number;
-            requested_by?: string;
-            state?: string;
-            /** Format: date-time */
-            requested_at?: string;
-            decided_by?: string;
-            /** Format: date-time */
-            decided_at?: string;
-            reason?: string;
-            /** Format: int64 */
-            version?: number;
-            risk_reason?: string;
-        };
-        v1ReleaseApprovalEvidence: {
-            id?: string;
-            draft_id?: string;
-            /** Format: int64 */
-            draft_version?: number;
-            requested_by?: string;
-            risk_reason?: string;
-            approved_by?: string;
-            /** Format: date-time */
-            approved_at?: string;
-        };
-        v1ReleaseConfiguredModelSnapshot: {
-            id?: string;
-            name?: string;
-            model_id?: string;
-            endpoint?: string;
-            credential_profile_id?: string;
-        };
-        v1ReleaseRepositoryBindingSnapshot: {
-            id?: string;
-            name?: string;
-            repository_ssh_url?: string;
-            default_branch?: string;
-            instructions?: string;
-            quality_commands?: components["schemas"]["v1QualityCommand"][];
-            egress_policy?: string;
-            required_runtime_capabilities?: string[];
-            source_control_provider_id?: string;
-            ssh_credential_profile_id?: string;
-            build_credential_profile_ids?: string[];
-            git_author_name?: string;
-            git_author_email?: string;
-        };
-        v1ReleaseRuntimeImageSnapshot: {
-            id?: string;
-            runtime?: string;
-            cli_version?: string;
-            adapter_version?: string;
-            image_digest?: string;
-            capabilities?: {
-                [key: string]: boolean;
-            };
-        };
-        v1RepositoryBinding: {
-            id?: string;
-            team_id?: string;
-            source_control_provider_id?: string;
-            name?: string;
-            repository_ssh_url?: string;
-            default_branch?: string;
-            ssh_credential_profile_id?: string;
-            build_credential_profile_ids?: string[];
-            git_author_name?: string;
-            git_author_email?: string;
-            allowed_runtime_image_ids?: string[];
-            default_runtime_image_id?: string;
-            default_model_id?: string;
-            model_budget?: components["schemas"]["v1ModelBudget"];
-            instructions?: string;
-            quality_commands?: components["schemas"]["v1QualityCommand"][];
-            egress_policy?: components["schemas"]["v1EgressPolicy"];
-            validation_report?: components["schemas"]["v1ValidationReport"];
-            /** Format: date-time */
-            validated_at?: string;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-            required_runtime_capabilities?: string[];
-        };
-        v1RepositoryBindingInput: {
-            team_id?: string;
-            source_control_provider_id?: string;
-            name?: string;
-            repository_ssh_url?: string;
-            default_branch?: string;
-            ssh_credential_profile_id?: string;
-            build_credential_profile_ids?: string[];
-            git_author_name?: string;
-            git_author_email?: string;
-            allowed_runtime_image_ids?: string[];
-            default_runtime_image_id?: string;
-            default_model_id?: string;
-            model_budget?: components["schemas"]["v1ModelBudget"];
-            instructions?: string;
-            quality_commands?: components["schemas"]["v1QualityCommand"][];
-            egress_policy?: components["schemas"]["v1EgressPolicy"];
-            required_runtime_capabilities?: string[];
-        };
-        v1RoleGrant: {
-            team_id?: string;
-            role?: string;
+            connection_version?: number;
         };
         v1Run: {
             id?: string;
-            session_id?: string;
-            agent_release_id?: string;
-            runtime_image_id?: string;
-            request_text?: string;
+            workflow_id?: string;
+            workflow_name?: string;
+            trigger?: string;
             state?: string;
-            model_binding?: components["schemas"]["v1ModelBinding"];
-            model_budget?: components["schemas"]["v1ModelBudget"];
-            execution_limits?: components["schemas"]["v1ExecutionLimits"];
-            usage?: components["schemas"]["v1Usage"];
-            cost_amount?: string;
-            terminal_error?: components["schemas"]["v1ExecutionError"];
-            /** Format: int32 */
-            attempt_count?: number;
-            created_by?: string;
+            text_input?: string;
+            json_input?: Record<string, never>;
+            final_text?: string;
+            final_json?: Record<string, never>;
+            error?: string;
             /** Format: date-time */
-            created_at?: string;
+            queued_at?: string;
             /** Format: date-time */
             started_at?: string;
             /** Format: date-time */
             ended_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
             /** Format: int64 */
-            version?: number;
-            attempts?: components["schemas"]["v1Attempt"][];
-            coding_task_id?: string;
-            agent_id?: string;
-            repository_binding_id?: string;
-            repository_binding_snapshot?: Record<string, never>;
-            runtime_image_snapshot?: Record<string, never>;
-            configured_model_snapshot?: Record<string, never>;
-            lease?: components["schemas"]["v1RunLeaseDiagnostic"];
+            elapsed_ms?: number;
+            workflow_snapshot?: Record<string, never>;
         };
-        v1RunApproval: {
-            id?: string;
-            run_id?: string;
-            kind?: string;
-            request?: Record<string, never>;
-            state?: string;
-            /** Format: date-time */
-            requested_at?: string;
-            decided_by?: string;
-            /** Format: date-time */
-            decided_at?: string;
-            decision_reason?: string;
-            /** Format: int64 */
-            version?: number;
-            requested_by?: string;
-            decision_actor_type?: string;
-        };
-        v1RunLeaseDiagnostic: {
-            attempt_id?: string;
-            worker_id?: string;
-            /** Format: date-time */
-            expires_at?: string;
-        };
-        v1RuntimeImage: {
-            id?: string;
-            runtime?: string;
+        v1RuntimeEngineStatus: {
+            name?: string;
+            available?: boolean;
+            native_resume?: boolean;
             cli_version?: string;
-            adapter_version?: string;
-            image_digest?: string;
-            capabilities?: {
-                [key: string]: boolean;
-            };
+        };
+        v1RuntimeModelCompatibility: {
+            runtime_engine?: string;
             status?: string;
-            blocked_reason?: string;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: date-time */
-            updated_at?: string;
-            /** Format: int64 */
-            version?: number;
-            conformance_evidence_key?: string;
-            conformance_evidence_sha256?: string;
+            reason?: string;
+        };
+        v1RuntimeModelDefault: {
+            runtime_engine?: string;
+            provider_model_id?: string;
+        };
+        v1Schedule: {
+            enabled?: boolean;
+            frequency?: string;
+            /** Format: int32 */
+            hour?: number;
+            /** Format: int32 */
+            minute?: number;
+            /** Format: int32 */
+            weekday?: number;
+            timezone?: string;
+        };
+        v1SendSessionMessageResponse: {
+            user_message?: components["schemas"]["v1SessionMessage"];
+            assistant_message?: components["schemas"]["v1SessionMessage"];
         };
         v1Session: {
             id?: string;
-            coding_task_id?: string;
-            repository_binding_id?: string;
-            target_branch?: string;
-            review_branch?: string;
-            memory?: components["schemas"]["v1SessionMemory"];
-            /** Format: int32 */
-            run_count?: number;
+            title?: string;
+            expert_id?: string;
+            archived?: boolean;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
             /** Format: int64 */
             version?: number;
-        };
-        v1SessionMemory: {
-            summary?: string;
-            confirmed_decisions?: string[];
-            results?: string[];
-            workspace_snapshots?: string[];
+            current_provider_model_id?: string;
         };
         v1SessionMessage: {
             /** Format: int64 */
             id?: number;
-            run_id?: string;
-            author?: string;
-            author_user_id?: string;
-            content?: components["schemas"]["v1SessionMessageContent"];
+            role?: string;
+            state?: string;
+            content?: string;
+            error?: string;
+            /** Format: int64 */
+            elapsed_ms?: number;
             /** Format: date-time */
             created_at?: string;
+            progress_stage?: string;
+            response_snapshot?: components["schemas"]["v1ResponseSnapshot"];
         };
-        v1SessionMessageContent: {
-            type?: string;
-            text?: string;
-            status?: string;
-            run_id?: string;
-            review_branch?: string;
-        };
-        v1SourceControlProvider: {
+        v1Skill: {
             id?: string;
             name?: string;
-            kind?: string;
-            base_url?: string;
-            enabled?: boolean;
+            source?: string;
+            git_url?: string;
+            git_ref?: string;
+            sha256?: string;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -1601,33 +1103,80 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
-        v1StreamResponse: {
+        v1UpdateSettingsRequest: {
+            personality?: string;
+            personality_instructions?: string;
+            runtime_model_defaults?: components["schemas"]["v1RuntimeModelDefault"][];
+            default_runtime_engine?: string;
+            language?: string;
+            timezone?: string;
             /** Format: int64 */
-            sequence?: number;
-            event_type?: string;
-            payload?: unknown;
+            expected_version?: number;
+        };
+        v1UserAccount: {
+            id?: string;
+            username?: string;
+            email?: string;
+            display_name?: string;
+            administrator?: boolean;
+            enabled?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1Workflow: {
+            id?: string;
+            name?: string;
+            goal?: string;
+            expert_id?: string;
+            provider_model_id?: string;
+            runtime_engine?: string;
+            environment?: components["schemas"]["v1EnvironmentVariable"][];
+            schedule?: components["schemas"]["v1Schedule"];
+            git_source?: components["schemas"]["v1GitSource"];
+            api_credential_configured?: boolean;
+            deleted?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1WorkflowCredential: {
+            api_key?: string;
+            api_secret?: string;
             /** Format: date-time */
             created_at?: string;
         };
-        v1Team: {
-            id?: string;
-            slug?: string;
+        v1WorkflowInput: {
             name?: string;
+            goal?: string;
+            expert_id?: string;
+            provider_model_id?: string;
+            runtime_engine?: string;
+            environment?: components["schemas"]["v1EnvironmentVariable"][];
+            schedule?: components["schemas"]["v1Schedule"];
         };
-        v1Usage: {
+        v1WorkspaceEntry: {
+            path?: string;
+            name?: string;
+            directory?: boolean;
             /** Format: int64 */
-            input_tokens?: number;
-            /** Format: int64 */
-            output_tokens?: number;
-            cost_amount?: string;
-        };
-        v1ValidationReport: {
-            valid?: boolean;
-            errors?: {
-                [key: string]: string;
-            };
+            size?: number;
             /** Format: date-time */
-            checked_at?: string;
+            modified_at?: string;
+        };
+        v1WorkspaceFile: {
+            path?: string;
+            /** Format: byte */
+            content?: string;
+            content_type?: string;
+            /** Format: int64 */
+            size?: number;
+            /** Format: date-time */
+            modified_at?: string;
         };
     };
     responses: never;
@@ -1638,6 +1187,1876 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AgentWorkspaceService_ListUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListUsersResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreateUserResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetUserEnabled: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSetUserEnabledBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1UserAccount"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ResetUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceResetUserPasswordBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ResetUserPasswordResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListExperts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListExpertsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateExpert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateExpertRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Expert"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteExpert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateExpert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateExpertBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Expert"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListMCPServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListMCPServersResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateMCPServerRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateMCPServerBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_TestMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceTestMCPServerBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSkillsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Skill"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateSkillBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Skill"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CurrentUser"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListModelProviderConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListModelProviderConnectionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateModelProviderConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateModelProviderConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ModelProviderConnection"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteModelProviderConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateModelProviderConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateModelProviderConnectionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ModelProviderConnection"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateProviderModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCreateProviderModelBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ProviderModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RefreshProviderModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRefreshProviderModelsBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ModelProviderConnection"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListModelProviderPresets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListModelProviderPresetsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListRuntimeEngines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListRuntimeEnginesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSessions: {
+        parameters: {
+            query?: {
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSessionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateSessionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetSessionArchived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSetSessionArchivedBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSessionMessages: {
+        parameters: {
+            query?: {
+                after?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSessionMessagesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SendSessionMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSendSessionMessageBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SendSessionMessageResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CancelSessionMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCancelSessionMessageBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SessionMessage"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RetrySessionMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRetrySessionMessageBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SendSessionMessageResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PersonalSettings"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1UpdateSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PersonalSettings"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListWorkflows: {
+        parameters: {
+            query?: {
+                deleted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListWorkflowsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateWorkflowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GenerateWorkflowCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceGenerateWorkflowCredentialBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkflowCredential"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListArtifacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListArtifactsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetArtifactDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ArtifactDownload"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListRunsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RunWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRunWorkflowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CancelRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCancelRunBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RerunWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRerunWorkflowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListWorkspaceEntries: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListWorkspaceEntriesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ClearWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceClearWorkspaceBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CloneWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCloneWorkspaceBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateWorkspaceDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCreateWorkspaceDirectoryBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkspaceEntry"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetWorkspaceFile: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkspaceFile"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UploadWorkspaceFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUploadWorkspaceFileBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkspaceEntry"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     HealthService_Health: {
         parameters: {
             query?: never;
@@ -1683,2415 +3102,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ReadyResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_UpdateAgentMemory: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                memory_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceUpdateAgentMemoryBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentMemory"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_DeleteAgentMemory: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                memory_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceDeleteAgentMemoryBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentMemory"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_ListAgents: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListAgentsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_CreateAgent: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1CreateAgentRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Agent"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_GetAgent: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Agent"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_UpdateAgent: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceUpdateAgentBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Agent"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_ListAgentDrafts: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListAgentDraftsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_CreateAgentDraft: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceCreateAgentDraftBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentDraft"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_GetAgentDraft: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentDraft"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_UpdateAgentDraft: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceUpdateAgentDraftBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentDraft"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_GetAgentDraftApproval: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ReleaseApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_RequestAgentDraftApproval: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceRequestAgentDraftApprovalBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ReleaseApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_DecideAgentDraftApproval: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceDecideAgentDraftApprovalBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ReleaseApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_PublishAgentDraft: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServicePublishAgentDraftBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentRelease"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_ValidateAgentDraft: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-                draft_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceValidateAgentDraftBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentDraft"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ListAgentMemories: {
-        parameters: {
-            query?: {
-                team_id?: string;
-                include_deleted?: boolean;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListAgentMemoriesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_ListAgentReleases: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListAgentReleasesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_GetAgentRelease: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                agent_id: string;
-                release_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentRelease"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_BlockAgentRelease: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-                release_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceBlockAgentReleaseBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentRelease"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentLifecycleService_DeprecateAgentRelease: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                agent_id: string;
-                release_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentLifecycleServiceDeprecateAgentReleaseBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1AgentRelease"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RunApprovalService_GetRunApproval: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                approval_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RunApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RunApprovalService_DecideRunApproval: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                approval_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RunApprovalServiceDecideRunApprovalBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RunApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ArtifactService_GetArtifactDownload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                artifact_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1GetArtifactDownloadResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AuditService_ListAuditEvents: {
-        parameters: {
-            query?: {
-                team_id?: string;
-                action?: string;
-                resource_type?: string;
-                resource_id?: string;
-                actor_user_id?: string;
-                created_from?: string;
-                created_to?: string;
-                limit?: number;
-                outcome?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListAuditEventsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ListCodingTaskLaunchOptions: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListCodingTaskLaunchOptionsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ListCodingTasks: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListCodingTasksResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_CreateCodingTask: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1CreateCodingTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CreateCodingTaskResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_GetCodingTask: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CodingTask"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_UpdateCodingTask: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceUpdateCodingTaskBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CodingTask"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ListMemoryCandidates: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListMemoryCandidatesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ProposeMemoryCandidate: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceProposeMemoryCandidateBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1MemoryCandidate"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ListSessionMessages: {
-        parameters: {
-            query?: {
-                team_id?: string;
-                after?: number;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListSessionMessagesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_ContinueCodingTask: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceContinueCodingTaskBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ContinueCodingTaskResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_GetCodingTaskSession: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Session"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_UpdateCodingTaskSession: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceUpdateCodingTaskSessionBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Session"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_ListConfiguredModels: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListConfiguredModelsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_RegisterConfiguredModel: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1RegisterConfiguredModelRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ConfiguredModel"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_GetConfiguredModel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                configured_model_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ConfiguredModel"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_ChangeConfiguredModelStatus: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                configured_model_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ModelCatalogServiceChangeConfiguredModelStatusBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ConfiguredModel"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_ListCredentialProfiles: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListCredentialProfilesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_RegisterCredentialProfile: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1RegisterCredentialProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CredentialProfile"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_GetCredentialProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                credential_profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CredentialProfile"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ModelCatalogService_ChangeCredentialProfileStatus: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                credential_profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ModelCatalogServiceChangeCredentialProfileStatusBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CredentialProfile"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    IdentityService_GetCurrentUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1CurrentUser"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    CollaborationService_DecideMemoryCandidate: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path: {
-                candidate_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollaborationServiceDecideMemoryCandidateBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1DecideMemoryCandidateResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_ListRepositoryBindings: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListRepositoryBindingsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_RegisterRepositoryBinding: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1RegisterRepositoryBindingRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RepositoryBinding"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_GetRepositoryBinding: {
-        parameters: {
-            query?: {
-                team_id?: string;
-            };
-            header?: never;
-            path: {
-                repository_binding_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RepositoryBinding"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_UpdateRepositoryBinding: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                repository_binding_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SourceControlServiceUpdateRepositoryBindingBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RepositoryBinding"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_ValidateRepositoryBinding: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                repository_binding_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SourceControlServiceValidateRepositoryBindingBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RepositoryBinding"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_ListRuns: {
-        parameters: {
-            query?: {
-                team_id?: string;
-                agent_id?: string;
-                repository_binding_id?: string;
-                task_id?: string;
-                state?: string;
-                runtime?: string;
-                created_from?: string;
-                created_to?: string;
-                limit?: number;
-                page_token?: string;
-                sort_direction?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListRunsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_GetRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RunApprovalService_ListRunApprovals: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListRunApprovalsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RunApprovalService_RequestRunApproval: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RunApprovalServiceRequestRunApprovalBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RunApproval"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ArtifactService_ListRunArtifacts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListRunArtifactsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_CancelRun: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RunEventStreamService_Stream: {
-        parameters: {
-            query?: {
-                after?: number;
-            };
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response.(streaming responses) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        result?: components["schemas"]["v1StreamResponse"];
-                        error?: components["schemas"]["rpcStatus"];
-                    };
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_InterruptRun: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_KillRun: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExecutionServiceKillRunBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_RecoverRun: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExecutionServiceRecoverRunBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    ExecutionService_ResumeRun: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Run"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RuntimeCatalogService_ListRuntimeImages: {
-        parameters: {
-            query?: {
-                page_size?: number;
-                page_token?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListRuntimeImagesResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RuntimeCatalogService_RegisterRuntimeImage: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Stable key for one user intent. */
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1RegisterRuntimeImageRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RuntimeImage"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RuntimeCatalogService_GetRuntimeImage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                runtime_image_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RuntimeImage"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    RuntimeCatalogService_ChangeRuntimeImageStatus: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Stable key for one user intent. */
-                "Idempotency-Key": string;
-                /** @description Current Runtime Image Version. */
-                "If-Match": string;
-            };
-            path: {
-                runtime_image_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RuntimeCatalogServiceChangeRuntimeImageStatusBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1RuntimeImage"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_ListSourceControlProviders: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListSourceControlProvidersResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_RegisterSourceControlProvider: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1RegisterSourceControlProviderRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1SourceControlProvider"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_GetSourceControlProvider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                source_control_provider_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1SourceControlProvider"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    SourceControlService_ChangeSourceControlProviderStatus: {
-        parameters: {
-            query?: never;
-            header: {
-                "Idempotency-Key": string;
-                "If-Match": string;
-            };
-            path: {
-                source_control_provider_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SourceControlServiceChangeSourceControlProviderStatusBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1SourceControlProvider"];
                 };
             };
             /** @description An unexpected error response. */

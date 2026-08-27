@@ -31,8 +31,21 @@ type ExecuteRequest struct {
 	WorkspacePath  string
 	Instruction    string
 	Model          string
+	ModelEndpoint  string
+	ModelProvider  string
+	ModelProtocols []string
 	CheckpointRef  string
 	EnvironmentRef string
+	MCPConfigPath  string
+}
+
+func (r ExecuteRequest) SupportsModelProtocol(protocol string) bool {
+	for _, candidate := range r.ModelProtocols {
+		if candidate == protocol {
+			return true
+		}
+	}
+	return false
 }
 
 func (r ExecuteRequest) Validate() error {

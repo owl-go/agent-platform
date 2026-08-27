@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createAuthSession, type OIDCClient, type OIDCUser } from "./session";
 
 const currentUser = {
-  user_id: "user-1",
+  id: "user-1",
+  username: "platform-user",
   email: "user@example.test",
   display_name: "Platform User",
-  organization: { id: "org-1", slug: "acme", name: "Acme" },
-  role_grants: [{ role: "agent_user" }],
+  administrator: false,
+  settings_ready: true,
 };
 
 describe("AuthSession", () => {

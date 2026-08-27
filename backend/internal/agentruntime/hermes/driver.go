@@ -48,7 +48,7 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 		"--oneshot", request.Instruction,
 		"--model", request.Model,
 		"--toolsets", "all",
-		"--safe-mode",
+		"--ignore-rules",
 		"--usage-file", filepath.Join(scratchDirectory, "usage.json"),
 	}}, nil
 }
@@ -66,7 +66,9 @@ type parser struct {
 
 func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.ParsedEvent, error) {
 	if stream == processharness.StreamStdout {
-		p.lines = append(p.lines, string(line))
+		value := string(line)
+		p.lines = append(p.lines, value)
+		return []cliadapter.ParsedEvent{{Kind: agentruntime.EventMessageDelta, Payload: map[string]string{"delta": value + "\n"}}}, nil
 	}
 	return nil, nil
 }

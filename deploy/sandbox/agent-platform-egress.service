@@ -1,0 +1,14 @@
+[Unit]
+Description=Agent Platform public-only sandbox egress policy
+Requires=docker.service
+After=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/opt/agent-platform/config/egress.env
+ExecStart=/opt/agent-platform/src/deploy/sandbox/configure-public-egress.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=docker.service

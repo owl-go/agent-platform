@@ -56,6 +56,7 @@ type Config struct {
 	VerifiedCapabilities map[agentruntime.Capability]bool
 	OutputSink           processharness.OutputSink
 	RunProcess           RunProcess
+	ScratchRoot          string
 	MaxOutputBytes       int64
 	MaxLineBytes         int64
 	GracePeriod          time.Duration
@@ -117,7 +118,7 @@ func (a *Adapter) Execute(ctx context.Context, request agentruntime.ExecuteReque
 	if err := request.Validate(); err != nil {
 		return agentruntime.Result{}, err
 	}
-	scratch, err := os.MkdirTemp("", "agent-runtime-adapter-*")
+	scratch, err := os.MkdirTemp(a.config.ScratchRoot, "agent-runtime-adapter-*")
 	if err != nil {
 		return agentruntime.Result{}, runtimeError(agentruntime.ErrorInternalAdapter, "create runtime scratch directory", err)
 	}

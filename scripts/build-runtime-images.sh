@@ -16,7 +16,7 @@ for index in "${!runtimes[@]}"; do
     --pull \
     --tag "${tag}" \
     --file "deploy/runtimes/${runtime}/Dockerfile" \
-    deploy/runtimes
+    .
   image_id="$(docker image inspect --format '{{.Id}}' "${tag}")"
   printf '%s\n' "${tag} ${image_id}" >"${metadata_directory}/${runtime}.txt"
 done

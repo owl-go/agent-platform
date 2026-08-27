@@ -34,27 +34,30 @@ type ScratchPreparer func(string, int, int) error
 type ControlContainer func(context.Context, string, bool) error
 
 type Config struct {
-	DockerCommand       string
-	Image               string
-	RuntimeCommand      string
-	RunID               string
-	Runtime             string
-	WorkspaceDirectory  string
-	WorkspaceVolume     string
-	ContainerWorkspace  string
-	CredentialDirectory string
-	PublicEgressNetwork string
-	ResolverConfigFile  string
-	Egress              sandbox.EgressMode
-	Limits              sandbox.Limits
-	UID                 int
-	GID                 int
-	RunHost             RunHost
-	Cleanup             Cleanup
-	Name                NameFactory
-	PrepareScratch      ScratchPreparer
-	ControlContainer    ControlContainer
-	WorkflowPlan        string
+	DockerCommand        string
+	Image                string
+	RuntimeCommand       string
+	RunID                string
+	Runtime              string
+	WorkspaceDirectory   string
+	WorkspaceVolume      string
+	ContainerWorkspace   string
+	CredentialDirectory  string
+	NativeStateDirectory string
+	ScratchDirectory     string
+	PublicEgressNetwork  string
+	ResolverConfigFile   string
+	Egress               sandbox.EgressMode
+	Limits               sandbox.Limits
+	UID                  int
+	GID                  int
+	RunHost              RunHost
+	Cleanup              Cleanup
+	Name                 NameFactory
+	PrepareScratch       ScratchPreparer
+	ControlContainer     ControlContainer
+	WorkflowPlan         string
+	DirectCommand        bool
 }
 
 func New(config Config) (cliadapter.RunProcess, error) {
@@ -208,6 +211,15 @@ func validateConfig(config Config) error {
 	if !filepath.IsAbs(config.CredentialDirectory) {
 		return fmt.Errorf("credential directory must be absolute")
 	}
+	if config.NativeStateDirectory != "" && !filepath.IsAbs(config.NativeStateDirectory) {
+		return fmt.Errorf("native Runtime state directory must be absolute")
+	}
+	if config.ScratchDirectory != "" && !filepath.IsAbs(config.ScratchDirectory) {
+		return fmt.Errorf("Runtime scratch directory must be absolute")
+	}
+	if config.NativeStateDirectory != "" && config.RuntimeCommand != "codex" {
+		return fmt.Errorf("native Runtime state directory is only supported for Codex")
+	}
 	if config.Egress != sandbox.EgressNone && config.Egress != sandbox.EgressPublic {
 		return fmt.Errorf("invalid egress mode")
 	}
@@ -278,11 +290,17 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		"--mount", workspaceMount,
 		"--mount", "type=bind,src=" + config.CredentialDirectory + ",dst=/run/agent-credentials,readonly=true",
 	}
+	if config.NativeStateDirectory != "" {
+		args = append(args, "--mount", "type=bind,src="+config.NativeStateDirectory+",dst=/tmp/runtime-home/.codex,readonly=false")
+	}
 	if config.Egress == sandbox.EgressPublic {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
 	for _, directory := range scratchDirectories {
 		args = append(args, "--mount", "type=bind,src="+directory+",dst="+directory+",readonly=false")
+	}
+	if config.DirectCommand {
+		args = append(args, "--entrypoint", "/usr/local/bin/runtime-entrypoint")
 	}
 	args = append(args,
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size="+strconv.FormatInt(config.Limits.TempBytes, 10),
@@ -303,6 +321,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		"--label", "agent-platform.run-id="+config.RunID,
 		config.Image,
 	)
+	if config.DirectCommand {
+		return append(args, spec.Command...)
+	}
 	return append(args, spec.Command[1:]...)
 }
 

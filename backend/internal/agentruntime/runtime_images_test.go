@@ -15,7 +15,7 @@ func TestRuntimeDockerfilesPinOneCLIAndNonRootUser(t *testing.T) {
 	}{
 		"claude":   {version: "2.1.233", install: "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}", entry: `ENTRYPOINT ["/usr/local/bin/runtime-entrypoint", "claude"]`},
 		"codex":    {version: "0.147.0", install: "@openai/codex@${CODEX_VERSION}", entry: `ENTRYPOINT ["/usr/local/bin/runtime-entrypoint", "codex"]`},
-		"hermes":   {version: "0.19.0", install: "hermes-agent==${HERMES_VERSION}", entry: `ENTRYPOINT ["/usr/local/bin/runtime-entrypoint", "hermes"]`},
+		"hermes":   {version: "0.19.0", install: "hermes-agent[mcp]==${HERMES_VERSION}", entry: `ENTRYPOINT ["/usr/local/bin/runtime-entrypoint", "hermes"]`},
 		"openclaw": {version: "2026.7.1-2", install: "openclaw@${OPENCLAW_VERSION}", entry: `ENTRYPOINT ["/usr/local/bin/runtime-entrypoint", "openclaw"]`},
 	}
 	for runtimeName, test := range tests {

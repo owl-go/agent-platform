@@ -22,8 +22,6 @@ api:
 authentication:
   mode: deny_all
 worker: {}
-webhook: {}
-retention: {}
 database:
   dsn: ${DATABASE_VALUE}
   max_open_connections: 5

@@ -1,0 +1,367 @@
+package gormrepo
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"agent-platform/backend/internal/biz/workspace/domain"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+func (repository *Repository) ListSessions(ctx context.Context, ownerID string, archived bool) ([]domain.Session, error) {
+	query := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID)
+	if archived {
+		query = query.Where("archived_at IS NOT NULL")
+	} else {
+		query = query.Where("archived_at IS NULL")
+	}
+	var rows []sessionRecord
+	if err := query.Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Sessions: %w", err)
+	}
+	items := make([]domain.Session, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, sessionDomain(row))
+	}
+	return items, nil
+}
+
+func (repository *Repository) CreateSession(ctx context.Context, ownerID string, expertID *string) (domain.Session, error) {
+	row := sessionRecord{ID: uuid.NewString(), OwnerID: ownerID, Title: "New session", ExpertID: expertID, Version: 1}
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if expertID != nil {
+			var count int64
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ?", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+				return domain.ErrInvalid
+			}
+		}
+		var settings settingsRecord
+		if err := tx.Where("user_id = ?", ownerID).Take(&settings).Error; err != nil {
+			return err
+		}
+		defaults := map[string]string{}
+		if len(settings.RuntimeModelDefaults) > 0 {
+			if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
+				return err
+			}
+		}
+		if modelID := defaults[settings.DefaultRuntimeEngine]; modelID != "" {
+			row.CurrentProviderModelID = &modelID
+		}
+		return tx.Create(&row).Error
+	})
+	if err != nil {
+		return domain.Session{}, fmt.Errorf("create Session: %w", err)
+	}
+	return sessionDomain(row), nil
+}
+
+func (repository *Repository) GetSession(ctx context.Context, ownerID, sessionID string) (domain.Session, error) {
+	row, err := repository.session(ctx, ownerID, sessionID, false)
+	return sessionDomain(row), err
+}
+
+func (repository *Repository) UpdateSession(ctx context.Context, ownerID, sessionID, title string, expectedVersion int64) (domain.Session, error) {
+	title = strings.TrimSpace(title)
+	if title == "" || len(title) > 200 {
+		return domain.Session{}, fmt.Errorf("%w: Session title must contain 1-200 characters", domain.ErrInvalid)
+	}
+	result := repository.db.WithContext(ctx).Model(&sessionRecord{}).
+		Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, sessionID, expectedVersion).
+		Updates(map[string]any{"title": title, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return domain.Session{}, fmt.Errorf("rename Session: %w", result.Error)
+	}
+	if result.RowsAffected != 1 {
+		return domain.Session{}, domain.ErrConflict
+	}
+	return repository.GetSession(ctx, ownerID, sessionID)
+}
+
+func (repository *Repository) SetSessionArchived(ctx context.Context, ownerID, sessionID string, archived bool, expectedVersion int64) (domain.Session, error) {
+	var archivedAt any
+	if archived {
+		archivedAt = gorm.Expr("now()")
+	}
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&sessionRecord{}).
+			Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, sessionID, expectedVersion).
+			Updates(map[string]any{"archived_at": archivedAt, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		if archived {
+			now := time.Now().UTC()
+			return tx.Model(&messageRecord{}).Where("session_id = ? AND role = 'assistant' AND state IN ?", sessionID, []string{"queued", "generating"}).Updates(map[string]any{"state": "cancelled", "progress_stage": "", "completed_at": now}).Error
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.Session{}, fmt.Errorf("archive Session: %w", err)
+	}
+	return repository.GetSession(ctx, ownerID, sessionID)
+}
+
+func (repository *Repository) DeleteSession(ctx context.Context, ownerID, sessionID string) error {
+	result := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, sessionID).Delete(&sessionRecord{})
+	if result.Error != nil {
+		return fmt.Errorf("delete Session: %w", result.Error)
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (repository *Repository) ListMessages(ctx context.Context, ownerID, sessionID string, after int64, limit int) ([]domain.Message, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	if _, err := repository.session(ctx, ownerID, sessionID, false); err != nil {
+		return nil, err
+	}
+	var rows []messageRecord
+	err := repository.db.WithContext(ctx).Table("session_messages message").
+		Joins("JOIN sessions session ON session.id = message.session_id").
+		Where("session.owner_user_id = ? AND message.session_id = ? AND message.id > ?", ownerID, sessionID, after).
+		Select("message.*").Order("message.id").Limit(limit).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("list Session Messages: %w", err)
+	}
+	items := make([]domain.Message, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, messageDomain(row))
+	}
+	return items, nil
+}
+
+func (repository *Repository) GetMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {
+	var row messageRecord
+	err := repository.db.WithContext(ctx).Table("session_messages message").
+		Joins("JOIN sessions session ON session.id = message.session_id").
+		Where("session.owner_user_id = ? AND message.session_id = ? AND message.id = ?", ownerID, sessionID, messageID).
+		Select("message.*").Take(&row).Error
+	if err != nil {
+		return domain.Message{}, mapNotFound(err)
+	}
+	return messageDomain(row), nil
+}
+
+func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string) (domain.Message, domain.Message, error) {
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, providerModelID, nil)
+}
+
+func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
+	content = strings.TrimSpace(content)
+	if content == "" || len(content) > 100_000 {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain 1-100000 characters", domain.ErrInvalid)
+	}
+	var user, assistant messageRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var session sessionRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND archived_at IS NULL", ownerID, sessionID).Take(&session).Error; err != nil {
+			return mapNotFound(err)
+		}
+		snapshot := frozen
+		if snapshot == nil {
+			selected, err := responseSnapshotOnTx(tx, session, providerModelID)
+			if err != nil {
+				return err
+			}
+			snapshot = &selected
+		}
+		if session.ExpertID != nil && len(session.ExpertSnapshot) == 0 {
+			if _, err := loadSessionSnapshot(tx, session, *snapshot); err != nil {
+				return err
+			}
+		}
+		encodedSnapshot, err := marshal(snapshot)
+		if err != nil {
+			return err
+		}
+		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content}
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot}
+		if err := tx.Create(&assistant).Error; err != nil {
+			return err
+		}
+		updates := map[string]any{"updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+		if frozen == nil {
+			updates["current_provider_model_id"] = snapshot.ProviderModelID
+		}
+		if session.Title == "New session" {
+			updates["title"] = sessionTitle(content)
+		}
+		return tx.Model(&sessionRecord{}).Where("id = ?", sessionID).Updates(updates).Error
+	})
+	if err != nil {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("append Session message: %w", err)
+	}
+	return messageDomain(user), messageDomain(assistant), nil
+}
+
+func sessionTitle(content string) string {
+	value := []rune(strings.Join(strings.Fields(content), " "))
+	if len(value) > 60 {
+		value = value[:60]
+	}
+	return string(value)
+}
+
+func (repository *Repository) RetryMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, domain.Message, error) {
+	var original messageRecord
+	err := repository.db.WithContext(ctx).Table("session_messages message").
+		Joins("JOIN sessions session ON session.id = message.session_id").
+		Where("session.owner_user_id = ? AND message.session_id = ? AND message.id = ? AND message.role = 'user'", ownerID, sessionID, messageID).
+		Select("message.*").Take(&original).Error
+	if err != nil {
+		return domain.Message{}, domain.Message{}, mapNotFound(err)
+	}
+	var assistant messageRecord
+	if err := repository.db.WithContext(ctx).Where("session_id = ? AND id > ? AND role = 'assistant'", sessionID, original.ID).Order("id").Take(&assistant).Error; err != nil {
+		return domain.Message{}, domain.Message{}, mapNotFound(err)
+	}
+	if len(assistant.ResponseSnapshot) == 0 {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: original response has no execution snapshot", domain.ErrConflict)
+	}
+	var snapshot domain.ResponseSnapshot
+	if err := json.Unmarshal(assistant.ResponseSnapshot, &snapshot); err != nil {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("decode original Response Snapshot: %w", err)
+	}
+	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, "", &snapshot)
+}
+
+func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {
+	var row messageRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Raw(`
+			SELECT message.* FROM session_messages message
+			JOIN sessions session ON session.id = message.session_id
+			WHERE session.owner_user_id = ? AND message.session_id = ? AND message.id = ? AND message.role = 'assistant'
+			FOR UPDATE OF message`, ownerID, sessionID, messageID).Scan(&row).Error; err != nil {
+			return err
+		}
+		if row.ID == 0 {
+			return domain.ErrNotFound
+		}
+		now := time.Now().UTC()
+		switch row.State {
+		case "queued":
+			if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{
+				"state": "cancelled", "progress_stage": "", "cancel_requested_at": now, "completed_at": now,
+				"elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now),
+			}).Error; err != nil {
+				return err
+			}
+		case "generating":
+			if row.CancelRequested == nil {
+				if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'generating'", row.ID).Update("cancel_requested_at", now).Error; err != nil {
+					return err
+				}
+			}
+		case "cancelled":
+			return nil
+		default:
+			return domain.ErrConflict
+		}
+		return tx.Where("id = ?", row.ID).Take(&row).Error
+	})
+	if err != nil {
+		return domain.Message{}, fmt.Errorf("cancel Session message: %w", err)
+	}
+	return messageDomain(row), nil
+}
+
+func (repository *Repository) session(ctx context.Context, ownerID, sessionID string, lock bool) (sessionRecord, error) {
+	query := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, sessionID)
+	if lock {
+		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+	var row sessionRecord
+	if err := query.Take(&row).Error; err != nil {
+		return row, mapNotFound(err)
+	}
+	return row, nil
+}
+
+func sessionDomain(row sessionRecord) domain.Session {
+	return domain.Session{ID: row.ID, OwnerID: row.OwnerID, Title: row.Title, ExpertID: row.ExpertID, CurrentProviderModelID: row.CurrentProviderModelID, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+}
+
+func messageDomain(row messageRecord) domain.Message {
+	value := domain.Message{ID: row.ID, SessionID: row.SessionID, Role: row.Role, State: row.State, Content: row.Content, ProgressStage: row.ProgressStage, ElapsedMS: row.ElapsedMS, CreatedAt: row.CreatedAt}
+	if row.Error != nil {
+		value.Error = *row.Error
+	}
+	if len(row.ResponseSnapshot) > 0 && string(row.ResponseSnapshot) != "null" {
+		value.ResponseSnapshot = &domain.ResponseSnapshot{}
+		if err := json.Unmarshal(row.ResponseSnapshot, value.ResponseSnapshot); err != nil {
+			value.ResponseSnapshot = nil
+		}
+	}
+	return value
+}
+
+func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord, selectedID string) (domain.ResponseSnapshot, error) {
+	var settings settingsRecord
+	if err := tx.Where("user_id = ?", session.OwnerID).Take(&settings).Error; err != nil {
+		return domain.ResponseSnapshot{}, err
+	}
+	runtime, err := domain.ParseRuntime(settings.DefaultRuntimeEngine)
+	if err != nil {
+		return domain.ResponseSnapshot{}, err
+	}
+	if strings.TrimSpace(selectedID) == "" && session.CurrentProviderModelID != nil {
+		selectedID = *session.CurrentProviderModelID
+	}
+	if strings.TrimSpace(selectedID) == "" {
+		defaults := map[string]string{}
+		if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
+			return domain.ResponseSnapshot{}, err
+		}
+		selectedID = defaults[string(runtime)]
+	}
+	if selectedID == "" {
+		return domain.ResponseSnapshot{}, fmt.Errorf("%w: choose a default Provider Model for %s", domain.ErrInvalid, runtime)
+	}
+	var model providerModelRecord
+	if err := tx.Where("owner_user_id = ? AND id = ? AND available", session.OwnerID, selectedID).Take(&model).Error; err != nil {
+		return domain.ResponseSnapshot{}, fmt.Errorf("%w: selected Provider Model is unavailable", domain.ErrInvalid)
+	}
+	var connection modelProviderConnectionRecord
+	if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, model.ConnectionID).Take(&connection).Error; err != nil {
+		return domain.ResponseSnapshot{}, mapNotFound(err)
+	}
+	var protocols []string
+	if err := json.Unmarshal(connection.Protocols, &protocols); err != nil {
+		return domain.ResponseSnapshot{}, err
+	}
+	parsedModel, err := providerModelDomain(model)
+	if err != nil {
+		return domain.ResponseSnapshot{}, err
+	}
+	compatibility := "unverified"
+	for _, item := range parsedModel.Compatibility {
+		if item.RuntimeEngine == runtime {
+			compatibility = item.Status
+			break
+		}
+	}
+	if compatibility == "incompatible" {
+		return domain.ResponseSnapshot{}, fmt.Errorf("%w: selected Provider Model is incompatible with %s", domain.ErrInvalid, runtime)
+	}
+	return domain.ResponseSnapshot{ProviderModelID: model.ID, ConnectionID: connection.ID, ConnectionName: connection.Name, ProviderType: connection.ProviderType, ModelID: model.ModelID, ModelName: model.DisplayName, Endpoint: connection.Endpoint, Protocols: protocols, RuntimeEngine: runtime, Compatibility: compatibility, ConnectionVersion: connection.Version}, nil
+}
+
+var _ = time.Second

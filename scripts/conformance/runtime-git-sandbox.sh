@@ -8,7 +8,9 @@ credentials="${4:-}"
 repository="${5:-}"
 branch="${6:-}"
 network="${AGENT_EGRESS_NETWORK:-agent-public-egress}"
-run_id="git-${operation}-$$"
+resolver_file="${AGENT_RESOLVER_CONFIG_FILE:-}"
+suite_id="${CONFORMANCE_SUITE_ID:-standalone-$$}"
+run_id="${suite_id}-git-${operation}-$$"
 
 fail() {
   echo "$1" >&2
@@ -22,6 +24,8 @@ fail() {
 [[ "${credentials}" == /* && -d "${credentials}" && "${credentials}" != *","* ]] || fail "credential directory must be an existing absolute path without commas"
 [[ -f "${credentials}/git/id_ed25519" && -f "${credentials}/git/known_hosts" ]] || fail "Git SSH key and pinned known_hosts are required"
 [[ -n "${repository}" && -n "${branch}" ]] || fail "repository and branch are required"
+[[ "${resolver_file}" == /* && -f "${resolver_file}" && "${resolver_file}" != *","* ]] || fail "AGENT_RESOLVER_CONFIG_FILE must be an existing absolute file without commas"
+[[ "${suite_id}" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "CONFORMANCE_SUITE_ID contains unsupported characters"
 docker info --format '{{json .Runtimes}}' | rg -q '"runsc"' || fail "Docker runtime runsc is unavailable"
 docker network inspect "${network}" >/dev/null
 
@@ -36,13 +40,15 @@ common=(
   --memory 1073741824
   --pids-limit 256
   --cpus 2
-  --mount "type=bind,src=${workspace},dst=/workspace,rw"
-  --mount "type=bind,src=${credentials},dst=/run/agent-credentials,ro"
+  --mount "type=bind,src=${workspace},dst=/workspace,readonly=false"
+  --mount "type=bind,src=${credentials},dst=/run/agent-credentials,readonly=true"
+  --mount "type=bind,src=${resolver_file},dst=/etc/resolv.conf,readonly=true"
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=134217728
   --workdir /workspace
   --init
   --label agent-platform.managed=true
   --label "agent-platform.run-id=${run_id}"
+  --label "agent-platform.conformance-suite=${suite_id}"
   --entrypoint /usr/local/bin/runtime-entrypoint
 )
 

@@ -1,153 +1,139 @@
-# Agent Platform
+# Agent Workspace
 
-An internal enterprise platform for building, publishing, using, and operating governed Agents. The first product slice focuses on software engineering work.
+A personal AI workspace for private conversations, reusable Workflows, Experts, Extensions, and managed execution.
 
-## Language
+## People And Ownership
 
-**Agent Platform**:
-The internal enterprise product that governs the full lifecycle of Agents, from configuration and release through execution and operations.
-_Avoid_: Agent framework, multi-agent system
+**Agent Workspace**:
+The product in which an authenticated User creates private Sessions, configures Workflows and Experts, and runs Workflows through managed Runtime Engines.
+_Avoid_: Coding Agent Platform, multi-agent system
 
-**Agent**:
-A governed digital worker configured to pursue a defined goal using approved knowledge and capabilities.
-_Avoid_: Bot, assistant, workflow
+**User**:
+An authenticated person who exclusively owns their Sessions, Workflows, Experts, Extensions, Model Provider Connections, and Personal Settings.
+_Avoid_: Organization member, Team member, product role
 
-**Coding Agent**:
-An Agent whose primary purpose is to inspect, change, and validate software in a governed code workspace.
-_Avoid_: Code assistant, coding chatbot
+**Administrator**:
+The single bootstrap identity that creates, disables, enables, and resets passwords for User accounts without access to User-owned content.
+_Avoid_: Platform operator, Organization administrator, support user
 
-**Coding Task**:
-A unit of software engineering work delegated to a Coding Agent, normally originating from an issue or an explicit user request.
-_Avoid_: Job, ticket, prompt
-
-**Run**:
-One governed execution of an Agent against a specific task and fixed configuration.
-_Avoid_: Job, process, session
+## Conversations
 
 **Session**:
-The continuing collaboration for one Coding Task, fixed to one Repository Binding, target branch, and task branch across multiple Runs.
-_Avoid_: Chat, conversation, runtime session
+A private, continuing text conversation owned by one User. It may use one Expert snapshot chosen before the first message, and it retains the User's current Provider Model selection.
+_Avoid_: Workflow Run, Coding Task, runtime process
 
-**Attempt**:
-One infrastructure execution of a Run, repeated only when the platform can safely retry without changing the user's intent.
-_Avoid_: Retry, Run
+**Response Snapshot**:
+The immutable Provider Model, Model Provider Connection identity, API Protocol, and Runtime Engine selected when one Session message is sent and reused when that response is regenerated. It records no API Key and is the execution identity shown with the resulting Agent response.
+_Avoid_: Workflow Snapshot, current Session model, Native Session
 
-**Code Workspace**:
-The isolated working copy in which a Coding Agent reads, changes, and validates a repository during a Run.
-_Avoid_: Sandbox, repository, working directory
+**Archived Session**:
+A read-only Session hidden from the active list until the User cancels its archive state.
+_Avoid_: Deleted Session, completed Run
 
-**Agent Runtime**:
-The configured execution engine that drives a Coding Agent during a Run.
-_Avoid_: Model, sandbox, worker
+**Native Session**:
+An opaque conversation identity maintained by one Runtime Engine to continue a product Session, including across Provider Model changes that keep the same Runtime Engine. It is an optional, conformance-gated optimization and never replaces platform-owned history.
+_Avoid_: Session, Run, rolling summary
+
+**Rolling Summary**:
+The platform-maintained bounded summary that preserves Session continuity when history is too large, the Runtime Engine changes, or native Resume is unavailable.
+_Avoid_: Agent Memory, user-authored note, Runtime checkpoint
+
+## Workflows And Execution
+
+**Workflow**:
+A reusable executable configuration that combines a name, goal, optional Expert, environment, API access, schedule, and one persistent Workspace. It is a single execution definition, not a visual graph or multi-step DAG.
+_Avoid_: Pipeline, visual DAG, orchestration graph
+
+**Workflow Snapshot**:
+The immutable copy of a Workflow's goal, optional Expert, Provider Model, Model Provider Connection version, API Protocol, Endpoint, Runtime Engine, Extensions, and environment used by one Run; its API Key is referenced through protected versioned credentials rather than copied into the ordinary snapshot.
+_Avoid_: Published Workflow, Workflow release
+
+**Workflow API Credential**:
+The single API Key and write-only API Secret pair that authorizes an external caller to start and inspect one specific Workflow. Regeneration immediately invalidates the previous pair.
+_Avoid_: User Token, Idempotency Key, model credential
+
+**Scheduled Trigger**:
+An optional hourly, daily, or weekly schedule that starts a Workflow from its fixed goal in a selected time zone.
+_Avoid_: API call, Webhook, file watcher
+
+**Run**:
+One manual, scheduled, or API-triggered execution of a Workflow with fixed input and a Workflow Snapshot.
+_Avoid_: Workflow, Session response, Worker process
+
+**Deleted Workflow Record**:
+The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
+_Avoid_: Restorable Workflow, archived Workflow
+
+## Files And Results
+
+**Workspace**:
+The persistent directory and file tree owned by one Workflow and reused across serialized Runs. A Run changes a temporary copy and merges it only on success.
+_Avoid_: Session, Artifact, per-Run sandbox
+
+**Git Source**:
+The optional single public HTTPS or private SSH repository cloned into an empty Workspace root.
+_Avoid_: Repository Binding, Source Control Provider, Review Branch
+
+**Artifact**:
+An immutable final result or file added or changed by one successful Run and shown separately from the mutable Workspace.
+_Avoid_: Workspace file, Run Event, temporary output
+
+## Experts And Extensions
+
+**Expert**:
+A reusable optional capability profile with a display name, display-only description, and selected MCP Servers and Skills. Its configuration is snapshotted when a Session begins and when a Run starts.
+_Avoid_: Agent, persona, Workflow
+
+**Extension**:
+A User-owned MCP Server or Skill that can be selected by an Expert.
+_Avoid_: Runtime Engine, Expert, plugin marketplace
+
+**MCP Server**:
+An Extension reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
+_Avoid_: API Endpoint, Skill, Third-party CLI
+
+**Skill**:
+A versioned Extension package containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
+_Avoid_: Prompt, MCP Server, Runtime Engine
+
+## Personal Configuration
+
+**Personal Settings**:
+A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone.
+_Avoid_: Organization policy, Expert configuration, Workflow settings
+
+**Personality**:
+One of the gentle-professional, direct-efficient, lively-friendly, or custom communication styles, optionally refined by a User-authored explanation.
+_Avoid_: Expert, model system prompt, display name
+
+**Model Provider Connection**:
+A User-owned named connection containing a provider type, Endpoint, and write-only API Key. A User may keep multiple connections for the same built-in or custom OpenAI-compatible provider, and an unverified connection remains distinguishable from one verified without a billable model call.
+_Avoid_: Model Profile, Provider Model, Runtime Engine
+
+**Model API Protocol**:
+The wire contract exposed by a Model Provider Connection, such as OpenAI Responses, OpenAI Chat Completions, or Anthropic Messages. It is distinct from the provider brand, and one connection may expose more than one protocol.
+_Avoid_: Model Provider, Endpoint, Runtime Adapter
+
+**Provider Model**:
+A model discovered from a provider or imported from the platform's maintained catalog under one Model Provider Connection. Non-Agent models remain visible in the provider catalog, while unavailable models remain identifiable in historical references but cannot be newly selected.
+_Avoid_: Model Profile, provider connection, Runtime Engine
+
+**Runtime Model Compatibility**:
+The verified, unverified, or incompatible relationship between one Provider Model's API Protocol and one Runtime Engine. An unverified relationship warns but does not prevent selection; an incompatible invocation fails explicitly.
+_Avoid_: Provider Model availability, Runtime Capability, provider verification
+
+**Runtime Engine**:
+The selected Claude Code, Codex, Hermes, or OpenClaw engine that generates a Session response or executes a Run.
+_Avoid_: Provider Model, Expert, sandbox, Worker
+
+**Runtime Engine Setting**:
+A User's preference for one Runtime Engine, including that engine's default Provider Model. A Session initially selects this model and may retain another Provider Model without changing the default.
+_Avoid_: global default model, Personality model, fixed Session model
 
 **Runtime Adapter**:
-The platform boundary that presents one Agent Runtime through the platform's common lifecycle and event contract.
-_Avoid_: Runtime, provider, CLI wrapper
+The platform boundary that presents one Runtime Engine through the common execution and event contract.
+_Avoid_: Runtime Engine, model provider, CLI wrapper
 
 **Runtime Capability**:
-A declared behavior an Agent Runtime can reliably provide through its Runtime Adapter.
-_Avoid_: Feature flag, compatibility assumption
-
-**Production Runtime**:
-An Agent Runtime that has passed the platform's required conformance checks and is supported for production Agent Releases.
-_Avoid_: Installed runtime, available CLI
-
-**Credential Profile**:
-A governed reference that authorizes a Run to use a platform-managed model or external service credential without exposing the underlying secret.
-_Avoid_: API key, login, environment variables
-
-**Configured Model**:
-A model registered by a Platform Administrator and therefore eligible to process code from any Repository Binding.
-_Avoid_: Approved model, trusted model
-
-**Model Binding**:
-The exact Configured Model, Endpoint, and Credential Profile frozen for one Run.
-_Avoid_: Model policy, default model
-
-**Egress Policy**:
-The network boundary that permits public internet access while keeping private infrastructure and platform control services inaccessible to a Sandbox unless explicitly authorized.
-_Avoid_: Firewall rule, internet access
-
-**Model Budget**:
-The maximum model usage or monetary cost authorized for a Run, constrained by progressively tighter organizational and Agent-level ceilings.
-_Avoid_: Resource quota, execution limit
-
-**Execution Limit**:
-A platform-enforced safety or capacity boundary on execution resources such as time, concurrency, processes, memory, storage, or network use.
-_Avoid_: Model budget, user budget
-
-**Agent Release**:
-An immutable, validated configuration that fixes an Agent's default Runtime and governed capabilities for future Runs.
-_Avoid_: Agent version, deployment
-
-**Source Control Provider**:
-A governed integration with a supported source-control service, initially GitHub.com or a self-hosted GitLab instance.
-_Avoid_: Git provider, repository
-
-**Repository Binding**:
-The repository-specific configuration that makes a reusable Agent eligible to work in one repository under its instructions, quality gates, and permissions.
-_Avoid_: Agent installation, repository configuration
-
-**Issue Snapshot**:
-The immutable issue title, body, and optional link submitted by a user as input to a Coding Task.
-_Avoid_: Live issue, synchronized issue
-
-**Workspace Write Lease**:
-The exclusive authority held by one Run to modify a Code Workspace while other Runs may continue read-only work.
-_Avoid_: File lock, branch lock
-
-**Runtime Subagent**:
-An Agent Runtime's internal helper that remains inside one platform Run and shares its authority, budget, workspace, and lifecycle.
-_Avoid_: Child Run, platform Agent
-
-## Memory
-
-**Working Memory**:
-The transient plan and intermediate state used within one Run.
-_Avoid_: Session history, checkpoint
-
-**Session Memory**:
-The messages, summaries, confirmed decisions, results, and workspace references that preserve continuity for one Coding Task across Runs.
-_Avoid_: Chat history, Agent Memory
-
-**Agent Memory**:
-Stable, user-approved experience retained by one Agent across Coding Tasks.
-_Avoid_: Repository instructions, User Memory
-
-**Memory Candidate**:
-An Agent-proposed fact or lesson that has no long-term effect until a user approves it as Agent Memory.
-_Avoid_: Memory, inference
-
-## Product Surfaces
-
-**Agent Studio**:
-The product surface where Agent Builders configure, validate, approve, publish, and evolve Agents.
-_Avoid_: Admin console, agent editor
-
-**Conversation Workspace**:
-The primary product surface where Agent Users delegate Coding Tasks, collaborate with Agents, inspect changes, and make decisions.
-_Avoid_: Chat page, playground
-
-**Operations Console**:
-The product surface where Run Operators inspect, intervene in, recover, and audit Runs.
-_Avoid_: Dashboard, log viewer
-
-**Review Branch**:
-The task branch pushed by a Coding Agent for human review and optional manual creation of a pull or merge request.
-_Avoid_: Draft pull request, final change
-
-**Platform Administrator**:
-A person responsible for platform-wide access, providers, policies, credentials, and operational configuration.
-_Avoid_: Superuser, system owner
-
-**Agent Builder**:
-A person who configures, validates, publishes, and evolves an Agent without owning the platform itself.
-_Avoid_: Agent developer, prompt engineer
-
-**Agent User**:
-A person who delegates software engineering work to a published Agent and reviews its results.
-_Avoid_: End user, customer
-
-**Run Operator**:
-A person who monitors, diagnoses, intervenes in, and audits Agent Runs.
-_Avoid_: Operator, SRE
+A behavior that a specific Runtime image can reliably provide only after its required conformance evidence passes.
+_Avoid_: Parsed field, configuration flag, compatibility assumption

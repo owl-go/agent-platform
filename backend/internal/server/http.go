@@ -40,9 +40,16 @@ func NewHTTPHandlers(business APIRoutes, runSSE http.Handler, authentication kra
 	return HTTPHandlers{Business: business, RunSSE: runSSE, Authentication: authentication}, nil
 }
 
+func NewWorkspaceHTTPHandlers(business APIRoutes, authentication kratoshttp.FilterFunc) (HTTPHandlers, error) {
+	if business == nil || authentication == nil {
+		return HTTPHandlers{}, fmt.Errorf("Agent Workspace API and Authentication Filter are required")
+	}
+	return HTTPHandlers{Business: business, Authentication: authentication}, nil
+}
+
 func NewHTTPServerFromConfig(config platformconfig.Config, platform *platformservice.Service, handlers HTTPHandlers, logger *slog.Logger) (*kratoshttp.Server, error) {
-	if handlers.Business == nil || handlers.RunSSE == nil || handlers.Authentication == nil || logger == nil {
-		return nil, fmt.Errorf("Business API, Run Event SSE, Authentication Filter, and Logger are required")
+	if handlers.Business == nil || handlers.Authentication == nil || logger == nil {
+		return nil, fmt.Errorf("Business API, Authentication Filter, and Logger are required")
 	}
 	server := newHTTPServer(HTTPConfig{
 		Address:           config.API.Address,
@@ -50,7 +57,9 @@ func NewHTTPServerFromConfig(config platformconfig.Config, platform *platformser
 		IdleTimeout:       config.API.IdleTimeout.Value(),
 	}, platform, kratoshttp.Filter(apiFilters(logger, handlers.Authentication)...))
 	handlers.Business.RegisterHTTP(server)
-	server.Handle("/v1/runs/{run_id}/events", handlers.RunSSE)
+	if handlers.RunSSE != nil {
+		server.Handle("/v1/runs/{run_id}/events", handlers.RunSSE)
+	}
 	return server, nil
 }
 
@@ -97,6 +106,14 @@ func encodeResponse(writer http.ResponseWriter, _ *http.Request, value any) erro
 		return nil
 	}
 	status := http.StatusOK
+	if rawStatus := writer.Header().Get("X-Agent-Platform-Internal-Response-Status"); rawStatus != "" {
+		parsed, err := strconv.Atoi(rawStatus)
+		if err != nil || parsed < 100 || parsed > 599 {
+			return fmt.Errorf("invalid mapped response status")
+		}
+		status = parsed
+		writer.Header().Del("X-Agent-Platform-Internal-Response-Status")
+	}
 	switch response := value.(type) {
 	case *platformv1.ReadyResponse:
 		if response.Status == "unavailable" {

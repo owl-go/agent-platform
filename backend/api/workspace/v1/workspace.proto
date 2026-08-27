@@ -1,0 +1,188 @@
+syntax = "proto3";
+
+package workspace.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "agent-platform/backend/api/workspace/v1;workspacev1";
+
+service AgentWorkspaceService {
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (CurrentUser) { option (google.api.http) = {get: "/api/v1/me"}; }
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) { option (google.api.http) = {get: "/api/v1/admin/users"}; }
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
+  rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
+  rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/password-reset" body: "*"}; }
+
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) { option (google.api.http) = {get: "/api/v1/sessions"}; }
+  rpc CreateSession(CreateSessionRequest) returns (Session) { option (google.api.http) = {post: "/api/v1/sessions" body: "*"}; }
+  rpc GetSession(GetSessionRequest) returns (Session) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}"}; }
+  rpc UpdateSession(UpdateSessionRequest) returns (Session) { option (google.api.http) = {patch: "/api/v1/sessions/{session_id}" body: "*"}; }
+  rpc SetSessionArchived(SetSessionArchivedRequest) returns (Session) { option (google.api.http) = {patch: "/api/v1/sessions/{session_id}/archived" body: "*"}; }
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/sessions/{session_id}"}; }
+  rpc ListSessionMessages(ListSessionMessagesRequest) returns (ListSessionMessagesResponse) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/messages"}; }
+  rpc SendSessionMessage(SendSessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages" body: "*"}; }
+  rpc RetrySessionMessage(RetrySessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/retry" body: "*"}; }
+  rpc CancelSessionMessage(CancelSessionMessageRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation" body: "*"}; }
+
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
+  rpc GetWorkflow(GetWorkflowRequest) returns (Workflow) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}"}; }
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) { option (google.api.http) = {patch: "/api/v1/workflows/{workflow_id}" body: "*"}; }
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}"}; }
+  rpc GenerateWorkflowCredential(GenerateWorkflowCredentialRequest) returns (WorkflowCredential) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/api-credential" body: "*"}; }
+  rpc RunWorkflow(RunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs" body: "*"}; }
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs"}; }
+  rpc GetRun(GetRunRequest) returns (Run) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs/{run_id}"}; }
+  rpc CancelRun(CancelRunRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation" body: "*"}; }
+  rpc RerunWorkflow(RerunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun" body: "*"}; }
+  rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts"}; }
+  rpc GetArtifactDownload(GetArtifactDownloadRequest) returns (ArtifactDownload) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download"}; }
+
+  rpc ListWorkspaceEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace"}; }
+  rpc CreateWorkspaceDirectory(CreateWorkspaceDirectoryRequest) returns (WorkspaceEntry) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/directories" body: "*"}; }
+  rpc UploadWorkspaceFile(UploadWorkspaceFileRequest) returns (WorkspaceEntry) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/files" body: "*"}; }
+  rpc GetWorkspaceFile(GetWorkspaceFileRequest) returns (WorkspaceFile) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace/file"}; }
+  rpc ClearWorkspace(ClearWorkspaceRequest) returns (DeleteResponse) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/clear" body: "*"}; }
+  rpc CloneWorkspace(CloneWorkspaceRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/clone" body: "*"}; }
+
+  rpc ListExperts(ListExpertsRequest) returns (ListExpertsResponse) { option (google.api.http) = {get: "/api/v1/experts"}; }
+  rpc CreateExpert(CreateExpertRequest) returns (Expert) { option (google.api.http) = {post: "/api/v1/experts" body: "*"}; }
+  rpc UpdateExpert(UpdateExpertRequest) returns (Expert) { option (google.api.http) = {patch: "/api/v1/experts/{expert_id}" body: "*"}; }
+  rpc DeleteExpert(DeleteExpertRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/experts/{expert_id}"}; }
+
+  rpc GetSettings(GetSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {get: "/api/v1/settings"}; }
+  rpc UpdateSettings(UpdateSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {patch: "/api/v1/settings" body: "*"}; }
+  rpc ListRuntimeEngines(ListRuntimeEnginesRequest) returns (ListRuntimeEnginesResponse) { option (google.api.http) = {get: "/api/v1/runtime-engines"}; }
+  rpc ListModelProviderPresets(ListModelProviderPresetsRequest) returns (ListModelProviderPresetsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-presets"}; }
+  rpc ListModelProviderConnections(ListModelProviderConnectionsRequest) returns (ListModelProviderConnectionsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-connections"}; }
+  rpc CreateModelProviderConnection(CreateModelProviderConnectionRequest) returns (ModelProviderConnection) { option (google.api.http) = {post: "/api/v1/model-provider-connections" body: "*"}; }
+  rpc UpdateModelProviderConnection(UpdateModelProviderConnectionRequest) returns (ModelProviderConnection) { option (google.api.http) = {patch: "/api/v1/model-provider-connections/{connection_id}" body: "*"}; }
+  rpc DeleteModelProviderConnection(DeleteModelProviderConnectionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/model-provider-connections/{connection_id}"}; }
+  rpc RefreshProviderModels(RefreshProviderModelsRequest) returns (ModelProviderConnection) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/refresh" body: "*"}; }
+  rpc CreateProviderModel(CreateProviderModelRequest) returns (ProviderModel) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/models" body: "*"}; }
+
+  rpc ListMCPServers(ListMCPServersRequest) returns (ListMCPServersResponse) { option (google.api.http) = {get: "/api/v1/extensions/mcp"}; }
+  rpc CreateMCPServer(CreateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/extensions/mcp" body: "*"}; }
+  rpc UpdateMCPServer(UpdateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {patch: "/api/v1/extensions/mcp/{mcp_server_id}" body: "*"}; }
+  rpc TestMCPServer(TestMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/extensions/mcp/{mcp_server_id}/test" body: "*"}; }
+  rpc DeleteMCPServer(DeleteMCPServerRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/extensions/mcp/{mcp_server_id}"}; }
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) { option (google.api.http) = {get: "/api/v1/extensions/skills"}; }
+  rpc CreateSkill(CreateSkillRequest) returns (Skill) { option (google.api.http) = {post: "/api/v1/extensions/skills" body: "*"}; }
+  rpc UpdateSkill(UpdateSkillRequest) returns (Skill) { option (google.api.http) = {patch: "/api/v1/extensions/skills/{skill_id}" body: "*"}; }
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/extensions/skills/{skill_id}"}; }
+}
+
+message GetCurrentUserRequest {}
+message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; }
+message ListUsersRequest {}
+message ListUsersResponse { repeated UserAccount items = 1; }
+message CreateUserRequest { string username = 1; string display_name = 2; string email = 3; }
+message CreateUserResponse { UserAccount user = 1; string temporary_password = 2; }
+message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; }
+message ResetUserPasswordRequest { string user_id = 1; }
+message ResetUserPasswordResponse { string temporary_password = 1; }
+message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; }
+
+message ListSessionsRequest { bool archived = 1; }
+message ListSessionsResponse { repeated Session items = 1; }
+message CreateSessionRequest { optional string expert_id = 1; }
+message GetSessionRequest { string session_id = 1; }
+message UpdateSessionRequest { string session_id = 1; string title = 2; int64 expected_version = 3; }
+message SetSessionArchivedRequest { string session_id = 1; bool archived = 2; int64 expected_version = 3; }
+message DeleteSessionRequest { string session_id = 1; }
+message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; optional string current_provider_model_id = 8; }
+message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
+message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; string provider_model_id = 3; }
+message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
+message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
+message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; }
+message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; }
+
+message ListWorkflowsRequest { bool deleted = 1; }
+message ListWorkflowsResponse { repeated Workflow items = 1; }
+message CreateWorkflowRequest { WorkflowInput workflow = 1; }
+message GetWorkflowRequest { string workflow_id = 1; }
+message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
+message DeleteWorkflowRequest { string workflow_id = 1; }
+message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; optional string provider_model_id = 4; optional string runtime_engine = 5; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; optional string provider_model_id = 5; optional string runtime_engine = 6; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; }
+message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
+message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
+message GitSource { string url = 1; string branch = 2; bool private_ssh = 3; bool credential_configured = 4; }
+message GenerateWorkflowCredentialRequest { string workflow_id = 1; }
+message WorkflowCredential { string api_key = 1; string api_secret = 2; google.protobuf.Timestamp created_at = 3; }
+
+message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; }
+message ListRunsRequest { string workflow_id = 1; }
+message ListRunsResponse { repeated Run items = 1; }
+message GetRunRequest { string workflow_id = 1; string run_id = 2; }
+message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
+message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; }
+
+message ListArtifactsRequest { string workflow_id = 1; }
+message ListArtifactsResponse { repeated Artifact items = 1; }
+message GetArtifactDownloadRequest { string workflow_id = 1; string artifact_id = 2; }
+message ArtifactDownload { string url = 1; google.protobuf.Timestamp expires_at = 2; }
+message Artifact { string id = 1; string run_id = 2; string kind = 3; string name = 4; string path = 5; int64 size = 6; string sha256 = 7; optional string text_preview = 8; bool expired = 9; google.protobuf.Timestamp created_at = 10; optional google.protobuf.Timestamp expires_at = 11; }
+
+message ListWorkspaceEntriesRequest { string workflow_id = 1; optional string path = 2; }
+message ListWorkspaceEntriesResponse { repeated WorkspaceEntry items = 1; int64 used_bytes = 2; int64 limit_bytes = 3; }
+message CreateWorkspaceDirectoryRequest { string workflow_id = 1; string path = 2; }
+message UploadWorkspaceFileRequest { string workflow_id = 1; string path = 2; bytes content = 3; }
+message GetWorkspaceFileRequest { string workflow_id = 1; string path = 2; }
+message WorkspaceFile { string path = 1; bytes content = 2; string content_type = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
+message ClearWorkspaceRequest { string workflow_id = 1; string confirmation = 2; }
+message CloneWorkspaceRequest { string workflow_id = 1; string url = 2; string branch = 3; optional string ssh_private_key = 4; }
+message WorkspaceEntry { string path = 1; string name = 2; bool directory = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
+
+message ListExpertsRequest {}
+message ListExpertsResponse { repeated Expert items = 1; }
+message CreateExpertRequest { ExpertInput expert = 1; }
+message UpdateExpertRequest { string expert_id = 1; ExpertInput expert = 2; int64 expected_version = 3; }
+message DeleteExpertRequest { string expert_id = 1; }
+message ExpertInput { string name = 1; string description = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; }
+message Expert { string id = 1; string name = 2; string description = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; }
+
+message GetSettingsRequest {}
+message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; }
+message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; }
+message RuntimeModelDefault { string runtime_engine = 1; string provider_model_id = 2; }
+message ListRuntimeEnginesRequest {}
+message ListRuntimeEnginesResponse { repeated RuntimeEngineStatus items = 1; }
+message RuntimeEngineStatus { string name = 1; bool available = 2; bool native_resume = 3; string cli_version = 4; }
+message ListModelProviderPresetsRequest {}
+message ListModelProviderPresetsResponse { repeated ModelProviderPreset items = 1; }
+message ModelProviderPreset { string provider_type = 1; string display_name = 2; string official_endpoint = 3; repeated string protocols = 4; bool dynamic_discovery = 5; }
+message ListModelProviderConnectionsRequest {}
+message ListModelProviderConnectionsResponse { repeated ModelProviderConnection items = 1; }
+message CreateModelProviderConnectionRequest { string name = 1; string provider_type = 2; string endpoint = 3; repeated string protocols = 4; string api_key = 5; }
+message UpdateModelProviderConnectionRequest { string connection_id = 1; string name = 2; string endpoint = 3; repeated string protocols = 4; optional string replacement_api_key = 5; int64 expected_version = 6; }
+message DeleteModelProviderConnectionRequest { string connection_id = 1; }
+message RefreshProviderModelsRequest { string connection_id = 1; }
+message CreateProviderModelRequest { string connection_id = 1; string model_id = 2; optional string display_name = 3; string model_type = 4; }
+message ModelProviderConnection { string id = 1; string name = 2; string provider_type = 3; string endpoint = 4; repeated string protocols = 5; bool api_key_configured = 6; string verification_status = 7; optional string verification_error = 8; bool custom_endpoint = 9; optional google.protobuf.Timestamp last_synced_at = 10; optional string last_sync_error = 11; repeated ProviderModel models = 12; google.protobuf.Timestamp created_at = 13; google.protobuf.Timestamp updated_at = 14; int64 version = 15; }
+message ProviderModel { string id = 1; string connection_id = 2; string model_id = 3; string display_name = 4; string model_type = 5; bool available = 6; bool manually_added = 7; repeated RuntimeModelCompatibility compatibility = 8; }
+message RuntimeModelCompatibility { string runtime_engine = 1; string status = 2; optional string reason = 3; }
+
+message ListMCPServersRequest {}
+message ListMCPServersResponse { repeated MCPServer items = 1; }
+message CreateMCPServerRequest { MCPServerInput mcp_server = 1; }
+message UpdateMCPServerRequest { string mcp_server_id = 1; MCPServerInput mcp_server = 2; int64 expected_version = 3; }
+message TestMCPServerRequest { string mcp_server_id = 1; }
+message DeleteMCPServerRequest { string mcp_server_id = 1; }
+message MCPServerInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; }
+message MCPServer { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; }
+
+message ListSkillsRequest {}
+message ListSkillsResponse { repeated Skill items = 1; }
+message CreateSkillRequest { string name = 1; string source = 2; optional string git_url = 3; optional string git_ref = 4; optional bytes archive = 5; }
+message UpdateSkillRequest { string skill_id = 1; optional string git_ref = 2; optional bytes archive = 3; int64 expected_version = 4; }
+message DeleteSkillRequest { string skill_id = 1; }
+message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
+
+message DeleteResponse { bool deleted = 1; }

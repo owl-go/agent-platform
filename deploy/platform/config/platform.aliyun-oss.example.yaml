@@ -7,25 +7,36 @@ api:
 authentication:
   mode: deny_all
 
+accounts:
+  keycloak_base_url: "${KEYCLOAK_BASE_URL}"
+  realm: "${KEYCLOAK_REALM}"
+  admin_client_id: "${KEYCLOAK_SERVICE_CLIENT_ID}"
+  admin_client_secret: "${KEYCLOAK_SERVICE_CLIENT_SECRET}"
+  bootstrap_subject: "${BOOTSTRAP_ADMIN_SUBJECT}"
+  bootstrap_username: "platform-admin"
+  bootstrap_email: "${BOOTSTRAP_ADMIN_EMAIL}"
+  bootstrap_display_name: "Platform Administrator"
+
+workspace:
+  root: "${WORKSPACE_ROOT}"
+  known_hosts: /etc/agent-workspace/known_hosts
+
+security:
+  data_encryption_key: "${DATA_ENCRYPTION_KEY}"
+
 worker:
   management_address: "127.0.0.1:9090"
   shutdown_timeout: 10s
-  reconcile_interval: 5s
-  max_attempts: 3
-  execution_enabled: false
-
-webhook:
-  enabled: false
-
-retention:
-  enabled: false
-  sweep_interval: 1h
-  batch_size: 500
-  run_event_period: 2160h
-  artifact_period: 2160h
-  workspace_period: 720h
-  audit_period: 8760h
-  idempotency_grace: 1h
+  poll_interval: 1s
+  runtime_idle_timeout: 30m
+  credential_temp_root: "${CREDENTIAL_TEMP_ROOT}"
+  sandbox_uid: 65532
+  sandbox_gid: 65532
+  runtimes:
+    claude: {available: true, native_resume: false, image_digest: "${CLAUDE_RUNTIME_IMAGE}", cli_version: "2.1.233"}
+    codex: {available: true, native_resume: true, image_digest: "${CODEX_RUNTIME_IMAGE}", cli_version: "0.147.0"}
+    hermes: {available: true, native_resume: false, image_digest: "${HERMES_RUNTIME_IMAGE}", cli_version: "0.19.0"}
+    openclaw: {available: true, native_resume: false, image_digest: "${OPENCLAW_RUNTIME_IMAGE}", cli_version: "2026.7.1-2"}
 
 database:
   dsn: "${DATABASE_URL}"

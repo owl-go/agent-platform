@@ -9,9 +9,8 @@ package main
 import (
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/platformconfig"
-	"agent-platform/backend/internal/wiring/execution"
-	"agent-platform/backend/internal/wiring/workerprocess"
-	"agent-platform/backend/internal/wiring/workflow"
+	"agent-platform/backend/internal/wiring/platform"
+	"agent-platform/backend/internal/wiring/workspaceworker"
 	"context"
 	"github.com/go-kratos/kratos/v3"
 	"log/slog"
@@ -20,12 +19,22 @@ import (
 // Injectors from wire.go:
 
 func initializeWorker(contextContext context.Context, config platformconfig.Config, database *gormdb.Database, logger *slog.Logger) (*kratos.App, error) {
-	manager := workflow.NewManager(database)
-	service := execution.NewService(database, manager)
-	v, err := workerprocess.NewServers(database, service, config)
+	provider, err := platform.NewObjectStore(config)
 	if err != nil {
 		return nil, err
 	}
-	app := workerprocess.NewApp(contextContext, config, logger, v)
+	warmManager, err := workspaceworker.NewWarmManager(config)
+	if err != nil {
+		return nil, err
+	}
+	worker, err := workspaceworker.NewWorker(database, config, provider, warmManager)
+	if err != nil {
+		return nil, err
+	}
+	v, err := workspaceworker.NewServers(database, worker, warmManager, config)
+	if err != nil {
+		return nil, err
+	}
+	app := workspaceworker.NewApp(contextContext, config, logger, v)
 	return app, nil
 }

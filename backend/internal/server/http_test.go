@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
+	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/platformconfig"
 	platformserver "agent-platform/backend/internal/server"
 	platformservice "agent-platform/backend/internal/service/platform"
@@ -27,25 +27,14 @@ type routesFunc func(*kratoshttp.Server)
 
 func (function routesFunc) RegisterHTTP(server *kratoshttp.Server) { function(server) }
 
-type runtimeCatalogStub struct {
-	registered *runtimecatalogv1.RegisterRuntimeImageRequest
+type workspaceStub struct {
+	workspacev1.UnimplementedAgentWorkspaceServiceServer
+	created *workspacev1.CreateWorkflowRequest
 }
 
-func (stub *runtimeCatalogStub) ListRuntimeImages(context.Context, *runtimecatalogv1.ListRuntimeImagesRequest) (*runtimecatalogv1.ListRuntimeImagesResponse, error) {
-	return &runtimecatalogv1.ListRuntimeImagesResponse{}, nil
-}
-
-func (stub *runtimeCatalogStub) GetRuntimeImage(context.Context, *runtimecatalogv1.GetRuntimeImageRequest) (*runtimecatalogv1.RuntimeImage, error) {
-	return &runtimecatalogv1.RuntimeImage{}, nil
-}
-
-func (stub *runtimeCatalogStub) RegisterRuntimeImage(_ context.Context, request *runtimecatalogv1.RegisterRuntimeImageRequest) (*runtimecatalogv1.RuntimeImage, error) {
-	stub.registered = request
-	return &runtimecatalogv1.RuntimeImage{Runtime: request.Runtime}, nil
-}
-
-func (stub *runtimeCatalogStub) ChangeRuntimeImageStatus(context.Context, *runtimecatalogv1.ChangeRuntimeImageStatusRequest) (*runtimecatalogv1.RuntimeImage, error) {
-	return &runtimecatalogv1.RuntimeImage{}, nil
+func (stub *workspaceStub) CreateWorkflow(_ context.Context, request *workspacev1.CreateWorkflowRequest) (*workspacev1.Workflow, error) {
+	stub.created = request
+	return &workspacev1.Workflow{Name: request.Workflow.GetName()}, nil
 }
 
 func TestHealthAndReadinessAreServedByKratos(t *testing.T) {
@@ -145,9 +134,9 @@ func TestGeneratedWriteRouteUsesStrictProtoJSONBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stub := &runtimeCatalogStub{}
+	stub := &workspaceStub{}
 	business := routesFunc(func(server *kratoshttp.Server) {
-		runtimecatalogv1.RegisterRuntimeCatalogServiceHTTPServer(server, stub)
+		workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, stub)
 	})
 	handlers, err := platformserver.NewHTTPHandlers(business, http.NotFoundHandler(), func(next http.Handler) http.Handler { return next })
 	if err != nil {
@@ -158,19 +147,19 @@ func TestGeneratedWriteRouteUsesStrictProtoJSONBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	body := `{"runtime":"codex","cli_version":"1.2.3","adapter_version":"v1","image_digest":"sha256:abc","capabilities":{"usage":true}}`
-	request := httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(body))
+	body := `{"workflow":{"name":"Daily report","goal":"Summarize changes"}}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
 	if response.Code != http.StatusOK {
 		t.Fatalf("POST status=%d body=%q", response.Code, response.Body.String())
 	}
-	if stub.registered == nil || stub.registered.Runtime != "codex" || !stub.registered.Capabilities["usage"] {
-		t.Fatalf("registered request runtime=%q capabilities=%v", stub.registered.GetRuntime(), stub.registered.GetCapabilities())
+	if stub.created == nil || stub.created.Workflow.GetName() != "Daily report" {
+		t.Fatalf("created request workflow=%q", stub.created.GetWorkflow().GetName())
 	}
 
-	request = httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(`{"runtime":"codex","unknown":true}`))
+	request = httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(`{"workflow":{"name":"Daily report","goal":"Summarize"},"unknown":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	response = httptest.NewRecorder()
 	server.ServeHTTP(response, request)
@@ -190,7 +179,7 @@ func TestGeneratedWriteRouteUsesStrictProtoJSONBinding(t *testing.T) {
 		{name: "oversized", body: `{"runtime":"` + strings.Repeat("x", 65*1024) + `"}`, contentType: "application/json", wantCode: "invalid_request_body"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(test.body))
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(test.body))
 			if test.contentType != "" {
 				request.Header.Set("Content-Type", test.contentType)
 			}
@@ -209,9 +198,9 @@ func TestAuthenticationRunsBeforeGeneratedBodyBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stub := &runtimeCatalogStub{}
+	stub := &workspaceStub{}
 	business := routesFunc(func(server *kratoshttp.Server) {
-		runtimecatalogv1.RegisterRuntimeCatalogServiceHTTPServer(server, stub)
+		workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, stub)
 	})
 	authentication := func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -226,11 +215,11 @@ func TestAuthenticationRunsBeforeGeneratedBodyBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(`{"unknown":true}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(`{"unknown":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
-	if response.Code != http.StatusUnauthorized || stub.registered != nil {
-		t.Fatalf("response status=%d registered=%v", response.Code, stub.registered != nil)
+	if response.Code != http.StatusUnauthorized || stub.created != nil {
+		t.Fatalf("response status=%d created=%v", response.Code, stub.created != nil)
 	}
 }

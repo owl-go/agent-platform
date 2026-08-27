@@ -31,5 +31,6 @@ MINIO_ENDPOINT="127.0.0.1:${port}" \
 MINIO_ACCESS_KEY="${access_key}" \
 MINIO_SECRET_KEY="${secret_key}" \
 MINIO_BUCKET="agent-platform-conformance" \
+MINIO_SECURE=false \
 MINIO_CREATE_BUCKET=true \
-go test -count=1 -v ./internal/objectstore/minio
+go -C backend test -count=1 -v ./internal/objectstore/minio

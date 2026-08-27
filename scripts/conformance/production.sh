@@ -5,11 +5,55 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${repo_root}"
 "${repo_root}/scripts/conformance/production-preflight.sh"
 
-stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+stamp="${CONFORMANCE_SUITE_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+[[ "${stamp}" =~ ^[A-Za-z0-9_.-]+$ ]] || {
+  echo "CONFORMANCE_SUITE_ID contains unsupported characters" >&2
+  exit 2
+}
 suite_root="${CONFORMANCE_EVIDENCE_ROOT}/${stamp}"
-mkdir -p "${CONFORMANCE_WORK_ROOT}" "${suite_root}"
-go build -o "${suite_root}/runtime-conformance" ./cmd/runtime-conformance
-go build -o "${suite_root}/conformance-artifact" ./cmd/conformance-artifact
+export CONFORMANCE_SUITE_ID="${stamp}"
+
+cleanup_suite() {
+  local status=$?
+  local child_pids container run_id suite_id
+  trap - EXIT INT TERM HUP
+
+  child_pids="$(jobs -pr)"
+  if [[ -n "${child_pids}" ]]; then
+    kill -TERM ${child_pids} 2>/dev/null || true
+  fi
+  if command -v docker >/dev/null 2>&1; then
+    while IFS= read -r container; do
+      [[ -n "${container}" ]] || continue
+      run_id="$(docker inspect --format '{{index .Config.Labels "agent-platform.run-id"}}' "${container}" 2>/dev/null || true)"
+      suite_id="$(docker inspect --format '{{index .Config.Labels "agent-platform.conformance-suite"}}' "${container}" 2>/dev/null || true)"
+      if [[ "${run_id}" == "${stamp}-"* || "${suite_id}" == "${stamp}" ]]; then
+        docker rm --force --volumes "${container}" >/dev/null 2>&1 || true
+      fi
+    done < <(docker ps --all --quiet --filter label=agent-platform.managed=true 2>/dev/null)
+  fi
+  if [[ -n "${child_pids}" ]]; then
+    wait ${child_pids} 2>/dev/null || true
+  fi
+  if ((status != 0)); then
+    echo "Production Conformance failed; partial evidence retained at ${suite_root}" >&2
+  fi
+  exit "${status}"
+}
+
+trap cleanup_suite EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+mkdir -p "${CONFORMANCE_WORK_ROOT}"
+mkdir "${suite_root}"
+go -C backend build -o "${suite_root}/runtime-conformance" ./cmd/runtime-conformance
+go -C backend build -o "${suite_root}/conformance-artifact" ./cmd/conformance-artifact
+
+# Validate both storage providers before spending model budget.
+go -C backend test -count=1 -v ./internal/objectstore/minio >"${suite_root}/minio.log" 2>&1
+go -C backend test -count=1 -v ./internal/objectstore/aliyunoss >"${suite_root}/aliyun-oss.log" 2>&1
 
 prepare_owned_directory() {
   local directory="$1"
@@ -82,6 +126,7 @@ for runtime in "${runtimes[@]}"; do
     --output "${forced_evidence}" \
     --run-id "${forced_run_id}" \
     --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
+    --resolver-config "${AGENT_RESOLVER_CONFIG_FILE}" \
     --timeout 15m \
     --instruction "Complete the task in CONFORMANCE.md. After scripts/test.sh passes, run scripts/long-command.sh as the final action and wait for it." &
   forced_pid=$!
@@ -148,6 +193,7 @@ for runtime in "${runtimes[@]}"; do
     --output "${evidence}" \
     --run-id "${stamp}-${runtime}" \
     --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
+    --resolver-config "${AGENT_RESOLVER_CONFIG_FILE}" \
     --instruction "$(<"${repo_root}/testdata/production-conformance/task.txt")"
 
   AGENT_EGRESS_NETWORK="${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
@@ -184,6 +230,7 @@ for runtime in "${runtimes[@]}"; do
       --workspace "${control_workspace}" --credentials "${credential_dir}" \
       --output "${control_evidence}" --run-id "${control_run_id}" \
       --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" --timeout 15m \
+      --resolver-config "${AGENT_RESOLVER_CONFIG_FILE}" \
       --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files." &
     control_pid=$!
     set -e
@@ -230,6 +277,7 @@ for runtime in "${runtimes[@]}"; do
     --workspace "${timeout_workspace}" --credentials "${credential_dir}" \
     --output "${timeout_evidence}" --run-id "${timeout_run_id}" \
     --network "${AGENT_EGRESS_NETWORK:-agent-public-egress}" \
+    --resolver-config "${AGENT_RESOLVER_CONFIG_FILE}" \
     --timeout "${CONFORMANCE_TIMEOUT_DURATION:-5m}" \
     --instruction "Run ./scripts/long-command.sh now and wait for it to finish. Do not modify files."; then
     echo "${runtime} timeout scenario unexpectedly succeeded" >&2
@@ -271,9 +319,6 @@ for runtime in "${runtimes[@]}"; do
   "${suite_root}/conformance-artifact" --action upload --provider aliyun_oss \
     --source "${evidence_root}" --key "${evidence_key}" --report "${artifact_report_root}/aliyun-oss-evidence.json"
 done
-
-go test -count=1 -v ./internal/objectstore/minio >"${suite_root}/minio.log" 2>&1
-go test -count=1 -v ./internal/objectstore/aliyunoss >"${suite_root}/aliyun-oss.log" 2>&1
 
 jq -s '{generated_at: now | todate, decision: "GO", runtimes: .}' \
   "${suite_root}"/{claude,codex,hermes,openclaw}/scenario-summary.json >"${suite_root}/summary.json"

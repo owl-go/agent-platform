@@ -1,10 +1,6 @@
 package platform
 
 import (
-	transaction "agent-platform/backend/internal/biz/transaction"
-	"agent-platform/backend/internal/data/controlplane/gormuow"
-	"agent-platform/backend/internal/data/runtimecatalog/evidenceverifier"
-	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/objectstore/aliyunoss"
 	minioadapter "agent-platform/backend/internal/objectstore/minio"
@@ -14,7 +10,7 @@ import (
 	"github.com/google/wire"
 )
 
-var APIProviderSet = wire.NewSet(NewObjectStore, NewCatalogWrites)
+var APIProviderSet = wire.NewSet(NewObjectStore)
 
 func NewObjectStore(config platformconfig.Config) (objectstore.Provider, error) {
 	return providerfactory.New(providerfactory.Config{
@@ -28,12 +24,4 @@ func NewObjectStore(config platformconfig.Config) (objectstore.Provider, error) 
 			SecretKey: config.ObjectStore.AliyunOSS.AccessKeySecret, Bucket: config.ObjectStore.AliyunOSS.Bucket, Prefix: config.ObjectStore.AliyunOSS.Prefix,
 		},
 	})
-}
-
-func NewCatalogWrites(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider) transaction.IdempotentTransactionManager {
-	verifier := evidenceverifier.New(objects)
-	if config.Webhook.Enabled {
-		return gormuow.NewWithWebhookAndEvidenceVerifier(database.ORM(), config.Webhook.TargetURL, verifier)
-	}
-	return gormuow.NewWithEvidenceVerifier(database.ORM(), verifier)
 }

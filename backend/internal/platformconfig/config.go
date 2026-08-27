@@ -19,12 +19,33 @@ const DefaultPath = "config/platform.yaml"
 type Config struct {
 	API            APIConfig            `yaml:"api"`
 	Authentication AuthenticationConfig `yaml:"authentication"`
+	Accounts       AccountsConfig       `yaml:"accounts"`
+	Workspace      WorkspaceConfig      `yaml:"workspace"`
+	Security       SecurityConfig       `yaml:"security"`
 	Worker         WorkerConfig         `yaml:"worker"`
-	Webhook        WebhookConfig        `yaml:"webhook"`
-	Retention      RetentionConfig      `yaml:"retention"`
 	Database       DatabaseConfig       `yaml:"database"`
 	ObjectStore    ObjectStoreConfig    `yaml:"object_store"`
 	Sandbox        SandboxConfig        `yaml:"sandbox"`
+}
+
+type AccountsConfig struct {
+	KeycloakBaseURL      string `yaml:"keycloak_base_url"`
+	Realm                string `yaml:"realm"`
+	AdminClientID        string `yaml:"admin_client_id"`
+	AdminClientSecret    string `yaml:"admin_client_secret"`
+	BootstrapSubject     string `yaml:"bootstrap_subject"`
+	BootstrapUsername    string `yaml:"bootstrap_username"`
+	BootstrapEmail       string `yaml:"bootstrap_email"`
+	BootstrapDisplayName string `yaml:"bootstrap_display_name"`
+}
+
+type WorkspaceConfig struct {
+	Root       string `yaml:"root"`
+	KnownHosts string `yaml:"known_hosts"`
+}
+
+type SecurityConfig struct {
+	DataEncryptionKey string `yaml:"data_encryption_key"`
 }
 
 type AuthenticationConfig struct {
@@ -32,35 +53,11 @@ type AuthenticationConfig struct {
 	Issuer            string   `yaml:"issuer"`
 	Audience          string   `yaml:"audience"`
 	ClientID          string   `yaml:"client_id"`
-	OrganizationClaim string   `yaml:"organization_claim"`
 	RedirectURI       string   `yaml:"redirect_uri"`
 	LogoutRedirectURI string   `yaml:"logout_redirect_uri"`
 	SigningAlgorithms []string `yaml:"signing_algorithms"`
 	DiscoveryTimeout  Duration `yaml:"discovery_timeout"`
 	JWKSTimeout       Duration `yaml:"jwks_timeout"`
-}
-
-type RetentionConfig struct {
-	Enabled          bool     `yaml:"enabled"`
-	SweepInterval    Duration `yaml:"sweep_interval"`
-	BatchSize        int      `yaml:"batch_size"`
-	RunEventPeriod   Duration `yaml:"run_event_period"`
-	ArtifactPeriod   Duration `yaml:"artifact_period"`
-	WorkspacePeriod  Duration `yaml:"workspace_period"`
-	AuditPeriod      Duration `yaml:"audit_period"`
-	IdempotencyGrace Duration `yaml:"idempotency_grace"`
-}
-
-type WebhookConfig struct {
-	Enabled        bool     `yaml:"enabled"`
-	PollInterval   Duration `yaml:"poll_interval"`
-	RequestTimeout Duration `yaml:"request_timeout"`
-	LeaseDuration  Duration `yaml:"lease_duration"`
-	RetryBase      Duration `yaml:"retry_base"`
-	RetryMaximum   Duration `yaml:"retry_maximum"`
-	MaxAttempts    int      `yaml:"max_attempts"`
-	SigningSecret  string   `yaml:"signing_secret"`
-	TargetURL      string   `yaml:"target_url"`
 }
 
 type APIConfig struct {
@@ -71,20 +68,21 @@ type APIConfig struct {
 }
 
 type WorkerConfig struct {
-	ManagementAddress  string   `yaml:"management_address"`
-	ShutdownTimeout    Duration `yaml:"shutdown_timeout"`
-	ReconcileInterval  Duration `yaml:"reconcile_interval"`
-	MaxAttempts        int      `yaml:"max_attempts"`
-	ExecutionEnabled   bool     `yaml:"execution_enabled"`
-	ID                 string   `yaml:"id"`
-	PollInterval       Duration `yaml:"poll_interval"`
-	LeaseDuration      Duration `yaml:"lease_duration"`
-	RenewInterval      Duration `yaml:"renew_interval"`
-	AdapterVersion     string   `yaml:"adapter_version"`
-	SecretStoreRoot    string   `yaml:"secret_store_root"`
-	CredentialTempRoot string   `yaml:"credential_temp_root"`
-	SandboxUID         int      `yaml:"sandbox_uid"`
-	SandboxGID         int      `yaml:"sandbox_gid"`
+	ManagementAddress  string                         `yaml:"management_address"`
+	ShutdownTimeout    Duration                       `yaml:"shutdown_timeout"`
+	PollInterval       Duration                       `yaml:"poll_interval"`
+	RuntimeIdleTimeout Duration                       `yaml:"runtime_idle_timeout"`
+	CredentialTempRoot string                         `yaml:"credential_temp_root"`
+	SandboxUID         int                            `yaml:"sandbox_uid"`
+	SandboxGID         int                            `yaml:"sandbox_gid"`
+	Runtimes           map[string]RuntimeEngineConfig `yaml:"runtimes"`
+}
+
+type RuntimeEngineConfig struct {
+	Available    bool   `yaml:"available"`
+	NativeResume bool   `yaml:"native_resume"`
+	ImageDigest  string `yaml:"image_digest"`
+	CLIVersion   string `yaml:"cli_version"`
 }
 
 type DatabaseConfig struct {
@@ -170,12 +168,33 @@ func expandEnvironment(config *Config) error {
 	var expand func(reflect.Value)
 	expand = func(value reflect.Value) {
 		if value.Kind() == reflect.Pointer {
+			if value.IsNil() {
+				return
+			}
 			value = value.Elem()
 		}
 		switch value.Kind() {
 		case reflect.Struct:
 			for index := 0; index < value.NumField(); index++ {
 				expand(value.Field(index))
+			}
+		case reflect.Map:
+			for _, key := range value.MapKeys() {
+				item := reflect.New(value.Type().Elem()).Elem()
+				item.Set(value.MapIndex(key))
+				expand(item)
+				value.SetMapIndex(key, item)
+			}
+		case reflect.Slice, reflect.Array:
+			for index := 0; index < value.Len(); index++ {
+				expand(value.Index(index))
+			}
+		case reflect.Interface:
+			if !value.IsNil() {
+				item := reflect.New(value.Elem().Type()).Elem()
+				item.Set(value.Elem())
+				expand(item)
+				value.Set(item)
 			}
 		case reflect.String:
 			value.SetString(os.Expand(value.String(), func(name string) string {
@@ -212,8 +231,27 @@ func (config Config) ValidateAPI() error {
 	if err := config.Authentication.Validate(); err != nil {
 		return err
 	}
-	if err := config.validateWebhook(); err != nil {
+	if err := config.Accounts.Validate(); err != nil {
 		return err
+	}
+	if !filepath.IsAbs(config.Workspace.Root) || filepath.Clean(config.Workspace.Root) == string(filepath.Separator) {
+		return fmt.Errorf("workspace.root must be an absolute, non-root path")
+	}
+	if strings.TrimSpace(config.Security.DataEncryptionKey) == "" {
+		return fmt.Errorf("security.data_encryption_key is required")
+	}
+	return nil
+}
+
+func (config AccountsConfig) Validate() error {
+	if err := validateHTTPSURL("accounts.keycloak_base_url", config.KeycloakBaseURL, true); err != nil {
+		return err
+	}
+	if strings.TrimSpace(config.Realm) == "" || strings.TrimSpace(config.AdminClientID) == "" || strings.TrimSpace(config.AdminClientSecret) == "" {
+		return fmt.Errorf("accounts realm and Keycloak Admin client credentials are required")
+	}
+	if strings.TrimSpace(config.BootstrapSubject) == "" || strings.TrimSpace(config.BootstrapUsername) == "" || strings.TrimSpace(config.BootstrapEmail) == "" || strings.TrimSpace(config.BootstrapDisplayName) == "" {
+		return fmt.Errorf("accounts bootstrap Administrator identity is required")
 	}
 	return nil
 }
@@ -229,15 +267,8 @@ func (config AuthenticationConfig) Validate() error {
 	if err := validateHTTPSURL("authentication.issuer", config.Issuer, true); err != nil {
 		return err
 	}
-	if strings.TrimSpace(config.Audience) == "" || strings.TrimSpace(config.ClientID) == "" || strings.TrimSpace(config.OrganizationClaim) == "" {
-		return fmt.Errorf("authentication audience, client_id, and organization_claim are required in oidc mode")
-	}
-	registeredClaims := map[string]bool{
-		"iss": true, "sub": true, "aud": true, "exp": true, "nbf": true,
-		"iat": true, "auth_time": true, "nonce": true, "acr": true, "amr": true, "azp": true,
-	}
-	if registeredClaims[config.OrganizationClaim] {
-		return fmt.Errorf("authentication.organization_claim must be a dedicated Organization claim")
+	if strings.TrimSpace(config.Audience) == "" || strings.TrimSpace(config.ClientID) == "" {
+		return fmt.Errorf("authentication audience and client_id are required in oidc mode")
 	}
 	if err := validateHTTPSURL("authentication.redirect_uri", config.RedirectURI, true); err != nil {
 		return err
@@ -304,76 +335,25 @@ func (config Config) ValidateWorker() error {
 	if config.Worker.ShutdownTimeout.Value() <= 0 {
 		return fmt.Errorf("worker.shutdown_timeout must be positive")
 	}
-	if config.Worker.ReconcileInterval.Value() <= 0 || config.Worker.ReconcileInterval.Value() > 30*time.Second {
-		return fmt.Errorf("worker.reconcile_interval must be positive and no greater than 30s")
+	if config.Worker.PollInterval.Value() <= 0 || config.Worker.PollInterval.Value() > 5*time.Second {
+		return fmt.Errorf("worker.poll_interval must be positive and no greater than 5s")
 	}
-	if config.Worker.MaxAttempts <= 0 || config.Worker.MaxAttempts > 3 {
-		return fmt.Errorf("worker.max_attempts must be between 1 and 3")
+	if config.Worker.RuntimeIdleTimeout.Value() <= 0 || config.Worker.RuntimeIdleTimeout.Value() > 24*time.Hour {
+		return fmt.Errorf("worker.runtime_idle_timeout must be positive and no greater than 24h")
 	}
-	if config.Worker.ExecutionEnabled {
-		if strings.TrimSpace(config.Worker.ID) == "" || strings.TrimSpace(config.Worker.AdapterVersion) == "" {
-			return fmt.Errorf("worker.id and worker.adapter_version are required when execution is enabled")
+	if !filepath.IsAbs(config.Worker.CredentialTempRoot) {
+		return fmt.Errorf("worker.credential_temp_root must be absolute")
+	}
+	if config.Worker.SandboxUID <= 0 || config.Worker.SandboxGID <= 0 {
+		return fmt.Errorf("Worker Sandbox UID and GID must be non-root")
+	}
+	for name, runtime := range config.Worker.Runtimes {
+		if name != "claude" && name != "codex" && name != "hermes" && name != "openclaw" {
+			return fmt.Errorf("worker.runtimes contains unsupported Runtime %q", name)
 		}
-		if config.Worker.PollInterval.Value() <= 0 || config.Worker.LeaseDuration.Value() <= 0 || config.Worker.RenewInterval.Value() <= 0 || config.Worker.RenewInterval.Value() >= config.Worker.LeaseDuration.Value() {
-			return fmt.Errorf("Worker polling and lease intervals are invalid")
+		if runtime.Available && (strings.TrimSpace(runtime.ImageDigest) == "" || !strings.Contains(runtime.ImageDigest, "@sha256:") || strings.TrimSpace(runtime.CLIVersion) == "") {
+			return fmt.Errorf("available Runtime %q requires an immutable image digest and CLI version", name)
 		}
-		if config.Worker.RenewInterval.Value() > 5*time.Second {
-			return fmt.Errorf("worker.renew_interval must not exceed 5s so Run cancellation starts within 10s")
-		}
-		if config.Worker.PollInterval.Value() > 5*time.Second || config.Worker.LeaseDuration.Value() > time.Minute {
-			return fmt.Errorf("worker.poll_interval must not exceed 5s and worker.lease_duration must not exceed 1m")
-		}
-		if config.Retention.ArtifactPeriod.Value() <= 0 {
-			return fmt.Errorf("retention.artifact_period is required when execution is enabled")
-		}
-		if !filepath.IsAbs(config.Worker.SecretStoreRoot) || !filepath.IsAbs(config.Worker.CredentialTempRoot) {
-			return fmt.Errorf("Worker Secret Store and credential temporary roots must be absolute")
-		}
-		if config.Worker.SandboxUID <= 0 || config.Worker.SandboxGID <= 0 {
-			return fmt.Errorf("Worker Sandbox UID and GID must be non-root")
-		}
-	}
-	if err := config.validateWebhook(); err != nil {
-		return err
-	}
-	if err := config.validateRetention(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (config Config) validateRetention() error {
-	if !config.Retention.Enabled {
-		return nil
-	}
-	if config.Retention.SweepInterval.Value() <= 0 || config.Retention.BatchSize <= 0 || config.Retention.BatchSize > 10_000 {
-		return fmt.Errorf("Retention sweep interval and batch size are invalid")
-	}
-	if config.Retention.RunEventPeriod.Value() <= 0 || config.Retention.ArtifactPeriod.Value() <= 0 || config.Retention.WorkspacePeriod.Value() <= 0 || config.Retention.AuditPeriod.Value() <= 0 || config.Retention.IdempotencyGrace.Value() < 0 {
-		return fmt.Errorf("Retention periods are invalid")
-	}
-	if config.Retention.AuditPeriod.Value() < config.Retention.RunEventPeriod.Value() {
-		return fmt.Errorf("Retention Audit period cannot be shorter than Run Event period")
-	}
-	return nil
-}
-
-func (config Config) validateWebhook() error {
-	if !config.Webhook.Enabled {
-		return nil
-	}
-	if config.Webhook.PollInterval.Value() <= 0 || config.Webhook.RequestTimeout.Value() <= 0 || config.Webhook.LeaseDuration.Value() <= config.Webhook.RequestTimeout.Value() {
-		return fmt.Errorf("Webhook polling, request, and lease durations are invalid")
-	}
-	if config.Webhook.RetryBase.Value() <= 0 || config.Webhook.RetryMaximum.Value() < config.Webhook.RetryBase.Value() || config.Webhook.MaxAttempts <= 0 {
-		return fmt.Errorf("Webhook retry configuration is invalid")
-	}
-	if len(config.Webhook.SigningSecret) < 32 {
-		return fmt.Errorf("webhook.signing_secret must contain at least 32 bytes when Webhook delivery is enabled")
-	}
-	target, err := url.ParseRequestURI(config.Webhook.TargetURL)
-	if err != nil || target.Scheme != "https" || target.Host == "" || target.User != nil {
-		return fmt.Errorf("webhook.target_url must be an HTTPS URL without user info when Webhook delivery is enabled")
 	}
 	return nil
 }
@@ -395,9 +375,6 @@ func (config Config) validateShared() error {
 		}
 	default:
 		return fmt.Errorf("object_store.provider must be minio or aliyun_oss")
-	}
-	if config.Retention.ArtifactPeriod.Value() <= 0 {
-		return fmt.Errorf("retention.artifact_period must be positive")
 	}
 	return nil
 }

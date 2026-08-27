@@ -90,6 +90,52 @@ func TestRunWrapsRuntimeCommandInHardenedContainer(t *testing.T) {
 	}
 }
 
+func TestRunCanInvokeAllowlistedDirectCommandThroughEntrypoint(t *testing.T) {
+	var captured processharness.Spec
+	config := validConfig(func(_ context.Context, spec processharness.Spec, _ processharness.OutputSink) (processharness.Result, error) {
+		captured = spec
+		return processharness.Result{}, nil
+	}, func(context.Context, string) error { return nil })
+	config.RuntimeCommand = "curl"
+	config.DirectCommand = true
+	runner, err := New(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runner(context.Background(), processharness.Spec{Command: []string{"curl", "--version"}, Dir: "/workspace"}, discardSink{}); err != nil {
+		t.Fatal(err)
+	}
+	wantTail := []string{digestImage(), "curl", "--version"}
+	joined := strings.Join(captured.Command, "\x00")
+	if !strings.Contains(joined, "--entrypoint\x00/usr/local/bin/runtime-entrypoint") || len(captured.Command) < len(wantTail) || !reflect.DeepEqual(captured.Command[len(captured.Command)-len(wantTail):], wantTail) {
+		t.Fatalf("direct command tail = %#v", captured.Command)
+	}
+}
+
+func TestRunMountsCodexSessionStateWithoutMountingTheWholeHome(t *testing.T) {
+	var captured processharness.Spec
+	config := validConfig(func(_ context.Context, spec processharness.Spec, _ processharness.OutputSink) (processharness.Result, error) {
+		captured = spec
+		return processharness.Result{}, nil
+	}, func(context.Context, string) error { return nil })
+	config.RuntimeCommand = "codex"
+	config.NativeStateDirectory = "/workspaces/.native-session-state/owner/session/codex"
+	runner, err := New(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runner(context.Background(), processharness.Spec{Command: []string{"codex", "exec", "-"}, Dir: "/workspace"}, discardSink{}); err != nil {
+		t.Fatal(err)
+	}
+	want := "type=bind,src=/workspaces/.native-session-state/owner/session/codex,dst=/tmp/runtime-home/.codex,readonly=false"
+	if !containsPair(captured.Command, "--mount", want) {
+		t.Fatalf("native Codex session mount missing from %#v", captured.Command)
+	}
+	if strings.Contains(strings.Join(captured.Command, "\x00"), "dst=/tmp/runtime-home,readonly=false") {
+		t.Fatalf("whole Runtime home was mounted: %#v", captured.Command)
+	}
+}
+
 func TestRunBindsApprovalObserverToContainerPause(t *testing.T) {
 	var controls []string
 	observer := &processAwareRecordingObserver{}
@@ -217,11 +263,13 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 
 func TestNewRejectsUnsafeConfiguration(t *testing.T) {
 	tests := map[string]Config{
-		"tagged image":        {Image: "runtime:latest"},
-		"wrong runtime":       {Image: digestImage(), Runtime: "runc"},
-		"root user":           {Image: digestImage(), UID: 0, GID: 0},
-		"relative credential": {Image: digestImage(), CredentialDirectory: "credentials"},
-		"relative resolver":   {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
+		"tagged image":               {Image: "runtime:latest"},
+		"wrong runtime":              {Image: digestImage(), Runtime: "runc"},
+		"root user":                  {Image: digestImage(), UID: 0, GID: 0},
+		"relative credential":        {Image: digestImage(), CredentialDirectory: "credentials"},
+		"relative native state":      {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "state"},
+		"native state for non Codex": {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "/state"},
+		"relative resolver":          {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
 	}
 	for name, config := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -24,6 +24,27 @@ func TestLoadExpandsEnvironmentAndValidatesAPI(t *testing.T) {
 	}
 }
 
+func TestLoadExpandsEnvironmentInsideRuntimeMap(t *testing.T) {
+	t.Setenv("TEST_RUNTIME_IMAGE", "registry.example/agent-platform/claude@sha256:"+strings.Repeat("a", 64))
+	fixture := strings.Replace(validYAML("postgres://database/platform"), "  sandbox_gid: 65532", `  sandbox_gid: 65532
+  runtimes:
+    claude:
+      available: true
+      image_digest: "${TEST_RUNTIME_IMAGE}"
+      cli_version: "2.1.233"`, 1)
+
+	config, err := Load(writeConfig(t, fixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.ValidateWorker(); err != nil {
+		t.Fatalf("ValidateWorker() rejected an expanded Runtime map: %v", err)
+	}
+	if got := config.Worker.Runtimes["claude"].ImageDigest; got != os.Getenv("TEST_RUNTIME_IMAGE") {
+		t.Fatalf("Runtime image digest = %q, want expanded environment value", got)
+	}
+}
+
 func TestOIDCAuthenticationConfigurationIsStrictAndFailClosed(t *testing.T) {
 	config, err := Load(writeConfig(t, validOIDCYAML("postgres://database/platform")))
 	if err != nil {
@@ -32,7 +53,7 @@ func TestOIDCAuthenticationConfigurationIsStrictAndFailClosed(t *testing.T) {
 	if err := config.ValidateAPI(); err != nil {
 		t.Fatalf("ValidateAPI() rejected valid OIDC configuration: %v", err)
 	}
-	if config.Authentication.OrganizationClaim != "organization" || config.Authentication.DiscoveryTimeout.Value() != 5*time.Second || config.Authentication.JWKSTimeout.Value() != 3*time.Second {
+	if config.Authentication.DiscoveryTimeout.Value() != 5*time.Second || config.Authentication.JWKSTimeout.Value() != 3*time.Second {
 		t.Fatalf("unexpected OIDC configuration: %+v", config.Authentication)
 	}
 	loopback := config
@@ -52,8 +73,6 @@ func TestOIDCAuthenticationConfigurationIsStrictAndFailClosed(t *testing.T) {
 		{name: "issuer query", mutate: func(value *AuthenticationConfig) { value.Issuer = "https://identity.example.test?issuer=other" }},
 		{name: "missing audience", mutate: func(value *AuthenticationConfig) { value.Audience = "" }},
 		{name: "missing client", mutate: func(value *AuthenticationConfig) { value.ClientID = "" }},
-		{name: "missing organization claim", mutate: func(value *AuthenticationConfig) { value.OrganizationClaim = "" }},
-		{name: "registered organization claim", mutate: func(value *AuthenticationConfig) { value.OrganizationClaim = "sub" }},
 		{name: "unsafe redirect", mutate: func(value *AuthenticationConfig) { value.RedirectURI = "http://app.example.test/callback" }},
 		{name: "unsafe logout redirect", mutate: func(value *AuthenticationConfig) { value.LogoutRedirectURI = "http://app.example.test" }},
 		{name: "missing signing algorithms", mutate: func(value *AuthenticationConfig) { value.SigningAlgorithms = nil }},
@@ -93,9 +112,9 @@ func TestValidationRejectsUnsafeDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config.Worker.MaxAttempts = 0
+	config.Worker.PollInterval = 0
 	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted zero attempts")
+		t.Fatal("ValidateWorker accepted zero polling interval")
 	}
 	config.Database.MaxIdleConnections = config.Database.MaxOpenConnections + 1
 	if err := config.ValidateAPI(); err == nil {
@@ -132,78 +151,17 @@ func TestWorkerExecutionConfigurationIsFailClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config.Worker.ExecutionEnabled = true
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted incomplete execution configuration")
+	if err := config.ValidateWorker(); err != nil {
+		t.Fatalf("ValidateWorker: %v", err)
 	}
-	config.Worker.ID = "worker-a"
-	config.Worker.AdapterVersion = "adapter-1"
+	config.Worker.PollInterval = Duration(6 * time.Second)
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted polling slower than the responsiveness guard")
+	}
 	config.Worker.PollInterval = Duration(time.Second)
-	config.Worker.LeaseDuration = Duration(30 * time.Second)
-	config.Worker.RenewInterval = Duration(5 * time.Second)
-	config.Worker.SecretStoreRoot = "/var/lib/agent-platform/secrets"
-	config.Worker.CredentialTempRoot = "/var/lib/agent-platform/run-credentials"
-	config.Worker.SandboxUID = 65532
-	config.Worker.SandboxGID = 65532
-	config.Retention.ArtifactPeriod = Duration(90 * 24 * time.Hour)
-	if err := config.ValidateWorker(); err != nil {
-		t.Fatalf("ValidateWorker: %v", err)
-	}
-	config.Worker.RenewInterval = Duration(6 * time.Second)
+	config.Worker.RuntimeIdleTimeout = 0
 	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted cancellation polling slower than the SLO guard")
-	}
-	config.Worker.RenewInterval = Duration(5 * time.Second)
-	config.Worker.LeaseDuration = Duration(61 * time.Second)
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted a lease longer than the recovery guard")
-	}
-}
-
-func TestWebhookConfigurationIsFailClosed(t *testing.T) {
-	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	config.Webhook.Enabled = true
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted incomplete Webhook configuration")
-	}
-	config.Webhook.PollInterval = Duration(time.Second)
-	config.Webhook.RequestTimeout = Duration(5 * time.Second)
-	config.Webhook.LeaseDuration = Duration(10 * time.Second)
-	config.Webhook.RetryBase = Duration(time.Second)
-	config.Webhook.RetryMaximum = Duration(time.Minute)
-	config.Webhook.MaxAttempts = 5
-	config.Webhook.SigningSecret = "0123456789abcdef0123456789abcdef"
-	config.Webhook.TargetURL = "https://hooks.example.test/agent-platform"
-	if err := config.ValidateWorker(); err != nil {
-		t.Fatalf("ValidateWorker: %v", err)
-	}
-}
-
-func TestRetentionConfigurationIsFailClosed(t *testing.T) {
-	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	config.Retention.Enabled = true
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted incomplete Retention configuration")
-	}
-	config.Retention.SweepInterval = Duration(time.Hour)
-	config.Retention.BatchSize = 500
-	config.Retention.RunEventPeriod = Duration(90 * 24 * time.Hour)
-	config.Retention.ArtifactPeriod = Duration(90 * 24 * time.Hour)
-	config.Retention.WorkspacePeriod = Duration(30 * 24 * time.Hour)
-	config.Retention.AuditPeriod = Duration(365 * 24 * time.Hour)
-	config.Retention.IdempotencyGrace = Duration(time.Hour)
-	if err := config.ValidateWorker(); err != nil {
-		t.Fatalf("ValidateWorker: %v", err)
-	}
-	config.Retention.AuditPeriod = Duration(30 * 24 * time.Hour)
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("ValidateWorker accepted Audit retention shorter than Run Event retention")
+		t.Fatal("ValidateWorker accepted a zero warm Runtime idle timeout")
 	}
 }
 
@@ -225,14 +183,28 @@ api:
   shutdown_timeout: 10s
 authentication:
   mode: deny_all
+accounts:
+  keycloak_base_url: https://identity.example.test
+  realm: agent-workspace
+  admin_client_id: agent-workspace-admin
+  admin_client_secret: test-client-secret
+  bootstrap_subject: bootstrap-admin-subject
+  bootstrap_username: platform-admin
+  bootstrap_email: admin@example.test
+  bootstrap_display_name: Platform Administrator
+workspace:
+  root: /var/lib/agent-workspace/workspaces
+  known_hosts: /etc/agent-workspace/known_hosts
+security:
+  data_encryption_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 worker:
   management_address: "127.0.0.1:9090"
   shutdown_timeout: 10s
-  reconcile_interval: 5s
-  max_attempts: 3
-retention:
-  enabled: false
-  artifact_period: 2160h
+  poll_interval: 1s
+  runtime_idle_timeout: 30m
+  credential_temp_root: /var/lib/agent-platform/run-credentials
+  sandbox_uid: 65532
+  sandbox_gid: 65532
 database:
   dsn: "`+dsn+`"
   max_open_connections: 20
@@ -261,7 +233,6 @@ func validOIDCYAML(dsn string) string {
   issuer: https://identity.example.test
   audience: agent-platform-api
   client_id: agent-platform-web
-  organization_claim: organization
   redirect_uri: https://app.example.test/auth/callback
   logout_redirect_uri: https://app.example.test
   signing_algorithms: [RS256]

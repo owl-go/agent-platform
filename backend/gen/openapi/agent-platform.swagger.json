@@ -1,45 +1,15 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "types/v1/types.proto",
+    "title": "platform/v1/platform.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "AgentLifecycleService"
-    },
-    {
-      "name": "RunApprovalService"
-    },
-    {
-      "name": "ArtifactService"
-    },
-    {
-      "name": "AuditService"
-    },
-    {
-      "name": "CollaborationService"
-    },
-    {
-      "name": "ExecutionService"
-    },
-    {
-      "name": "RunEventStreamService"
-    },
-    {
-      "name": "IdentityService"
-    },
-    {
-      "name": "ModelCatalogService"
-    },
-    {
       "name": "HealthService"
     },
     {
-      "name": "RuntimeCatalogService"
-    },
-    {
-      "name": "SourceControlService"
+      "name": "AgentWorkspaceService"
     }
   ],
   "consumes": [
@@ -49,6 +19,1872 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/enabled": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetUserEnabled",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSetUserEnabledBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/password-reset": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ResetUserPassword",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResetUserPasswordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceResetUserPasswordBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/experts": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListExperts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExpertsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateExpert",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Expert"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateExpertRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/experts/{expert_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteExpert",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateExpert",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Expert"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateExpertBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/extensions/mcp": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListMCPServers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMCPServersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMCPServerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/extensions/mcp/{mcp_server_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPServerBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/extensions/mcp/{mcp_server_id}/test": {
+      "post": {
+        "operationId": "AgentWorkspaceService_TestMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceTestMCPServerBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/extensions/skills": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSkills",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSkillRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/extensions/skills/{skill_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateSkillBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetCurrentUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CurrentUser"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/model-provider-connections": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListModelProviderConnections",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListModelProviderConnectionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateModelProviderConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProviderConnection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateModelProviderConnectionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/model-provider-connections/{connection_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteModelProviderConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateModelProviderConnection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProviderConnection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateModelProviderConnectionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/model-provider-connections/{connection_id}/models": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateProviderModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ProviderModel"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCreateProviderModelBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/model-provider-connections/{connection_id}/refresh": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RefreshProviderModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ModelProviderConnection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRefreshProviderModelsBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/model-provider-presets": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListModelProviderPresets",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListModelProviderPresetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/runtime-engines": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListRuntimeEngines",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRuntimeEnginesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Session"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSessionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Session"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Session"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/archived": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetSessionArchived",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Session"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSetSessionArchivedBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSessionMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSessionMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_SendSessionMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendSessionMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSendSessionMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CancelSessionMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SessionMessage"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCancelSessionMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RetrySessionMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendSessionMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRetrySessionMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PersonalSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PersonalSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSettingsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListWorkflows",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkflowsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Workflow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateWorkflowRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Workflow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Workflow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateWorkflowBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/api-credential": {
+      "post": {
+        "operationId": "AgentWorkspaceService_GenerateWorkflowCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WorkflowCredential"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceGenerateWorkflowCredentialBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/artifacts": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListArtifacts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListArtifactsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetArtifactDownload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ArtifactDownload"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/runs": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListRuns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_RunWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRunWorkflowBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CancelRun",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCancelRunBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RerunWorkflow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRerunWorkflowBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListWorkspaceEntries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkspaceEntriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace/clear": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ClearWorkspace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceClearWorkspaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace/clone": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CloneWorkspace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Workflow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCloneWorkspaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace/directories": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateWorkspaceDirectory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WorkspaceEntry"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCreateWorkspaceDirectoryBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace/file": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetWorkspaceFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WorkspaceFile"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/workspace/files": {
+      "post": {
+        "operationId": "AgentWorkspaceService_UploadWorkspaceFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WorkspaceEntry"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUploadWorkspaceFileBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "HealthService_Health",
@@ -92,3162 +1928,220 @@
           "HealthService"
         ]
       }
-    },
-    "/v1/agent-memories/{memory_id}": {
-      "patch": {
-        "operationId": "CollaborationService_UpdateAgentMemory",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentMemory"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "memory_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceUpdateAgentMemoryBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/agent-memories/{memory_id}/deletion": {
-      "post": {
-        "operationId": "CollaborationService_DeleteAgentMemory",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentMemory"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "memory_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceDeleteAgentMemoryBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/agents": {
-      "get": {
-        "operationId": "AgentLifecycleService_ListAgents",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAgentsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "post": {
-        "operationId": "AgentLifecycleService_CreateAgent",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Agent"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateAgentRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}": {
-      "get": {
-        "operationId": "AgentLifecycleService_GetAgent",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Agent"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "patch": {
-        "operationId": "AgentLifecycleService_UpdateAgent",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Agent"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceUpdateAgentBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/drafts": {
-      "get": {
-        "operationId": "AgentLifecycleService_ListAgentDrafts",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAgentDraftsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "post": {
-        "operationId": "AgentLifecycleService_CreateAgentDraft",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentDraft"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceCreateAgentDraftBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/drafts/{draft_id}": {
-      "get": {
-        "operationId": "AgentLifecycleService_GetAgentDraft",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentDraft"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "patch": {
-        "operationId": "AgentLifecycleService_UpdateAgentDraft",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentDraft"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceUpdateAgentDraftBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/drafts/{draft_id}/approval": {
-      "get": {
-        "operationId": "AgentLifecycleService_GetAgentDraftApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ReleaseApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "post": {
-        "operationId": "AgentLifecycleService_RequestAgentDraftApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ReleaseApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceRequestAgentDraftApprovalBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      },
-      "patch": {
-        "operationId": "AgentLifecycleService_DecideAgentDraftApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ReleaseApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceDecideAgentDraftApprovalBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/drafts/{draft_id}/release": {
-      "post": {
-        "operationId": "AgentLifecycleService_PublishAgentDraft",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentRelease"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServicePublishAgentDraftBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/drafts/{draft_id}/validation": {
-      "post": {
-        "operationId": "AgentLifecycleService_ValidateAgentDraft",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentDraft"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "draft_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceValidateAgentDraftBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/memories": {
-      "get": {
-        "operationId": "CollaborationService_ListAgentMemories",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAgentMemoriesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "include_deleted",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/releases": {
-      "get": {
-        "operationId": "AgentLifecycleService_ListAgentReleases",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAgentReleasesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/releases/{release_id}": {
-      "get": {
-        "operationId": "AgentLifecycleService_GetAgentRelease",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentRelease"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "release_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/releases/{release_id}/block": {
-      "post": {
-        "operationId": "AgentLifecycleService_BlockAgentRelease",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentRelease"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "release_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceBlockAgentReleaseBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/agents/{agent_id}/releases/{release_id}/deprecation": {
-      "post": {
-        "operationId": "AgentLifecycleService_DeprecateAgentRelease",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1AgentRelease"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "release_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentLifecycleServiceDeprecateAgentReleaseBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentLifecycleService"
-        ]
-      }
-    },
-    "/v1/approvals/{approval_id}": {
-      "get": {
-        "operationId": "RunApprovalService_GetRunApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RunApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "approval_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RunApprovalService"
-        ]
-      }
-    },
-    "/v1/approvals/{approval_id}/decision": {
-      "post": {
-        "operationId": "RunApprovalService_DecideRunApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RunApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "approval_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/RunApprovalServiceDecideRunApprovalBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RunApprovalService"
-        ]
-      }
-    },
-    "/v1/artifacts/{artifact_id}/download": {
-      "get": {
-        "operationId": "ArtifactService_GetArtifactDownload",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetArtifactDownloadResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "artifact_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ArtifactService"
-        ]
-      }
-    },
-    "/v1/audit-events": {
-      "get": {
-        "operationId": "AuditService_ListAuditEvents",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListAuditEventsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "action",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "resource_type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "resource_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "actor_user_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "created_from",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "created_to",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "outcome",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AuditService"
-        ]
-      }
-    },
-    "/v1/coding-task-launch-options": {
-      "get": {
-        "operationId": "CollaborationService_ListCodingTaskLaunchOptions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListCodingTaskLaunchOptionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks": {
-      "get": {
-        "operationId": "CollaborationService_ListCodingTasks",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListCodingTasksResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      },
-      "post": {
-        "operationId": "CollaborationService_CreateCodingTask",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CreateCodingTaskResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateCodingTaskRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks/{task_id}": {
-      "get": {
-        "operationId": "CollaborationService_GetCodingTask",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CodingTask"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      },
-      "patch": {
-        "operationId": "CollaborationService_UpdateCodingTask",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CodingTask"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceUpdateCodingTaskBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks/{task_id}/memory-candidates": {
-      "get": {
-        "operationId": "CollaborationService_ListMemoryCandidates",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListMemoryCandidatesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      },
-      "post": {
-        "operationId": "CollaborationService_ProposeMemoryCandidate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MemoryCandidate"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceProposeMemoryCandidateBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks/{task_id}/messages": {
-      "get": {
-        "operationId": "CollaborationService_ListSessionMessages",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSessionMessagesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "int64"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks/{task_id}/runs": {
-      "post": {
-        "operationId": "CollaborationService_ContinueCodingTask",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ContinueCodingTaskResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceContinueCodingTaskBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/coding-tasks/{task_id}/session": {
-      "get": {
-        "operationId": "CollaborationService_GetCodingTaskSession",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Session"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      },
-      "patch": {
-        "operationId": "CollaborationService_UpdateCodingTaskSession",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Session"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "task_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceUpdateCodingTaskSessionBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/configured-models": {
-      "get": {
-        "operationId": "ModelCatalogService_ListConfiguredModels",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListConfiguredModelsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "ModelCatalogService"
-        ]
-      },
-      "post": {
-        "operationId": "ModelCatalogService_RegisterConfiguredModel",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ConfiguredModel"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterConfiguredModelRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/configured-models/{configured_model_id}": {
-      "get": {
-        "operationId": "ModelCatalogService_GetConfiguredModel",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ConfiguredModel"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "configured_model_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/configured-models/{configured_model_id}/status": {
-      "patch": {
-        "operationId": "ModelCatalogService_ChangeConfiguredModelStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ConfiguredModel"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "configured_model_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ModelCatalogServiceChangeConfiguredModelStatusBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/credential-profiles": {
-      "get": {
-        "operationId": "ModelCatalogService_ListCredentialProfiles",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListCredentialProfilesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "ModelCatalogService"
-        ]
-      },
-      "post": {
-        "operationId": "ModelCatalogService_RegisterCredentialProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CredentialProfile"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterCredentialProfileRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/credential-profiles/{credential_profile_id}": {
-      "get": {
-        "operationId": "ModelCatalogService_GetCredentialProfile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CredentialProfile"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "credential_profile_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/credential-profiles/{credential_profile_id}/status": {
-      "patch": {
-        "operationId": "ModelCatalogService_ChangeCredentialProfileStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CredentialProfile"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "credential_profile_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ModelCatalogServiceChangeCredentialProfileStatusBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ModelCatalogService"
-        ]
-      }
-    },
-    "/v1/me": {
-      "get": {
-        "operationId": "IdentityService_GetCurrentUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CurrentUser"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "IdentityService"
-        ]
-      }
-    },
-    "/v1/memory-candidates/{candidate_id}": {
-      "patch": {
-        "operationId": "CollaborationService_DecideMemoryCandidate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DecideMemoryCandidateResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "candidate_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/CollaborationServiceDecideMemoryCandidateBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "CollaborationService"
-        ]
-      }
-    },
-    "/v1/repository-bindings": {
-      "get": {
-        "operationId": "SourceControlService_ListRepositoryBindings",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRepositoryBindingsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      },
-      "post": {
-        "operationId": "SourceControlService_RegisterRepositoryBinding",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RepositoryBinding"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterRepositoryBindingRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
-    },
-    "/v1/repository-bindings/{repository_binding_id}": {
-      "get": {
-        "operationId": "SourceControlService_GetRepositoryBinding",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RepositoryBinding"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "repository_binding_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      },
-      "patch": {
-        "operationId": "SourceControlService_UpdateRepositoryBinding",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RepositoryBinding"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "repository_binding_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SourceControlServiceUpdateRepositoryBindingBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
-    },
-    "/v1/repository-bindings/{repository_binding_id}/validation": {
-      "post": {
-        "operationId": "SourceControlService_ValidateRepositoryBinding",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RepositoryBinding"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "repository_binding_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SourceControlServiceValidateRepositoryBindingBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
-    },
-    "/v1/runs": {
-      "get": {
-        "operationId": "ExecutionService_ListRuns",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRunsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "agent_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "repository_binding_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "task_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "runtime",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "created_from",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "created_to",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "page_token",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sort_direction",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}": {
-      "get": {
-        "operationId": "ExecutionService_GetRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/approvals": {
-      "get": {
-        "operationId": "RunApprovalService_ListRunApprovals",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRunApprovalsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RunApprovalService"
-        ]
-      },
-      "post": {
-        "operationId": "RunApprovalService_RequestRunApproval",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RunApproval"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/RunApprovalServiceRequestRunApprovalBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RunApprovalService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/artifacts": {
-      "get": {
-        "operationId": "ArtifactService_ListRunArtifacts",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRunArtifactsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ArtifactService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/cancel": {
-      "post": {
-        "operationId": "ExecutionService_CancelRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/events": {
-      "get": {
-        "operationId": "RunEventStreamService_Stream",
-        "responses": {
-          "200": {
-            "description": "A successful response.(streaming responses)",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "result": {
-                  "$ref": "#/definitions/v1StreamResponse"
-                },
-                "error": {
-                  "$ref": "#/definitions/rpcStatus"
-                }
-              },
-              "title": "Stream result of v1StreamResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "int64"
-          }
-        ],
-        "tags": [
-          "RunEventStreamService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/interrupt": {
-      "post": {
-        "operationId": "ExecutionService_InterruptRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/kill": {
-      "post": {
-        "operationId": "ExecutionService_KillRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ExecutionServiceKillRunBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/recovery": {
-      "post": {
-        "operationId": "ExecutionService_RecoverRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/ExecutionServiceRecoverRunBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runs/{run_id}/resume": {
-      "post": {
-        "operationId": "ExecutionService_ResumeRun",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Run"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ExecutionService"
-        ]
-      }
-    },
-    "/v1/runtime-images": {
-      "get": {
-        "operationId": "RuntimeCatalogService_ListRuntimeImages",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRuntimeImagesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "page_size",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "page_token",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RuntimeCatalogService"
-        ]
-      },
-      "post": {
-        "operationId": "RuntimeCatalogService_RegisterRuntimeImage",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RuntimeImage"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterRuntimeImageRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "description": "Stable key for one user intent.",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RuntimeCatalogService"
-        ]
-      }
-    },
-    "/v1/runtime-images/{runtime_image_id}": {
-      "get": {
-        "operationId": "RuntimeCatalogService_GetRuntimeImage",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RuntimeImage"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "runtime_image_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RuntimeCatalogService"
-        ]
-      }
-    },
-    "/v1/runtime-images/{runtime_image_id}/status": {
-      "patch": {
-        "operationId": "RuntimeCatalogService_ChangeRuntimeImageStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RuntimeImage"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "runtime_image_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/RuntimeCatalogServiceChangeRuntimeImageStatusBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "description": "Stable key for one user intent.",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "description": "Current Runtime Image Version.",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "RuntimeCatalogService"
-        ]
-      }
-    },
-    "/v1/source-control-providers": {
-      "get": {
-        "operationId": "SourceControlService_ListSourceControlProviders",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSourceControlProvidersResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "SourceControlService"
-        ]
-      },
-      "post": {
-        "operationId": "SourceControlService_RegisterSourceControlProvider",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SourceControlProvider"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1RegisterSourceControlProviderRequest"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
-    },
-    "/v1/source-control-providers/{source_control_provider_id}": {
-      "get": {
-        "operationId": "SourceControlService_GetSourceControlProvider",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SourceControlProvider"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "source_control_provider_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
-    },
-    "/v1/source-control-providers/{source_control_provider_id}/status": {
-      "patch": {
-        "operationId": "SourceControlService_ChangeSourceControlProviderStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SourceControlProvider"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "source_control_provider_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SourceControlServiceChangeSourceControlProviderStatusBody"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SourceControlService"
-        ]
-      }
     }
   },
   "definitions": {
-    "AgentLifecycleServiceBlockAgentReleaseBody": {
+    "AgentWorkspaceServiceCancelRunBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceCancelSessionMessageBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceClearWorkspaceBody": {
       "type": "object",
       "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "reason": {
+        "confirmation": {
           "type": "string"
         }
       }
     },
-    "AgentLifecycleServiceCreateAgentDraftBody": {
+    "AgentWorkspaceServiceCloneWorkspaceBody": {
       "type": "object",
       "properties": {
-        "team_id": {
+        "url": {
           "type": "string"
         },
-        "configuration": {
-          "$ref": "#/definitions/v1AgentConfiguration"
+        "branch": {
+          "type": "string"
         },
-        "release_risk": {
+        "ssh_private_key": {
           "type": "string"
         }
       }
     },
-    "AgentLifecycleServiceDecideAgentDraftApprovalBody": {
+    "AgentWorkspaceServiceCreateProviderModelBody": {
       "type": "object",
       "properties": {
-        "team_id": {
+        "model_id": {
           "type": "string"
         },
-        "approved": {
+        "display_name": {
+          "type": "string"
+        },
+        "model_type": {
+          "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceCreateWorkspaceDirectoryBody": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceGenerateWorkflowCredentialBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceRefreshProviderModelsBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceRerunWorkflowBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceResetUserPasswordBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceRetrySessionMessageBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceRunWorkflowBody": {
+      "type": "object",
+      "properties": {
+        "text_input": {
+          "type": "string"
+        },
+        "json_input": {
+          "type": "object"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSendSessionMessageBody": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "provider_model_id": {
+          "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSetSessionArchivedBody": {
+      "type": "object",
+      "properties": {
+        "archived": {
           "type": "boolean"
         },
-        "reason": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServiceDeprecateAgentReleaseBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServicePublishAgentDraftBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServiceRequestAgentDraftApprovalBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "risk_reason": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServiceUpdateAgentBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServiceUpdateAgentDraftBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "configuration": {
-          "$ref": "#/definitions/v1AgentConfiguration"
-        },
-        "release_risk": {
-          "type": "string"
-        }
-      }
-    },
-    "AgentLifecycleServiceValidateAgentDraftBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        }
-      }
-    },
-    "CollaborationServiceContinueCodingTaskBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "request_text": {
-          "type": "string"
-        },
-        "expected_session_version": {
+        "expected_version": {
           "type": "string",
           "format": "int64"
         }
       }
     },
-    "CollaborationServiceDecideMemoryCandidateBody": {
+    "AgentWorkspaceServiceSetUserEnabledBody": {
       "type": "object",
       "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "approve": {
+        "enabled": {
           "type": "boolean"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
-    "CollaborationServiceDeleteAgentMemoryBody": {
+    "AgentWorkspaceServiceTestMCPServerBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceUpdateExpertBody": {
       "type": "object",
       "properties": {
-        "team_id": {
-          "type": "string"
+        "expert": {
+          "$ref": "#/definitions/v1ExpertInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
-    "CollaborationServiceProposeMemoryCandidateBody": {
+    "AgentWorkspaceServiceUpdateMCPServerBody": {
       "type": "object",
       "properties": {
-        "team_id": {
+        "mcp_server": {
+          "$ref": "#/definitions/v1MCPServerInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateModelProviderConnectionBody": {
+      "type": "object",
+      "properties": {
+        "name": {
           "type": "string"
         },
-        "agent_id": {
+        "endpoint": {
+          "type": "string"
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replacement_api_key": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateSessionBody": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateSkillBody": {
+      "type": "object",
+      "properties": {
+        "git_ref": {
+          "type": "string"
+        },
+        "archive": {
+          "type": "string",
+          "format": "byte"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateWorkflowBody": {
+      "type": "object",
+      "properties": {
+        "workflow": {
+          "$ref": "#/definitions/v1WorkflowInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUploadWorkspaceFileBody": {
+      "type": "object",
+      "properties": {
+        "path": {
           "type": "string"
         },
         "content": {
-          "type": "string"
-        }
-      }
-    },
-    "CollaborationServiceUpdateAgentMemoryBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "content": {
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        }
-      }
-    },
-    "CollaborationServiceUpdateCodingTaskBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        }
-      }
-    },
-    "CollaborationServiceUpdateCodingTaskSessionBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "memory": {
-          "$ref": "#/definitions/v1SessionMemory"
-        }
-      }
-    },
-    "ExecutionServiceKillRunBody": {
-      "type": "object",
-      "properties": {
-        "reason": {
-          "type": "string"
-        }
-      }
-    },
-    "ExecutionServiceRecoverRunBody": {
-      "type": "object",
-      "properties": {
-        "reason": {
-          "type": "string"
-        }
-      }
-    },
-    "ModelCatalogServiceChangeConfiguredModelStatusBody": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      }
-    },
-    "ModelCatalogServiceChangeCredentialProfileStatusBody": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      }
-    },
-    "RunApprovalServiceDecideRunApprovalBody": {
-      "type": "object",
-      "properties": {
-        "approved": {
-          "type": "boolean"
-        },
-        "reason": {
-          "type": "string"
-        }
-      }
-    },
-    "RunApprovalServiceRequestRunApprovalBody": {
-      "type": "object",
-      "properties": {
-        "kind": {
-          "type": "string"
-        },
-        "request": {
-          "type": "object"
-        }
-      }
-    },
-    "RuntimeCatalogServiceChangeRuntimeImageStatusBody": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
-        },
-        "blocked_reason": {
-          "type": "string"
-        },
-        "conformance_evidence_key": {
-          "type": "string"
-        }
-      }
-    },
-    "SourceControlServiceChangeSourceControlProviderStatusBody": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      }
-    },
-    "SourceControlServiceUpdateRepositoryBindingBody": {
-      "type": "object",
-      "properties": {
-        "binding": {
-          "$ref": "#/definitions/v1RepositoryBindingInput"
-        }
-      }
-    },
-    "SourceControlServiceValidateRepositoryBindingBody": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -3287,211 +2181,6 @@
         }
       }
     },
-    "v1Agent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "created_by": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1AgentConfiguration": {
-      "type": "object",
-      "properties": {
-        "instructions": {
-          "type": "string"
-        },
-        "repository_binding_id": {
-          "type": "string"
-        },
-        "runtime_image_id": {
-          "type": "string"
-        },
-        "configured_model_id": {
-          "type": "string"
-        },
-        "model_budget": {
-          "$ref": "#/definitions/v1ModelBudget"
-        },
-        "execution_limits": {
-          "$ref": "#/definitions/v1ExecutionLimits"
-        },
-        "native_subagents": {
-          "type": "boolean"
-        }
-      }
-    },
-    "v1AgentDraft": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "agent_id": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "string",
-          "format": "int64"
-        },
-        "state": {
-          "type": "string"
-        },
-        "configuration": {
-          "$ref": "#/definitions/v1AgentConfiguration"
-        },
-        "release_risk": {
-          "type": "string"
-        },
-        "validation_report": {
-          "$ref": "#/definitions/v1ValidationReport"
-        },
-        "created_by": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1AgentMemory": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "agent_id": {
-          "type": "string"
-        },
-        "content": {
-          "type": "string"
-        },
-        "approved_by": {
-          "type": "string"
-        },
-        "source_task_id": {
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "deleted_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1AgentRelease": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "agent_id": {
-          "type": "string"
-        },
-        "release_number": {
-          "type": "string",
-          "format": "int64"
-        },
-        "source_draft_id": {
-          "type": "string"
-        },
-        "runtime_image_id": {
-          "type": "string"
-        },
-        "configured_model_id": {
-          "type": "string"
-        },
-        "repository_binding_id": {
-          "type": "string"
-        },
-        "configuration": {
-          "$ref": "#/definitions/v1AgentConfiguration"
-        },
-        "status": {
-          "type": "string"
-        },
-        "released_by": {
-          "type": "string"
-        },
-        "released_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "deprecated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "release_risk": {
-          "type": "string"
-        },
-        "repository_binding_snapshot": {
-          "$ref": "#/definitions/v1ReleaseRepositoryBindingSnapshot"
-        },
-        "runtime_image_snapshot": {
-          "$ref": "#/definitions/v1ReleaseRuntimeImageSnapshot"
-        },
-        "configured_model_snapshot": {
-          "$ref": "#/definitions/v1ReleaseConfiguredModelSnapshot"
-        },
-        "approval_evidence": {
-          "$ref": "#/definitions/v1ReleaseApprovalEvidence"
-        },
-        "blocked_reason": {
-          "type": "string"
-        }
-      }
-    },
     "v1Artifact": {
       "type": "object",
       "properties": {
@@ -3504,376 +2193,36 @@
         "kind": {
           "type": "string"
         },
-        "size_bytes": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
           "type": "string",
           "format": "int64"
         },
         "sha256": {
           "type": "string"
         },
-        "content_type": {
+        "text_preview": {
           "type": "string"
         },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+        "expired": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
         },
         "expires_at": {
           "type": "string",
           "format": "date-time"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
         }
       }
     },
-    "v1Attempt": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "number": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "worker_id": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        },
-        "infrastructure_failure": {
-          "type": "boolean"
-        },
-        "error": {
-          "$ref": "#/definitions/v1ExecutionError"
-        },
-        "started_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "ended_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "v1AuditEvent": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "int64"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "actor_user_id": {
-          "type": "string"
-        },
-        "action": {
-          "type": "string"
-        },
-        "resource_type": {
-          "type": "string"
-        },
-        "resource_id": {
-          "type": "string"
-        },
-        "details": {
-          "type": "object"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "outcome": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CodingTask": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "agent_release_id": {
-          "type": "string"
-        },
-        "created_by": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "request_text": {
-          "type": "string"
-        },
-        "issue_snapshot": {
-          "$ref": "#/definitions/v1IssueSnapshot"
-        },
-        "state": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "completed_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1CodingTaskLaunchOption": {
-      "type": "object",
-      "properties": {
-        "agent_release_id": {
-          "type": "string"
-        },
-        "repository_binding_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ConfiguredModel": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "model_id": {
-          "type": "string"
-        },
-        "endpoint": {
-          "type": "string"
-        },
-        "credential_profile_id": {
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1ContinueCodingTaskResponse": {
-      "type": "object",
-      "properties": {
-        "task": {
-          "$ref": "#/definitions/v1CodingTask"
-        },
-        "session": {
-          "$ref": "#/definitions/v1Session"
-        },
-        "run_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CreateAgentRequest": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CreateCodingTaskRequest": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "agent_release_id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "request_text": {
-          "type": "string"
-        },
-        "issue_snapshot": {
-          "$ref": "#/definitions/v1IssueSnapshot"
-        }
-      }
-    },
-    "v1CreateCodingTaskResponse": {
-      "type": "object",
-      "properties": {
-        "task": {
-          "$ref": "#/definitions/v1CodingTask"
-        },
-        "session": {
-          "$ref": "#/definitions/v1Session"
-        },
-        "run_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1CredentialProfile": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "secret_configured": {
-          "type": "boolean"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "v1CurrentUser": {
-      "type": "object",
-      "properties": {
-        "user_id": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "display_name": {
-          "type": "string"
-        },
-        "organization": {
-          "$ref": "#/definitions/v1Organization"
-        },
-        "role_grants": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RoleGrant"
-          }
-        },
-        "teams": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Team"
-          }
-        }
-      }
-    },
-    "v1DecideMemoryCandidateResponse": {
-      "type": "object",
-      "properties": {
-        "candidate": {
-          "$ref": "#/definitions/v1MemoryCandidate"
-        },
-        "memory": {
-          "$ref": "#/definitions/v1AgentMemory"
-        }
-      }
-    },
-    "v1EgressPolicy": {
-      "type": "object",
-      "properties": {
-        "mode": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ExecutionError": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ExecutionLimits": {
-      "type": "object",
-      "properties": {
-        "timeout_seconds": {
-          "type": "string",
-          "format": "int64"
-        },
-        "cpus": {
-          "type": "number",
-          "format": "double"
-        },
-        "memory_bytes": {
-          "type": "string",
-          "format": "int64"
-        },
-        "pids": {
-          "type": "string",
-          "format": "int64"
-        },
-        "temp_bytes": {
-          "type": "string",
-          "format": "int64"
-        },
-        "egress": {
-          "type": "string"
-        }
-      }
-    },
-    "v1GetArtifactDownloadResponse": {
+    "v1ArtifactDownload": {
       "type": "object",
       "properties": {
         "url": {
@@ -3882,6 +2231,233 @@
         "expires_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1CreateExpertRequest": {
+      "type": "object",
+      "properties": {
+        "expert": {
+          "$ref": "#/definitions/v1ExpertInput"
+        }
+      }
+    },
+    "v1CreateMCPServerRequest": {
+      "type": "object",
+      "properties": {
+        "mcp_server": {
+          "$ref": "#/definitions/v1MCPServerInput"
+        }
+      }
+    },
+    "v1CreateModelProviderConnectionRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "provider_type": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "api_key": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateSessionRequest": {
+      "type": "object",
+      "properties": {
+        "expert_id": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateSkillRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "git_url": {
+          "type": "string"
+        },
+        "git_ref": {
+          "type": "string"
+        },
+        "archive": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1CreateUserRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1UserAccount"
+        },
+        "temporary_password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateWorkflowRequest": {
+      "type": "object",
+      "properties": {
+        "workflow": {
+          "$ref": "#/definitions/v1WorkflowInput"
+        }
+      }
+    },
+    "v1CurrentUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "administrator": {
+          "type": "boolean"
+        },
+        "settings_ready": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1DeleteResponse": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1EnvironmentVariable": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "configured": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1Expert": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mcp_server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExpertInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "mcp_server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1GitSource": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "private_ssh": {
+          "type": "boolean"
+        },
+        "credential_configured": {
+          "type": "boolean"
         }
       }
     },
@@ -3893,168 +2469,7 @@
         }
       }
     },
-    "v1IssueSnapshot": {
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "body": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ListAgentDraftsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AgentDraft"
-          }
-        }
-      }
-    },
-    "v1ListAgentMemoriesResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AgentMemory"
-          }
-        }
-      }
-    },
-    "v1ListAgentReleasesResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AgentRelease"
-          }
-        }
-      }
-    },
-    "v1ListAgentsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Agent"
-          }
-        }
-      }
-    },
-    "v1ListAuditEventsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1AuditEvent"
-          }
-        }
-      }
-    },
-    "v1ListCodingTaskLaunchOptionsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1CodingTaskLaunchOption"
-          }
-        },
-        "prerequisite": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ListCodingTasksResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1CodingTask"
-          }
-        }
-      }
-    },
-    "v1ListConfiguredModelsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ConfiguredModel"
-          }
-        }
-      }
-    },
-    "v1ListCredentialProfilesResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1CredentialProfile"
-          }
-        }
-      }
-    },
-    "v1ListMemoryCandidatesResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1MemoryCandidate"
-          }
-        }
-      }
-    },
-    "v1ListRepositoryBindingsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RepositoryBinding"
-          }
-        }
-      }
-    },
-    "v1ListRunApprovalsResponse": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1RunApproval"
-          }
-        }
-      }
-    },
-    "v1ListRunArtifactsResponse": {
+    "v1ListArtifactsResponse": {
       "type": "object",
       "properties": {
         "items": {
@@ -4062,6 +2477,54 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Artifact"
+          }
+        }
+      }
+    },
+    "v1ListExpertsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Expert"
+          }
+        }
+      }
+    },
+    "v1ListMCPServersResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MCPServer"
+          }
+        }
+      }
+    },
+    "v1ListModelProviderConnectionsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ModelProviderConnection"
+          }
+        }
+      }
+    },
+    "v1ListModelProviderPresetsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ModelProviderPreset"
           }
         }
       }
@@ -4075,24 +2538,18 @@
             "type": "object",
             "$ref": "#/definitions/v1Run"
           }
-        },
-        "next_page_token": {
-          "type": "string"
         }
       }
     },
-    "v1ListRuntimeImagesResponse": {
+    "v1ListRuntimeEnginesResponse": {
       "type": "object",
       "properties": {
         "items": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1RuntimeImage"
+            "$ref": "#/definitions/v1RuntimeEngineStatus"
           }
-        },
-        "next_page_token": {
-          "type": "string"
         }
       }
     },
@@ -4108,106 +2565,96 @@
         }
       }
     },
-    "v1ListSourceControlProvidersResponse": {
+    "v1ListSessionsResponse": {
       "type": "object",
       "properties": {
         "items": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1SourceControlProvider"
+            "$ref": "#/definitions/v1Session"
           }
         }
       }
     },
-    "v1MemoryCandidate": {
+    "v1ListSkillsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Skill"
+          }
+        }
+      }
+    },
+    "v1ListUsersResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserAccount"
+          }
+        }
+      }
+    },
+    "v1ListWorkflowsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Workflow"
+          }
+        }
+      }
+    },
+    "v1ListWorkspaceEntriesResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkspaceEntry"
+          }
+        },
+        "used_bytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "limit_bytes": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1MCPServer": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
-        "agent_id": {
-          "type": "string"
-        },
-        "coding_task_id": {
-          "type": "string"
-        },
-        "proposed_content": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        },
-        "proposed_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "decided_by": {
-          "type": "string"
-        },
-        "decided_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "resulting_memory_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ModelBinding": {
-      "type": "object",
-      "properties": {
-        "model_id": {
-          "type": "string"
-        },
-        "endpoint": {
-          "type": "string"
-        },
-        "credential_profile_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ModelBudget": {
-      "type": "object",
-      "properties": {
-        "max_input_tokens": {
-          "type": "string",
-          "format": "int64"
-        },
-        "max_output_tokens": {
-          "type": "string",
-          "format": "int64"
-        },
-        "max_cost_amount": {
-          "type": "string"
-        }
-      }
-    },
-    "v1Organization": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "slug": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
-    "v1QualityCommand": {
-      "type": "object",
-      "properties": {
         "name": {
           "type": "string"
         },
-        "kind": {
+        "transport": {
           "type": "string"
         },
-        "executable": {
+        "url": {
+          "type": "string"
+        },
+        "runner": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "package_version": {
           "type": "string"
         },
         "arguments": {
@@ -4216,9 +2663,217 @@
             "type": "string"
           }
         },
-        "timeout_seconds": {
-          "type": "integer",
-          "format": "int32"
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnvironmentVariable"
+          }
+        },
+        "tested": {
+          "type": "boolean"
+        },
+        "test_error": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "test_pending": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1MCPServerInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "transport": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "runner": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnvironmentVariable"
+          }
+        }
+      }
+    },
+    "v1ModelProviderConnection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provider_type": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "api_key_configured": {
+          "type": "boolean"
+        },
+        "verification_status": {
+          "type": "string"
+        },
+        "verification_error": {
+          "type": "string"
+        },
+        "custom_endpoint": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_sync_error": {
+          "type": "string"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderModel"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ModelProviderPreset": {
+      "type": "object",
+      "properties": {
+        "provider_type": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "official_endpoint": {
+          "type": "string"
+        },
+        "protocols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dynamic_discovery": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1PersonalSettings": {
+      "type": "object",
+      "properties": {
+        "personality": {
+          "type": "string"
+        },
+        "personality_instructions": {
+          "type": "string"
+        },
+        "runtime_model_defaults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RuntimeModelDefault"
+          }
+        },
+        "default_runtime_engine": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ProviderModel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "connection_id": {
+          "type": "string"
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "model_type": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "manually_added": {
+          "type": "boolean"
+        },
+        "compatibility": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RuntimeModelCompatibility"
+          }
         }
       }
     },
@@ -4230,423 +2885,53 @@
         }
       }
     },
-    "v1RegisterConfiguredModelRequest": {
+    "v1ResetUserPasswordResponse": {
       "type": "object",
       "properties": {
-        "name": {
+        "temporary_password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ResponseSnapshot": {
+      "type": "object",
+      "properties": {
+        "provider_model_id": {
+          "type": "string"
+        },
+        "connection_id": {
+          "type": "string"
+        },
+        "connection_name": {
+          "type": "string"
+        },
+        "provider_type": {
           "type": "string"
         },
         "model_id": {
           "type": "string"
         },
-        "endpoint": {
-          "type": "string"
-        },
-        "credential_profile_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1RegisterCredentialProfileRequest": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "secret_ref": {
-          "type": "string"
-        }
-      }
-    },
-    "v1RegisterRepositoryBindingRequest": {
-      "type": "object",
-      "properties": {
-        "binding": {
-          "$ref": "#/definitions/v1RepositoryBindingInput"
-        }
-      }
-    },
-    "v1RegisterRuntimeImageRequest": {
-      "type": "object",
-      "properties": {
-        "runtime": {
-          "type": "string"
-        },
-        "cli_version": {
-          "type": "string"
-        },
-        "adapter_version": {
-          "type": "string"
-        },
-        "image_digest": {
-          "type": "string"
-        },
-        "capabilities": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "boolean"
-          }
-        }
-      }
-    },
-    "v1RegisterSourceControlProviderRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "base_url": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ReleaseApproval": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "draft_id": {
-          "type": "string"
-        },
-        "draft_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "requested_by": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        },
-        "requested_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "decided_by": {
-          "type": "string"
-        },
-        "decided_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "risk_reason": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ReleaseApprovalEvidence": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "draft_id": {
-          "type": "string"
-        },
-        "draft_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "requested_by": {
-          "type": "string"
-        },
-        "risk_reason": {
-          "type": "string"
-        },
-        "approved_by": {
-          "type": "string"
-        },
-        "approved_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "v1ReleaseConfiguredModelSnapshot": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "model_id": {
+        "model_name": {
           "type": "string"
         },
         "endpoint": {
           "type": "string"
         },
-        "credential_profile_id": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ReleaseRepositoryBindingSnapshot": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "repository_ssh_url": {
-          "type": "string"
-        },
-        "default_branch": {
-          "type": "string"
-        },
-        "instructions": {
-          "type": "string"
-        },
-        "quality_commands": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1QualityCommand"
-          }
-        },
-        "egress_policy": {
-          "type": "string"
-        },
-        "required_runtime_capabilities": {
+        "protocols": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "source_control_provider_id": {
+        "runtime_engine": {
           "type": "string"
         },
-        "ssh_credential_profile_id": {
+        "compatibility": {
           "type": "string"
         },
-        "build_credential_profile_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "git_author_name": {
-          "type": "string"
-        },
-        "git_author_email": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ReleaseRuntimeImageSnapshot": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "runtime": {
-          "type": "string"
-        },
-        "cli_version": {
-          "type": "string"
-        },
-        "adapter_version": {
-          "type": "string"
-        },
-        "image_digest": {
-          "type": "string"
-        },
-        "capabilities": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "boolean"
-          }
-        }
-      }
-    },
-    "v1RepositoryBinding": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "source_control_provider_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "repository_ssh_url": {
-          "type": "string"
-        },
-        "default_branch": {
-          "type": "string"
-        },
-        "ssh_credential_profile_id": {
-          "type": "string"
-        },
-        "build_credential_profile_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "git_author_name": {
-          "type": "string"
-        },
-        "git_author_email": {
-          "type": "string"
-        },
-        "allowed_runtime_image_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "default_runtime_image_id": {
-          "type": "string"
-        },
-        "default_model_id": {
-          "type": "string"
-        },
-        "model_budget": {
-          "$ref": "#/definitions/v1ModelBudget"
-        },
-        "instructions": {
-          "type": "string"
-        },
-        "quality_commands": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1QualityCommand"
-          }
-        },
-        "egress_policy": {
-          "$ref": "#/definitions/v1EgressPolicy"
-        },
-        "validation_report": {
-          "$ref": "#/definitions/v1ValidationReport"
-        },
-        "validated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
+        "connection_version": {
           "type": "string",
           "format": "int64"
-        },
-        "required_runtime_capabilities": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "v1RepositoryBindingInput": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "source_control_provider_id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "repository_ssh_url": {
-          "type": "string"
-        },
-        "default_branch": {
-          "type": "string"
-        },
-        "ssh_credential_profile_id": {
-          "type": "string"
-        },
-        "build_credential_profile_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "git_author_name": {
-          "type": "string"
-        },
-        "git_author_email": {
-          "type": "string"
-        },
-        "allowed_runtime_image_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "default_runtime_image_id": {
-          "type": "string"
-        },
-        "default_model_id": {
-          "type": "string"
-        },
-        "model_budget": {
-          "$ref": "#/definitions/v1ModelBudget"
-        },
-        "instructions": {
-          "type": "string"
-        },
-        "quality_commands": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1QualityCommand"
-          }
-        },
-        "egress_policy": {
-          "$ref": "#/definitions/v1EgressPolicy"
-        },
-        "required_runtime_capabilities": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "v1RoleGrant": {
-      "type": "object",
-      "properties": {
-        "team_id": {
-          "type": "string"
-        },
-        "role": {
-          "type": "string"
         }
       }
     },
@@ -4656,47 +2941,34 @@
         "id": {
           "type": "string"
         },
-        "session_id": {
+        "workflow_id": {
           "type": "string"
         },
-        "agent_release_id": {
+        "workflow_name": {
           "type": "string"
         },
-        "runtime_image_id": {
-          "type": "string"
-        },
-        "request_text": {
+        "trigger": {
           "type": "string"
         },
         "state": {
           "type": "string"
         },
-        "model_binding": {
-          "$ref": "#/definitions/v1ModelBinding"
-        },
-        "model_budget": {
-          "$ref": "#/definitions/v1ModelBudget"
-        },
-        "execution_limits": {
-          "$ref": "#/definitions/v1ExecutionLimits"
-        },
-        "usage": {
-          "$ref": "#/definitions/v1Usage"
-        },
-        "cost_amount": {
+        "text_input": {
           "type": "string"
         },
-        "terminal_error": {
-          "$ref": "#/definitions/v1ExecutionError"
+        "json_input": {
+          "type": "object"
         },
-        "attempt_count": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "created_by": {
+        "final_text": {
           "type": "string"
         },
-        "created_at": {
+        "final_json": {
+          "type": "object"
+        },
+        "error": {
+          "type": "string"
+        },
+        "queued_at": {
           "type": "string",
           "format": "date-time"
         },
@@ -4708,150 +2980,91 @@
           "type": "string",
           "format": "date-time"
         },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
+        "elapsed_ms": {
           "type": "string",
           "format": "int64"
         },
-        "attempts": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Attempt"
-          }
-        },
-        "coding_task_id": {
-          "type": "string"
-        },
-        "agent_id": {
-          "type": "string"
-        },
-        "repository_binding_id": {
-          "type": "string"
-        },
-        "repository_binding_snapshot": {
+        "workflow_snapshot": {
           "type": "object"
-        },
-        "runtime_image_snapshot": {
-          "type": "object"
-        },
-        "configured_model_snapshot": {
-          "type": "object"
-        },
-        "lease": {
-          "$ref": "#/definitions/v1RunLeaseDiagnostic"
         }
       }
     },
-    "v1RunApproval": {
+    "v1RuntimeEngineStatus": {
       "type": "object",
       "properties": {
-        "id": {
+        "name": {
           "type": "string"
         },
-        "run_id": {
-          "type": "string"
+        "available": {
+          "type": "boolean"
         },
-        "kind": {
-          "type": "string"
-        },
-        "request": {
-          "type": "object"
-        },
-        "state": {
-          "type": "string"
-        },
-        "requested_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "decided_by": {
-          "type": "string"
-        },
-        "decided_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "decision_reason": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "requested_by": {
-          "type": "string"
-        },
-        "decision_actor_type": {
-          "type": "string"
-        }
-      }
-    },
-    "v1RunLeaseDiagnostic": {
-      "type": "object",
-      "properties": {
-        "attempt_id": {
-          "type": "string"
-        },
-        "worker_id": {
-          "type": "string"
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "v1RuntimeImage": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "runtime": {
-          "type": "string"
+        "native_resume": {
+          "type": "boolean"
         },
         "cli_version": {
           "type": "string"
-        },
-        "adapter_version": {
+        }
+      }
+    },
+    "v1RuntimeModelCompatibility": {
+      "type": "object",
+      "properties": {
+        "runtime_engine": {
           "type": "string"
-        },
-        "image_digest": {
-          "type": "string"
-        },
-        "capabilities": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "boolean"
-          }
         },
         "status": {
           "type": "string"
         },
-        "blocked_reason": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RuntimeModelDefault": {
+      "type": "object",
+      "properties": {
+        "runtime_engine": {
           "type": "string"
         },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
+        "provider_model_id": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Schedule": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
         },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "conformance_evidence_key": {
+        "frequency": {
           "type": "string"
         },
-        "conformance_evidence_sha256": {
+        "hour": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "minute": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "weekday": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timezone": {
           "type": "string"
+        }
+      }
+    },
+    "v1SendSessionMessageResponse": {
+      "type": "object",
+      "properties": {
+        "user_message": {
+          "$ref": "#/definitions/v1SessionMessage"
+        },
+        "assistant_message": {
+          "$ref": "#/definitions/v1SessionMessage"
         }
       }
     },
@@ -4861,24 +3074,14 @@
         "id": {
           "type": "string"
         },
-        "coding_task_id": {
+        "title": {
           "type": "string"
         },
-        "repository_binding_id": {
+        "expert_id": {
           "type": "string"
         },
-        "target_branch": {
-          "type": "string"
-        },
-        "review_branch": {
-          "type": "string"
-        },
-        "memory": {
-          "$ref": "#/definitions/v1SessionMemory"
-        },
-        "run_count": {
-          "type": "integer",
-          "format": "int32"
+        "archived": {
+          "type": "boolean"
         },
         "created_at": {
           "type": "string",
@@ -4891,32 +3094,9 @@
         "version": {
           "type": "string",
           "format": "int64"
-        }
-      }
-    },
-    "v1SessionMemory": {
-      "type": "object",
-      "properties": {
-        "summary": {
+        },
+        "current_provider_model_id": {
           "type": "string"
-        },
-        "confirmed_decisions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "results": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "workspace_snapshots": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -4927,45 +3107,35 @@
           "type": "string",
           "format": "int64"
         },
-        "run_id": {
+        "role": {
           "type": "string"
         },
-        "author": {
-          "type": "string"
-        },
-        "author_user_id": {
+        "state": {
           "type": "string"
         },
         "content": {
-          "$ref": "#/definitions/v1SessionMessageContent"
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "type": "string",
+          "format": "int64"
         },
         "created_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "progress_stage": {
+          "type": "string"
+        },
+        "response_snapshot": {
+          "$ref": "#/definitions/v1ResponseSnapshot"
         }
       }
     },
-    "v1SessionMessageContent": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "review_branch": {
-          "type": "string"
-        }
-      }
-    },
-    "v1SourceControlProvider": {
+    "v1Skill": {
       "type": "object",
       "properties": {
         "id": {
@@ -4974,13 +3144,132 @@
         "name": {
           "type": "string"
         },
-        "kind": {
+        "source": {
           "type": "string"
         },
-        "base_url": {
+        "git_url": {
           "type": "string"
+        },
+        "git_ref": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1UpdateSettingsRequest": {
+      "type": "object",
+      "properties": {
+        "personality": {
+          "type": "string"
+        },
+        "personality_instructions": {
+          "type": "string"
+        },
+        "runtime_model_defaults": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RuntimeModelDefault"
+          }
+        },
+        "default_runtime_engine": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1UserAccount": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "administrator": {
+          "type": "boolean"
         },
         "enabled": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1Workflow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "expert_id": {
+          "type": "string"
+        },
+        "provider_model_id": {
+          "type": "string"
+        },
+        "runtime_engine": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnvironmentVariable"
+          }
+        },
+        "schedule": {
+          "$ref": "#/definitions/v1Schedule"
+        },
+        "git_source": {
+          "$ref": "#/definitions/v1GitSource"
+        },
+        "api_credential_configured": {
+          "type": "boolean"
+        },
+        "deleted": {
           "type": "boolean"
         },
         "created_at": {
@@ -4997,66 +3286,91 @@
         }
       }
     },
-    "v1StreamResponse": {
+    "v1WorkflowCredential": {
       "type": "object",
       "properties": {
-        "sequence": {
-          "type": "string",
-          "format": "int64"
-        },
-        "event_type": {
+        "api_key": {
           "type": "string"
         },
-        "payload": {},
+        "api_secret": {
+          "type": "string"
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
         }
       }
     },
-    "v1Team": {
+    "v1WorkflowInput": {
       "type": "object",
       "properties": {
-        "id": {
+        "name": {
           "type": "string"
         },
-        "slug": {
+        "goal": {
+          "type": "string"
+        },
+        "expert_id": {
+          "type": "string"
+        },
+        "provider_model_id": {
+          "type": "string"
+        },
+        "runtime_engine": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EnvironmentVariable"
+          }
+        },
+        "schedule": {
+          "$ref": "#/definitions/v1Schedule"
+        }
+      }
+    },
+    "v1WorkspaceEntry": {
+      "type": "object",
+      "properties": {
+        "path": {
           "type": "string"
         },
         "name": {
           "type": "string"
-        }
-      }
-    },
-    "v1Usage": {
-      "type": "object",
-      "properties": {
-        "input_tokens": {
-          "type": "string",
-          "format": "int64"
         },
-        "output_tokens": {
-          "type": "string",
-          "format": "int64"
-        },
-        "cost_amount": {
-          "type": "string"
-        }
-      }
-    },
-    "v1ValidationReport": {
-      "type": "object",
-      "properties": {
-        "valid": {
+        "directory": {
           "type": "boolean"
         },
-        "errors": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+        "size": {
+          "type": "string",
+          "format": "int64"
         },
-        "checked_at": {
+        "modified_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1WorkspaceFile": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "modified_at": {
           "type": "string",
           "format": "date-time"
         }

@@ -5,12 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 type Request struct {
-	Ref       string
-	Variables map[string]string
-	Files     map[string][]byte
+	Ref          string
+	Variables    map[string]string
+	Files        map[string][]byte
+	RedactValues [][]byte
 }
 
 type Materializer struct {
@@ -41,8 +43,43 @@ func (m Materializer) Create(request Request) (*Environment, error) {
 		_ = os.RemoveAll(directory)
 		return nil, fmt.Errorf("protect credential directory: %w", err)
 	}
+	return m.materialize(request, directory)
+}
+
+// CreateAt replaces a stopped warm container's credential directory. Callers
+// must serialize this operation with container start/stop so no Runtime process
+// can observe credentials from another execution.
+func (m Materializer) CreateAt(request Request, directory string) (*Environment, error) {
+	if request.Ref == "" {
+		return nil, fmt.Errorf("credential environment ref is required")
+	}
+	root := filepath.Clean(m.Root)
+	directory = filepath.Clean(directory)
+	relative, err := filepath.Rel(root, directory)
+	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return nil, fmt.Errorf("credential directory must be a child of the configured root")
+	}
+	if err := os.RemoveAll(directory); err != nil {
+		return nil, fmt.Errorf("clear credential directory: %w", err)
+	}
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		return nil, fmt.Errorf("create credential directory: %w", err)
+	}
+	if err := os.Chmod(directory, 0o700); err != nil {
+		_ = os.RemoveAll(directory)
+		return nil, fmt.Errorf("protect credential directory: %w", err)
+	}
+	return m.materialize(request, directory)
+}
+
+func (m Materializer) materialize(request Request, directory string) (*Environment, error) {
 
 	environment := &Environment{directory: directory}
+	for _, value := range request.RedactValues {
+		if len(value) > 0 {
+			environment.secrets = append(environment.secrets, append([]byte(nil), value...))
+		}
+	}
 	variableNames := make([]string, 0, len(request.Variables))
 	for name := range request.Variables {
 		if !validEnvironmentName(name) {

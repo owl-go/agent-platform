@@ -17,6 +17,12 @@ check_version() {
     echo "${runtime} image runs as root" >&2
     exit 1
   fi
+  docker run --rm --network none --mount type=volume,dst=/workspace \
+    --entrypoint sh "${registry}/${runtime}:${version}" -ceu '
+      test "$(id -u)" = "65532"
+      test -w /workspace
+      touch /workspace/runtime-write-probe
+    '
 }
 
 check_version claude 2.1.233

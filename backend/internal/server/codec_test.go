@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	runtimecatalogv1 "agent-platform/backend/api/runtimecatalog/v1"
+	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/transportmeta"
 )
 
 func TestStrictJSONRequestDecoderPreservesRawBody(t *testing.T) {
-	body := `{"runtime":"codex","cli_version":"1.2.3","adapter_version":"v1","image_digest":"sha256:abc","capabilities":{"usage":true}}`
-	request := httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(body))
+	body := `{"workflow":{"name":"Daily report","goal":"Summarize changes"}}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	var input runtimecatalogv1.RegisterRuntimeImageRequest
+	var input workspacev1.CreateWorkflowRequest
 	if err := decodeStrictJSONRequest(request, &input); err != nil {
 		t.Fatal(err)
 	}
@@ -24,8 +24,8 @@ func TestStrictJSONRequestDecoderPreservesRawBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(preserved) != body || input.Runtime != "codex" || !input.Capabilities["usage"] {
-		t.Fatalf("decoded runtime=%q capabilities=%v raw=%q", input.Runtime, input.Capabilities, preserved)
+	if string(preserved) != body || input.Workflow.GetName() != "Daily report" {
+		t.Fatalf("decoded workflow=%q raw=%q", input.Workflow.GetName(), preserved)
 	}
 }
 
@@ -43,9 +43,9 @@ func TestStrictJSONRequestDecoderFailsClosed(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "/v1/runtime-images", strings.NewReader(test.body))
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(test.body))
 			request.Header.Set("Content-Type", test.contentType)
-			if err := decodeStrictJSONRequest(request, &runtimecatalogv1.RegisterRuntimeImageRequest{}); err == nil {
+			if err := decodeStrictJSONRequest(request, &workspacev1.CreateWorkflowRequest{}); err == nil {
 				t.Fatal("decoder accepted invalid request")
 			}
 		})
@@ -69,7 +69,7 @@ func TestResponseEncoderWritesExplicitCompatibilityMapping(t *testing.T) {
 	response := httptest.NewRecorder()
 	response.Header().Set("X-Agent-Platform-Internal-Response-Status", "201")
 	response.Header().Set("X-Agent-Platform-Internal-Response-Body", `{"id":"runtime-1","version":1}`)
-	if err := encodeResponse(response, request, &runtimecatalogv1.RuntimeImage{}); err != nil {
+	if err := encodeResponse(response, request, &workspacev1.Workflow{}); err != nil {
 		t.Fatal(err)
 	}
 	if response.Code != http.StatusCreated || response.Body.String() != "{\"id\":\"runtime-1\",\"version\":1}\n" {

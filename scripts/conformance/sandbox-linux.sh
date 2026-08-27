@@ -3,18 +3,19 @@ set -euo pipefail
 
 image="${SANDBOX_TEST_IMAGE:-}"
 network_name="${AGENT_EGRESS_NETWORK:-agent-public-egress}"
+resolver_file="${AGENT_RESOLVER_CONFIG_FILE:-}"
 public_url="${SANDBOX_PUBLIC_TEST_URL:-https://example.com}"
 redirect_url="${SANDBOX_REDIRECT_TEST_URL:-}"
 rebind_url="${SANDBOX_REBIND_TEST_URL:-}"
 control_plane_url="${SANDBOX_CONTROL_PLANE_TEST_URL:-}"
 test_entrypoint="${SANDBOX_TEST_ENTRYPOINT:-/usr/local/bin/runtime-entrypoint}"
-container_name="agent-sandbox-conformance-$$"
-volume_name="agent-sandbox-workspace-$$"
+container_name="agent-sandbox-conformance-$(date +%s%N)-$$"
+volume_name=""
 credential_root="$(mktemp -d)"
 
 cleanup() {
   docker rm --force --volumes "${container_name}" >/dev/null 2>&1 || true
-  docker volume rm "${volume_name}" >/dev/null 2>&1 || true
+  [[ -z "${volume_name}" ]] || docker volume rm "${volume_name}" >/dev/null 2>&1 || true
   rm -rf "${credential_root}"
 }
 trap cleanup EXIT
@@ -31,6 +32,10 @@ if [[ -z "${redirect_url}" || -z "${rebind_url}" || -z "${control_plane_url}" ]]
   echo "SANDBOX_REDIRECT_TEST_URL, SANDBOX_REBIND_TEST_URL, and SANDBOX_CONTROL_PLANE_TEST_URL are required" >&2
   exit 1
 fi
+if [[ "${resolver_file}" != /* || ! -f "${resolver_file}" ]]; then
+  echo "AGENT_RESOLVER_CONFIG_FILE must be an existing absolute file" >&2
+  exit 1
+fi
 if ! docker info --format '{{json .Runtimes}}' | grep -q '"runsc"'; then
   echo "Docker runtime runsc is unavailable" >&2
   exit 1
@@ -42,7 +47,7 @@ printf '%s' 'fake-model-secret' >"${credential_root}/selected/model-key"
 chown -R 65532:65532 "${credential_root}/selected"
 chmod 0700 "${credential_root}/selected"
 chmod 0600 "${credential_root}/selected/model-key"
-docker volume create "${volume_name}" >/dev/null
+volume_name="$(docker volume create --label agent-platform.managed=true --label agent-platform.purpose=sandbox-conformance)"
 
 entrypoint_args=()
 if [[ -n "${test_entrypoint}" ]]; then
@@ -60,8 +65,9 @@ docker create \
   --memory 536870912 \
   --pids-limit 256 \
   --cpus 2 \
-  --mount "type=volume,src=${volume_name},dst=/workspace,rw" \
-  --mount "type=bind,src=${credential_root}/selected,dst=/run/agent-credentials,ro" \
+  --mount "type=volume,src=${volume_name},dst=/workspace,readonly=false" \
+  --mount "type=bind,src=${credential_root}/selected,dst=/run/agent-credentials,readonly=true" \
+  --mount "type=bind,src=${resolver_file},dst=/etc/resolv.conf,readonly=true" \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=67108864 \
   --label agent-platform.managed=true \
   --label agent-platform.run-id=conformance \

@@ -1,226 +1,46 @@
-# 服务端领域架构
+# 服务端架构
 
-## 目标结构
+状态：Agent Workspace 当前实现
 
-后端采用 Go Kratos 的全局职责分层，并在每层内部保留限界上下文。业务边界不以 HTTP、数据库表或框架命名；依赖保持单向：
+## 结构
 
-```text
-Service / Server (Proto HTTP / Gin SSE / Worker)
-              |
-              v
-              Biz
-              |
-              v
-   Aggregate / Usecase / Port
-              ^
-              |
-Data (GORM / Runtime CLI / Object Storage)
-```
+后端是两个 Go Kratos 进程：`cmd/api` 提供认证后的控制面，`cmd/worker` 领取会话回复、工作流 Run、定时触发和 MCP 测试。Wire 只负责显式装配；所有运行配置来自严格校验的 YAML。
 
-`backend/internal/biz` 定义聚合、实体、值对象、领域规则、Repository 端口和用例；`backend/internal/data` 实现端口；`backend/internal/service` 负责 Proto/HTTP 转换、身份与授权调用及公开错误映射；`backend/internal/server` 负责 Kratos 生命周期。`backend/cmd/api` 与 `backend/cmd/worker` 只加载严格配置、调用 Wire Injector 并运行 App。GORM Model、YAML Config 和 HTTP DTO 不得作为领域实体复用。
+业务分为两个限界上下文：
 
-## 限界上下文
+- Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
+- Workspace：Session、Workflow、Run、Expert、Model Provider Connection、Provider Model、MCP Server、Skill 与 Personal Settings。
 
-| 上下文 | 当前核心模型 | 代码位置 | 状态 |
-|---|---|---|---|
-| Execution | Run 聚合、Attempt、Run Lease、Run Event | `backend/internal/biz/execution`, `backend/internal/data/execution` | Phase 1：领取、续租、恢复、查询与 Worker 编排已实现 |
-| Runtime | Agent Runtime、Runtime Adapter、Capability、标准 Event Contract | `backend/internal/agentruntime`, `backend/internal/runworker` | Phase 0 |
-| Runtime Catalog | Runtime Image、不可变 Digest、Capability、生产状态与封禁 | `backend/internal/biz/runtimecatalog`, `backend/internal/data/runtimecatalog` | Phase 1：Biz、Data 与 Proto HTTP 已实现 |
-| Model Catalog | Credential Profile、Configured Model、Secret Ref、凭证撤销 | `backend/internal/biz/modelcatalog`, `backend/internal/data/modelcatalog` | Phase 1：Biz、Data 与 Proto HTTP 已实现 |
-| Source Control | GitHub.com、自建 GitLab、Git SSH 来源、Repository Binding | `backend/internal/biz/sourcecontrol`, `backend/internal/data/sourcecontrol` | Provider 与 Binding 已实现 |
-| Workspace | Code Workspace、Sandbox、Workspace Snapshot、Write Lease | `backend/internal/sandbox`, `backend/internal/conformanceartifact` | Phase 0/骨架 |
-| Artifact | Artifact、Object Key、保留与临时访问 | `backend/internal/biz/artifact`, `backend/internal/objectstore` | 授权列表、下载与保留清理已实现 |
-| Run Approval | 高风险计划请求、审批决定、Run 等待状态 | `backend/internal/biz/approval` | 中立事务 Workflow、RBAC 与 Proto HTTP 已实现 |
-| Webhook | Webhook Delivery、签名、重试与 Delivery Lease | `backend/internal/biz/webhook`, `backend/internal/data/webhook` | 投递循环与事务事件源已实现 |
-| Agent Lifecycle | Agent、Agent Draft、Validation、Release Approval、Agent Release | `backend/internal/biz/agentlifecycle`, `backend/internal/data/agentlifecycle` | Biz、Data 与 Proto HTTP 已实现 |
-| Collaboration | Coding Task、Session、Session Memory、Memory Candidate、Agent Memory | `backend/internal/biz/collaboration`, `backend/internal/data/collaboration` | Proto HTTP、Workspace Write Lease 与 Git Workflow 已实现；真实外部 Git/Runtime 联调后置 |
-| Identity & Governance | Organization、Team、User、Role Grant、Audit | `backend/internal/biz/identity`, `backend/internal/biz/audit` | RBAC、范围查询、审计、OIDC Token 验证与当前 User 引导已实现 |
+Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
 
-未实现上下文不会因为数据库中已有预留表就视为已交付。实现新能力时先在对应上下文建立 Domain 和 Application，再增加 HTTP/GORM 等 Adapter。
+## 所有权
 
-## Execution 聚合边界
+除管理员账号操作外，每个查询和写入都以认证 User ID 过滤。管理员不能借助管理权限读取其他 User 的会话、工作流、模型或扩展。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
-`Run` 是聚合根，负责以下不变量：
+## 事务与并发
 
-- Run 状态只能按领域状态机转换；终态不可继续推进。
-- Claim 只允许从 `queued` 或 `resuming` 进入 `provisioning`，并产生唯一的新 Attempt。
-- 一个 Run 同时最多有一个有效 Run Lease；续租和推进必须持有未过期 Token。
-- 完成结果只能为 `completed`、`failed` 或 `cancelled`，Usage 与 Error 必须是合法 JSON，模型成本必须是非负十进制金额。
-- 过期 Lease 只在已知基础设施故障语义下进入 `resuming`；达到 Attempt 上限后进入 `failed`。
-- 聚合状态、Attempt、Run Lease 与对应 Run Event 在同一 PostgreSQL 事务中提交。
+- Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
+- Workflow Run 在创建时冻结 Workflow、Expert、Provider Model、Model Provider Connection 版本、Model API Protocol、Endpoint、Runtime、环境变量与扩展配置；同一 Workflow 的 Run 串行执行。API Key 通过版本化凭证引用在 Worker 领取时加载，不进入普通 Snapshot JSON。
+- Worker 按 Session 或 Workflow 维护隔离的 Warm Runtime Container 租约。租约不共享 User 或资源边界；执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
+- Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。
+- 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
+- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务。进程崩溃后的悬挂任务由运行超时和后续对账收口，不暴露为产品控制。
 
-`backend/internal/biz/execution/domain` 不依赖 GORM。`backend/internal/biz/execution/application` 通过 Repository 端口执行用例。`backend/internal/data/execution/gormrepo` 使用 GORM Transaction 和 PostgreSQL `FOR UPDATE SKIP LOCKED` 实现原子领取与 Reconcile。
+## API
 
-Application Worker 统一编排 `Claim -> MarkRunning -> Renew -> Finish`。租约丢失时取消 Runtime Processor，且不再提交终态，由 Reconciler 决定安全恢复或失败；Runtime Processor 返回的内部错误不会原样写入持久化终态。
+`backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。认证使用 Bearer OIDC Token。Workflow API Credential 只允许通过 HTTP Basic 启动和查看该 Workflow 的 Run，不代表 User 身份。
 
-Operations Console 的 Run 查询始终以已验证身份的 Organization 和显式 Team 为范围，可组合 Agent、Repository Binding、Coding Task、状态、Agent Runtime 与创建时间过滤。结果按创建时间和 Run ID 确定性排序，并以不透明 Cursor 有界分页；筛选、排序、Cursor 与选中 Run 都保存在 URL。详情从不可变 Agent Release 快照投影 Runtime RepoDigest、Configured Model 和 Repository Binding，同时只暴露安全的 Attempt 错误分类、活动 Run Lease、Usage、成本、Runtime Event 与 Artifact 元数据；Credential Binding、Lease Token、内部 Cause 和 Object Key 不进入响应。
+两个流式端点有意使用手写 Handler：
 
-Run 控制命令使用 Version 乐观锁和 Idempotency Key。Interrupt 将活跃 Run 切换到 `interrupting`；Worker 在最长五秒的续租检查周期内取消 Runtime，随后确认 `interrupted` 并释放 Run/Workspace Lease。Resume 只允许 `interrupted -> resuming`，由普通 Claim 创建新 Attempt。Cancel 和 Operator Kill 立即提交终态、取消活跃 Attempt 并撤销 Lease；Kill 额外记录安全的 `operator_killed` 终态错误。Agent User、Agent Builder 和 Platform Administrator 可协作式 Interrupt/Resume/Cancel；Run Operator 可 Interrupt/Cancel/Kill，但不能代替用户 Resume。
+- `GET /api/v1/workflows/{workflow_id}/runs/{run_id}/events`：SSE 历史回放、实时事件与 Heartbeat。
+- `GET /api/v1/sessions/{session_id}/messages/{message_id}/events`：按 Owner 隔离持续推送 Assistant Message 快照。快照只暴露受限的产品进度阶段与已脱敏答案，不暴露 Runtime 原始事件、命令内容或模型私有推理；完成、失败或取消后关闭连接。
+- `GET /api/v1/workflows/{workflow_id}/workspace/download?path=...`：认证后流式下载 Workspace 文件。
+- `POST /api/v1/workflows/{workflow_id}/workspace/upload?path=...`：认证后以二进制流上传最多 100 MiB，避免把文件 Base64 放入普通 JSON 请求。
 
-Run Approval 与 Release Approval 是两个不同概念。前者绑定单个 Run 的高风险计划或变更请求：创建 Pending Approval 与 `running -> waiting_confirmation` 在同一事务提交，批准后恢复 `running`，拒绝后以 `approval_rejected` 终止 Run、取消 Attempt 并撤销 Lease。只有 Agent User、Agent Builder 和 Platform Administrator 可申请或决定；Run Operator 只保留运行控制职责。四种 Production Runtime 都由受控 `runtime-workflow` 在启动真实 CLI 之前输出平台 `approval.requested` 协议帧并自行 `SIGSTOP`，因此 CLI 的 bypass 模式不能越过审批；Adapter 收到该帧后再暂停整个容器。宿主进程使用进程组 `SIGSTOP`/`SIGCONT`，Production 容器通过明确的容器名执行 `docker pause`，批准时依次执行 `docker unpause` 与 `docker kill --signal CONT`，不能只依赖 stdout 背压。Runtime Approval 的幂等身份包含 Run、Attempt 和 Runtime Event Sequence；等待被取消或连续读取失败时，平台以 `system` 决策者类型自动拒绝，`decided_by` 与 Audit `actor_user_id` 保持为空，避免伪装成用户决定。
+## Secret
 
-## 身份与授权边界
+Model Provider API Key、Workflow Secret 环境变量、MCP Secret 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。执行时 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
 
-HTTP 只接受 Bearer Token，并通过 `backend/internal/biz/identity/application.TokenVerifier` 端口获得已经验证的 OIDC Subject 与 Organization Slug。部署可以选择显式 `deny_all` 或严格 YAML 配置的通用 OIDC Adapter；后者通过 Provider Discovery 和 JWKS 验证签名、Issuer、Audience、有效期、Subject 与 Organization Claim。JWKS 暂时不可用与未知签名 Key 分别映射为基础设施不可用和未认证，不使用可伪造的组织 Header 或开发后门。`GET /v1/me` 根据已验证身份从 PostgreSQL 引导 User、Organization、Role Grant 与可访问 Team 的安全投影；Organization 范围 Grant 可见本 Organization 的全部 Team，Team 范围 Grant 只投影对应 Team。
+## 数据库
 
-Run 读取同时校验 Organization 和 Team 范围。Organization 级 Role Grant 覆盖该 Organization 内的 Team，Team 级 Role Grant 只覆盖对应 Team；跨 Organization 一律拒绝。Runtime Image、Model Catalog、Source Control Provider 与 Repository Binding 写入只允许 Organization 级 Platform Administrator，Team 级管理员不能修改这些治理配置。
-
-## Runtime Catalog 聚合边界
-
-Runtime Image 属于一个 Organization。读取、注册、状态治理和被 Agent/Repository Binding 引用时都必须使用同一个 Organization 范围；同一 Repo Digest 可以分别注册在不同 Organization，但不得跨 Organization 可见或复用。注册后 Runtime、CLI Version、Adapter Version、Capabilities 与镜像 Repo Digest 不可变；更新必须注册新镜像。可变字段仅为 `experimental`、`production`、`blocked`、`deprecated` 状态和 Blocked Reason，并使用 Version 乐观锁。Deprecated 为不可逆终态；Blocked 必须携带原因。
-
-Runtime Image 只有在进入 `production` 时关联并验证对应的逻辑 Conformance Evidence Object Key，才能称为 Production Runtime；仅注册、声明 Capability 或提交任意 Object Key 不代表已通过验证。服务端从配置的 MinIO 或阿里云 OSS 读取 `application/x-tar` Evidence，核验对象 Size、SHA-256 和 `artifact-kind=production-conformance`，再解析唯一的 `scenario-summary.json`；其中 Runtime、镜像 RepoDigest、CLI Version、Capability、强杀恢复、Interrupt、Cancel、Timeout、Review Branch 及 MinIO/阿里云 OSS Snapshot 必须与注册记录和 Production Conformance 契约一致。验证通过后同时保存逻辑 Object Key 与当时对象内容的 SHA-256，形成不可变证据快照；不保存 Provider URL 或签名参数。Blocked 和 Deprecated 会保留此前的证据引用与摘要供审计，界面将其显示为“已记录证据”而非“无证据”。
-
-Runtime Image 列表按 Runtime、注册时间倒序和 ID 提供确定性排序，并通过不透明 `page_token` 分页；默认每页 20 条，单页最多 100 条。注册请求必须声明 `Idempotency-Key`，状态变更同时声明 `Idempotency-Key` 与 `If-Match`，这些 Header 是生成 OpenAPI 契约的一部分。
-
-从旧版 Runtime Catalog 升级时，如果数据库已有 Runtime Image 且存在多个 Organization，平台不会猜测归属；如果已有 `production` 记录，也不会伪造证据。运维人员应先停写并备份数据库，再执行以下可审计的预迁移步骤，逐行填写真实 Organization 与已验证 Evidence，确认查询返回零行后再启动新版 API。Migration 使用 `ADD COLUMN IF NOT EXISTS`，因此失败后可按同一路径修复并安全重试：
-
-```sql
-ALTER TABLE runtime_images
-  ADD COLUMN IF NOT EXISTS organization_id uuid REFERENCES organizations(id),
-  ADD COLUMN IF NOT EXISTS conformance_evidence_key text,
-  ADD COLUMN IF NOT EXISTS conformance_evidence_sha256 text;
-
--- 按企业自己的归属清单逐行执行；禁止用任意默认 Organization 批量代填。
-UPDATE runtime_images
-SET organization_id = '<verified-organization-uuid>'
-WHERE id = '<runtime-image-uuid>' AND organization_id IS NULL;
-
--- 仅填写已由 Production Conformance 验证的逻辑 Key 与对象内容 SHA-256。
-UPDATE runtime_images
-SET conformance_evidence_key = '<verified-object-key>',
-    conformance_evidence_sha256 = '<lowercase-64-char-sha256>'
-WHERE id = '<production-runtime-image-uuid>' AND status = 'production';
-
-SELECT id, status FROM runtime_images
-WHERE organization_id IS NULL
-   OR status = 'production' AND (conformance_evidence_key IS NULL OR conformance_evidence_sha256 IS NULL);
-```
-
-Credential Profile 只保存符合 URI 形式的 Secret Manager 引用。Model Catalog 的读取接口只投影 Organization Scope、类型为 `model` 的 Credential Profile，避免 Team 范围凭证元数据跨 Team 暴露。Configured Model 必须绑定同 Organization、Organization Scope、类型为 `model` 且已启用的 Credential Profile；注册或从禁用状态重新启用 Configured Model 时，Repository 会锁定对应 Credential Profile 并在写入前重新检查这个约束，使并发禁用与模型写入串行。禁用 Credential Profile 会在同一个数据库事务内禁用引用它的 Configured Model；重新启用凭证不会自动重新启用模型。
-
-Repository Binding 保存 Git SSH 地址以及 SSH/Build Credential Profile 的安全引用，不保存或返回私钥、`known_hosts` 内容和构建 Secret。注册与更新先校验 Organization/Team、凭证 Kind/Scope、Runtime、模型和 Provider 引用；显式 Validation 会按当前依赖状态重新检查 Provider、仓库 Host、Credential、Production Runtime、Required Runtime Capabilities、Configured Model、Model Budget 和结构化质量命令，并以字段为 Key 保存可定位的 Validation Report。每个 Allowed Runtime Image 都必须提供 Binding 声明的全部 Required Runtime Capabilities。配置更新清除旧报告，依赖禁用后再次验证会如实变为失败。Agent Draft 对所选 Runtime 的额外 Capability 要求及其相对 Repository Binding 的预算收紧由 Draft Validation 继续校验。
-
-## 幂等写事务
-
-所有 POST/PATCH 要求 `Idempotency-Key`，可变资源额外要求 `If-Match` Version。`backend/internal/data/controlplane/gormuow` 在同一个 PostgreSQL Transaction 内提供事务作用域服务；Coding Task Launch/Continue、Run Completion 与 Run Approval 由 `backend/internal/biz/workflow` 端口和 `backend/internal/data/workflow/gormtx` 适配器协调：
-
-1. 通过 Organization、Key、Operation 获取行锁；
-2. 校验原始请求 Body 与 Version 的 SHA-256；
-3. 执行对应限界上下文 Application Service；
-4. 保存 HTTP Status 和脱敏后的 JSON Response Snapshot；
-5. 追加不含请求/响应正文的 Audit Event，并在配置 Webhook 时创建待投递的安全元数据事件；
-6. 一次提交 Key、领域变更、Audit Event、Webhook Delivery 和响应。
-
-并发相同请求只有一个 Handler 执行，其余请求重放完全相同的持久化响应。相同 Key/Operation 配合不同请求哈希返回 Conflict；领域事务失败时 Key 占位也回滚。
-
-## 配置边界
-
-API 与 Worker 使用同一份严格 YAML Schema，由 `backend/internal/conf` 经 Kratos Config Source/Load/Scan 接入，并复用 `backend/internal/platformconfig` 的 fail-closed 校验。启动流程会拒绝：
-
-- 未知字段；
-- 未设置的 `${ENV_VAR}`；
-- 空 DSN、空监听地址；
-- 非正数 Timeout、Reconcile Interval 或 Attempt 上限；
-- 不一致的数据库连接池上下限。
-
-Secret 不提交到 YAML；部署 YAML 只保存 `${ENV_VAR}` 占位符。MinIO 与阿里云 OSS 使用不同的部署 YAML，Object Store Provider 仍通过统一领域端口供上层使用。
-
-## Webhook 投递边界
-
-Webhook Delivery 是持久化投递单元。Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 原子领取并持有 Delivery Lease；崩溃后由后续 Worker 回收过期 Lease。非 2xx 响应按指数退避重试，达到上限后进入 `cancelled`，不会无限重试。
-
-目标必须是无 User Info 的 HTTPS URL。请求体保持领域事件 JSON 的原始字节，签名为 `HMAC-SHA256(secret, timestamp + "." + payload)`，通过 `X-Agent-Platform-Timestamp` 和 `X-Agent-Platform-Signature: sha256=<hex>` 传递；Delivery ID 和 Event Type 使用独立 Header。HTTP 响应 Body 不写入错误或日志。
-
-Webhook Worker 默认关闭，启用时严格校验 HTTPS `target_url`、请求超时、Delivery Lease、退避上限、Attempt 上限和至少 32 字节的环境注入 Signing Secret。Control Plane 幂等写入已在同一事务内创建 Audit Event 和 Webhook Delivery；幂等重放不重复创建。Task、Run 等后续上下文仍必须在各自业务事务中接入事件源，不能仅因投递器存在而视为已交付。
-
-## Web 产品边界
-
-`frontend` 是独立的 Vue + TypeScript Interface Adapter，提供 Agent Studio、Conversation Workspace 和 Operations Console 三个产品界面。前端使用生成的 OpenAPI 类型，不复制服务端领域模型，也不承担授权、幂等或状态机不变量。
-
-页面只在未认证状态调用无身份的健康接口；受保护界面在 OIDC Authorization Code + PKCE 完成并且 `GET /v1/me` 成功前不会渲染。OIDC 状态与 Token 仅保存在浏览器 `sessionStorage`，刷新时重新引导当前 User，Token 过期或退出后立即隐藏受保护界面。Agent Studio、Conversation Workspace 与 Operations Console 使用真实路由，active Team 通过 `team` 查询参数从启动上下文 allowlist 中选择，不使用 Team Header。切换 Team 会通过带 Team Key 的路由视图销毁旧页面状态。展示边界支持 `zh-CN` 与 `en-US`，语言偏好可写入 `localStorage`，但 Token 和 Secret 不得写入。导航可按 Role Grant 提示可用能力，所有业务操作仍由服务端根据 Organization、Team 和 Role Grant 做最终授权。
-
-## Retention 边界
-
-Retention Worker 按严格 YAML 策略分批清理过期 Run Event、Artifact、Audit Event 和 Idempotency Key。Artifact 遵循“先删除 Object Store 对象，再软删除 PostgreSQL 元数据”的顺序；对象删除失败时保留元数据以便下次重试，对象已经不存在则按幂等成功处理。
-
-默认配置关闭 Retention，防止开发环境或未完成对象存储验证的部署误删数据。启用时默认保留普通 Run Event 与 Artifact 90 天、安全与授权 Audit 一年；每轮批量上限为 500，避免长事务影响 Run 调度。`workspace_snapshot` Artifact 与 Session Docker Volume 按 Coding Task 关闭时间单独保留 30 天，删除成功后记录 `workspace_purged_at`；Volume 名称不符合平台 UUID 命名规则时拒绝执行 Docker 删除。
-
-## Run Event 展示边界
-
-Conversation Workspace 先通过同一个 Run SSE 连接重放历史事件，再持续接收实时事件。浏览器使用 `fetch` 在 `Authorization` Header 携带 Bearer Token，并以 `Last-Event-ID` 传递最后确认的 Sequence；Token 不进入查询参数。服务端在发送流 Header 前、以及每次事件读取前重新执行 Run Read 授权，事件 Envelope 包含 Run ID、Sequence、Event Type、Payload 与创建时间。客户端只接受同一 Run 从 Cursor 严格递增的事件，重连边界上的相同 Sequence 会去重；跳跃、回退、终态后的事件、认证失效或已结束 Run 缺少终态都作为显式合同错误处理。服务端在历史耗尽时读取 Run 状态验证终态完整性，并在满批次终态后额外检查下一页；唯一终态后停止连接。
-
-Attempt 只表示同一 Run 的基础设施执行历史，不创建新的用户意图。页面按计划、命令、文件、验证、Diff、Approval、错误、Usage、成本和终态呈现事件，同时展示 Release 冻结的 Runtime Capability。事件 Payload 的页面预览限制为 16384 个字符；完整大输出通过受治理的 Artifact 获取。
-
-## Artifact 边界
-
-Runtime stdout/stderr 先以 Attempt 唯一对象键写入 Object Store，再在 PostgreSQL 创建 Artifact 元数据；元数据提交失败时补偿删除刚上传的对象，避免无法授权和追溯的孤儿数据。重试 Attempt 不覆盖前一次输出。Artifact REST 只返回 ID、Run、Kind、大小、校验和、Content Type、安全 Metadata 和保留时间，不暴露 Provider Object Key；下载前按所属 Run 重新授权，并只签发五分钟访问地址。
-
-## Agent Lifecycle 聚合边界
-
-Agent 是 Team 范围的稳定身份；Agent Draft 是可编辑、可验证的版本；Agent Release 是发布时冻结的不可变快照。Agent Studio 的 Agent Catalog、Agent 详情以及 Draft 列表和详情都通过 Team-scoped API 读取；服务端同时使用认证身份的 Organization 和请求 Team 查询聚合，使跨 Team 查询与不存在资源返回相同的 Not Found 语义。Draft 表单中的 Repository Binding、Runtime Image 与 Configured Model 来自各自的真实目录 API，不使用浏览器内置样例。
-
-Agent 和 Draft 创建、Draft 编辑与验证都要求 `Idempotency-Key`；编辑和验证还要求 `If-Match` 传递期望 Version。相同意图重试复用 Key，而输入或 Version 变化形成新意图。Draft 每次编辑都会递增 Version、回到 `draft` 状态并清除旧 Validation Report；Version 不匹配返回显式 Precondition Failed，浏览器保留安全表单输入并重新加载权威 Version，不静默覆盖。
-
-Draft Validation 使用当前 Repository Binding、Runtime Image 和 Configured Model 投影生成字段级 Validation Report。它会检查 Binding 的最新 Validation Report（其中包含 Git SSH、Credential、Egress、Required Runtime Capabilities 与质量命令结果）、Runtime allowlist 与 Production 状态、Configured Model 策略与启用状态、Draft 相对 Binding 收紧的 Model Budget，以及原生 Subagent 所需 Runtime Capability。发布时不仅检查此前验证结果，还会在幂等写事务内锁定 Binding、Provider、Credential Profile、Runtime Image 与 Configured Model 的依赖行并重新执行同一验证，依赖在验证后被禁用或变更时发布会 fail closed。
-
-低风险 Draft 验证成功后可直接发布。启用 Runtime Subagent 等高风险能力时必须先申请 Release Approval，由另一名具有相应 Team 权限的 Agent Builder 决定；申请记录包含申请人、精确 Draft Version 和风险原因，申请人不能自批，Draft 编辑后旧审批不会授权新版本。Release Approval 使用 Agent Draft 路由和聚合；它不复用、也不改变 Run Approval 的路由、状态机或职责。
-
-同一 Draft 只能产生一个 Agent Release；相同发布意图的网络重试从 Idempotency Key 记录重放同一响应。Release 冻结 Configuration、Model Budget、Repository Binding（含质量命令、Egress 与 Required Runtime Capabilities）、Runtime Image RepoDigest 与 Capability、Configured Model，以及高风险审批证据，发布后不再从可变目录拼装这些字段。Release 内容不可修改，仅允许使用 Version 乐观锁进入 `deprecated` 或 `blocked` 状态；Blocked 必须记录原因。Agent Builder 可完成常规生命周期操作，Release Block 仅允许 Organization 级 Platform Administrator。
-
-从未保存上述冻结字段的旧版 Agent Lifecycle 升级时，Migration 不会用当前可变目录冒充历史发布快照，也不会猜测 Release Approval 或 Block 原因。运维人员必须先停写并备份数据库，依据发布审计记录逐个 Release 回填发布当时的真实值；无法证明的历史记录必须先隔离或保留在旧系统，不能迁入为可执行 Release。Migration 使用 `ADD COLUMN IF NOT EXISTS`，失败后可执行以下预迁移骨架并安全重试：
-
-```sql
-ALTER TABLE agent_release_approvals ADD COLUMN IF NOT EXISTS risk_reason text;
-ALTER TABLE agent_releases
-  ADD COLUMN IF NOT EXISTS release_risk text,
-  ADD COLUMN IF NOT EXISTS repository_binding_snapshot jsonb,
-  ADD COLUMN IF NOT EXISTS runtime_image_snapshot jsonb,
-  ADD COLUMN IF NOT EXISTS configured_model_snapshot jsonb,
-  ADD COLUMN IF NOT EXISTS approval_evidence jsonb,
-  ADD COLUMN IF NOT EXISTS blocked_reason text;
-
--- 以下值必须来自发布时审计记录；禁止从当前 Repository Binding、Runtime 或 Model 批量拼装。
-UPDATE agent_release_approvals
-SET risk_reason = '<audited-risk-reason>'
-WHERE id = '<approval-uuid>' AND risk_reason IS NULL;
-
-UPDATE agent_releases
-SET release_risk = '<low-or-high>',
-    repository_binding_snapshot = '<audited-binding-json>'::jsonb,
-    runtime_image_snapshot = '<audited-runtime-json>'::jsonb,
-    configured_model_snapshot = '<audited-model-json>'::jsonb,
-    approval_evidence = NULL, -- 高风险 Release 改为与精确审批行一致的审计 JSON。
-    blocked_reason = NULL     -- Blocked Release 改为真实审计原因。
-WHERE id = '<release-uuid>' AND release_risk IS NULL;
-
-SELECT id FROM agent_release_approvals
-WHERE risk_reason IS NULL OR length(btrim(risk_reason)) = 0;
-SELECT id FROM agent_releases
-WHERE release_risk IS NULL
-   OR repository_binding_snapshot IS NULL
-   OR runtime_image_snapshot IS NULL
-   OR configured_model_snapshot IS NULL
-   OR release_risk = 'high' AND approval_evidence IS NULL
-   OR status = 'blocked' AND (blocked_reason IS NULL OR length(btrim(blocked_reason)) = 0);
-```
-
-## Coding Task 启动边界
-
-Agent User 从当前 Team 的已发布 Agent Release 与验证通过的 Repository Binding 启动 Coding Task。自由文本直接形成任务请求；Issue 输入在创建时复制标题、正文和可选链接为不可变 Issue Snapshot，后续不与外部 Issue 同步。浏览器只展示当前 Team 中 Release 状态为 `released`、Runtime 仍为 `production`、Configured Model 仍启用且 Repository Binding 当前验证有效的组合。
-
-创建操作要求 `Idempotency-Key`，并在 Control Plane 的幂等事务内调用 Collaboration → Workflow seam：同一个 PostgreSQL Transaction 依次创建 Coding Task、唯一 Session、稳定 Review Branch、首条用户消息、首个 Queued Run 与初始 Run Event；任一写入失败会整体回滚。相同 Key 和请求重放持久化响应，相同 Key 携带不同请求返回冲突，不会创建第二个 Task、Session 或 Run。
-
-事务内的 Launch 解析会按 Organization 和 Team 锁定/读取 Agent Release 及当前依赖，并 fail closed 检查 Release、Production Runtime、Configured Model 与模型 Credential、Repository Binding Validation、Source Control Provider、Git SSH Credential 和全部 Build Credential。Credential 行按 ID 有序加共享锁，避免并发禁用穿透启动事务；执行用 Model ID、Endpoint、Credential Profile、Git/Build Credential、仓库、Runtime RepoDigest、Capability 和质量命令均来自不可变 Release Snapshot，实时目录只决定当前是否仍允许启动。旧 Release 缺少这些可审计凭证快照时，追加 Migration 拒绝升级，不从当前目录猜测历史值。API 的 Team-scoped Launch Catalog 只返回当前可启动的 Release/Binding 组合，并对 Runtime、模型和 Repository Binding 不可用返回不同的安全前置条件；跨 Team 或跨 Organization Release/Task 使用与不存在资源相同的不可用或 Not Found 语义。
-
-Conversation Workspace 把选中的 Coding Task ID 写入 URL 查询参数。直接 URL、刷新和重新登录都通过真实 Team-scoped Task、Session、Run 查询恢复同一个业务上下文，并从不可变 Agent Release 投影展示发布时的 Runtime RepoDigest、Configured Model 和 Repository Binding；浏览器内存中的创建响应不是恢复正确性的前提。
-
-每个 Run 的终态与 Coding Task 投影在同一个 Workflow Transaction 中提交。`completed`、`failed`、`cancelled` 或 `killed` 都会追加带真实终态的 Session Message，并把仍为 `active` 的 Coding Task 转为 `waiting_for_user`；失败或取消 Run 不会替人类关闭任务。后续指令以 `If-Match` 同时校验 Task 与 Session Version，在原 Session、Repository Binding、目标分支、Review Branch 和 Workspace 上创建新的 Run；`Attempt` 始终留在 Run 内，不成为新的用户协作轮次。只有用户显式操作才能把 Coding Task 转为 `completed` 或 `cancelled`。
-
-Session Memory、Memory Candidate 与 Agent Memory 使用独立持久语义。每个新 Run 在创建事务中冻结当前 Session Memory、最近的 Session Message 和同 Team/Agent 已启用的 Agent Memory，并与本轮用户指令一起作为 Runtime 输入；因此 Session Memory 跨 Run 连续，批准的 Agent Memory 也会影响同一 Agent 的后续 Coding Task。Runtime 投影始终完整保留 Session Summary，并在 50 KB 预算内按 Workspace Snapshot、Result、Confirmed Decision 的顺序丢弃最旧条目；历史 Session Message 也只丢最旧记录，从而保证所有 Domain 合法的 Session Memory 和 100 KB 用户指令都能继续创建 Run。Memory Candidate 的批准或拒绝采用单终态并发决策，只有批准事务才原子创建 Team/Agent-scoped Agent Memory。Agent Memory 不是自由文本：候选创建、批准和编辑只接受平台定义的结构化 Operating Policy 枚举，其他内容全部拒绝，从语法上排除源代码、Credential/Secret 和模型私有推理进入跨任务持久记忆。Agent Memory 更新和删除要求 `Idempotency-Key` 与 `If-Match`，跨 Team 查询使用 Not Found 语义。
-
-镜像内 Git Workflow 在 Commit 和 Review Branch Push 成功后以 `agent-platform-event` 协议产生 `workflow.delivered` 标准事件，Payload 保存真实 `review_branch`、`commit` 与 `changed_files`。所有 Runtime 与质量命令的 stdout/stderr 先经过保留前缀转义器，子进程不能写入可信平台协议通道；协议还严格校验 Commit、Branch、路径，并在持久化前比对 Run 冻结的 Review Branch。Workspace 只从通过该合同的持久化 `workflow.delivered` Event 展示交付证据。
-
-Operations Console 的 Run Operator 写边界复用 Control Plane 幂等事务。Interrupt、Cancel、Kill 与基础设施恢复都要求 `Idempotency-Key` 和当前 `If-Match`；Kill 与恢复另外要求 3–500 字节的安全原因。Operator 不拥有 Resume 或 Approval 决策权限。Kill 在同一事务中终结 Attempt、删除 Run Lease 与 Workspace Write Lease、写入唯一 `run.killed` 终态，并生成 Audit Event、Webhook Delivery 和持久化幂等响应。
-
-基础设施恢复不重新打开已经产生终态 Event 的 Run。Worker Lease 自动重试耗尽后，Run 进入非终态 `recovery_required` 并写入 `run.recovery_required`；只有最后一次 Attempt 为 `failed/lost` 且 `infrastructure_failure=true` 时，Operator 才能记录原因并将其转回 `resuming`。应用错误、策略错误以及 `completed`、`failed`、`cancelled` 终态全部 fail closed。Audit 查询始终按 Organization 和 Team 授权，可按 actor、operation、resource、outcome 和时间过滤；响应只包含资源关联、状态、actor 类型、Idempotency Key 和响应状态等安全元数据，不包含请求/响应正文、Token 或 Secret。
+当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。

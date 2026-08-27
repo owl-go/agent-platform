@@ -3,6 +3,8 @@ package codex
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -33,7 +35,26 @@ func (Driver) ParseVersion(output string) (string, error) {
 }
 
 func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.Invocation, error) {
-	args := []string{"exec"}
+	if len(request.ModelProtocols) > 0 && !request.SupportsModelProtocol("openai_responses") {
+		return cliadapter.Invocation{}, fmt.Errorf("Codex requires the OpenAI Responses protocol")
+	}
+	endpointValue := request.ModelEndpoint
+	if endpointValue == "" {
+		endpointValue = "https://api.openai.com/v1"
+	}
+	endpoint, err := url.Parse(endpointValue)
+	if err != nil || endpoint.Scheme != "https" || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return cliadapter.Invocation{}, fmt.Errorf("Codex model endpoint must be an HTTPS URL without credentials, query, or fragment")
+	}
+	args := []string{
+		"--strict-config",
+		"-c", `model_provider="agent_workspace"`,
+		"-c", `model_providers.agent_workspace.name="Agent Workspace"`,
+		"-c", "model_providers.agent_workspace.base_url=" + strconv.Quote(endpoint.String()),
+		"-c", `model_providers.agent_workspace.env_key="OPENAI_API_KEY"`,
+		"-c", `model_providers.agent_workspace.wire_api="responses"`,
+		"exec",
+	}
 	if request.CheckpointRef != "" {
 		args = append(args, "resume")
 	}
@@ -98,6 +119,7 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 			}}, nil
 		case "agent_message":
 			p.result.FinalMessage = envelope.Item.Text
+			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventMessageDelta, Payload: map[string]string{"delta": envelope.Item.Text}}}, nil
 		case "file_change":
 			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventFileChanged, Payload: map[string]any{"changes": envelope.Item.Changes}}}, nil
 		}

@@ -61,7 +61,10 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 	if err := os.WriteFile(promptPath, []byte(request.Instruction), 0o600); err != nil {
 		return cliadapter.Invocation{}, fmt.Errorf("write OpenClaw instruction: %w", err)
 	}
-	configPath := filepath.Join(scratchDirectory, "openclaw.json")
+	configPath := request.MCPConfigPath
+	if configPath == "" {
+		configPath = filepath.Join(scratchDirectory, "openclaw.json")
+	}
 	config := struct {
 		Plugins struct {
 			Allow            []string                   `json:"allow"`
@@ -74,12 +77,14 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 	config.Plugins.BundledDiscovery = "allowlist"
 	config.Plugins.Slots = map[string]string{"memory": "none"}
 	config.Plugins.Entries = map[string]map[string]bool{provider: {"enabled": true}}
-	encoded, err := json.Marshal(config)
-	if err != nil {
-		return cliadapter.Invocation{}, fmt.Errorf("encode OpenClaw runtime config: %w", err)
-	}
-	if err := os.WriteFile(configPath, append(encoded, '\n'), 0o600); err != nil {
-		return cliadapter.Invocation{}, fmt.Errorf("write OpenClaw runtime config: %w", err)
+	if request.MCPConfigPath == "" {
+		encoded, err := json.Marshal(config)
+		if err != nil {
+			return cliadapter.Invocation{}, fmt.Errorf("encode OpenClaw runtime config: %w", err)
+		}
+		if err := os.WriteFile(configPath, append(encoded, '\n'), 0o600); err != nil {
+			return cliadapter.Invocation{}, fmt.Errorf("write OpenClaw runtime config: %w", err)
+		}
 	}
 	return cliadapter.Invocation{Env: []string{"OPENCLAW_CONFIG_PATH=" + configPath}, Args: []string{
 		"agent",
@@ -105,6 +110,20 @@ type parser struct {
 func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.ParsedEvent, error) {
 	if stream == processharness.StreamStdout {
 		p.stdout = append(p.stdout, string(line))
+		var response struct {
+			Payloads []struct {
+				Text string `json:"text"`
+			} `json:"payloads"`
+		}
+		if json.Unmarshal(line, &response) == nil {
+			events := make([]cliadapter.ParsedEvent, 0, len(response.Payloads))
+			for _, payload := range response.Payloads {
+				if payload.Text != "" {
+					events = append(events, cliadapter.ParsedEvent{Kind: agentruntime.EventMessageDelta, Payload: map[string]string{"delta": payload.Text}})
+				}
+			}
+			return events, nil
+		}
 	} else if value := strings.TrimSpace(string(line)); value != "" {
 		if len(value) > 4096 {
 			value = value[len(value)-4096:]

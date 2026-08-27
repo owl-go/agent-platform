@@ -5,6 +5,10 @@ umask 077
 mkdir -p "${HOME}"
 if [ -n "${CODEX_HOME:-}" ]; then
   mkdir -p "${CODEX_HOME}"
+  rm -f "${CODEX_HOME}/config.toml" "${CODEX_HOME}/auth.json"
+  if [ -f "/run/agent-credentials/extensions/codex-config.toml" ]; then
+    ln -s "/run/agent-credentials/extensions/codex-config.toml" "${CODEX_HOME}/config.toml"
+  fi
 fi
 
 credential_root="/run/agent-credentials"
@@ -29,6 +33,12 @@ if [ -f "${credential_root}/git/id_ed25519" ]; then
     exit 2
   fi
   export GIT_SSH_COMMAND="ssh -i ${credential_root}/git/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=${credential_root}/git/known_hosts"
+fi
+
+# Runtime-native MCP configuration is copied only into the container tmpfs.
+# The source remains a read-only per-execution credential mount.
+if [ -d "${credential_root}/runtime-home" ]; then
+  cp -R "${credential_root}/runtime-home/." "${HOME}/"
 fi
 
 exec "$@"
