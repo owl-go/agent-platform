@@ -145,10 +145,10 @@ api_request "${ordinary_token}" PATCH "/api/v1/sessions/${ordinary_session}/arch
 jq -e '.title == "Acceptance Session" and (.archived // false) == false and .version == 4' "${temporary_directory}/session-restored.json" >/dev/null
 
 stage settings-and-expert
-profile_body="$(jq -nc --arg secret "${secret_canary}" '{name:"Acceptance Model",model_id:"test/model",endpoint:"https://127.0.0.1:1/v1?intentional_failure=1",secret:$secret}')"
-api_request "${ordinary_token}" POST /api/v1/model-profiles "${profile_body}" "${temporary_directory}/profile.json"
-profile_id="$(jq -er '.id' "${temporary_directory}/profile.json")"
-settings_body="$(jq -nc --arg profile "${profile_id}" '{personality:"direct_efficient",personality_instructions:"",default_model_profile_id:$profile,default_runtime_engine:"codex",language:"zh-CN",timezone:"Asia/Shanghai",expected_version:1}')"
+provider_body="$(jq -nc --arg secret "${secret_canary}" '{name:"Acceptance Provider",provider_type:"alibaba_bailian",endpoint:"https://dashscope.aliyuncs.com/compatible-mode/v1",protocols:["openai_responses","openai_chat","anthropic_messages"],api_key:$secret}')"
+api_request "${ordinary_token}" POST /api/v1/model-provider-connections "${provider_body}" "${temporary_directory}/provider.json"
+provider_model_id="$(jq -er '.models | map(select(.available == true))[0].id' "${temporary_directory}/provider.json")"
+settings_body="$(jq -nc --arg model "${provider_model_id}" '{personality:"direct_efficient",personality_instructions:"",runtime_model_defaults:[{runtime_engine:"codex",provider_model_id:$model}],default_runtime_engine:"codex",language:"zh-CN",timezone:"Asia/Shanghai",expected_version:1}')"
 api_request "${ordinary_token}" PATCH /api/v1/settings "${settings_body}" "${temporary_directory}/settings.json"
 
 api_request "${ordinary_token}" POST /api/v1/experts '{"expert":{"name":"Acceptance Expert","description":"Optional expert","mcp_server_ids":[],"skill_ids":[]}}' "${temporary_directory}/expert.json"
@@ -177,14 +177,14 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [[ "${cancelled_message_state}" == cancelled ]]
-workflow_body="$(jq -nc --arg profile "${profile_id}" --arg expert "${expert_id}" --arg secret "${secret_canary}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,model_profile_id:$profile,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",value:$secret,secret:true,configured:true}]}}')"
+workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg expert "${expert_id}" --arg secret "${secret_canary}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",value:$secret,secret:true,configured:true}]}}')"
 stage workflow-and-workspace
 api_request "${ordinary_token}" POST /api/v1/workflows "${workflow_body}" "${temporary_directory}/workflow.json"
 workflow_id="$(jq -er '.id' "${temporary_directory}/workflow.json")"
 assert_status 404 "${admin_token}" "/api/v1/workflows/${workflow_id}/runs"
 assert_status 404 "${admin_token}" "/api/v1/workflows/${workflow_id}/artifacts"
 schedule_minute="$((10#$(date -u -d '1 minute' +%M)))"
-scheduled_workflow_body="$(jq -nc --arg profile "${profile_id}" --arg expert "${expert_id}" --argjson minute "${schedule_minute}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,model_profile_id:$profile,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",secret:true,configured:true}],schedule:{enabled:true,frequency:"hourly",hour:0,minute:$minute,weekday:0,timezone:"UTC"}},expected_version:1}')"
+scheduled_workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg expert "${expert_id}" --argjson minute "${schedule_minute}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",secret:true,configured:true}],schedule:{enabled:true,frequency:"hourly",hour:0,minute:$minute,weekday:0,timezone:"UTC"}},expected_version:1}')"
 api_request "${ordinary_token}" PATCH "/api/v1/workflows/${workflow_id}" "${scheduled_workflow_body}" "${temporary_directory}/workflow-scheduled.json"
 
 api_request "${ordinary_token}" POST "/api/v1/workflows/${workflow_id}/workspace/directories" '{"path":"notes"}' "${temporary_directory}/directory.json"

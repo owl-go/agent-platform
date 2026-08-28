@@ -50,7 +50,7 @@ curl --fail http://127.0.0.1/api/readyz
 
 Set `PUBLIC_HOST` to a DNS name whose A/AAAA record reaches the Worker, allow inbound TCP 80/443 and UDP 443, and set all OIDC URLs to that exact HTTPS origin. `Dockerfile.web` consumes the four `VITE_OIDC_*` values at build time; API and Worker consume `platform.https.yaml` at startup. They are configuration, not source-code constants.
 
-`MODEL_RELAY_UPSTREAM` optionally points at a host-local HTTP model gateway. Caddy exposes it only through the authenticated `/model-relay/` TLS route, so Model Profile Secrets are not sent over public plaintext HTTP.
+`MODEL_RELAY_UPSTREAM` optionally points at a host-local HTTP model gateway. Caddy exposes it only through the authenticated `/model-relay/` TLS route, so Model Provider API Keys are not sent over public plaintext HTTP.
 
 The Keycloak realm import is deployment-owned because it contains bootstrap users. Store it outside the repository at `OIDC_REALM_FILE`. The realm must provide:
 
