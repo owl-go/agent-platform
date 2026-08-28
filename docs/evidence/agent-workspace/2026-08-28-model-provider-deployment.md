@@ -4,17 +4,17 @@
 
 - Host: `47.237.108.63`
 - Public origin: `https://47-237-108-63.sslip.io`
-- Product revision: `68a4741` (`79b3cf3` Agent Workspace release plus the maintained-catalog panic fix)
-- Release directory: `/opt/agent-platform/src.release-68a4741`
+- Product revision: `e8da914` (`79b3cf3` Agent Workspace release plus model-provider fixes)
+- Release directory: `/opt/agent-platform/src.release-e8da914`
 - Pre-deployment backup: `/opt/agent-platform/backups/20260828-074618-pre-79b3cf3`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
 
 ## Deployed images
 
-- API: `sha256:c19aa2c61bff190ab173dc2de30bee691013b7277347eba869d2dddeb3bfeb02`
-- Worker: `sha256:63e844a060d04f54921918fcf23f1c2005b7afd049ef2b4f07c22720fc5d8350`
-- Web: `sha256:a293008481e8d2e16e6754ce5bd37fbbf680bc0cc1de0c84fd058d21ca162d13`
+- API: `sha256:be139d6f9f62bd70f2e72812425603375f07f0fe071ddbf9e510a7944ad09794`
+- Worker: `sha256:01af34799bcb0afe7c56f20dc16027a89aeabe11b1d6f7d7e157cc34610656cb`
+- Web: `sha256:4a0cf9b15cf377cfef0d447003a485f329daf3b79da1e6761f09764e0f331623`
 
 ## Migration
 
@@ -37,12 +37,15 @@ The previously applied `000001`–`000004` checksums matched the release before 
 - Authenticated administrator projection succeeded.
 - Model Provider presets include OpenAI, Anthropic, and Alibaba Bailian.
 - A temporary Alibaba Bailian connection imported the maintained catalog, remained explicitly `unverified`, and returned only write-only API Key state.
+- An authenticated temporary custom connection using an absolute HTTP Endpoint returned `200`, preserved write-only API Key state, and was deleted after verification.
 - A temporary Session message froze the selected Provider Model and Codex Runtime in its Response Snapshot.
 - The Worker claimed the message and reached the expected failed terminal state with a random invalid canary key.
 - The canary key was absent from API and Worker logs.
 - Temporary Session and Model Provider Connection rows were removed, and Keycloak Direct Access Grants were restored to disabled.
 
 During the first authenticated check, static catalog success exposed a nil-error panic in the service verification branch. The request left no product data, the regression was fixed in `68a4741`, full Go tests passed, and the check then completed successfully. API logs after the fixed container started contain no recovered panic.
+
+The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-save success, failure, and in-progress states visible in the Web editor. Its domain and component regression tests passed before deployment. After cutover, API, Worker, and Web were healthy, the served asset was `assets/index-CA3y2En_.js`, and recent API/Worker logs contained no panic or error-level entry.
 
 ## Evidence boundary
 
