@@ -4,17 +4,17 @@
 
 - Host: `47.237.108.63`
 - Public origin: `https://47-237-108-63.sslip.io`
-- Product revision: `5c572be` (`79b3cf3` Agent Workspace release plus model-provider, feedback, and model-catalog fallback fixes)
-- Release directory: `/opt/agent-platform/src.release-5c572be`
+- Product revision: `c0890c5` (`79b3cf3` Agent Workspace release plus model-provider, feedback, and model-catalog usability fixes)
+- Release directory: `/opt/agent-platform/src.release-c0890c5`
 - Latest pre-deployment backup: `/opt/agent-platform/backups/20260828-model-catalog-5c572be`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
 
 ## Deployed images
 
-- API: `sha256:a9a11cd7f18b62d1ce9e2d96114925aa53b830e9ccedc8094776150860e7cf3b`
+- API: `sha256:b164db23423ebeacea31ea27bb960a605900fb537568290db0aa032e8c0df67d`
 - Worker: `sha256:dd0b62d129ceff9b0263bdbccf25e596b7a66a659125786536179dfcf0dea288`
-- Web: `sha256:ff10d448ecff3d8a193395a365c00574e81c0dcd621808c3b9e0d9151a411e93`
+- Web: `sha256:6470ed528351bf86295120b53d650470d65496e337bb1b17539c2c99f35a9123`
 
 ## Migration
 
@@ -52,6 +52,8 @@ The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-sa
 The `2403d5d` Web-only follow-up standardizes transient success and failure feedback on one Toast component across Sessions, Workflows, Workflow detail, Experts, Settings, and User administration. The component provides success/error semantics, accessible live regions, manual dismissal, timed dismissal, responsive placement above modal layers, and reduced-motion behavior. All 44 frontend tests, TypeScript checking, and the production build passed before deployment. After the Web-only cutover, API, Worker, and Web remained healthy and the served asset was `assets/index-D3NPOGKa.js`.
 
 The `5c572be` follow-up tries each Model Provider Connection's `/models` endpoint first and falls back to that provider's platform-maintained defaults when the endpoint is unsupported or unusable. An authenticated refresh of the existing OpenAI connection at `http://47.237.108.63:3000/openai` exercised the real HTTP 404 path, stored `gpt-5.6-sol` as an available Provider Model, and cleared both verification and synchronization errors. The API correctly leaves the fallback connection `unverified`, because no provider response was verified. The API, Worker, and Web remained healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-C1QWxwlk.js`.
+
+The `c0890c5` usability follow-up reduces manual model entry to one localized Model field. The create request now accepts only the invocation identifier, and the service uses that value for both invocation and display instead of asking the User for a separate name. All 45 Web tests, the complete Go test suite, TypeScript checking, generated-contract verification, and production builds passed. After cutover, API and Web reported healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-B4k4h9Nr.js`.
 
 ## Evidence boundary
 
