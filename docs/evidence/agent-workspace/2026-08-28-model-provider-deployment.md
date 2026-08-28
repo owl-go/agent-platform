@@ -4,8 +4,8 @@
 
 - Host: `47.237.108.63`
 - Public origin: `https://47-237-108-63.sslip.io`
-- Product revision: `c0890c5` (`79b3cf3` Agent Workspace release plus model-provider, feedback, and model-catalog usability fixes)
-- Release directory: `/opt/agent-platform/src.release-c0890c5`
+- Product revision: `5891eff` (`79b3cf3` Agent Workspace release plus model-provider, feedback, model-catalog usability, and HTTP Runtime fixes)
+- Release directory: `/opt/agent-platform/src.release-5891eff`
 - Latest pre-deployment backup: `/opt/agent-platform/backups/20260828-model-catalog-5c572be`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
@@ -13,7 +13,7 @@ The backup contains PostgreSQL business and Keycloak custom-format dumps, the de
 ## Deployed images
 
 - API: `sha256:b164db23423ebeacea31ea27bb960a605900fb537568290db0aa032e8c0df67d`
-- Worker: `sha256:dd0b62d129ceff9b0263bdbccf25e596b7a66a659125786536179dfcf0dea288`
+- Worker: `sha256:9c719a2f177dbeba53f3d1b1ebba6adf90fcdf20351bd40c5134ce6b21c5568d`
 - Web: `sha256:6470ed528351bf86295120b53d650470d65496e337bb1b17539c2c99f35a9123`
 
 ## Migration
@@ -55,6 +55,8 @@ The `5c572be` follow-up tries each Model Provider Connection's `/models` endpoin
 
 The `c0890c5` usability follow-up reduces manual model entry to one localized Model field. The create request now accepts only the invocation identifier, and the service uses that value for both invocation and display instead of asking the User for a separate name. All 45 Web tests, the complete Go test suite, TypeScript checking, generated-contract verification, and production builds passed. After cutover, API and Web reported healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-B4k4h9Nr.js`.
 
+The `5891eff` Runtime follow-up aligns the Codex Driver with the product's absolute HTTP-or-HTTPS Endpoint contract while continuing to reject credentials, Query, Fragment, missing Host, and other schemes. A focused regression test reproduced the exact prior `Codex model endpoint must be an HTTPS URL` failure before the fix and passed afterward. Deployment probing then showed that the host-local upstream was healthy but Docker public-IP hairpin access from `agent-public-egress` was refused, so the existing OpenAI connection was switched to the deployment's controlled TLS Relay at `https://47-237-108-63.sslip.io/model-relay/openai`; Caddy still forwards it to the host-local HTTP upstream. A temporary authenticated Codex Session using `gpt-5.6-sol` reached `completed` with non-empty content, was deleted afterward, and Direct Access Grants returned to disabled. API and Worker remained healthy with no error-level log entry.
+
 ## Evidence boundary
 
-This verification proves deployment, migration, authenticated Model Provider management, `/models` failure fallback, Session Response Snapshot persistence, Worker claiming, explicit Runtime failure, cleanup, and Secret-log absence. It does not claim a successful response from an external provider's `/models` endpoint or a billable model invocation, and it does not replace four-Runtime production Conformance for the deployed image digests.
+This verification proves deployment, migration, authenticated Model Provider management, `/models` failure fallback, Session Response Snapshot persistence, Worker claiming, one successful Codex model invocation through the controlled Relay, cleanup, and Secret-log absence. It does not claim a successful response from the upstream provider's `/models` endpoint, and it does not replace four-Runtime production Conformance for the deployed image digests.
