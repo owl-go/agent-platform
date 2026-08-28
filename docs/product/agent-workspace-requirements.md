@@ -210,7 +210,7 @@ Run metadata and final text/JSON results are retained without a time limit in th
 - A User may add personality guidance to any preset; custom requires guidance.
 - The selected Personality applies globally to Session responses and Workflow Runs.
 - Model configuration uses User-owned Model Provider Connections rather than individual Model Profiles. One User may create multiple named connections for the same built-in or custom OpenAI-compatible provider.
-- A connection contains provider type, editable Endpoint, supported Model API Protocols, and a write-only API Key. Built-in official Endpoints are prefilled; editing one marks the connection as a custom, unverified Endpoint.
+- A connection contains provider type, editable absolute HTTP or HTTPS Endpoint, supported Model API Protocols, and a write-only API Key. Built-in official Endpoints are prefilled; editing one marks the connection as a custom, unverified Endpoint. HTTP supports trusted private or self-hosted gateways; because it does not encrypt API Keys or model traffic in transit, the User is responsible for using it only on a trusted network.
 - Initial built-ins are OpenAI, Anthropic, Google Gemini, xAI, DeepSeek, Alibaba Model Studio, Volcengine Ark, Moonshot, Zhipu, and MiniMax, plus a custom OpenAI-compatible connection.
 - Built-in connections preset their supported protocols. A custom connection explicitly selects one or more of OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
 - Saving a connection verifies it through a non-billable model-list or metadata request where available and imports the account-visible model catalog. Providers without a stable model-list API use a maintained platform catalog and allow manual model identifiers. Users can refresh explicitly.

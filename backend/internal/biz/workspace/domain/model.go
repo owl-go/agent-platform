@@ -423,8 +423,12 @@ func ValidateModelProviderConnection(name, providerType, endpoint string, protoc
 		return fmt.Errorf("%w: unsupported model provider", ErrInvalid)
 	}
 	parsed, err := url.Parse(strings.TrimSpace(endpoint))
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("%w: Model Endpoint must be an absolute HTTPS URL", ErrInvalid)
+	scheme := ""
+	if parsed != nil {
+		scheme = strings.ToLower(parsed.Scheme)
+	}
+	if err != nil || parsed == nil || (scheme != "http" && scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("%w: Model Endpoint must be an absolute HTTP or HTTPS URL", ErrInvalid)
 	}
 	if len(protocols) == 0 || len(protocols) > 4 {
 		return fmt.Errorf("%w: at least one Model API Protocol is required", ErrInvalid)

@@ -30,19 +30,18 @@ func TestMCPHTTPAuthenticationIsNarrow(t *testing.T) {
 	}
 }
 
-func TestModelProviderConnectionRequiresHTTPSAndKnownProtocols(t *testing.T) {
-	valid := func() error {
-		return ValidateModelProviderConnection("Primary", "openai", "https://api.openai.com/v1", []string{"openai_responses"}, "secret", true)
-	}
-	if err := valid(); err != nil {
-		t.Fatalf("valid Provider Connection rejected: %v", err)
+func TestModelProviderConnectionRequiresHTTPAndKnownProtocols(t *testing.T) {
+	for _, endpoint := range []string{"https://api.openai.com/v1", "http://model-gateway.internal/v1"} {
+		if err := ValidateModelProviderConnection("Primary", "openai", endpoint, []string{"openai_responses"}, "secret", true); err != nil {
+			t.Fatalf("valid Provider Connection %q rejected: %v", endpoint, err)
+		}
 	}
 	for _, test := range []struct {
 		name      string
 		endpoint  string
 		protocols []string
 	}{
-		{name: "plain HTTP", endpoint: "http://api.example.test/v1", protocols: []string{"openai_responses"}},
+		{name: "unsupported scheme", endpoint: "ftp://api.example.test/v1", protocols: []string{"openai_responses"}},
 		{name: "userinfo", endpoint: "https://secret@api.example.test/v1", protocols: []string{"openai_responses"}},
 		{name: "query", endpoint: "https://api.example.test/v1?token=secret", protocols: []string{"openai_responses"}},
 		{name: "unknown protocol", endpoint: "https://api.example.test/v1", protocols: []string{"vendor_magic"}},
