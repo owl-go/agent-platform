@@ -22,15 +22,15 @@ func TestDiscoverOpenAICompatibleModels(t *testing.T) {
 	defer server.Close()
 
 	connection := domain.ModelProviderConnection{ProviderType: "custom_openai", Endpoint: server.URL + "/v1", Protocols: []string{"openai_responses"}}
-	models, err := New(server.Client()).Discover(context.Background(), connection, "secret")
+	result, err := New(server.Client()).Discover(context.Background(), connection, "secret")
 	if err != nil {
 		t.Fatalf("discover models: %v", err)
 	}
-	if len(models) != 2 || models[0].ModelID != "embed-model" || models[0].ModelType != "embedding" {
-		t.Fatalf("unexpected models: %#v", models)
+	if result.Source != "provider" || len(result.Models) != 2 || result.Models[0].ModelID != "embed-model" {
+		t.Fatalf("unexpected result: %#v", result)
 	}
-	if models[1].Compatibility[1].RuntimeEngine != domain.RuntimeCodex || models[1].Compatibility[1].Status != "unverified" {
-		t.Fatalf("unexpected compatibility: %#v", models[1].Compatibility)
+	if result.Models[1].Compatibility[1].RuntimeEngine != domain.RuntimeCodex || result.Models[1].Compatibility[1].Status != "unverified" {
+		t.Fatalf("unexpected compatibility: %#v", result.Models[1].Compatibility)
 	}
 }
 
@@ -43,31 +43,29 @@ func TestDiscoverGeminiModels(t *testing.T) {
 	}))
 	defer server.Close()
 
-	models, err := New(server.Client()).Discover(context.Background(), domain.ModelProviderConnection{ProviderType: "google_gemini", Endpoint: server.URL, Protocols: []string{"gemini"}}, "secret")
+	result, err := New(server.Client()).Discover(context.Background(), domain.ModelProviderConnection{ProviderType: "google_gemini", Endpoint: server.URL, Protocols: []string{"gemini"}}, "secret")
 	if err != nil {
 		t.Fatalf("discover Gemini models: %v", err)
 	}
-	if len(models) != 1 || models[0].ModelID != "gemini-test" || models[0].ModelType != "text" {
-		t.Fatalf("unexpected models: %#v", models)
+	if result.Source != "provider" || len(result.Models) != 1 || result.Models[0].ModelID != "gemini-test" {
+		t.Fatalf("unexpected result: %#v", result)
 	}
 }
 
-func TestMaintainedCatalogDoesNotCallProvider(t *testing.T) {
-	catalog := New(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
-		t.Fatal("maintained catalog must not call a provider list endpoint")
-		return nil, nil
-	})})
-	models, err := catalog.Discover(context.Background(), domain.ModelProviderConnection{ProviderType: "alibaba_bailian", Protocols: []string{"openai_responses"}}, "secret")
+func TestDiscoverFallsBackToProviderDefaultsWhenModelsEndpointIsUnsupported(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	result, err := New(server.Client()).Discover(context.Background(), domain.ModelProviderConnection{ProviderType: "openai", Endpoint: server.URL, Protocols: []string{"openai_responses"}}, "secret")
 	if err != nil {
-		t.Fatalf("discover maintained models: %v", err)
+		t.Fatalf("fall back to defaults: %v", err)
 	}
-	if len(models) == 0 || models[0].Compatibility[1].Status != "unverified" {
-		t.Fatalf("unexpected maintained models: %#v", models)
+	if result.Source != "default" || len(result.Models) == 0 || result.Models[0].ModelID != "gpt-5.6-sol" {
+		t.Fatalf("unexpected fallback result: %#v", result)
 	}
-}
-
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
-	return function(request)
+	if result.Models[0].Compatibility[1].Status != "unverified" {
+		t.Fatalf("unexpected compatibility: %#v", result.Models[0].Compatibility)
+	}
 }

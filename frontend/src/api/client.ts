@@ -21,9 +21,9 @@ export interface PersonalSettings { personality: Personality; personality_instru
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
 export type CompatibilityStatus = "verified" | "unverified" | "incompatible";
 export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; status: CompatibilityStatus; reason?: string }
-export interface ProviderModel { id: string; connection_id: string; model_id: string; display_name: string; model_type: "agent" | "text" | "embedding" | "image" | "audio" | "unknown"; available: boolean; manually_added: boolean; compatibility: RuntimeModelCompatibility[] }
+export interface ProviderModel { id: string; connection_id: string; model_id: string; display_name: string; available: boolean; manually_added: boolean; compatibility: RuntimeModelCompatibility[] }
 export interface ModelProviderConnection { id: string; name: string; provider_type: string; endpoint: string; protocols: string[]; api_key_configured: boolean; verification_status: "verified" | "unverified" | "failed"; verification_error?: string; custom_endpoint: boolean; last_synced_at?: string; last_sync_error?: string; models: ProviderModel[]; created_at: string; updated_at: string; version: number }
-export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[]; dynamic_discovery: boolean }
+export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number }
@@ -83,7 +83,7 @@ export interface PlatformApi {
   updateModelProviderConnection(id: string, input: { name: string; endpoint: string; protocols: string[]; api_key?: string }, version: number, signal?: AbortSignal): Promise<ModelProviderConnection>;
   deleteModelProviderConnection(id: string, signal?: AbortSignal): Promise<void>;
   refreshProviderModels(id: string, signal?: AbortSignal): Promise<ModelProviderConnection>;
-  createProviderModel(connectionID: string, input: { model_id: string; display_name?: string; model_type: ProviderModel["model_type"] }, signal?: AbortSignal): Promise<ProviderModel>;
+  createProviderModel(connectionID: string, input: { model_id: string; display_name?: string }, signal?: AbortSignal): Promise<ProviderModel>;
   listMCPServers(signal?: AbortSignal): Promise<MCPServer[]>;
   createMCPServer(input: Record<string, unknown>, signal?: AbortSignal): Promise<MCPServer>;
   updateMCPServer(id: string, input: Record<string, unknown>, version: number, signal?: AbortSignal): Promise<MCPServer>;

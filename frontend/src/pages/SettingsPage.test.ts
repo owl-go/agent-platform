@@ -24,7 +24,7 @@ function apiStub(): PlatformApi {
   return {
     getSettings: vi.fn(async () => ({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1 })),
     listModelProviderConnections: vi.fn(async () => [connection]),
-    listModelProviderPresets: vi.fn(async () => [{ provider_type: "openai", display_name: "OpenAI", official_endpoint: "https://api.openai.com/v1", protocols: ["openai_responses", "openai_chat"], dynamic_discovery: true }]),
+    listModelProviderPresets: vi.fn(async () => [{ provider_type: "openai", display_name: "OpenAI", official_endpoint: "https://api.openai.com/v1", protocols: ["openai_responses", "openai_chat"] }]),
     listMCPServers: vi.fn(async () => []),
     listSkills: vi.fn(async () => []),
     listRuntimeEngines: vi.fn(async () => [{ name: "codex", available: true, native_resume: true, cli_version: "1.0.0" }]),
@@ -68,6 +68,18 @@ describe("SettingsPage model provider feedback", () => {
 
     expect(wrapper.find(".modal-layer").exists()).toBe(true);
     expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("保存失败");
+    wrapper.unmount();
+  });
+
+  it("adds a model without asking for a model type", async () => {
+    const api = apiStub();
+    const wrapper = await openConnectionEditor(api);
+    await wrapper.get('.modal-actions button[type="button"]').trigger("click");
+    await wrapper.get(".provider-actions .button:nth-child(2)").trigger("click");
+
+    expect(wrapper.get(".modal-card").text()).toContain("模型 ID");
+    expect(wrapper.get(".modal-card").text()).not.toContain("模型类型");
+    expect(wrapper.find(".modal-card select").exists()).toBe(false);
     wrapper.unmount();
   });
 });

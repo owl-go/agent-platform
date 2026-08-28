@@ -27,10 +27,18 @@ func New(client *http.Client) *Catalog {
 
 var _ application.ModelCatalog = (*Catalog)(nil)
 
-func (catalog *Catalog) Discover(ctx context.Context, connection domain.ModelProviderConnection, apiKey string) ([]domain.ProviderModel, error) {
-	if models, ok := maintainedModels(connection.ProviderType); ok {
-		return withCompatibility(models, connection.Protocols), nil
+func (catalog *Catalog) Discover(ctx context.Context, connection domain.ModelProviderConnection, apiKey string) (application.ModelCatalogResult, error) {
+	models, err := catalog.discoverProvider(ctx, connection, apiKey)
+	if err == nil && len(models) > 0 {
+		return application.ModelCatalogResult{Models: withCompatibility(models, connection.Protocols), Source: "provider"}, nil
 	}
+	if defaults, ok := defaultModels(connection.ProviderType); ok {
+		return application.ModelCatalogResult{Models: withCompatibility(defaults, connection.Protocols), Source: "default"}, nil
+	}
+	return application.ModelCatalogResult{}, err
+}
+
+func (catalog *Catalog) discoverProvider(ctx context.Context, connection domain.ModelProviderConnection, apiKey string) ([]domain.ProviderModel, error) {
 	endpoint, err := modelsEndpoint(connection)
 	if err != nil {
 		return nil, err
@@ -65,26 +73,48 @@ func (catalog *Catalog) Discover(ctx context.Context, connection domain.ModelPro
 	if err != nil {
 		return nil, err
 	}
-	return withCompatibility(models, connection.Protocols), nil
+	return models, nil
 }
 
-// Providers without a stable list endpoint use an intentionally small catalog.
-// Users can add regional/deployment-specific identifiers from the UI.
-func maintainedModels(providerType string) ([]domain.ProviderModel, bool) {
+// Defaults keep a connection usable when a provider does not expose /models.
+// Users can add deployment-specific identifiers from the UI.
+func defaultModels(providerType string) ([]domain.ProviderModel, bool) {
 	catalogs := map[string][]domain.ProviderModel{
+		"openai": {
+			{ModelID: "gpt-5.6-sol", DisplayName: "GPT 5.6 Sol", Available: true},
+		},
+		"anthropic": {
+			{ModelID: "claude-opus-4-1", DisplayName: "Claude Opus 4.1", Available: true},
+			{ModelID: "claude-sonnet-4", DisplayName: "Claude Sonnet 4", Available: true},
+		},
+		"google_gemini": {
+			{ModelID: "gemini-2.5-pro", DisplayName: "Gemini 2.5 Pro", Available: true},
+			{ModelID: "gemini-2.5-flash", DisplayName: "Gemini 2.5 Flash", Available: true},
+		},
+		"xai": {
+			{ModelID: "grok-4", DisplayName: "Grok 4", Available: true},
+			{ModelID: "grok-3", DisplayName: "Grok 3", Available: true},
+		},
+		"deepseek": {
+			{ModelID: "deepseek-chat", DisplayName: "DeepSeek Chat", Available: true},
+			{ModelID: "deepseek-reasoner", DisplayName: "DeepSeek Reasoner", Available: true},
+		},
 		"alibaba_bailian": {
-			{ModelID: "qwen-plus", DisplayName: "Qwen Plus", ModelType: "agent", Available: true},
-			{ModelID: "qwen3-coder-plus", DisplayName: "Qwen3 Coder Plus", ModelType: "agent", Available: true},
+			{ModelID: "qwen-plus", DisplayName: "Qwen Plus", Available: true},
+			{ModelID: "qwen3-coder-plus", DisplayName: "Qwen3 Coder Plus", Available: true},
 		},
 		"volcengine_ark": {
-			{ModelID: "doubao-seed-1-6", DisplayName: "Doubao Seed 1.6", ModelType: "agent", Available: true},
+			{ModelID: "doubao-seed-1-6", DisplayName: "Doubao Seed 1.6", Available: true},
+		},
+		"moonshot": {
+			{ModelID: "kimi-k2", DisplayName: "Kimi K2", Available: true},
 		},
 		"zhipu": {
-			{ModelID: "glm-4.5", DisplayName: "GLM-4.5", ModelType: "agent", Available: true},
-			{ModelID: "glm-4.5-air", DisplayName: "GLM-4.5 Air", ModelType: "agent", Available: true},
+			{ModelID: "glm-4.5", DisplayName: "GLM-4.5", Available: true},
+			{ModelID: "glm-4.5-air", DisplayName: "GLM-4.5 Air", Available: true},
 		},
 		"minimax": {
-			{ModelID: "MiniMax-M2.1", DisplayName: "MiniMax M2.1", ModelType: "agent", Available: true},
+			{ModelID: "MiniMax-M2.1", DisplayName: "MiniMax M2.1", Available: true},
 		},
 	}
 	models, ok := catalogs[providerType]
@@ -164,36 +194,11 @@ func decodeModels(providerType string, body []byte) ([]domain.ProviderModel, err
 		if displayName == "" {
 			displayName = identifier
 		}
-		models = append(models, domain.ProviderModel{ModelID: identifier, DisplayName: displayName, ModelType: classify(identifier, item.Methods), Available: true})
+		models = append(models, domain.ProviderModel{ModelID: identifier, DisplayName: displayName, Available: true})
 	}
 	if len(models) == 0 {
 		return nil, fmt.Errorf("Provider returned no models")
 	}
 	sort.Slice(models, func(i, j int) bool { return models[i].DisplayName < models[j].DisplayName })
 	return models, nil
-}
-
-func classify(modelID string, methods []string) string {
-	value := strings.ToLower(modelID)
-	for _, token := range []string{"embedding", "embed"} {
-		if strings.Contains(value, token) {
-			return "embedding"
-		}
-	}
-	for _, token := range []string{"image", "dall-e", "imagen"} {
-		if strings.Contains(value, token) {
-			return "image"
-		}
-	}
-	for _, token := range []string{"tts", "audio", "transcribe", "whisper"} {
-		if strings.Contains(value, token) {
-			return "audio"
-		}
-	}
-	for _, method := range methods {
-		if method == "generateContent" {
-			return "text"
-		}
-	}
-	return "unknown"
 }

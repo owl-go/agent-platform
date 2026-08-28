@@ -4646,7 +4646,6 @@ type ModelProviderPreset struct {
 	DisplayName      string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	OfficialEndpoint string                 `protobuf:"bytes,3,opt,name=official_endpoint,json=officialEndpoint,proto3" json:"official_endpoint,omitempty"`
 	Protocols        []string               `protobuf:"bytes,4,rep,name=protocols,proto3" json:"protocols,omitempty"`
-	DynamicDiscovery bool                   `protobuf:"varint,5,opt,name=dynamic_discovery,json=dynamicDiscovery,proto3" json:"dynamic_discovery,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -4707,13 +4706,6 @@ func (x *ModelProviderPreset) GetProtocols() []string {
 		return x.Protocols
 	}
 	return nil
-}
-
-func (x *ModelProviderPreset) GetDynamicDiscovery() bool {
-	if x != nil {
-		return x.DynamicDiscovery
-	}
-	return false
 }
 
 type ListModelProviderConnectionsRequest struct {
@@ -5049,7 +5041,6 @@ type CreateProviderModelRequest struct {
 	ConnectionId  string                 `protobuf:"bytes,1,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
 	ModelId       string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
 	DisplayName   *string                `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	ModelType     string                 `protobuf:"bytes,4,opt,name=model_type,json=modelType,proto3" json:"model_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5101,13 +5092,6 @@ func (x *CreateProviderModelRequest) GetModelId() string {
 func (x *CreateProviderModelRequest) GetDisplayName() string {
 	if x != nil && x.DisplayName != nil {
 		return *x.DisplayName
-	}
-	return ""
-}
-
-func (x *CreateProviderModelRequest) GetModelType() string {
-	if x != nil {
-		return x.ModelType
 	}
 	return ""
 }
@@ -5274,7 +5258,6 @@ type ProviderModel struct {
 	ConnectionId  string                       `protobuf:"bytes,2,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
 	ModelId       string                       `protobuf:"bytes,3,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
 	DisplayName   string                       `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	ModelType     string                       `protobuf:"bytes,5,opt,name=model_type,json=modelType,proto3" json:"model_type,omitempty"`
 	Available     bool                         `protobuf:"varint,6,opt,name=available,proto3" json:"available,omitempty"`
 	ManuallyAdded bool                         `protobuf:"varint,7,opt,name=manually_added,json=manuallyAdded,proto3" json:"manually_added,omitempty"`
 	Compatibility []*RuntimeModelCompatibility `protobuf:"bytes,8,rep,name=compatibility,proto3" json:"compatibility,omitempty"`
@@ -5336,13 +5319,6 @@ func (x *ProviderModel) GetModelId() string {
 func (x *ProviderModel) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
-	}
-	return ""
-}
-
-func (x *ProviderModel) GetModelType() string {
-	if x != nil {
-		return x.ModelType
 	}
 	return ""
 }
@@ -6791,13 +6767,12 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"cliVersion\"!\n" +
 	"\x1fListModelProviderPresetsRequest\"[\n" +
 	" ListModelProviderPresetsResponse\x127\n" +
-	"\x05items\x18\x01 \x03(\v2!.workspace.v1.ModelProviderPresetR\x05items\"\xd5\x01\n" +
+	"\x05items\x18\x01 \x03(\v2!.workspace.v1.ModelProviderPresetR\x05items\"\xc1\x01\n" +
 	"\x13ModelProviderPreset\x12#\n" +
 	"\rprovider_type\x18\x01 \x01(\tR\fproviderType\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12+\n" +
 	"\x11official_endpoint\x18\x03 \x01(\tR\x10officialEndpoint\x12\x1c\n" +
-	"\tprotocols\x18\x04 \x03(\tR\tprotocols\x12+\n" +
-	"\x11dynamic_discovery\x18\x05 \x01(\bR\x10dynamicDiscovery\"%\n" +
+	"\tprotocols\x18\x04 \x03(\tR\tprotocolsJ\x04\b\x05\x10\x06R\x11dynamic_discovery\"%\n" +
 	"#ListModelProviderConnectionsRequest\"c\n" +
 	"$ListModelProviderConnectionsResponse\x12;\n" +
 	"\x05items\x18\x01 \x03(\v2%.workspace.v1.ModelProviderConnectionR\x05items\"\xb2\x01\n" +
@@ -6818,14 +6793,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"$DeleteModelProviderConnectionRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"C\n" +
 	"\x1cRefreshProviderModelsRequest\x12#\n" +
-	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"\xb4\x01\n" +
+	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"\xa7\x01\n" +
 	"\x1aCreateProviderModelRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12\x19\n" +
 	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12&\n" +
-	"\fdisplay_name\x18\x03 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12\x1d\n" +
-	"\n" +
-	"model_type\x18\x04 \x01(\tR\tmodelTypeB\x0f\n" +
-	"\r_display_name\"\xcf\x05\n" +
+	"\fdisplay_name\x18\x03 \x01(\tH\x00R\vdisplayName\x88\x01\x01B\x0f\n" +
+	"\r_display_nameJ\x04\b\x04\x10\x05R\n" +
+	"model_type\"\xcf\x05\n" +
 	"\x17ModelProviderConnection\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -6847,17 +6821,16 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\aversion\x18\x0f \x01(\x03R\aversionB\x15\n" +
 	"\x13_verification_errorB\x11\n" +
 	"\x0f_last_synced_atB\x12\n" +
-	"\x10_last_sync_error\"\xb5\x02\n" +
+	"\x10_last_sync_error\"\xa8\x02\n" +
 	"\rProviderModel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rconnection_id\x18\x02 \x01(\tR\fconnectionId\x12\x19\n" +
 	"\bmodel_id\x18\x03 \x01(\tR\amodelId\x12!\n" +
-	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x1d\n" +
-	"\n" +
-	"model_type\x18\x05 \x01(\tR\tmodelType\x12\x1c\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x1c\n" +
 	"\tavailable\x18\x06 \x01(\bR\tavailable\x12%\n" +
 	"\x0emanually_added\x18\a \x01(\bR\rmanuallyAdded\x12M\n" +
-	"\rcompatibility\x18\b \x03(\v2'.workspace.v1.RuntimeModelCompatibilityR\rcompatibility\"\x82\x01\n" +
+	"\rcompatibility\x18\b \x03(\v2'.workspace.v1.RuntimeModelCompatibilityR\rcompatibilityJ\x04\b\x05\x10\x06R\n" +
+	"model_type\"\x82\x01\n" +
 	"\x19RuntimeModelCompatibility\x12%\n" +
 	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1b\n" +

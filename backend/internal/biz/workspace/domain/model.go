@@ -352,7 +352,6 @@ type ModelProviderPreset struct {
 	DisplayName      string
 	OfficialEndpoint string
 	Protocols        []string
-	DynamicDiscovery bool
 }
 
 type ModelProviderConnection struct {
@@ -379,7 +378,6 @@ type ProviderModel struct {
 	ConnectionID  string
 	ModelID       string
 	DisplayName   string
-	ModelType     string
 	Available     bool
 	ManuallyAdded bool
 	Compatibility []RuntimeModelCompatibility
@@ -392,17 +390,17 @@ type RuntimeModelCompatibility struct {
 }
 
 var providerPresets = []ModelProviderPreset{
-	{ProviderType: "openai", DisplayName: "OpenAI", OfficialEndpoint: "https://api.openai.com/v1", Protocols: []string{"openai_responses", "openai_chat"}, DynamicDiscovery: true},
-	{ProviderType: "anthropic", DisplayName: "Anthropic", OfficialEndpoint: "https://api.anthropic.com", Protocols: []string{"anthropic_messages"}, DynamicDiscovery: true},
-	{ProviderType: "google_gemini", DisplayName: "Google Gemini", OfficialEndpoint: "https://generativelanguage.googleapis.com/v1beta", Protocols: []string{"gemini"}, DynamicDiscovery: true},
-	{ProviderType: "xai", DisplayName: "xAI", OfficialEndpoint: "https://api.x.ai/v1", Protocols: []string{"openai_responses", "openai_chat"}, DynamicDiscovery: true},
-	{ProviderType: "deepseek", DisplayName: "DeepSeek", OfficialEndpoint: "https://api.deepseek.com", Protocols: []string{"openai_chat"}, DynamicDiscovery: true},
+	{ProviderType: "openai", DisplayName: "OpenAI", OfficialEndpoint: "https://api.openai.com/v1", Protocols: []string{"openai_responses", "openai_chat"}},
+	{ProviderType: "anthropic", DisplayName: "Anthropic", OfficialEndpoint: "https://api.anthropic.com", Protocols: []string{"anthropic_messages"}},
+	{ProviderType: "google_gemini", DisplayName: "Google Gemini", OfficialEndpoint: "https://generativelanguage.googleapis.com/v1beta", Protocols: []string{"gemini"}},
+	{ProviderType: "xai", DisplayName: "xAI", OfficialEndpoint: "https://api.x.ai/v1", Protocols: []string{"openai_responses", "openai_chat"}},
+	{ProviderType: "deepseek", DisplayName: "DeepSeek", OfficialEndpoint: "https://api.deepseek.com", Protocols: []string{"openai_chat"}},
 	{ProviderType: "alibaba_bailian", DisplayName: "阿里云百炼", OfficialEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", Protocols: []string{"openai_responses", "openai_chat", "anthropic_messages"}},
 	{ProviderType: "volcengine_ark", DisplayName: "火山方舟", OfficialEndpoint: "https://ark.cn-beijing.volces.com/api/v3", Protocols: []string{"openai_chat"}},
-	{ProviderType: "moonshot", DisplayName: "Moonshot", OfficialEndpoint: "https://api.moonshot.cn/v1", Protocols: []string{"openai_chat"}, DynamicDiscovery: true},
+	{ProviderType: "moonshot", DisplayName: "Moonshot", OfficialEndpoint: "https://api.moonshot.cn/v1", Protocols: []string{"openai_chat"}},
 	{ProviderType: "zhipu", DisplayName: "智谱 GLM", OfficialEndpoint: "https://open.bigmodel.cn/api/paas/v4", Protocols: []string{"openai_chat", "anthropic_messages"}},
 	{ProviderType: "minimax", DisplayName: "MiniMax", OfficialEndpoint: "https://api.minimax.io/v1", Protocols: []string{"openai_chat"}},
-	{ProviderType: "custom_openai", DisplayName: "OpenAI Compatible", Protocols: []string{"openai_responses", "openai_chat", "anthropic_messages"}, DynamicDiscovery: true},
+	{ProviderType: "custom_openai", DisplayName: "OpenAI Compatible", Protocols: []string{"openai_responses", "openai_chat", "anthropic_messages"}},
 }
 
 func ModelProviderPresets() []ModelProviderPreset {
@@ -454,19 +452,14 @@ func ValidateModelProviderConnection(name, providerType, endpoint string, protoc
 	return nil
 }
 
-func ValidateProviderModel(modelID, displayName, modelType string) error {
+func ValidateProviderModel(modelID, displayName string) error {
 	if value := strings.TrimSpace(modelID); value == "" || len(value) > 500 || strings.ContainsAny(value, "\x00\r\n") {
 		return fmt.Errorf("%w: invalid provider model identifier", ErrInvalid)
 	}
 	if len(displayName) > 500 {
 		return fmt.Errorf("%w: provider model display name is too large", ErrInvalid)
 	}
-	switch modelType {
-	case "agent", "text", "embedding", "image", "audio", "unknown":
-		return nil
-	default:
-		return fmt.Errorf("%w: unsupported provider model type", ErrInvalid)
-	}
+	return nil
 }
 
 func CompatibilityForProtocols(protocols []string) []RuntimeModelCompatibility {

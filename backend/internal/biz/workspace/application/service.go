@@ -71,7 +71,12 @@ type Repository interface {
 }
 
 type ModelCatalog interface {
-	Discover(context.Context, domain.ModelProviderConnection, string) ([]domain.ProviderModel, error)
+	Discover(context.Context, domain.ModelProviderConnection, string) (ModelCatalogResult, error)
+}
+
+type ModelCatalogResult struct {
+	Models []domain.ProviderModel
+	Source string
 }
 
 type Service struct {
@@ -92,9 +97,9 @@ func New(repository Repository, catalogs ...ModelCatalog) (*Service, error) {
 
 func (service *Service) Repository() Repository { return service.repository }
 
-func (service *Service) DiscoverProviderModels(ctx context.Context, connection domain.ModelProviderConnection, apiKey string) ([]domain.ProviderModel, error) {
+func (service *Service) DiscoverProviderModels(ctx context.Context, connection domain.ModelProviderConnection, apiKey string) (ModelCatalogResult, error) {
 	if service.catalog == nil {
-		return nil, fmt.Errorf("Model Provider catalog is unavailable")
+		return ModelCatalogResult{}, fmt.Errorf("Model Provider catalog is unavailable")
 	}
 	return service.catalog.Discover(ctx, connection, apiKey)
 }

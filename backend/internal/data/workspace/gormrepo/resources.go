@@ -384,7 +384,7 @@ func (repository *Repository) ReplaceProviderModels(ctx context.Context, ownerID
 				return err
 			}
 		}
-		updates := map[string]any{"verification_status": verificationStatus, "last_sync_error": nil, "last_synced_at": gorm.Expr("now()"), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+		updates := map[string]any{"verification_status": verificationStatus, "verification_error": nil, "last_sync_error": nil, "last_synced_at": gorm.Expr("now()"), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 		if syncError != "" {
 			updates["last_sync_error"] = syncError
 			delete(updates, "last_synced_at")
@@ -406,7 +406,7 @@ func (repository *Repository) ReplaceProviderModels(ctx context.Context, ownerID
 
 func (repository *Repository) CreateProviderModel(ctx context.Context, ownerID, connectionID string, model domain.ProviderModel) (domain.ProviderModel, error) {
 	compatibility, _ := marshal(model.Compatibility)
-	row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: strings.TrimSpace(model.ModelID), DisplayName: strings.TrimSpace(model.DisplayName), ModelType: model.ModelType, Available: true, ManuallyAdded: true, Compatibility: compatibility}
+	row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: strings.TrimSpace(model.ModelID), DisplayName: strings.TrimSpace(model.DisplayName), Available: true, ManuallyAdded: true, Compatibility: compatibility}
 	if row.DisplayName == "" {
 		row.DisplayName = row.ModelID
 	}
@@ -422,11 +422,11 @@ func replaceProviderModelRows(tx *gorm.DB, ownerID, connectionID string, models 
 	}
 	for _, model := range models {
 		compatibility, _ := marshal(model.Compatibility)
-		row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: model.ModelID, DisplayName: model.DisplayName, ModelType: model.ModelType, Available: true, ManuallyAdded: model.ManuallyAdded, Compatibility: compatibility}
+		row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: model.ModelID, DisplayName: model.DisplayName, Available: true, ManuallyAdded: model.ManuallyAdded, Compatibility: compatibility}
 		if row.DisplayName == "" {
 			row.DisplayName = row.ModelID
 		}
-		if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "connection_id"}, {Name: "model_id"}}, DoUpdates: clause.AssignmentColumns([]string{"display_name", "model_type", "available", "compatibility", "updated_at"})}).Create(&row).Error; err != nil {
+		if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "connection_id"}, {Name: "model_id"}}, DoUpdates: clause.AssignmentColumns([]string{"display_name", "available", "compatibility", "updated_at"})}).Create(&row).Error; err != nil {
 			return err
 		}
 	}
@@ -467,7 +467,7 @@ func (repository *Repository) providerConnectionDomain(ctx context.Context, row 
 }
 
 func providerModelDomain(row providerModelRecord) (domain.ProviderModel, error) {
-	item := domain.ProviderModel{ID: row.ID, ConnectionID: row.ConnectionID, ModelID: row.ModelID, DisplayName: row.DisplayName, ModelType: row.ModelType, Available: row.Available, ManuallyAdded: row.ManuallyAdded}
+	item := domain.ProviderModel{ID: row.ID, ConnectionID: row.ConnectionID, ModelID: row.ModelID, DisplayName: row.DisplayName, Available: row.Available, ManuallyAdded: row.ManuallyAdded}
 	if err := json.Unmarshal(row.Compatibility, &item.Compatibility); err != nil {
 		return domain.ProviderModel{}, err
 	}

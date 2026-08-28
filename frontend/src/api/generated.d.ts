@@ -677,7 +677,6 @@ export interface components {
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
             display_name?: string;
-            model_type?: string;
         };
         AgentWorkspaceServiceCreateWorkspaceDirectoryBody: {
             path?: string;
@@ -969,7 +968,6 @@ export interface components {
             display_name?: string;
             official_endpoint?: string;
             protocols?: string[];
-            dynamic_discovery?: boolean;
         };
         v1PersonalSettings: {
             personality?: string;
@@ -986,7 +984,6 @@ export interface components {
             connection_id?: string;
             model_id?: string;
             display_name?: string;
-            model_type?: string;
             available?: boolean;
             manually_added?: boolean;
             compatibility?: components["schemas"]["v1RuntimeModelCompatibility"][];

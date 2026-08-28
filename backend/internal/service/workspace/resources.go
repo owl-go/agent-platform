@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
+	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -132,7 +133,7 @@ func (service *Service) ListModelProviderPresets(ctx context.Context, _ *workspa
 	}
 	response := &workspacev1.ListModelProviderPresetsResponse{}
 	for _, preset := range workspacedomain.ModelProviderPresets() {
-		response.Items = append(response.Items, &workspacev1.ModelProviderPreset{ProviderType: preset.ProviderType, DisplayName: preset.DisplayName, OfficialEndpoint: preset.OfficialEndpoint, Protocols: preset.Protocols, DynamicDiscovery: preset.DynamicDiscovery})
+		response.Items = append(response.Items, &workspacev1.ModelProviderPreset{ProviderType: preset.ProviderType, DisplayName: preset.DisplayName, OfficialEndpoint: preset.OfficialEndpoint, Protocols: preset.Protocols})
 	}
 	return response, nil
 }
@@ -162,8 +163,8 @@ func (service *Service) CreateModelProviderConnection(ctx context.Context, reque
 		return nil, publicError(err)
 	}
 	connection := workspacedomain.ModelProviderConnection{Name: request.Name, ProviderType: request.ProviderType, Endpoint: request.Endpoint, Protocols: append([]string(nil), request.Protocols...), VerificationStatus: "unverified", CustomEndpoint: customProviderEndpoint(request.ProviderType, request.Endpoint)}
-	models, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, request.ApiKey)
-	models = applyDiscoveryResult(&connection, models, discoveryErr)
+	catalog, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, request.ApiKey)
+	models := applyCatalogResult(&connection, catalog, discoveryErr)
 	ciphertext, err := service.box.Encrypt([]byte(request.ApiKey), "model-provider:"+owner)
 	if err != nil {
 		return nil, publicError(err)
@@ -211,8 +212,8 @@ func (service *Service) UpdateModelProviderConnection(ctx context.Context, reque
 		apiKey = string(plaintext)
 	}
 	connection := workspacedomain.ModelProviderConnection{Name: request.Name, ProviderType: existing.ProviderType, Endpoint: request.Endpoint, Protocols: append([]string(nil), request.Protocols...), VerificationStatus: "unverified", CustomEndpoint: customProviderEndpoint(existing.ProviderType, request.Endpoint)}
-	models, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, apiKey)
-	models = applyDiscoveryResult(&connection, models, discoveryErr)
+	catalog, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, apiKey)
+	models := applyCatalogResult(&connection, catalog, discoveryErr)
 	item, err := service.workspace.Repository().UpdateModelProviderConnection(ctx, owner, request.ConnectionId, connection, ciphertext, models, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
@@ -249,14 +250,13 @@ func (service *Service) RefreshProviderModels(ctx context.Context, request *work
 		return nil, publicError(err)
 	}
 	defer clear(plaintext)
-	models, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, string(plaintext))
-	status, syncError := "unverified", ""
-	if providerUsesDynamicDiscovery(connection.ProviderType) {
+	catalog, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, string(plaintext))
+	models, status, syncError := catalog.Models, "unverified", ""
+	if catalog.Source == "provider" {
 		status = "verified"
 	}
 	if discoveryErr != nil {
 		models = nil
-		status = "unverified"
 		syncError = discoveryErr.Error()
 	}
 	updated, err := service.workspace.Repository().ReplaceProviderModels(ctx, owner, request.ConnectionId, models, status, syncError)
@@ -266,24 +266,15 @@ func (service *Service) RefreshProviderModels(ctx context.Context, request *work
 	return modelProviderConnectionResponse(updated), nil
 }
 
-func providerUsesDynamicDiscovery(providerType string) bool {
-	for _, preset := range workspacedomain.ModelProviderPresets() {
-		if preset.ProviderType == providerType {
-			return preset.DynamicDiscovery
-		}
-	}
-	return false
-}
-
-func applyDiscoveryResult(connection *workspacedomain.ModelProviderConnection, models []workspacedomain.ProviderModel, discoveryErr error) []workspacedomain.ProviderModel {
+func applyCatalogResult(connection *workspacedomain.ModelProviderConnection, result workspaceapplication.ModelCatalogResult, discoveryErr error) []workspacedomain.ProviderModel {
 	if discoveryErr != nil {
 		connection.VerificationError = discoveryErr.Error()
 		return nil
 	}
-	if providerUsesDynamicDiscovery(connection.ProviderType) {
+	if result.Source == "provider" {
 		connection.VerificationStatus = "verified"
 	}
-	return models
+	return result.Models
 }
 
 func (service *Service) CreateProviderModel(ctx context.Context, request *workspacev1.CreateProviderModelRequest) (*workspacev1.ProviderModel, error) {
@@ -299,10 +290,10 @@ func (service *Service) CreateProviderModel(ctx context.Context, request *worksp
 	if request.DisplayName != nil {
 		displayName = *request.DisplayName
 	}
-	if err := workspacedomain.ValidateProviderModel(request.ModelId, displayName, request.ModelType); err != nil {
+	if err := workspacedomain.ValidateProviderModel(request.ModelId, displayName); err != nil {
 		return nil, publicError(err)
 	}
-	model := workspacedomain.ProviderModel{ModelID: request.ModelId, DisplayName: displayName, ModelType: request.ModelType, Available: true, ManuallyAdded: true, Compatibility: workspacedomain.CompatibilityForProtocols(connection.Protocols)}
+	model := workspacedomain.ProviderModel{ModelID: request.ModelId, DisplayName: displayName, Available: true, ManuallyAdded: true, Compatibility: workspacedomain.CompatibilityForProtocols(connection.Protocols)}
 	item, err := service.workspace.Repository().CreateProviderModel(ctx, owner, request.ConnectionId, model)
 	if err != nil {
 		return nil, publicError(err)
@@ -542,7 +533,7 @@ func modelProviderConnectionResponse(item workspacedomain.ModelProviderConnectio
 }
 
 func providerModelResponse(item workspacedomain.ProviderModel) *workspacev1.ProviderModel {
-	response := &workspacev1.ProviderModel{Id: item.ID, ConnectionId: item.ConnectionID, ModelId: item.ModelID, DisplayName: item.DisplayName, ModelType: item.ModelType, Available: item.Available, ManuallyAdded: item.ManuallyAdded}
+	response := &workspacev1.ProviderModel{Id: item.ID, ConnectionId: item.ConnectionID, ModelId: item.ModelID, DisplayName: item.DisplayName, Available: item.Available, ManuallyAdded: item.ManuallyAdded}
 	for _, value := range item.Compatibility {
 		compatibility := &workspacev1.RuntimeModelCompatibility{RuntimeEngine: string(value.RuntimeEngine), Status: value.Status}
 		if value.Reason != "" {

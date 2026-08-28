@@ -70,6 +70,12 @@ func TestCompatibilityIsProtocolBased(t *testing.T) {
 	}
 }
 
+func TestProviderModelValidationHasNoModelType(t *testing.T) {
+	if err := ValidateProviderModel("gpt-5.6-sol", "GPT 5.6 Sol"); err != nil {
+		t.Fatalf("valid Provider Model rejected: %v", err)
+	}
+}
+
 func TestProviderCredentialDoesNotEnterExecutionSnapshotJSON(t *testing.T) {
 	encoded, err := json.Marshal(ExecutionSnapshot{ProviderModel: ProviderModelSnapshot{
 		ConnectionID: "connection-1", ConnectionVersion: 2, APIKeyCiphertext: []byte("encrypted-api-key"),

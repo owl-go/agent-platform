@@ -157,16 +157,16 @@ message ListRuntimeEnginesResponse { repeated RuntimeEngineStatus items = 1; }
 message RuntimeEngineStatus { string name = 1; bool available = 2; bool native_resume = 3; string cli_version = 4; }
 message ListModelProviderPresetsRequest {}
 message ListModelProviderPresetsResponse { repeated ModelProviderPreset items = 1; }
-message ModelProviderPreset { string provider_type = 1; string display_name = 2; string official_endpoint = 3; repeated string protocols = 4; bool dynamic_discovery = 5; }
+message ModelProviderPreset { string provider_type = 1; string display_name = 2; string official_endpoint = 3; repeated string protocols = 4; reserved 5; reserved "dynamic_discovery"; }
 message ListModelProviderConnectionsRequest {}
 message ListModelProviderConnectionsResponse { repeated ModelProviderConnection items = 1; }
 message CreateModelProviderConnectionRequest { string name = 1; string provider_type = 2; string endpoint = 3; repeated string protocols = 4; string api_key = 5; }
 message UpdateModelProviderConnectionRequest { string connection_id = 1; string name = 2; string endpoint = 3; repeated string protocols = 4; optional string replacement_api_key = 5; int64 expected_version = 6; }
 message DeleteModelProviderConnectionRequest { string connection_id = 1; }
 message RefreshProviderModelsRequest { string connection_id = 1; }
-message CreateProviderModelRequest { string connection_id = 1; string model_id = 2; optional string display_name = 3; string model_type = 4; }
+message CreateProviderModelRequest { string connection_id = 1; string model_id = 2; optional string display_name = 3; reserved 4; reserved "model_type"; }
 message ModelProviderConnection { string id = 1; string name = 2; string provider_type = 3; string endpoint = 4; repeated string protocols = 5; bool api_key_configured = 6; string verification_status = 7; optional string verification_error = 8; bool custom_endpoint = 9; optional google.protobuf.Timestamp last_synced_at = 10; optional string last_sync_error = 11; repeated ProviderModel models = 12; google.protobuf.Timestamp created_at = 13; google.protobuf.Timestamp updated_at = 14; int64 version = 15; }
-message ProviderModel { string id = 1; string connection_id = 2; string model_id = 3; string display_name = 4; string model_type = 5; bool available = 6; bool manually_added = 7; repeated RuntimeModelCompatibility compatibility = 8; }
+message ProviderModel { string id = 1; string connection_id = 2; string model_id = 3; string display_name = 4; reserved 5; reserved "model_type"; bool available = 6; bool manually_added = 7; repeated RuntimeModelCompatibility compatibility = 8; }
 message RuntimeModelCompatibility { string runtime_engine = 1; string status = 2; optional string reason = 3; }
 
 message ListMCPServersRequest {}

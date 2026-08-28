@@ -12,7 +12,7 @@ const route = useRoute(); const router = useRouter(); const { t, locale } = useI
 const workflowID = computed(() => String(route.params.workflowId));
 const origin = window.location.origin;
 const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const runEvents = ref<RunEvent[]>([]); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const runInput = ref(""); const runInputMode = ref<"text" | "json">("text"); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
-const models = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available && ["agent", "text", "unknown"].includes(model.model_type)).map((model) => ({ ...model, connection_name: connection.name }))));
+const models = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection_name: connection.name }))));
 const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
 function modelIncompatible(model: (typeof models.value)[number]) {
   if (!settingsForm.value.runtime_engine) return false;

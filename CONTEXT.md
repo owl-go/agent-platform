@@ -107,7 +107,7 @@ One of the gentle-professional, direct-efficient, lively-friendly, or custom com
 _Avoid_: Expert, model system prompt, display name
 
 **Model Provider Connection**:
-A User-owned named connection containing a provider type, Endpoint, and write-only API Key. A User may keep multiple connections for the same built-in or custom OpenAI-compatible provider, and an unverified connection remains distinguishable from one verified without a billable model call.
+A User-owned named connection containing a provider type, Endpoint, and write-only API Key. A User may keep multiple connections for the same built-in or custom OpenAI-compatible provider.
 _Avoid_: Model Profile, Provider Model, Runtime Engine
 
 **Model API Protocol**:
@@ -115,7 +115,7 @@ The wire contract exposed by a Model Provider Connection, such as OpenAI Respons
 _Avoid_: Model Provider, Endpoint, Runtime Adapter
 
 **Provider Model**:
-A model discovered from a provider or imported from the platform's maintained catalog under one Model Provider Connection. Non-Agent models remain visible in the provider catalog, while unavailable models remain identifiable in historical references but cannot be newly selected.
+A model identifier under one Model Provider Connection, loaded from its `/models` API, the platform-maintained provider defaults, or explicit User configuration. The platform does not classify model types; every available Provider Model is selectable subject to Runtime Model Compatibility.
 _Avoid_: Model Profile, provider connection, Runtime Engine
 
 **Runtime Model Compatibility**:

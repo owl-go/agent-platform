@@ -2580,9 +2580,6 @@
           },
           "display_name": {
             "type": "string"
-          },
-          "model_type": {
-            "type": "string"
           }
         }
       },
@@ -3403,9 +3400,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "dynamic_discovery": {
-            "type": "boolean"
           }
         }
       },
@@ -3452,9 +3446,6 @@
             "type": "string"
           },
           "display_name": {
-            "type": "string"
-          },
-          "model_type": {
             "type": "string"
           },
           "available": {

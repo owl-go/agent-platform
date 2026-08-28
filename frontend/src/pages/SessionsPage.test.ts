@@ -26,7 +26,7 @@ function apiStub(sessionMessages: SessionMessage[] = messages, stream?: (snapsho
     listSessionMessages: vi.fn(async () => sessionMessages),
     streamSessionMessage: vi.fn(async (_sessionID, _messageID, onSnapshot) => stream?.(onSnapshot)),
     listExperts: vi.fn(async () => []),
-    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", model_type: "agent", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]),
+    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]),
     listRuntimeEngines: vi.fn(async () => [{ name: "codex", available: true, native_resume: true, cli_version: "1.0.0" }]),
     getSettings: vi.fn(async () => ({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1 })),
   } as unknown as PlatformApi;
@@ -222,8 +222,8 @@ describe("SessionsPage conversation layout", () => {
     const provider: ModelProviderConnection = {
       id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true,
       models: [
-        { id: "model-1", connection_id: "connection-1", model_id: "default", display_name: "Default", model_type: "agent", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
-        { id: "model-2", connection_id: "connection-1", model_id: "selected", display_name: "Selected", model_type: "agent", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
+        { id: "model-1", connection_id: "connection-1", model_id: "default", display_name: "Default", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
+        { id: "model-2", connection_id: "connection-1", model_id: "selected", display_name: "Selected", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
       ],
       created_at: session.created_at, updated_at: session.updated_at, version: 1,
     };

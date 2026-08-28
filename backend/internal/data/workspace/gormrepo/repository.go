@@ -132,7 +132,6 @@ type providerModelRecord struct {
 	OwnerID       string    `gorm:"column:owner_user_id"`
 	ModelID       string    `gorm:"column:model_id"`
 	DisplayName   string    `gorm:"column:display_name"`
-	ModelType     string    `gorm:"column:model_type"`
 	Available     bool      `gorm:"column:available"`
 	ManuallyAdded bool      `gorm:"column:manually_added"`
 	Compatibility []byte    `gorm:"column:compatibility;type:jsonb"`
