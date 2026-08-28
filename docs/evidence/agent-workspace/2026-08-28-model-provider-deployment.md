@@ -4,17 +4,17 @@
 
 - Host: `47.237.108.63`
 - Public origin: `https://47-237-108-63.sslip.io`
-- Product revision: `2403d5d` (`79b3cf3` Agent Workspace release plus model-provider and Toast feedback fixes)
-- Release directory: `/opt/agent-platform/src.release-2403d5d`
-- Pre-deployment backup: `/opt/agent-platform/backups/20260828-074618-pre-79b3cf3`
+- Product revision: `5c572be` (`79b3cf3` Agent Workspace release plus model-provider, feedback, and model-catalog fallback fixes)
+- Release directory: `/opt/agent-platform/src.release-5c572be`
+- Latest pre-deployment backup: `/opt/agent-platform/backups/20260828-model-catalog-5c572be`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
 
 ## Deployed images
 
-- API: `sha256:be139d6f9f62bd70f2e72812425603375f07f0fe071ddbf9e510a7944ad09794`
-- Worker: `sha256:01af34799bcb0afe7c56f20dc16027a89aeabe11b1d6f7d7e157cc34610656cb`
-- Web: `sha256:1fcdf92f4d8ef1d3a8d7bbc76c2c68a50e3fdf56cda7bec5e0912425579cd2f2`
+- API: `sha256:a9a11cd7f18b62d1ce9e2d96114925aa53b830e9ccedc8094776150860e7cf3b`
+- Worker: `sha256:dd0b62d129ceff9b0263bdbccf25e596b7a66a659125786536179dfcf0dea288`
+- Web: `sha256:ff10d448ecff3d8a193395a365c00574e81c0dcd621808c3b9e0d9151a411e93`
 
 ## Migration
 
@@ -25,6 +25,8 @@ The backup contains PostgreSQL business and Keycloak custom-format dumps, the de
 ```
 
 The previously applied `000001`–`000004` checksums matched the release before cutover.
+
+`000006_remove_provider_model_type.sql` subsequently applied successfully. The migration ledger contains the new entry and `information_schema.columns` reports zero `provider_models.model_type` columns.
 
 ## Verification
 
@@ -49,6 +51,8 @@ The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-sa
 
 The `2403d5d` Web-only follow-up standardizes transient success and failure feedback on one Toast component across Sessions, Workflows, Workflow detail, Experts, Settings, and User administration. The component provides success/error semantics, accessible live regions, manual dismissal, timed dismissal, responsive placement above modal layers, and reduced-motion behavior. All 44 frontend tests, TypeScript checking, and the production build passed before deployment. After the Web-only cutover, API, Worker, and Web remained healthy and the served asset was `assets/index-D3NPOGKa.js`.
 
+The `5c572be` follow-up tries each Model Provider Connection's `/models` endpoint first and falls back to that provider's platform-maintained defaults when the endpoint is unsupported or unusable. An authenticated refresh of the existing OpenAI connection at `http://47.237.108.63:3000/openai` exercised the real HTTP 404 path, stored `gpt-5.6-sol` as an available Provider Model, and cleared both verification and synchronization errors. The API correctly leaves the fallback connection `unverified`, because no provider response was verified. The API, Worker, and Web remained healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-C1QWxwlk.js`.
+
 ## Evidence boundary
 
-This verification proves deployment, migration, authenticated Model Provider management, Session Response Snapshot persistence, Worker claiming, explicit Runtime failure, cleanup, and Secret-log absence. It does not claim real-provider model success or refresh behavior, and it does not replace four-Runtime production Conformance for the deployed image digests.
+This verification proves deployment, migration, authenticated Model Provider management, `/models` failure fallback, Session Response Snapshot persistence, Worker claiming, explicit Runtime failure, cleanup, and Secret-log absence. It does not claim a successful response from an external provider's `/models` endpoint or a billable model invocation, and it does not replace four-Runtime production Conformance for the deployed image digests.
