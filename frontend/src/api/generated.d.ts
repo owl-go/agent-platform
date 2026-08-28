@@ -676,7 +676,6 @@ export interface components {
         };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
-            display_name?: string;
         };
         AgentWorkspaceServiceCreateWorkspaceDirectoryBody: {
             path?: string;

@@ -71,14 +71,20 @@ describe("SettingsPage model provider feedback", () => {
     wrapper.unmount();
   });
 
-  it("adds a model without asking for a model type", async () => {
+  it("adds a model with one model field", async () => {
     const api = apiStub();
+    api.createProviderModel = vi.fn(async (_connectionID, input) => ({ id: "model-1", connection_id: connection.id, model_id: input.model_id, display_name: input.model_id, available: true, manually_added: true, compatibility: [] }));
     const wrapper = await openConnectionEditor(api);
     await wrapper.get('.modal-actions button[type="button"]').trigger("click");
     await wrapper.get(".provider-actions .button:nth-child(2)").trigger("click");
 
-    expect(wrapper.get(".modal-card").text()).toContain("模型 ID");
-    expect(wrapper.get(".modal-card").text()).not.toContain("模型类型");
+    expect(wrapper.get(".modal-card").text()).toContain("模型");
+    expect(wrapper.findAll(".modal-card input")).toHaveLength(1);
+    await wrapper.get<HTMLInputElement>(".modal-card input").setValue("gpt-5.6-sol");
+    await wrapper.get(".modal-card").trigger("submit");
+    await flushPromises();
+
+    expect(api.createProviderModel).toHaveBeenCalledWith(connection.id, { model_id: "gpt-5.6-sol" });
     expect(wrapper.find(".modal-card select").exists()).toBe(false);
     wrapper.unmount();
   });

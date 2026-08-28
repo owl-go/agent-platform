@@ -286,14 +286,10 @@ func (service *Service) CreateProviderModel(ctx context.Context, request *worksp
 	if err != nil {
 		return nil, publicError(err)
 	}
-	displayName := ""
-	if request.DisplayName != nil {
-		displayName = *request.DisplayName
-	}
-	if err := workspacedomain.ValidateProviderModel(request.ModelId, displayName); err != nil {
+	if err := workspacedomain.ValidateProviderModel(request.ModelId, request.ModelId); err != nil {
 		return nil, publicError(err)
 	}
-	model := workspacedomain.ProviderModel{ModelID: request.ModelId, DisplayName: displayName, Available: true, ManuallyAdded: true, Compatibility: workspacedomain.CompatibilityForProtocols(connection.Protocols)}
+	model := workspacedomain.ProviderModel{ModelID: request.ModelId, DisplayName: request.ModelId, Available: true, ManuallyAdded: true, Compatibility: workspacedomain.CompatibilityForProtocols(connection.Protocols)}
 	item, err := service.workspace.Repository().CreateProviderModel(ctx, owner, request.ConnectionId, model)
 	if err != nil {
 		return nil, publicError(err)

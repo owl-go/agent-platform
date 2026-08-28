@@ -5040,7 +5040,6 @@ type CreateProviderModelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ConnectionId  string                 `protobuf:"bytes,1,opt,name=connection_id,json=connectionId,proto3" json:"connection_id,omitempty"`
 	ModelId       string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	DisplayName   *string                `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5085,13 +5084,6 @@ func (x *CreateProviderModelRequest) GetConnectionId() string {
 func (x *CreateProviderModelRequest) GetModelId() string {
 	if x != nil {
 		return x.ModelId
-	}
-	return ""
-}
-
-func (x *CreateProviderModelRequest) GetDisplayName() string {
-	if x != nil && x.DisplayName != nil {
-		return *x.DisplayName
 	}
 	return ""
 }
@@ -6793,12 +6785,10 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"$DeleteModelProviderConnectionRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"C\n" +
 	"\x1cRefreshProviderModelsRequest\x12#\n" +
-	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"\xa7\x01\n" +
+	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\"\x82\x01\n" +
 	"\x1aCreateProviderModelRequest\x12#\n" +
 	"\rconnection_id\x18\x01 \x01(\tR\fconnectionId\x12\x19\n" +
-	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12&\n" +
-	"\fdisplay_name\x18\x03 \x01(\tH\x00R\vdisplayName\x88\x01\x01B\x0f\n" +
-	"\r_display_nameJ\x04\b\x04\x10\x05R\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelIdJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\fdisplay_nameR\n" +
 	"model_type\"\xcf\x05\n" +
 	"\x17ModelProviderConnection\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -7319,7 +7309,6 @@ func file_workspace_v1_workspace_proto_init() {
 	file_workspace_v1_workspace_proto_msgTypes[51].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[58].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[80].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[83].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[84].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[86].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[93].OneofWrappers = []any{}

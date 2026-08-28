@@ -83,7 +83,7 @@ export interface PlatformApi {
   updateModelProviderConnection(id: string, input: { name: string; endpoint: string; protocols: string[]; api_key?: string }, version: number, signal?: AbortSignal): Promise<ModelProviderConnection>;
   deleteModelProviderConnection(id: string, signal?: AbortSignal): Promise<void>;
   refreshProviderModels(id: string, signal?: AbortSignal): Promise<ModelProviderConnection>;
-  createProviderModel(connectionID: string, input: { model_id: string; display_name?: string }, signal?: AbortSignal): Promise<ProviderModel>;
+  createProviderModel(connectionID: string, input: { model_id: string }, signal?: AbortSignal): Promise<ProviderModel>;
   listMCPServers(signal?: AbortSignal): Promise<MCPServer[]>;
   createMCPServer(input: Record<string, unknown>, signal?: AbortSignal): Promise<MCPServer>;
   updateMCPServer(id: string, input: Record<string, unknown>, version: number, signal?: AbortSignal): Promise<MCPServer>;
