@@ -10,6 +10,8 @@ The primary experience is intentionally lightweight: a ChatGPT-like left navigat
 
 The UI supports Chinese and English. Language is stored in Personal Settings.
 
+Transient operation success and failure feedback uses one standardized Toast pattern across product pages. Toasts remain above modal layers, carry the appropriate accessible live-region role, can be dismissed manually, and disappear automatically; persistent business content such as setup guidance and one-time credentials remains in the page.
+
 ## 2. Ownership And Accounts
 
 - Every business resource is owned by one authenticated User and is invisible to other Users.

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
+import ToastMessage from "../components/ToastMessage.vue";
 import { renderMarkdown } from "../markdown";
 
 const api = inject(platformApiKey)!;
@@ -387,7 +388,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       </div>
     </aside>
     <article class="conversation-panel">
-      <div v-if="error" class="toast error-toast" @click="error = ''">{{ error }} <span>×</span></div>
+      <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><button class="button ghost" @click="router.push('/settings')">{{ t('nav.settings') }} →</button></div>
       <template v-if="selected">
         <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p>{{ selectedExpert?.name ?? t('sessions.noExpert') }} <span>·</span> {{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><span class="engine-chip">AUTO RUNTIME</span></header>

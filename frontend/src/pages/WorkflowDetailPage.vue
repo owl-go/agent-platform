@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import ToastMessage from "../components/ToastMessage.vue";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
 const api = inject(platformApiKey)!;
@@ -67,7 +68,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
 <template>
   <section class="detail-page">
     <header class="detail-hero"><button class="back-link" @click="router.push('/workflows')">← {{ t('common.back') }}</button><div v-if="workflow"><p class="eyebrow">WORKFLOW / {{ workflow.id.slice(0, 8).toUpperCase() }}</p><h1>{{ workflow.name }}</h1><p>{{ workflow.goal }}</p></div><div v-if="workflow && !workflow.deleted" class="hero-actions"><select v-model="runInputMode"><option value="text">Text</option><option value="json">JSON</option></select><input v-model="runInput" :placeholder="runInputMode === 'json' ? '{&quot;key&quot;:&quot;value&quot;}' : t('workflows.input')"><button class="button primary" :disabled="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</button></div><span v-else-if="workflow" class="engine-chip">{{ t('common.readOnly') }}</span></header>
-    <div v-if="error" class="notice error-notice">{{ error }}</div><div v-if="loading" class="quiet-state large">{{ t('common.loading') }}</div>
+    <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" /><div v-if="loading" class="quiet-state large">{{ t('common.loading') }}</div>
     <template v-else-if="workflow">
       <nav class="tabs"><button v-for="item in tabs" :key="item" :class="{ active: tab === item }" @click="tab = item">{{ t(`workflows.${item}`) }}</button></nav>
       <div v-if="tab === 'artifacts'" class="tab-content"><div class="section-heading"><div><p class="eyebrow">OUTPUT / 90 DAY FILE RETENTION</p><h2>{{ t('workflows.artifacts') }}</h2></div></div><div v-if="!artifacts.length" class="empty-inline"><span>◇</span><p>{{ t('common.empty') }}</p></div><div v-else class="artifact-list"><article v-for="item in artifacts" :key="item.id" role="button" tabindex="0" @click="openArtifact(item)" @keydown.enter="openArtifact(item)"><span class="file-icon">{{ item.kind === 'result' ? 'TXT' : 'FILE' }}</span><div><strong>{{ item.name }}</strong><small>{{ item.path || item.kind }} · {{ item.size }} B <template v-if="item.expired">· {{ t('workflows.expired') }}</template></small></div><code>{{ (item.sha256 || 'inline').slice(0, 12) }}</code></article></div></div>

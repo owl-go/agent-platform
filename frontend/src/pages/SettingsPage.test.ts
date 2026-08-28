@@ -55,7 +55,7 @@ describe("SettingsPage model provider feedback", () => {
 
     expect(api.updateModelProviderConnection).toHaveBeenCalled();
     expect(wrapper.find(".modal-layer").exists()).toBe(false);
-    expect(wrapper.get(".success-notice").text()).toContain("模型供应商已保存");
+    expect(wrapper.get(".app-toast.success").text()).toContain("模型供应商已保存");
     wrapper.unmount();
   });
 
@@ -67,7 +67,7 @@ describe("SettingsPage model provider feedback", () => {
     await flushPromises();
 
     expect(wrapper.find(".modal-layer").exists()).toBe(true);
-    expect(wrapper.get('.modal-card [role="alert"]').text()).toContain("保存失败");
+    expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("保存失败");
     wrapper.unmount();
   });
 });

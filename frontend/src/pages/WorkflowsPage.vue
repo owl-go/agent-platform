@@ -3,6 +3,7 @@ import { inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type Workflow, type WorkflowInput } from "../api/client";
+import ToastMessage from "../components/ToastMessage.vue";
 
 const api = inject(platformApiKey)!;
 const { t } = useI18n(); const router = useRouter();
@@ -17,7 +18,7 @@ async function run(item: Workflow) { try { await api.runWorkflow(item.id); await
 <template>
   <section class="page-surface">
     <header class="page-header"><div><p class="eyebrow">02 / REPEATABLE EXECUTION</p><h1>{{ t('workflows.title') }}</h1><p>{{ t('workflows.subtitle') }}</p></div><div><button class="button ghost" @click="showDeleted = !showDeleted">{{ t('workflows.deletedRecords') }} · {{ deleted.length }}</button><button class="button primary" @click="showCreate = true">＋ {{ t('workflows.new') }}</button></div></header>
-    <div v-if="error" class="notice error-notice">{{ error }}</div>
+    <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <div v-if="loading" class="quiet-state large">{{ t('common.loading') }}</div>
     <div v-else-if="workflows.length === 0" class="empty-workflows"><div class="blueprint"><i></i><i></i><span>⌁</span></div><h2>{{ t('common.empty') }}</h2><p>{{ t('workflows.subtitle') }}</p><button class="button primary" @click="showCreate = true">{{ t('workflows.new') }}</button></div>
     <div v-else class="workflow-grid">
