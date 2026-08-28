@@ -4,8 +4,8 @@
 
 - Host: `47.237.108.63`
 - Public origin: `https://47-237-108-63.sslip.io`
-- Product revision: `e8da914` (`79b3cf3` Agent Workspace release plus model-provider fixes)
-- Release directory: `/opt/agent-platform/src.release-e8da914`
+- Product revision: `2403d5d` (`79b3cf3` Agent Workspace release plus model-provider and Toast feedback fixes)
+- Release directory: `/opt/agent-platform/src.release-2403d5d`
 - Pre-deployment backup: `/opt/agent-platform/backups/20260828-074618-pre-79b3cf3`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
@@ -14,7 +14,7 @@ The backup contains PostgreSQL business and Keycloak custom-format dumps, the de
 
 - API: `sha256:be139d6f9f62bd70f2e72812425603375f07f0fe071ddbf9e510a7944ad09794`
 - Worker: `sha256:01af34799bcb0afe7c56f20dc16027a89aeabe11b1d6f7d7e157cc34610656cb`
-- Web: `sha256:4a0cf9b15cf377cfef0d447003a485f329daf3b79da1e6761f09764e0f331623`
+- Web: `sha256:1fcdf92f4d8ef1d3a8d7bbc76c2c68a50e3fdf56cda7bec5e0912425579cd2f2`
 
 ## Migration
 
@@ -45,7 +45,9 @@ The previously applied `000001`–`000004` checksums matched the release before 
 
 During the first authenticated check, static catalog success exposed a nil-error panic in the service verification branch. The request left no product data, the regression was fixed in `68a4741`, full Go tests passed, and the check then completed successfully. API logs after the fixed container started contain no recovered panic.
 
-The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-save success, failure, and in-progress states visible in the Web editor. Its domain and component regression tests passed before deployment. After cutover, API, Worker, and Web were healthy, the served asset was `assets/index-CA3y2En_.js`, and recent API/Worker logs contained no panic or error-level entry.
+The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-save success, failure, and in-progress states visible in the Web editor. Its domain and component regression tests passed before deployment, and recent API/Worker logs contained no panic or error-level entry.
+
+The `2403d5d` Web-only follow-up standardizes transient success and failure feedback on one Toast component across Sessions, Workflows, Workflow detail, Experts, Settings, and User administration. The component provides success/error semantics, accessible live regions, manual dismissal, timed dismissal, responsive placement above modal layers, and reduced-motion behavior. All 44 frontend tests, TypeScript checking, and the production build passed before deployment. After the Web-only cutover, API, Worker, and Web remained healthy and the served asset was `assets/index-D3NPOGKa.js`.
 
 ## Evidence boundary
 
