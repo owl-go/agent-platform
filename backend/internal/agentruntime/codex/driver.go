@@ -43,8 +43,12 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 		endpointValue = "https://api.openai.com/v1"
 	}
 	endpoint, err := url.Parse(endpointValue)
-	if err != nil || endpoint.Scheme != "https" || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
-		return cliadapter.Invocation{}, fmt.Errorf("Codex model endpoint must be an HTTPS URL without credentials, query, or fragment")
+	scheme := ""
+	if endpoint != nil {
+		scheme = strings.ToLower(endpoint.Scheme)
+	}
+	if err != nil || endpoint == nil || (scheme != "http" && scheme != "https") || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return cliadapter.Invocation{}, fmt.Errorf("Codex model endpoint must be an HTTP or HTTPS URL without credentials, query, or fragment")
 	}
 	args := []string{
 		"--strict-config",

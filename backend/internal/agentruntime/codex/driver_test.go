@@ -40,12 +40,30 @@ func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 	}
 }
 
+func TestDriverBuildsInvocationForTrustedHTTPModelEndpoint(t *testing.T) {
+	invocation, err := (Driver{}).Build(agentruntime.ExecuteRequest{
+		Model:         "gpt-5.6-sol",
+		ModelEndpoint: "http://47.237.108.63:3000/openai",
+		ModelProtocols: []string{
+			"openai_responses",
+		},
+	}, t.TempDir())
+	if err != nil {
+		t.Fatalf("build HTTP model invocation: %v", err)
+	}
+	if !slices.Contains(invocation.Args, `model_providers.agent_workspace.base_url="http://47.237.108.63:3000/openai"`) {
+		t.Fatalf("args = %v", invocation.Args)
+	}
+}
+
 func TestDriverRejectsUnsafeModelEndpoints(t *testing.T) {
 	for _, endpoint := range []string{
-		"http://models.example.test/openai",
 		"https://user:password@models.example.test/openai",
+		"http://user:password@models.example.test/openai",
 		"https://models.example.test/openai?token=secret",
+		"http://models.example.test/openai?token=secret",
 		"https://models.example.test/openai#fragment",
+		"ftp://models.example.test/openai",
 	} {
 		t.Run(strings.ReplaceAll(endpoint, "/", "_"), func(t *testing.T) {
 			_, err := (Driver{}).Build(agentruntime.ExecuteRequest{ModelEndpoint: endpoint}, t.TempDir())
