@@ -237,9 +237,12 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     downloadWorkspaceFile(id, path, signal) { return download(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/download?path=${encodeURIComponent(path)}`, signal); },
     clearWorkspace(id, confirmation, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/clear`, json("POST", { confirmation }, signal)).then(() => undefined); },
     cloneWorkspace(id, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/clone`, json("POST", input, signal)); },
-    async listExperts(signal) { return (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? []; },
-    createExpert(input, signal) { return call("/api/v1/experts", json("POST", { expert: input }, signal)); },
-    updateExpert(id, input, version, signal) { return call(`/api/v1/experts/${encodeURIComponent(id)}`, json("PATCH", { expert: input, expected_version: version }, signal)); },
+    async listExperts(signal) {
+      const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
+      return items.map(normalizeExpert);
+    },
+    async createExpert(input, signal) { return normalizeExpert(await call("/api/v1/experts", json("POST", { expert: input }, signal))); },
+    async updateExpert(id, input, version, signal) { return normalizeExpert(await call(`/api/v1/experts/${encodeURIComponent(id)}`, json("PATCH", { expert: input, expected_version: version }, signal))); },
     deleteExpert(id, signal) { return remove(`/api/v1/experts/${encodeURIComponent(id)}`, signal); },
     async getSettings(signal) {
       const settings = await call<PersonalSettings>("/api/v1/settings", { signal });
@@ -276,6 +279,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     setUserEnabled(id, enabled, version, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version }, signal)); },
     resetUserPassword(id, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/password-reset`, json("POST", {}, signal)); },
   };
+}
+
+function normalizeExpert(expert: Expert): Expert {
+  return { ...expert, mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [] };
 }
 
 async function request<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<T> {

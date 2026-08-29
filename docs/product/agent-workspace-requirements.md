@@ -164,7 +164,7 @@ The Run list shows:
 - state: queued, running, succeeded, failed, or cancelled
 - elapsed time
 
-The Run detail shows queued time, start time, end time, elapsed time, input, Workflow Snapshot, logs and events, final result, error, and Artifacts. Users can cancel a queued or running Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
+The Run detail uses the same conversation presentation as a Session: the frozen Workflow goal and optional Run input appear as the User message, and the final text/JSON result or error appears as the Agent response. Run time, trigger, state, elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. Users can cancel a queued or running Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
 
 Run metadata and final text/JSON results are retained without a time limit in the first version. Users cannot delete individual Run records.
 

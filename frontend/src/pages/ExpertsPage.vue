@@ -7,7 +7,7 @@ const api = inject(platformApiKey)!;
 const { t } = useI18n(); const experts = ref<Expert[]>([]); const mcp = ref<MCPServer[]>([]); const skills = ref<Skill[]>([]); const showForm = ref(false); const editing = ref<Expert>(); const error = ref("");
 const form = ref({ name: "", description: "", mcp_server_ids: [] as string[], skill_ids: [] as string[] });
 onMounted(refresh);
-async function refresh() { try { [experts.value, mcp.value, skills.value] = await Promise.all([api.listExperts(), api.listMCPServers(), api.listSkills()]); } catch { error.value = t("errors.generic"); } }
+async function refresh() { try { const [expertItems, mcpItems, skillItems] = await Promise.all([api.listExperts(), api.listMCPServers(), api.listSkills()]); experts.value = expertItems.map((item) => ({ ...item, mcp_server_ids: item.mcp_server_ids ?? [], skill_ids: item.skill_ids ?? [] })); mcp.value = mcpItems; skills.value = skillItems; } catch { error.value = t("errors.generic"); } }
 function open(item?: Expert) { editing.value = item; form.value = item ? { name: item.name, description: item.description, mcp_server_ids: [...item.mcp_server_ids], skill_ids: [...item.skill_ids] } : { name: "", description: "", mcp_server_ids: [], skill_ids: [] }; showForm.value = true; }
 async function save() { try { if (editing.value) await api.updateExpert(editing.value.id, form.value, editing.value.version); else await api.createExpert(form.value); showForm.value = false; await refresh(); } catch { error.value = t("errors.validation"); } }
 async function remove(item: Expert) { if (!window.confirm(`${t('common.delete')} “${item.name}”?`)) return; await api.deleteExpert(item.id); await refresh(); }
