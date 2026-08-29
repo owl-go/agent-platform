@@ -101,7 +101,7 @@ Settings contains five collapsed sections:
 
 ### 5.3 Triggers And Input
 
-- Manual Runs accept optional text or JSON input.
+- Manual Runs launched from the Workflow interface execute the fixed Workflow goal directly; the detail header does not expose a separate input or input-type control.
 - API Runs accept optional text or JSON input.
 - Scheduled Runs execute only the fixed Workflow goal and do not have a separate default input.
 - Run trigger types shown to Users are manual, scheduled, and API.
@@ -164,7 +164,7 @@ The Run list shows:
 - state: queued, running, succeeded, failed, or cancelled
 - elapsed time
 
-Each Run History row represents a Run Conversation. Its detail uses the same conversation presentation as a Session: the frozen Workflow goal and initial input appear as the first User message, every follow-up input and Run result appear as later User/Agent message pairs, and a composer remains available while the Workflow exists. Run time, trigger, latest state, accumulated elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. A follow-up creates a new immutable Run turn using the initiating Workflow Snapshot and serialized Workspace; it never reopens a terminal Run. Users can cancel the active Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
+Each Run History row represents a Run Conversation. Its detail uses the same conversation presentation as a Session: the frozen Workflow goal appears as the first User message, every follow-up input and Run result appear as later User/Agent message pairs, and a composer remains available while the Workflow exists. API-triggered initial text or JSON remains visible with the goal when present. Run time, trigger, latest state, accumulated elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. A follow-up creates a new immutable Run turn using the initiating Workflow Snapshot and serialized Workspace; it never reopens a terminal Run. Users can cancel the active Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
 
 Run metadata and final text/JSON results are retained without a time limit in the first version. Users cannot delete individual Run records.
 

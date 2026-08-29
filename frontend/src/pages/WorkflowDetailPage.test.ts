@@ -79,6 +79,18 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("runs the Workflow goal without a separate manual input", async () => {
+    const runWorkflow = vi.fn(async () => run);
+    const wrapper = await mountPage(apiStub({ runWorkflow }));
+
+    expect(wrapper.find('[placeholder="本次补充输入（可选）"]').exists()).toBe(false);
+    await wrapper.get(".detail-hero .button.primary").trigger("click");
+    await flushPromises();
+
+    expect(runWorkflow).toHaveBeenCalledWith(workflow.id);
+    wrapper.unmount();
+  });
+
   it("keeps every Workflow setting section expanded by default", async () => {
     const wrapper = await mountPage();
     await wrapper.findAll(".tabs button").at(3)!.trigger("click");
