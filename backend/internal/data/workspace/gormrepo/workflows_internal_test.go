@@ -1,6 +1,7 @@
 package gormrepo
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -17,6 +18,19 @@ func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
 	}
 	if err := validateRunInput(nil, map[string]any{"payload": strings.Repeat("x", 1_048_576)}); err == nil {
 		t.Fatal("validateRunInput accepted JSON above 1 MiB")
+	}
+}
+
+func TestWorkflowRunInstructionIncludesPriorConversation(t *testing.T) {
+	firstInput, _ := json.Marshal(map[string]any{"text": "先检查代码", "json": nil})
+	firstResult, _ := json.Marshal(map[string]any{"text": "发现两个问题", "json": nil})
+	current := "继续修复第一个问题"
+	instruction := workflowRunInstruction("完成代码审查", []runRecord{{Input: firstInput, FinalResult: firstResult}}, &current, nil)
+
+	for _, expected := range []string{"Workflow goal:\n完成代码审查", "user: 先检查代码", "assistant: 发现两个问题", "Current user message:\n继续修复第一个问题"} {
+		if !strings.Contains(instruction, expected) {
+			t.Fatalf("instruction %q does not contain %q", instruction, expected)
+		}
 	}
 }
 

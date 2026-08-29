@@ -21,6 +21,7 @@ const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceSer
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
 const OperationAgentWorkspaceServiceClearWorkspace = "/workspace.v1.AgentWorkspaceService/ClearWorkspace"
 const OperationAgentWorkspaceServiceCloneWorkspace = "/workspace.v1.AgentWorkspaceService/CloneWorkspace"
+const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateMCPServer = "/workspace.v1.AgentWorkspaceService/CreateMCPServer"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
@@ -49,6 +50,7 @@ const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceListMCPServers = "/workspace.v1.AgentWorkspaceService/ListMCPServers"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
+const OperationAgentWorkspaceServiceListRunTurns = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
 const OperationAgentWorkspaceServiceListRuns = "/workspace.v1.AgentWorkspaceService/ListRuns"
 const OperationAgentWorkspaceServiceListRuntimeEngines = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
 const OperationAgentWorkspaceServiceListSessionMessages = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
@@ -80,6 +82,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
 	ClearWorkspace(context.Context, *ClearWorkspaceRequest) (*DeleteResponse, error)
 	CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error)
+	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
@@ -108,6 +111,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
+	ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
 	ListSessionMessages(context.Context, *ListSessionMessagesRequest) (*ListSessionMessagesResponse, error)
@@ -161,6 +165,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_ListRuns0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs/{run_id}", _AgentWorkspaceService_GetRun0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns", _AgentWorkspaceService_ListRunTurns0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns", _AgentWorkspaceService_ContinueRunConversation0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation", _AgentWorkspaceService_CancelRun0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun", _AgentWorkspaceService_RerunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/artifacts", _AgentWorkspaceService_ListArtifacts0_HTTP_Handler(srv))
@@ -693,6 +699,50 @@ func _AgentWorkspaceService_GetRun0_HTTP_Handler(srv AgentWorkspaceServiceHTTPSe
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetRun)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.GetRun(ctx, req.(*GetRunRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*Run)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListRunTurns0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListRunTurnsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListRunTurns)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListRunTurns(ctx, req.(*ListRunTurnsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListRunsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ContinueRunConversation0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ContinueRunConversationRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceContinueRunConversation)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ContinueRunConversation(ctx, req.(*ContinueRunConversationRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -1398,6 +1448,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
 	ClearWorkspace(ctx context.Context, req *ClearWorkspaceRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	CloneWorkspace(ctx context.Context, req *CloneWorkspaceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateMCPServer(ctx context.Context, req *CreateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
@@ -1426,6 +1477,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListMCPServers(ctx context.Context, req *ListMCPServersRequest, opts ...http.CallOption) (rsp *ListMCPServersResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
+	ListRunTurns(ctx context.Context, req *ListRunTurnsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuns(ctx context.Context, req *ListRunsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuntimeEngines(ctx context.Context, req *ListRuntimeEnginesRequest, opts ...http.CallOption) (rsp *ListRuntimeEnginesResponse, err error)
 	ListSessionMessages(ctx context.Context, req *ListSessionMessagesRequest, opts ...http.CallOption) (rsp *ListSessionMessagesResponse, err error)
@@ -1520,6 +1572,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CloneWorkspace(ctx context.Context
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCloneWorkspace),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ContinueRunConversation(ctx context.Context, in *ContinueRunConversationRequest, opts ...http.CallOption) (*Run, error) {
+	var out Run
+	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceContinueRunConversation),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -1978,6 +2047,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListModelProviderPresets(ctx conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListModelProviderPresets),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListRunTurns(ctx context.Context, in *ListRunTurnsRequest, opts ...http.CallOption) (*ListRunsResponse, error) {
+	var out ListRunsResponse
+	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListRunTurns),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

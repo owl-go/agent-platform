@@ -206,6 +206,34 @@ func (service *Service) GetRun(ctx context.Context, request *workspacev1.GetRunR
 	return runResponse(item), nil
 }
 
+func (service *Service) ListRunTurns(ctx context.Context, request *workspacev1.ListRunTurnsRequest) (*workspacev1.ListRunsResponse, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, err := service.workspace.Repository().ListRunTurns(ctx, owner, request.WorkflowId, request.RunId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := make([]*workspacev1.Run, 0, len(items))
+	for _, item := range items {
+		response = append(response, runResponse(item))
+	}
+	return &workspacev1.ListRunsResponse{Items: response}, nil
+}
+
+func (service *Service) ContinueRunConversation(ctx context.Context, request *workspacev1.ContinueRunConversationRequest) (*workspacev1.Run, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return runResponse(item), nil
+}
+
 func (service *Service) CancelRun(ctx context.Context, request *workspacev1.CancelRunRequest) (*workspacev1.Run, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
@@ -328,7 +356,7 @@ func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
 }
 
 func runResponse(item workspacedomain.Run) *workspacev1.Run {
-	response := &workspacev1.Run{Id: item.ID, WorkflowId: item.WorkflowID, WorkflowName: item.WorkflowName, Trigger: item.Trigger, State: item.State, TextInput: item.TextInput, FinalText: item.FinalText, QueuedAt: timestamppb.New(item.QueuedAt)}
+	response := &workspacev1.Run{Id: item.ID, ConversationId: item.ConversationID, TurnNumber: int32(item.TurnNumber), WorkflowId: item.WorkflowID, WorkflowName: item.WorkflowName, Trigger: item.Trigger, State: item.State, TextInput: item.TextInput, FinalText: item.FinalText, QueuedAt: timestamppb.New(item.QueuedAt)}
 	if item.JSONInput != nil {
 		response.JsonInput, _ = structpb.NewStruct(item.JSONInput)
 	}

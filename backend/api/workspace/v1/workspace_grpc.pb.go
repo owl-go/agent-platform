@@ -43,6 +43,8 @@ const (
 	AgentWorkspaceService_RunWorkflow_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 	AgentWorkspaceService_ListRuns_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListRuns"
 	AgentWorkspaceService_GetRun_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/GetRun"
+	AgentWorkspaceService_ListRunTurns_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
+	AgentWorkspaceService_ContinueRunConversation_FullMethodName       = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 	AgentWorkspaceService_CancelRun_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/CancelRun"
 	AgentWorkspaceService_RerunWorkflow_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
 	AgentWorkspaceService_ListArtifacts_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
@@ -106,6 +108,8 @@ type AgentWorkspaceServiceClient interface {
 	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*Run, error)
+	ListRunTurns(ctx context.Context, in *ListRunTurnsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
+	ContinueRunConversation(ctx context.Context, in *ContinueRunConversationRequest, opts ...grpc.CallOption) (*Run, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*Run, error)
 	RerunWorkflow(ctx context.Context, in *RerunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
 	ListArtifacts(ctx context.Context, in *ListArtifactsRequest, opts ...grpc.CallOption) (*ListArtifactsResponse, error)
@@ -383,6 +387,26 @@ func (c *agentWorkspaceServiceClient) GetRun(ctx context.Context, in *GetRunRequ
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Run)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetRun_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListRunTurns(ctx context.Context, in *ListRunTurnsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRunsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListRunTurns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ContinueRunConversation(ctx context.Context, in *ContinueRunConversationRequest, opts ...grpc.CallOption) (*Run, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Run)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ContinueRunConversation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -747,6 +771,8 @@ type AgentWorkspaceServiceServer interface {
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
+	ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error)
+	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
@@ -861,6 +887,12 @@ func (UnimplementedAgentWorkspaceServiceServer) ListRuns(context.Context, *ListR
 }
 func (UnimplementedAgentWorkspaceServiceServer) GetRun(context.Context, *GetRunRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetRun not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRunTurns not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error) {
+	return nil, status.Error(codes.Unimplemented, "method ContinueRunConversation not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) CancelRun(context.Context, *CancelRunRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelRun not implemented")
@@ -1410,6 +1442,42 @@ func _AgentWorkspaceService_GetRun_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).GetRun(ctx, req.(*GetRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListRunTurns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRunTurnsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListRunTurns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListRunTurns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListRunTurns(ctx, req.(*ListRunTurnsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ContinueRunConversation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContinueRunConversationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ContinueRunConversation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ContinueRunConversation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ContinueRunConversation(ctx, req.(*ContinueRunConversationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2110,6 +2178,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRun",
 			Handler:    _AgentWorkspaceService_GetRun_Handler,
+		},
+		{
+			MethodName: "ListRunTurns",
+			Handler:    _AgentWorkspaceService_ListRunTurns_Handler,
+		},
+		{
+			MethodName: "ContinueRunConversation",
+			Handler:    _AgentWorkspaceService_ContinueRunConversation_Handler,
 		},
 		{
 			MethodName: "CancelRun",

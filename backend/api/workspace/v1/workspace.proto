@@ -35,6 +35,8 @@ service AgentWorkspaceService {
   rpc RunWorkflow(RunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs" body: "*"}; }
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs"}; }
   rpc GetRun(GetRunRequest) returns (Run) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs/{run_id}"}; }
+  rpc ListRunTurns(ListRunTurnsRequest) returns (ListRunsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns"}; }
+  rpc ContinueRunConversation(ContinueRunConversationRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns" body: "*"}; }
   rpc CancelRun(CancelRunRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation" body: "*"}; }
   rpc RerunWorkflow(RerunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun" body: "*"}; }
   rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts"}; }
@@ -120,9 +122,11 @@ message RunWorkflowRequest { string workflow_id = 1; optional string text_input 
 message ListRunsRequest { string workflow_id = 1; }
 message ListRunsResponse { repeated Run items = 1; }
 message GetRunRequest { string workflow_id = 1; string run_id = 2; }
+message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
+message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }

@@ -2185,6 +2185,110 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListRunTurns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRunsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_ContinueRunConversation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Run"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceContinueRunConversationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/workspace": {
       "get": {
         "operationId": "AgentWorkspaceService_ListWorkspaceEntries",
@@ -2568,6 +2672,14 @@
             "type": "string"
           },
           "ssh_private_key": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentWorkspaceServiceContinueRunConversationBody": {
+        "type": "object",
+        "properties": {
+          "content": {
             "type": "string"
           }
         }
@@ -3568,6 +3680,13 @@
           },
           "workflow_snapshot": {
             "type": "object"
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "turn_number": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

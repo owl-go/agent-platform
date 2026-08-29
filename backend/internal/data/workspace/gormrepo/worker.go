@@ -150,14 +150,13 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := json.Unmarshal(row.Input, &input); err != nil {
 		return nil, fmt.Errorf("decode claimed Run input: %w", err)
 	}
-	instruction := snapshot.Goal
-	if input.Text != nil && strings.TrimSpace(*input.Text) != "" {
-		instruction += "\n\nRun input:\n" + strings.TrimSpace(*input.Text)
+	var prior []runRecord
+	if row.TurnNumber > 1 {
+		if err := tx.Where("conversation_id = ? AND turn_number < ?", row.ConversationID, row.TurnNumber).Order("turn_number").Find(&prior).Error; err != nil {
+			return nil, fmt.Errorf("load prior Run Conversation turns: %w", err)
+		}
 	}
-	if input.JSON != nil {
-		encoded, _ := json.Marshal(input.JSON)
-		instruction += "\n\nRun JSON input:\n" + string(encoded)
-	}
+	instruction := workflowRunInstruction(snapshot.Goal, prior, input.Text, input.JSON)
 	result := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "running", "started_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 	if result.Error != nil || result.RowsAffected != 1 {
 		return nil, result.Error
@@ -170,6 +169,57 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		workflowID = *row.WorkflowID
 	}
 	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, Instruction: instruction, Snapshot: snapshot}, nil
+}
+
+func workflowRunInstruction(goal string, prior []runRecord, textInput *string, jsonInput map[string]any) string {
+	var builder strings.Builder
+	builder.WriteString("Workflow goal:\n")
+	builder.WriteString(strings.TrimSpace(goal))
+	if len(prior) > 0 {
+		builder.WriteString("\n\nPrevious conversation, oldest first:\n")
+		for _, turn := range prior {
+			var input struct {
+				Text *string        `json:"text"`
+				JSON map[string]any `json:"json"`
+			}
+			_ = json.Unmarshal(turn.Input, &input)
+			if input.Text != nil && strings.TrimSpace(*input.Text) != "" {
+				builder.WriteString("user: ")
+				builder.WriteString(strings.TrimSpace(*input.Text))
+				builder.WriteByte('\n')
+			} else if input.JSON != nil {
+				encoded, _ := json.Marshal(input.JSON)
+				builder.WriteString("user: ")
+				builder.Write(encoded)
+				builder.WriteByte('\n')
+			}
+			var result struct {
+				Text *string        `json:"text"`
+				JSON map[string]any `json:"json"`
+			}
+			_ = json.Unmarshal(turn.FinalResult, &result)
+			builder.WriteString("assistant: ")
+			switch {
+			case result.Text != nil:
+				builder.WriteString(*result.Text)
+			case result.JSON != nil:
+				encoded, _ := json.Marshal(result.JSON)
+				builder.Write(encoded)
+			case turn.TerminalError != nil:
+				builder.WriteString(*turn.TerminalError)
+			}
+			builder.WriteByte('\n')
+		}
+	}
+	if textInput != nil && strings.TrimSpace(*textInput) != "" {
+		builder.WriteString("\nCurrent user message:\n")
+		builder.WriteString(strings.TrimSpace(*textInput))
+	} else if jsonInput != nil {
+		encoded, _ := json.Marshal(jsonInput)
+		builder.WriteString("\nCurrent user message (JSON):\n")
+		builder.Write(encoded)
+	}
+	return builder.String()
 }
 
 func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {

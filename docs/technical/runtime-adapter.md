@@ -16,6 +16,8 @@ Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Co
 
 Session 连续性优先使用平台保存的最近消息与有界 Rolling Summary。只有某 Runtime 配置 `native_resume: true` 且该镜像通过验证时，才把原生 Checkpoint 作为优化；切换 Runtime 时自动放弃原生 Checkpoint。
 
+Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 Run，Worker 将同一 Conversation 的既有 User/Assistant 轮次和当前输入通过公共 Instruction seam 交给 Runtime；不依赖 Runtime 原生 Resume，也不会重开或改写已经终态的 Run。
+
 当前部署固定的 Codex CLI `0.147.0` 已验证 `thread_id` 的保存与 `codex exec resume <thread_id>` 续接，允许开启 `native_resume`。每个 Run 只把用户与 Session 双重隔离的临时副本挂载到容器 `$CODEX_HOME`，成功后仅将经过精确 Secret 脱敏的 `sessions/` 原子写回；插件缓存、日志、认证文件和 MCP 配置均不持久化。MCP 配置从单 Run Credential 目录建立临时符号链接。API 删除 Session 时同步清理状态目录。其他 Runtime 保持关闭，直到各自固定镜像完成同等黑盒验证。
 
 `ExecuteRequest.ModelEndpoint`、`ModelProvider` 与 `ModelProtocols` 来自发送消息或启动 Workflow Run 时冻结的 Response/Workflow Snapshot。Driver 必须把它们作为结构化参数或受控配置传给 CLI，禁止拼接 Shell；Endpoint 必须是无 Userinfo、Query 和 Fragment 的绝对 HTTP 或 HTTPS URL。HTTP 仅用于 User 明确配置的可信私有或自托管网关，API Key 与模型流量不会获得传输加密；内置官方 Endpoint 仍全部使用 HTTPS。API Key 通过对应 Model Provider Connection 版本的受保护凭证取得，并且只进入单 Run 临时环境。Codex Driver 使用固定的 `agent_workspace` Custom Provider，由 `OPENAI_API_KEY` 读取 Secret，并要求连接支持 OpenAI Responses；Claude Code 要求 Anthropic Messages。Hermes 与 OpenClaw 在完成指定镜像和协议组合的 Conformance 前保持 `unverified`。只有绕过产品 Model Provider Connection 的独立 Conformance 调用可以省略 Endpoint，此时 Driver 使用其官方 HTTPS Endpoint。

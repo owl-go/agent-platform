@@ -9,7 +9,7 @@
 业务分为两个限界上下文：
 
 - Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
-- Workspace：Session、Workflow、Run、Expert、Model Provider Connection、Provider Model、MCP Server、Skill 与 Personal Settings。
+- Workspace：Session、Workflow、Run Conversation、Run、Expert、Model Provider Connection、Provider Model、MCP Server、Skill 与 Personal Settings。
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
 
@@ -20,7 +20,7 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 ## 事务与并发
 
 - Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
-- Workflow Run 在创建时冻结 Workflow、Expert、Provider Model、Model Provider Connection 版本、Model API Protocol、Endpoint、Runtime、环境变量与扩展配置；同一 Workflow 的 Run 串行执行。API Key 通过版本化凭证引用在 Worker 领取时加载，不进入普通 Snapshot JSON。
+- Run Conversation 的首个 Run 创建时冻结 Workflow、Expert、Provider Model、Model Provider Connection 版本、Model API Protocol、Endpoint、Runtime、环境变量与扩展配置；后续追问创建新的不可变 Run 并复用该快照和 Workspace。一个 Run Conversation 同时只有一个 Run 可执行，同一 Workflow 的所有 Run 仍串行执行。API Key 通过版本化凭证引用在 Worker 领取时加载，不进入普通 Snapshot JSON。
 - Worker 按 Session 或 Workflow 维护隔离的 Warm Runtime Container 租约。租约不共享 User 或资源边界；执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。
 - 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
@@ -29,6 +29,8 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 ## API
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。认证使用 Bearer OIDC Token。Workflow API Credential 只允许通过 HTTP Basic 启动和查看该 Workflow 的 Run，不代表 User 身份。
+
+工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
 
 两个流式端点有意使用手写 Handler：
 

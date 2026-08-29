@@ -345,8 +345,48 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	if err != nil {
 		return runRecord{}, err
 	}
-	created := runRecord{ID: uuid.NewString(), OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, QueuedAt: time.Now().UTC(), Version: 1}
+	id := uuid.NewString()
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, QueuedAt: time.Now().UTC(), Version: 1}
 	return created, tx.Create(&created).Error
+}
+
+func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string) (domain.Run, error) {
+	content = strings.TrimSpace(content)
+	if content == "" || len(content) > 100_000 {
+		return domain.Run{}, fmt.Errorf("%w: follow-up content must contain 1-100000 bytes", domain.ErrInvalid)
+	}
+	var created runRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var workflow workflowRecord
+		if err := tx.Clauses(clause.Locking{Strength: "SHARE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
+			return mapNotFound(err)
+		}
+		var root runRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND conversation_id = id", ownerID, workflowID, runID).Take(&root).Error; err != nil {
+			return mapNotFound(err)
+		}
+		var active int64
+		if err := tx.Model(&runRecord{}).Where("conversation_id = ? AND state IN ('queued','running')", root.ID).Count(&active).Error; err != nil {
+			return err
+		}
+		if active > 0 {
+			return domain.ErrConflict
+		}
+		var lastTurn int
+		if err := tx.Model(&runRecord{}).Select("COALESCE(MAX(turn_number), 0)").Where("conversation_id = ?", root.ID).Scan(&lastTurn).Error; err != nil {
+			return err
+		}
+		input, err := marshal(map[string]any{"text": content, "json": nil})
+		if err != nil {
+			return err
+		}
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, WorkflowSnapshot: append([]byte(nil), root.WorkflowSnapshot...), QueuedAt: time.Now().UTC(), Version: 1}
+		return tx.Create(&created).Error
+	})
+	if err != nil {
+		return domain.Run{}, fmt.Errorf("continue Run Conversation: %w", err)
+	}
+	return runDomain(created), nil
 }
 
 func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.ExecutionSnapshot, error) {
@@ -449,8 +489,24 @@ func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID 
 		return nil, err
 	}
 	var rows []runRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ?", ownerID, workflowID).Order("queued_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND conversation_id = id", ownerID, workflowID).Order("queued_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Workflow Runs: %w", err)
+	}
+	items := make([]domain.Run, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, runDomain(row))
+	}
+	return items, nil
+}
+
+func (repository *Repository) ListRunTurns(ctx context.Context, ownerID, workflowID, runID string) ([]domain.Run, error) {
+	var root runRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND conversation_id = id", ownerID, workflowID, runID).Take(&root).Error; err != nil {
+		return nil, mapNotFound(err)
+	}
+	var rows []runRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND conversation_id = ?", ownerID, workflowID, root.ID).Order("turn_number, queued_at, id").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Run Conversation turns: %w", err)
 	}
 	items := make([]domain.Run, 0, len(rows))
 	for _, row := range rows {
@@ -668,7 +724,7 @@ func workflowDomain(row workflowRecord) (domain.Workflow, error) {
 }
 
 func runDomain(row runRecord) domain.Run {
-	item := domain.Run{ID: row.ID, OwnerID: row.OwnerID, WorkflowName: row.WorkflowName, Trigger: row.Trigger, State: row.State, QueuedAt: row.QueuedAt, StartedAt: row.StartedAt, EndedAt: row.EndedAt}
+	item := domain.Run{ID: row.ID, ConversationID: row.ConversationID, TurnNumber: row.TurnNumber, OwnerID: row.OwnerID, WorkflowName: row.WorkflowName, Trigger: row.Trigger, State: row.State, QueuedAt: row.QueuedAt, StartedAt: row.StartedAt, EndedAt: row.EndedAt}
 	if row.WorkflowID != nil {
 		item.WorkflowID = *row.WorkflowID
 	}

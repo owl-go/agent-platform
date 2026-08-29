@@ -532,6 +532,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListRunTurns"];
+        put?: never;
+        post: operations["AgentWorkspaceService_ContinueRunConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/workspace": {
         parameters: {
             query?: never;
@@ -673,6 +689,9 @@ export interface components {
             url?: string;
             branch?: string;
             ssh_private_key?: string;
+        };
+        AgentWorkspaceServiceContinueRunConversationBody: {
+            content?: string;
         };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
@@ -1027,6 +1046,9 @@ export interface components {
             /** Format: int64 */
             elapsed_ms?: number;
             workflow_snapshot?: Record<string, never>;
+            conversation_id?: string;
+            /** Format: int32 */
+            turn_number?: number;
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -2824,6 +2846,74 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceRerunWorkflowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListRunTurns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListRunsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ContinueRunConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceContinueRunConversationBody"];
             };
         };
         responses: {

@@ -89,6 +89,18 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.elapsed_ms).toBe(0);
   });
 
+  it("submits a follow-up to the selected Run Conversation", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({ id: "run-2", conversation_id: "run-1", turn_number: 2, workflow_id: "workflow-1", workflow_name: "Build", trigger: "manual", state: "queued", text_input: "继续分析", queued_at: "2026-08-25T00:01:00Z" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await createPlatformApi(() => "token").continueRunConversation("workflow-1", "run-1", "继续分析");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/runs/run-1/turns");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ content: "继续分析" });
+    expect(result.turn_number).toBe(2);
+  });
+
   it("parses replayed and live SSE events in order", async () => {
     const body = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode("id: 1\nevent: run.started\ndata: {}\n\nid: 2\nevent: run.succeeded\ndata: {\"message\":\"done\"}\n\n")); controller.close(); } });
     vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));

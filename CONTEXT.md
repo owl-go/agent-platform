@@ -56,9 +56,13 @@ _Avoid_: User Token, Idempotency Key, model credential
 An optional hourly, daily, or weekly schedule that starts a Workflow from its fixed goal in a selected time zone.
 _Avoid_: API call, Webhook, file watcher
 
+**Run Conversation**:
+A continuing conversation started by one manual, scheduled, or API Workflow trigger. It keeps the initiating Workflow Snapshot and contains one or more ordered Runs, so the User can follow up without losing the original goal, prior messages, or Workspace context.
+_Avoid_: Session, one Runtime process, Run Event stream
+
 **Run**:
-One manual, scheduled, or API-triggered execution of a Workflow with fixed input and a Workflow Snapshot.
-_Avoid_: Workflow, Session response, Worker process
+One immutable execution turn inside a Run Conversation, with fixed input, one terminal result, and the Run Conversation's frozen Workflow Snapshot. The first Run records the trigger; each follow-up creates another Run instead of reopening a terminal Run.
+_Avoid_: Workflow, Run Conversation, Session response, Worker process
 
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.

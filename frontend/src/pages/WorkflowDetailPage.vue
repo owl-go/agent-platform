@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
@@ -12,7 +12,8 @@ const api = inject(platformApiKey)!;
 const route = useRoute(); const router = useRouter(); const { t, locale } = useI18n();
 const workflowID = computed(() => String(route.params.workflowId));
 const origin = window.location.origin;
-const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const runEvents = ref<RunEvent[]>([]); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const runInput = ref(""); const runInputMode = ref<"text" | "json">("text"); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const runConversationElement = ref<HTMLElement>();
+const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const streamingRunID = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const runInput = ref(""); const runInputMode = ref<"text" | "json">("text"); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const models = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection_name: connection.name }))));
 const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
 function modelIncompatible(model: (typeof models.value)[number]) {
@@ -24,23 +25,13 @@ watch(() => settingsForm.value.runtime_engine, () => {
   if (selectedModel && modelIncompatible(selectedModel)) settingsForm.value.provider_model_id = undefined;
 });
 const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
-const selectedRunArtifacts = computed(() => artifacts.value.filter((item) => item.run_id === selectedRun.value?.id));
-const selectedRunInput = computed(() => {
-  if (!selectedRun.value) return "";
-  const supplementalInput = selectedRun.value.text_input || (selectedRun.value.json_input ? JSON.stringify(selectedRun.value.json_input, null, 2) : "");
-  return [workflow.value?.goal, supplementalInput].filter(Boolean).join("\n\n");
-});
+const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
+const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running"));
+const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => total + item.elapsed_ms, 0));
 const streamedRunOutput = computed(() => runEvents.value
   .filter((event) => event.type === "message.delta")
   .map((event) => typeof event.payload.delta === "string" ? event.payload.delta : "")
   .join(""));
-const selectedRunOutput = computed(() => {
-  if (!selectedRun.value) return "";
-  return selectedRun.value.final_text
-    || (selectedRun.value.final_json ? `\`\`\`json\n${JSON.stringify(selectedRun.value.final_json, null, 2)}\n\`\`\`` : "")
-    || selectedRun.value.error
-    || streamedRunOutput.value;
-});
 watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
@@ -50,7 +41,7 @@ let eventController: AbortController | undefined;
 onMounted(async () => { await refresh(); runTimer = setInterval(() => void refreshRuns(), 1500); });
 onBeforeUnmount(() => { if (runTimer) clearInterval(runTimer); eventController?.abort(); });
 async function refresh() { loading.value = true; error.value = ""; try { workflow.value = await api.getWorkflow(workflowID.value); settingsForm.value = { name: workflow.value.name, goal: workflow.value.goal, expert_id: workflow.value.expert_id, provider_model_id: workflow.value.provider_model_id, runtime_engine: workflow.value.runtime_engine, environment: workflow.value.environment ?? [], schedule: workflow.value.schedule }; [experts.value, connections.value, runtimes.value, runs.value, artifacts.value] = await Promise.all([api.listExperts(), api.listModelProviderConnections(), api.listRuntimeEngines(), api.listRuns(workflowID.value), api.listArtifacts(workflowID.value)]); if (!workflow.value.deleted) await loadDirectory(""); else if (tab.value === "workspace" || tab.value === "settings") tab.value = "history"; } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
-async function refreshRuns() { try { runs.value = await api.listRuns(workflowID.value); if (selectedRun.value) selectedRun.value = runs.value.find((item) => item.id === selectedRun.value?.id); if (!runs.value.some((item) => item.state === "queued" || item.state === "running")) artifacts.value = await api.listArtifacts(workflowID.value); } catch { /* Keep the last usable projection during a transient poll failure. */ } }
+async function refreshRuns() { try { runs.value = await api.listRuns(workflowID.value); if (selectedRun.value) { selectedRun.value = runs.value.find((item) => item.id === selectedRun.value?.id) ?? selectedRun.value; conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value.id); } if (!runs.value.some((item) => item.state === "queued" || item.state === "running")) artifacts.value = await api.listArtifacts(workflowID.value); } catch { /* Keep the last usable projection during a transient poll failure. */ } }
 async function runNow() { running.value = true; try { const input = runInputMode.value === "json" && runInput.value.trim() ? { json_input: JSON.parse(runInput.value) as Record<string, unknown> } : { text_input: runInput.value || undefined }; await api.runWorkflow(workflowID.value, input); runInput.value = ""; tab.value = "history"; runs.value = await api.listRuns(workflowID.value); } catch { error.value = runInputMode.value === "json" ? t("errors.validation") : t("errors.generic"); } finally { running.value = false; } }
 async function loadDirectory(path: string) { const result = await api.listWorkspace(workflowID.value, path); entries.value = result.items ?? []; workspacePath.value = path; workspaceUsage.value = { used: result.used_bytes, limit: result.limit_bytes }; }
 async function openEntry(entry: WorkspaceEntry) { if (entry.directory) { await loadDirectory(entry.path); return; } if (entry.size > 1024 * 1024) { await downloadEntry(entry); return; } const file = await api.getWorkspaceFile(workflowID.value, entry.path); if (!file.content_type.startsWith("text/") && !file.content_type.includes("json") && !file.content_type.includes("xml")) { await downloadEntry(entry); return; } preview.value = { path: file.path, content: decodeBase64(file.content) }; }
@@ -65,13 +56,45 @@ async function removeWorkflow() { if (!workflow.value || !window.confirm(`${t('c
 async function cancelRun(item: Run) { await api.cancelRun(workflowID.value, item.id); runs.value = await api.listRuns(workflowID.value); }
 async function rerun(item: Run) { await api.rerunWorkflow(workflowID.value, item.id); runs.value = await api.listRuns(workflowID.value); }
 async function openRun(item: Run) {
-  eventController?.abort();
-  selectedRun.value = item;
-  runEvents.value = [];
-  eventController = new AbortController();
-  try { await api.streamRunEvents(workflowID.value, item.id, (event) => runEvents.value.push(event), eventController.signal); } catch (streamError) { if (!(streamError instanceof DOMException && streamError.name === "AbortError")) error.value = t("errors.generic"); }
+	eventController?.abort();
+	selectedRun.value = item;
+	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
+	runEvents.value = [];
+	await scrollConversationToEnd();
+	const active = activeConversationRun.value;
+	if (active) void streamConversationTurn(active);
 }
-function closeRun() { eventController?.abort(); eventController = undefined; selectedRun.value = undefined; runEvents.value = []; }
+async function streamConversationTurn(item: Run) {
+	eventController?.abort();
+	eventController = new AbortController();
+	streamingRunID.value = item.id;
+	runEvents.value = [];
+	try {
+		await api.streamRunEvents(workflowID.value, item.id, (event) => { runEvents.value.push(event); void scrollConversationToEnd(); }, eventController.signal);
+		const completed = await api.getRun(workflowID.value, item.id);
+		conversationRuns.value = conversationRuns.value.map((turn) => turn.id === completed.id ? completed : turn);
+	} catch (streamError) {
+		if (!(streamError instanceof DOMException && streamError.name === "AbortError")) error.value = t("errors.generic");
+	} finally {
+		if (streamingRunID.value === item.id) streamingRunID.value = "";
+	}
+}
+async function sendFollowUp() {
+	if (!selectedRun.value || !followUpInput.value.trim() || activeConversationRun.value || sendingFollowUp.value) return;
+	sendingFollowUp.value = true;
+	try {
+		const created = await api.continueRunConversation(workflowID.value, selectedRun.value.id, followUpInput.value.trim());
+		followUpInput.value = "";
+		conversationRuns.value.push(created);
+		await scrollConversationToEnd();
+		void streamConversationTurn(created);
+	} catch { error.value = t("errors.generic"); } finally { sendingFollowUp.value = false; }
+}
+async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
+function closeRun() { eventController?.abort(); eventController = undefined; selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; streamingRunID.value = ""; followUpInput.value = ""; }
+function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
+function runOutput(item: Run) { return item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || (item.id === streamingRunID.value ? streamedRunOutput.value : ""); }
+async function scrollConversationToEnd() { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior: "smooth" }); }
 function addEnvironment() { settingsForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }
 function removeEnvironment(index: number) { settingsForm.value.environment.splice(index, 1); }
 function enableSchedule() { settingsForm.value.schedule = settingsForm.value.schedule ?? { enabled: true, frequency: "daily", hour: 9, minute: 0, weekday: 1, timezone: "Asia/Shanghai" }; }
@@ -103,5 +126,5 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     </template>
   </section>
   <div v-if="preview" class="modal-layer" @click.self="preview = undefined"><div class="modal-card preview-card"><div class="section-heading"><h2>{{ preview.path }}</h2><button class="icon-button" @click="preview = undefined">×</button></div><pre>{{ preview.content }}</pre></div></div>
-  <div v-if="selectedRun" class="modal-layer" @click.self="closeRun"><div class="modal-card run-dialog"><header class="run-conversation-head"><div><p class="eyebrow">{{ workflow?.name ?? selectedRun.workflow_name }} / RUN {{ selectedRun.id.slice(0, 8) }}</p><h2>{{ t('workflows.history') }}</h2><p><span><i class="run-state" :class="selectedRun.state"></i>{{ stateLabel(selectedRun.state) }}</span><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(selectedRun.elapsed_ms, locale as SupportedLocale) }}</span><span>{{ new Date(selectedRun.started_at || selectedRun.queued_at).toLocaleString() }}</span></p></div><button class="icon-button" :aria-label="t('common.close')" @click="closeRun">×</button></header><div class="run-conversation"><article class="message user"><div class="message-content"><p>{{ selectedRunInput }}</p><small>{{ t('workflows.inputLabel') }}</small></div></article><article class="message assistant"><div class="message-content"><div v-if="selectedRunOutput" class="markdown-body" :class="{ streaming: selectedRun.state === 'queued' || selectedRun.state === 'running' }" v-html="renderMarkdown(selectedRunOutput)"></div><div v-else class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong></div><div v-if="selectedRunArtifacts.length" class="run-attachments"><button v-for="item in selectedRunArtifacts" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">{{ item.kind === 'result' ? 'TXT' : 'FILE' }}</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ selectedRun.ended_at ? new Date(selectedRun.ended_at).toLocaleString() : stateLabel(selectedRun.state) }}</small></div></article></div></div></div>
+  <div v-if="selectedRun" class="modal-layer" @click.self="closeRun"><div class="modal-card run-dialog"><header class="run-conversation-head"><div><p class="eyebrow">{{ workflow?.name ?? selectedRun.workflow_name }} / RUN {{ selectedRun.id.slice(0, 8) }}</p><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span><i class="run-state" :class="latestConversationRun.state"></i>{{ stateLabel(latestConversationRun.state) }}</span><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(conversationElapsed, locale as SupportedLocale) }}</span><span>{{ new Date(selectedRun.started_at || selectedRun.queued_at).toLocaleString() }}</span></p></div><button class="icon-button" :aria-label="t('common.close')" @click="closeRun">×</button></header><div ref="runConversationElement" class="run-conversation"><template v-for="(turn, index) in conversationRuns" :key="turn.id"><article class="message user"><div class="message-content"><p>{{ runInputText(turn, index) }}</p><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article><article class="message assistant"><div class="message-content"><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(runOutput(turn))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="artifacts.some((item) => item.run_id === turn.id)" class="run-attachments"><button v-for="item in artifacts.filter((artifact) => artifact.run_id === turn.id)" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">{{ item.kind === 'result' ? 'TXT' : 'FILE' }}</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article></template></div><form v-if="!workflow?.deleted" class="run-composer" @submit.prevent="sendFollowUp"><textarea v-model="followUpInput" rows="2" :placeholder="t('workflows.followUpPlaceholder')" :disabled="Boolean(activeConversationRun)" @keydown.enter.exact.prevent="sendFollowUp"></textarea><button v-if="activeConversationRun" type="button" class="run-stop" :aria-label="t('sessions.stopGeneration')" @click="cancelConversationRun">■</button><button v-else type="submit" :disabled="sendingFollowUp || !followUpInput.trim()" :aria-label="t('common.send')">↑</button></form></div></div>
 </template>

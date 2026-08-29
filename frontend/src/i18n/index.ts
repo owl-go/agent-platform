@@ -29,6 +29,11 @@ const en = {
   errors: { generic: "The operation did not complete. Try again.", conflict: "This content changed elsewhere. Refresh and retry.", validation: "Check the entered values.", copy: "Copy failed. Check the browser clipboard permission." },
 };
 
+Object.assign(zh.common, { send: "发送" });
+Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行" });
+Object.assign(en.common, { send: "Send" });
+Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line" });
+
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";

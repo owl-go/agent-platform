@@ -77,7 +77,7 @@ Login opens Sessions. A User without a usable Model Provider Connection, Provide
 - A User can create, edit, run, and delete a Workflow.
 - Required fields are name and goal. Expert is optional.
 - The selected Runtime Engine's default Provider Model applies unless the Workflow overrides it in advanced settings.
-- Every Run freezes a Workflow Snapshot containing the goal, optional Expert and Extension revisions, Model Provider Connection version, Model API Protocol, Endpoint, Provider Model, Runtime Engine, environment, and input. The API Key is held only through a protected versioned credential reference.
+- The first Run in a Run Conversation freezes a Workflow Snapshot containing the goal, optional Expert and Extension revisions, Model Provider Connection version, Model API Protocol, Endpoint, Provider Model, Runtime Engine, and environment. Follow-up Runs reuse that frozen snapshot and add one immutable turn input. The API Key is held only through a protected versioned credential reference.
 - A Workflow keeps its isolated Runtime container definition warm for 30 minutes after a Run finishes so frequent serialized Runs do not recreate the container. The container is stopped between Runs and destroyed only after 30 minutes without use.
 - Editing a Workflow affects future Runs only. There is no Draft, Release, publish, approval, or visible version flow.
 - Only one Run may modify a Workflow at a time. Additional manual, scheduled, and API requests enter the queue.
@@ -164,7 +164,7 @@ The Run list shows:
 - state: queued, running, succeeded, failed, or cancelled
 - elapsed time
 
-The Run detail uses the same conversation presentation as a Session: the frozen Workflow goal and optional Run input appear as the User message, and the final text/JSON result or error appears as the Agent response. Run time, trigger, state, elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. Users can cancel a queued or running Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
+Each Run History row represents a Run Conversation. Its detail uses the same conversation presentation as a Session: the frozen Workflow goal and initial input appear as the first User message, every follow-up input and Run result appear as later User/Agent message pairs, and a composer remains available while the Workflow exists. Run time, trigger, latest state, accumulated elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. A follow-up creates a new immutable Run turn using the initiating Workflow Snapshot and serialized Workspace; it never reopens a terminal Run. Users can cancel the active Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
 
 Run metadata and final text/JSON results are retained without a time limit in the first version. Users cannot delete individual Run records.
 

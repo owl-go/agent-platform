@@ -530,6 +530,8 @@ func (settings Settings) Validate() error {
 
 type Run struct {
 	ID               string
+	ConversationID   string
+	TurnNumber       int
 	OwnerID          string
 	WorkflowID       string
 	WorkflowName     string

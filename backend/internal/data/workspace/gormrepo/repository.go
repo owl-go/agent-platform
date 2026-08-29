@@ -187,6 +187,8 @@ func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
 	ID               string     `gorm:"column:id"`
+	ConversationID   string     `gorm:"column:conversation_id"`
+	TurnNumber       int        `gorm:"column:turn_number"`
 	OwnerID          string     `gorm:"column:owner_user_id"`
 	WorkflowID       *string    `gorm:"column:workflow_id"`
 	WorkflowName     string     `gorm:"column:workflow_name"`

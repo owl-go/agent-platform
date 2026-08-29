@@ -21,6 +21,8 @@ const workflow: Workflow = {
 
 const run: Run = {
   id: "run-1",
+  conversation_id: "run-1",
+  turn_number: 1,
   workflow_id: workflow.id,
   workflow_name: workflow.name,
   trigger: "manual",
@@ -33,29 +35,31 @@ const run: Run = {
   elapsed_ms: 24_000,
 };
 
-function apiStub(): PlatformApi {
+function apiStub(overrides: Partial<PlatformApi> = {}): PlatformApi {
   return {
     getWorkflow: vi.fn(async () => workflow),
     listExperts: vi.fn(async () => []),
     listModelProviderConnections: vi.fn(async () => []),
     listRuntimeEngines: vi.fn(async () => []),
     listRuns: vi.fn(async () => [run]),
+    listRunTurns: vi.fn(async () => [run]),
     listArtifacts: vi.fn(async () => []),
     listWorkspace: vi.fn(async () => ({ items: [], used_bytes: 0, limit_bytes: 1024 })),
     streamRunEvents: vi.fn(async (_workflowID, _runID, onEvent) => {
       onEvent({ sequence: 1, type: "message.delta", payload: { delta: "分析结果" }, raw: "{}" });
     }),
+    ...overrides,
   } as unknown as PlatformApi;
 }
 
-async function mountPage() {
+async function mountPage(api = apiStub()) {
   const router = createAppRouter(createMemoryHistory());
   await router.push(`/workflows/${workflow.id}?tab=history`);
   await router.isReady();
   const wrapper = mount(WorkflowDetailPage, {
     global: {
       plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-      provide: { [platformApiKey as symbol]: apiStub() },
+      provide: { [platformApiKey as symbol]: api },
     },
   });
   await flushPromises();
@@ -83,6 +87,36 @@ describe("WorkflowDetailPage", () => {
     const sections = wrapper.findAll(".settings-section");
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.every((section) => section.attributes("open") !== undefined)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("continues a Run Conversation from the composer", async () => {
+    const followUp: Run = {
+      ...run,
+      id: "run-2",
+      turn_number: 2,
+      state: "queued",
+      text_input: "继续给出修复建议",
+      final_text: undefined,
+      started_at: undefined,
+      ended_at: undefined,
+      elapsed_ms: 0,
+    };
+    const continueRunConversation = vi.fn(async () => followUp);
+    const api = apiStub({
+      continueRunConversation,
+      getRun: vi.fn(async (): Promise<Run> => ({ ...followUp, state: "succeeded", final_text: "已补充修复建议" })),
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    await wrapper.get(".run-composer textarea").setValue("继续给出修复建议");
+    await wrapper.get(".run-composer").trigger("submit");
+    await flushPromises();
+
+    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, run.id, "继续给出修复建议");
+    expect(wrapper.findAll(".run-conversation .message.user")).toHaveLength(2);
     wrapper.unmount();
   });
 });
