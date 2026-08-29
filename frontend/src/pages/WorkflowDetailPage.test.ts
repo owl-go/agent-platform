@@ -79,7 +79,7 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
-  it("runs the Workflow goal without a separate manual input", async () => {
+  it("runs the Workflow goal and opens its conversation immediately", async () => {
     const runWorkflow = vi.fn(async () => run);
     const wrapper = await mountPage(apiStub({ runWorkflow }));
 
@@ -88,6 +88,8 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(runWorkflow).toHaveBeenCalledWith(workflow.id);
+    expect(wrapper.get(".run-dialog").text()).toContain("运行对话");
+    expect(wrapper.get(".run-conversation .message.user").text()).toContain(workflow.goal);
     wrapper.unmount();
   });
 

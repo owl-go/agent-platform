@@ -101,7 +101,7 @@ Settings contains five collapsed sections:
 
 ### 5.3 Triggers And Input
 
-- Manual Runs launched from the Workflow interface execute the fixed Workflow goal directly; the detail header does not expose a separate input or input-type control.
+- Manual Runs launched from the Workflow interface execute the fixed Workflow goal directly; the detail header does not expose a separate input or input-type control. After creation, the interface immediately opens that Run Conversation and streams the active Run instead of requiring another click in Run History.
 - API Runs accept optional text or JSON input.
 - Scheduled Runs execute only the fixed Workflow goal and do not have a separate default input.
 - Run trigger types shown to Users are manual, scheduled, and API.
