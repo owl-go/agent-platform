@@ -67,6 +67,17 @@ async function mountPage(api = apiStub()) {
 }
 
 describe("WorkflowDetailPage", () => {
+  it("does not repeat the active tab label as a section title", async () => {
+    const wrapper = await mountPage();
+
+    for (const tabButton of wrapper.findAll(".tabs button")) {
+      await tabButton.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".tab-content .section-heading h2").exists()).toBe(false);
+    }
+    wrapper.unmount();
+  });
+
   it("opens a Run as a conversation instead of raw Runtime events", async () => {
     const wrapper = await mountPage();
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
