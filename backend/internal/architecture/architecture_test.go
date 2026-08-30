@@ -98,6 +98,20 @@ func TestProtoServicesDoNotBridgeThroughHTTPHandlers(t *testing.T) {
 	})
 }
 
+func TestWorkerCapabilitiesSupportWorkspaceOwnershipNormalization(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "compose.execution.yaml")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration := string(contents)
+	for _, capability := range []string{"CHOWN", "DAC_OVERRIDE", "FOWNER"} {
+		if !strings.Contains(configuration, "      - "+capability) {
+			t.Errorf("Worker execution overlay is missing %s", capability)
+		}
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))

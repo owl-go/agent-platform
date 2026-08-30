@@ -18,7 +18,7 @@ API 和 Worker 只读取 YAML 配置。默认 Compose 配置使用 `config/platf
 install -d -o 65532 -g 65532 -m 0700 "${WORKSPACE_ROOT}"
 ```
 
-The execution overlay gives the Worker only `CHOWN` and `DAC_OVERRIDE` in addition to its Docker socket. These are required because staging switches directories to Runtime UID `65532` before the Worker finishes writing them. Runtime containers remain non-root and drop every capability.
+The execution overlay gives the Worker only `CHOWN`, `DAC_OVERRIDE`, and `FOWNER` in addition to its Docker socket. Staging switches directories to Runtime UID `65532` before the Worker finishes writing them; `FOWNER` is required to normalize the modes of files created by that Runtime UID before merging a successful Workspace. Runtime containers remain non-root and drop every capability.
 `CREDENTIAL_TEMP_ROOT` is mounted at the identical absolute path inside the Worker because the host Docker daemon, not the Worker container, resolves Runtime bind-mount sources.
 
 `worker.runtime_idle_timeout` defaults to the deployed value `30m`. Session and Workflow Runtime containers are stopped after each execution, retain their immutable Docker definition for this idle window, and are then removed by the Worker reaper. Per-execution credential directories are removed immediately after stop and are never retained for the idle window.

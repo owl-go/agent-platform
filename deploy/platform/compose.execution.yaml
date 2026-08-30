@@ -10,3 +10,5 @@ services:
       - CHOWN
       # Staging switches ownership to the Runtime UID before the Worker finishes writing.
       - DAC_OVERRIDE
+      # Runtime-owned files must be normalized before they replace the persistent Workspace.
+      - FOWNER
