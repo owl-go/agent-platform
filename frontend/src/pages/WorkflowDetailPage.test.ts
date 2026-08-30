@@ -74,6 +74,9 @@ describe("WorkflowDetailPage", () => {
 
     expect(wrapper.get(".run-conversation .message.user").text()).toContain("重点关注发布风险");
     expect(wrapper.get(".run-conversation .message.assistant .markdown-body h2").text()).toBe("分析结果");
+    expect(wrapper.find(".run-page").exists()).toBe(true);
+    expect(wrapper.find(".run-dialog").exists()).toBe(false);
+    expect(wrapper.find(".detail-hero").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
     wrapper.unmount();
@@ -88,7 +91,7 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(runWorkflow).toHaveBeenCalledWith(workflow.id);
-    expect(wrapper.get(".run-dialog").text()).toContain("运行对话");
+    expect(wrapper.get(".run-page").text()).toContain("运行对话");
     expect(wrapper.get(".run-conversation .message.user").text()).toContain(workflow.goal);
     wrapper.unmount();
   });
