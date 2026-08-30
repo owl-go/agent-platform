@@ -224,7 +224,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async rerunWorkflow(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/rerun`, json("POST", {}, signal))); },
     async listArtifacts(id, signal) {
       const result = await call<{ items?: Array<Omit<Artifact, "size"> & { size?: number | string }> }>(`/api/v1/workflows/${encodeURIComponent(id)}/artifacts`, { signal });
-      return (result.items ?? []).map((item) => ({ ...item, size: Number(item.size ?? 0) }));
+      return (result.items ?? []).filter((item) => item.kind === "file").map((item) => ({ ...item, size: Number(item.size ?? 0) }));
     },
     getArtifactDownload(workflowID, artifactID, signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/artifacts/${encodeURIComponent(artifactID)}/download`, { signal }); },
     async listWorkspace(id, path = "", signal) {

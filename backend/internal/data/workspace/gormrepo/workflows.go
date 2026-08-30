@@ -597,7 +597,7 @@ func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workfl
 		return nil, err
 	}
 	var rows []artifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ?", ownerID, workflowID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND kind = 'file'", ownerID, workflowID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Artifacts: %w", err)
 	}
 	items := make([]domain.Artifact, 0, len(rows))
@@ -610,11 +610,7 @@ func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workfl
 			item.SHA256 = *row.SHA256
 		}
 		if len(row.TextResult) > 0 {
-			if row.Kind == "file" {
-				_ = json.Unmarshal(row.TextResult, &item.TextPreview)
-			} else {
-				item.TextPreview = string(row.TextResult)
-			}
+			_ = json.Unmarshal(row.TextResult, &item.TextPreview)
 		}
 		items = append(items, item)
 	}
@@ -623,7 +619,7 @@ func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workfl
 
 func (repository *Repository) GetArtifact(ctx context.Context, ownerID, workflowID, artifactID string) (domain.Artifact, error) {
 	var row artifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ?", ownerID, workflowID, artifactID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND kind = 'file'", ownerID, workflowID, artifactID).Take(&row).Error; err != nil {
 		return domain.Artifact{}, mapNotFound(err)
 	}
 	item := domain.Artifact{ID: row.ID, RunID: row.RunID, Kind: row.Kind, Name: row.Name, Path: row.Path, Size: row.Size, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt}

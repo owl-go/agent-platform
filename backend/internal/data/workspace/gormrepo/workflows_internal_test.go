@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
+
+	"agent-platform/backend/internal/biz/workspace/application"
 )
 
 func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
@@ -18,6 +21,19 @@ func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
 	}
 	if err := validateRunInput(nil, map[string]any{"payload": strings.Repeat("x", 1_048_576)}); err == nil {
 		t.Fatal("validateRunInput accepted JSON above 1 MiB")
+	}
+}
+
+func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
+	job := application.ExecutionJob{ID: "run-1", OwnerID: "owner-1", WorkflowID: "workflow-1"}
+	if records := fileArtifactRecords(job, nil, time.Now()); len(records) != 0 {
+		t.Fatalf("text-only Run produced %d Artifact records", len(records))
+	}
+
+	expiresAt := time.Now().Add(90 * 24 * time.Hour)
+	records := fileArtifactRecords(job, []application.ExecutionArtifact{{Name: "report.md", Path: "report.md", ObjectKey: "artifacts/report", Size: 12, SHA256: strings.Repeat("a", 64), ExpiresAt: expiresAt}}, time.Now())
+	if len(records) != 1 || records[0].Kind != "file" || records[0].Name != "report.md" {
+		t.Fatalf("file Artifact records = %#v", records)
 	}
 }
 

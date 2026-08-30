@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { platformApiKey, type Artifact, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import WorkflowDetailPage from "./WorkflowDetailPage.vue";
@@ -90,6 +90,24 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find(".detail-hero").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
+    wrapper.unmount();
+  });
+
+  it("shows only files as artifacts and ignores legacy final-result records", async () => {
+    const legacyResult: Artifact = { id: "result-1", run_id: run.id, kind: "result", name: "Final result", path: "", size: 0, text_preview: "done", expired: false, created_at: run.ended_at! };
+    const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 12, sha256: "abc", expired: false, created_at: run.ended_at! };
+    const wrapper = await mountPage(apiStub({ listArtifacts: vi.fn(async () => [legacyResult, generatedFile]) }));
+
+    await wrapper.findAll(".tabs button").at(0)!.trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".artifact-list").text()).toContain("report.md");
+    expect(wrapper.get(".artifact-list").text()).not.toContain("Final result");
+
+    await wrapper.findAll(".tabs button").at(2)!.trigger("click");
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".run-attachments").text()).toContain("report.md");
+    expect(wrapper.get(".run-attachments").text()).not.toContain("Final result");
     wrapper.unmount();
   });
 

@@ -79,8 +79,8 @@ The optional single public HTTPS or private SSH repository cloned into an empty 
 _Avoid_: Repository Binding, Source Control Provider, Review Branch
 
 **Artifact**:
-An immutable final result or file added or changed by one successful Run and shown separately from the mutable Workspace.
-_Avoid_: Workspace file, Run Event, temporary output
+An immutable file added or changed by one successful Run and shown separately from the mutable Workspace. A Run's final text or JSON remains part of its Run Conversation and is not an Artifact.
+_Avoid_: Run result, Workspace file, Run Event, temporary output
 
 ## Experts And Extensions
 

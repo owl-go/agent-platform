@@ -150,9 +150,10 @@ Settings contains five collapsed sections:
 
 ### 7.1 Artifacts
 
-- A successful Run produces an immutable final text or JSON result and captures files added or changed by that Run.
+- A successful Run persists its final text or JSON in the Run Conversation and captures files added or changed by that Run as Artifacts.
+- Only actual generated or changed files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
 - Artifacts are grouped by Run time and can be previewed or downloaded.
-- Failed and cancelled Runs do not create Artifacts; their temporary Workspace changes are discarded.
+- Failed and cancelled Runs do not create file Artifacts; their temporary Workspace changes are discarded.
 - Artifact files expire after 90 days. The UI preserves metadata and reports that the file has expired.
 
 ### 7.2 Run History

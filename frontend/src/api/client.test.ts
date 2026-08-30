@@ -70,15 +70,15 @@ describe("Agent Workspace API client", () => {
     expect(result.limit_bytes).toBe(1073741824);
   });
 
-  it("accepts inline result Artifacts whose protobuf defaults omit sha256", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "result", name: "result.txt", path: "", text_preview: "done", expired: false, created_at: "2026-08-25T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
+  it("filters legacy final-result records from file Artifacts", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "result", name: "Final result", path: "", text_preview: "done", expired: false, created_at: "2026-08-25T00:00:00Z" }, { id: "artifact-2", run_id: "run-1", kind: "file", name: "report.md", path: "report.md", expired: false, created_at: "2026-08-25T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
     const result = await createPlatformApi(() => "token").listArtifacts("workflow-1");
 
     expect(result).toHaveLength(1);
+    expect(result[0]?.name).toBe("report.md");
     expect(result[0]?.sha256).toBeUndefined();
     expect(result[0]?.size).toBe(0);
-    expect(result[0]?.text_preview).toBe("done");
   });
 
   it("normalizes an omitted queued Run duration to zero", async () => {

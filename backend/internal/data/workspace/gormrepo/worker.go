@@ -340,23 +340,28 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 		if err := appendRunEvents(tx, job.ID, result.Events, "run.succeeded", now); err != nil {
 			return err
 		}
-		if err := tx.Create(&artifactRecord{ID: uuid.NewString(), OwnerID: job.OwnerID, WorkflowID: &job.WorkflowID, RunID: job.ID, Kind: "result", Name: "Final result", TextResult: finalResult, CreatedAt: now}).Error; err != nil {
-			return err
-		}
-		for _, artifact := range result.Artifacts {
-			objectKey := artifact.ObjectKey
-			var preview []byte
-			if artifact.TextPreview != "" {
-				preview, _ = marshal(artifact.TextPreview)
-			}
-			expiresAt := artifact.ExpiresAt
-			sha := artifact.SHA256
-			if err := tx.Create(&artifactRecord{ID: uuid.NewString(), OwnerID: job.OwnerID, WorkflowID: &job.WorkflowID, RunID: job.ID, Kind: "file", Name: artifact.Name, Path: artifact.Path, ObjectKey: &objectKey, TextResult: preview, Size: artifact.Size, SHA256: &sha, CreatedAt: now, ExpiresAt: &expiresAt}).Error; err != nil {
+		for _, artifact := range fileArtifactRecords(job, result.Artifacts, now) {
+			if err := tx.Create(&artifact).Error; err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func fileArtifactRecords(job application.ExecutionJob, artifacts []application.ExecutionArtifact, createdAt time.Time) []artifactRecord {
+	records := make([]artifactRecord, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		objectKey := artifact.ObjectKey
+		var preview []byte
+		if artifact.TextPreview != "" {
+			preview, _ = marshal(artifact.TextPreview)
+		}
+		expiresAt := artifact.ExpiresAt
+		sha := artifact.SHA256
+		records = append(records, artifactRecord{ID: uuid.NewString(), OwnerID: job.OwnerID, WorkflowID: &job.WorkflowID, RunID: job.ID, Kind: "file", Name: artifact.Name, Path: artifact.Path, ObjectKey: &objectKey, TextResult: preview, Size: artifact.Size, SHA256: &sha, CreatedAt: createdAt, ExpiresAt: &expiresAt})
+	}
+	return records
 }
 
 func advanceRollingSummary(tx *gorm.DB, sessionID string, completedMessageID int64) (string, *int64, error) {
