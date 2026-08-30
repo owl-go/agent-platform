@@ -179,6 +179,7 @@ Run metadata and final text/JSON results are retained without a time limit in th
 ### 8.1 Experts
 
 - An Expert contains name, display-only description, selected MCP Servers, and selected Skills.
+- Expert create and edit surfaces use the same MCP, Skills, and Third-party CLI extension manager as Settings. Users may create and manage MCP Servers and Skills without leaving the Expert form; newly installed Skills are selected for that Expert, while MCP Servers become selectable only after a successful test. The Third-party CLI tab remains the same non-actionable Coming Soon placeholder defined below.
 - The description is not injected into the model and does not act as a hidden instruction.
 - A Session or Workflow may run without an Expert.
 - Deleting an Expert clears it from Workflows, which then use Personal Settings. Sessions using that Expert retain their snapshot and are automatically archived read-only.

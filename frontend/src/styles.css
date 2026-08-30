@@ -93,6 +93,8 @@ label { display: grid; gap: .48rem; font-size: .83rem; font-weight: 650; color: 
 @keyframes jump-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes thinking-dot { 0%,65%,100% { transform: translateY(1px) scale(.72); opacity: .3; } 32% { transform: translateY(-4px) scale(1.18); opacity: 1; } }
 @keyframes stream-caret { 50% { opacity: 0; } }
+.extension-choice { display: flex; flex: 0 0 auto; cursor: pointer; }.extension-choice input { width: auto; }.extension-manager.selectable { padding-top: 8px; }.expert-form-modal { width: min(960px,calc(100vw - 40px)); }
+
 @keyframes loading-sheen { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 @media (prefers-reduced-motion: reduce) { .thinking-dots i,.stream-caret,.message-loading span { animation: none; } }
