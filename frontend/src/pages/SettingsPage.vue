@@ -78,7 +78,7 @@ function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setR
 
 <template>
   <section class="page-surface settings-page">
-    <header class="page-header"><div><p class="eyebrow">04 / PERSONAL DEFAULTS</p><h1>{{ t("settings.title") }}</h1><p>{{ t("settings.subtitle") }}</p></div></header>
+    <header class="page-header"><div><p class="eyebrow">04 / PERSONAL DEFAULTS</p><h1>{{ t("settings.title") }}</h1></div></header>
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" /><ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
     <div class="settings-layout">
       <nav class="settings-nav">
@@ -88,7 +88,7 @@ function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setR
       </nav>
       <div class="settings-canvas">
         <form v-if="section === 'personal' && settings" @submit.prevent="saveSettings">
-          <div class="section-heading"><div><p class="eyebrow">BEHAVIOR / PERSONAL</p><h2>{{ t("settings.personality") }}</h2></div><button class="button primary">{{ t("common.save") }}</button></div>
+          <div class="section-heading"><div><p class="eyebrow">BEHAVIOR / PERSONAL</p></div><button class="button primary">{{ t("common.save") }}</button></div>
           <div class="personality-grid"><label v-for="item in ['gentle_professional','direct_efficient','lively_friendly','custom']" :key="item" :class="{ selected: settings.personality === item }"><input v-model="settings.personality" type="radio" :value="item"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
           <label class="block-label">{{ t("settings.instructions") }}<textarea v-model="settings.personality_instructions" rows="6" :required="settings.personality === 'custom'"></textarea></label>
           <div class="form-grid">
@@ -102,7 +102,7 @@ function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setR
           <div class="provider-grid"><article v-for="item in connections" :key="item.id" class="provider-card"><header><span class="resource-mark">{{ item.name.slice(0, 2).toUpperCase() }}</span><div><strong>{{ item.name }}</strong><p>{{ presets.find((preset) => preset.provider_type === item.provider_type)?.display_name ?? item.provider_type }}</p></div><span class="safe-chip" :class="{ unsafe: item.verification_status !== 'verified' }">{{ t(`settings.${item.verification_status}`) }}</span></header><p class="provider-endpoint">{{ item.endpoint }}</p><p v-if="item.last_sync_error || item.verification_error" class="provider-error">{{ item.last_sync_error || item.verification_error }}</p><div class="provider-model-summary"><strong>{{ item.models.filter((model) => model.available).length }}</strong><span>{{ t("settings.importedModels") }}</span><small v-if="item.last_synced_at">{{ new Date(item.last_synced_at).toLocaleString() }}</small></div><div class="provider-actions"><button class="button ghost" @click="refreshModels(item)">↻ {{ t("settings.refreshModels") }}</button><button class="button ghost" @click="openManualModel(item)">＋ {{ t("settings.manualModel") }}</button><button :aria-label="t('common.edit')" @click="openConnection(item)">✎</button><button :aria-label="t('common.delete')" @click="removeConnection(item)">×</button></div><details><summary>{{ t("settings.modelCatalog") }}</summary><div class="catalog-list"><span v-for="model in item.models" :key="model.id" :class="{ unavailable: !model.available }"><strong>{{ model.display_name }}</strong><small>{{ model.model_id }}</small></span></div></details></article><div v-if="!connections.length" class="empty-inline"><span>M</span><p>{{ t("common.empty") }}</p></div></div>
         </div>
         <div v-if="section === 'extensions'">
-          <div class="section-heading"><div><p class="eyebrow">EXTENSIONS / ISOLATED RUNTIME</p><h2>{{ t("settings.extensions") }}</h2></div></div>
+          <div class="section-heading"><div><p class="eyebrow">EXTENSIONS / ISOLATED RUNTIME</p></div></div>
           <ExtensionManager @error="showError('validation')" />
         </div>
       </div>
