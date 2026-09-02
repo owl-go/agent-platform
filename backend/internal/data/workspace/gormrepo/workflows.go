@@ -368,7 +368,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 		return runRecord{}, err
 	}
 	id := uuid.NewString()
-	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, QueuedAt: time.Now().UTC(), Version: 1}
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 	return created, tx.Create(&created).Error
 }
 
@@ -402,7 +402,7 @@ func (repository *Repository) ContinueRunConversation(ctx context.Context, owner
 		if err != nil {
 			return err
 		}
-		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, WorkflowSnapshot: append([]byte(nil), root.WorkflowSnapshot...), QueuedAt: time.Now().UTC(), Version: 1}
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, WorkflowSnapshot: append([]byte(nil), root.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		return tx.Create(&created).Error
 	})
 	if err != nil {
@@ -684,7 +684,7 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 	created := runRecord{
 		ID: uuid.NewString(), OwnerID: ownerID, WorkflowID: source.WorkflowID, WorkflowName: source.WorkflowName,
 		Trigger: "manual", State: "queued", Input: append([]byte(nil), source.Input...),
-		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), QueuedAt: time.Now().UTC(), Version: 1,
+		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1,
 	}
 	created.ConversationID = created.ID
 	created.TurnNumber = 1

@@ -260,11 +260,12 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		if err != nil {
 			return err
 		}
-		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content, Attachments: encodedAttachments}
+		emptyStages := []byte("[]")
+		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content, Attachments: encodedAttachments, ExpertStages: emptyStages}
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
-		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot}
+		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot, ExpertStages: emptyStages}
 		if err := tx.Create(&assistant).Error; err != nil {
 			return err
 		}
