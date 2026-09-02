@@ -1,6 +1,6 @@
 # Agent Workspace
 
-A personal AI workspace for private conversations, reusable Workflows, Experts, Extensions, and managed execution.
+A personal AI workspace for private conversations, reusable Workflows, Experts, Expert Teams, Extensions, and managed execution.
 
 ## People And Ownership
 
@@ -19,7 +19,7 @@ _Avoid_: Platform operator, Organization administrator, support user
 ## Conversations
 
 **Session**:
-A private, continuing text conversation owned by one User. It may use one Expert snapshot chosen before the first message, and it retains the User's current Provider Model selection.
+A private, continuing text conversation owned by one User. It may use one Expert or Expert Team snapshot chosen before the first message, and it retains the User's current Provider Model selection.
 _Avoid_: Workflow Run, Coding Task, runtime process
 
 **Response Snapshot**:
@@ -41,11 +41,11 @@ _Avoid_: Agent Memory, user-authored note, Runtime checkpoint
 ## Workflows And Execution
 
 **Workflow**:
-A reusable executable configuration that combines a name, goal, optional Expert, environment, API access, schedule, and one persistent Workspace. It is a single execution definition, not a visual graph or multi-step DAG.
-_Avoid_: Pipeline, visual DAG, orchestration graph
+A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
+_Avoid_: Pipeline, visual DAG
 
 **Workflow Snapshot**:
-The immutable copy of a Workflow's goal, optional Expert, Provider Model, Model Provider Connection version, API Protocol, Endpoint, Runtime Engine, Extensions, and environment used by one Run; its API Key is referenced through protected versioned credentials rather than copied into the ordinary snapshot.
+The immutable copy of a Workflow's goal, optional Expert or Expert Team, Provider Model, Model Provider Connection version, API Protocol, Endpoint, Runtime Engine, Extensions, and environment used by one Run Conversation; its API Key is referenced through protected versioned credentials rather than copied into the ordinary snapshot.
 _Avoid_: Published Workflow, Workflow release
 
 **Workflow API Credential**:
@@ -85,8 +85,40 @@ _Avoid_: Run result, Workspace file, Run Event, temporary output
 ## Experts And Extensions
 
 **Expert**:
-A reusable optional capability profile with a display name, display-only description, and selected MCP Servers and Skills. Its configuration is snapshotted when a Session begins and when a Run starts.
-_Avoid_: Agent, persona, Workflow
+A reusable specialist profile with a display name, display-only Capability Introduction, visible Execution Instruction, Expertise Tags, and selected MCP Servers and Skills. It executes directly when selected alone and as a Subagent when included in an Expert Team.
+_Avoid_: Persona, Workflow
+
+**Capability Introduction**:
+The display-only explanation of an Expert or Expert Team's abilities. It is never injected into model instructions.
+_Avoid_: Execution instruction, hidden prompt
+
+**Execution Instruction**:
+The visible, User-authored instruction that defines how an Expert performs work and is injected whenever that Expert executes.
+_Avoid_: Capability Introduction, hidden prompt, Personality
+
+**Expertise Tag**:
+A short User-authored label describing an Expert or Expert Team's area of strength. Each profile may have up to ten tags, each no longer than twenty characters.
+_Avoid_: Category, managed taxonomy
+
+**Expert Team**:
+A reusable named profile with a Capability Introduction, Expertise Tags, and an ordered list of two to ten distinct Experts, selectable anywhere a single Expert can be selected. Its configuration is snapshotted when a Session begins or Run Conversation starts.
+_Avoid_: User team, organization, visual workflow
+
+**Subagent**:
+A platform-managed execution of one Expert in its own process and context inside an Expert Team. Runtime-specific native subagent support is not required for this behavior.
+_Avoid_: Expert selected alone, simulated persona, Runtime capability
+
+**Expert Team Execution**:
+A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, follows the team's member order, and shares the selected Provider Model and Runtime Engine. The final member produces the official response; retry restarts the whole collaboration.
+_Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
+
+**Expert Snapshot**:
+The immutable Expert or Expert Team definition used by one Session or Run Conversation, including member order, Execution Instructions, and exact Extension revisions. Deleting or editing the source profile does not change this snapshot.
+_Avoid_: Current Expert, mutable team, Provider Model snapshot
+
+**Incomplete Expert**:
+A migrated Expert that has a Capability Introduction but no Execution Instruction. It remains editable and visible but cannot be selected for new execution until completed.
+_Avoid_: Disabled Expert, deleted Expert
 
 **Extension**:
 A User-owned MCP Server or Skill that can be selected by an Expert.
