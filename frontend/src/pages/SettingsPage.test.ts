@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type ModelProviderConnection, type PlatformApi } from "../api/client";
+import { platformApiKey, type ModelProviderConnection, type PersonalSettings, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
 import SettingsPage from "./SettingsPage.vue";
 
@@ -46,6 +46,37 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
+  it("updates the personality instructions when a preset is selected", async () => {
+    const api = apiStub();
+    api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({
+      personality: "custom",
+      personality_instructions: "My custom guidance",
+      runtime_model_defaults: [],
+      default_runtime_engine: "codex",
+      language: "zh-CN",
+      timezone: "Asia/Shanghai",
+      version: 1,
+    }));
+    const wrapper = mount(SettingsPage, {
+      global: {
+        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+        provide: { [platformApiKey as symbol]: api },
+      },
+    });
+    await flushPromises();
+
+    const textarea = wrapper.get<HTMLTextAreaElement>('.block-label textarea');
+    await wrapper.find<HTMLInputElement>('input[value="gentle_professional"]').setValue();
+    expect(textarea.element.value).toContain("温和");
+    await wrapper.find<HTMLInputElement>('input[value="direct_efficient"]').setValue();
+    expect(textarea.element.value).toContain("直接");
+    await wrapper.find<HTMLInputElement>('input[value="lively_friendly"]').setValue();
+    expect(textarea.element.value).toContain("活泼");
+    await wrapper.find<HTMLInputElement>('input[value="custom"]').setValue();
+    expect(textarea.element.value).toBe("My custom guidance");
+    wrapper.unmount();
+  });
+
   it("does not repeat navigation labels or the Settings summary", async () => {
     const wrapper = mount(SettingsPage, {
       global: {

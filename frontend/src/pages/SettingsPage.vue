@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { platformApiKey, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import ExtensionManager from "../components/ExtensionManager.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 
@@ -23,12 +23,17 @@ const connectionError = ref("");
 const connectionForm = ref({ name: "", provider_type: "openai", endpoint: "", protocols: [] as string[], api_key: "" });
 const manualConnection = ref<ModelProviderConnection>();
 const manualModel = ref({ model_id: "" });
+const personalities: Personality[] = ["gentle_professional", "direct_efficient", "lively_friendly", "custom"];
+const customPersonalityInstructions = ref("");
 onMounted(() => { void refresh(); });
 function clearFeedback() { error.value = ""; notice.value = ""; }
 function showError(kind: "generic" | "validation" | "conflict" = "generic") { error.value = t(`errors.${kind}`); }
 async function refresh() {
   clearFeedback();
-  try { [settings.value, connections.value, presets.value, runtimes.value] = await Promise.all([api.getSettings(), api.listModelProviderConnections(), api.listModelProviderPresets(), api.listRuntimeEngines()]); } catch { showError(); }
+  try {
+    [settings.value, connections.value, presets.value, runtimes.value] = await Promise.all([api.getSettings(), api.listModelProviderConnections(), api.listModelProviderPresets(), api.listRuntimeEngines()]);
+    if (settings.value.personality === "custom") customPersonalityInstructions.value = settings.value.personality_instructions;
+  } catch { showError(); }
 }
 async function saveSettings() {
   if (!settings.value) return;
@@ -73,6 +78,14 @@ async function saveManualModel() { if (!manualConnection.value) return; try { aw
 function runtimeDefault(runtime: RuntimeEngine) { return settings.value?.runtime_model_defaults.find((item) => item.runtime_engine === runtime)?.provider_model_id ?? ""; }
 function setRuntimeDefault(runtime: RuntimeEngine, modelID: string) { if (!settings.value) return; settings.value.runtime_model_defaults = settings.value.runtime_model_defaults.filter((item) => item.runtime_engine !== runtime); if (modelID) settings.value.runtime_model_defaults.push({ runtime_engine: runtime, provider_model_id: modelID }); }
 function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setRuntimeDefault(runtime, (event.target as HTMLSelectElement).value); }
+function selectPersonality(personality: Personality) {
+  if (!settings.value || settings.value.personality === personality) return;
+  if (settings.value.personality === "custom") customPersonalityInstructions.value = settings.value.personality_instructions;
+  settings.value.personality = personality;
+  settings.value.personality_instructions = personality === "custom"
+    ? customPersonalityInstructions.value
+    : t(`settings.${personality === "gentle_professional" ? "gentleInstructions" : personality === "direct_efficient" ? "directInstructions" : "livelyInstructions"}`);
+}
 
 </script>
 
@@ -89,7 +102,7 @@ function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setR
       <div class="settings-canvas">
         <form v-if="section === 'personal' && settings" @submit.prevent="saveSettings">
           <div class="section-heading"><div><p class="eyebrow">BEHAVIOR / PERSONAL</p></div><button class="button primary">{{ t("common.save") }}</button></div>
-          <div class="personality-grid"><label v-for="item in ['gentle_professional','direct_efficient','lively_friendly','custom']" :key="item" :class="{ selected: settings.personality === item }"><input v-model="settings.personality" type="radio" :value="item"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
+          <div class="personality-grid"><label v-for="item in personalities" :key="item" :class="{ selected: settings.personality === item }"><input type="radio" :value="item" :checked="settings.personality === item" @change="selectPersonality(item)"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
           <label class="block-label">{{ t("settings.instructions") }}<textarea v-model="settings.personality_instructions" rows="6" :required="settings.personality === 'custom'"></textarea></label>
           <div class="form-grid">
             <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtime.name === 'claude' ? 'Claude Code' : runtime.name === 'openclaw' ? 'OpenClaw' : runtime.name[0].toUpperCase() + runtime.name.slice(1) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
