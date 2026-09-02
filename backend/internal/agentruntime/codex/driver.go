@@ -130,6 +130,9 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 	case "turn.completed":
 		p.result.Usage.InputTokens = envelope.Usage.InputTokens
 		p.result.Usage.OutputTokens = envelope.Usage.OutputTokens
+		if p.result.FinalMessage != "" {
+			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventMessageCompleted, Payload: map[string]string{"message": p.result.FinalMessage}}}, nil
+		}
 	}
 	return nil, nil
 }

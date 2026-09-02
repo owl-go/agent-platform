@@ -116,7 +116,11 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, err
 	}
-	user, assistant, err := service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, request.ProviderModelId)
+	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	user, assistant, err := service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, request.ProviderModelId, attachments)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -161,5 +165,12 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 		snapshot := item.ResponseSnapshot
 		response.ResponseSnapshot = &workspacev1.ResponseSnapshot{ProviderModelId: snapshot.ProviderModelID, ConnectionId: snapshot.ConnectionID, ConnectionName: snapshot.ConnectionName, ProviderType: snapshot.ProviderType, ModelId: snapshot.ModelID, ModelName: snapshot.ModelName, Endpoint: snapshot.Endpoint, Protocols: snapshot.Protocols, RuntimeEngine: string(snapshot.RuntimeEngine), Compatibility: snapshot.Compatibility, ConnectionVersion: snapshot.ConnectionVersion}
 	}
+	for _, attachment := range item.Attachments {
+		response.Attachments = append(response.Attachments, attachmentResponse(attachment))
+	}
 	return response
+}
+
+func attachmentResponse(item workspacedomain.Attachment) *workspacev1.Attachment {
+	return &workspacev1.Attachment{Id: item.ID, Name: item.Name, ContentType: item.ContentType, Size: item.Size, Sha256: item.SHA256, Image: item.Image}
 }

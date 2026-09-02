@@ -159,7 +159,7 @@ func (a *Adapter) Execute(ctx context.Context, request agentruntime.ExecuteReque
 		CheckpointRef: parsed.CheckpointRef,
 		Usage:         parsed.Usage,
 	}
-	if parsed.FinalMessage != "" && processErr == nil {
+	if parsed.FinalMessage != "" && processErr == nil && !emitter.published(agentruntime.EventMessageCompleted) {
 		if err := emitter.publish(ctx, agentruntime.EventMessageCompleted, map[string]string{"message": parsed.FinalMessage}); err != nil {
 			return result, err
 		}
@@ -179,6 +179,7 @@ type eventEmitter struct {
 	runID    string
 	sequence int64
 	sink     agentruntime.EventSink
+	kinds    map[agentruntime.EventKind]bool
 }
 
 func (e *eventEmitter) publish(ctx context.Context, kind agentruntime.EventKind, payload any) error {
@@ -194,7 +195,17 @@ func (e *eventEmitter) publish(ctx context.Context, kind agentruntime.EventKind,
 	}); err != nil {
 		return runtimeError(agentruntime.ErrorEventDeliveryFailed, "publish runtime event", err)
 	}
+	if e.kinds == nil {
+		e.kinds = make(map[agentruntime.EventKind]bool)
+	}
+	e.kinds[kind] = true
 	return nil
+}
+
+func (e *eventEmitter) published(kind agentruntime.EventKind) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.kinds[kind]
 }
 
 type lineObserver struct {

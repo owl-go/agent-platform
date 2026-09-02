@@ -75,6 +75,14 @@ func TestWorkflowRunInstructionIncludesPriorConversation(t *testing.T) {
 	}
 }
 
+func TestSessionInstructionUsesOnlyCurrentMessageWhenNativeResumeIsActive(t *testing.T) {
+	recent := []messageRecord{{Role: "user", Content: "old question"}, {Role: "assistant", Content: "old answer"}}
+	got := sessionInstruction("old summary", recent, "new question", true)
+	if got != "Current user message:\nnew question" {
+		t.Fatalf("instruction = %q", got)
+	}
+}
+
 func TestBoundedSummaryPreservesUTF8(t *testing.T) {
 	value := strings.Repeat("你", 10_000)
 	bounded := boundedSummary(value)

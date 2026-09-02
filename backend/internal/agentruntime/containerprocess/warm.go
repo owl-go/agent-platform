@@ -265,7 +265,7 @@ func (manager *WarmManager) stopIfRunning(ctx context.Context, name string) erro
 	if strings.TrimSpace(string(output)) != "true" {
 		return nil
 	}
-	stopOutput, stopErr := manager.docker(ctx, "stop", "--time", "5", name)
+	stopOutput, stopErr := manager.docker(ctx, "stop", "--time", "0", name)
 	if stopErr != nil && !isMissingContainer(stopOutput) {
 		return fmt.Errorf("stop warm Runtime container: %w: %s", stopErr, strings.TrimSpace(string(stopOutput)))
 	}

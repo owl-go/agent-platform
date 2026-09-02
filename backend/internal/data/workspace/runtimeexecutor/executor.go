@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,6 +60,19 @@ func New(config platformconfig.Config, box *secretcrypto.Box, objects objectstor
 }
 
 func (executor *Executor) Execute(ctx context.Context, job application.ExecutionJob, progress application.ProgressRecorder) (result application.ExecutionResult, returnErr error) {
+	startedAt := time.Now()
+	var runtimeStartedAt time.Time
+	var runtimeFinishedAt time.Time
+	defer func() {
+		attributes := []any{"run_id", job.ID, "job_kind", job.Kind, "total_ms", time.Since(startedAt).Milliseconds(), "success", returnErr == nil}
+		if !runtimeStartedAt.IsZero() {
+			attributes = append(attributes, "setup_ms", runtimeStartedAt.Sub(startedAt).Milliseconds())
+		}
+		if !runtimeFinishedAt.IsZero() {
+			attributes = append(attributes, "runtime_ms", runtimeFinishedAt.Sub(runtimeStartedAt).Milliseconds(), "post_runtime_ms", time.Since(runtimeFinishedAt).Milliseconds())
+		}
+		slog.InfoContext(context.WithoutCancel(ctx), "Runtime execution timing", attributes...)
+	}()
 	if job.Kind == application.JobMCPTest {
 		return executor.testMCP(ctx, job)
 	}
@@ -114,6 +128,10 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if err := prepareRuntimeScratch(slot.scratch, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
 		return result, err
 	}
+	attachmentPaths, err := executor.materializeAttachments(ctx, job, slot.scratch)
+	if err != nil {
+		return result, err
+	}
 	nativeState, nativePersistent, err := executor.nativeStateDirectoriesAt(job, runtimeConfig, slot.nativeState)
 	if err != nil {
 		return result, err
@@ -145,16 +163,18 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if _, err := adapter.Describe(executionCtx); err != nil {
 		return result, err
 	}
-	instruction := buildInstruction(job)
+	instruction := buildInstruction(job, attachmentPaths)
 	checkpoint := job.CheckpointRef
 	if !runtimeConfig.NativeResume {
 		checkpoint = ""
 	}
 	redactor := environment.Redactor()
+	runtimeStartedAt = time.Now()
 	runtimeResult, err := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
 		RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: job.Snapshot.ProviderModel.ModelID,
 		ModelEndpoint: job.Snapshot.ProviderModel.Endpoint, ModelProvider: job.Snapshot.ProviderModel.ProviderType, ModelProtocols: job.Snapshot.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(job),
 	}, agentruntime.NewRedactingEventSink(redactor, sink))
+	runtimeFinishedAt = time.Now()
 	if err != nil {
 		return result, err
 	}
@@ -647,7 +667,7 @@ func workspaceManifest(root string) (map[string]string, error) {
 	return manifest, err
 }
 
-func buildInstruction(job application.ExecutionJob) string {
+func buildInstruction(job application.ExecutionJob, attachmentPaths []string) string {
 	var sections []string
 	preferences := personalityGuidance(job.Snapshot.Personality)
 	if value := strings.TrimSpace(job.Snapshot.PersonalityInstructions); value != "" {
@@ -666,8 +686,58 @@ func buildInstruction(job application.ExecutionJob) string {
 		}
 		sections = append(sections, "Available isolated Skills: "+strings.Join(names, ", "))
 	}
+	if len(attachmentPaths) > 0 {
+		sections = append(sections, "Files attached to the current user message (read-only; inspect them when relevant):\n- "+strings.Join(attachmentPaths, "\n- "))
+	}
 	sections = append(sections, job.Instruction)
 	return strings.Join(sections, "\n\n")
+}
+
+func (executor *Executor) materializeAttachments(ctx context.Context, job application.ExecutionJob, scratch string) ([]string, error) {
+	if len(job.Attachments) == 0 {
+		return nil, nil
+	}
+	root := filepath.Join(scratch, "attachments")
+	if err := os.MkdirAll(root, 0o750); err != nil {
+		return nil, fmt.Errorf("create attachment directory: %w", err)
+	}
+	paths := make([]string, 0, len(job.Attachments))
+	for _, attachment := range job.Attachments {
+		expectedKey := "attachments/" + job.OwnerID + "/" + attachment.ID
+		if attachment.ObjectKey != expectedKey || filepath.Base(attachment.Name) != attachment.Name || attachment.Name == "." || attachment.Name == ".." {
+			return nil, fmt.Errorf("invalid attachment reference")
+		}
+		reader, object, err := executor.objects.Get(ctx, expectedKey)
+		if err != nil {
+			return nil, fmt.Errorf("open attachment %q: %w", attachment.Name, err)
+		}
+		directory := filepath.Join(root, attachment.ID)
+		if err := os.MkdirAll(directory, 0o750); err != nil {
+			_ = reader.Close()
+			return nil, fmt.Errorf("create attachment staging directory: %w", err)
+		}
+		path := filepath.Join(directory, attachment.Name)
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o400)
+		if err != nil {
+			_ = reader.Close()
+			return nil, fmt.Errorf("create attachment copy: %w", err)
+		}
+		digest := sha256.New()
+		written, copyErr := io.Copy(io.MultiWriter(file, digest), io.LimitReader(reader, attachment.Size+1))
+		closeErr := errors.Join(file.Close(), reader.Close())
+		actualDigest := hex.EncodeToString(digest.Sum(nil))
+		if copyErr != nil || closeErr != nil || written != attachment.Size || object.Size != attachment.Size || actualDigest != attachment.SHA256 || object.SHA256 != attachment.SHA256 {
+			return nil, fmt.Errorf("attachment %q failed size or checksum verification: %w", attachment.Name, errors.Join(copyErr, closeErr, objectstore.ErrChecksumMismatch))
+		}
+		if err := os.Chown(path, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
+			return nil, fmt.Errorf("set attachment ownership: %w", err)
+		}
+		if err := os.Chmod(path, 0o400); err != nil {
+			return nil, fmt.Errorf("protect attachment copy: %w", err)
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
 }
 
 func personalityGuidance(personality string) string {

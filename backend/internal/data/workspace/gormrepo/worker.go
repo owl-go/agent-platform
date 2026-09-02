@@ -144,8 +144,9 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	}
 	snapshot.ProviderModel.APIKeyCiphertext = credential.APIKeyCiphertext
 	var input struct {
-		Text *string        `json:"text"`
-		JSON map[string]any `json:"json"`
+		Text        *string             `json:"text"`
+		JSON        map[string]any      `json:"json"`
+		Attachments []domain.Attachment `json:"attachments"`
 	}
 	if err := json.Unmarshal(row.Input, &input); err != nil {
 		return nil, fmt.Errorf("decode claimed Run input: %w", err)
@@ -168,7 +169,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if row.WorkflowID != nil {
 		workflowID = *row.WorkflowID
 	}
-	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, Instruction: instruction, Snapshot: snapshot}, nil
+	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, Instruction: instruction, Attachments: input.Attachments, Snapshot: snapshot}, nil
 }
 
 func workflowRunInstruction(goal string, prior []runRecord, textInput *string, jsonInput map[string]any) string {
@@ -273,8 +274,14 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "generating", "progress_stage": "thinking"}).Error; err != nil {
 		return nil, err
 	}
-	instruction := sessionInstruction(session.RollingSummary, recent, user.Content)
-	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, CheckpointRef: checkpoint, Snapshot: snapshot}, nil
+	instruction := sessionInstruction(session.RollingSummary, recent, user.Content, checkpoint != "")
+	var attachments []domain.Attachment
+	if len(user.Attachments) > 0 {
+		if err := json.Unmarshal(user.Attachments, &attachments); err != nil {
+			return nil, fmt.Errorf("decode Session attachments: %w", err)
+		}
+	}
+	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, Attachments: attachments, CheckpointRef: checkpoint, Snapshot: snapshot}, nil
 }
 
 func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.ResponseSnapshot) (domain.ExecutionSnapshot, error) {
@@ -501,6 +508,17 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 			}
 			updates["content"] = gorm.Expr("content || ?", payload.Delta)
 			updates["progress_stage"] = "responding"
+		case "message.completed":
+			var payload struct {
+				Message string `json:"message"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err != nil {
+				return err
+			}
+			if payload.Message != "" {
+				updates["content"] = payload.Message
+			}
+			updates["progress_stage"] = "finalizing"
 		default:
 			return nil
 		}
@@ -554,14 +572,14 @@ func (repository *Repository) CancellationRequested(ctx context.Context, job app
 	return count == 0, err
 }
 
-func sessionInstruction(summary string, recent []messageRecord, current string) string {
+func sessionInstruction(summary string, recent []messageRecord, current string, nativeResume bool) string {
 	var builder strings.Builder
-	if summary = strings.TrimSpace(summary); summary != "" {
+	if summary = strings.TrimSpace(summary); summary != "" && !nativeResume {
 		builder.WriteString("Rolling summary from the previous conversation:\n")
 		builder.WriteString(summary)
 		builder.WriteString("\n\n")
 	}
-	if len(recent) > 0 {
+	if len(recent) > 0 && !nativeResume {
 		builder.WriteString("Recent conversation, oldest first:\n")
 		for index := len(recent) - 1; index >= 0; index-- {
 			message := recent[index]

@@ -2042,6 +2042,12 @@
       "properties": {
         "content": {
           "type": "string"
+        },
+        "attachment_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -2095,6 +2101,12 @@
         },
         "provider_model_id": {
           "type": "string"
+        },
+        "attachment_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -2311,6 +2323,30 @@
         "expires_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1Attachment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "image": {
+          "type": "boolean"
         }
       }
     },
@@ -3067,6 +3103,13 @@
         "turn_number": {
           "type": "integer",
           "format": "int32"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attachment"
+          }
         }
       }
     },
@@ -3213,6 +3256,13 @@
         },
         "response_snapshot": {
           "$ref": "#/definitions/v1ResponseSnapshot"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attachment"
+          }
         }
       }
     },

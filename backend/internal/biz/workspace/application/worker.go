@@ -26,6 +26,7 @@ type ExecutionJob struct {
 	MCPServerID        string
 	MCPServer          domain.MCPServerSnapshot
 	Instruction        string
+	Attachments        []domain.Attachment
 	CheckpointRef      string
 	Snapshot           domain.ExecutionSnapshot
 }

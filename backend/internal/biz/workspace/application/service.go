@@ -19,7 +19,7 @@ type Repository interface {
 	DeleteSession(context.Context, string, string) error
 	ListMessages(context.Context, string, string, int64, int) ([]domain.Message, error)
 	GetMessage(context.Context, string, string, int64) (domain.Message, error)
-	CreateMessagePair(context.Context, string, string, string, string) (domain.Message, domain.Message, error)
+	CreateMessagePair(context.Context, string, string, string, string, []domain.Attachment) (domain.Message, domain.Message, error)
 	RetryMessage(context.Context, string, string, int64) (domain.Message, domain.Message, error)
 	CancelMessage(context.Context, string, string, int64) (domain.Message, error)
 
@@ -37,7 +37,7 @@ type Repository interface {
 	GetRun(context.Context, string, string, string) (domain.Run, error)
 	ListRunEvents(context.Context, string, string, string, int64, int) ([]domain.RunEvent, error)
 	CreateRun(context.Context, string, string, string, *string, map[string]any) (domain.Run, error)
-	ContinueRunConversation(context.Context, string, string, string, string) (domain.Run, error)
+	ContinueRunConversation(context.Context, string, string, string, string, []domain.Attachment) (domain.Run, error)
 	CreateRunIdempotent(context.Context, string, string, string, string, *string, map[string]any) (domain.Run, bool, error)
 	CancelRun(context.Context, string, string, string) (domain.Run, error)
 	Rerun(context.Context, string, string, string) (domain.Run, error)

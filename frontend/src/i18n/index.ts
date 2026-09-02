@@ -31,8 +31,12 @@ const en = {
 
 Object.assign(zh.common, { send: "发送" });
 Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行" });
+Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
+Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
 Object.assign(en.common, { send: "Send" });
 Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line" });
+Object.assign(en.sessions, { addAttachment: "Attach images or files", removeAttachment: "Remove attachment {name}", attachmentLimits: "Up to 10 attachments per message, 100 MB each" });
+Object.assign(en.sessions.progress, { finalizing: "Saving the session securely" });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;

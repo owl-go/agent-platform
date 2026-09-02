@@ -90,6 +90,28 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	}
 }
 
+func TestWarmManagerStopsWithoutGraceDelay(t *testing.T) {
+	manager, err := NewWarmManager("docker", 30*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stop []string
+	manager.docker = func(_ context.Context, arguments ...string) ([]byte, error) {
+		if arguments[0] == "inspect" {
+			return []byte("true\n"), nil
+		}
+		stop = append([]string(nil), arguments...)
+		return nil, nil
+	}
+	if err := manager.stopIfRunning(context.Background(), warmContainerPrefix+strings.Repeat("a", 32)); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"stop", "--time", "0", warmContainerPrefix + strings.Repeat("a", 32)}
+	if !reflect.DeepEqual(stop, want) {
+		t.Fatalf("stop call = %v, want %v", stop, want)
+	}
+}
+
 func TestWarmManagerReapsOnlyContainersIdleForThirtyMinutes(t *testing.T) {
 	manager, err := NewWarmManager("docker", 30*time.Minute)
 	if err != nil {

@@ -243,7 +243,7 @@ describe("SessionsPage conversation layout", () => {
     await wrapper.get(".composer > button:last-child").trigger("click");
     await flushPromises();
 
-    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", "model-2");
+    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", "model-2", []);
     expect(selector.element.disabled).toBe(true);
     releaseStream();
     await flushPromises();

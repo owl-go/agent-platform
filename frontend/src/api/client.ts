@@ -3,14 +3,15 @@ import type { InjectionKey } from "vue";
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean }
 export interface Session { id: string; title: string; expert_id?: string; current_provider_model_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot }
+export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[] }
 export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitSource { url: string; branch: string; private_ssh: boolean; credential_configured: boolean }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; provider_model_id?: string; runtime_engine?: RuntimeEngine; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown> }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown> }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id: string; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -46,7 +47,9 @@ export interface PlatformApi {
   deleteSession(id: string, signal?: AbortSignal): Promise<void>;
   listSessionMessages(id: string, signal?: AbortSignal): Promise<SessionMessage[]>;
   streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
-  sendSessionMessage(id: string, content: string, providerModelID: string, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
+  uploadAttachment(file: File, signal?: AbortSignal): Promise<Attachment>;
+  getAttachmentDownload(id: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }>;
+  sendSessionMessage(id: string, content: string, providerModelID: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -59,7 +62,7 @@ export interface PlatformApi {
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
-  continueRunConversation(workflowID: string, runID: string, content: string, signal?: AbortSignal): Promise<Run>;
+  continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<Run>;
   streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<void>;
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
@@ -180,7 +183,15 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         if (done) return;
       }
     },
-    sendSessionMessage(id, content, providerModelID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, provider_model_id: providerModelID }, signal)); },
+    async uploadAttachment(file, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const response = await fetch(`/api/v1/attachments/upload?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file, signal, headers: { Authorization: `Bearer ${token}`, "Content-Type": file.type || "application/octet-stream", "Idempotency-Key": crypto.randomUUID() } });
+      if (!response.ok) throw new ApiError(response.status === 413 || response.status === 422 ? "validation" : "unknown", response.status, "attachment_upload_failed");
+      return response.json() as Promise<Attachment>;
+    },
+    getAttachmentDownload(id, signal) { return call(`/api/v1/attachments/${encodeURIComponent(id)}/download`, { signal }); },
+    sendSessionMessage(id, content, providerModelID, attachmentIDs = [], signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, provider_model_id: providerModelID, attachment_ids: attachmentIDs }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
@@ -193,7 +204,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listRuns(id, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, { signal })).items ?? []).map(normalizeRun); },
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
-    async continueRunConversation(workflowID, runID, content, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content }, signal))); },
+    async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs }, signal))); },
     async streamRunEvents(workflowID, runID, onEvent, signal) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
@@ -324,5 +335,5 @@ function timestampString(value: unknown): unknown {
 }
 
 function normalizeRun(item: Run & { elapsed_ms?: number | string }): Run {
-  return { ...item, elapsed_ms: Number(item.elapsed_ms ?? 0) };
+  return { ...item, attachments: item.attachments ?? [], elapsed_ms: Number(item.elapsed_ms ?? 0) };
 }

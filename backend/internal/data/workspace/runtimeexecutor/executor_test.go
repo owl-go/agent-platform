@@ -1,6 +1,10 @@
 package runtimeexecutor
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,8 +13,38 @@ import (
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/credentials"
+	"agent-platform/backend/internal/objectstore"
+	"agent-platform/backend/internal/objectstore/memory"
 	"agent-platform/backend/internal/platformconfig"
 )
+
+func TestMaterializeAttachmentsVerifiesAndProtectsCopies(t *testing.T) {
+	provider := memory.New()
+	content := []byte("attachment contents")
+	digest := sha256.Sum256(content)
+	sha := hex.EncodeToString(digest[:])
+	key := "attachments/owner-1/11111111-1111-4111-8111-111111111111"
+	if _, err := provider.Put(context.Background(), key, bytes.NewReader(content), objectstore.PutOptions{Size: int64(len(content)), SHA256: sha, ContentType: "text/plain", Metadata: map[string]string{"name": "notes.txt"}}); err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{objects: provider, config: platformconfig.Config{Worker: platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()}}}
+	root := t.TempDir()
+	paths, err := executor.materializeAttachments(context.Background(), application.ExecutionJob{OwnerID: "owner-1", Attachments: []domain.Attachment{{ID: "11111111-1111-4111-8111-111111111111", Name: "notes.txt", ObjectKey: key, Size: int64(len(content)), SHA256: sha}}}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 {
+		t.Fatalf("paths = %v", paths)
+	}
+	got, err := os.ReadFile(paths[0])
+	if err != nil || !bytes.Equal(got, content) {
+		t.Fatalf("copy = %q, %v", got, err)
+	}
+	info, err := os.Stat(paths[0])
+	if err != nil || info.Mode().Perm() != 0o400 {
+		t.Fatalf("copy mode = %v, %v", info.Mode().Perm(), err)
+	}
+}
 
 func TestBuildInstructionAppliesPresetAndCustomPersonality(t *testing.T) {
 	tests := []struct {
@@ -27,7 +61,7 @@ func TestBuildInstructionAppliesPresetAndCustomPersonality(t *testing.T) {
 			instruction := buildInstruction(application.ExecutionJob{
 				Instruction: "Do the work",
 				Snapshot:    domain.ExecutionSnapshot{Personality: test.personality, PersonalityInstructions: test.guidance},
-			})
+			}, nil)
 			for _, value := range test.want {
 				if !strings.Contains(instruction, value) {
 					t.Fatalf("instruction %q does not contain %q", instruction, value)

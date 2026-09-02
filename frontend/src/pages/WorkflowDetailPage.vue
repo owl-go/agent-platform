@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { Paperclip, X } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
-import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import { platformApiKey, type Artifact, type Attachment, type Expert, type ModelProviderConnection, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
@@ -14,6 +15,7 @@ const workflowID = computed(() => String(route.params.workflowId));
 const origin = window.location.origin;
 const runConversationElement = ref<HTMLElement>();
 const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const streamingRunID = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const pendingAttachments = ref<File[]>([]); const attachmentURLs = ref<Record<string, string>>({});
 const models = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection_name: connection.name }))));
 const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
 function modelIncompatible(model: (typeof models.value)[number]) {
@@ -60,6 +62,7 @@ async function openRun(item: Run) {
 	eventController?.abort();
 	selectedRun.value = item;
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
+	void hydrateAttachmentURLs(conversationRuns.value.flatMap((turn) => turn.attachments ?? []));
 	runEvents.value = [];
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
@@ -81,18 +84,30 @@ async function streamConversationTurn(item: Run) {
 	}
 }
 async function sendFollowUp() {
-	if (!selectedRun.value || !followUpInput.value.trim() || activeConversationRun.value || sendingFollowUp.value) return;
+	if (!selectedRun.value || (!followUpInput.value.trim() && pendingAttachments.value.length === 0) || activeConversationRun.value || sendingFollowUp.value) return;
 	sendingFollowUp.value = true;
 	try {
-		const created = await api.continueRunConversation(workflowID.value, selectedRun.value.id, followUpInput.value.trim());
+		const uploaded = await Promise.all(pendingAttachments.value.map((file) => api.uploadAttachment(file)));
+		const created = await api.continueRunConversation(workflowID.value, selectedRun.value.id, followUpInput.value.trim(), uploaded.map((item) => item.id));
 		followUpInput.value = "";
+		pendingAttachments.value = [];
 		conversationRuns.value.push(created);
+		void hydrateAttachmentURLs(created.attachments ?? []);
 		await scrollConversationToEnd();
 		void streamConversationTurn(created);
 	} catch { error.value = t("errors.generic"); } finally { sendingFollowUp.value = false; }
 }
+function chooseConversationAttachments(event: Event) {
+	const input = event.target as HTMLInputElement; const files = [...(input.files ?? [])];
+	if (files.some((file) => file.size > 100 * 1024 * 1024) || pendingAttachments.value.length + files.length > 10) error.value = t("sessions.attachmentLimits");
+	else pendingAttachments.value.push(...files);
+	input.value = "";
+}
+function removeConversationAttachment(index: number) { pendingAttachments.value.splice(index, 1); }
+async function hydrateAttachmentURLs(attachments: Attachment[]) { await Promise.all(attachments.filter((item) => item.image && !attachmentURLs.value[item.id]).map(async (item) => { try { attachmentURLs.value[item.id] = (await api.getAttachmentDownload(item.id)).url; } catch { /* Keep the file card usable. */ } })); }
+async function openTurnAttachment(attachment: Attachment) { try { window.open((await api.getAttachmentDownload(attachment.id)).url, "_blank", "noopener,noreferrer"); } catch { error.value = t("errors.generic"); } }
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; streamingRunID.value = ""; followUpInput.value = ""; }
+function closeRun() { eventController?.abort(); eventController = undefined; selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; streamingRunID.value = ""; followUpInput.value = ""; pendingAttachments.value = []; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || (item.id === streamingRunID.value ? streamedRunOutput.value : ""); }
 async function scrollConversationToEnd() { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior: "smooth" }); }
@@ -110,7 +125,14 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
   <section class="detail-page workflow-detail-page" :class="{ 'workflow-run-view': selectedRun }">
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <div v-if="selectedRun" class="run-page">
-      <header class="run-conversation-head"><div><button class="back-link" @click="closeRun">← {{ t('common.back') }}</button><p class="eyebrow">{{ workflow?.name ?? selectedRun.workflow_name }} / RUN {{ selectedRun.id.slice(0, 8) }}</p><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span><i class="run-state" :class="latestConversationRun.state"></i>{{ stateLabel(latestConversationRun.state) }}</span><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(conversationElapsed, locale as SupportedLocale) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header><div ref="runConversationElement" class="run-conversation"><template v-for="(turn, index) in conversationRuns" :key="turn.id"><article class="message user"><div class="message-content"><p>{{ runInputText(turn, index) }}</p><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article><article class="message assistant"><div class="message-content"><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(runOutput(turn))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="fileArtifacts.some((item) => item.run_id === turn.id)" class="run-attachments"><button v-for="item in fileArtifacts.filter((artifact) => artifact.run_id === turn.id)" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">FILE</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article></template></div><form v-if="!workflow?.deleted" class="run-composer" @submit.prevent="sendFollowUp"><textarea v-model="followUpInput" rows="2" :placeholder="t('workflows.followUpPlaceholder')" :disabled="Boolean(activeConversationRun)" @keydown.enter.exact.prevent="sendFollowUp"></textarea><button v-if="activeConversationRun" type="button" class="run-stop" :aria-label="t('sessions.stopGeneration')" @click="cancelConversationRun">■</button><button v-else type="submit" :disabled="sendingFollowUp || !followUpInput.trim()" :aria-label="t('common.send')">↑</button></form>
+      <header class="run-conversation-head"><div><button class="back-link" @click="closeRun">← {{ t('common.back') }}</button><p class="eyebrow">{{ workflow?.name ?? selectedRun.workflow_name }} / RUN {{ selectedRun.id.slice(0, 8) }}</p><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span><i class="run-state" :class="latestConversationRun.state"></i>{{ stateLabel(latestConversationRun.state) }}</span><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(conversationElapsed, locale as SupportedLocale) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
+      <div ref="runConversationElement" class="run-conversation">
+        <template v-for="(turn, index) in conversationRuns" :key="turn.id">
+          <article class="message user"><div class="message-content"><p v-if="runInputText(turn, index)">{{ runInputText(turn, index) }}</p><div v-if="turn.attachments?.length" class="turn-attachments"><button v-for="attachment in turn.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openTurnAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name"><span v-else class="attachment-file-mark">FILE</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article>
+          <article class="message assistant"><div class="message-content"><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(runOutput(turn))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="fileArtifacts.some((item) => item.run_id === turn.id)" class="run-attachments"><button v-for="item in fileArtifacts.filter((artifact) => artifact.run_id === turn.id)" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">FILE</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
+        </template>
+      </div>
+      <form v-if="!workflow?.deleted" class="run-composer" @submit.prevent="sendFollowUp"><div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removeConversationAttachment(index)"><X /></button></span></div><textarea v-model="followUpInput" rows="2" :placeholder="t('workflows.followUpPlaceholder')" :disabled="Boolean(activeConversationRun)" @keydown.enter.exact.prevent="sendFollowUp"></textarea><label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="Boolean(activeConversationRun) || sendingFollowUp" @change="chooseConversationAttachments"></label><button v-if="activeConversationRun" type="button" class="run-stop" :aria-label="t('sessions.stopGeneration')" @click="cancelConversationRun">■</button><button v-else type="submit" :disabled="sendingFollowUp || (!followUpInput.trim() && pendingAttachments.length === 0)" :aria-label="t('common.send')">↑</button></form>
     </div>
     <template v-else>
       <header class="detail-hero"><button class="back-link" @click="router.push('/workflows')">← {{ t('common.back') }}</button><div v-if="workflow"><p class="eyebrow">WORKFLOW / {{ workflow.id.slice(0, 8).toUpperCase() }}</p><h1>{{ workflow.name }}</h1><p>{{ workflow.goal }}</p></div><button v-if="workflow && !workflow.deleted" class="button primary" :disabled="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</button><span v-else-if="workflow" class="engine-chip">{{ t('common.readOnly') }}</span></header>

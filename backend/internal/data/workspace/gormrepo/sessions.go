@@ -156,17 +156,21 @@ func (repository *Repository) GetMessage(ctx context.Context, ownerID, sessionID
 	return messageDomain(row), nil
 }
 
-func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string) (domain.Message, domain.Message, error) {
-	return repository.createMessagePair(ctx, ownerID, sessionID, content, providerModelID, nil)
+func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, providerModelID, attachments, nil)
 }
 
-func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
+func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
 	content = strings.TrimSpace(content)
-	if content == "" || len(content) > 100_000 {
-		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain 1-100000 characters", domain.ErrInvalid)
+	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain text or an attachment", domain.ErrInvalid)
+	}
+	encodedAttachments, err := marshal(attachments)
+	if err != nil {
+		return domain.Message{}, domain.Message{}, fmt.Errorf("encode message attachments: %w", err)
 	}
 	var user, assistant messageRecord
-	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var session sessionRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND archived_at IS NULL", ownerID, sessionID).Take(&session).Error; err != nil {
 			return mapNotFound(err)
@@ -188,7 +192,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		if err != nil {
 			return err
 		}
-		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content}
+		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content, Attachments: encodedAttachments}
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
@@ -201,7 +205,11 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			updates["current_provider_model_id"] = snapshot.ProviderModelID
 		}
 		if session.Title == "New session" {
-			updates["title"] = sessionTitle(content)
+			title := content
+			if strings.TrimSpace(title) == "" && len(attachments) > 0 {
+				title = attachments[0].Name
+			}
+			updates["title"] = sessionTitle(title)
 		}
 		return tx.Model(&sessionRecord{}).Where("id = ?", sessionID).Updates(updates).Error
 	})
@@ -239,7 +247,11 @@ func (repository *Repository) RetryMessage(ctx context.Context, ownerID, session
 	if err := json.Unmarshal(assistant.ResponseSnapshot, &snapshot); err != nil {
 		return domain.Message{}, domain.Message{}, fmt.Errorf("decode original Response Snapshot: %w", err)
 	}
-	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, "", &snapshot)
+	var attachments []domain.Attachment
+	if len(original.Attachments) > 0 {
+		_ = json.Unmarshal(original.Attachments, &attachments)
+	}
+	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, "", attachments, &snapshot)
 }
 
 func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {
@@ -309,6 +321,9 @@ func messageDomain(row messageRecord) domain.Message {
 		if err := json.Unmarshal(row.ResponseSnapshot, value.ResponseSnapshot); err != nil {
 			value.ResponseSnapshot = nil
 		}
+	}
+	if len(row.Attachments) > 0 && string(row.Attachments) != "null" {
+		_ = json.Unmarshal(row.Attachments, &value.Attachments)
 	}
 	return value
 }

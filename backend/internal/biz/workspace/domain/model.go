@@ -58,6 +58,18 @@ type Message struct {
 	ElapsedMS        int64
 	CreatedAt        time.Time
 	ResponseSnapshot *ResponseSnapshot
+	Attachments      []Attachment
+}
+
+// Attachment is an immutable reference to a user upload frozen onto one turn.
+type Attachment struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ContentType string `json:"content_type"`
+	ObjectKey   string `json:"object_key"`
+	Size        int64  `json:"size"`
+	SHA256      string `json:"sha256"`
+	Image       bool   `json:"image"`
 }
 
 type ResponseSnapshot struct {
@@ -539,6 +551,7 @@ type Run struct {
 	State            string
 	TextInput        *string
 	JSONInput        map[string]any
+	Attachments      []Attachment
 	FinalText        *string
 	FinalJSON        map[string]any
 	Error            string

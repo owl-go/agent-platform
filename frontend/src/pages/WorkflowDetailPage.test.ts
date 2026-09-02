@@ -187,7 +187,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-composer").trigger("submit");
     await flushPromises();
 
-    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, run.id, "继续给出修复建议");
+    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, run.id, "继续给出修复建议", []);
     expect(wrapper.findAll(".run-conversation .message.user")).toHaveLength(2);
     wrapper.unmount();
   });

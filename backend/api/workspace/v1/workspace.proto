@@ -97,11 +97,11 @@ message DeleteSessionRequest { string session_id = 1; }
 message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; optional string current_provider_model_id = 8; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
-message SendSessionMessageRequest { string session_id = 1; string content = 2; string provider_model_id = 3; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; string provider_model_id = 3; repeated string attachment_ids = 4; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
-message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; }
 
 message ListWorkflowsRequest { bool deleted = 1; }
@@ -123,10 +123,10 @@ message ListRunsRequest { string workflow_id = 1; }
 message ListRunsResponse { repeated Run items = 1; }
 message GetRunRequest { string workflow_id = 1; string run_id = 2; }
 message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
-message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; }
+message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -190,3 +190,4 @@ message DeleteSkillRequest { string skill_id = 1; }
 message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
 
 message DeleteResponse { bool deleted = 1; }
+message Attachment { string id = 1; string name = 2; string content_type = 3; int64 size = 4; string sha256 = 5; bool image = 6; }

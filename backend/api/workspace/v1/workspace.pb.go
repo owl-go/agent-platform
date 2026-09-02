@@ -1133,6 +1133,7 @@ type SendSessionMessageRequest struct {
 	SessionId       string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	Content         string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	ProviderModelId string                 `protobuf:"bytes,3,opt,name=provider_model_id,json=providerModelId,proto3" json:"provider_model_id,omitempty"`
+	AttachmentIds   []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1186,6 +1187,13 @@ func (x *SendSessionMessageRequest) GetProviderModelId() string {
 		return x.ProviderModelId
 	}
 	return ""
+}
+
+func (x *SendSessionMessageRequest) GetAttachmentIds() []string {
+	if x != nil {
+		return x.AttachmentIds
+	}
+	return nil
 }
 
 type SendSessionMessageResponse struct {
@@ -1355,6 +1363,7 @@ type SessionMessage struct {
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ProgressStage    string                 `protobuf:"bytes,8,opt,name=progress_stage,json=progressStage,proto3" json:"progress_stage,omitempty"`
 	ResponseSnapshot *ResponseSnapshot      `protobuf:"bytes,9,opt,name=response_snapshot,json=responseSnapshot,proto3,oneof" json:"response_snapshot,omitempty"`
+	Attachments      []*Attachment          `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1448,6 +1457,13 @@ func (x *SessionMessage) GetProgressStage() string {
 func (x *SessionMessage) GetResponseSnapshot() *ResponseSnapshot {
 	if x != nil {
 		return x.ResponseSnapshot
+	}
+	return nil
+}
+
+func (x *SessionMessage) GetAttachments() []*Attachment {
+	if x != nil {
+		return x.Attachments
 	}
 	return nil
 }
@@ -2677,6 +2693,7 @@ type ContinueRunConversationRequest struct {
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
 	RunId         string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	AttachmentIds []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2730,6 +2747,13 @@ func (x *ContinueRunConversationRequest) GetContent() string {
 		return x.Content
 	}
 	return ""
+}
+
+func (x *ContinueRunConversationRequest) GetAttachmentIds() []string {
+	if x != nil {
+		return x.AttachmentIds
+	}
+	return nil
 }
 
 type CancelRunRequest struct {
@@ -2855,6 +2879,7 @@ type Run struct {
 	WorkflowSnapshot *structpb.Struct       `protobuf:"bytes,15,opt,name=workflow_snapshot,json=workflowSnapshot,proto3,oneof" json:"workflow_snapshot,omitempty"`
 	ConversationId   string                 `protobuf:"bytes,16,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
 	TurnNumber       int32                  `protobuf:"varint,17,opt,name=turn_number,json=turnNumber,proto3" json:"turn_number,omitempty"`
+	Attachments      []*Attachment          `protobuf:"bytes,18,rep,name=attachments,proto3" json:"attachments,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -3006,6 +3031,13 @@ func (x *Run) GetTurnNumber() int32 {
 		return x.TurnNumber
 	}
 	return 0
+}
+
+func (x *Run) GetAttachments() []*Attachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
 }
 
 type ListArtifactsRequest struct {
@@ -6472,6 +6504,90 @@ func (x *DeleteResponse) GetDeleted() bool {
 	return false
 }
 
+type Attachment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ContentType   string                 `protobuf:"bytes,3,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Size          int64                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Sha256        string                 `protobuf:"bytes,5,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	Image         bool                   `protobuf:"varint,6,opt,name=image,proto3" json:"image,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Attachment) Reset() {
+	*x = Attachment{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Attachment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Attachment) ProtoMessage() {}
+
+func (x *Attachment) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Attachment.ProtoReflect.Descriptor instead.
+func (*Attachment) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *Attachment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Attachment) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Attachment) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *Attachment) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *Attachment) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+func (x *Attachment) GetImage() bool {
+	if x != nil {
+		return x.Image
+	}
+	return false
+}
+
 var File_workspace_v1_workspace_proto protoreflect.FileDescriptor
 
 const file_workspace_v1_workspace_proto_rawDesc = "" +
@@ -6559,12 +6675,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x06_afterB\b\n" +
 	"\x06_limit\"Q\n" +
 	"\x1bListSessionMessagesResponse\x122\n" +
-	"\x05items\x18\x01 \x03(\v2\x1c.workspace.v1.SessionMessageR\x05items\"\x80\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x1c.workspace.v1.SessionMessageR\x05items\"\xa7\x01\n" +
 	"\x19SendSessionMessageRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12*\n" +
-	"\x11provider_model_id\x18\x03 \x01(\tR\x0fproviderModelId\"\xa8\x01\n" +
+	"\x11provider_model_id\x18\x03 \x01(\tR\x0fproviderModelId\x12%\n" +
+	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\"\xa8\x01\n" +
 	"\x1aSendSessionMessageResponse\x12?\n" +
 	"\fuser_message\x18\x01 \x01(\v2\x1c.workspace.v1.SessionMessageR\vuserMessage\x12I\n" +
 	"\x11assistant_message\x18\x02 \x01(\v2\x1c.workspace.v1.SessionMessageR\x10assistantMessage\"Z\n" +
@@ -6577,7 +6694,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x02 \x01(\x03R\tmessageId\"\xf2\x02\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\"\xae\x03\n" +
 	"\x0eSessionMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x14\n" +
@@ -6589,7 +6706,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12%\n" +
 	"\x0eprogress_stage\x18\b \x01(\tR\rprogressStage\x12P\n" +
-	"\x11response_snapshot\x18\t \x01(\v2\x1e.workspace.v1.ResponseSnapshotH\x01R\x10responseSnapshot\x88\x01\x01B\b\n" +
+	"\x11response_snapshot\x18\t \x01(\v2\x1e.workspace.v1.ResponseSnapshotH\x01R\x10responseSnapshot\x88\x01\x01\x12:\n" +
+	"\vattachments\x18\n" +
+	" \x03(\v2\x18.workspace.v1.AttachmentR\vattachmentsB\b\n" +
 	"\x06_errorB\x14\n" +
 	"\x12_response_snapshot\"\xa1\x03\n" +
 	"\x10ResponseSnapshot\x12*\n" +
@@ -6712,12 +6831,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13ListRunTurnsRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"r\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\x99\x01\n" +
 	"\x1eContinueRunConversationRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\"J\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12%\n" +
+	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\"J\n" +
 	"\x10CancelRunRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
@@ -6725,7 +6845,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x14RerunWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\xc9\x06\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\x85\a\n" +
 	"\x03Run\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -6752,7 +6872,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x11workflow_snapshot\x18\x0f \x01(\v2\x17.google.protobuf.StructH\aR\x10workflowSnapshot\x88\x01\x01\x12'\n" +
 	"\x0fconversation_id\x18\x10 \x01(\tR\x0econversationId\x12\x1f\n" +
 	"\vturn_number\x18\x11 \x01(\x05R\n" +
-	"turnNumberB\r\n" +
+	"turnNumber\x12:\n" +
+	"\vattachments\x18\x12 \x03(\v2\x18.workspace.v1.AttachmentR\vattachmentsB\r\n" +
 	"\v_text_inputB\r\n" +
 	"\v_json_inputB\r\n" +
 	"\v_final_textB\r\n" +
@@ -7064,7 +7185,15 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"\b_git_ref\"*\n" +
 	"\x0eDeleteResponse\x12\x18\n" +
-	"\adeleted\x18\x01 \x01(\bR\adeleted2\x8d?\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted\"\x95\x01\n" +
+	"\n" +
+	"Attachment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x16\n" +
+	"\x06sha256\x18\x05 \x01(\tR\x06sha256\x12\x14\n" +
+	"\x05image\x18\x06 \x01(\bR\x05image2\x8d?\n" +
 	"\x15AgentWorkspaceService\x12d\n" +
 	"\x0eGetCurrentUser\x12#.workspace.v1.GetCurrentUserRequest\x1a\x19.workspace.v1.CurrentUser\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/api/v1/me\x12i\n" +
@@ -7142,7 +7271,7 @@ func file_workspace_v1_workspace_proto_rawDescGZIP() []byte {
 	return file_workspace_v1_workspace_proto_rawDescData
 }
 
-var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 104)
+var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
 var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*GetCurrentUserRequest)(nil),                // 0: workspace.v1.GetCurrentUserRequest
 	(*CurrentUser)(nil),                          // 1: workspace.v1.CurrentUser
@@ -7248,195 +7377,198 @@ var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*DeleteSkillRequest)(nil),                   // 101: workspace.v1.DeleteSkillRequest
 	(*Skill)(nil),                                // 102: workspace.v1.Skill
 	(*DeleteResponse)(nil),                       // 103: workspace.v1.DeleteResponse
-	(*timestamppb.Timestamp)(nil),                // 104: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                      // 105: google.protobuf.Struct
+	(*Attachment)(nil),                           // 104: workspace.v1.Attachment
+	(*timestamppb.Timestamp)(nil),                // 105: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                      // 106: google.protobuf.Struct
 }
 var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	9,   // 0: workspace.v1.ListUsersResponse.items:type_name -> workspace.v1.UserAccount
 	9,   // 1: workspace.v1.CreateUserResponse.user:type_name -> workspace.v1.UserAccount
-	104, // 2: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
+	105, // 2: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
 	17,  // 3: workspace.v1.ListSessionsResponse.items:type_name -> workspace.v1.Session
-	104, // 4: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
-	104, // 5: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
+	105, // 4: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	105, // 5: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
 	24,  // 6: workspace.v1.ListSessionMessagesResponse.items:type_name -> workspace.v1.SessionMessage
 	24,  // 7: workspace.v1.SendSessionMessageResponse.user_message:type_name -> workspace.v1.SessionMessage
 	24,  // 8: workspace.v1.SendSessionMessageResponse.assistant_message:type_name -> workspace.v1.SessionMessage
-	104, // 9: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
+	105, // 9: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
 	25,  // 10: workspace.v1.SessionMessage.response_snapshot:type_name -> workspace.v1.ResponseSnapshot
-	33,  // 11: workspace.v1.ListWorkflowsResponse.items:type_name -> workspace.v1.Workflow
-	32,  // 12: workspace.v1.CreateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
-	32,  // 13: workspace.v1.UpdateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
-	34,  // 14: workspace.v1.WorkflowInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	35,  // 15: workspace.v1.WorkflowInput.schedule:type_name -> workspace.v1.Schedule
-	34,  // 16: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
-	35,  // 17: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
-	36,  // 18: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
-	104, // 19: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	104, // 20: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 21: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
-	105, // 22: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
-	47,  // 23: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
-	105, // 24: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
-	105, // 25: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
-	104, // 26: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
-	104, // 27: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	104, // 28: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	105, // 29: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
-	52,  // 30: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
-	104, // 31: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
-	104, // 32: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
-	104, // 33: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
-	61,  // 34: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
-	104, // 35: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
-	104, // 36: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
-	68,  // 37: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
-	67,  // 38: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	67,  // 39: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	104, // 40: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
-	104, // 41: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
-	72,  // 42: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	72,  // 43: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	75,  // 44: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
-	78,  // 45: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
-	86,  // 46: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
-	104, // 47: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
-	87,  // 48: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
-	104, // 49: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
-	104, // 50: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
-	88,  // 51: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
-	96,  // 52: workspace.v1.ListMCPServersResponse.items:type_name -> workspace.v1.MCPServer
-	95,  // 53: workspace.v1.CreateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	95,  // 54: workspace.v1.UpdateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	34,  // 55: workspace.v1.MCPServerInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	34,  // 56: workspace.v1.MCPServer.environment:type_name -> workspace.v1.EnvironmentVariable
-	104, // 57: workspace.v1.MCPServer.created_at:type_name -> google.protobuf.Timestamp
-	104, // 58: workspace.v1.MCPServer.updated_at:type_name -> google.protobuf.Timestamp
-	102, // 59: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
-	104, // 60: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
-	104, // 61: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
-	0,   // 62: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
-	2,   // 63: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
-	4,   // 64: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
-	6,   // 65: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
-	7,   // 66: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
-	10,  // 67: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
-	12,  // 68: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
-	13,  // 69: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
-	14,  // 70: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
-	15,  // 71: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
-	16,  // 72: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
-	18,  // 73: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
-	20,  // 74: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
-	22,  // 75: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
-	23,  // 76: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
-	26,  // 77: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
-	28,  // 78: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
-	29,  // 79: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
-	30,  // 80: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
-	31,  // 81: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
-	37,  // 82: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
-	39,  // 83: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
-	40,  // 84: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
-	42,  // 85: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
-	43,  // 86: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
-	44,  // 87: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
-	45,  // 88: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
-	46,  // 89: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
-	48,  // 90: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
-	50,  // 91: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
-	53,  // 92: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
-	55,  // 93: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:input_type -> workspace.v1.CreateWorkspaceDirectoryRequest
-	56,  // 94: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:input_type -> workspace.v1.UploadWorkspaceFileRequest
-	57,  // 95: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
-	59,  // 96: workspace.v1.AgentWorkspaceService.ClearWorkspace:input_type -> workspace.v1.ClearWorkspaceRequest
-	60,  // 97: workspace.v1.AgentWorkspaceService.CloneWorkspace:input_type -> workspace.v1.CloneWorkspaceRequest
-	62,  // 98: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
-	64,  // 99: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
-	65,  // 100: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
-	66,  // 101: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
-	69,  // 102: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
-	70,  // 103: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
-	73,  // 104: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
-	76,  // 105: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
-	79,  // 106: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
-	81,  // 107: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
-	82,  // 108: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
-	83,  // 109: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
-	84,  // 110: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
-	85,  // 111: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	89,  // 112: workspace.v1.AgentWorkspaceService.ListMCPServers:input_type -> workspace.v1.ListMCPServersRequest
-	91,  // 113: workspace.v1.AgentWorkspaceService.CreateMCPServer:input_type -> workspace.v1.CreateMCPServerRequest
-	92,  // 114: workspace.v1.AgentWorkspaceService.UpdateMCPServer:input_type -> workspace.v1.UpdateMCPServerRequest
-	93,  // 115: workspace.v1.AgentWorkspaceService.TestMCPServer:input_type -> workspace.v1.TestMCPServerRequest
-	94,  // 116: workspace.v1.AgentWorkspaceService.DeleteMCPServer:input_type -> workspace.v1.DeleteMCPServerRequest
-	97,  // 117: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
-	99,  // 118: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
-	100, // 119: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
-	101, // 120: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
-	1,   // 121: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
-	3,   // 122: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
-	5,   // 123: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
-	9,   // 124: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
-	8,   // 125: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
-	11,  // 126: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
-	17,  // 127: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
-	17,  // 128: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
-	17,  // 129: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
-	17,  // 130: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
-	103, // 131: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
-	19,  // 132: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
-	21,  // 133: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	21,  // 134: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	24,  // 135: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
-	27,  // 136: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
-	33,  // 137: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
-	33,  // 138: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
-	33,  // 139: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
-	103, // 140: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
-	38,  // 141: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	47,  // 142: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
-	41,  // 143: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
-	47,  // 144: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
-	41,  // 145: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
-	47,  // 146: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
-	47,  // 147: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
-	47,  // 148: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
-	49,  // 149: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
-	51,  // 150: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
-	54,  // 151: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
-	61,  // 152: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:output_type -> workspace.v1.WorkspaceEntry
-	61,  // 153: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:output_type -> workspace.v1.WorkspaceEntry
-	58,  // 154: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
-	103, // 155: workspace.v1.AgentWorkspaceService.ClearWorkspace:output_type -> workspace.v1.DeleteResponse
-	33,  // 156: workspace.v1.AgentWorkspaceService.CloneWorkspace:output_type -> workspace.v1.Workflow
-	63,  // 157: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
-	68,  // 158: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
-	68,  // 159: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
-	103, // 160: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
-	71,  // 161: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
-	71,  // 162: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
-	74,  // 163: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
-	77,  // 164: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
-	80,  // 165: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
-	86,  // 166: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	86,  // 167: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	103, // 168: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
-	86,  // 169: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
-	87,  // 170: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	90,  // 171: workspace.v1.AgentWorkspaceService.ListMCPServers:output_type -> workspace.v1.ListMCPServersResponse
-	96,  // 172: workspace.v1.AgentWorkspaceService.CreateMCPServer:output_type -> workspace.v1.MCPServer
-	96,  // 173: workspace.v1.AgentWorkspaceService.UpdateMCPServer:output_type -> workspace.v1.MCPServer
-	96,  // 174: workspace.v1.AgentWorkspaceService.TestMCPServer:output_type -> workspace.v1.MCPServer
-	103, // 175: workspace.v1.AgentWorkspaceService.DeleteMCPServer:output_type -> workspace.v1.DeleteResponse
-	98,  // 176: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
-	102, // 177: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
-	102, // 178: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
-	103, // 179: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
-	121, // [121:180] is the sub-list for method output_type
-	62,  // [62:121] is the sub-list for method input_type
-	62,  // [62:62] is the sub-list for extension type_name
-	62,  // [62:62] is the sub-list for extension extendee
-	0,   // [0:62] is the sub-list for field type_name
+	104, // 11: workspace.v1.SessionMessage.attachments:type_name -> workspace.v1.Attachment
+	33,  // 12: workspace.v1.ListWorkflowsResponse.items:type_name -> workspace.v1.Workflow
+	32,  // 13: workspace.v1.CreateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
+	32,  // 14: workspace.v1.UpdateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
+	34,  // 15: workspace.v1.WorkflowInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	35,  // 16: workspace.v1.WorkflowInput.schedule:type_name -> workspace.v1.Schedule
+	34,  // 17: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
+	35,  // 18: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
+	36,  // 19: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
+	105, // 20: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	105, // 21: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
+	105, // 22: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
+	106, // 23: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
+	47,  // 24: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
+	106, // 25: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
+	106, // 26: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
+	105, // 27: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
+	105, // 28: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	105, // 29: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	106, // 30: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
+	104, // 31: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
+	52,  // 32: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
+	105, // 33: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
+	105, // 34: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
+	105, // 35: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
+	61,  // 36: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
+	105, // 37: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
+	105, // 38: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
+	68,  // 39: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
+	67,  // 40: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	67,  // 41: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	105, // 42: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
+	105, // 43: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
+	72,  // 44: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	72,  // 45: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	75,  // 46: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
+	78,  // 47: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
+	86,  // 48: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
+	105, // 49: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
+	87,  // 50: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
+	105, // 51: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
+	105, // 52: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
+	88,  // 53: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
+	96,  // 54: workspace.v1.ListMCPServersResponse.items:type_name -> workspace.v1.MCPServer
+	95,  // 55: workspace.v1.CreateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
+	95,  // 56: workspace.v1.UpdateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
+	34,  // 57: workspace.v1.MCPServerInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	34,  // 58: workspace.v1.MCPServer.environment:type_name -> workspace.v1.EnvironmentVariable
+	105, // 59: workspace.v1.MCPServer.created_at:type_name -> google.protobuf.Timestamp
+	105, // 60: workspace.v1.MCPServer.updated_at:type_name -> google.protobuf.Timestamp
+	102, // 61: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
+	105, // 62: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
+	105, // 63: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
+	0,   // 64: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
+	2,   // 65: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
+	4,   // 66: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
+	6,   // 67: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
+	7,   // 68: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
+	10,  // 69: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
+	12,  // 70: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
+	13,  // 71: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
+	14,  // 72: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
+	15,  // 73: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
+	16,  // 74: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
+	18,  // 75: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
+	20,  // 76: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
+	22,  // 77: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
+	23,  // 78: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
+	26,  // 79: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
+	28,  // 80: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
+	29,  // 81: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
+	30,  // 82: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
+	31,  // 83: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
+	37,  // 84: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
+	39,  // 85: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
+	40,  // 86: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
+	42,  // 87: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
+	43,  // 88: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
+	44,  // 89: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
+	45,  // 90: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
+	46,  // 91: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
+	48,  // 92: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
+	50,  // 93: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
+	53,  // 94: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
+	55,  // 95: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:input_type -> workspace.v1.CreateWorkspaceDirectoryRequest
+	56,  // 96: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:input_type -> workspace.v1.UploadWorkspaceFileRequest
+	57,  // 97: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
+	59,  // 98: workspace.v1.AgentWorkspaceService.ClearWorkspace:input_type -> workspace.v1.ClearWorkspaceRequest
+	60,  // 99: workspace.v1.AgentWorkspaceService.CloneWorkspace:input_type -> workspace.v1.CloneWorkspaceRequest
+	62,  // 100: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
+	64,  // 101: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
+	65,  // 102: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
+	66,  // 103: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
+	69,  // 104: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
+	70,  // 105: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
+	73,  // 106: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
+	76,  // 107: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
+	79,  // 108: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
+	81,  // 109: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
+	82,  // 110: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
+	83,  // 111: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
+	84,  // 112: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
+	85,  // 113: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
+	89,  // 114: workspace.v1.AgentWorkspaceService.ListMCPServers:input_type -> workspace.v1.ListMCPServersRequest
+	91,  // 115: workspace.v1.AgentWorkspaceService.CreateMCPServer:input_type -> workspace.v1.CreateMCPServerRequest
+	92,  // 116: workspace.v1.AgentWorkspaceService.UpdateMCPServer:input_type -> workspace.v1.UpdateMCPServerRequest
+	93,  // 117: workspace.v1.AgentWorkspaceService.TestMCPServer:input_type -> workspace.v1.TestMCPServerRequest
+	94,  // 118: workspace.v1.AgentWorkspaceService.DeleteMCPServer:input_type -> workspace.v1.DeleteMCPServerRequest
+	97,  // 119: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
+	99,  // 120: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
+	100, // 121: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
+	101, // 122: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
+	1,   // 123: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
+	3,   // 124: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
+	5,   // 125: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
+	9,   // 126: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
+	8,   // 127: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
+	11,  // 128: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
+	17,  // 129: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
+	17,  // 130: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
+	17,  // 131: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
+	17,  // 132: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
+	103, // 133: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
+	19,  // 134: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
+	21,  // 135: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	21,  // 136: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	24,  // 137: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
+	27,  // 138: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
+	33,  // 139: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
+	33,  // 140: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
+	33,  // 141: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
+	103, // 142: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
+	38,  // 143: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	47,  // 144: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
+	41,  // 145: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
+	47,  // 146: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
+	41,  // 147: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
+	47,  // 148: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
+	47,  // 149: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
+	47,  // 150: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
+	49,  // 151: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
+	51,  // 152: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
+	54,  // 153: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
+	61,  // 154: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:output_type -> workspace.v1.WorkspaceEntry
+	61,  // 155: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:output_type -> workspace.v1.WorkspaceEntry
+	58,  // 156: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
+	103, // 157: workspace.v1.AgentWorkspaceService.ClearWorkspace:output_type -> workspace.v1.DeleteResponse
+	33,  // 158: workspace.v1.AgentWorkspaceService.CloneWorkspace:output_type -> workspace.v1.Workflow
+	63,  // 159: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
+	68,  // 160: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
+	68,  // 161: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
+	103, // 162: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
+	71,  // 163: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
+	71,  // 164: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
+	74,  // 165: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
+	77,  // 166: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
+	80,  // 167: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
+	86,  // 168: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	86,  // 169: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	103, // 170: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
+	86,  // 171: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
+	87,  // 172: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
+	90,  // 173: workspace.v1.AgentWorkspaceService.ListMCPServers:output_type -> workspace.v1.ListMCPServersResponse
+	96,  // 174: workspace.v1.AgentWorkspaceService.CreateMCPServer:output_type -> workspace.v1.MCPServer
+	96,  // 175: workspace.v1.AgentWorkspaceService.UpdateMCPServer:output_type -> workspace.v1.MCPServer
+	96,  // 176: workspace.v1.AgentWorkspaceService.TestMCPServer:output_type -> workspace.v1.MCPServer
+	103, // 177: workspace.v1.AgentWorkspaceService.DeleteMCPServer:output_type -> workspace.v1.DeleteResponse
+	98,  // 178: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
+	102, // 179: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
+	102, // 180: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
+	103, // 181: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
+	123, // [123:182] is the sub-list for method output_type
+	64,  // [64:123] is the sub-list for method input_type
+	64,  // [64:64] is the sub-list for extension type_name
+	64,  // [64:64] is the sub-list for extension extendee
+	0,   // [0:64] is the sub-list for field type_name
 }
 
 func init() { file_workspace_v1_workspace_proto_init() }
@@ -7470,7 +7602,7 @@ func file_workspace_v1_workspace_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_workspace_v1_workspace_proto_rawDesc), len(file_workspace_v1_workspace_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   104,
+			NumMessages:   105,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

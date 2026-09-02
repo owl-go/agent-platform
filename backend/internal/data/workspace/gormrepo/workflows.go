@@ -351,10 +351,10 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	return created, tx.Create(&created).Error
 }
 
-func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string) (domain.Run, error) {
+func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment) (domain.Run, error) {
 	content = strings.TrimSpace(content)
-	if content == "" || len(content) > 100_000 {
-		return domain.Run{}, fmt.Errorf("%w: follow-up content must contain 1-100000 bytes", domain.ErrInvalid)
+	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
+		return domain.Run{}, fmt.Errorf("%w: follow-up must contain text or an attachment", domain.ErrInvalid)
 	}
 	var created runRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -377,7 +377,7 @@ func (repository *Repository) ContinueRunConversation(ctx context.Context, owner
 		if err := tx.Model(&runRecord{}).Select("COALESCE(MAX(turn_number), 0)").Where("conversation_id = ?", root.ID).Scan(&lastTurn).Error; err != nil {
 			return err
 		}
-		input, err := marshal(map[string]any{"text": content, "json": nil})
+		input, err := marshal(map[string]any{"text": content, "json": nil, "attachments": attachments})
 		if err != nil {
 			return err
 		}
@@ -759,11 +759,12 @@ func runDomain(row runRecord) domain.Run {
 		item.WorkflowID = *row.WorkflowID
 	}
 	var input struct {
-		Text *string        `json:"text"`
-		JSON map[string]any `json:"json"`
+		Text        *string             `json:"text"`
+		JSON        map[string]any      `json:"json"`
+		Attachments []domain.Attachment `json:"attachments"`
 	}
 	_ = json.Unmarshal(row.Input, &input)
-	item.TextInput, item.JSONInput = input.Text, input.JSON
+	item.TextInput, item.JSONInput, item.Attachments = input.Text, input.JSON, input.Attachments
 	if row.TerminalError != nil {
 		item.Error = *row.TerminalError
 	}

@@ -692,6 +692,7 @@ export interface components {
         };
         AgentWorkspaceServiceContinueRunConversationBody: {
             content?: string;
+            attachment_ids?: string[];
         };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
@@ -711,6 +712,7 @@ export interface components {
         AgentWorkspaceServiceSendSessionMessageBody: {
             content?: string;
             provider_model_id?: string;
+            attachment_ids?: string[];
         };
         AgentWorkspaceServiceSetSessionArchivedBody: {
             archived?: boolean;
@@ -805,6 +807,15 @@ export interface components {
             url?: string;
             /** Format: date-time */
             expires_at?: string;
+        };
+        v1Attachment: {
+            id?: string;
+            name?: string;
+            content_type?: string;
+            /** Format: int64 */
+            size?: number;
+            sha256?: string;
+            image?: boolean;
         };
         v1CreateExpertRequest: {
             expert?: components["schemas"]["v1ExpertInput"];
@@ -1049,6 +1060,7 @@ export interface components {
             conversation_id?: string;
             /** Format: int32 */
             turn_number?: number;
+            attachments?: components["schemas"]["v1Attachment"][];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -1106,6 +1118,7 @@ export interface components {
             created_at?: string;
             progress_stage?: string;
             response_snapshot?: components["schemas"]["v1ResponseSnapshot"];
+            attachments?: components["schemas"]["v1Attachment"][];
         };
         v1Skill: {
             id?: string;

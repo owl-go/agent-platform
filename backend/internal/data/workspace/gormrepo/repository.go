@@ -50,6 +50,7 @@ type messageRecord struct {
 	Completed        *time.Time `gorm:"column:completed_at"`
 	CancelRequested  *time.Time `gorm:"column:cancel_requested_at"`
 	ResponseSnapshot []byte     `gorm:"column:response_snapshot;type:jsonb"`
+	Attachments      []byte     `gorm:"column:attachments;type:jsonb"`
 }
 
 func (messageRecord) TableName() string { return "session_messages" }

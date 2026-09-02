@@ -227,7 +227,11 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 	if err != nil {
 		return nil, err
 	}
-	item, err := service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content)
+	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -374,6 +378,9 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 	}
 	if item.EndedAt != nil {
 		response.EndedAt = timestamppb.New(*item.EndedAt)
+	}
+	for _, attachment := range item.Attachments {
+		response.Attachments = append(response.Attachments, attachmentResponse(attachment))
 	}
 	if item.StartedAt != nil {
 		end := time.Now()

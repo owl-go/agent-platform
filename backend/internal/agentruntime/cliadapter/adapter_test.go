@@ -137,7 +137,7 @@ func (p *fakeParser) Parse(_ processharness.Stream, line []byte) ([]ParsedEvent,
 	}
 	if value.Final != "" {
 		p.result.FinalMessage = value.Final
-		return nil, nil
+		return []ParsedEvent{{Kind: agentruntime.EventMessageCompleted, Payload: map[string]string{"message": value.Final}}}, nil
 	}
 	return []ParsedEvent{{Kind: agentruntime.EventMessageDelta, Payload: map[string]string{"delta": value.Delta}}}, nil
 }

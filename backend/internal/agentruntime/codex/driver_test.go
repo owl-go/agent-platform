@@ -103,7 +103,7 @@ func TestParserReadsThreadItemsAndUsage(t *testing.T) {
 			kinds = append(kinds, event.Kind)
 		}
 	}
-	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted, agentruntime.EventMessageDelta}
+	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted, agentruntime.EventMessageDelta, agentruntime.EventMessageCompleted}
 	if !slices.Equal(kinds, wantKinds) {
 		t.Fatalf("event kinds = %v, want %v", kinds, wantKinds)
 	}

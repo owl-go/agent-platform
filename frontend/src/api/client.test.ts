@@ -60,6 +60,20 @@ describe("Agent Workspace API client", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace/upload?path=docs%2Fa.txt");
   });
 
+  it("uploads a message attachment with its original media type", async () => {
+    const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
+      expect(init?.body).toBeInstanceOf(File);
+      expect(new Headers(init?.headers).get("Content-Type")).toBe("image/png");
+      return new Response(JSON.stringify({ id: "attachment-1", name: "diagram.png", content_type: "image/png", size: 3, sha256: "abc", image: true }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const attachment = await createPlatformApi(() => "token").uploadAttachment(new File(["png"], "diagram.png", { type: "image/png" }));
+
+    expect(attachment.image).toBe(true);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/attachments/upload?name=diagram.png");
+  });
+
   it("normalizes Workspace byte counters from protobuf JSON", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ path: "verification.txt", name: "verification.txt", directory: false, size: 22 }], usedBytes: "22", limitBytes: "1073741824" }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
@@ -97,7 +111,7 @@ describe("Agent Workspace API client", () => {
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/runs/run-1/turns");
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ content: "继续分析" });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ content: "继续分析", attachment_ids: [] });
     expect(result.turn_number).toBe(2);
   });
 
