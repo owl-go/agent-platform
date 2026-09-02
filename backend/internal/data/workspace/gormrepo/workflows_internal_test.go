@@ -37,6 +37,31 @@ func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
 	}
 }
 
+func TestSummarizeRunConversationsUsesLatestTurnProjection(t *testing.T) {
+	oldTime := time.Date(2026, 8, 30, 12, 36, 18, 0, time.UTC)
+	otherTime := oldTime.Add(24 * time.Hour)
+	latestTime := oldTime.Add(72 * time.Hour)
+	latestStarted := latestTime.Add(time.Second)
+	latestEnded := latestStarted.Add(15 * time.Second)
+	rows := []runRecord{
+		{ID: "conversation-1", ConversationID: "conversation-1", TurnNumber: 1, Trigger: "api", State: "succeeded", QueuedAt: oldTime},
+		{ID: "turn-2", ConversationID: "conversation-1", TurnNumber: 2, Trigger: "manual", State: "failed", QueuedAt: latestTime, StartedAt: &latestStarted, EndedAt: &latestEnded},
+		{ID: "conversation-2", ConversationID: "conversation-2", TurnNumber: 1, Trigger: "scheduled", State: "succeeded", QueuedAt: otherTime},
+	}
+
+	summaries := summarizeRunConversations(rows)
+	if len(summaries) != 2 {
+		t.Fatalf("got %d Run Conversation summaries", len(summaries))
+	}
+	latest := summaries[0]
+	if latest.ID != "conversation-1" || latest.Trigger != "api" || latest.State != "failed" || latest.TurnNumber != 2 || !latest.QueuedAt.Equal(latestTime) {
+		t.Fatalf("latest Run Conversation summary = %#v", latest)
+	}
+	if latest.StartedAt == nil || !latest.StartedAt.Equal(latestStarted) || latest.EndedAt == nil || !latest.EndedAt.Equal(latestEnded) {
+		t.Fatalf("latest Run Conversation timestamps = %#v / %#v", latest.StartedAt, latest.EndedAt)
+	}
+}
+
 func TestWorkflowRunInstructionIncludesPriorConversation(t *testing.T) {
 	firstInput, _ := json.Marshal(map[string]any{"text": "先检查代码", "json": nil})
 	firstResult, _ := json.Marshal(map[string]any{"text": "发现两个问题", "json": nil})

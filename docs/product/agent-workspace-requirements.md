@@ -160,10 +160,12 @@ Settings contains five collapsed sections:
 
 The Run list shows:
 
-- start time
+- latest turn run time
 - trigger type: manual, scheduled, or API
-- state: queued, running, succeeded, failed, or cancelled
-- elapsed time
+- latest turn state: queued, running, succeeded, failed, or cancelled
+- latest turn elapsed time
+
+Run Conversation rows are ordered by their latest turn time. Their stable identity remains the first Run ID so opening a row always loads the complete conversation.
 
 Each Run History row represents a Run Conversation. Opening it replaces the Workflow detail content with a full-page conversation view rather than displaying a modal. Its detail uses the same conversation presentation as a Session: the frozen Workflow goal appears as the first User message, every follow-up input and Run result appear as later User/Agent message pairs, and a composer remains available while the Workflow exists. API-triggered initial text or JSON remains visible with the goal when present. Run time, trigger, latest state, accumulated elapsed time, and Artifacts remain visible as supporting metadata. Raw Workflow Snapshots, Runtime logs, and Runtime events are retained for platform operation but are not exposed as the primary User interface. A follow-up creates a new immutable Run turn using the initiating Workflow Snapshot and serialized Workspace; it never reopens a terminal Run. Users can cancel the active Run and rerun a failed Run. Interrupt, Resume, Kill, Recovery, Attempt, Lease, and Sandbox diagnostics are not product controls.
 

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -489,14 +490,47 @@ func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID 
 		return nil, err
 	}
 	var rows []runRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND conversation_id = id", ownerID, workflowID).Order("queued_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ?", ownerID, workflowID).Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Workflow Runs: %w", err)
 	}
-	items := make([]domain.Run, 0, len(rows))
-	for _, row := range rows {
+	summaries := summarizeRunConversations(rows)
+	items := make([]domain.Run, 0, len(summaries))
+	for _, row := range summaries {
 		items = append(items, runDomain(row))
 	}
 	return items, nil
+}
+
+func summarizeRunConversations(rows []runRecord) []runRecord {
+	roots := make(map[string]runRecord)
+	latest := make(map[string]runRecord)
+	for _, row := range rows {
+		if row.ID == row.ConversationID {
+			roots[row.ConversationID] = row
+		}
+		current, ok := latest[row.ConversationID]
+		if !ok || row.TurnNumber > current.TurnNumber || row.TurnNumber == current.TurnNumber && row.QueuedAt.After(current.QueuedAt) {
+			latest[row.ConversationID] = row
+		}
+	}
+
+	summaries := make([]runRecord, 0, len(roots))
+	for conversationID, root := range roots {
+		turn := latest[conversationID]
+		root.State = turn.State
+		root.TurnNumber = turn.TurnNumber
+		root.QueuedAt = turn.QueuedAt
+		root.StartedAt = turn.StartedAt
+		root.EndedAt = turn.EndedAt
+		summaries = append(summaries, root)
+	}
+	sort.Slice(summaries, func(left, right int) bool {
+		if summaries[left].QueuedAt.Equal(summaries[right].QueuedAt) {
+			return summaries[left].ID > summaries[right].ID
+		}
+		return summaries[left].QueuedAt.After(summaries[right].QueuedAt)
+	})
+	return summaries
 }
 
 func (repository *Repository) ListRunTurns(ctx context.Context, ownerID, workflowID, runID string) ([]domain.Run, error) {

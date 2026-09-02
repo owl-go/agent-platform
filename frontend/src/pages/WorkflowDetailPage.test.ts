@@ -93,6 +93,32 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("shows the latest turn state and time in the Run Conversation header", async () => {
+    const latestTurn: Run = {
+      ...run,
+      id: "run-2",
+      turn_number: 2,
+      state: "failed",
+      text_input: "检查最新状态",
+      final_text: undefined,
+      error: "执行失败",
+      queued_at: "2026-09-02T07:13:02Z",
+      started_at: "2026-09-02T07:13:03Z",
+      ended_at: "2026-09-02T07:14:08Z",
+      elapsed_ms: 65_000,
+    };
+    const wrapper = await mountPage(apiStub({ listRunTurns: vi.fn(async () => [run, latestTurn]) }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    const header = wrapper.get(".run-conversation-head").text();
+    expect(header).toContain("失败");
+    expect(header).toContain(new Date(latestTurn.started_at!).toLocaleString());
+    expect(header).not.toContain(new Date(run.started_at!).toLocaleString());
+    wrapper.unmount();
+  });
+
   it("shows only files as artifacts and ignores legacy final-result records", async () => {
     const legacyResult: Artifact = { id: "result-1", run_id: run.id, kind: "result", name: "Final result", path: "", size: 0, text_preview: "done", expired: false, created_at: run.ended_at! };
     const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 12, sha256: "abc", expired: false, created_at: run.ended_at! };
