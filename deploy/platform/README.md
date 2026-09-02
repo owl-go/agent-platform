@@ -57,6 +57,7 @@ The Keycloak realm import is deployment-owned because it contains bootstrap user
 - realm `agent-platform` and public client `agent-platform-web` with Authorization Code + PKCE;
 - exact Redirect URI `${VITE_OIDC_REDIRECT_URI}`, post-logout origin `${VITE_OIDC_POST_LOGOUT_REDIRECT_URI}/*`, and trusted Web Origin;
 - the `agent-platform-api` audience and stable Keycloak User subject;
+- a 72-hour SSO idle and maximum lifespan (`259200` seconds), with short-lived Access Tokens renewed by the Web client;
 - no committed user password, client secret, Token, private key, or Runtime Credential.
 
 Start the HTTPS stack with the deployment YAML outside the repository:

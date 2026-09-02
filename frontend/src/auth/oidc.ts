@@ -1,4 +1,4 @@
-import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
+import { UserManager, WebStorageStateStore, type User, type UserManagerSettings } from "oidc-client-ts";
 import type { OIDCClient, OIDCUser } from "./session";
 
 export interface OIDCEnvironment {
@@ -20,6 +20,17 @@ export interface BrowserOIDC {
   isCallback: boolean;
   replaceCallbackURL(): void;
 }
+
+interface UserManagerLike {
+  getUser(): Promise<User | null>;
+  signinSilent(): Promise<User | null>;
+  signinRedirect(): Promise<void>;
+  signinRedirectCallback(): Promise<User>;
+  signoutRedirect(): Promise<void>;
+  events: UserManager["events"];
+}
+
+type UserManagerFactory = (settings: UserManagerSettings) => UserManagerLike;
 
 export function readOIDCSettings(environment: OIDCEnvironment, applicationOrigin: string): OIDCSettings {
   const authority = environment.VITE_OIDC_AUTHORITY?.trim() ?? "";
@@ -46,11 +57,12 @@ export function readOIDCSettings(environment: OIDCEnvironment, applicationOrigin
 
 export function createBrowserOIDC(
   environment: OIDCEnvironment,
-  browser: Pick<Window, "location" | "history" | "sessionStorage"> = window,
+  browser: Pick<Window, "location" | "history" | "sessionStorage" | "localStorage"> = window,
+  managerFactory: UserManagerFactory = (settings) => new UserManager(settings),
 ): BrowserOIDC {
   const settings = readOIDCSettings(environment, browser.location.origin);
-  const store = new WebStorageStateStore({ store: browser.sessionStorage });
-  const manager = new UserManager({
+  migrateStoredUser(browser.sessionStorage, browser.localStorage, settings.authority, settings.clientId);
+  const manager = managerFactory({
     authority: settings.authority,
     client_id: settings.clientId,
     redirect_uri: settings.redirectURI,
@@ -58,9 +70,9 @@ export function createBrowserOIDC(
     response_type: "code",
     scope: "openid profile email",
     loadUserInfo: false,
-    automaticSilentRenew: false,
-    userStore: store,
-    stateStore: store,
+    automaticSilentRenew: true,
+    userStore: new WebStorageStateStore({ store: browser.localStorage }),
+    stateStore: new WebStorageStateStore({ store: browser.sessionStorage }),
   });
   const callbackURL = new URL(settings.redirectURI);
   const search = new URLSearchParams(browser.location.search);
@@ -73,11 +85,24 @@ export function createBrowserOIDC(
   };
 }
 
+function migrateStoredUser(sessionStore: Storage, persistentStore: Storage, authority: string, clientID: string): void {
+  const key = `oidc.user:${authority}:${clientID}`;
+  const stored = sessionStore.getItem(key);
+  if (stored !== null && persistentStore.getItem(key) === null) persistentStore.setItem(key, stored);
+  if (stored !== null) sessionStore.removeItem(key);
+}
+
 class UserManagerClient implements OIDCClient {
-  constructor(private readonly manager: UserManager) {}
+  constructor(private readonly manager: UserManagerLike) {}
 
   async getUser(): Promise<OIDCUser | null> {
-    return mapUser(await this.manager.getUser());
+    const stored = await this.manager.getUser();
+    if (!stored?.expired) return mapUser(stored);
+    try {
+      return mapUser(await this.manager.signinSilent());
+    } catch {
+      return mapUser(stored);
+    }
   }
 
   async completeSignIn(): Promise<OIDCUser | null> {
@@ -90,6 +115,12 @@ class UserManagerClient implements OIDCClient {
 
   async signOut(): Promise<void> {
     await this.manager.signoutRedirect();
+  }
+
+  onUserLoaded(listener: (user: OIDCUser) => void): () => void {
+    const mapped = (user: User) => listener(mapUser(user)!);
+    this.manager.events.addUserLoaded(mapped);
+    return () => this.manager.events.removeUserLoaded(mapped);
   }
 
   onExpired(listener: () => void): () => void {

@@ -41,6 +41,18 @@ describe("AuthSession", () => {
     expect(session.accessToken()).toBeUndefined();
   });
 
+  it("switches API calls to the automatically renewed access token", async () => {
+    const client = new OIDCClientStub();
+    client.storedUser = { accessToken: "initial-token", expired: false };
+    const session = createAuthSession(client, async () => currentUser, vi.fn());
+    await session.initialize(false);
+
+    client.load({ accessToken: "renewed-token", expired: false });
+
+    expect(session.accessToken()).toBe("renewed-token");
+    expect(session.state.value.kind).toBe("authenticated");
+  });
+
   it("reports an expired stored OIDC session without calling the API", async () => {
     const client = new OIDCClientStub();
     client.storedUser = { accessToken: "expired-token", expired: true };
@@ -122,6 +134,7 @@ class OIDCClientStub implements OIDCClient {
   signOutCalls = 0;
   signOutError: Error | undefined;
   private expiredListener: (() => void) | undefined;
+  private userLoadedListener: ((user: OIDCUser) => void) | undefined;
 
   async getUser() { return this.storedUser; }
   async completeSignIn() {
@@ -134,6 +147,8 @@ class OIDCClientStub implements OIDCClient {
     this.signOutCalls += 1;
     if (this.signOutError) throw this.signOutError;
   }
+  onUserLoaded(listener: (user: OIDCUser) => void) { this.userLoadedListener = listener; return () => { this.userLoadedListener = undefined; }; }
   onExpired(listener: () => void) { this.expiredListener = listener; return () => { this.expiredListener = undefined; }; }
+  load(user: OIDCUser) { this.userLoadedListener?.(user); }
   expire() { this.expiredListener?.(); }
 }

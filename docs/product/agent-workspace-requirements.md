@@ -20,6 +20,7 @@ Transient operation success and failure feedback uses one standardized Toast pat
 - The Administrator opens User Management from the avatar menu and can create, disable, enable, and reset passwords for ordinary User accounts.
 - Account creation requires username, display name, and email. Keycloak generates a temporary password that is shown once and must be changed at first login.
 - Keycloak remains the credential authority. The application stores only the User projection and never stores login passwords.
+- A signed-in browser keeps the User session for up to 72 hours. The Web client persists the OIDC session and automatically renews short-lived Access Tokens within that window; explicit sign-out or account disabling ends access immediately.
 - The Administrator can see account metadata and state but cannot read or modify User-owned content.
 - Disabling a User cancels running work, stops schedules, rejects Workflow API credentials, and prevents login.
 - Accounts are not permanently deleted in the first version.

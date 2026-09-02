@@ -10,6 +10,11 @@
   "duplicateEmailsAllowed": false,
   "bruteForceProtected": true,
   "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 259200,
+  "ssoSessionMaxLifespan": 259200,
+  "ssoSessionIdleTimeoutRememberMe": 259200,
+  "ssoSessionMaxLifespanRememberMe": 259200,
   "clients": [
     {
       "clientId": "agent-platform-web",

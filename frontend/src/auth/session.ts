@@ -11,6 +11,7 @@ export interface OIDCClient {
   completeSignIn(): Promise<OIDCUser | null>;
   signIn(): Promise<void>;
   signOut(): Promise<void>;
+  onUserLoaded(listener: (user: OIDCUser) => void): () => void;
   onExpired(listener: () => void): () => void;
 }
 
@@ -55,6 +56,9 @@ export function createAuthSession(
 ): AuthSession {
   const state = ref<AuthState>({ kind: "checking" });
   let activeAccessToken: string | undefined;
+  const removeUserLoadedListener = client.onUserLoaded((user) => {
+    if (!user.expired) activeAccessToken = user.accessToken;
+  });
   const removeExpiredListener = client.onExpired(() => {
     activeAccessToken = undefined;
     state.value = { kind: "unauthenticated", reason: "expired" };
@@ -98,6 +102,7 @@ export function createAuthSession(
       await client.signOut();
     },
     dispose() {
+      removeUserLoadedListener();
       removeExpiredListener();
     },
   };
