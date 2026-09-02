@@ -39,6 +39,7 @@ function apiStub(overrides: Partial<PlatformApi> = {}): PlatformApi {
   return {
     getWorkflow: vi.fn(async () => workflow),
     listExperts: vi.fn(async () => []),
+    listExpertTeams: vi.fn(async () => []),
     listModelProviderConnections: vi.fn(async () => []),
     listRuntimeEngines: vi.fn(async () => []),
     listRuns: vi.fn(async () => [run]),

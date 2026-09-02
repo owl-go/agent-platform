@@ -37,6 +37,7 @@ type ExecutionResult struct {
 	CheckpointRef string
 	Events        []ExecutionEvent
 	Artifacts     []ExecutionArtifact
+	ExpertStages  []domain.ExpertStage
 }
 
 type ExecutionArtifact struct {

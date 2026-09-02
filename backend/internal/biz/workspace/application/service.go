@@ -12,10 +12,11 @@ import (
 // perform an unscoped lookup.
 type Repository interface {
 	ListSessions(context.Context, string, bool) ([]domain.Session, error)
-	CreateSession(context.Context, string, *string) (domain.Session, error)
+	CreateSession(context.Context, string, *string, *string) (domain.Session, error)
 	GetSession(context.Context, string, string) (domain.Session, error)
 	UpdateSession(context.Context, string, string, string, int64) (domain.Session, error)
 	SetSessionArchived(context.Context, string, string, bool, int64) (domain.Session, error)
+	SetSessionExpertSelection(context.Context, string, string, *string, *string, int64) (domain.Session, error)
 	DeleteSession(context.Context, string, string) error
 	ListMessages(context.Context, string, string, int64, int) ([]domain.Message, error)
 	GetMessage(context.Context, string, string, int64) (domain.Message, error)
@@ -45,9 +46,15 @@ type Repository interface {
 	GetArtifact(context.Context, string, string, string) (domain.Artifact, error)
 
 	ListExperts(context.Context, string) ([]domain.Expert, error)
+	GetExpert(context.Context, string, string) (domain.Expert, error)
 	CreateExpert(context.Context, string, domain.ExpertInput) (domain.Expert, error)
 	UpdateExpert(context.Context, string, string, domain.ExpertInput, int64) (domain.Expert, error)
 	DeleteExpert(context.Context, string, string) error
+	ListExpertTeams(context.Context, string) ([]domain.ExpertTeam, error)
+	GetExpertTeam(context.Context, string, string) (domain.ExpertTeam, error)
+	CreateExpertTeam(context.Context, string, domain.ExpertTeamInput) (domain.ExpertTeam, error)
+	UpdateExpertTeam(context.Context, string, string, domain.ExpertTeamInput, int64) (domain.ExpertTeam, error)
+	DeleteExpertTeam(context.Context, string, string) error
 
 	GetSettings(context.Context, string) (domain.Settings, error)
 	UpdateSettings(context.Context, string, domain.Settings, int64) (domain.Settings, error)

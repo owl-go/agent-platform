@@ -31,7 +31,7 @@ func (service *Service) CreateSession(ctx context.Context, request *workspacev1.
 	if err != nil {
 		return nil, err
 	}
-	item, err := service.workspace.Repository().CreateSession(ctx, owner, request.ExpertId)
+	item, err := service.workspace.Repository().CreateSession(ctx, owner, request.ExpertId, request.ExpertTeamId)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -68,6 +68,18 @@ func (service *Service) SetSessionArchived(ctx context.Context, request *workspa
 		return nil, err
 	}
 	item, err := service.workspace.Repository().SetSessionArchived(ctx, owner, request.SessionId, request.Archived, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return sessionResponse(item), nil
+}
+
+func (service *Service) SetSessionExpertSelection(ctx context.Context, request *workspacev1.SetSessionExpertSelectionRequest) (*workspacev1.Session, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := service.workspace.Repository().SetSessionExpertSelection(ctx, owner, request.SessionId, request.ExpertId, request.ExpertTeamId, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -152,7 +164,7 @@ func (service *Service) CancelSessionMessage(ctx context.Context, request *works
 }
 
 func sessionResponse(item workspacedomain.Session) *workspacev1.Session {
-	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, CurrentProviderModelId: item.CurrentProviderModelID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, CurrentProviderModelId: item.CurrentProviderModelID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	return response
 }
 
@@ -167,6 +179,20 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	}
 	for _, attachment := range item.Attachments {
 		response.Attachments = append(response.Attachments, attachmentResponse(attachment))
+	}
+	for _, stage := range item.ExpertStages {
+		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
+	}
+	return response
+}
+
+func expertStageResponse(item workspacedomain.ExpertStage) *workspacev1.ExpertStage {
+	response := &workspacev1.ExpertStage{ExpertId: item.ExpertID, ExpertName: item.ExpertName, Position: int32(item.Position), Total: int32(item.Total), State: item.State, ElapsedMs: item.ElapsedMS}
+	if item.FinalText != "" {
+		response.FinalText = &item.FinalText
+	}
+	if item.Error != "" {
+		response.Error = &item.Error
 	}
 	return response
 }

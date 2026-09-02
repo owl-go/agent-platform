@@ -29,6 +29,7 @@ const (
 	AgentWorkspaceService_GetSession_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSession"
 	AgentWorkspaceService_UpdateSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateSession"
 	AgentWorkspaceService_SetSessionArchived_FullMethodName            = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
+	AgentWorkspaceService_SetSessionExpertSelection_FullMethodName     = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 	AgentWorkspaceService_DeleteSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/DeleteSession"
 	AgentWorkspaceService_ListSessionMessages_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
 	AgentWorkspaceService_SendSessionMessage_FullMethodName            = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
@@ -56,9 +57,15 @@ const (
 	AgentWorkspaceService_ClearWorkspace_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ClearWorkspace"
 	AgentWorkspaceService_CloneWorkspace_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CloneWorkspace"
 	AgentWorkspaceService_ListExperts_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListExperts"
+	AgentWorkspaceService_GetExpert_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/GetExpert"
 	AgentWorkspaceService_CreateExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 	AgentWorkspaceService_UpdateExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
 	AgentWorkspaceService_DeleteExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
+	AgentWorkspaceService_ListExpertTeams_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
+	AgentWorkspaceService_GetExpertTeam_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+	AgentWorkspaceService_CreateExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
+	AgentWorkspaceService_UpdateExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
+	AgentWorkspaceService_DeleteExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 	AgentWorkspaceService_GetSettings_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/GetSettings"
 	AgentWorkspaceService_UpdateSettings_FullMethodName                = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
 	AgentWorkspaceService_ListRuntimeEngines_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
@@ -94,6 +101,7 @@ type AgentWorkspaceServiceClient interface {
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	UpdateSession(ctx context.Context, in *UpdateSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	SetSessionArchived(ctx context.Context, in *SetSessionArchivedRequest, opts ...grpc.CallOption) (*Session, error)
+	SetSessionExpertSelection(ctx context.Context, in *SetSessionExpertSelectionRequest, opts ...grpc.CallOption) (*Session, error)
 	DeleteSession(ctx context.Context, in *DeleteSessionRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListSessionMessages(ctx context.Context, in *ListSessionMessagesRequest, opts ...grpc.CallOption) (*ListSessionMessagesResponse, error)
 	SendSessionMessage(ctx context.Context, in *SendSessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
@@ -121,9 +129,15 @@ type AgentWorkspaceServiceClient interface {
 	ClearWorkspace(ctx context.Context, in *ClearWorkspaceRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	CloneWorkspace(ctx context.Context, in *CloneWorkspaceRequest, opts ...grpc.CallOption) (*Workflow, error)
 	ListExperts(ctx context.Context, in *ListExpertsRequest, opts ...grpc.CallOption) (*ListExpertsResponse, error)
+	GetExpert(ctx context.Context, in *GetExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	UpdateExpert(ctx context.Context, in *UpdateExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	DeleteExpert(ctx context.Context, in *DeleteExpertRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	ListExpertTeams(ctx context.Context, in *ListExpertTeamsRequest, opts ...grpc.CallOption) (*ListExpertTeamsResponse, error)
+	GetExpertTeam(ctx context.Context, in *GetExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error)
+	CreateExpertTeam(ctx context.Context, in *CreateExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error)
+	UpdateExpertTeam(ctx context.Context, in *UpdateExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error)
+	DeleteExpertTeam(ctx context.Context, in *DeleteExpertTeamRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
 	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
 	ListRuntimeEngines(ctx context.Context, in *ListRuntimeEnginesRequest, opts ...grpc.CallOption) (*ListRuntimeEnginesResponse, error)
@@ -247,6 +261,16 @@ func (c *agentWorkspaceServiceClient) SetSessionArchived(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Session)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetSessionArchived_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SetSessionExpertSelection(ctx context.Context, in *SetSessionExpertSelectionRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetSessionExpertSelection_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -523,6 +547,16 @@ func (c *agentWorkspaceServiceClient) ListExperts(ctx context.Context, in *ListE
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) GetExpert(ctx context.Context, in *GetExpertRequest, opts ...grpc.CallOption) (*Expert, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Expert)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetExpert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*Expert, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Expert)
@@ -547,6 +581,56 @@ func (c *agentWorkspaceServiceClient) DeleteExpert(ctx context.Context, in *Dele
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteExpert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListExpertTeams(ctx context.Context, in *ListExpertTeamsRequest, opts ...grpc.CallOption) (*ListExpertTeamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListExpertTeamsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListExpertTeams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetExpertTeam(ctx context.Context, in *GetExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExpertTeam)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetExpertTeam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateExpertTeam(ctx context.Context, in *CreateExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExpertTeam)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateExpertTeam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateExpertTeam(ctx context.Context, in *UpdateExpertTeamRequest, opts ...grpc.CallOption) (*ExpertTeam, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExpertTeam)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateExpertTeam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DeleteExpertTeam(ctx context.Context, in *DeleteExpertTeamRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteExpertTeam_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -757,6 +841,7 @@ type AgentWorkspaceServiceServer interface {
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	UpdateSession(context.Context, *UpdateSessionRequest) (*Session, error)
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
+	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
 	ListSessionMessages(context.Context, *ListSessionMessagesRequest) (*ListSessionMessagesResponse, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
@@ -784,9 +869,15 @@ type AgentWorkspaceServiceServer interface {
 	ClearWorkspace(context.Context, *ClearWorkspaceRequest) (*DeleteResponse, error)
 	CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
+	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
+	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
+	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
+	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
+	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
+	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
@@ -845,6 +936,9 @@ func (UnimplementedAgentWorkspaceServiceServer) UpdateSession(context.Context, *
 }
 func (UnimplementedAgentWorkspaceServiceServer) SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetSessionArchived not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetSessionExpertSelection not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSession not implemented")
@@ -927,6 +1021,9 @@ func (UnimplementedAgentWorkspaceServiceServer) CloneWorkspace(context.Context, 
 func (UnimplementedAgentWorkspaceServiceServer) ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExperts not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) GetExpert(context.Context, *GetExpertRequest) (*Expert, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetExpert not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateExpert not implemented")
 }
@@ -935,6 +1032,21 @@ func (UnimplementedAgentWorkspaceServiceServer) UpdateExpert(context.Context, *U
 }
 func (UnimplementedAgentWorkspaceServiceServer) DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteExpert not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListExpertTeams not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetExpertTeam not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateExpertTeam not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateExpertTeam not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteExpertTeam not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSettings not implemented")
@@ -1190,6 +1302,24 @@ func _AgentWorkspaceService_SetSessionArchived_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).SetSessionArchived(ctx, req.(*SetSessionArchivedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SetSessionExpertSelection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetSessionExpertSelectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetSessionExpertSelection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetSessionExpertSelection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetSessionExpertSelection(ctx, req.(*SetSessionExpertSelectionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1680,6 +1810,24 @@ func _AgentWorkspaceService_ListExperts_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_GetExpert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExpertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetExpert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetExpert_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetExpert(ctx, req.(*GetExpertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_CreateExpert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateExpertRequest)
 	if err := dec(in); err != nil {
@@ -1730,6 +1878,96 @@ func _AgentWorkspaceService_DeleteExpert_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).DeleteExpert(ctx, req.(*DeleteExpertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListExpertTeams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListExpertTeamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListExpertTeams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListExpertTeams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListExpertTeams(ctx, req.(*ListExpertTeamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetExpertTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExpertTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetExpertTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetExpertTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetExpertTeam(ctx, req.(*GetExpertTeamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateExpertTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateExpertTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateExpertTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateExpertTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateExpertTeam(ctx, req.(*CreateExpertTeamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateExpertTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExpertTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateExpertTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateExpertTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateExpertTeam(ctx, req.(*UpdateExpertTeamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DeleteExpertTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteExpertTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DeleteExpertTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DeleteExpertTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DeleteExpertTeam(ctx, req.(*DeleteExpertTeamRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2124,6 +2362,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_SetSessionArchived_Handler,
 		},
 		{
+			MethodName: "SetSessionExpertSelection",
+			Handler:    _AgentWorkspaceService_SetSessionExpertSelection_Handler,
+		},
+		{
 			MethodName: "DeleteSession",
 			Handler:    _AgentWorkspaceService_DeleteSession_Handler,
 		},
@@ -2232,6 +2474,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_ListExperts_Handler,
 		},
 		{
+			MethodName: "GetExpert",
+			Handler:    _AgentWorkspaceService_GetExpert_Handler,
+		},
+		{
 			MethodName: "CreateExpert",
 			Handler:    _AgentWorkspaceService_CreateExpert_Handler,
 		},
@@ -2242,6 +2488,26 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteExpert",
 			Handler:    _AgentWorkspaceService_DeleteExpert_Handler,
+		},
+		{
+			MethodName: "ListExpertTeams",
+			Handler:    _AgentWorkspaceService_ListExpertTeams_Handler,
+		},
+		{
+			MethodName: "GetExpertTeam",
+			Handler:    _AgentWorkspaceService_GetExpertTeam_Handler,
+		},
+		{
+			MethodName: "CreateExpertTeam",
+			Handler:    _AgentWorkspaceService_CreateExpertTeam_Handler,
+		},
+		{
+			MethodName: "UpdateExpertTeam",
+			Handler:    _AgentWorkspaceService_UpdateExpertTeam_Handler,
+		},
+		{
+			MethodName: "DeleteExpertTeam",
+			Handler:    _AgentWorkspaceService_DeleteExpertTeam_Handler,
 		},
 		{
 			MethodName: "GetSettings",

@@ -16,7 +16,7 @@ import (
 
 func (repository *Repository) ListExperts(ctx context.Context, ownerID string) ([]domain.Expert, error) {
 	var rows []expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Experts: %w", err)
 	}
 	items := make([]domain.Expert, 0, len(rows))
@@ -36,7 +36,8 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
-	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Description: strings.TrimSpace(input.Description), MCPServerIDs: mcp, SkillIDs: skills, Version: 1}
+	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
+	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
@@ -54,13 +55,14 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
+	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
 		result := tx.Model(&expertRecord{}).
 			Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, expertID, expectedVersion).
-			Updates(map[string]any{"name": strings.TrimSpace(input.Name), "description": strings.TrimSpace(input.Description), "mcp_server_ids": mcp, "skill_ids": skills, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			Updates(map[string]any{"name": strings.TrimSpace(input.Name), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -109,10 +111,10 @@ func validateUniqueUUIDs(values []string) error {
 	seen := make(map[string]struct{}, len(values))
 	for _, value := range values {
 		if _, err := uuid.Parse(value); err != nil {
-			return fmt.Errorf("%w: invalid Extension identifier", domain.ErrInvalid)
+			return fmt.Errorf("%w: invalid resource identifier", domain.ErrInvalid)
 		}
 		if _, duplicate := seen[value]; duplicate {
-			return fmt.Errorf("%w: duplicate Extension identifier", domain.ErrInvalid)
+			return fmt.Errorf("%w: duplicate resource identifier", domain.ErrInvalid)
 		}
 		seen[value] = struct{}{}
 	}
@@ -121,17 +123,26 @@ func validateUniqueUUIDs(values []string) error {
 
 func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertID string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var sessionIDs []string
-		if err := tx.Model(&sessionRecord{}).Where("owner_user_id = ? AND expert_id = ?", ownerID, expertID).Pluck("id", &sessionIDs).Error; err != nil {
+		var teams []expertTeamRecord
+		if err := tx.Where("owner_user_id = ?", ownerID).Find(&teams).Error; err != nil {
 			return err
 		}
-		if len(sessionIDs) > 0 {
-			now := time.Now().UTC()
-			if err := tx.Model(&sessionRecord{}).Where("id IN ?", sessionIDs).Updates(map[string]any{"archived_at": now, "updated_at": now, "version": gorm.Expr("version + 1")}).Error; err != nil {
-				return err
+		for _, team := range teams {
+			var ids []string
+			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+				return fmt.Errorf("decode Expert Team members: %w", err)
 			}
-			if err := tx.Model(&messageRecord{}).Where("session_id IN ? AND role = 'assistant' AND state IN ?", sessionIDs, []string{"queued", "generating"}).Updates(map[string]any{"state": "cancelled", "progress_stage": "", "completed_at": now}).Error; err != nil {
-				return err
+			remaining := ids[:0]
+			for _, id := range ids {
+				if id != expertID {
+					remaining = append(remaining, id)
+				}
+			}
+			if len(remaining) != len(ids) {
+				encoded, _ := marshal(remaining)
+				if err := tx.Model(&expertTeamRecord{}).Where("id = ?", team.ID).Updates(map[string]any{"expert_ids": encoded, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+					return err
+				}
 			}
 		}
 		result := tx.Where("owner_user_id = ? AND id = ?", ownerID, expertID).Delete(&expertRecord{})
@@ -141,12 +152,11 @@ func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertI
 		if result.RowsAffected != 1 {
 			return domain.ErrNotFound
 		}
-		// Existing Session snapshots remain frozen and archived; future Workflow runs fall back to personal defaults.
-		return tx.Model(&workflowRecord{}).Where("owner_user_id = ? AND expert_id = ?", ownerID, expertID).Update("expert_id", nil).Error
+		return nil
 	})
 }
 
-func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID string) (domain.Expert, error) {
+func (repository *Repository) GetExpert(ctx context.Context, ownerID, expertID string) (domain.Expert, error) {
 	var row expertRecord
 	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&row).Error; err != nil {
 		return domain.Expert{}, mapNotFound(err)
@@ -154,13 +164,152 @@ func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID s
 	return expertDomain(row)
 }
 
+func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID string) (domain.Expert, error) {
+	return repository.GetExpert(ctx, ownerID, expertID)
+}
+
 func expertDomain(row expertRecord) (domain.Expert, error) {
-	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Description: row.Description, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	if err := json.Unmarshal(row.ExpertiseTags, &item.ExpertiseTags); err != nil {
+		return domain.Expert{}, fmt.Errorf("decode Expert tags: %w", err)
+	}
 	if err := json.Unmarshal(row.MCPServerIDs, &item.MCPServerIDs); err != nil {
 		return domain.Expert{}, fmt.Errorf("decode Expert MCP Servers: %w", err)
 	}
 	if err := json.Unmarshal(row.SkillIDs, &item.SkillIDs); err != nil {
 		return domain.Expert{}, fmt.Errorf("decode Expert Skills: %w", err)
+	}
+	return item, nil
+}
+
+func normalizeTags(tags []string) []string {
+	result := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		result = append(result, strings.TrimSpace(tag))
+	}
+	return result
+}
+
+func (repository *Repository) ListExpertTeams(ctx context.Context, ownerID string) ([]domain.ExpertTeam, error) {
+	var rows []expertTeamRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Expert Teams: %w", err)
+	}
+	items := make([]domain.ExpertTeam, 0, len(rows))
+	for _, row := range rows {
+		item, err := repository.expertTeamDomain(ctx, row)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (repository *Repository) GetExpertTeam(ctx context.Context, ownerID, teamID string) (domain.ExpertTeam, error) {
+	var row expertTeamRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, teamID).Take(&row).Error; err != nil {
+		return domain.ExpertTeam{}, mapNotFound(err)
+	}
+	return repository.expertTeamDomain(ctx, row)
+}
+
+func (repository *Repository) CreateExpertTeam(ctx context.Context, ownerID string, input domain.ExpertTeamInput) (domain.ExpertTeam, error) {
+	if err := input.Validate(); err != nil {
+		return domain.ExpertTeam{}, err
+	}
+	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
+	members, _ := marshal(input.ExpertIDs)
+	row := expertTeamRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExpertiseTags: tags, ExpertIDs: members, Version: 1}
+	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := validateExpertTeamReferences(tx, ownerID, input.ExpertIDs); err != nil {
+			return err
+		}
+		return tx.Create(&row).Error
+	}); err != nil {
+		return domain.ExpertTeam{}, fmt.Errorf("create Expert Team: %w", err)
+	}
+	return repository.GetExpertTeam(ctx, ownerID, row.ID)
+}
+
+func (repository *Repository) UpdateExpertTeam(ctx context.Context, ownerID, teamID string, input domain.ExpertTeamInput, expectedVersion int64) (domain.ExpertTeam, error) {
+	if err := input.Validate(); err != nil {
+		return domain.ExpertTeam{}, err
+	}
+	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
+	members, _ := marshal(input.ExpertIDs)
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := validateExpertTeamReferences(tx, ownerID, input.ExpertIDs); err != nil {
+			return err
+		}
+		result := tx.Model(&expertTeamRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, teamID, expectedVersion).Updates(map[string]any{"name": strings.TrimSpace(input.Name), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "expertise_tags": tags, "expert_ids": members, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.ExpertTeam{}, fmt.Errorf("update Expert Team: %w", err)
+	}
+	return repository.GetExpertTeam(ctx, ownerID, teamID)
+}
+
+func (repository *Repository) DeleteExpertTeam(ctx context.Context, ownerID, teamID string) error {
+	result := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, teamID).Delete(&expertTeamRecord{})
+	if result.Error != nil {
+		return fmt.Errorf("delete Expert Team: %w", result.Error)
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []string) error {
+	if err := validateUniqueUUIDs(expertIDs); err != nil {
+		return err
+	}
+	var count int64
+	if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, expertIDs).Count(&count).Error; err != nil {
+		return err
+	}
+	if count != int64(len(expertIDs)) {
+		return fmt.Errorf("%w: every Expert Team member must be available and belong to the User", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (repository *Repository) expertTeamDomain(ctx context.Context, row expertTeamRecord) (domain.ExpertTeam, error) {
+	item := domain.ExpertTeam{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, CapabilityIntroduction: row.CapabilityIntroduction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	if err := json.Unmarshal(row.ExpertiseTags, &item.ExpertiseTags); err != nil {
+		return domain.ExpertTeam{}, fmt.Errorf("decode Expert Team tags: %w", err)
+	}
+	var ids []string
+	if err := json.Unmarshal(row.ExpertIDs, &ids); err != nil {
+		return domain.ExpertTeam{}, fmt.Errorf("decode Expert Team members: %w", err)
+	}
+	if len(ids) == 0 {
+		return item, nil
+	}
+	var rows []expertRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id IN ?", row.OwnerID, ids).Find(&rows).Error; err != nil {
+		return domain.ExpertTeam{}, err
+	}
+	byID := make(map[string]domain.Expert, len(rows))
+	for _, expertRow := range rows {
+		expert, err := expertDomain(expertRow)
+		if err != nil {
+			return domain.ExpertTeam{}, err
+		}
+		byID[expert.ID] = expert
+	}
+	for _, id := range ids {
+		if expert, exists := byID[id]; exists {
+			item.Experts = append(item.Experts, expert)
+		}
 	}
 	return item, nil
 }

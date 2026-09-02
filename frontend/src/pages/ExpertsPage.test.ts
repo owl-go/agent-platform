@@ -1,79 +1,47 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
+import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type Expert, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { platformApiKey, type Expert, type ExpertTeam, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
+import { createAppRouter } from "../router";
 import ExpertsPage from "./ExpertsPage.vue";
 
-describe("ExpertsPage", () => {
-  it("renders Experts whose optional binding arrays are omitted by JSON", async () => {
-    const expert = {
-      id: "expert-1",
-      name: "代码专家",
-      description: "分析代码",
-      created_at: "2026-08-29T00:00:00Z",
-      updated_at: "2026-08-29T00:00:00Z",
-      version: 1,
-    } as Expert;
-    const api = {
-      listExperts: vi.fn(async () => [expert]),
-      listMCPServers: vi.fn(async () => []),
-      listSkills: vi.fn(async () => []),
-    } as unknown as PlatformApi;
-    const wrapper = mount(ExpertsPage, {
-      global: {
-        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-        provide: { [platformApiKey as symbol]: api },
-      },
-    });
+const expert: Expert = {
+  id: "expert-1", name: "架构专家", capability_introduction: "负责系统架构与边界设计", execution_instruction: "审查需求并给出架构方案。",
+  expertise_tags: ["架构", "Go"], mcp_server_ids: [], skill_ids: [], available: true,
+  created_at: "2026-09-02T00:00:00Z", updated_at: "2026-09-02T00:00:00Z", version: 1,
+};
+const team: ExpertTeam = {
+  id: "team-1", name: "交付专家团", capability_introduction: "按顺序完成设计与交付", expertise_tags: ["交付"], experts: [expert, { ...expert, id: "expert-2", name: "开发专家" }], available: true,
+  created_at: "2026-09-02T00:00:00Z", updated_at: "2026-09-02T00:00:00Z", version: 1,
+};
 
+function api(): PlatformApi {
+  return { listExperts: vi.fn(async () => [expert]), listExpertTeams: vi.fn(async () => [team]) } as unknown as PlatformApi;
+}
+
+describe("ExpertsPage", () => {
+  it("shows searchable Expert cards with capability and expertise tags", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/experts");
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });
     await flushPromises();
 
-    expect(wrapper.get(".expert-card h2").text()).toBe("代码专家");
-    expect(wrapper.get(".tag-row").text()).toContain("未绑定扩展");
-    wrapper.unmount();
+    expect(wrapper.get(".expert-card h2").text()).toBe("架构专家");
+    expect(wrapper.get(".expert-card").text()).toContain("负责系统架构与边界设计");
+    expect(wrapper.get(".expert-card").text()).toContain("架构");
+    expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
   });
 
-  it("uses the shared extension manager to bind MCP Servers and Skills", async () => {
-    const expert: Expert = {
-      id: "expert-1", name: "代码专家", description: "分析代码", mcp_server_ids: [], skill_ids: [],
-      created_at: "2026-08-29T00:00:00Z", updated_at: "2026-08-29T00:00:00Z", version: 1,
-    };
-    const mcp: MCPServer = {
-      id: "mcp-1", name: "文档 MCP", transport: "streamable_http", url: "https://mcp.example.test", arguments: [], environment: [], tested: true, test_pending: false,
-      created_at: "2026-08-29T00:00:00Z", updated_at: "2026-08-29T00:00:00Z", version: 1,
-    };
-    const skill: Skill = {
-      id: "skill-1", name: "代码审查", source: "git", git_url: "https://example.test/skill.git", git_ref: "main", sha256: "a".repeat(64),
-      created_at: "2026-08-29T00:00:00Z", updated_at: "2026-08-29T00:00:00Z", version: 1,
-    };
-    const updateExpert = vi.fn(async (_id, input) => ({ ...expert, ...input, version: 2 }));
-    const api = {
-      listExperts: vi.fn(async () => [expert]),
-      listMCPServers: vi.fn(async () => [mcp]),
-      listSkills: vi.fn(async () => [skill]),
-      updateExpert,
-    } as unknown as PlatformApi;
-    const wrapper = mount(ExpertsPage, {
-      global: {
-        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-        provide: { [platformApiKey as symbol]: api },
-      },
-    });
+  it("switches to Expert Teams and discloses ordered per-turn members", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/experts?tab=teams");
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });
     await flushPromises();
 
-    await wrapper.get(".card-menu button").trigger("click");
-    await flushPromises();
-    expect(wrapper.findAll(".extension-manager .subtabs button")).toHaveLength(3);
-    expect(wrapper.get(".extension-manager .compact-action").text()).toContain("MCP");
-    await wrapper.get(".extension-manager .extension-choice input").setValue(true);
-    await wrapper.findAll(".extension-manager .subtabs button")[1]!.trigger("click");
-    expect(wrapper.get(".extension-manager .compact-action").text()).toContain("Skill");
-    await wrapper.get(".extension-manager .extension-choice input").setValue(true);
-    await wrapper.get(".expert-form-modal").trigger("submit");
-    await flushPromises();
-
-    expect(updateExpert).toHaveBeenCalledWith(expert.id, expect.objectContaining({ mcp_server_ids: [mcp.id], skill_ids: [skill.id] }), expert.version);
-    wrapper.unmount();
+    expect(wrapper.get(".expert-team-card").text()).toContain("交付专家团");
+    expect(wrapper.get(".expert-team-card").text()).toContain("架构专家");
+    expect(wrapper.get(".expert-team-card").text()).toContain("2 位专家 / 每轮");
   });
 });

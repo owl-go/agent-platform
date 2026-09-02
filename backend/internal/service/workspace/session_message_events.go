@@ -11,11 +11,12 @@ import (
 )
 
 type sessionMessageSnapshot struct {
-	State         string `json:"state"`
-	Content       string `json:"content"`
-	Error         string `json:"error,omitempty"`
-	ProgressStage string `json:"progress_stage,omitempty"`
-	ElapsedMS     int64  `json:"elapsed_ms"`
+	State         string               `json:"state"`
+	Content       string               `json:"content"`
+	Error         string               `json:"error,omitempty"`
+	ProgressStage string               `json:"progress_stage,omitempty"`
+	ElapsedMS     int64                `json:"elapsed_ms"`
+	ExpertStages  []domain.ExpertStage `json:"expert_stages,omitempty"`
 }
 
 func (service *Service) streamSessionMessage(writer http.ResponseWriter, request *http.Request) {
@@ -86,7 +87,7 @@ func (service *Service) streamSessionMessage(writer http.ResponseWriter, request
 }
 
 func snapshotOf(message domain.Message) sessionMessageSnapshot {
-	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS}
+	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages}
 }
 
 func terminalMessageState(state string) bool {

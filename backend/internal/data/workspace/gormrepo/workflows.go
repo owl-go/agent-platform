@@ -89,7 +89,7 @@ func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workf
 		runtime = &value
 	}
 	updates := map[string]any{
-		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID,
+		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID, "expert_team_id": input.ExpertTeamID,
 		"provider_model_id": input.ProviderModelID, "runtime_engine": runtime, "environment": environment,
 		"schedule": schedule, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 	}
@@ -125,6 +125,7 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 		where string
 	}{
 		{value: input.ExpertID, model: &expertRecord{}, name: "Expert", where: "owner_user_id = ? AND id = ?"},
+		{value: input.ExpertTeamID, model: &expertTeamRecord{}, name: "Expert Team", where: "owner_user_id = ? AND id = ?"},
 		{value: input.ProviderModelID, model: &providerModelRecord{}, name: "Provider Model", where: "owner_user_id = ? AND id = ? AND available"},
 	}
 	for _, check := range checks {
@@ -142,6 +143,26 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 			return fmt.Errorf("%w: selected %s does not belong to the User", domain.ErrInvalid, check.name)
 		}
 	}
+	if input.ExpertTeamID != nil {
+		var team expertTeamRecord
+		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *input.ExpertTeamID).Take(&team).Error; err != nil {
+			return fmt.Errorf("%w: selected Expert Team does not belong to the User", domain.ErrInvalid)
+		}
+		var ids []string
+		if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+			return err
+		}
+		if len(ids) < 2 {
+			return fmt.Errorf("%w: selected Expert Team requires at least two Experts", domain.ErrInvalid)
+		}
+		var available int64
+		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&available).Error; err != nil {
+			return err
+		}
+		if available != int64(len(ids)) {
+			return fmt.Errorf("%w: selected Expert Team contains an unavailable Expert", domain.ErrInvalid)
+		}
+	}
 	return nil
 }
 
@@ -152,7 +173,7 @@ func (repository *Repository) DeleteWorkflow(ctx context.Context, ownerID, workf
 			Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).
 			Updates(map[string]any{
 				"deleted_at": now, "updated_at": now, "version": gorm.Expr("version + 1"),
-				"goal": "", "expert_id": nil, "provider_model_id": nil, "runtime_engine": nil,
+				"goal": "", "expert_id": nil, "expert_team_id": nil, "provider_model_id": nil, "runtime_engine": nil,
 				"environment": []byte(`[]`), "environment_secret_ciphertext": nil,
 				"api_key": nil, "api_secret_hash": nil, "schedule": nil, "next_scheduled_at": nil,
 				"git_source": nil, "git_secret_ciphertext": nil,
@@ -453,36 +474,80 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow Git source snapshot: %w", err)
 		}
 	}
-	if workflow.ExpertID == nil {
+	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
 		return snapshot, nil
 	}
-	var expert expertRecord
-	if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertID).Take(&expert).Error; err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert for Run: %w", mapNotFound(err))
+	if workflow.ExpertID != nil {
+		var expert expertRecord
+		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertID).Take(&expert).Error; err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert for Run: %w", mapNotFound(err))
+		}
+		member, err := loadExpertMemberSnapshot(tx, workflow.OwnerID, expert, 1)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		snapshot.Expert = &member.ExpertSnapshot
+		snapshot.MCPServers, snapshot.Skills = member.MCPServers, member.Skills
+		return snapshot, nil
 	}
-	snapshot.Expert = &domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, Description: expert.Description}
-	var mcpIDs, skillIDs []string
-	if err := json.Unmarshal(expert.MCPServerIDs, &mcpIDs); err != nil {
+	var team expertTeamRecord
+	if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertTeamID).Take(&team).Error; err != nil {
+		return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert Team for Run: %w", mapNotFound(err))
+	}
+	var expertIDs, tags []string
+	if err := json.Unmarshal(team.ExpertIDs, &expertIDs); err != nil {
 		return domain.ExecutionSnapshot{}, err
+	}
+	if len(expertIDs) < 2 {
+		return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team requires at least two Experts", domain.ErrInvalid)
+	}
+	_ = json.Unmarshal(team.ExpertiseTags, &tags)
+	teamSnapshot := &domain.ExpertTeamSnapshot{ID: team.ID, Name: team.Name, CapabilityIntroduction: team.CapabilityIntroduction, ExpertiseTags: tags}
+	for index, expertID := range expertIDs {
+		var expert expertRecord
+		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, expertID).Take(&expert).Error; err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team member is unavailable", domain.ErrInvalid)
+		}
+		member, err := loadExpertMemberSnapshot(tx, workflow.OwnerID, expert, index+1)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		teamSnapshot.Members = append(teamSnapshot.Members, member)
+	}
+	snapshot.ExpertTeam = teamSnapshot
+	return snapshot, nil
+}
+
+func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExpertMemberSnapshot, error) {
+	if strings.TrimSpace(expert.ExecutionInstruction) == "" {
+		return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert Execution Instruction is required", domain.ErrInvalid)
+	}
+	var tags, mcpIDs, skillIDs []string
+	if err := json.Unmarshal(expert.ExpertiseTags, &tags); err != nil {
+		return domain.ExpertMemberSnapshot{}, err
+	}
+	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags}, Position: position}
+	if err := json.Unmarshal(expert.MCPServerIDs, &mcpIDs); err != nil {
+		return domain.ExpertMemberSnapshot{}, err
 	}
 	if err := json.Unmarshal(expert.SkillIDs, &skillIDs); err != nil {
-		return domain.ExecutionSnapshot{}, err
+		return domain.ExpertMemberSnapshot{}, err
 	}
 	for _, id := range mcpIDs {
 		var row mcpRecord
-		if err := tx.Where("owner_user_id = ? AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", workflow.OwnerID, id).Take(&row).Error; err != nil {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
+		if err := tx.Where("owner_user_id = ? AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", ownerID, id).Take(&row).Error; err != nil {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
 		}
-		snapshot.MCPServers = append(snapshot.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext})
+		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext})
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, id).Take(&row).Error; err != nil {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Skill is unavailable", domain.ErrInvalid)
+		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, id).Take(&row).Error; err != nil {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert Skill is unavailable", domain.ErrInvalid)
 		}
-		snapshot.Skills = append(snapshot.Skills, domain.SkillSnapshot{ID: row.ID, Name: row.Name, ObjectKey: row.ObjectKey, SHA256: row.SHA256})
+		member.Skills = append(member.Skills, domain.SkillSnapshot{ID: row.ID, Name: row.Name, ObjectKey: row.ObjectKey, SHA256: row.SHA256})
 	}
-	return snapshot, nil
+	return member, nil
 }
 
 func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID string) ([]domain.Run, error) {
@@ -616,14 +681,17 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND state IN ('succeeded','failed','cancelled')", ownerID, workflowID, runID).Take(&source).Error; err != nil {
 		return domain.Run{}, mapNotFound(err)
 	}
-	var input struct {
-		Text *string        `json:"text"`
-		JSON map[string]any `json:"json"`
+	created := runRecord{
+		ID: uuid.NewString(), OwnerID: ownerID, WorkflowID: source.WorkflowID, WorkflowName: source.WorkflowName,
+		Trigger: "manual", State: "queued", Input: append([]byte(nil), source.Input...),
+		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), QueuedAt: time.Now().UTC(), Version: 1,
 	}
-	if err := json.Unmarshal(source.Input, &input); err != nil {
-		return domain.Run{}, fmt.Errorf("decode Run input: %w", err)
+	created.ConversationID = created.ID
+	created.TurnNumber = 1
+	if err := repository.db.WithContext(ctx).Create(&created).Error; err != nil {
+		return domain.Run{}, fmt.Errorf("rerun Workflow: %w", err)
 	}
-	return repository.CreateRun(ctx, ownerID, workflowID, "manual", input.Text, input.JSON)
+	return runDomain(created), nil
 }
 
 func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workflowID string) ([]domain.Artifact, error) {
@@ -680,7 +748,7 @@ func workflowRecordForInput(id, ownerID, workspacePath string, input domain.Work
 		value := string(*input.RuntimeEngine)
 		runtime = &value
 	}
-	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ProviderModelID: input.ProviderModelID, RuntimeEngine: runtime, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
+	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ExpertTeamID: input.ExpertTeamID, ProviderModelID: input.ProviderModelID, RuntimeEngine: runtime, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
 }
 
 func nextScheduledAt(schedule *domain.Schedule, after time.Time) *time.Time {
@@ -725,7 +793,7 @@ func marshalNullable(value any) ([]byte, error) {
 }
 
 func workflowDomain(row workflowRecord) (domain.Workflow, error) {
-	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ProviderModelID: row.ProviderModelID, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, ProviderModelID: row.ProviderModelID, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.RuntimeEngine != nil {
 		runtime, err := domain.ParseRuntime(*row.RuntimeEngine)
 		if err != nil {
@@ -765,6 +833,9 @@ func runDomain(row runRecord) domain.Run {
 	}
 	_ = json.Unmarshal(row.Input, &input)
 	item.TextInput, item.JSONInput, item.Attachments = input.Text, input.JSON, input.Attachments
+	if len(row.ExpertStages) > 0 && string(row.ExpertStages) != "null" {
+		_ = json.Unmarshal(row.ExpertStages, &item.ExpertStages)
+	}
 	if row.TerminalError != nil {
 		item.Error = *row.TerminalError
 	}
@@ -785,6 +856,13 @@ func runDomain(row runRecord) domain.Run {
 		}
 		if snapshot.Expert != nil {
 			projection["expert"] = map[string]any{"id": snapshot.Expert.ID, "name": snapshot.Expert.Name}
+		}
+		if snapshot.ExpertTeam != nil {
+			members := make([]map[string]any, 0, len(snapshot.ExpertTeam.Members))
+			for _, member := range snapshot.ExpertTeam.Members {
+				members = append(members, map[string]any{"id": member.ID, "name": member.Name, "position": member.Position})
+			}
+			projection["expert_team"] = map[string]any{"id": snapshot.ExpertTeam.ID, "name": snapshot.ExpertTeam.Name, "members": members}
 		}
 		mcp := make([]map[string]any, 0, len(snapshot.MCPServers))
 		for _, server := range snapshot.MCPServers {

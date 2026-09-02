@@ -52,6 +52,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/expert-teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListExpertTeams"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateExpertTeam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expert-teams/{expert_team_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetExpertTeam"];
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteExpertTeam"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateExpertTeam"];
+        trace?: never;
+    };
     "/api/v1/experts": {
         parameters: {
             query?: never;
@@ -75,7 +107,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AgentWorkspaceService_GetExpert"];
         put?: never;
         post?: never;
         delete: operations["AgentWorkspaceService_DeleteExpert"];
@@ -322,6 +354,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_SetSessionArchived"];
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/expert-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_SetSessionExpertSelection"];
         trace?: never;
     };
     "/api/v1/sessions/{session_id}/messages": {
@@ -719,6 +767,12 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceSetSessionExpertSelectionBody: {
+            expert_id?: string;
+            expert_team_id?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
         AgentWorkspaceServiceSetUserEnabledBody: {
             enabled?: boolean;
             /** Format: int64 */
@@ -727,6 +781,11 @@ export interface components {
         AgentWorkspaceServiceTestMCPServerBody: Record<string, never>;
         AgentWorkspaceServiceUpdateExpertBody: {
             expert?: components["schemas"]["v1ExpertInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateExpertTeamBody: {
+            expert_team?: components["schemas"]["v1ExpertTeamInput"];
             /** Format: int64 */
             expected_version?: number;
         };
@@ -820,6 +879,9 @@ export interface components {
         v1CreateExpertRequest: {
             expert?: components["schemas"]["v1ExpertInput"];
         };
+        v1CreateExpertTeamRequest: {
+            expert_team?: components["schemas"]["v1ExpertTeamInput"];
+        };
         v1CreateMCPServerRequest: {
             mcp_server?: components["schemas"]["v1MCPServerInput"];
         };
@@ -832,6 +894,7 @@ export interface components {
         };
         v1CreateSessionRequest: {
             expert_id?: string;
+            expert_team_id?: string;
         };
         v1CreateSkillRequest: {
             name?: string;
@@ -873,7 +936,7 @@ export interface components {
         v1Expert: {
             id?: string;
             name?: string;
-            description?: string;
+            capability_introduction?: string;
             mcp_server_ids?: string[];
             skill_ids?: string[];
             /** Format: date-time */
@@ -882,12 +945,50 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            execution_instruction?: string;
+            expertise_tags?: string[];
+            available?: boolean;
         };
         v1ExpertInput: {
             name?: string;
-            description?: string;
+            capability_introduction?: string;
             mcp_server_ids?: string[];
             skill_ids?: string[];
+            execution_instruction?: string;
+            expertise_tags?: string[];
+        };
+        v1ExpertStage: {
+            expert_id?: string;
+            expert_name?: string;
+            /** Format: int32 */
+            position?: number;
+            state?: string;
+            /** Format: int64 */
+            elapsed_ms?: number;
+            final_text?: string;
+            error?: string;
+            /** Format: int32 */
+            total?: number;
+        };
+        v1ExpertTeam: {
+            id?: string;
+            name?: string;
+            capability_introduction?: string;
+            expertise_tags?: string[];
+            experts?: components["schemas"]["v1Expert"][];
+            available?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ExpertTeamInput: {
+            name?: string;
+            capability_introduction?: string;
+            expertise_tags?: string[];
+            expert_ids?: string[];
         };
         v1GitSource: {
             url?: string;
@@ -900,6 +1001,9 @@ export interface components {
         };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
+        };
+        v1ListExpertTeamsResponse: {
+            items?: components["schemas"]["v1ExpertTeam"][];
         };
         v1ListExpertsResponse: {
             items?: components["schemas"]["v1Expert"][];
@@ -1061,6 +1165,7 @@ export interface components {
             /** Format: int32 */
             turn_number?: number;
             attachments?: components["schemas"]["v1Attachment"][];
+            expert_stages?: components["schemas"]["v1ExpertStage"][];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -1104,6 +1209,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             current_provider_model_id?: string;
+            expert_team_id?: string;
         };
         v1SessionMessage: {
             /** Format: int64 */
@@ -1119,6 +1225,7 @@ export interface components {
             progress_stage?: string;
             response_snapshot?: components["schemas"]["v1ResponseSnapshot"];
             attachments?: components["schemas"]["v1Attachment"][];
+            expert_stages?: components["schemas"]["v1ExpertStage"][];
         };
         v1Skill: {
             id?: string;
@@ -1174,6 +1281,7 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            expert_team_id?: string;
         };
         v1WorkflowCredential: {
             api_key?: string;
@@ -1189,6 +1297,7 @@ export interface components {
             runtime_engine?: string;
             environment?: components["schemas"]["v1EnvironmentVariable"][];
             schedule?: components["schemas"]["v1Schedule"];
+            expert_team_id?: string;
         };
         v1WorkspaceEntry: {
             path?: string;
@@ -1350,6 +1459,165 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_ListExpertTeams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListExpertTeamsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateExpertTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateExpertTeamRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ExpertTeam"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetExpertTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ExpertTeam"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteExpertTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateExpertTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateExpertTeamBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ExpertTeam"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListExperts: {
         parameters: {
             query?: never;
@@ -1391,6 +1659,37 @@ export interface operations {
                 "application/json": components["schemas"]["v1CreateExpertRequest"];
             };
         };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Expert"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetExpert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description A successful response. */
             200: {
@@ -2227,6 +2526,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceSetSessionArchivedBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetSessionExpertSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSetSessionExpertSelectionBody"];
             };
         };
         responses: {

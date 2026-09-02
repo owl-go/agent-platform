@@ -20,6 +20,7 @@ service AgentWorkspaceService {
   rpc GetSession(GetSessionRequest) returns (Session) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}"}; }
   rpc UpdateSession(UpdateSessionRequest) returns (Session) { option (google.api.http) = {patch: "/api/v1/sessions/{session_id}" body: "*"}; }
   rpc SetSessionArchived(SetSessionArchivedRequest) returns (Session) { option (google.api.http) = {patch: "/api/v1/sessions/{session_id}/archived" body: "*"}; }
+  rpc SetSessionExpertSelection(SetSessionExpertSelectionRequest) returns (Session) { option (google.api.http) = {patch: "/api/v1/sessions/{session_id}/expert-selection" body: "*"}; }
   rpc DeleteSession(DeleteSessionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/sessions/{session_id}"}; }
   rpc ListSessionMessages(ListSessionMessagesRequest) returns (ListSessionMessagesResponse) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/messages"}; }
   rpc SendSessionMessage(SendSessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages" body: "*"}; }
@@ -50,9 +51,15 @@ service AgentWorkspaceService {
   rpc CloneWorkspace(CloneWorkspaceRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/clone" body: "*"}; }
 
   rpc ListExperts(ListExpertsRequest) returns (ListExpertsResponse) { option (google.api.http) = {get: "/api/v1/experts"}; }
+  rpc GetExpert(GetExpertRequest) returns (Expert) { option (google.api.http) = {get: "/api/v1/experts/{expert_id}"}; }
   rpc CreateExpert(CreateExpertRequest) returns (Expert) { option (google.api.http) = {post: "/api/v1/experts" body: "*"}; }
   rpc UpdateExpert(UpdateExpertRequest) returns (Expert) { option (google.api.http) = {patch: "/api/v1/experts/{expert_id}" body: "*"}; }
   rpc DeleteExpert(DeleteExpertRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/experts/{expert_id}"}; }
+  rpc ListExpertTeams(ListExpertTeamsRequest) returns (ListExpertTeamsResponse) { option (google.api.http) = {get: "/api/v1/expert-teams"}; }
+  rpc GetExpertTeam(GetExpertTeamRequest) returns (ExpertTeam) { option (google.api.http) = {get: "/api/v1/expert-teams/{expert_team_id}"}; }
+  rpc CreateExpertTeam(CreateExpertTeamRequest) returns (ExpertTeam) { option (google.api.http) = {post: "/api/v1/expert-teams" body: "*"}; }
+  rpc UpdateExpertTeam(UpdateExpertTeamRequest) returns (ExpertTeam) { option (google.api.http) = {patch: "/api/v1/expert-teams/{expert_team_id}" body: "*"}; }
+  rpc DeleteExpertTeam(DeleteExpertTeamRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/expert-teams/{expert_team_id}"}; }
 
   rpc GetSettings(GetSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {get: "/api/v1/settings"}; }
   rpc UpdateSettings(UpdateSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {patch: "/api/v1/settings" body: "*"}; }
@@ -89,19 +96,20 @@ message UserAccount { string id = 1; string username = 2; string email = 3; stri
 
 message ListSessionsRequest { bool archived = 1; }
 message ListSessionsResponse { repeated Session items = 1; }
-message CreateSessionRequest { optional string expert_id = 1; }
+message CreateSessionRequest { optional string expert_id = 1; optional string expert_team_id = 2; }
 message GetSessionRequest { string session_id = 1; }
 message UpdateSessionRequest { string session_id = 1; string title = 2; int64 expected_version = 3; }
 message SetSessionArchivedRequest { string session_id = 1; bool archived = 2; int64 expected_version = 3; }
+message SetSessionExpertSelectionRequest { string session_id = 1; optional string expert_id = 2; optional string expert_team_id = 3; int64 expected_version = 4; }
 message DeleteSessionRequest { string session_id = 1; }
-message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; optional string current_provider_model_id = 8; }
+message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; optional string current_provider_model_id = 8; optional string expert_team_id = 9; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
 message SendSessionMessageRequest { string session_id = 1; string content = 2; string provider_model_id = 3; repeated string attachment_ids = 4; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
-message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; }
 
 message ListWorkflowsRequest { bool deleted = 1; }
@@ -110,8 +118,8 @@ message CreateWorkflowRequest { WorkflowInput workflow = 1; }
 message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
-message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; optional string provider_model_id = 4; optional string runtime_engine = 5; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; optional string provider_model_id = 5; optional string runtime_engine = 6; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; }
+message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; optional string provider_model_id = 4; optional string runtime_engine = 5; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; optional string provider_model_id = 5; optional string runtime_engine = 6; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitSource { string url = 1; string branch = 2; bool private_ssh = 3; bool credential_configured = 4; }
@@ -126,7 +134,7 @@ message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
 message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -146,11 +154,22 @@ message WorkspaceEntry { string path = 1; string name = 2; bool directory = 3; i
 
 message ListExpertsRequest {}
 message ListExpertsResponse { repeated Expert items = 1; }
+message GetExpertRequest { string expert_id = 1; }
 message CreateExpertRequest { ExpertInput expert = 1; }
 message UpdateExpertRequest { string expert_id = 1; ExpertInput expert = 2; int64 expected_version = 3; }
 message DeleteExpertRequest { string expert_id = 1; }
-message ExpertInput { string name = 1; string description = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; }
-message Expert { string id = 1; string name = 2; string description = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; }
+message ExpertInput { string name = 1; string capability_introduction = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; string execution_instruction = 5; repeated string expertise_tags = 6; }
+message Expert { string id = 1; string name = 2; string capability_introduction = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; string execution_instruction = 9; repeated string expertise_tags = 10; bool available = 11; }
+
+message ListExpertTeamsRequest {}
+message ListExpertTeamsResponse { repeated ExpertTeam items = 1; }
+message GetExpertTeamRequest { string expert_team_id = 1; }
+message CreateExpertTeamRequest { ExpertTeamInput expert_team = 1; }
+message UpdateExpertTeamRequest { string expert_team_id = 1; ExpertTeamInput expert_team = 2; int64 expected_version = 3; }
+message DeleteExpertTeamRequest { string expert_team_id = 1; }
+message ExpertTeamInput { string name = 1; string capability_introduction = 2; repeated string expertise_tags = 3; repeated string expert_ids = 4; }
+message ExpertTeam { string id = 1; string name = 2; string capability_introduction = 3; repeated string expertise_tags = 4; repeated Expert experts = 5; bool available = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
+message ExpertStage { string expert_id = 1; string expert_name = 2; int32 position = 3; string state = 4; int64 elapsed_ms = 5; optional string final_text = 6; optional string error = 7; int32 total = 8; }
 
 message GetSettingsRequest {}
 message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; }

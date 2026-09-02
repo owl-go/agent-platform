@@ -3,18 +3,20 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Paperclip, Pencil, Square, Trash2, X } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type Attachment, type Expert, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, type Attachment, type Expert, type ExpertTeam, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
+import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const sessions = ref<Session[]>([]);
 const archived = ref<Session[]>([]);
 const experts = ref<Expert[]>([]);
+const expertTeams = ref<ExpertTeam[]>([]);
 const connections = ref<ModelProviderConnection[]>([]);
 const runtimes = ref<RuntimeEngineStatus[]>([]);
 const settings = ref<PersonalSettings>();
@@ -22,6 +24,7 @@ const selected = ref<Session>();
 const messages = ref<SessionMessage[]>([]);
 const loadingMessages = ref(false);
 const copiedMessageID = ref<number>();
+const copiedStageKey = ref("");
 const editingSessionID = ref("");
 const editingTitle = ref("");
 const pendingDelete = ref<Session>();
@@ -42,6 +45,8 @@ const composerClearance = ref(154);
 const showJumpToLatest = ref(false);
 const keepAtLatest = ref(true);
 const selectedExpert = computed(() => experts.value.find((item) => item.id === selected.value?.expert_id));
+const selectedExpertTeam = computed(() => expertTeams.value.find((item) => item.id === selected.value?.expert_team_id));
+const specialistValue = computed(() => selected.value?.expert_team_id ? `team:${selected.value.expert_team_id}` : selected.value?.expert_id ? `expert:${selected.value.expert_id}` : "none");
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
 const selectedModelID = computed({
   get: () => selected.value?.current_provider_model_id ?? settings.value?.runtime_model_defaults.find((item) => item.runtime_engine === settings.value?.default_runtime_engine)?.provider_model_id ?? "",
@@ -120,7 +125,7 @@ function scrollToLatest(behavior: ScrollBehavior = "smooth") {
 async function refresh() {
   loading.value = true; error.value = "";
   try {
-    [sessions.value, archived.value, experts.value, connections.value, runtimes.value, settings.value] = await Promise.all([api.listSessions(false), api.listSessions(true), api.listExperts(), api.listModelProviderConnections(), api.listRuntimeEngines(), api.getSettings()]);
+    [sessions.value, archived.value, experts.value, expertTeams.value, connections.value, runtimes.value, settings.value] = await Promise.all([api.listSessions(false), api.listSessions(true), api.listExperts(), api.listExpertTeams(), api.listModelProviderConnections(), api.listRuntimeEngines(), api.getSettings()]);
     if (!selected.value && sessions.value[0]) await open(sessions.value[0]);
   } catch { error.value = t("errors.generic"); }
   finally { loading.value = false; }
@@ -247,6 +252,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.progress_stage = snapshot.progress_stage;
   message.error = snapshot.error;
   message.elapsed_ms = snapshot.elapsed_ms;
+  message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
@@ -257,6 +263,18 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   revealTarget = snapshot.content;
   terminalSnapshot = snapshot.state === "completed" || snapshot.state === "failed" || snapshot.state === "cancelled" ? snapshot : undefined;
   revealNextChunk();
+}
+async function changeSpecialist(event: Event) {
+  if (!selected.value || messages.value.length > 0) return;
+  const value = (event.target as HTMLSelectElement).value;
+  const selection = value.startsWith("expert:") ? { expert_id: value.slice(7) } : value.startsWith("team:") ? { expert_team_id: value.slice(5) } : {};
+  try {
+    selected.value = await api.setSessionExpertSelection(selected.value.id, selection, selected.value.version);
+    const index = sessions.value.findIndex((item) => item.id === selected.value?.id);
+    if (index >= 0) sessions.value[index] = selected.value;
+  } catch {
+    error.value = t("errors.validation");
+  }
 }
 async function cancelGeneration() {
   const sessionID = selected.value?.id;
@@ -323,6 +341,17 @@ function progressLabel(stage?: string) {
   const supported = ["preparing", "thinking", "using_tool", "working", "responding", "finalizing"];
   return t(`sessions.progress.${supported.includes(stage ?? "") ? stage : "thinking"}`);
 }
+function activeStageLabel(message: SessionMessage) {
+  const stage = [...(message.expert_stages ?? [])].reverse().find((item) => item.state === "running");
+  return stage ? `${stage.position}/${stage.total || message.expert_stages?.length || stage.position} · ${stage.expert_name}` : progressLabel(message.progress_stage);
+}
+function visibleStages(message: SessionMessage) {
+  const stages = message.expert_stages ?? [];
+  return message.state === "failed" || message.state === "cancelled" ? stages : stages.slice(0, -1);
+}
+function stageStateLabel(state: string) {
+  return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
+}
 async function copyMessage(message: SessionMessage) {
   try {
     await navigator.clipboard.writeText(message.content);
@@ -332,6 +361,13 @@ async function copyMessage(message: SessionMessage) {
   } catch {
     error.value = t("errors.copy");
   }
+}
+async function copyStage(messageID: number, position: number, value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    copiedStageKey.value = `${messageID}:${position}`;
+    window.setTimeout(() => { copiedStageKey.value = ""; }, 1600);
+  } catch { error.value = t("errors.copy"); }
 }
 async function archive(item: Session) {
   try { await api.archiveSession(item.id, !item.archived, item.version); if (selected.value?.id === item.id) selected.value = undefined; await refresh(); }
@@ -416,20 +452,23 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><button class="button ghost" @click="router.push('/settings')">{{ t('nav.settings') }} →</button></div>
       <template v-if="selected">
-        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p>{{ selectedExpert?.name ?? t('sessions.noExpert') }} <span>·</span> {{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><span class="engine-chip">AUTO RUNTIME</span></header>
+        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p>{{ selectedExpertTeam?.name ?? selectedExpert?.name ?? t('sessions.noExpert') }} <span>·</span> {{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><span class="engine-chip">AUTO RUNTIME</span></header>
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <div v-if="loadingMessages" class="message-loading" :aria-label="t('common.loading')"><span></span><span></span><span></span></div>
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ t('sessions.welcome') }}</p></div>
           <div v-for="(message, index) in messages" :key="message.id" class="message" :class="message.role">
             <div class="message-content">
-              <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong><small>{{ progressLabel(message.progress_stage) }}</small></div>
+              <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' }" v-html="renderMarkdown(message.content)"></div>
               <p v-else-if="message.content">{{ message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
               <div v-if="message.attachments?.length" class="turn-attachments"><button v-for="attachment in message.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name"><span v-else class="attachment-file-mark">FILE</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div>
               <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
+              <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">
+                <details v-for="stage in visibleStages(message)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || message.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(stage.final_text)"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(message.id, stage.position, stage.final_text)">{{ copiedStageKey === `${message.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details>
+              </div>
               <div class="message-actions">
-                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: `${(message.elapsed_ms / 1000).toFixed(1)}s` }) }}</template><span v-if="message.response_snapshot" class="message-model" :title="`${message.response_snapshot.connection_name} · ${message.response_snapshot.model_id} · ${message.response_snapshot.runtime_engine}`"> · {{ message.response_snapshot.model_name }}</span></small>
+                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="message.response_snapshot" class="message-model" :title="`${message.response_snapshot.connection_name} · ${message.response_snapshot.model_id} · ${message.response_snapshot.runtime_engine}`"> · {{ message.response_snapshot.model_name }}</span></small>
                 <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
                 <button v-if="message.role === 'assistant' && message.state === 'failed'" class="text-button" @click="retry(index)">{{ t('common.retry') }}</button>
               </div>
@@ -441,6 +480,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
           <footer class="composer">
             <div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removePendingAttachment(index)"><X /></button></span></div>
             <textarea v-model="draft" :placeholder="t('sessions.placeholder')" :disabled="selected.archived || sending" @keydown="keyboard"></textarea>
+            <select v-if="messages.length === 0" class="specialist-selector" :value="specialistValue" :aria-label="t('sessions.chooseExpert')" :disabled="selected.archived || sending" @change="changeSpecialist"><option value="none">{{ t('sessions.noExpert') }}</option><optgroup :label="t('experts.title')"><option v-for="item in experts.filter((value) => value.available)" :key="item.id" :value="`expert:${item.id}`">{{ item.name }}</option></optgroup><optgroup :label="t('experts.teams')"><option v-for="item in expertTeams" :key="item.id" :value="`team:${item.id}`" :disabled="!item.available">{{ item.name }}{{ item.available ? '' : ` (${t('experts.teamUnavailable')})` }}</option></optgroup></select>
             <label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="selected.archived || sending || Boolean(activeAssistant)" @change="chooseAttachments"></label>
             <div class="composer-model-control"><label><span class="model-dot" :class="selectedCompatibility?.status"></span><select v-model="selectedModelID" :aria-label="t('sessions.modelSelector')" :disabled="selected.archived || sending || Boolean(activeAssistant)"><optgroup v-for="connection in connections" :key="connection.id" :label="connection.name"><option v-for="model in connection.models.filter((item) => item.available)" :key="model.id" :value="model.id" :disabled="model.compatibility.find((item) => item.runtime_engine === settings?.default_runtime_engine)?.status === 'incompatible'">{{ model.display_name }}</option></optgroup></select></label><small v-if="selectedCompatibility?.status === 'unverified'">{{ t('sessions.modelUnverified') }}</small></div>
             <button v-if="activeAssistant" type="button" class="stop-generation" :class="{ stopping: cancellingMessageID === activeAssistant.id }" :disabled="cancellingMessageID === activeAssistant.id" :aria-label="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" :title="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" @click="cancelGeneration"><Square aria-hidden="true" /></button>

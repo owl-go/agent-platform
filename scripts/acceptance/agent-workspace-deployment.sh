@@ -151,8 +151,18 @@ provider_model_id="$(jq -er '.models | map(select(.available == true))[0].id' "$
 settings_body="$(jq -nc --arg model "${provider_model_id}" '{personality:"direct_efficient",personality_instructions:"",runtime_model_defaults:[{runtime_engine:"codex",provider_model_id:$model}],default_runtime_engine:"codex",language:"zh-CN",timezone:"Asia/Shanghai",expected_version:1}')"
 api_request "${ordinary_token}" PATCH /api/v1/settings "${settings_body}" "${temporary_directory}/settings.json"
 
-api_request "${ordinary_token}" POST /api/v1/experts '{"expert":{"name":"Acceptance Expert","description":"Optional expert","mcp_server_ids":[],"skill_ids":[]}}' "${temporary_directory}/expert.json"
+api_request "${ordinary_token}" POST /api/v1/experts '{"expert":{"name":"Acceptance Expert","capability_introduction":"Acceptance checks","execution_instruction":"Complete the requested acceptance task and report the final result.","expertise_tags":["acceptance"],"mcp_server_ids":[],"skill_ids":[]}}' "${temporary_directory}/expert.json"
 expert_id="$(jq -er '.id' "${temporary_directory}/expert.json")"
+api_request "${ordinary_token}" POST /api/v1/experts '{"expert":{"name":"Acceptance Reviewer","capability_introduction":"Reviews acceptance output","execution_instruction":"Review the preceding Expert result and return the final acceptance conclusion.","expertise_tags":["review"],"mcp_server_ids":[],"skill_ids":[]}}' "${temporary_directory}/reviewer.json"
+reviewer_id="$(jq -er '.id' "${temporary_directory}/reviewer.json")"
+team_body="$(jq -nc --arg first "${expert_id}" --arg second "${reviewer_id}" '{expert_team:{name:"Acceptance Team",capability_introduction:"Sequential acceptance team",expertise_tags:["acceptance"],expert_ids:[$first,$second]}}')"
+api_request "${ordinary_token}" POST /api/v1/expert-teams "${team_body}" "${temporary_directory}/team.json"
+team_id="$(jq -er '.id' "${temporary_directory}/team.json")"
+jq -e --arg first "${expert_id}" --arg second "${reviewer_id}" '.available == true and [.experts[].id] == [$first,$second]' "${temporary_directory}/team.json" >/dev/null
+api_request "${ordinary_token}" GET "/api/v1/expert-teams/${team_id}" '' "${temporary_directory}/team-read.json"
+jq -e '.experts | length == 2' "${temporary_directory}/team-read.json" >/dev/null
+api_request "${ordinary_token}" PATCH "/api/v1/sessions/${ordinary_session}/expert-selection" "$(jq -nc --arg team "${team_id}" '{expert_team_id:$team,expected_version:4}')" "${temporary_directory}/session-team.json"
+jq -e --arg team "${team_id}" '.expert_team_id == $team and .version == 5' "${temporary_directory}/session-team.json" >/dev/null
 
 api_request "${ordinary_token}" POST "/api/v1/sessions/${ordinary_session}/messages" '{"content":"Session failure-path acceptance"}' "${temporary_directory}/message-pair.json"
 user_message_id="$(jq -er '.user_message.id' "${temporary_directory}/message-pair.json")"
@@ -177,14 +187,14 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [[ "${cancelled_message_state}" == cancelled ]]
-workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg expert "${expert_id}" --arg secret "${secret_canary}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",value:$secret,secret:true,configured:true}]}}')"
+workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg team "${team_id}" --arg secret "${secret_canary}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_team_id:$team,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",value:$secret,secret:true,configured:true}]}}')"
 stage workflow-and-workspace
 api_request "${ordinary_token}" POST /api/v1/workflows "${workflow_body}" "${temporary_directory}/workflow.json"
 workflow_id="$(jq -er '.id' "${temporary_directory}/workflow.json")"
 assert_status 404 "${admin_token}" "/api/v1/workflows/${workflow_id}/runs"
 assert_status 404 "${admin_token}" "/api/v1/workflows/${workflow_id}/artifacts"
 schedule_minute="$((10#$(date -u -d '1 minute' +%M)))"
-scheduled_workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg expert "${expert_id}" --argjson minute "${schedule_minute}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_id:$expert,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",secret:true,configured:true}],schedule:{enabled:true,frequency:"hourly",hour:0,minute:$minute,weekday:0,timezone:"UTC"}},expected_version:1}')"
+scheduled_workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg team "${team_id}" --argjson minute "${schedule_minute}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_team_id:$team,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",secret:true,configured:true}],schedule:{enabled:true,frequency:"hourly",hour:0,minute:$minute,weekday:0,timezone:"UTC"}},expected_version:1}')"
 api_request "${ordinary_token}" PATCH "/api/v1/workflows/${workflow_id}" "${scheduled_workflow_body}" "${temporary_directory}/workflow-scheduled.json"
 
 api_request "${ordinary_token}" POST "/api/v1/workflows/${workflow_id}/workspace/directories" '{"path":"notes"}' "${temporary_directory}/directory.json"
@@ -239,6 +249,7 @@ done
   echo "fake-provider Runtime Run ended as ${terminal_state}, want failed" >&2
   exit 1
 }
+jq -e '.expert_stages | length == 1 and .[0].position == 1 and .[0].total == 2 and .[0].state == "failed"' "${temporary_directory}/run.json" >/dev/null
 curl --fail-with-body --silent --show-error --max-time 15 -u "${api_key}:${api_secret}" \
   "${base_url}/api/v1/workflows/${workflow_id}/runs/${run_id}/events" -o "${temporary_directory}/events.txt"
 grep -q 'event: run.started' "${temporary_directory}/events.txt"

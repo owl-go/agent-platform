@@ -23,6 +23,7 @@ type sessionRecord struct {
 	OwnerID                string     `gorm:"column:owner_user_id"`
 	Title                  string     `gorm:"column:title"`
 	ExpertID               *string    `gorm:"column:expert_id"`
+	ExpertTeamID           *string    `gorm:"column:expert_team_id"`
 	ExpertSnapshot         []byte     `gorm:"column:expert_snapshot;type:jsonb"`
 	CurrentProviderModelID *string    `gorm:"column:current_provider_model_id"`
 	ArchivedAt             *time.Time `gorm:"column:archived_at"`
@@ -51,6 +52,7 @@ type messageRecord struct {
 	CancelRequested  *time.Time `gorm:"column:cancel_requested_at"`
 	ResponseSnapshot []byte     `gorm:"column:response_snapshot;type:jsonb"`
 	Attachments      []byte     `gorm:"column:attachments;type:jsonb"`
+	ExpertStages     []byte     `gorm:"column:expert_stages;type:jsonb"`
 }
 
 func (messageRecord) TableName() string { return "session_messages" }
@@ -61,6 +63,7 @@ type workflowRecord struct {
 	Name              string     `gorm:"column:name"`
 	Goal              string     `gorm:"column:goal"`
 	ExpertID          *string    `gorm:"column:expert_id"`
+	ExpertTeamID      *string    `gorm:"column:expert_team_id"`
 	ProviderModelID   *string    `gorm:"column:provider_model_id"`
 	RuntimeEngine     *string    `gorm:"column:runtime_engine"`
 	Environment       []byte     `gorm:"column:environment;type:jsonb"`
@@ -81,18 +84,34 @@ type workflowRecord struct {
 func (workflowRecord) TableName() string { return "workflows" }
 
 type expertRecord struct {
-	ID           string    `gorm:"column:id"`
-	OwnerID      string    `gorm:"column:owner_user_id"`
-	Name         string    `gorm:"column:name"`
-	Description  string    `gorm:"column:description"`
-	MCPServerIDs []byte    `gorm:"column:mcp_server_ids;type:jsonb"`
-	SkillIDs     []byte    `gorm:"column:skill_ids;type:jsonb"`
-	CreatedAt    time.Time `gorm:"column:created_at"`
-	UpdatedAt    time.Time `gorm:"column:updated_at"`
-	Version      int64     `gorm:"column:version"`
+	ID                     string    `gorm:"column:id"`
+	OwnerID                string    `gorm:"column:owner_user_id"`
+	Name                   string    `gorm:"column:name"`
+	CapabilityIntroduction string    `gorm:"column:capability_introduction"`
+	ExecutionInstruction   string    `gorm:"column:execution_instruction"`
+	ExpertiseTags          []byte    `gorm:"column:expertise_tags;type:jsonb"`
+	MCPServerIDs           []byte    `gorm:"column:mcp_server_ids;type:jsonb"`
+	SkillIDs               []byte    `gorm:"column:skill_ids;type:jsonb"`
+	CreatedAt              time.Time `gorm:"column:created_at"`
+	UpdatedAt              time.Time `gorm:"column:updated_at"`
+	Version                int64     `gorm:"column:version"`
 }
 
 func (expertRecord) TableName() string { return "experts" }
+
+type expertTeamRecord struct {
+	ID                     string    `gorm:"column:id"`
+	OwnerID                string    `gorm:"column:owner_user_id"`
+	Name                   string    `gorm:"column:name"`
+	CapabilityIntroduction string    `gorm:"column:capability_introduction"`
+	ExpertiseTags          []byte    `gorm:"column:expertise_tags;type:jsonb"`
+	ExpertIDs              []byte    `gorm:"column:expert_ids;type:jsonb"`
+	CreatedAt              time.Time `gorm:"column:created_at"`
+	UpdatedAt              time.Time `gorm:"column:updated_at"`
+	Version                int64     `gorm:"column:version"`
+}
+
+func (expertTeamRecord) TableName() string { return "expert_teams" }
 
 type settingsRecord struct {
 	UserID                  string `gorm:"column:user_id"`
@@ -203,6 +222,7 @@ type runRecord struct {
 	StartedAt        *time.Time `gorm:"column:started_at"`
 	EndedAt          *time.Time `gorm:"column:ended_at"`
 	CancelRequested  *time.Time `gorm:"column:cancel_requested_at"`
+	ExpertStages     []byte     `gorm:"column:expert_stages;type:jsonb"`
 	Version          int64      `gorm:"column:version"`
 }
 

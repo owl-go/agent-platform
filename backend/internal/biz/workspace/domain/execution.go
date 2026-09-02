@@ -12,6 +12,7 @@ type ExecutionSnapshot struct {
 	Personality                 string                `json:"personality"`
 	PersonalityInstructions     string                `json:"personality_instructions"`
 	Expert                      *ExpertSnapshot       `json:"expert,omitempty"`
+	ExpertTeam                  *ExpertTeamSnapshot   `json:"expert_team,omitempty"`
 	Environment                 []EnvironmentVariable `json:"environment"`
 	EnvironmentSecretCiphertext []byte                `json:"environment_secret_ciphertext,omitempty"`
 	MCPServers                  []MCPServerSnapshot   `json:"mcp_servers"`
@@ -36,9 +37,26 @@ type ProviderModelSnapshot struct {
 }
 
 type ExpertSnapshot struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID                     string   `json:"id"`
+	Name                   string   `json:"name"`
+	CapabilityIntroduction string   `json:"capability_introduction"`
+	ExecutionInstruction   string   `json:"execution_instruction"`
+	ExpertiseTags          []string `json:"expertise_tags"`
+}
+
+type ExpertTeamSnapshot struct {
+	ID                     string                 `json:"id"`
+	Name                   string                 `json:"name"`
+	CapabilityIntroduction string                 `json:"capability_introduction"`
+	ExpertiseTags          []string               `json:"expertise_tags"`
+	Members                []ExpertMemberSnapshot `json:"members"`
+}
+
+type ExpertMemberSnapshot struct {
+	ExpertSnapshot
+	Position   int                 `json:"position"`
+	MCPServers []MCPServerSnapshot `json:"mcp_servers"`
+	Skills     []SkillSnapshot     `json:"skills"`
 }
 
 type MCPServerSnapshot struct {

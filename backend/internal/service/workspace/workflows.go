@@ -305,7 +305,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 	if input == nil {
 		return workspacedomain.WorkflowInput{}, nil, fmt.Errorf("%w: Workflow input is required", workspacedomain.ErrInvalid)
 	}
-	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ProviderModelID: input.ProviderModelId}
+	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId, ProviderModelID: input.ProviderModelId}
 	if input.RuntimeEngine != nil {
 		runtime, err := workspacedomain.ParseRuntime(*input.RuntimeEngine)
 		if err != nil {
@@ -338,7 +338,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 }
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
-	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ProviderModelId: item.ProviderModelID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, ProviderModelId: item.ProviderModelID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	if item.RuntimeEngine != nil {
 		value := string(*item.RuntimeEngine)
 		response.RuntimeEngine = &value
@@ -381,6 +381,9 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 	}
 	for _, attachment := range item.Attachments {
 		response.Attachments = append(response.Attachments, attachmentResponse(attachment))
+	}
+	for _, stage := range item.ExpertStages {
+		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
 	if item.StartedAt != nil {
 		end := time.Now()

@@ -28,6 +28,18 @@ func (service *Service) ListExperts(ctx context.Context, _ *workspacev1.ListExpe
 	return &workspacev1.ListExpertsResponse{Items: response}, nil
 }
 
+func (service *Service) GetExpert(ctx context.Context, request *workspacev1.GetExpertRequest) (*workspacev1.Expert, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := service.workspace.Repository().GetExpert(ctx, owner, request.ExpertId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertResponse(item), nil
+}
+
 func (service *Service) CreateExpert(ctx context.Context, request *workspacev1.CreateExpertRequest) (*workspacev1.Expert, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
@@ -66,6 +78,77 @@ func (service *Service) DeleteExpert(ctx context.Context, request *workspacev1.D
 		return nil, err
 	}
 	if err := service.workspace.Repository().DeleteExpert(ctx, owner, request.ExpertId); err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
+func (service *Service) ListExpertTeams(ctx context.Context, _ *workspacev1.ListExpertTeamsRequest) (*workspacev1.ListExpertTeamsResponse, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, err := service.workspace.Repository().ListExpertTeams(ctx, owner)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := make([]*workspacev1.ExpertTeam, 0, len(items))
+	for _, item := range items {
+		response = append(response, expertTeamResponse(item))
+	}
+	return &workspacev1.ListExpertTeamsResponse{Items: response}, nil
+}
+
+func (service *Service) GetExpertTeam(ctx context.Context, request *workspacev1.GetExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := service.workspace.Repository().GetExpertTeam(ctx, owner, request.ExpertTeamId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item), nil
+}
+
+func (service *Service) CreateExpertTeam(ctx context.Context, request *workspacev1.CreateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := expertTeamInput(request.ExpertTeam)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := service.workspace.Repository().CreateExpertTeam(ctx, owner, input)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item), nil
+}
+
+func (service *Service) UpdateExpertTeam(ctx context.Context, request *workspacev1.UpdateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := expertTeamInput(request.ExpertTeam)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := service.workspace.Repository().UpdateExpertTeam(ctx, owner, request.ExpertTeamId, input, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item), nil
+}
+
+func (service *Service) DeleteExpertTeam(ctx context.Context, request *workspacev1.DeleteExpertTeamRequest) (*workspacev1.DeleteResponse, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := service.workspace.Repository().DeleteExpertTeam(ctx, owner, request.ExpertTeamId); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
@@ -494,11 +577,26 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 	if input == nil {
 		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Expert input is required", workspacedomain.ErrInvalid)
 	}
-	return workspacedomain.ExpertInput{Name: input.Name, Description: input.Description, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
+	return workspacedomain.ExpertInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExecutionInstruction: input.ExecutionInstruction, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
 }
 
 func expertResponse(item workspacedomain.Expert) *workspacev1.Expert {
-	return &workspacev1.Expert{Id: item.ID, Name: item.Name, Description: item.Description, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	return &workspacev1.Expert{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExecutionInstruction: item.ExecutionInstruction, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Available: item.Available(), CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+}
+
+func expertTeamInput(input *workspacev1.ExpertTeamInput) (workspacedomain.ExpertTeamInput, error) {
+	if input == nil {
+		return workspacedomain.ExpertTeamInput{}, fmt.Errorf("%w: Expert Team input is required", workspacedomain.ErrInvalid)
+	}
+	return workspacedomain.ExpertTeamInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), ExpertIDs: append([]string(nil), input.ExpertIds...)}, nil
+}
+
+func expertTeamResponse(item workspacedomain.ExpertTeam) *workspacev1.ExpertTeam {
+	experts := make([]*workspacev1.Expert, 0, len(item.Experts))
+	for _, expert := range item.Experts {
+		experts = append(experts, expertResponse(expert))
+	}
+	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: item.Available(), CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 }
 
 func settingsResponse(item workspacedomain.Settings) *workspacev1.PersonalSettings {

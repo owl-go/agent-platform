@@ -23,6 +23,7 @@ const OperationAgentWorkspaceServiceClearWorkspace = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceCloneWorkspace = "/workspace.v1.AgentWorkspaceService/CloneWorkspace"
 const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
+const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
 const OperationAgentWorkspaceServiceCreateMCPServer = "/workspace.v1.AgentWorkspaceService/CreateMCPServer"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
 const OperationAgentWorkspaceServiceCreateProviderModel = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
@@ -32,6 +33,7 @@ const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceSe
 const OperationAgentWorkspaceServiceCreateWorkflow = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 const OperationAgentWorkspaceServiceCreateWorkspaceDirectory = "/workspace.v1.AgentWorkspaceService/CreateWorkspaceDirectory"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
+const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 const OperationAgentWorkspaceServiceDeleteMCPServer = "/workspace.v1.AgentWorkspaceService/DeleteMCPServer"
 const OperationAgentWorkspaceServiceDeleteModelProviderConnection = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
 const OperationAgentWorkspaceServiceDeleteSession = "/workspace.v1.AgentWorkspaceService/DeleteSession"
@@ -40,12 +42,15 @@ const OperationAgentWorkspaceServiceDeleteWorkflow = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceGenerateWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
 const OperationAgentWorkspaceServiceGetArtifactDownload = "/workspace.v1.AgentWorkspaceService/GetArtifactDownload"
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
+const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
+const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
 const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceService/GetSettings"
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
+const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
 const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceService/ListExperts"
 const OperationAgentWorkspaceServiceListMCPServers = "/workspace.v1.AgentWorkspaceService/ListMCPServers"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
@@ -66,9 +71,11 @@ const OperationAgentWorkspaceServiceRetrySessionMessage = "/workspace.v1.AgentWo
 const OperationAgentWorkspaceServiceRunWorkflow = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
+const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
 const OperationAgentWorkspaceServiceTestMCPServer = "/workspace.v1.AgentWorkspaceService/TestMCPServer"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
+const OperationAgentWorkspaceServiceUpdateExpertTeam = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
 const OperationAgentWorkspaceServiceUpdateMCPServer = "/workspace.v1.AgentWorkspaceService/UpdateMCPServer"
 const OperationAgentWorkspaceServiceUpdateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
 const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspaceService/UpdateSession"
@@ -84,6 +91,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error)
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
+	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
 	CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	CreateProviderModel(context.Context, *CreateProviderModelRequest) (*ProviderModel, error)
@@ -93,6 +101,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	CreateWorkspaceDirectory(context.Context, *CreateWorkspaceDirectoryRequest) (*WorkspaceEntry, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
+	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	DeleteMCPServer(context.Context, *DeleteMCPServerRequest) (*DeleteResponse, error)
 	DeleteModelProviderConnection(context.Context, *DeleteModelProviderConnectionRequest) (*DeleteResponse, error)
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
@@ -101,12 +110,15 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetArtifactDownload(context.Context, *GetArtifactDownloadRequest) (*ArtifactDownload, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
+	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
+	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
+	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
 	ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
@@ -127,9 +139,11 @@ type AgentWorkspaceServiceHTTPServer interface {
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
+	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
 	TestMCPServer(context.Context, *TestMCPServerRequest) (*MCPServer, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
+	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
 	UpdateMCPServer(context.Context, *UpdateMCPServerRequest) (*MCPServer, error)
 	UpdateModelProviderConnection(context.Context, *UpdateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	UpdateSession(context.Context, *UpdateSessionRequest) (*Session, error)
@@ -151,6 +165,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_GetSession0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_UpdateSession0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/sessions/{session_id}/archived", _AgentWorkspaceService_SetSessionArchived0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/sessions/{session_id}/expert-selection", _AgentWorkspaceService_SetSessionExpertSelection0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_DeleteSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}/messages", _AgentWorkspaceService_ListSessionMessages0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages", _AgentWorkspaceService_SendSessionMessage0_HTTP_Handler(srv))
@@ -178,9 +193,15 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/clear", _AgentWorkspaceService_ClearWorkspace0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/clone", _AgentWorkspaceService_CloneWorkspace0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts", _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_GetExpert0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/experts", _AgentWorkspaceService_CreateExpert0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_UpdateExpert0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_DeleteExpert0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/expert-teams", _AgentWorkspaceService_ListExpertTeams0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/expert-teams/{expert_team_id}", _AgentWorkspaceService_GetExpertTeam0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/expert-teams", _AgentWorkspaceService_CreateExpertTeam0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/expert-teams/{expert_team_id}", _AgentWorkspaceService_UpdateExpertTeam0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/expert-teams/{expert_team_id}", _AgentWorkspaceService_DeleteExpertTeam0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/settings", _AgentWorkspaceService_GetSettings0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/settings", _AgentWorkspaceService_UpdateSettings0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/runtime-engines", _AgentWorkspaceService_ListRuntimeEngines0_HTTP_Handler(srv))
@@ -397,6 +418,28 @@ func _AgentWorkspaceService_SetSessionArchived0_HTTP_Handler(srv AgentWorkspaceS
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceSetSessionArchived)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.SetSessionArchived(ctx, req.(*SetSessionArchivedRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*Session)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SetSessionExpertSelection0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetSessionExpertSelectionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSetSessionExpertSelection)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetSessionExpertSelection(ctx, req.(*SetSessionExpertSelectionRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -992,6 +1035,28 @@ func _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv AgentWorkspaceServiceH
 	}
 }
 
+func _AgentWorkspaceService_GetExpert0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetExpertRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetExpert)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetExpert(ctx, req.(*GetExpertRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*Expert)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_CreateExpert0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in CreateExpertRequest
@@ -1045,6 +1110,110 @@ func _AgentWorkspaceService_DeleteExpert0_HTTP_Handler(srv AgentWorkspaceService
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteExpert)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.DeleteExpert(ctx, req.(*DeleteExpertRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListExpertTeams0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListExpertTeamsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListExpertTeams)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListExpertTeams(ctx, req.(*ListExpertTeamsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListExpertTeamsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetExpertTeam0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetExpertTeamRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetExpertTeam)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetExpertTeam(ctx, req.(*GetExpertTeamRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ExpertTeam)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateExpertTeam0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateExpertTeamRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateExpertTeam)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateExpertTeam(ctx, req.(*CreateExpertTeamRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ExpertTeam)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_UpdateExpertTeam0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateExpertTeamRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateExpertTeam)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateExpertTeam(ctx, req.(*UpdateExpertTeamRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ExpertTeam)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteExpertTeam0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteExpertTeamRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteExpertTeam)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteExpertTeam(ctx, req.(*DeleteExpertTeamRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -1450,6 +1619,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CloneWorkspace(ctx context.Context, req *CloneWorkspaceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
+	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	CreateMCPServer(ctx context.Context, req *CreateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	CreateProviderModel(ctx context.Context, req *CreateProviderModelRequest, opts ...http.CallOption) (rsp *ProviderModel, err error)
@@ -1459,6 +1629,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	CreateWorkspaceDirectory(ctx context.Context, req *CreateWorkspaceDirectoryRequest, opts ...http.CallOption) (rsp *WorkspaceEntry, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteMCPServer(ctx context.Context, req *DeleteMCPServerRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteModelProviderConnection(ctx context.Context, req *DeleteModelProviderConnectionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSession(ctx context.Context, req *DeleteSessionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -1467,12 +1638,15 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GenerateWorkflowCredential(ctx context.Context, req *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetArtifactDownload(ctx context.Context, req *GetArtifactDownloadRequest, opts ...http.CallOption) (rsp *ArtifactDownload, err error)
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
+	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
+	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	GetSettings(ctx context.Context, req *GetSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
+	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
 	ListExperts(ctx context.Context, req *ListExpertsRequest, opts ...http.CallOption) (rsp *ListExpertsResponse, err error)
 	ListMCPServers(ctx context.Context, req *ListMCPServersRequest, opts ...http.CallOption) (rsp *ListMCPServersResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
@@ -1493,9 +1667,11 @@ type AgentWorkspaceServiceHTTPClient interface {
 	RunWorkflow(ctx context.Context, req *RunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	SendSessionMessage(ctx context.Context, req *SendSessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
+	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
 	TestMCPServer(ctx context.Context, req *TestMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
+	UpdateExpertTeam(ctx context.Context, req *UpdateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	UpdateMCPServer(ctx context.Context, req *UpdateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
 	UpdateModelProviderConnection(ctx context.Context, req *UpdateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
@@ -1606,6 +1782,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateExpert(ctx context.Context, 
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCreateExpert),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateExpertTeam(ctx context.Context, in *CreateExpertTeamRequest, opts ...http.CallOption) (*ExpertTeam, error) {
+	var out ExpertTeam
+	pattern := "/api/v1/expert-teams"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateExpertTeam),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -1767,6 +1960,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteExpert(ctx context.Context, 
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteExpertTeam(ctx context.Context, in *DeleteExpertTeamRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/expert-teams/{expert_team_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteMCPServer(ctx context.Context, in *DeleteMCPServerRequest, opts ...http.CallOption) (*DeleteResponse, error) {
 	var out DeleteResponse
 	pattern := "/api/v1/extensions/mcp/{mcp_server_id}"
@@ -1896,6 +2105,38 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetCurrentUser(ctx context.Context
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetExpert(ctx context.Context, in *GetExpertRequest, opts ...http.CallOption) (*Expert, error) {
+	var out Expert
+	pattern := "/api/v1/experts/{expert_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetExpert),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetExpertTeam(ctx context.Context, in *GetExpertTeamRequest, opts ...http.CallOption) (*ExpertTeam, error) {
+	var out ExpertTeam
+	pattern := "/api/v1/expert-teams/{expert_team_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GetRun(ctx context.Context, in *GetRunRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}"
@@ -1983,6 +2224,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListArtifacts(ctx context.Context,
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListArtifacts),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListExpertTeams(ctx context.Context, in *ListExpertTeamsRequest, opts ...http.CallOption) (*ListExpertTeamsResponse, error) {
+	var out ListExpertTeamsResponse
+	pattern := "/api/v1/expert-teams"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListExpertTeams),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -2319,6 +2576,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetSessionArchived(ctx context.Con
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) SetSessionExpertSelection(ctx context.Context, in *SetSessionExpertSelectionRequest, opts ...http.CallOption) (*Session, error) {
+	var out Session
+	pattern := "/api/v1/sessions/{session_id}/expert-selection"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSetSessionExpertSelection),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserEnabled(ctx context.Context, in *SetUserEnabledRequest, opts ...http.CallOption) (*UserAccount, error) {
 	var out UserAccount
 	pattern := "/api/v1/admin/users/{user_id}/enabled"
@@ -2361,6 +2635,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateExpert(ctx context.Context, 
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceUpdateExpert),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateExpertTeam(ctx context.Context, in *UpdateExpertTeamRequest, opts ...http.CallOption) (*ExpertTeam, error) {
+	var out ExpertTeam
+	pattern := "/api/v1/expert-teams/{expert_team_id}"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceUpdateExpertTeam),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)

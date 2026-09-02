@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"agent-platform/backend/internal/biz/workspace/application"
+	"agent-platform/backend/internal/biz/workspace/domain"
 )
 
 func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
@@ -34,6 +35,29 @@ func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
 	records := fileArtifactRecords(job, []application.ExecutionArtifact{{Name: "report.md", Path: "report.md", ObjectKey: "artifacts/report", Size: 12, SHA256: strings.Repeat("a", 64), ExpiresAt: expiresAt}}, time.Now())
 	if len(records) != 1 || records[0].Kind != "file" || records[0].Name != "report.md" {
 		t.Fatalf("file Artifact records = %#v", records)
+	}
+}
+
+func TestCloseRunningExpertStagesPreservesTerminalStages(t *testing.T) {
+	started := time.Now().UTC().Add(-time.Second)
+	encoded, err := json.Marshal([]domain.ExpertStage{
+		{ExpertID: "done", State: "succeeded", StartedAt: started, EndedAt: started.Add(100 * time.Millisecond)},
+		{ExpertID: "active", State: "running", StartedAt: started},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ended := started.Add(750 * time.Millisecond)
+	closed, err := closeRunningExpertStages(encoded, "failed", "terminal write failed", ended)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stages []domain.ExpertStage
+	if err := json.Unmarshal(closed, &stages); err != nil {
+		t.Fatal(err)
+	}
+	if stages[0].State != "succeeded" || stages[1].State != "failed" || stages[1].Error != "terminal write failed" || stages[1].ElapsedMS != 750 {
+		t.Fatalf("closed stages = %#v", stages)
 	}
 }
 

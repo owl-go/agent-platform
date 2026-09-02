@@ -1,22 +1,26 @@
 import type { InjectionKey } from "vue";
 
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean }
-export interface Session { id: string; title: string; expert_id?: string; current_provider_model_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
+export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; current_provider_model_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[] }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number }
+export interface ExpertStage { expert_id: string; expert_name: string; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[] }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[] }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitSource { url: string; branch: string; private_ssh: boolean; credential_configured: boolean }
-export interface WorkflowInput { name: string; goal: string; expert_id?: string; provider_model_id?: string; runtime_engine?: RuntimeEngine; environment: EnvironmentVariable[]; schedule?: Schedule }
+export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; provider_model_id?: string; runtime_engine?: RuntimeEngine; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown> }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[] }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id: string; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
-export interface Expert { id: string; name: string; description: string; mcp_server_ids: string[]; skill_ids: string[]; created_at: string; updated_at: string; version: number }
+export interface ExpertInput { name: string; capability_introduction: string; execution_instruction: string; expertise_tags: string[]; mcp_server_ids: string[]; skill_ids: string[] }
+export interface Expert extends ExpertInput { id: string; available: boolean; created_at: string; updated_at: string; version: number }
+export interface ExpertTeamInput { name: string; capability_introduction: string; expertise_tags: string[]; expert_ids: string[] }
+export interface ExpertTeam extends Omit<ExpertTeamInput, "expert_ids"> { id: string; experts: Expert[]; available: boolean; created_at: string; updated_at: string; version: number }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
 export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number }
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
@@ -41,9 +45,10 @@ export class ApiError extends Error {
 
 export interface PlatformApi {
   listSessions(archived?: boolean, signal?: AbortSignal): Promise<Session[]>;
-  createSession(expertID?: string, signal?: AbortSignal): Promise<Session>;
+  createSession(selection?: { expert_id?: string; expert_team_id?: string }, signal?: AbortSignal): Promise<Session>;
   renameSession(id: string, title: string, version: number, signal?: AbortSignal): Promise<Session>;
   archiveSession(id: string, archived: boolean, version: number, signal?: AbortSignal): Promise<Session>;
+  setSessionExpertSelection(id: string, selection: { expert_id?: string; expert_team_id?: string }, version: number, signal?: AbortSignal): Promise<Session>;
   deleteSession(id: string, signal?: AbortSignal): Promise<void>;
   listSessionMessages(id: string, signal?: AbortSignal): Promise<SessionMessage[]>;
   streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
@@ -76,9 +81,15 @@ export interface PlatformApi {
   clearWorkspace(id: string, confirmation: string, signal?: AbortSignal): Promise<void>;
   cloneWorkspace(id: string, input: { url: string; branch: string; ssh_private_key?: string }, signal?: AbortSignal): Promise<Workflow>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
-  createExpert(input: Omit<Expert, "id" | "created_at" | "updated_at" | "version">, signal?: AbortSignal): Promise<Expert>;
-  updateExpert(id: string, input: Omit<Expert, "id" | "created_at" | "updated_at" | "version">, version: number, signal?: AbortSignal): Promise<Expert>;
+  getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
+  createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
+  updateExpert(id: string, input: ExpertInput, version: number, signal?: AbortSignal): Promise<Expert>;
   deleteExpert(id: string, signal?: AbortSignal): Promise<void>;
+  listExpertTeams(signal?: AbortSignal): Promise<ExpertTeam[]>;
+  getExpertTeam(id: string, signal?: AbortSignal): Promise<ExpertTeam>;
+  createExpertTeam(input: ExpertTeamInput, signal?: AbortSignal): Promise<ExpertTeam>;
+  updateExpertTeam(id: string, input: ExpertTeamInput, version: number, signal?: AbortSignal): Promise<ExpertTeam>;
+  deleteExpertTeam(id: string, signal?: AbortSignal): Promise<void>;
   getSettings(signal?: AbortSignal): Promise<PersonalSettings>;
   updateSettings(settings: PersonalSettings, signal?: AbortSignal): Promise<PersonalSettings>;
   listRuntimeEngines(signal?: AbortSignal): Promise<RuntimeEngineStatus[]>;
@@ -141,9 +152,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
     async listSessions(archived = false, signal) { return (await call<{ items: Session[] }>(`/api/v1/sessions?archived=${archived}`, { signal })).items ?? []; },
-    createSession(expertID, signal) { return call("/api/v1/sessions", json("POST", { expert_id: expertID }, signal)); },
+    createSession(selection = {}, signal) { return call("/api/v1/sessions", json("POST", selection, signal)); },
     renameSession(id, title, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}`, json("PATCH", { title, expected_version: version }, signal)); },
     archiveSession(id, archived, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/archived`, json("PATCH", { archived, expected_version: version }, signal)); },
+    setSessionExpertSelection(id, selection, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/expert-selection`, json("PATCH", { ...selection, expected_version: version }, signal)); },
     deleteSession(id, signal) { return remove(`/api/v1/sessions/${encodeURIComponent(id)}`, signal); },
     async listSessionMessages(id, signal) {
       const messages: SessionMessage[] = [];
@@ -256,9 +268,18 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);
     },
+    async getExpert(id, signal) { return normalizeExpert(await call(`/api/v1/experts/${encodeURIComponent(id)}`, { signal })); },
     async createExpert(input, signal) { return normalizeExpert(await call("/api/v1/experts", json("POST", { expert: input }, signal))); },
     async updateExpert(id, input, version, signal) { return normalizeExpert(await call(`/api/v1/experts/${encodeURIComponent(id)}`, json("PATCH", { expert: input, expected_version: version }, signal))); },
     deleteExpert(id, signal) { return remove(`/api/v1/experts/${encodeURIComponent(id)}`, signal); },
+    async listExpertTeams(signal) {
+      const items = (await call<{ items: ExpertTeam[] }>("/api/v1/expert-teams", { signal })).items ?? [];
+      return items.map(normalizeExpertTeam);
+    },
+    async getExpertTeam(id, signal) { return normalizeExpertTeam(await call(`/api/v1/expert-teams/${encodeURIComponent(id)}`, { signal })); },
+    async createExpertTeam(input, signal) { return normalizeExpertTeam(await call("/api/v1/expert-teams", json("POST", { expert_team: input }, signal))); },
+    async updateExpertTeam(id, input, version, signal) { return normalizeExpertTeam(await call(`/api/v1/expert-teams/${encodeURIComponent(id)}`, json("PATCH", { expert_team: input, expected_version: version }, signal))); },
+    deleteExpertTeam(id, signal) { return remove(`/api/v1/expert-teams/${encodeURIComponent(id)}`, signal); },
     async getSettings(signal) {
       const settings = await call<PersonalSettings>("/api/v1/settings", { signal });
       return { ...settings, runtime_model_defaults: settings.runtime_model_defaults ?? [] };
@@ -297,7 +318,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
 }
 
 function normalizeExpert(expert: Expert): Expert {
-  return { ...expert, mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [] };
+  return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [] };
+}
+
+function normalizeExpertTeam(team: ExpertTeam): ExpertTeam {
+  return { ...team, expertise_tags: team.expertise_tags ?? [], experts: (team.experts ?? []).map(normalizeExpert) };
 }
 
 async function request<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<T> {
@@ -335,5 +360,5 @@ function timestampString(value: unknown): unknown {
 }
 
 function normalizeRun(item: Run & { elapsed_ms?: number | string }): Run {
-  return { ...item, attachments: item.attachments ?? [], elapsed_ms: Number(item.elapsed_ms ?? 0) };
+  return { ...item, attachments: item.attachments ?? [], expert_stages: item.expert_stages ?? [], elapsed_ms: Number(item.elapsed_ms ?? 0) };
 }

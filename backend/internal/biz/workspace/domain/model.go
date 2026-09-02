@@ -40,6 +40,7 @@ type Session struct {
 	OwnerID                string
 	Title                  string
 	ExpertID               *string
+	ExpertTeamID           *string
 	CurrentProviderModelID *string
 	ArchivedAt             *time.Time
 	CreatedAt              time.Time
@@ -59,6 +60,7 @@ type Message struct {
 	CreatedAt        time.Time
 	ResponseSnapshot *ResponseSnapshot
 	Attachments      []Attachment
+	ExpertStages     []ExpertStage
 }
 
 // Attachment is an immutable reference to a user upload frozen onto one turn.
@@ -289,6 +291,7 @@ type WorkflowInput struct {
 	Name            string
 	Goal            string
 	ExpertID        *string
+	ExpertTeamID    *string
 	ProviderModelID *string
 	RuntimeEngine   *RuntimeEngine
 	Environment     []EnvironmentVariable
@@ -301,6 +304,9 @@ func (input WorkflowInput) Validate() error {
 	}
 	if goal := strings.TrimSpace(input.Goal); len(goal) < 1 || len(goal) > 100_000 {
 		return fmt.Errorf("%w: Workflow goal must contain 1-100000 characters", ErrInvalid)
+	}
+	if input.ExpertID != nil && input.ExpertTeamID != nil {
+		return fmt.Errorf("%w: choose either an Expert or an Expert Team", ErrInvalid)
 	}
 	if err := ValidateEnvironment(input.Environment); err != nil {
 		return err
@@ -317,6 +323,7 @@ type Workflow struct {
 	Name                    string
 	Goal                    string
 	ExpertID                *string
+	ExpertTeamID            *string
 	ProviderModelID         *string
 	RuntimeEngine           *RuntimeEngine
 	Environment             []EnvironmentVariable
@@ -331,32 +338,125 @@ type Workflow struct {
 }
 
 type ExpertInput struct {
-	Name         string
-	Description  string
-	MCPServerIDs []string
-	SkillIDs     []string
+	Name                   string
+	CapabilityIntroduction string
+	ExecutionInstruction   string
+	ExpertiseTags          []string
+	MCPServerIDs           []string
+	SkillIDs               []string
 }
 
 func (input ExpertInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert name must contain 1-100 characters", ErrInvalid)
 	}
-	if len(input.Description) > 2_000 || len(input.MCPServerIDs) > 50 || len(input.SkillIDs) > 50 {
+	if introduction := strings.TrimSpace(input.CapabilityIntroduction); len(introduction) < 1 || len(introduction) > 2_000 {
+		return fmt.Errorf("%w: Capability Introduction must contain 1-2000 characters", ErrInvalid)
+	}
+	if instruction := strings.TrimSpace(input.ExecutionInstruction); len(instruction) < 1 || len(instruction) > 20_000 {
+		return fmt.Errorf("%w: Execution Instruction must contain 1-20000 characters", ErrInvalid)
+	}
+	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
+		return err
+	}
+	if len(input.MCPServerIDs) > 50 || len(input.SkillIDs) > 50 {
 		return fmt.Errorf("%w: Expert configuration exceeds limits", ErrInvalid)
 	}
 	return nil
 }
 
 type Expert struct {
-	ID           string
-	OwnerID      string
-	Name         string
-	Description  string
-	MCPServerIDs []string
-	SkillIDs     []string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Version      int64
+	ID                     string
+	OwnerID                string
+	Name                   string
+	CapabilityIntroduction string
+	ExecutionInstruction   string
+	ExpertiseTags          []string
+	MCPServerIDs           []string
+	SkillIDs               []string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	Version                int64
+}
+
+func (expert Expert) Available() bool {
+	return strings.TrimSpace(expert.ExecutionInstruction) != ""
+}
+
+func ValidateExpertiseTags(tags []string) error {
+	if len(tags) > 10 {
+		return fmt.Errorf("%w: at most ten Expertise Tags are allowed", ErrInvalid)
+	}
+	seen := make(map[string]struct{}, len(tags))
+	for _, tag := range tags {
+		trimmed := strings.TrimSpace(tag)
+		if trimmed == "" || len([]rune(trimmed)) > 20 {
+			return fmt.Errorf("%w: Expertise Tags must contain 1-20 characters", ErrInvalid)
+		}
+		key := strings.ToLower(trimmed)
+		if _, exists := seen[key]; exists {
+			return fmt.Errorf("%w: duplicate Expertise Tag", ErrInvalid)
+		}
+		seen[key] = struct{}{}
+	}
+	return nil
+}
+
+type ExpertTeamInput struct {
+	Name                   string
+	CapabilityIntroduction string
+	ExpertiseTags          []string
+	ExpertIDs              []string
+}
+
+func (input ExpertTeamInput) Validate() error {
+	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
+		return fmt.Errorf("%w: Expert Team name must contain 1-100 characters", ErrInvalid)
+	}
+	if introduction := strings.TrimSpace(input.CapabilityIntroduction); len(introduction) < 1 || len(introduction) > 2_000 {
+		return fmt.Errorf("%w: Capability Introduction must contain 1-2000 characters", ErrInvalid)
+	}
+	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
+		return err
+	}
+	if len(input.ExpertIDs) < 2 || len(input.ExpertIDs) > 10 {
+		return fmt.Errorf("%w: Expert Team must contain 2-10 Experts", ErrInvalid)
+	}
+	seen := make(map[string]struct{}, len(input.ExpertIDs))
+	for _, expertID := range input.ExpertIDs {
+		if strings.TrimSpace(expertID) == "" {
+			return fmt.Errorf("%w: Expert Team member is required", ErrInvalid)
+		}
+		if _, exists := seen[expertID]; exists {
+			return fmt.Errorf("%w: duplicate Expert Team member", ErrInvalid)
+		}
+		seen[expertID] = struct{}{}
+	}
+	return nil
+}
+
+type ExpertTeam struct {
+	ID                     string
+	OwnerID                string
+	Name                   string
+	CapabilityIntroduction string
+	ExpertiseTags          []string
+	Experts                []Expert
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	Version                int64
+}
+
+func (team ExpertTeam) Available() bool {
+	if len(team.Experts) < 2 || len(team.Experts) > 10 {
+		return false
+	}
+	for _, expert := range team.Experts {
+		if !expert.Available() {
+			return false
+		}
+	}
+	return true
 }
 
 type ModelProviderPreset struct {
@@ -552,6 +652,7 @@ type Run struct {
 	TextInput        *string
 	JSONInput        map[string]any
 	Attachments      []Attachment
+	ExpertStages     []ExpertStage
 	FinalText        *string
 	FinalJSON        map[string]any
 	Error            string
@@ -559,6 +660,19 @@ type Run struct {
 	QueuedAt         time.Time
 	StartedAt        *time.Time
 	EndedAt          *time.Time
+}
+
+type ExpertStage struct {
+	ExpertID   string    `json:"expert_id"`
+	ExpertName string    `json:"expert_name"`
+	Position   int       `json:"position"`
+	Total      int       `json:"total"`
+	State      string    `json:"state"`
+	ElapsedMS  int64     `json:"elapsed_ms"`
+	FinalText  string    `json:"final_text,omitempty"`
+	Error      string    `json:"error,omitempty"`
+	StartedAt  time.Time `json:"started_at,omitempty"`
+	EndedAt    time.Time `json:"ended_at,omitempty"`
 }
 
 func ValidateWorkspacePath(value string) (string, error) {

@@ -32,12 +32,29 @@ func (repository *Repository) ListSessions(ctx context.Context, ownerID string, 
 	return items, nil
 }
 
-func (repository *Repository) CreateSession(ctx context.Context, ownerID string, expertID *string) (domain.Session, error) {
-	row := sessionRecord{ID: uuid.NewString(), OwnerID: ownerID, Title: "New session", ExpertID: expertID, Version: 1}
+func (repository *Repository) CreateSession(ctx context.Context, ownerID string, expertID, expertTeamID *string) (domain.Session, error) {
+	if expertID != nil && expertTeamID != nil {
+		return domain.Session{}, fmt.Errorf("%w: choose either an Expert or an Expert Team", domain.ErrInvalid)
+	}
+	row := sessionRecord{ID: uuid.NewString(), OwnerID: ownerID, Title: "New session", ExpertID: expertID, ExpertTeamID: expertTeamID, Version: 1}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ?", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+				return domain.ErrInvalid
+			}
+		}
+		if expertTeamID != nil {
+			var team expertTeamRecord
+			if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *expertTeamID).Take(&team).Error; err != nil {
+				return domain.ErrInvalid
+			}
+			var ids []string
+			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil || len(ids) < 2 {
+				return domain.ErrInvalid
+			}
+			var count int64
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
 				return domain.ErrInvalid
 			}
 		}
@@ -107,6 +124,57 @@ func (repository *Repository) SetSessionArchived(ctx context.Context, ownerID, s
 	})
 	if err != nil {
 		return domain.Session{}, fmt.Errorf("archive Session: %w", err)
+	}
+	return repository.GetSession(ctx, ownerID, sessionID)
+}
+
+func (repository *Repository) SetSessionExpertSelection(ctx context.Context, ownerID, sessionID string, expertID, expertTeamID *string, expectedVersion int64) (domain.Session, error) {
+	if expertID != nil && expertTeamID != nil {
+		return domain.Session{}, fmt.Errorf("%w: choose either an Expert or an Expert Team", domain.ErrInvalid)
+	}
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var session sessionRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND archived_at IS NULL AND version = ?", ownerID, sessionID, expectedVersion).Take(&session).Error; err != nil {
+			return mapNotFound(err)
+		}
+		var messageCount int64
+		if err := tx.Model(&messageRecord{}).Where("session_id = ?", sessionID).Count(&messageCount).Error; err != nil {
+			return err
+		}
+		if messageCount != 0 {
+			return fmt.Errorf("%w: Expert selection is frozen after the first message", domain.ErrConflict)
+		}
+		if expertID != nil {
+			var count int64
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+				return fmt.Errorf("%w: selected Expert is unavailable", domain.ErrInvalid)
+			}
+		}
+		if expertTeamID != nil {
+			var team expertTeamRecord
+			if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *expertTeamID).Take(&team).Error; err != nil {
+				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
+			}
+			var ids []string
+			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil || len(ids) < 2 {
+				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
+			}
+			var count int64
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
+			}
+		}
+		result := tx.Model(&sessionRecord{}).Where("id = ? AND version = ?", sessionID, expectedVersion).Updates(map[string]any{"expert_id": expertID, "expert_team_id": expertTeamID, "expert_snapshot": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.Session{}, fmt.Errorf("set Session Expert selection: %w", err)
 	}
 	return repository.GetSession(ctx, ownerID, sessionID)
 }
@@ -183,7 +251,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			}
 			snapshot = &selected
 		}
-		if session.ExpertID != nil && len(session.ExpertSnapshot) == 0 {
+		if (session.ExpertID != nil || session.ExpertTeamID != nil) && len(session.ExpertSnapshot) == 0 {
 			if _, err := loadSessionSnapshot(tx, session, *snapshot); err != nil {
 				return err
 			}
@@ -308,7 +376,7 @@ func (repository *Repository) session(ctx context.Context, ownerID, sessionID st
 }
 
 func sessionDomain(row sessionRecord) domain.Session {
-	return domain.Session{ID: row.ID, OwnerID: row.OwnerID, Title: row.Title, ExpertID: row.ExpertID, CurrentProviderModelID: row.CurrentProviderModelID, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Session{ID: row.ID, OwnerID: row.OwnerID, Title: row.Title, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, CurrentProviderModelID: row.CurrentProviderModelID, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 
 func messageDomain(row messageRecord) domain.Message {
@@ -324,6 +392,9 @@ func messageDomain(row messageRecord) domain.Message {
 	}
 	if len(row.Attachments) > 0 && string(row.Attachments) != "null" {
 		_ = json.Unmarshal(row.Attachments, &value.Attachments)
+	}
+	if len(row.ExpertStages) > 0 && string(row.ExpertStages) != "null" {
+		_ = json.Unmarshal(row.ExpertStages, &value.ExpertStages)
 	}
 	return value
 }

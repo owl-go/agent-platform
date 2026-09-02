@@ -2,9 +2,63 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
+
+func TestExpertInputRequiresIntroductionInstructionAndValidTags(t *testing.T) {
+	valid := ExpertInput{
+		Name:                   "Architecture Expert",
+		CapabilityIntroduction: "Designs maintainable systems.",
+		ExecutionInstruction:   "Review the task and propose a concrete architecture.",
+		ExpertiseTags:          []string{"Architecture", "Go"},
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid Expert input rejected: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*ExpertInput)
+	}{
+		{name: "missing capability introduction", mutate: func(input *ExpertInput) { input.CapabilityIntroduction = " " }},
+		{name: "missing execution instruction", mutate: func(input *ExpertInput) { input.ExecutionInstruction = " " }},
+		{name: "duplicate tags ignoring case", mutate: func(input *ExpertInput) { input.ExpertiseTags = []string{"Go", "go"} }},
+		{name: "too many tags", mutate: func(input *ExpertInput) { input.ExpertiseTags = make([]string, 11) }},
+		{name: "tag too long", mutate: func(input *ExpertInput) { input.ExpertiseTags = []string{strings.Repeat("x", 21)} }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := valid
+			test.mutate(&input)
+			if err := input.Validate(); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("Validate() error = %v, want ErrInvalid", err)
+			}
+		})
+	}
+}
+
+func TestMigratedExpertWithoutInstructionIsIncomplete(t *testing.T) {
+	expert := Expert{Name: "Legacy Expert", CapabilityIntroduction: "Old description"}
+	if expert.Available() {
+		t.Fatal("migrated Expert without an Execution Instruction is available")
+	}
+}
+
+func TestExpertTeamInputRequiresDistinctOrderedMembers(t *testing.T) {
+	valid := ExpertTeamInput{Name: "Delivery Team", CapabilityIntroduction: "Ships changes", ExpertiseTags: []string{"delivery"}, ExpertIDs: []string{"expert-a", "expert-b"}}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid Expert Team rejected: %v", err)
+	}
+	for _, members := range [][]string{{"expert-a"}, {"expert-a", "expert-a"}, make([]string, 11)} {
+		input := valid
+		input.ExpertIDs = members
+		if err := input.Validate(); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("members %#v error = %v, want ErrInvalid", members, err)
+		}
+	}
+}
 
 func TestValidateEnvironmentRejectsRuntimeControlVariables(t *testing.T) {
 	for _, name := range []string{"PATH", "CODEX_HOME", "GIT_SSH_COMMAND", "LD_PRELOAD", "AGENT_PLATFORM_WORKFLOW_B64"} {

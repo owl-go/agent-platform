@@ -147,6 +147,152 @@
         ]
       }
     },
+    "/api/v1/expert-teams": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListExpertTeams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExpertTeamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateExpertTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExpertTeam"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateExpertTeamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/expert-teams/{expert_team_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetExpertTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExpertTeam"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_team_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteExpertTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_team_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateExpertTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExpertTeam"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_team_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateExpertTeamBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/experts": {
       "get": {
         "operationId": "AgentWorkspaceService_ListExperts",
@@ -200,6 +346,34 @@
       }
     },
     "/api/v1/experts/{expert_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetExpert",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Expert"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expert_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
       "delete": {
         "operationId": "AgentWorkspaceService_DeleteExpert",
         "responses": {
@@ -983,6 +1157,44 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceSetSessionArchivedBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/expert-selection": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetSessionExpertSelection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Session"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSetSessionExpertSelectionBody"
             }
           }
         ],
@@ -2122,6 +2334,21 @@
         }
       }
     },
+    "AgentWorkspaceServiceSetSessionExpertSelectionBody": {
+      "type": "object",
+      "properties": {
+        "expert_id": {
+          "type": "string"
+        },
+        "expert_team_id": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "AgentWorkspaceServiceSetUserEnabledBody": {
       "type": "object",
       "properties": {
@@ -2142,6 +2369,18 @@
       "properties": {
         "expert": {
           "$ref": "#/definitions/v1ExpertInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateExpertTeamBody": {
+      "type": "object",
+      "properties": {
+        "expert_team": {
+          "$ref": "#/definitions/v1ExpertTeamInput"
         },
         "expected_version": {
           "type": "string",
@@ -2358,6 +2597,14 @@
         }
       }
     },
+    "v1CreateExpertTeamRequest": {
+      "type": "object",
+      "properties": {
+        "expert_team": {
+          "$ref": "#/definitions/v1ExpertTeamInput"
+        }
+      }
+    },
     "v1CreateMCPServerRequest": {
       "type": "object",
       "properties": {
@@ -2393,6 +2640,9 @@
       "type": "object",
       "properties": {
         "expert_id": {
+          "type": "string"
+        },
+        "expert_team_id": {
           "type": "string"
         }
       }
@@ -2508,7 +2758,7 @@
         "name": {
           "type": "string"
         },
-        "description": {
+        "capability_introduction": {
           "type": "string"
         },
         "mcp_server_ids": {
@@ -2534,6 +2784,18 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "execution_instruction": {
+          "type": "string"
+        },
+        "expertise_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "available": {
+          "type": "boolean"
         }
       }
     },
@@ -2543,7 +2805,7 @@
         "name": {
           "type": "string"
         },
-        "description": {
+        "capability_introduction": {
           "type": "string"
         },
         "mcp_server_ids": {
@@ -2553,6 +2815,112 @@
           }
         },
         "skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution_instruction": {
+          "type": "string"
+        },
+        "expertise_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1ExpertStage": {
+      "type": "object",
+      "properties": {
+        "expert_id": {
+          "type": "string"
+        },
+        "expert_name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "type": "string",
+          "format": "int64"
+        },
+        "final_text": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ExpertTeam": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "capability_introduction": {
+          "type": "string"
+        },
+        "expertise_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "experts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Expert"
+          }
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExpertTeamInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "capability_introduction": {
+          "type": "string"
+        },
+        "expertise_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expert_ids": {
           "type": "array",
           "items": {
             "type": "string"
@@ -2593,6 +2961,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Artifact"
+          }
+        }
+      }
+    },
+    "v1ListExpertTeamsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertTeam"
           }
         }
       }
@@ -3110,6 +3490,13 @@
             "type": "object",
             "$ref": "#/definitions/v1Attachment"
           }
+        },
+        "expert_stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertStage"
+          }
         }
       }
     },
@@ -3221,6 +3608,9 @@
         },
         "current_provider_model_id": {
           "type": "string"
+        },
+        "expert_team_id": {
+          "type": "string"
         }
       }
     },
@@ -3262,6 +3652,13 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Attachment"
+          }
+        },
+        "expert_stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertStage"
           }
         }
       }
@@ -3414,6 +3811,9 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "expert_team_id": {
+          "type": "string"
         }
       }
     },
@@ -3459,6 +3859,9 @@
         },
         "schedule": {
           "$ref": "#/definitions/v1Schedule"
+        },
+        "expert_team_id": {
+          "type": "string"
         }
       }
     },

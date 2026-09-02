@@ -43,6 +43,14 @@ type Executor struct {
 	materializer credentials.Materializer
 	objects      objectstore.Provider
 	warm         *containerprocess.WarmManager
+	checkout     func(context.Context, string) (runtimeLease, error)
+	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
+	executionTTL time.Duration
+}
+
+type runtimeLease interface {
+	Start(context.Context, containerprocess.Config) (cliadapter.RunProcess, error)
+	Release(context.Context) error
 }
 
 func New(config platformconfig.Config, box *secretcrypto.Box, objects objectstore.Provider, warm *containerprocess.WarmManager) (*Executor, error) {
@@ -56,7 +64,12 @@ func New(config platformconfig.Config, box *secretcrypto.Box, objects objectstor
 		return nil, err
 	}
 	owner := &credentials.Owner{UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID}
-	return &Executor{config: config, box: box, objects: objects, warm: warm, materializer: credentials.Materializer{Root: config.Worker.CredentialTempRoot, Owner: owner}}, nil
+	return &Executor{
+		config: config, box: box, objects: objects, warm: warm,
+		materializer: credentials.Materializer{Root: config.Worker.CredentialTempRoot, Owner: owner},
+		checkout:     func(ctx context.Context, name string) (runtimeLease, error) { return warm.Checkout(ctx, name) },
+		newAdapter:   runtimeAdapter, executionTTL: 2 * time.Hour,
+	}, nil
 }
 
 func (executor *Executor) Execute(ctx context.Context, job application.ExecutionJob, progress application.ProgressRecorder) (result application.ExecutionResult, returnErr error) {
@@ -80,47 +93,24 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if !ok || !runtimeConfig.Available {
 		return result, fmt.Errorf("Runtime %s is unavailable", job.Snapshot.RuntimeEngine)
 	}
-	variables, err := executor.environment(job)
-	if err != nil {
-		return result, err
-	}
-	files, extensionVariables, redactValues, err := executor.extensionFiles(ctx, job)
-	if err != nil {
-		return result, err
-	}
-	for name, value := range extensionVariables {
-		if _, exists := variables[name]; exists {
-			return result, fmt.Errorf("MCP credential environment collides with %s", name)
-		}
-		variables[name] = value
-	}
 	containerName, slot, err := executor.warmSlot(job, runtimeConfig)
 	if err != nil {
 		return result, err
 	}
-	lease, err := executor.warm.Checkout(ctx, containerName)
+	setupLease, err := executor.checkout(ctx, containerName)
 	if err != nil {
 		return result, err
 	}
-	var environment *credentials.Environment
 	workspace := slot.workspace
 	nativeState := ""
 	defer func() {
-		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-		defer cancel()
-		returnErr = errors.Join(returnErr, lease.Release(cleanupCtx))
-		if environment != nil {
-			returnErr = errors.Join(returnErr, environment.Cleanup())
-		}
+		returnErr = errors.Join(returnErr, releaseWarmLease(ctx, setupLease))
+		returnErr = errors.Join(returnErr, os.RemoveAll(slot.credentials))
 		returnErr = errors.Join(returnErr, os.RemoveAll(workspace), os.RemoveAll(slot.scratch))
 		if nativeState != "" {
 			returnErr = errors.Join(returnErr, os.RemoveAll(nativeState))
 		}
 	}()
-	environment, err = executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: files, RedactValues: redactValues}, slot.credentials)
-	if err != nil {
-		return result, err
-	}
 	workspace, persistent, baseline, err := executor.stageWorkspaceAt(job, slot.workspace)
 	if err != nil {
 		return result, err
@@ -136,48 +126,136 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if err != nil {
 		return result, err
 	}
-	containerConfig := containerprocess.Config{
-		Image: runtimeConfig.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
-		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: "/workspace",
-		CredentialDirectory: environment.Directory(), NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
-		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
-		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
-		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
-	}
-	runProcess, err := lease.Start(ctx, containerConfig)
-	if err != nil {
-		return result, err
-	}
 	sink := &eventSink{runID: job.ID, job: job, progress: progress}
-	adapter, err := runtimeAdapter(job.Snapshot.RuntimeEngine, cliadapter.Config{
-		ExpectedVersion: runtimeConfig.CLIVersion, RunProcess: runProcess,
-		ScratchRoot:          slot.scratch,
-		OutputSink:           processharness.NewRedactingSink(environment.Redactor(), discardOutput{}),
-		VerifiedCapabilities: map[agentruntime.Capability]bool{agentruntime.CapabilityStreaming: true, agentruntime.CapabilityNativeResume: runtimeConfig.NativeResume},
-	})
-	if err != nil {
-		return result, err
+	executionTTL := executor.executionTTL
+	if executionTTL <= 0 {
+		executionTTL = 2 * time.Hour
 	}
-	executionCtx, cancel := context.WithTimeout(ctx, 2*time.Hour)
+	executionCtx, cancel := context.WithTimeout(ctx, executionTTL)
 	defer cancel()
-	if _, err := adapter.Describe(executionCtx); err != nil {
-		return result, err
+	memberJobs := []application.ExecutionJob{job}
+	if team := job.Snapshot.ExpertTeam; team != nil {
+		memberJobs = make([]application.ExecutionJob, 0, len(team.Members))
+		for _, member := range team.Members {
+			memberJobs = append(memberJobs, teamMemberJob(job, member, result.ExpertStages))
+		}
 	}
-	instruction := buildInstruction(job, attachmentPaths)
-	checkpoint := job.CheckpointRef
-	if !runtimeConfig.NativeResume {
-		checkpoint = ""
+	var finalMessage, checkpointAfter string
+	var allRedactValues [][]byte
+	for index := range memberJobs {
+		memberJob := memberJobs[index]
+		var stage *workspacedomain.ExpertStage
+		if job.Snapshot.ExpertTeam != nil {
+			member := job.Snapshot.ExpertTeam.Members[index]
+			value := workspacedomain.ExpertStage{ExpertID: member.ID, ExpertName: member.Name, Position: member.Position, Total: len(job.Snapshot.ExpertTeam.Members), State: "running", StartedAt: time.Now().UTC()}
+			stage = &value
+			if err := recordExpertStage(executionCtx, progress, job, value); err != nil {
+				return result, err
+			}
+			// Include every preceding final result when building this member's isolated context.
+			memberJob = teamMemberJob(job, member, result.ExpertStages)
+		}
+		failStage := func(cause error) error {
+			if stage == nil || stage.State != "running" {
+				return cause
+			}
+			stage.State = "failed"
+			if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
+				stage.State = "cancelled"
+			}
+			stage.Error, stage.EndedAt = cause.Error(), time.Now().UTC()
+			stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
+			result.ExpertStages = append(result.ExpertStages, *stage)
+			recordCtx, recordCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+			recordErr := recordExpertStage(recordCtx, progress, job, *stage)
+			recordCancel()
+			return errors.Join(cause, recordErr)
+		}
+		lease := setupLease
+		if index > 0 {
+			lease, err = executor.checkout(executionCtx, containerName)
+			if err != nil {
+				return result, failStage(err)
+			}
+		}
+		variables, environmentFiles, redactValues, prepareErr := executor.memberEnvironment(executionCtx, memberJob)
+		if prepareErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			return result, failStage(prepareErr)
+		}
+		for _, value := range variables {
+			allRedactValues = append(allRedactValues, []byte(value))
+		}
+		for _, value := range environmentFiles {
+			allRedactValues = append(allRedactValues, append([]byte(nil), value...))
+		}
+		allRedactValues = append(allRedactValues, redactValues...)
+		environment, materializeErr := executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: environmentFiles, RedactValues: redactValues}, slot.credentials)
+		if materializeErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			return result, failStage(materializeErr)
+		}
+		containerConfig := executor.containerConfig(job, runtimeConfig, containerName, slot, workspace, nativeState, environment.Directory())
+		runProcess, startErr := lease.Start(executionCtx, containerConfig)
+		if startErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(startErr)
+		}
+		redactor := environment.Redactor()
+		sink.suppressMessages = job.Snapshot.ExpertTeam != nil && index < len(memberJobs)-1
+		adapter, adapterErr := executor.newAdapter(job.Snapshot.RuntimeEngine, cliadapter.Config{
+			ExpectedVersion: runtimeConfig.CLIVersion, RunProcess: runProcess,
+			ScratchRoot:          slot.scratch,
+			OutputSink:           processharness.NewRedactingSink(redactor, discardOutput{}),
+			VerifiedCapabilities: map[agentruntime.Capability]bool{agentruntime.CapabilityStreaming: true, agentruntime.CapabilityNativeResume: runtimeConfig.NativeResume},
+		})
+		if adapterErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(adapterErr)
+		}
+		if _, describeErr := adapter.Describe(executionCtx); describeErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(describeErr)
+		}
+		instruction := buildInstruction(memberJob, attachmentPaths)
+		checkpoint := memberJob.CheckpointRef
+		if !runtimeConfig.NativeResume || job.Snapshot.ExpertTeam != nil {
+			checkpoint = ""
+		}
+		if runtimeStartedAt.IsZero() {
+			runtimeStartedAt = time.Now()
+		}
+		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
+			RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: job.Snapshot.ProviderModel.ModelID,
+			ModelEndpoint: job.Snapshot.ProviderModel.Endpoint, ModelProvider: job.Snapshot.ProviderModel.ProviderType, ModelProtocols: job.Snapshot.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(memberJob),
+		}, agentruntime.NewRedactingEventSink(redactor, sink))
+		runtimeFinishedAt = time.Now()
+		releaseErr := releaseWarmLease(ctx, lease)
+		credentialCleanupErr := environment.Cleanup()
+		if index == 0 {
+			setupLease = nil
+		}
+		if executeErr != nil {
+			return result, failStage(errors.Join(executeErr, releaseErr, credentialCleanupErr))
+		}
+		if releaseErr != nil || credentialCleanupErr != nil {
+			return result, failStage(errors.Join(releaseErr, credentialCleanupErr))
+		}
+		finalMessage = string(redactor.Bytes([]byte(runtimeResult.FinalMessage)))
+		checkpointAfter = runtimeResult.CheckpointRef
+		if stage != nil {
+			stage.State, stage.FinalText, stage.EndedAt = "succeeded", finalMessage, time.Now().UTC()
+			stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
+			result.ExpertStages = append(result.ExpertStages, *stage)
+			if err := recordExpertStage(executionCtx, progress, job, *stage); err != nil {
+				return result, err
+			}
+		}
 	}
-	redactor := environment.Redactor()
-	runtimeStartedAt = time.Now()
-	runtimeResult, err := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
-		RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: job.Snapshot.ProviderModel.ModelID,
-		ModelEndpoint: job.Snapshot.ProviderModel.Endpoint, ModelProvider: job.Snapshot.ProviderModel.ProviderType, ModelProtocols: job.Snapshot.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(job),
-	}, agentruntime.NewRedactingEventSink(redactor, sink))
-	runtimeFinishedAt = time.Now()
-	if err != nil {
-		return result, err
-	}
+	redactor := credentials.NewRedactor(allRedactValues...)
 	if nativeState != "" {
 		nativeSessions := filepath.Join(nativeState, "sessions")
 		if err := sanitizeNativeState(nativeSessions, redactor); err != nil {
@@ -187,7 +265,6 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, fmt.Errorf("persist native Runtime state: %w", err)
 		}
 	}
-	finalMessage := string(redactor.Bytes([]byte(runtimeResult.FinalMessage)))
 	var artifacts []application.ExecutionArtifact
 	if persistent != "" {
 		used, err := executionWorkspaceSize(workspace)
@@ -210,7 +287,57 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, err
 		}
 	}
-	return application.ExecutionResult{FinalMessage: finalMessage, CheckpointRef: runtimeResult.CheckpointRef, Artifacts: artifacts}, nil
+	result.FinalMessage, result.CheckpointRef, result.Artifacts = finalMessage, checkpointAfter, artifacts
+	return result, nil
+}
+
+func releaseWarmLease(ctx context.Context, lease runtimeLease) error {
+	if lease == nil {
+		return nil
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+	defer cancel()
+	return lease.Release(cleanupCtx)
+}
+
+func (executor *Executor) memberEnvironment(ctx context.Context, job application.ExecutionJob) (map[string]string, map[string][]byte, [][]byte, error) {
+	variables, err := executor.environment(job)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	files, extensionVariables, redactValues, err := executor.extensionFiles(ctx, job)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	for name, value := range extensionVariables {
+		if _, exists := variables[name]; exists {
+			return nil, nil, nil, fmt.Errorf("MCP credential environment collides with %s", name)
+		}
+		variables[name] = value
+	}
+	return variables, files, redactValues, nil
+}
+
+func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory string) containerprocess.Config {
+	return containerprocess.Config{
+		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
+		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: "/workspace",
+		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
+		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
+		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
+		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
+	}
+}
+
+func recordExpertStage(ctx context.Context, progress application.ProgressRecorder, job application.ExecutionJob, stage workspacedomain.ExpertStage) error {
+	if progress == nil {
+		return fmt.Errorf("Runtime progress recorder is required")
+	}
+	payload, err := json.Marshal(stage)
+	if err != nil {
+		return err
+	}
+	return progress.RecordProgress(ctx, job, application.ExecutionEvent{Type: "expert.stage.updated", Payload: payload})
 }
 
 func prepareRuntimeScratch(path string, uid, gid int) error {
@@ -669,6 +796,11 @@ func workspaceManifest(root string) (map[string]string, error) {
 
 func buildInstruction(job application.ExecutionJob, attachmentPaths []string) string {
 	var sections []string
+	if job.Snapshot.Expert != nil {
+		if instruction := strings.TrimSpace(job.Snapshot.Expert.ExecutionInstruction); instruction != "" {
+			sections = append(sections, "Expert Execution Instruction (follow for this execution):\n"+instruction)
+		}
+	}
 	preferences := personalityGuidance(job.Snapshot.Personality)
 	if value := strings.TrimSpace(job.Snapshot.PersonalityInstructions); value != "" {
 		if preferences != "" {
@@ -691,6 +823,23 @@ func buildInstruction(job application.ExecutionJob, attachmentPaths []string) st
 	}
 	sections = append(sections, job.Instruction)
 	return strings.Join(sections, "\n\n")
+}
+
+func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertMemberSnapshot, completed []workspacedomain.ExpertStage) application.ExecutionJob {
+	job := base
+	job.CheckpointRef = ""
+	job.Snapshot.ExpertTeam = nil
+	job.Snapshot.Expert = &member.ExpertSnapshot
+	job.Snapshot.MCPServers = append([]workspacedomain.MCPServerSnapshot(nil), member.MCPServers...)
+	job.Snapshot.Skills = append([]workspacedomain.SkillSnapshot(nil), member.Skills...)
+	if len(completed) > 0 {
+		var prior []string
+		for _, stage := range completed {
+			prior = append(prior, stage.ExpertName+":\n"+stage.FinalText)
+		}
+		job.Instruction = base.Instruction + "\n\nFinal results from preceding Experts (use as collaboration context; do not repeat blindly):\n\n" + strings.Join(prior, "\n\n")
+	}
+	return job
 }
 
 func (executor *Executor) materializeAttachments(ctx context.Context, job application.ExecutionJob, scratch string) ([]string, error) {
@@ -771,9 +920,10 @@ func runtimeAdapter(engine workspacedomain.RuntimeEngine, config cliadapter.Conf
 }
 
 type eventSink struct {
-	runID    string
-	job      application.ExecutionJob
-	progress application.ProgressRecorder
+	runID            string
+	job              application.ExecutionJob
+	progress         application.ProgressRecorder
+	suppressMessages bool
 }
 
 func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) error {
@@ -782,6 +932,9 @@ func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) er
 	}
 	if sink.progress == nil {
 		return fmt.Errorf("Runtime progress recorder is required")
+	}
+	if sink.suppressMessages && (event.Kind == agentruntime.EventMessageCompleted || event.Kind == agentruntime.EventRuntimeCompleted) {
+		return nil
 	}
 	return sink.progress.RecordProgress(ctx, sink.job, application.ExecutionEvent{Type: string(event.Kind), Payload: append([]byte(nil), event.Payload...)})
 }
