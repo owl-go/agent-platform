@@ -265,7 +265,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
-		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot, ExpertStages: emptyStages}
+		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot, Attachments: emptyStages, ExpertStages: emptyStages}
 		if err := tx.Create(&assistant).Error; err != nil {
 			return err
 		}
