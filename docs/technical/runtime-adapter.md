@@ -4,7 +4,9 @@
 
 Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Code、Codex、Hermes、OpenClaw 与 PI Agent 的命令参数、版本探测和输出解析保留在各自 Driver，共享的进程、容器和事件行为位于 `cliadapter`、`processharness` 与 `containerprocess`。
 
-一个 Execute 接收不可变的 Run/Session 输入、临时 Workspace、Model ID、凭证引用、可选原生 Resume Checkpoint 和 MCP 配置路径。Instruction 通过 stdin 或受控临时文件传递，绝不拼接 Shell 命令。
+一个 Execute 接收不可变的 Run/Session 输入、临时 Workspace、Model ID、凭证引用、可选原生 Resume Checkpoint 和 MCP 配置路径。Instruction 通过 stdin、独立参数值或受控临时文件传递，绝不拼接 Shell 命令。
+
+Runtime JSONL 的单个结构化事件允许增长到本次执行的总输出上限，因为 Codex 等 CLI 会在一行 `command_execution` 事件中携带完整工具输出。进程输出仍受 64 MB 总量硬限制；超过总量时立即终止，不能用较小的通用单行限制误杀合法事件。
 
 事件约束：
 

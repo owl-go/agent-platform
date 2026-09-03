@@ -80,7 +80,7 @@ func New(driver Driver, config Config) *Adapter {
 		config.MaxOutputBytes = 64 * 1024 * 1024
 	}
 	if config.MaxLineBytes == 0 {
-		config.MaxLineBytes = 1024 * 1024
+		config.MaxLineBytes = config.MaxOutputBytes
 	}
 	return &Adapter{driver: driver, config: config}
 }

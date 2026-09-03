@@ -76,6 +76,26 @@ func TestAdapterStopsWhenEventSinkFails(t *testing.T) {
 	}
 }
 
+func TestAdapterAllowsStructuredEventWithinTotalOutputLimit(t *testing.T) {
+	final := strings.Repeat("x", 2*1024*1024)
+	runner := &largeEventProcessRunner{line: `{"final":"` + final + `"}` + "\n"}
+	adapter := New(fakeDriver{}, Config{
+		Command:         []string{"fake-runtime"},
+		ExpectedVersion: "1.2.3",
+		RunProcess:      runner.Run,
+	})
+
+	result, err := adapter.Execute(context.Background(), agentruntime.ExecuteRequest{
+		RunID: "run-1", WorkspacePath: t.TempDir(), Instruction: "fix", Model: "model", EnvironmentRef: "env-1",
+	}, &recordingEventSink{})
+	if err != nil {
+		t.Fatalf("execute large structured event: %v", err)
+	}
+	if result.FinalMessage != final {
+		t.Fatalf("final message bytes = %d, want %d", len(result.FinalMessage), len(final))
+	}
+}
+
 func TestAdapterPausesForControlledWorkflowApprovalEvent(t *testing.T) {
 	runner := &approvalProcessRunner{}
 	adapter := New(fakeDriver{}, Config{Command: []string{"fake-runtime"}, ExpectedVersion: "1.2.3", RunProcess: runner.Run})
@@ -146,6 +166,18 @@ func (p *fakeParser) Result() ParsedResult { return p.result }
 
 type fakeProcessRunner struct {
 	calls int
+}
+
+type largeEventProcessRunner struct{ line string }
+
+func (runner *largeEventProcessRunner) Run(ctx context.Context, spec processharness.Spec, _ processharness.OutputSink) (processharness.Result, error) {
+	if int64(len(runner.line)) > spec.MaxLineBytes {
+		return processharness.Result{}, processharness.ErrLineLimit
+	}
+	if err := spec.Observer.Observe(ctx, processharness.StreamStdout, []byte(runner.line)); err != nil {
+		return processharness.Result{}, err
+	}
+	return processharness.Result{ExitCode: 0, StdoutBytes: int64(len(runner.line))}, nil
 }
 
 type approvalProcessRunner struct{ controller recordingController }
