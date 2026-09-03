@@ -28,7 +28,7 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 
 ## API
 
-`backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。认证使用 Bearer OIDC Token。Workflow API Credential 只允许通过 HTTP Basic 启动和查看该 Workflow 的 Run，不代表 User 身份。
+`backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；返回的 15 分钟 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
 工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
 
@@ -37,11 +37,11 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 - `GET /api/v1/workflows/{workflow_id}/runs/{run_id}/events`：SSE 历史回放、实时事件与 Heartbeat。
 - `GET /api/v1/sessions/{session_id}/messages/{message_id}/events`：按 Owner 隔离持续推送 Assistant Message 快照。快照只暴露受限的产品进度阶段与已脱敏答案，不暴露 Runtime 原始事件、命令内容或模型私有推理；完成、失败或取消后关闭连接。
 - `GET /api/v1/workflows/{workflow_id}/workspace/download?path=...`：认证后流式下载 Workspace 文件。
-- `POST /api/v1/workflows/{workflow_id}/workspace/upload?path=...`：认证后以二进制流上传最多 100 MiB，避免把文件 Base64 放入普通 JSON 请求。
+- Workspace HTTP API 只提供目录查看、文本预览和文件下载；Git Clone 由 `/api/v1/workflows/{workflow_id}/git-source` 设置入口完成。
 
 ## Secret
 
-Model Provider API Key、Workflow Secret 环境变量、MCP Secret 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。执行时 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
+Model Provider API Key、Workflow Secret 环境变量、MCP Secret、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。执行时 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
 
 ## 数据库
 

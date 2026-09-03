@@ -144,3 +144,27 @@ func TestProviderCredentialDoesNotEnterExecutionSnapshotJSON(t *testing.T) {
 		t.Fatalf("credential leaked into Execution Snapshot: %s", encoded)
 	}
 }
+
+func TestGitSourceAuthenticationAndConfigValidation(t *testing.T) {
+	username := "developer"
+	valid := []GitSource{
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none"},
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "basic", Username: &username, CredentialConfigured: true},
+		{URL: "git@git.example.test:team/project.git", Branch: "main", Authentication: "ssh", CredentialConfigured: true, Config: []GitConfigEntry{{Key: "user.name", Value: "Agent"}}},
+	}
+	for _, source := range valid {
+		if err := ValidateGitSource(source); err != nil {
+			t.Fatalf("valid Git source rejected: %v", err)
+		}
+	}
+	for _, source := range []GitSource{
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "basic"},
+		{URL: "https://user:secret@git.example.test/team/project.git", Branch: "main", Authentication: "none"},
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none", Config: []GitConfigEntry{{Key: "credential.helper", Value: "store"}}},
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none", Config: []GitConfigEntry{{Key: "core.sshCommand", Value: "sh -c anything"}}},
+	} {
+		if err := ValidateGitSource(source); err == nil {
+			t.Fatalf("unsafe Git source accepted: %#v", source)
+		}
+	}
+}

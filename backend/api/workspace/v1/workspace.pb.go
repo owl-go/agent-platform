@@ -2372,19 +2372,73 @@ func (x *Schedule) GetTimezone() string {
 	return ""
 }
 
+type GitConfigEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GitConfigEntry) Reset() {
+	*x = GitConfigEntry{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GitConfigEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GitConfigEntry) ProtoMessage() {}
+
+func (x *GitConfigEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GitConfigEntry.ProtoReflect.Descriptor instead.
+func (*GitConfigEntry) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *GitConfigEntry) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *GitConfigEntry) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 type GitSource struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Url                  string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
 	Branch               string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty"`
-	PrivateSsh           bool                   `protobuf:"varint,3,opt,name=private_ssh,json=privateSsh,proto3" json:"private_ssh,omitempty"`
+	Authentication       string                 `protobuf:"bytes,3,opt,name=authentication,proto3" json:"authentication,omitempty"`
 	CredentialConfigured bool                   `protobuf:"varint,4,opt,name=credential_configured,json=credentialConfigured,proto3" json:"credential_configured,omitempty"`
+	Username             *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Config               []*GitConfigEntry      `protobuf:"bytes,6,rep,name=config,proto3" json:"config,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GitSource) Reset() {
 	*x = GitSource{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2396,7 +2450,7 @@ func (x *GitSource) String() string {
 func (*GitSource) ProtoMessage() {}
 
 func (x *GitSource) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2409,7 +2463,7 @@ func (x *GitSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitSource.ProtoReflect.Descriptor instead.
 func (*GitSource) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{37}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GitSource) GetUrl() string {
@@ -2426,11 +2480,11 @@ func (x *GitSource) GetBranch() string {
 	return ""
 }
 
-func (x *GitSource) GetPrivateSsh() bool {
+func (x *GitSource) GetAuthentication() string {
 	if x != nil {
-		return x.PrivateSsh
+		return x.Authentication
 	}
-	return false
+	return ""
 }
 
 func (x *GitSource) GetCredentialConfigured() bool {
@@ -2438,6 +2492,20 @@ func (x *GitSource) GetCredentialConfigured() bool {
 		return x.CredentialConfigured
 	}
 	return false
+}
+
+func (x *GitSource) GetUsername() string {
+	if x != nil && x.Username != nil {
+		return *x.Username
+	}
+	return ""
+}
+
+func (x *GitSource) GetConfig() []*GitConfigEntry {
+	if x != nil {
+		return x.Config
+	}
+	return nil
 }
 
 type GenerateWorkflowCredentialRequest struct {
@@ -2449,7 +2517,7 @@ type GenerateWorkflowCredentialRequest struct {
 
 func (x *GenerateWorkflowCredentialRequest) Reset() {
 	*x = GenerateWorkflowCredentialRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2461,7 +2529,7 @@ func (x *GenerateWorkflowCredentialRequest) String() string {
 func (*GenerateWorkflowCredentialRequest) ProtoMessage() {}
 
 func (x *GenerateWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2474,7 +2542,7 @@ func (x *GenerateWorkflowCredentialRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GenerateWorkflowCredentialRequest.ProtoReflect.Descriptor instead.
 func (*GenerateWorkflowCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{38}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GenerateWorkflowCredentialRequest) GetWorkflowId() string {
@@ -2495,7 +2563,7 @@ type WorkflowCredential struct {
 
 func (x *WorkflowCredential) Reset() {
 	*x = WorkflowCredential{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2507,7 +2575,7 @@ func (x *WorkflowCredential) String() string {
 func (*WorkflowCredential) ProtoMessage() {}
 
 func (x *WorkflowCredential) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2520,7 +2588,7 @@ func (x *WorkflowCredential) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowCredential.ProtoReflect.Descriptor instead.
 func (*WorkflowCredential) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{39}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *WorkflowCredential) GetApiKey() string {
@@ -2544,6 +2612,110 @@ func (x *WorkflowCredential) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type ExchangeWorkflowCredentialRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeWorkflowCredentialRequest) Reset() {
+	*x = ExchangeWorkflowCredentialRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeWorkflowCredentialRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeWorkflowCredentialRequest) ProtoMessage() {}
+
+func (x *ExchangeWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeWorkflowCredentialRequest.ProtoReflect.Descriptor instead.
+func (*ExchangeWorkflowCredentialRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ExchangeWorkflowCredentialRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+type WorkflowAccessToken struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JwtToken      string                 `protobuf:"bytes,1,opt,name=jwt_token,json=jwtToken,proto3" json:"jwt_token,omitempty"`
+	TokenType     string                 `protobuf:"bytes,2,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowAccessToken) Reset() {
+	*x = WorkflowAccessToken{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowAccessToken) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowAccessToken) ProtoMessage() {}
+
+func (x *WorkflowAccessToken) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowAccessToken.ProtoReflect.Descriptor instead.
+func (*WorkflowAccessToken) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *WorkflowAccessToken) GetJwtToken() string {
+	if x != nil {
+		return x.JwtToken
+	}
+	return ""
+}
+
+func (x *WorkflowAccessToken) GetTokenType() string {
+	if x != nil {
+		return x.TokenType
+	}
+	return ""
+}
+
+func (x *WorkflowAccessToken) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 type RunWorkflowRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -2555,7 +2727,7 @@ type RunWorkflowRequest struct {
 
 func (x *RunWorkflowRequest) Reset() {
 	*x = RunWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2567,7 +2739,7 @@ func (x *RunWorkflowRequest) String() string {
 func (*RunWorkflowRequest) ProtoMessage() {}
 
 func (x *RunWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2580,7 +2752,7 @@ func (x *RunWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*RunWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{40}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *RunWorkflowRequest) GetWorkflowId() string {
@@ -2613,7 +2785,7 @@ type ListRunsRequest struct {
 
 func (x *ListRunsRequest) Reset() {
 	*x = ListRunsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2625,7 +2797,7 @@ func (x *ListRunsRequest) String() string {
 func (*ListRunsRequest) ProtoMessage() {}
 
 func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2638,7 +2810,7 @@ func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{41}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListRunsRequest) GetWorkflowId() string {
@@ -2657,7 +2829,7 @@ type ListRunsResponse struct {
 
 func (x *ListRunsResponse) Reset() {
 	*x = ListRunsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2669,7 +2841,7 @@ func (x *ListRunsResponse) String() string {
 func (*ListRunsResponse) ProtoMessage() {}
 
 func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2682,7 +2854,7 @@ func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{42}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListRunsResponse) GetItems() []*Run {
@@ -2702,7 +2874,7 @@ type GetRunRequest struct {
 
 func (x *GetRunRequest) Reset() {
 	*x = GetRunRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2714,7 +2886,7 @@ func (x *GetRunRequest) String() string {
 func (*GetRunRequest) ProtoMessage() {}
 
 func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2727,7 +2899,7 @@ func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunRequest.ProtoReflect.Descriptor instead.
 func (*GetRunRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{43}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *GetRunRequest) GetWorkflowId() string {
@@ -2754,7 +2926,7 @@ type ListRunTurnsRequest struct {
 
 func (x *ListRunTurnsRequest) Reset() {
 	*x = ListRunTurnsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2766,7 +2938,7 @@ func (x *ListRunTurnsRequest) String() string {
 func (*ListRunTurnsRequest) ProtoMessage() {}
 
 func (x *ListRunTurnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2779,7 +2951,7 @@ func (x *ListRunTurnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunTurnsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunTurnsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{44}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ListRunTurnsRequest) GetWorkflowId() string {
@@ -2808,7 +2980,7 @@ type ContinueRunConversationRequest struct {
 
 func (x *ContinueRunConversationRequest) Reset() {
 	*x = ContinueRunConversationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2820,7 +2992,7 @@ func (x *ContinueRunConversationRequest) String() string {
 func (*ContinueRunConversationRequest) ProtoMessage() {}
 
 func (x *ContinueRunConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2833,7 +3005,7 @@ func (x *ContinueRunConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueRunConversationRequest.ProtoReflect.Descriptor instead.
 func (*ContinueRunConversationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{45}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ContinueRunConversationRequest) GetWorkflowId() string {
@@ -2874,7 +3046,7 @@ type CancelRunRequest struct {
 
 func (x *CancelRunRequest) Reset() {
 	*x = CancelRunRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2886,7 +3058,7 @@ func (x *CancelRunRequest) String() string {
 func (*CancelRunRequest) ProtoMessage() {}
 
 func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2899,7 +3071,7 @@ func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRunRequest.ProtoReflect.Descriptor instead.
 func (*CancelRunRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{46}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *CancelRunRequest) GetWorkflowId() string {
@@ -2926,7 +3098,7 @@ type RerunWorkflowRequest struct {
 
 func (x *RerunWorkflowRequest) Reset() {
 	*x = RerunWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2938,7 +3110,7 @@ func (x *RerunWorkflowRequest) String() string {
 func (*RerunWorkflowRequest) ProtoMessage() {}
 
 func (x *RerunWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2951,7 +3123,7 @@ func (x *RerunWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RerunWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*RerunWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{47}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *RerunWorkflowRequest) GetWorkflowId() string {
@@ -2995,7 +3167,7 @@ type Run struct {
 
 func (x *Run) Reset() {
 	*x = Run{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3007,7 +3179,7 @@ func (x *Run) String() string {
 func (*Run) ProtoMessage() {}
 
 func (x *Run) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3020,7 +3192,7 @@ func (x *Run) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Run.ProtoReflect.Descriptor instead.
 func (*Run) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{48}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *Run) GetId() string {
@@ -3165,7 +3337,7 @@ type ListArtifactsRequest struct {
 
 func (x *ListArtifactsRequest) Reset() {
 	*x = ListArtifactsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3177,7 +3349,7 @@ func (x *ListArtifactsRequest) String() string {
 func (*ListArtifactsRequest) ProtoMessage() {}
 
 func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3190,7 +3362,7 @@ func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*ListArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{49}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ListArtifactsRequest) GetWorkflowId() string {
@@ -3209,7 +3381,7 @@ type ListArtifactsResponse struct {
 
 func (x *ListArtifactsResponse) Reset() {
 	*x = ListArtifactsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3221,7 +3393,7 @@ func (x *ListArtifactsResponse) String() string {
 func (*ListArtifactsResponse) ProtoMessage() {}
 
 func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3234,7 +3406,7 @@ func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*ListArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{50}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ListArtifactsResponse) GetItems() []*Artifact {
@@ -3254,7 +3426,7 @@ type GetArtifactDownloadRequest struct {
 
 func (x *GetArtifactDownloadRequest) Reset() {
 	*x = GetArtifactDownloadRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3266,7 +3438,7 @@ func (x *GetArtifactDownloadRequest) String() string {
 func (*GetArtifactDownloadRequest) ProtoMessage() {}
 
 func (x *GetArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3279,7 +3451,7 @@ func (x *GetArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtifactDownloadRequest.ProtoReflect.Descriptor instead.
 func (*GetArtifactDownloadRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{51}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetArtifactDownloadRequest) GetWorkflowId() string {
@@ -3306,7 +3478,7 @@ type ArtifactDownload struct {
 
 func (x *ArtifactDownload) Reset() {
 	*x = ArtifactDownload{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3318,7 +3490,7 @@ func (x *ArtifactDownload) String() string {
 func (*ArtifactDownload) ProtoMessage() {}
 
 func (x *ArtifactDownload) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3331,7 +3503,7 @@ func (x *ArtifactDownload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArtifactDownload.ProtoReflect.Descriptor instead.
 func (*ArtifactDownload) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{52}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ArtifactDownload) GetUrl() string {
@@ -3367,7 +3539,7 @@ type Artifact struct {
 
 func (x *Artifact) Reset() {
 	*x = Artifact{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3379,7 +3551,7 @@ func (x *Artifact) String() string {
 func (*Artifact) ProtoMessage() {}
 
 func (x *Artifact) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3392,7 +3564,7 @@ func (x *Artifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Artifact.ProtoReflect.Descriptor instead.
 func (*Artifact) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{53}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *Artifact) GetId() string {
@@ -3482,7 +3654,7 @@ type ListWorkspaceEntriesRequest struct {
 
 func (x *ListWorkspaceEntriesRequest) Reset() {
 	*x = ListWorkspaceEntriesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3494,7 +3666,7 @@ func (x *ListWorkspaceEntriesRequest) String() string {
 func (*ListWorkspaceEntriesRequest) ProtoMessage() {}
 
 func (x *ListWorkspaceEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3507,7 +3679,7 @@ func (x *ListWorkspaceEntriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceEntriesRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{54}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ListWorkspaceEntriesRequest) GetWorkflowId() string {
@@ -3535,7 +3707,7 @@ type ListWorkspaceEntriesResponse struct {
 
 func (x *ListWorkspaceEntriesResponse) Reset() {
 	*x = ListWorkspaceEntriesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3547,7 +3719,7 @@ func (x *ListWorkspaceEntriesResponse) String() string {
 func (*ListWorkspaceEntriesResponse) ProtoMessage() {}
 
 func (x *ListWorkspaceEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3560,7 +3732,7 @@ func (x *ListWorkspaceEntriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceEntriesResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceEntriesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{55}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListWorkspaceEntriesResponse) GetItems() []*WorkspaceEntry {
@@ -3584,118 +3756,6 @@ func (x *ListWorkspaceEntriesResponse) GetLimitBytes() int64 {
 	return 0
 }
 
-type CreateWorkspaceDirectoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateWorkspaceDirectoryRequest) Reset() {
-	*x = CreateWorkspaceDirectoryRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateWorkspaceDirectoryRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateWorkspaceDirectoryRequest) ProtoMessage() {}
-
-func (x *CreateWorkspaceDirectoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateWorkspaceDirectoryRequest.ProtoReflect.Descriptor instead.
-func (*CreateWorkspaceDirectoryRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{56}
-}
-
-func (x *CreateWorkspaceDirectoryRequest) GetWorkflowId() string {
-	if x != nil {
-		return x.WorkflowId
-	}
-	return ""
-}
-
-func (x *CreateWorkspaceDirectoryRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-type UploadWorkspaceFileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	Content       []byte                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UploadWorkspaceFileRequest) Reset() {
-	*x = UploadWorkspaceFileRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UploadWorkspaceFileRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UploadWorkspaceFileRequest) ProtoMessage() {}
-
-func (x *UploadWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UploadWorkspaceFileRequest.ProtoReflect.Descriptor instead.
-func (*UploadWorkspaceFileRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{57}
-}
-
-func (x *UploadWorkspaceFileRequest) GetWorkflowId() string {
-	if x != nil {
-		return x.WorkflowId
-	}
-	return ""
-}
-
-func (x *UploadWorkspaceFileRequest) GetPath() string {
-	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-func (x *UploadWorkspaceFileRequest) GetContent() []byte {
-	if x != nil {
-		return x.Content
-	}
-	return nil
-}
-
 type GetWorkspaceFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -3706,7 +3766,7 @@ type GetWorkspaceFileRequest struct {
 
 func (x *GetWorkspaceFileRequest) Reset() {
 	*x = GetWorkspaceFileRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3718,7 +3778,7 @@ func (x *GetWorkspaceFileRequest) String() string {
 func (*GetWorkspaceFileRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3731,7 +3791,7 @@ func (x *GetWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceFileRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceFileRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{58}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *GetWorkspaceFileRequest) GetWorkflowId() string {
@@ -3761,7 +3821,7 @@ type WorkspaceFile struct {
 
 func (x *WorkspaceFile) Reset() {
 	*x = WorkspaceFile{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3773,7 +3833,7 @@ func (x *WorkspaceFile) String() string {
 func (*WorkspaceFile) ProtoMessage() {}
 
 func (x *WorkspaceFile) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3786,7 +3846,7 @@ func (x *WorkspaceFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceFile.ProtoReflect.Descriptor instead.
 func (*WorkspaceFile) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{59}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *WorkspaceFile) GetPath() string {
@@ -3824,82 +3884,34 @@ func (x *WorkspaceFile) GetModifiedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-type ClearWorkspaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Confirmation  string                 `protobuf:"bytes,2,opt,name=confirmation,proto3" json:"confirmation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type ConfigureWorkflowGitSourceRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId     string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Url            string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	Branch         string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`
+	Authentication string                 `protobuf:"bytes,4,opt,name=authentication,proto3" json:"authentication,omitempty"`
+	Username       *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Password       *string                `protobuf:"bytes,6,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	SshPrivateKey  *string                `protobuf:"bytes,7,opt,name=ssh_private_key,json=sshPrivateKey,proto3,oneof" json:"ssh_private_key,omitempty"`
+	Config         []*GitConfigEntry      `protobuf:"bytes,8,rep,name=config,proto3" json:"config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *ClearWorkspaceRequest) Reset() {
-	*x = ClearWorkspaceRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ClearWorkspaceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ClearWorkspaceRequest) ProtoMessage() {}
-
-func (x *ClearWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ClearWorkspaceRequest.ProtoReflect.Descriptor instead.
-func (*ClearWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{60}
-}
-
-func (x *ClearWorkspaceRequest) GetWorkflowId() string {
-	if x != nil {
-		return x.WorkflowId
-	}
-	return ""
-}
-
-func (x *ClearWorkspaceRequest) GetConfirmation() string {
-	if x != nil {
-		return x.Confirmation
-	}
-	return ""
-}
-
-type CloneWorkspaceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`
-	SshPrivateKey *string                `protobuf:"bytes,4,opt,name=ssh_private_key,json=sshPrivateKey,proto3,oneof" json:"ssh_private_key,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CloneWorkspaceRequest) Reset() {
-	*x = CloneWorkspaceRequest{}
+func (x *ConfigureWorkflowGitSourceRequest) Reset() {
+	*x = ConfigureWorkflowGitSourceRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CloneWorkspaceRequest) String() string {
+func (x *ConfigureWorkflowGitSourceRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CloneWorkspaceRequest) ProtoMessage() {}
+func (*ConfigureWorkflowGitSourceRequest) ProtoMessage() {}
 
-func (x *CloneWorkspaceRequest) ProtoReflect() protoreflect.Message {
+func (x *ConfigureWorkflowGitSourceRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -3911,37 +3923,65 @@ func (x *CloneWorkspaceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CloneWorkspaceRequest.ProtoReflect.Descriptor instead.
-func (*CloneWorkspaceRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigureWorkflowGitSourceRequest.ProtoReflect.Descriptor instead.
+func (*ConfigureWorkflowGitSourceRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{61}
 }
 
-func (x *CloneWorkspaceRequest) GetWorkflowId() string {
+func (x *ConfigureWorkflowGitSourceRequest) GetWorkflowId() string {
 	if x != nil {
 		return x.WorkflowId
 	}
 	return ""
 }
 
-func (x *CloneWorkspaceRequest) GetUrl() string {
+func (x *ConfigureWorkflowGitSourceRequest) GetUrl() string {
 	if x != nil {
 		return x.Url
 	}
 	return ""
 }
 
-func (x *CloneWorkspaceRequest) GetBranch() string {
+func (x *ConfigureWorkflowGitSourceRequest) GetBranch() string {
 	if x != nil {
 		return x.Branch
 	}
 	return ""
 }
 
-func (x *CloneWorkspaceRequest) GetSshPrivateKey() string {
+func (x *ConfigureWorkflowGitSourceRequest) GetAuthentication() string {
+	if x != nil {
+		return x.Authentication
+	}
+	return ""
+}
+
+func (x *ConfigureWorkflowGitSourceRequest) GetUsername() string {
+	if x != nil && x.Username != nil {
+		return *x.Username
+	}
+	return ""
+}
+
+func (x *ConfigureWorkflowGitSourceRequest) GetPassword() string {
+	if x != nil && x.Password != nil {
+		return *x.Password
+	}
+	return ""
+}
+
+func (x *ConfigureWorkflowGitSourceRequest) GetSshPrivateKey() string {
 	if x != nil && x.SshPrivateKey != nil {
 		return *x.SshPrivateKey
 	}
 	return ""
+}
+
+func (x *ConfigureWorkflowGitSourceRequest) GetConfig() []*GitConfigEntry {
+	if x != nil {
+		return x.Config
+	}
+	return nil
 }
 
 type WorkspaceEntry struct {
@@ -7560,13 +7600,18 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x04hour\x18\x03 \x01(\x05R\x04hour\x12\x16\n" +
 	"\x06minute\x18\x04 \x01(\x05R\x06minute\x12\x18\n" +
 	"\aweekday\x18\x05 \x01(\x05R\aweekday\x12\x1a\n" +
-	"\btimezone\x18\x06 \x01(\tR\btimezone\"\x8b\x01\n" +
+	"\btimezone\x18\x06 \x01(\tR\btimezone\"8\n" +
+	"\x0eGitConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\xf6\x01\n" +
 	"\tGitSource\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x16\n" +
-	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1f\n" +
-	"\vprivate_ssh\x18\x03 \x01(\bR\n" +
-	"privateSsh\x123\n" +
-	"\x15credential_configured\x18\x04 \x01(\bR\x14credentialConfigured\"D\n" +
+	"\x06branch\x18\x02 \x01(\tR\x06branch\x12&\n" +
+	"\x0eauthentication\x18\x03 \x01(\tR\x0eauthentication\x123\n" +
+	"\x15credential_configured\x18\x04 \x01(\bR\x14credentialConfigured\x12\x1f\n" +
+	"\busername\x18\x05 \x01(\tH\x00R\busername\x88\x01\x01\x124\n" +
+	"\x06config\x18\x06 \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06configB\v\n" +
+	"\t_username\"D\n" +
 	"!GenerateWorkflowCredentialRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\"\x87\x01\n" +
@@ -7575,7 +7620,16 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"api_secret\x18\x02 \x01(\tR\tapiSecret\x129\n" +
 	"\n" +
-	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb4\x01\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"D\n" +
+	"!ExchangeWorkflowCredentialRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\"\x8c\x01\n" +
+	"\x13WorkflowAccessToken\x12\x1b\n" +
+	"\tjwt_token\x18\x01 \x01(\tR\bjwtToken\x12\x1d\n" +
+	"\n" +
+	"token_type\x18\x02 \x01(\tR\ttokenType\x129\n" +
+	"\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xb4\x01\n" +
 	"\x12RunWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\"\n" +
@@ -7690,16 +7744,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"used_bytes\x18\x02 \x01(\x03R\tusedBytes\x12\x1f\n" +
 	"\vlimit_bytes\x18\x03 \x01(\x03R\n" +
-	"limitBytes\"V\n" +
-	"\x1fCreateWorkspaceDirectoryRequest\x12\x1f\n" +
-	"\vworkflow_id\x18\x01 \x01(\tR\n" +
-	"workflowId\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"k\n" +
-	"\x1aUploadWorkspaceFileRequest\x12\x1f\n" +
-	"\vworkflow_id\x18\x01 \x01(\tR\n" +
-	"workflowId\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\fR\acontent\"N\n" +
+	"limitBytes\"N\n" +
 	"\x17GetWorkspaceFileRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x12\n" +
@@ -7710,17 +7755,19 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x12\n" +
 	"\x04size\x18\x04 \x01(\x03R\x04size\x12;\n" +
 	"\vmodified_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"modifiedAt\"\\\n" +
-	"\x15ClearWorkspaceRequest\x12\x1f\n" +
-	"\vworkflow_id\x18\x01 \x01(\tR\n" +
-	"workflowId\x12\"\n" +
-	"\fconfirmation\x18\x02 \x01(\tR\fconfirmation\"\xa3\x01\n" +
-	"\x15CloneWorkspaceRequest\x12\x1f\n" +
+	"modifiedAt\"\xe9\x02\n" +
+	"!ConfigureWorkflowGitSourceRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +
-	"\x06branch\x18\x03 \x01(\tR\x06branch\x12+\n" +
-	"\x0fssh_private_key\x18\x04 \x01(\tH\x00R\rsshPrivateKey\x88\x01\x01B\x12\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12&\n" +
+	"\x0eauthentication\x18\x04 \x01(\tR\x0eauthentication\x12\x1f\n" +
+	"\busername\x18\x05 \x01(\tH\x00R\busername\x88\x01\x01\x12\x1f\n" +
+	"\bpassword\x18\x06 \x01(\tH\x01R\bpassword\x88\x01\x01\x12+\n" +
+	"\x0fssh_private_key\x18\a \x01(\tH\x02R\rsshPrivateKey\x88\x01\x01\x124\n" +
+	"\x06config\x18\b \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06configB\v\n" +
+	"\t_usernameB\v\n" +
+	"\t_passwordB\x12\n" +
 	"\x10_ssh_private_key\"\xa7\x01\n" +
 	"\x0eWorkspaceEntry\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
@@ -8016,7 +8063,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x12\n" +
 	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x16\n" +
 	"\x06sha256\x18\x05 \x01(\tR\x06sha256\x12\x14\n" +
-	"\x05image\x18\x06 \x01(\bR\x05image2\x98F\n" +
+	"\x05image\x18\x06 \x01(\bR\x05image2\xfaC\n" +
 	"\x15AgentWorkspaceService\x12d\n" +
 	"\x0eGetCurrentUser\x12#.workspace.v1.GetCurrentUserRequest\x1a\x19.workspace.v1.CurrentUser\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/api/v1/me\x12i\n" +
@@ -8042,7 +8089,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\vGetWorkflow\x12 .workspace.v1.GetWorkflowRequest\x1a\x16.workspace.v1.Workflow\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/workflows/{workflow_id}\x12y\n" +
 	"\x0eUpdateWorkflow\x12#.workspace.v1.UpdateWorkflowRequest\x1a\x16.workspace.v1.Workflow\"*\x82\xd3\xe4\x93\x02$:\x01*2\x1f/api/v1/workflows/{workflow_id}\x12|\n" +
 	"\x0eDeleteWorkflow\x12#.workspace.v1.DeleteWorkflowRequest\x1a\x1c.workspace.v1.DeleteResponse\"'\x82\xd3\xe4\x93\x02!*\x1f/api/v1/workflows/{workflow_id}\x12\xaa\x01\n" +
-	"\x1aGenerateWorkflowCredential\x12/.workspace.v1.GenerateWorkflowCredentialRequest\x1a .workspace.v1.WorkflowCredential\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/workflows/{workflow_id}/api-credential\x12s\n" +
+	"\x1aGenerateWorkflowCredential\x12/.workspace.v1.GenerateWorkflowCredentialRequest\x1a .workspace.v1.WorkflowCredential\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/workflows/{workflow_id}/api-credential\x12\xa6\x01\n" +
+	"\x1aExchangeWorkflowCredential\x12/.workspace.v1.ExchangeWorkflowCredentialRequest\x1a!.workspace.v1.WorkflowAccessToken\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/workflows/{workflow_id}/api-token\x12s\n" +
 	"\vRunWorkflow\x12 .workspace.v1.RunWorkflowRequest\x1a\x11.workspace.v1.Run\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/workflows/{workflow_id}/runs\x12w\n" +
 	"\bListRuns\x12\x1d.workspace.v1.ListRunsRequest\x1a\x1e.workspace.v1.ListRunsResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/v1/workflows/{workflow_id}/runs\x12o\n" +
 	"\x06GetRun\x12\x1b.workspace.v1.GetRunRequest\x1a\x11.workspace.v1.Run\"5\x82\xd3\xe4\x93\x02/\x12-/api/v1/workflows/{workflow_id}/runs/{run_id}\x12\x8e\x01\n" +
@@ -8052,12 +8100,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\rRerunWorkflow\x12\".workspace.v1.RerunWorkflowRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun\x12\x8b\x01\n" +
 	"\rListArtifacts\x12\".workspace.v1.ListArtifactsRequest\x1a#.workspace.v1.ListArtifactsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/artifacts\x12\xa9\x01\n" +
 	"\x13GetArtifactDownload\x12(.workspace.v1.GetArtifactDownloadRequest\x1a\x1e.workspace.v1.ArtifactDownload\"H\x82\xd3\xe4\x93\x02B\x12@/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download\x12\xa0\x01\n" +
-	"\x14ListWorkspaceEntries\x12).workspace.v1.ListWorkspaceEntriesRequest\x1a*.workspace.v1.ListWorkspaceEntriesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/workspace\x12\xa9\x01\n" +
-	"\x18CreateWorkspaceDirectory\x12-.workspace.v1.CreateWorkspaceDirectoryRequest\x1a\x1c.workspace.v1.WorkspaceEntry\"@\x82\xd3\xe4\x93\x02::\x01*\"5/api/v1/workflows/{workflow_id}/workspace/directories\x12\x99\x01\n" +
-	"\x13UploadWorkspaceFile\x12(.workspace.v1.UploadWorkspaceFileRequest\x1a\x1c.workspace.v1.WorkspaceEntry\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/workflows/{workflow_id}/workspace/files\x12\x8e\x01\n" +
-	"\x10GetWorkspaceFile\x12%.workspace.v1.GetWorkspaceFileRequest\x1a\x1b.workspace.v1.WorkspaceFile\"6\x82\xd3\xe4\x93\x020\x12./api/v1/workflows/{workflow_id}/workspace/file\x12\x8f\x01\n" +
-	"\x0eClearWorkspace\x12#.workspace.v1.ClearWorkspaceRequest\x1a\x1c.workspace.v1.DeleteResponse\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/workflows/{workflow_id}/workspace/clear\x12\x89\x01\n" +
-	"\x0eCloneWorkspace\x12#.workspace.v1.CloneWorkspaceRequest\x1a\x16.workspace.v1.Workflow\":\x82\xd3\xe4\x93\x024:\x01*\"//api/v1/workflows/{workflow_id}/workspace/clone\x12k\n" +
+	"\x14ListWorkspaceEntries\x12).workspace.v1.ListWorkspaceEntriesRequest\x1a*.workspace.v1.ListWorkspaceEntriesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/workspace\x12\x8e\x01\n" +
+	"\x10GetWorkspaceFile\x12%.workspace.v1.GetWorkspaceFileRequest\x1a\x1b.workspace.v1.WorkspaceFile\"6\x82\xd3\xe4\x93\x020\x12./api/v1/workflows/{workflow_id}/workspace/file\x12\x9c\x01\n" +
+	"\x1aConfigureWorkflowGitSource\x12/.workspace.v1.ConfigureWorkflowGitSourceRequest\x1a\x16.workspace.v1.Workflow\"5\x82\xd3\xe4\x93\x02/:\x01*\x1a*/api/v1/workflows/{workflow_id}/git-source\x12k\n" +
 	"\vListExperts\x12 .workspace.v1.ListExpertsRequest\x1a!.workspace.v1.ListExpertsResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/api/v1/experts\x12f\n" +
 	"\tGetExpert\x12\x1e.workspace.v1.GetExpertRequest\x1a\x14.workspace.v1.Expert\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/experts/{expert_id}\x12c\n" +
 	"\fCreateExpert\x12!.workspace.v1.CreateExpertRequest\x1a\x14.workspace.v1.Expert\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/api/v1/experts\x12o\n" +
@@ -8140,31 +8185,31 @@ var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*Workflow)(nil),                             // 34: workspace.v1.Workflow
 	(*EnvironmentVariable)(nil),                  // 35: workspace.v1.EnvironmentVariable
 	(*Schedule)(nil),                             // 36: workspace.v1.Schedule
-	(*GitSource)(nil),                            // 37: workspace.v1.GitSource
-	(*GenerateWorkflowCredentialRequest)(nil),    // 38: workspace.v1.GenerateWorkflowCredentialRequest
-	(*WorkflowCredential)(nil),                   // 39: workspace.v1.WorkflowCredential
-	(*RunWorkflowRequest)(nil),                   // 40: workspace.v1.RunWorkflowRequest
-	(*ListRunsRequest)(nil),                      // 41: workspace.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),                     // 42: workspace.v1.ListRunsResponse
-	(*GetRunRequest)(nil),                        // 43: workspace.v1.GetRunRequest
-	(*ListRunTurnsRequest)(nil),                  // 44: workspace.v1.ListRunTurnsRequest
-	(*ContinueRunConversationRequest)(nil),       // 45: workspace.v1.ContinueRunConversationRequest
-	(*CancelRunRequest)(nil),                     // 46: workspace.v1.CancelRunRequest
-	(*RerunWorkflowRequest)(nil),                 // 47: workspace.v1.RerunWorkflowRequest
-	(*Run)(nil),                                  // 48: workspace.v1.Run
-	(*ListArtifactsRequest)(nil),                 // 49: workspace.v1.ListArtifactsRequest
-	(*ListArtifactsResponse)(nil),                // 50: workspace.v1.ListArtifactsResponse
-	(*GetArtifactDownloadRequest)(nil),           // 51: workspace.v1.GetArtifactDownloadRequest
-	(*ArtifactDownload)(nil),                     // 52: workspace.v1.ArtifactDownload
-	(*Artifact)(nil),                             // 53: workspace.v1.Artifact
-	(*ListWorkspaceEntriesRequest)(nil),          // 54: workspace.v1.ListWorkspaceEntriesRequest
-	(*ListWorkspaceEntriesResponse)(nil),         // 55: workspace.v1.ListWorkspaceEntriesResponse
-	(*CreateWorkspaceDirectoryRequest)(nil),      // 56: workspace.v1.CreateWorkspaceDirectoryRequest
-	(*UploadWorkspaceFileRequest)(nil),           // 57: workspace.v1.UploadWorkspaceFileRequest
-	(*GetWorkspaceFileRequest)(nil),              // 58: workspace.v1.GetWorkspaceFileRequest
-	(*WorkspaceFile)(nil),                        // 59: workspace.v1.WorkspaceFile
-	(*ClearWorkspaceRequest)(nil),                // 60: workspace.v1.ClearWorkspaceRequest
-	(*CloneWorkspaceRequest)(nil),                // 61: workspace.v1.CloneWorkspaceRequest
+	(*GitConfigEntry)(nil),                       // 37: workspace.v1.GitConfigEntry
+	(*GitSource)(nil),                            // 38: workspace.v1.GitSource
+	(*GenerateWorkflowCredentialRequest)(nil),    // 39: workspace.v1.GenerateWorkflowCredentialRequest
+	(*WorkflowCredential)(nil),                   // 40: workspace.v1.WorkflowCredential
+	(*ExchangeWorkflowCredentialRequest)(nil),    // 41: workspace.v1.ExchangeWorkflowCredentialRequest
+	(*WorkflowAccessToken)(nil),                  // 42: workspace.v1.WorkflowAccessToken
+	(*RunWorkflowRequest)(nil),                   // 43: workspace.v1.RunWorkflowRequest
+	(*ListRunsRequest)(nil),                      // 44: workspace.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                     // 45: workspace.v1.ListRunsResponse
+	(*GetRunRequest)(nil),                        // 46: workspace.v1.GetRunRequest
+	(*ListRunTurnsRequest)(nil),                  // 47: workspace.v1.ListRunTurnsRequest
+	(*ContinueRunConversationRequest)(nil),       // 48: workspace.v1.ContinueRunConversationRequest
+	(*CancelRunRequest)(nil),                     // 49: workspace.v1.CancelRunRequest
+	(*RerunWorkflowRequest)(nil),                 // 50: workspace.v1.RerunWorkflowRequest
+	(*Run)(nil),                                  // 51: workspace.v1.Run
+	(*ListArtifactsRequest)(nil),                 // 52: workspace.v1.ListArtifactsRequest
+	(*ListArtifactsResponse)(nil),                // 53: workspace.v1.ListArtifactsResponse
+	(*GetArtifactDownloadRequest)(nil),           // 54: workspace.v1.GetArtifactDownloadRequest
+	(*ArtifactDownload)(nil),                     // 55: workspace.v1.ArtifactDownload
+	(*Artifact)(nil),                             // 56: workspace.v1.Artifact
+	(*ListWorkspaceEntriesRequest)(nil),          // 57: workspace.v1.ListWorkspaceEntriesRequest
+	(*ListWorkspaceEntriesResponse)(nil),         // 58: workspace.v1.ListWorkspaceEntriesResponse
+	(*GetWorkspaceFileRequest)(nil),              // 59: workspace.v1.GetWorkspaceFileRequest
+	(*WorkspaceFile)(nil),                        // 60: workspace.v1.WorkspaceFile
+	(*ConfigureWorkflowGitSourceRequest)(nil),    // 61: workspace.v1.ConfigureWorkflowGitSourceRequest
 	(*WorkspaceEntry)(nil),                       // 62: workspace.v1.WorkspaceEntry
 	(*ListExpertsRequest)(nil),                   // 63: workspace.v1.ListExpertsRequest
 	(*ListExpertsResponse)(nil),                  // 64: workspace.v1.ListExpertsResponse
@@ -8243,195 +8288,194 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	36,  // 17: workspace.v1.WorkflowInput.schedule:type_name -> workspace.v1.Schedule
 	35,  // 18: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
 	36,  // 19: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
-	37,  // 20: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
+	38,  // 20: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
 	116, // 21: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
 	116, // 22: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
-	116, // 23: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
-	117, // 24: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
-	48,  // 25: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
-	117, // 26: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
-	117, // 27: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
-	116, // 28: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
-	116, // 29: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	116, // 30: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	117, // 31: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
-	115, // 32: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
-	79,  // 33: workspace.v1.Run.expert_stages:type_name -> workspace.v1.ExpertStage
-	53,  // 34: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
-	116, // 35: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
-	116, // 36: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
-	116, // 37: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
-	62,  // 38: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
-	116, // 39: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
-	116, // 40: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
-	70,  // 41: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
-	69,  // 42: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	69,  // 43: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	116, // 44: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
-	116, // 45: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
-	78,  // 46: workspace.v1.ListExpertTeamsResponse.items:type_name -> workspace.v1.ExpertTeam
-	77,  // 47: workspace.v1.CreateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
-	77,  // 48: workspace.v1.UpdateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
-	70,  // 49: workspace.v1.ExpertTeam.experts:type_name -> workspace.v1.Expert
-	116, // 50: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
-	116, // 51: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
-	83,  // 52: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	83,  // 53: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	86,  // 54: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
-	89,  // 55: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
-	97,  // 56: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
-	116, // 57: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
-	98,  // 58: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
-	116, // 59: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
-	116, // 60: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
-	99,  // 61: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
-	107, // 62: workspace.v1.ListMCPServersResponse.items:type_name -> workspace.v1.MCPServer
-	106, // 63: workspace.v1.CreateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	106, // 64: workspace.v1.UpdateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	35,  // 65: workspace.v1.MCPServerInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	35,  // 66: workspace.v1.MCPServer.environment:type_name -> workspace.v1.EnvironmentVariable
-	116, // 67: workspace.v1.MCPServer.created_at:type_name -> google.protobuf.Timestamp
-	116, // 68: workspace.v1.MCPServer.updated_at:type_name -> google.protobuf.Timestamp
-	113, // 69: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
-	116, // 70: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
-	116, // 71: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
-	0,   // 72: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
-	2,   // 73: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
-	4,   // 74: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
-	6,   // 75: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
-	7,   // 76: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
-	10,  // 77: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
-	12,  // 78: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
-	13,  // 79: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
-	14,  // 80: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
-	15,  // 81: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
-	16,  // 82: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
-	17,  // 83: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
-	19,  // 84: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
-	21,  // 85: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
-	23,  // 86: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
-	24,  // 87: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
-	27,  // 88: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
-	29,  // 89: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
-	30,  // 90: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
-	31,  // 91: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
-	32,  // 92: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
-	38,  // 93: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
-	40,  // 94: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
-	41,  // 95: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
-	43,  // 96: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
-	44,  // 97: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
-	45,  // 98: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
-	46,  // 99: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
-	47,  // 100: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
-	49,  // 101: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
-	51,  // 102: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
-	54,  // 103: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
-	56,  // 104: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:input_type -> workspace.v1.CreateWorkspaceDirectoryRequest
-	57,  // 105: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:input_type -> workspace.v1.UploadWorkspaceFileRequest
-	58,  // 106: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
-	60,  // 107: workspace.v1.AgentWorkspaceService.ClearWorkspace:input_type -> workspace.v1.ClearWorkspaceRequest
-	61,  // 108: workspace.v1.AgentWorkspaceService.CloneWorkspace:input_type -> workspace.v1.CloneWorkspaceRequest
-	63,  // 109: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
-	65,  // 110: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
-	66,  // 111: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
-	67,  // 112: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
-	68,  // 113: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
-	71,  // 114: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
-	73,  // 115: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
-	74,  // 116: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
-	75,  // 117: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
-	76,  // 118: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
-	80,  // 119: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
-	81,  // 120: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
-	84,  // 121: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
-	87,  // 122: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
-	90,  // 123: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
-	92,  // 124: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
-	93,  // 125: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
-	94,  // 126: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
-	95,  // 127: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
-	96,  // 128: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	100, // 129: workspace.v1.AgentWorkspaceService.ListMCPServers:input_type -> workspace.v1.ListMCPServersRequest
-	102, // 130: workspace.v1.AgentWorkspaceService.CreateMCPServer:input_type -> workspace.v1.CreateMCPServerRequest
-	103, // 131: workspace.v1.AgentWorkspaceService.UpdateMCPServer:input_type -> workspace.v1.UpdateMCPServerRequest
-	104, // 132: workspace.v1.AgentWorkspaceService.TestMCPServer:input_type -> workspace.v1.TestMCPServerRequest
-	105, // 133: workspace.v1.AgentWorkspaceService.DeleteMCPServer:input_type -> workspace.v1.DeleteMCPServerRequest
-	108, // 134: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
-	110, // 135: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
-	111, // 136: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
-	112, // 137: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
-	1,   // 138: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
-	3,   // 139: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
-	5,   // 140: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
-	9,   // 141: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
-	8,   // 142: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
-	11,  // 143: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
-	18,  // 144: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
-	18,  // 145: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
-	18,  // 146: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
-	18,  // 147: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
-	18,  // 148: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
-	114, // 149: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
-	20,  // 150: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
-	22,  // 151: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	22,  // 152: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	25,  // 153: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
-	28,  // 154: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
-	34,  // 155: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
-	34,  // 156: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
-	34,  // 157: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
-	114, // 158: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
-	39,  // 159: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	48,  // 160: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
-	42,  // 161: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
-	48,  // 162: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
-	42,  // 163: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
-	48,  // 164: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
-	48,  // 165: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
-	48,  // 166: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
-	50,  // 167: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
-	52,  // 168: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
-	55,  // 169: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
-	62,  // 170: workspace.v1.AgentWorkspaceService.CreateWorkspaceDirectory:output_type -> workspace.v1.WorkspaceEntry
-	62,  // 171: workspace.v1.AgentWorkspaceService.UploadWorkspaceFile:output_type -> workspace.v1.WorkspaceEntry
-	59,  // 172: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
-	114, // 173: workspace.v1.AgentWorkspaceService.ClearWorkspace:output_type -> workspace.v1.DeleteResponse
-	34,  // 174: workspace.v1.AgentWorkspaceService.CloneWorkspace:output_type -> workspace.v1.Workflow
-	64,  // 175: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
-	70,  // 176: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
-	70,  // 177: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
-	70,  // 178: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
-	114, // 179: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
-	72,  // 180: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
-	78,  // 181: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
-	78,  // 182: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	78,  // 183: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	114, // 184: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
-	82,  // 185: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
-	82,  // 186: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
-	85,  // 187: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
-	88,  // 188: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
-	91,  // 189: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
-	97,  // 190: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	97,  // 191: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	114, // 192: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
-	97,  // 193: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
-	98,  // 194: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	101, // 195: workspace.v1.AgentWorkspaceService.ListMCPServers:output_type -> workspace.v1.ListMCPServersResponse
-	107, // 196: workspace.v1.AgentWorkspaceService.CreateMCPServer:output_type -> workspace.v1.MCPServer
-	107, // 197: workspace.v1.AgentWorkspaceService.UpdateMCPServer:output_type -> workspace.v1.MCPServer
-	107, // 198: workspace.v1.AgentWorkspaceService.TestMCPServer:output_type -> workspace.v1.MCPServer
-	114, // 199: workspace.v1.AgentWorkspaceService.DeleteMCPServer:output_type -> workspace.v1.DeleteResponse
-	109, // 200: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
-	113, // 201: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
-	113, // 202: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
-	114, // 203: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
-	138, // [138:204] is the sub-list for method output_type
-	72,  // [72:138] is the sub-list for method input_type
-	72,  // [72:72] is the sub-list for extension type_name
-	72,  // [72:72] is the sub-list for extension extendee
-	0,   // [0:72] is the sub-list for field type_name
+	37,  // 23: workspace.v1.GitSource.config:type_name -> workspace.v1.GitConfigEntry
+	116, // 24: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
+	116, // 25: workspace.v1.WorkflowAccessToken.expires_at:type_name -> google.protobuf.Timestamp
+	117, // 26: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
+	51,  // 27: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
+	117, // 28: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
+	117, // 29: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
+	116, // 30: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
+	116, // 31: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	116, // 32: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	117, // 33: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
+	115, // 34: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
+	79,  // 35: workspace.v1.Run.expert_stages:type_name -> workspace.v1.ExpertStage
+	56,  // 36: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
+	116, // 37: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
+	116, // 38: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
+	116, // 39: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
+	62,  // 40: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
+	116, // 41: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
+	37,  // 42: workspace.v1.ConfigureWorkflowGitSourceRequest.config:type_name -> workspace.v1.GitConfigEntry
+	116, // 43: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
+	70,  // 44: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
+	69,  // 45: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	69,  // 46: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	116, // 47: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
+	116, // 48: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
+	78,  // 49: workspace.v1.ListExpertTeamsResponse.items:type_name -> workspace.v1.ExpertTeam
+	77,  // 50: workspace.v1.CreateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
+	77,  // 51: workspace.v1.UpdateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
+	70,  // 52: workspace.v1.ExpertTeam.experts:type_name -> workspace.v1.Expert
+	116, // 53: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
+	116, // 54: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
+	83,  // 55: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	83,  // 56: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	86,  // 57: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
+	89,  // 58: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
+	97,  // 59: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
+	116, // 60: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
+	98,  // 61: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
+	116, // 62: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
+	116, // 63: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
+	99,  // 64: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
+	107, // 65: workspace.v1.ListMCPServersResponse.items:type_name -> workspace.v1.MCPServer
+	106, // 66: workspace.v1.CreateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
+	106, // 67: workspace.v1.UpdateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
+	35,  // 68: workspace.v1.MCPServerInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	35,  // 69: workspace.v1.MCPServer.environment:type_name -> workspace.v1.EnvironmentVariable
+	116, // 70: workspace.v1.MCPServer.created_at:type_name -> google.protobuf.Timestamp
+	116, // 71: workspace.v1.MCPServer.updated_at:type_name -> google.protobuf.Timestamp
+	113, // 72: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
+	116, // 73: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
+	116, // 74: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
+	0,   // 75: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
+	2,   // 76: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
+	4,   // 77: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
+	6,   // 78: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
+	7,   // 79: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
+	10,  // 80: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
+	12,  // 81: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
+	13,  // 82: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
+	14,  // 83: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
+	15,  // 84: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
+	16,  // 85: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
+	17,  // 86: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
+	19,  // 87: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
+	21,  // 88: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
+	23,  // 89: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
+	24,  // 90: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
+	27,  // 91: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
+	29,  // 92: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
+	30,  // 93: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
+	31,  // 94: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
+	32,  // 95: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
+	39,  // 96: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
+	41,  // 97: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
+	43,  // 98: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
+	44,  // 99: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
+	46,  // 100: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
+	47,  // 101: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
+	48,  // 102: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
+	49,  // 103: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
+	50,  // 104: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
+	52,  // 105: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
+	54,  // 106: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
+	57,  // 107: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
+	59,  // 108: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
+	61,  // 109: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
+	63,  // 110: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
+	65,  // 111: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
+	66,  // 112: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
+	67,  // 113: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
+	68,  // 114: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
+	71,  // 115: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
+	73,  // 116: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
+	74,  // 117: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
+	75,  // 118: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
+	76,  // 119: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
+	80,  // 120: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
+	81,  // 121: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
+	84,  // 122: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
+	87,  // 123: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
+	90,  // 124: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
+	92,  // 125: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
+	93,  // 126: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
+	94,  // 127: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
+	95,  // 128: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
+	96,  // 129: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
+	100, // 130: workspace.v1.AgentWorkspaceService.ListMCPServers:input_type -> workspace.v1.ListMCPServersRequest
+	102, // 131: workspace.v1.AgentWorkspaceService.CreateMCPServer:input_type -> workspace.v1.CreateMCPServerRequest
+	103, // 132: workspace.v1.AgentWorkspaceService.UpdateMCPServer:input_type -> workspace.v1.UpdateMCPServerRequest
+	104, // 133: workspace.v1.AgentWorkspaceService.TestMCPServer:input_type -> workspace.v1.TestMCPServerRequest
+	105, // 134: workspace.v1.AgentWorkspaceService.DeleteMCPServer:input_type -> workspace.v1.DeleteMCPServerRequest
+	108, // 135: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
+	110, // 136: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
+	111, // 137: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
+	112, // 138: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
+	1,   // 139: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
+	3,   // 140: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
+	5,   // 141: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
+	9,   // 142: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
+	8,   // 143: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
+	11,  // 144: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
+	18,  // 145: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
+	18,  // 146: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
+	18,  // 147: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
+	18,  // 148: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
+	18,  // 149: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
+	114, // 150: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
+	20,  // 151: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
+	22,  // 152: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	22,  // 153: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	25,  // 154: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
+	28,  // 155: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
+	34,  // 156: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
+	34,  // 157: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
+	34,  // 158: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
+	114, // 159: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
+	40,  // 160: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	42,  // 161: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
+	51,  // 162: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
+	45,  // 163: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
+	51,  // 164: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
+	45,  // 165: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
+	51,  // 166: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
+	51,  // 167: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
+	51,  // 168: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
+	53,  // 169: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
+	55,  // 170: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
+	58,  // 171: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
+	60,  // 172: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
+	34,  // 173: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
+	64,  // 174: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
+	70,  // 175: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
+	70,  // 176: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
+	70,  // 177: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
+	114, // 178: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
+	72,  // 179: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
+	78,  // 180: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
+	78,  // 181: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	78,  // 182: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	114, // 183: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
+	82,  // 184: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
+	82,  // 185: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
+	85,  // 186: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
+	88,  // 187: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
+	91,  // 188: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
+	97,  // 189: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	97,  // 190: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	114, // 191: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
+	97,  // 192: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
+	98,  // 193: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
+	101, // 194: workspace.v1.AgentWorkspaceService.ListMCPServers:output_type -> workspace.v1.ListMCPServersResponse
+	107, // 195: workspace.v1.AgentWorkspaceService.CreateMCPServer:output_type -> workspace.v1.MCPServer
+	107, // 196: workspace.v1.AgentWorkspaceService.UpdateMCPServer:output_type -> workspace.v1.MCPServer
+	107, // 197: workspace.v1.AgentWorkspaceService.TestMCPServer:output_type -> workspace.v1.MCPServer
+	114, // 198: workspace.v1.AgentWorkspaceService.DeleteMCPServer:output_type -> workspace.v1.DeleteResponse
+	109, // 199: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
+	113, // 200: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
+	113, // 201: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
+	114, // 202: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
+	139, // [139:203] is the sub-list for method output_type
+	75,  // [75:139] is the sub-list for method input_type
+	75,  // [75:75] is the sub-list for extension type_name
+	75,  // [75:75] is the sub-list for extension extendee
+	0,   // [0:75] is the sub-list for field type_name
 }
 
 func init() { file_workspace_v1_workspace_proto_init() }
@@ -8447,10 +8491,11 @@ func file_workspace_v1_workspace_proto_init() {
 	file_workspace_v1_workspace_proto_msgTypes[33].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[34].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[35].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[40].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[48].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[53].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[54].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[38].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[43].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[51].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[56].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[57].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[61].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[79].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[93].OneofWrappers = []any{}

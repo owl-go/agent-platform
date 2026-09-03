@@ -193,42 +193,100 @@ func (store *Store) Clear(_ context.Context, workspacePath string) error {
 	return os.MkdirAll(root, 0o700)
 }
 
-func (store *Store) Clone(ctx context.Context, workspacePath, repositoryURL, branch string) error {
-	return store.clone(ctx, workspacePath, repositoryURL, branch, nil)
+type GitCloneOptions struct {
+	RepositoryURL string
+	Branch        string
+	Username      string
+	Password      []byte
+	PrivateKey    []byte
+	Config        []domain.GitConfigEntry
 }
 
-func (store *Store) CloneSSH(ctx context.Context, workspacePath, repositoryURL, branch string, privateKey []byte) error {
+func (store *Store) Clone(ctx context.Context, workspacePath string, options GitCloneOptions) error {
+	if err := domain.ValidateGitConfig(options.Config); err != nil {
+		return err
+	}
+	var keyPath *string
+	var askPassPath string
+	if len(options.PrivateKey) > 0 {
+		path, cleanup, err := store.writeSSHKey(options.PrivateKey)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		keyPath = &path
+	}
+	if len(options.Password) > 0 {
+		path, cleanup, err := writeAskPass()
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+		askPassPath = path
+	}
+	return store.clone(ctx, workspacePath, options, keyPath, askPassPath)
+}
+
+func (store *Store) writeSSHKey(privateKey []byte) (string, func(), error) {
 	if len(privateKey) == 0 || len(privateKey) > 64*1024 {
-		return fmt.Errorf("private SSH key must contain 1-65536 bytes")
+		return "", func() {}, fmt.Errorf("private SSH key must contain 1-65536 bytes")
 	}
 	if !filepath.IsAbs(store.knownHosts) {
-		return fmt.Errorf("known_hosts must be configured as an absolute path")
+		return "", func() {}, fmt.Errorf("known_hosts must be configured as an absolute path")
 	}
 	knownHosts, err := os.Stat(store.knownHosts)
 	if err != nil || !knownHosts.Mode().IsRegular() || knownHosts.Size() == 0 {
-		return fmt.Errorf("configured known_hosts is unavailable")
+		return "", func() {}, fmt.Errorf("configured known_hosts is unavailable")
 	}
 	keyFile, err := os.CreateTemp("", "agent-workspace-git-key-*")
 	if err != nil {
-		return err
+		return "", func() {}, err
 	}
 	keyPath := keyFile.Name()
-	defer os.Remove(keyPath)
+	cleanup := func() { _ = os.Remove(keyPath) }
 	if err := keyFile.Chmod(0o600); err != nil {
 		_ = keyFile.Close()
-		return err
+		cleanup()
+		return "", func() {}, err
 	}
 	if _, err := keyFile.Write(privateKey); err != nil {
 		_ = keyFile.Close()
-		return err
+		cleanup()
+		return "", func() {}, err
 	}
 	if err := keyFile.Close(); err != nil {
-		return err
+		cleanup()
+		return "", func() {}, err
 	}
-	return store.clone(ctx, workspacePath, repositoryURL, branch, &keyPath)
+	return keyPath, cleanup, nil
 }
 
-func (store *Store) clone(ctx context.Context, workspacePath, repositoryURL, branch string, keyPath *string) error {
+func writeAskPass() (string, func(), error) {
+	file, err := os.CreateTemp("", "agent-workspace-git-askpass-*")
+	if err != nil {
+		return "", func() {}, err
+	}
+	path := file.Name()
+	cleanup := func() { _ = os.Remove(path) }
+	const script = "#!/bin/sh\ncase \"$1\" in *Username*) printf '%s\\n' \"$AGENT_GIT_USERNAME\" ;; *) printf '%s\\n' \"$AGENT_GIT_PASSWORD\" ;; esac\n"
+	if err := file.Chmod(0o700); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", func() {}, err
+	}
+	if _, err := file.WriteString(script); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", func() {}, err
+	}
+	if err := file.Close(); err != nil {
+		cleanup()
+		return "", func() {}, err
+	}
+	return path, cleanup, nil
+}
+
+func (store *Store) clone(ctx context.Context, workspacePath string, options GitCloneOptions, keyPath *string, askPassPath string) error {
 	root := store.workspaceRoot(workspacePath)
 	if err := store.validateRoot(root); err != nil {
 		return err
@@ -243,8 +301,16 @@ func (store *Store) clone(ctx context.Context, workspacePath, repositoryURL, bra
 	if err := os.MkdirAll(filepath.Dir(root), 0o700); err != nil {
 		return err
 	}
-	command := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--branch", branch, "--", repositoryURL, root)
+	args := make([]string, 0, 8+len(options.Config)*2)
+	for _, entry := range options.Config {
+		args = append(args, "-c", strings.TrimSpace(entry.Key)+"="+entry.Value)
+	}
+	args = append(args, "clone", "--depth", "1", "--branch", options.Branch, "--", options.RepositoryURL, root)
+	command := exec.CommandContext(ctx, "git", args...)
 	command.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	if askPassPath != "" {
+		command.Env = append(command.Env, "GIT_ASKPASS="+askPassPath, "AGENT_GIT_USERNAME="+options.Username, "AGENT_GIT_PASSWORD="+string(options.Password))
+	}
 	if keyPath != nil {
 		command.Env = append(command.Env,
 			"GIT_SSH_COMMAND=ssh -F /dev/null -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="+store.knownHosts+" -i "+*keyPath,
@@ -262,6 +328,13 @@ func (store *Store) clone(ctx context.Context, workspacePath, repositoryURL, bra
 	if used > WorkspaceLimit {
 		_ = os.RemoveAll(root)
 		return fmt.Errorf("cloned repository exceeds 1 GiB")
+	}
+	for _, entry := range options.Config {
+		configCommand := exec.CommandContext(ctx, "git", "-C", root, "config", "--local", "--", strings.TrimSpace(entry.Key), entry.Value)
+		if output, err := configCommand.CombinedOutput(); err != nil {
+			_ = os.RemoveAll(root)
+			return fmt.Errorf("configure Git repository: %w: %s", err, strings.TrimSpace(string(output)))
+		}
 	}
 	return nil
 }

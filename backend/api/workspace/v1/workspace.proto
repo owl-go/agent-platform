@@ -33,6 +33,7 @@ service AgentWorkspaceService {
   rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) { option (google.api.http) = {patch: "/api/v1/workflows/{workflow_id}" body: "*"}; }
   rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}"}; }
   rpc GenerateWorkflowCredential(GenerateWorkflowCredentialRequest) returns (WorkflowCredential) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/api-credential" body: "*"}; }
+  rpc ExchangeWorkflowCredential(ExchangeWorkflowCredentialRequest) returns (WorkflowAccessToken) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/api-token" body: "*"}; }
   rpc RunWorkflow(RunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs" body: "*"}; }
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs"}; }
   rpc GetRun(GetRunRequest) returns (Run) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs/{run_id}"}; }
@@ -44,11 +45,8 @@ service AgentWorkspaceService {
   rpc GetArtifactDownload(GetArtifactDownloadRequest) returns (ArtifactDownload) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download"}; }
 
   rpc ListWorkspaceEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace"}; }
-  rpc CreateWorkspaceDirectory(CreateWorkspaceDirectoryRequest) returns (WorkspaceEntry) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/directories" body: "*"}; }
-  rpc UploadWorkspaceFile(UploadWorkspaceFileRequest) returns (WorkspaceEntry) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/files" body: "*"}; }
   rpc GetWorkspaceFile(GetWorkspaceFileRequest) returns (WorkspaceFile) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace/file"}; }
-  rpc ClearWorkspace(ClearWorkspaceRequest) returns (DeleteResponse) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/clear" body: "*"}; }
-  rpc CloneWorkspace(CloneWorkspaceRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/workspace/clone" body: "*"}; }
+  rpc ConfigureWorkflowGitSource(ConfigureWorkflowGitSourceRequest) returns (Workflow) { option (google.api.http) = {put: "/api/v1/workflows/{workflow_id}/git-source" body: "*"}; }
 
   rpc ListExperts(ListExpertsRequest) returns (ListExpertsResponse) { option (google.api.http) = {get: "/api/v1/experts"}; }
   rpc GetExpert(GetExpertRequest) returns (Expert) { option (google.api.http) = {get: "/api/v1/experts/{expert_id}"}; }
@@ -122,9 +120,12 @@ message WorkflowInput { string name = 1; string goal = 2; optional string expert
 message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; optional string provider_model_id = 5; optional string runtime_engine = 6; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
-message GitSource { string url = 1; string branch = 2; bool private_ssh = 3; bool credential_configured = 4; }
+message GitConfigEntry { string key = 1; string value = 2; }
+message GitSource { string url = 1; string branch = 2; string authentication = 3; bool credential_configured = 4; optional string username = 5; repeated GitConfigEntry config = 6; }
 message GenerateWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowCredential { string api_key = 1; string api_secret = 2; google.protobuf.Timestamp created_at = 3; }
+message ExchangeWorkflowCredentialRequest { string workflow_id = 1; }
+message WorkflowAccessToken { string jwt_token = 1; string token_type = 2; google.protobuf.Timestamp expires_at = 3; }
 
 message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; }
 message ListRunsRequest { string workflow_id = 1; }
@@ -144,12 +145,9 @@ message Artifact { string id = 1; string run_id = 2; string kind = 3; string nam
 
 message ListWorkspaceEntriesRequest { string workflow_id = 1; optional string path = 2; }
 message ListWorkspaceEntriesResponse { repeated WorkspaceEntry items = 1; int64 used_bytes = 2; int64 limit_bytes = 3; }
-message CreateWorkspaceDirectoryRequest { string workflow_id = 1; string path = 2; }
-message UploadWorkspaceFileRequest { string workflow_id = 1; string path = 2; bytes content = 3; }
 message GetWorkspaceFileRequest { string workflow_id = 1; string path = 2; }
 message WorkspaceFile { string path = 1; bytes content = 2; string content_type = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
-message ClearWorkspaceRequest { string workflow_id = 1; string confirmation = 2; }
-message CloneWorkspaceRequest { string workflow_id = 1; string url = 2; string branch = 3; optional string ssh_private_key = 4; }
+message ConfigureWorkflowGitSourceRequest { string workflow_id = 1; string url = 2; string branch = 3; string authentication = 4; optional string username = 5; optional string password = 6; optional string ssh_private_key = 7; repeated GitConfigEntry config = 8; }
 message WorkspaceEntry { string path = 1; string name = 2; bool directory = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
 
 message ListExpertsRequest {}

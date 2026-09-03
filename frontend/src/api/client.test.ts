@@ -46,18 +46,17 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
-  it("streams a Workspace upload as binary instead of Base64 JSON", async () => {
+  it("configures Git separately from the read-only Workspace", async () => {
     const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
-      expect(init?.body).toBeInstanceOf(Blob);
-      expect(new Headers(init?.headers).get("Content-Type")).toBe("application/octet-stream");
-      return new Response(JSON.stringify({ path: "docs/a.txt", name: "a.txt", directory: false, size: 3, modified_at: "2026-08-25T00:00:00Z" }), { status: 200 });
+      expect(JSON.parse(String(init?.body))).toEqual({ url: "https://git.example.com/team/project.git", branch: "main", authentication: "basic", username: "developer", password: "secret", config: [{ key: "user.name", value: "Agent" }] });
+      return new Response(JSON.stringify({ id: "workflow-1" }), { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const entry = await createPlatformApi(() => "token").uploadWorkspaceFile("workflow-1", "docs/a.txt", new Blob(["abc"]));
+    await createPlatformApi(() => "token").configureWorkflowGitSource("workflow-1", { url: "https://git.example.com/team/project.git", branch: "main", authentication: "basic", username: "developer", password: "secret", config: [{ key: "user.name", value: "Agent" }] });
 
-    expect(entry.path).toBe("docs/a.txt");
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace/upload?path=docs%2Fa.txt");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/git-source");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PUT");
   });
 
   it("uploads a message attachment with its original media type", async () => {

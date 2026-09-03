@@ -49,7 +49,7 @@ The immutable copy of a Workflow's goal, optional Expert or Expert Team, Provide
 _Avoid_: Published Workflow, Workflow release
 
 **Workflow API Credential**:
-The single API Key and write-only API Secret pair that authorizes an external caller to start and inspect one specific Workflow. Regeneration immediately invalidates the previous pair.
+The single API Key and write-only API Secret pair used only to exchange for a short-lived Workflow Access Token. Regeneration immediately invalidates the previous pair and every token derived from it.
 _Avoid_: User Token, Idempotency Key, model credential
 
 **Scheduled Trigger**:
@@ -75,7 +75,7 @@ The persistent directory and file tree owned by one Workflow and reused across s
 _Avoid_: Session, Artifact, per-Run sandbox
 
 **Git Source**:
-The optional single public HTTPS or private SSH repository cloned into an empty Workspace root.
+The optional single Git repository cloned into an empty Workspace root from Workflow Git Settings. It uses public HTTPS, HTTPS account/password (or token), or SSH private-key authentication and a fail-closed allowlist of local Git configuration.
 _Avoid_: Repository Binding, Source Control Provider, Review Branch
 
 **Artifact**:

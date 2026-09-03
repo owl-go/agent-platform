@@ -2127,6 +2127,56 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/api-token": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ExchangeWorkflowCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1WorkflowAccessToken"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceExchangeWorkflowCredentialBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/artifacts": {
       "get": {
         "operationId": "AgentWorkspaceService_ListArtifacts",
@@ -2210,6 +2260,56 @@
             }
           }
         ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/git-source": {
+      "put": {
+        "operationId": "AgentWorkspaceService_ConfigureWorkflowGitSource",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1Workflow"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceConfigureWorkflowGitSourceBody"
+              }
+            }
+          },
+          "required": true
+        },
         "tags": [
           "AgentWorkspaceService"
         ]
@@ -2619,156 +2719,6 @@
         ]
       }
     },
-    "/api/v1/workflows/{workflow_id}/workspace/clear": {
-      "post": {
-        "operationId": "AgentWorkspaceService_ClearWorkspace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/v1DeleteResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/rpcStatus"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentWorkspaceServiceClearWorkspaceBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/workflows/{workflow_id}/workspace/clone": {
-      "post": {
-        "operationId": "AgentWorkspaceService_CloneWorkspace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/v1Workflow"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/rpcStatus"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentWorkspaceServiceCloneWorkspaceBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/workflows/{workflow_id}/workspace/directories": {
-      "post": {
-        "operationId": "AgentWorkspaceService_CreateWorkspaceDirectory",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/v1WorkspaceEntry"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/rpcStatus"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentWorkspaceServiceCreateWorkspaceDirectoryBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
     "/api/v1/workflows/{workflow_id}/workspace/file": {
       "get": {
         "operationId": "AgentWorkspaceService_GetWorkspaceFile",
@@ -2812,56 +2762,6 @@
             }
           }
         ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/workflows/{workflow_id}/workspace/files": {
-      "post": {
-        "operationId": "AgentWorkspaceService_UploadWorkspaceFile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/v1WorkspaceEntry"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/rpcStatus"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentWorkspaceServiceUploadWorkspaceFileBody"
-              }
-            }
-          },
-          "required": true
-        },
         "tags": [
           "AgentWorkspaceService"
         ]
@@ -2936,15 +2836,7 @@
       "AgentWorkspaceServiceCancelSessionMessageBody": {
         "type": "object"
       },
-      "AgentWorkspaceServiceClearWorkspaceBody": {
-        "type": "object",
-        "properties": {
-          "confirmation": {
-            "type": "string"
-          }
-        }
-      },
-      "AgentWorkspaceServiceCloneWorkspaceBody": {
+      "AgentWorkspaceServiceConfigureWorkflowGitSourceBody": {
         "type": "object",
         "properties": {
           "url": {
@@ -2953,8 +2845,23 @@
           "branch": {
             "type": "string"
           },
+          "authentication": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
           "ssh_private_key": {
             "type": "string"
+          },
+          "config": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GitConfigEntry"
+            }
           }
         }
       },
@@ -2980,13 +2887,8 @@
           }
         }
       },
-      "AgentWorkspaceServiceCreateWorkspaceDirectoryBody": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          }
-        }
+      "AgentWorkspaceServiceExchangeWorkflowCredentialBody": {
+        "type": "object"
       },
       "AgentWorkspaceServiceGenerateWorkflowCredentialBody": {
         "type": "object"
@@ -3170,18 +3072,6 @@
           "expected_version": {
             "type": "integer",
             "format": "int64"
-          }
-        }
-      },
-      "AgentWorkspaceServiceUploadWorkspaceFileBody": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string",
-            "format": "byte"
           }
         }
       },
@@ -3635,6 +3525,17 @@
           }
         }
       },
+      "v1GitConfigEntry": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
       "v1GitSource": {
         "type": "object",
         "properties": {
@@ -3644,11 +3545,20 @@
           "branch": {
             "type": "string"
           },
-          "private_ssh": {
-            "type": "boolean"
+          "authentication": {
+            "type": "string"
           },
           "credential_configured": {
             "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          },
+          "config": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GitConfigEntry"
+            }
           }
         }
       },
@@ -4496,6 +4406,21 @@
           },
           "expert_team_id": {
             "type": "string"
+          }
+        }
+      },
+      "v1WorkflowAccessToken": {
+        "type": "object",
+        "properties": {
+          "jwt_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

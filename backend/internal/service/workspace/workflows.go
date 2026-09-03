@@ -6,6 +6,7 @@ import (
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
+	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/go-kratos/kratos/v3/transport"
@@ -124,6 +125,18 @@ func (service *Service) GenerateWorkflowCredential(ctx context.Context, request 
 		return nil, publicError(err)
 	}
 	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: secret, CreatedAt: timestamppb.Now()}, nil
+}
+
+func (service *Service) ExchangeWorkflowCredential(ctx context.Context, request *workspacev1.ExchangeWorkflowCredentialRequest) (*workspacev1.WorkflowAccessToken, error) {
+	access, ok := ctx.Value(workflowCredentialContextKey{}).(workflowCredentialContext)
+	if !ok || access.WorkflowID != request.WorkflowId {
+		return nil, publicError(accountdomain.ErrUnauthenticated)
+	}
+	token, expiresAt, err := issueWorkflowToken(access, time.Now())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.WorkflowAccessToken{JwtToken: token, TokenType: "Bearer", ExpiresAt: timestamppb.New(expiresAt)}, nil
 }
 
 func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.RunWorkflowRequest) (*workspacev1.Run, error) {
@@ -354,7 +367,11 @@ func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
 		response.Schedule = &workspacev1.Schedule{Enabled: item.Schedule.Enabled, Frequency: item.Schedule.Frequency, Hour: item.Schedule.Hour, Minute: item.Schedule.Minute, Weekday: item.Schedule.Weekday, Timezone: item.Schedule.Timezone}
 	}
 	if item.GitSource != nil {
-		response.GitSource = &workspacev1.GitSource{Url: item.GitSource.URL, Branch: item.GitSource.Branch, PrivateSsh: item.GitSource.PrivateSSH, CredentialConfigured: item.GitSource.CredentialConfigured}
+		config := make([]*workspacev1.GitConfigEntry, 0, len(item.GitSource.Config))
+		for _, entry := range item.GitSource.Config {
+			config = append(config, &workspacev1.GitConfigEntry{Key: entry.Key, Value: entry.Value})
+		}
+		response.GitSource = &workspacev1.GitSource{Url: item.GitSource.URL, Branch: item.GitSource.Branch, Authentication: item.GitSource.Authentication, Username: item.GitSource.Username, Config: config, CredentialConfigured: item.GitSource.CredentialConfigured}
 	}
 	return response
 }

@@ -98,8 +98,8 @@ Settings contains five collapsed sections:
 - Basic: name, goal, optional Expert or Expert Team
 - Execution: optional Provider Model and Runtime Engine overrides, environment variables
 - Schedule: hourly, daily, or weekly trigger with time and optional time-zone override
-- API Credential: generate or regenerate API Key/API Secret and show usage examples
-- Git Source: public HTTPS or private SSH Clone configuration
+- API Credential: generate or regenerate API Key/API Secret and show the JWT exchange and Bearer invocation examples
+- Git Source: URL, branch, public HTTPS/account-password/private-key authentication, and safe local Git config
 
 ### 5.3 Triggers And Input
 
@@ -121,7 +121,8 @@ Settings contains five collapsed sections:
 - API access is opt-in. No credential is generated when the Workflow is created.
 - A Workflow has one API Key/API Secret pair. Regeneration immediately revokes the old pair.
 - The API Secret is shown once and stored only as a verifier, never as recoverable product data.
-- Authentication uses HTTP Basic Auth with API Key as username and API Secret as password.
+- HTTP Basic Auth with API Key as username and API Secret as password is accepted only by the token exchange endpoint. It returns a 15-minute JWT access token.
+- Workflow invocation and inspection use `Authorization: Bearer <jwt_token>`. Regenerating the credential invalidates outstanding tokens because their signature key derives from the current credential verifier.
 - `POST /api/v1/workflows/{workflowId}/runs` accepts text or JSON input and returns `202` with a Run ID.
 - `GET /api/v1/workflows/{workflowId}/runs/{runId}` returns status and final result.
 - SSE provides live Run events.
@@ -138,13 +139,12 @@ Settings contains five collapsed sections:
 ## 6. Workspace
 
 - Every Workflow owns one persistent Workspace reused across Runs.
-- The tree view shows directories and files. Users can create a directory, upload a file, preview supported text, download a file, and clear the entire Workspace.
-- Users cannot edit, rename, move, or individually delete Workspace entries in the first version.
-- Clearing the Workspace requires destructive confirmation.
-- Maximum Workspace size is 1 GB, maximum upload size is 100 MB, and maximum inline text preview size is 1 MB.
-- The Workspace may be initialized by file upload or by cloning one Git Source into the empty root.
-- Git supports public HTTPS and private SSH repositories. A private key belongs only to that Workflow, is write-only, and is destroyed with the Workspace.
-- Clone requires an empty Workspace. A User may clear the Workspace before cloning.
+- The Workspace tab is read-only: its tree view shows directories and files and allows supported text preview and file download. It does not create directories, upload, edit, rename, move, or delete entries.
+- Maximum Workspace size is 1 GB and maximum inline text preview size is 1 MB.
+- Workspace initialization by Git Clone is configured only in Workflow Git Settings, not in the Workspace browser.
+- Git supports public HTTPS, HTTPS username/password or token, and private SSH repositories. Passwords, tokens, and private keys belong only to that Workflow, are write-only, and are destroyed with the Workspace.
+- Git config is stored as an ordered key/value list and restricted to a safe allowlist; command, credential-helper, include, URL rewrite, and transport override keys are rejected.
+- Clone requires an empty Workspace.
 - Runs operate on a temporary copy. A successful Run atomically advances the persistent Workspace; failed or cancelled Runs discard their file changes.
 - Runtime and Skill processes access only the temporary Workspace, explicitly assigned environment, and allowed public network. They cannot access the host, platform private services, or another User's data.
 
@@ -289,7 +289,7 @@ Completion requires real browser-to-API closure for both Administrator and ordin
 - account create, first-login password change, disable/enable/reset, and owner isolation
 - Session create, image/file attachment upload and history, stream, retry, rename, archive, cancel archive, delete, Rolling Summary, Engine switch, and capability-gated native Resume
 - Workflow CRUD, manual/scheduled/API Run, follow-up image/file attachments, queueing, cancellation, rerun, record detail, and deleted-record access
-- Workspace upload, directory create, clear, public/private Clone, quotas, success merge, and failure rollback
+- read-only Workspace browse/preview/download, Git Settings Clone authentication/config validation, quotas, success merge, and failure rollback
 - Artifact creation, preview/download, expiry, and post-Workflow deletion access
 - Expert and Expert Team CRUD, responsive cards, search/tag filters, ordered member editing, incomplete migration state, grouped selection, snapshot behavior, and deletion semantics
 - real two-member sequential execution, preceding-result and attachment handoff, streaming member progress, persisted stage results, final-member response, fail-fast behavior, cancellation, whole-team retry, shared temporary Workspace success merge, and failure rollback

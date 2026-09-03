@@ -9,7 +9,9 @@ export interface SessionMessage { id: number; role: "user" | "assistant"; state:
 export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[] }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
-export interface GitSource { url: string; branch: string; private_ssh: boolean; credential_configured: boolean }
+export interface GitConfigEntry { key: string; value: string }
+export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; credential_configured: boolean }
+export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; provider_model_id?: string; runtime_engine?: RuntimeEngine; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[] }
@@ -81,12 +83,9 @@ export interface PlatformApi {
   listArtifacts(id: string, signal?: AbortSignal): Promise<Artifact[]>;
   getArtifactDownload(workflowID: string, artifactID: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }>;
   listWorkspace(id: string, path?: string, signal?: AbortSignal): Promise<{ items: WorkspaceEntry[]; used_bytes: number; limit_bytes: number }>;
-  createWorkspaceDirectory(id: string, path: string, signal?: AbortSignal): Promise<WorkspaceEntry>;
-  uploadWorkspaceFile(id: string, path: string, content: Blob, signal?: AbortSignal): Promise<WorkspaceEntry>;
   getWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<WorkspaceFile>;
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
-  clearWorkspace(id: string, confirmation: string, signal?: AbortSignal): Promise<void>;
-  cloneWorkspace(id: string, input: { url: string; branch: string; ssh_private_key?: string }, signal?: AbortSignal): Promise<Workflow>;
+  configureWorkflowGitSource(id: string, input: GitSourceInput, signal?: AbortSignal): Promise<Workflow>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
   getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
   createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
@@ -148,13 +147,6 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     const response = await fetch(path, { signal, headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new ApiError(response.status === 404 ? "not_found" : "unknown", response.status, "download_failed");
     return response.blob();
-  };
-  const upload = async <T>(path: string, content: Blob, signal?: AbortSignal) => {
-    const token = getAccessToken();
-    if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
-    const response = await fetch(path, { method: "POST", body: content, signal, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream", "Idempotency-Key": crypto.randomUUID() } });
-    if (!response.ok) throw new ApiError(response.status === 413 || response.status === 422 ? "validation" : "unknown", response.status, "upload_failed");
-    return response.json().then(normalizeTimestamps) as Promise<T>;
   };
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
@@ -265,12 +257,9 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         limit_bytes: Number(result.limit_bytes ?? result.limitBytes ?? 0),
       };
     },
-    createWorkspaceDirectory(id, path, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/directories`, json("POST", { path }, signal)); },
-    uploadWorkspaceFile(id, path, content, signal) { return upload(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/upload?path=${encodeURIComponent(path)}`, content, signal); },
     getWorkspaceFile(id, path, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/file?path=${encodeURIComponent(path)}`, { signal }); },
     downloadWorkspaceFile(id, path, signal) { return download(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/download?path=${encodeURIComponent(path)}`, signal); },
-    clearWorkspace(id, confirmation, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/clear`, json("POST", { confirmation }, signal)).then(() => undefined); },
-    cloneWorkspace(id, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/clone`, json("POST", input, signal)); },
+    configureWorkflowGitSource(id, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/git-source`, json("PUT", input, signal)); },
     async listExperts(signal) {
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);

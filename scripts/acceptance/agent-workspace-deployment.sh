@@ -197,38 +197,29 @@ schedule_minute="$((10#$(date -u -d '1 minute' +%M)))"
 scheduled_workflow_body="$(jq -nc --arg model "${provider_model_id}" --arg team "${team_id}" --argjson minute "${schedule_minute}" '{workflow:{name:"Acceptance Workflow",goal:"Return a short acceptance result",expert_team_id:$team,provider_model_id:$model,runtime_engine:"codex",environment:[{name:"ACCEPTANCE_PUBLIC",value:"visible",secret:false,configured:true},{name:"ACCEPTANCE_SECRET",secret:true,configured:true}],schedule:{enabled:true,frequency:"hourly",hour:0,minute:$minute,weekday:0,timezone:"UTC"}},expected_version:1}')"
 api_request "${ordinary_token}" PATCH "/api/v1/workflows/${workflow_id}" "${scheduled_workflow_body}" "${temporary_directory}/workflow-scheduled.json"
 
-api_request "${ordinary_token}" POST "/api/v1/workflows/${workflow_id}/workspace/directories" '{"path":"notes"}' "${temporary_directory}/directory.json"
-printf '%s' 'workspace acceptance file' >"${temporary_directory}/upload.txt"
-curl --fail-with-body --silent --show-error -X POST \
-  "${base_url}/api/v1/workflows/${workflow_id}/workspace/upload?path=notes%2Facceptance.txt" \
-  -H "Authorization: Bearer ${ordinary_token}" -H "Idempotency-Key: $(openssl rand -hex 16)" \
-  -H 'Content-Type: application/octet-stream' --data-binary @"${temporary_directory}/upload.txt" \
-  -o "${temporary_directory}/upload.json"
-curl --fail-with-body --silent --show-error \
-  "${base_url}/api/v1/workflows/${workflow_id}/workspace/download?path=notes%2Facceptance.txt" \
-  -H "Authorization: Bearer ${ordinary_token}" -o "${temporary_directory}/download.txt"
-cmp "${temporary_directory}/upload.txt" "${temporary_directory}/download.txt"
+assert_status 404 "${ordinary_token}" "/api/v1/workflows/${workflow_id}/workspace/directories"
+assert_status 404 "${ordinary_token}" "/api/v1/workflows/${workflow_id}/workspace/upload"
 
 clone_workflow_body='{"workflow":{"name":"Clone Acceptance","goal":"Inspect the cloned Workspace","environment":[]}}'
 api_request "${ordinary_token}" POST /api/v1/workflows "${clone_workflow_body}" "${temporary_directory}/clone-workflow.json"
 clone_workflow_id="$(jq -er '.id' "${temporary_directory}/clone-workflow.json")"
-api_request "${ordinary_token}" POST "/api/v1/workflows/${clone_workflow_id}/workspace/clone" \
-  '{"url":"https://github.com/octocat/Hello-World.git","branch":"master"}' "${temporary_directory}/clone.json"
+api_request "${ordinary_token}" PUT "/api/v1/workflows/${clone_workflow_id}/git-source" \
+  '{"url":"https://github.com/octocat/Hello-World.git","branch":"master","authentication":"none","config":[{"key":"user.name","value":"Acceptance"}]}' "${temporary_directory}/clone.json"
 api_request "${ordinary_token}" GET "/api/v1/workflows/${clone_workflow_id}/workspace" '' "${temporary_directory}/clone-entries.json"
 jq -e '.items | any(.name == "README" and ((.directory // false) == false))' "${temporary_directory}/clone-entries.json" >/dev/null
-api_request "${ordinary_token}" POST "/api/v1/workflows/${clone_workflow_id}/workspace/clear" \
-  '{"confirmation":"Clone Acceptance"}' "${temporary_directory}/clone-cleared.json"
-api_request "${ordinary_token}" GET "/api/v1/workflows/${clone_workflow_id}/workspace" '' "${temporary_directory}/clone-empty.json"
-jq -e '.items | length == 0' "${temporary_directory}/clone-empty.json" >/dev/null
 api_request "${ordinary_token}" DELETE "/api/v1/workflows/${clone_workflow_id}" '' "${temporary_directory}/clone-deleted.json"
 
 stage workflow-api-and-runtime
 api_request "${ordinary_token}" POST "/api/v1/workflows/${workflow_id}/api-credential" '{}' "${temporary_directory}/credential.json"
 api_key="$(jq -er '.api_key' "${temporary_directory}/credential.json")"
 api_secret="$(jq -er '.api_secret' "${temporary_directory}/credential.json")"
+curl --fail-with-body --silent --show-error -X POST \
+  "${base_url}/api/v1/workflows/${workflow_id}/api-token" -u "${api_key}:${api_secret}" \
+  -H 'Content-Type: application/json' --data '{}' -o "${temporary_directory}/workflow-token.json"
+workflow_token="$(jq -er '.jwt_token' "${temporary_directory}/workflow-token.json")"
 api_run_status="$(curl --fail-with-body --silent --show-error -X POST \
   "${base_url}/api/v1/workflows/${workflow_id}/runs" \
-  -u "${api_key}:${api_secret}" -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer ${workflow_token}" -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(openssl rand -hex 16)" --data '{"text_input":"API acceptance"}' \
   -o "${temporary_directory}/api-run.json" -w '%{http_code}')"
 [[ "${api_run_status}" == 202 ]]
@@ -237,7 +228,7 @@ jq -e '.trigger == "api" and .state == "queued"' "${temporary_directory}/api-run
 
 terminal_state=""
 for _ in $(seq 1 60); do
-  curl --fail-with-body --silent --show-error -u "${api_key}:${api_secret}" \
+  curl --fail-with-body --silent --show-error -H "Authorization: Bearer ${workflow_token}" \
     "${base_url}/api/v1/workflows/${workflow_id}/runs/${run_id}" -o "${temporary_directory}/run.json"
   terminal_state="$(jq -r '.state' "${temporary_directory}/run.json")"
   if [[ "${terminal_state}" == failed || "${terminal_state}" == cancelled || "${terminal_state}" == succeeded ]]; then
@@ -250,7 +241,7 @@ done
   exit 1
 }
 jq -e '.expert_stages | length == 1 and .[0].position == 1 and .[0].total == 2 and .[0].state == "failed"' "${temporary_directory}/run.json" >/dev/null
-curl --fail-with-body --silent --show-error --max-time 15 -u "${api_key}:${api_secret}" \
+curl --fail-with-body --silent --show-error --max-time 15 -H "Authorization: Bearer ${workflow_token}" \
   "${base_url}/api/v1/workflows/${workflow_id}/runs/${run_id}/events" -o "${temporary_directory}/events.txt"
 grep -q 'event: run.started' "${temporary_directory}/events.txt"
 grep -q 'event: run.failed' "${temporary_directory}/events.txt"

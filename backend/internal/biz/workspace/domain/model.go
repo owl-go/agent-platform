@@ -264,8 +264,15 @@ func (schedule Schedule) Validate() error {
 type GitSource struct {
 	URL                  string
 	Branch               string
-	PrivateSSH           bool
+	Authentication       string
+	Username             *string
+	Config               []GitConfigEntry
 	CredentialConfigured bool
+}
+
+type GitConfigEntry struct {
+	Key   string
+	Value string
 }
 
 func ValidateGitSource(source GitSource) error {
@@ -275,15 +282,32 @@ func ValidateGitSource(source GitSource) error {
 	if strings.ContainsAny(source.Branch, "\x00\r\n") || strings.TrimSpace(source.Branch) == "" || len(source.Branch) > 255 {
 		return fmt.Errorf("%w: invalid Git branch", ErrInvalid)
 	}
-	if source.PrivateSSH {
+	if source.Authentication != "none" && source.Authentication != "basic" && source.Authentication != "ssh" {
+		return fmt.Errorf("%w: Git authentication must be none, basic, or ssh", ErrInvalid)
+	}
+	if source.Authentication == "ssh" {
 		if !strings.HasPrefix(source.URL, "ssh://") && !regexp.MustCompile(`^[^@\s]+@[^:\s]+:.+$`).MatchString(source.URL) {
 			return fmt.Errorf("%w: private Git source requires an SSH URL", ErrInvalid)
 		}
-		return nil
+	} else {
+		parsed, err := url.Parse(source.URL)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+			return fmt.Errorf("%w: Git source requires an HTTPS URL without embedded credentials", ErrInvalid)
+		}
+		if source.Authentication == "basic" && (source.Username == nil || strings.TrimSpace(*source.Username) == "") {
+			return fmt.Errorf("%w: Git username is required for account authentication", ErrInvalid)
+		}
 	}
-	parsed, err := url.Parse(source.URL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
-		return fmt.Errorf("%w: public Git source requires an HTTPS URL", ErrInvalid)
+	return ValidateGitConfig(source.Config)
+}
+
+func ValidateGitConfig(config []GitConfigEntry) error {
+	allowedConfig := map[string]bool{"user.name": true, "user.email": true, "core.autocrlf": true, "core.filemode": true, "pull.rebase": true, "init.defaultbranch": true}
+	for _, entry := range config {
+		key := strings.ToLower(strings.TrimSpace(entry.Key))
+		if !allowedConfig[key] || strings.TrimSpace(entry.Value) == "" || strings.ContainsAny(entry.Value, "\x00\r\n") || len(entry.Value) > 512 {
+			return fmt.Errorf("%w: unsupported or invalid Git config %q", ErrInvalid, entry.Key)
+		}
 	}
 	return nil
 }

@@ -41,6 +41,7 @@ const (
 	AgentWorkspaceService_UpdateWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
 	AgentWorkspaceService_DeleteWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
 	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName    = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
+	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
 	AgentWorkspaceService_RunWorkflow_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 	AgentWorkspaceService_ListRuns_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListRuns"
 	AgentWorkspaceService_GetRun_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/GetRun"
@@ -51,11 +52,8 @@ const (
 	AgentWorkspaceService_ListArtifacts_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 	AgentWorkspaceService_GetArtifactDownload_FullMethodName           = "/workspace.v1.AgentWorkspaceService/GetArtifactDownload"
 	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
-	AgentWorkspaceService_CreateWorkspaceDirectory_FullMethodName      = "/workspace.v1.AgentWorkspaceService/CreateWorkspaceDirectory"
-	AgentWorkspaceService_UploadWorkspaceFile_FullMethodName           = "/workspace.v1.AgentWorkspaceService/UploadWorkspaceFile"
 	AgentWorkspaceService_GetWorkspaceFile_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
-	AgentWorkspaceService_ClearWorkspace_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ClearWorkspace"
-	AgentWorkspaceService_CloneWorkspace_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CloneWorkspace"
+	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
 	AgentWorkspaceService_ListExperts_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListExperts"
 	AgentWorkspaceService_GetExpert_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/GetExpert"
 	AgentWorkspaceService_CreateExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/CreateExpert"
@@ -113,6 +111,7 @@ type AgentWorkspaceServiceClient interface {
 	UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GenerateWorkflowCredential(ctx context.Context, in *GenerateWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error)
+	ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowAccessToken, error)
 	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*Run, error)
@@ -123,11 +122,8 @@ type AgentWorkspaceServiceClient interface {
 	ListArtifacts(ctx context.Context, in *ListArtifactsRequest, opts ...grpc.CallOption) (*ListArtifactsResponse, error)
 	GetArtifactDownload(ctx context.Context, in *GetArtifactDownloadRequest, opts ...grpc.CallOption) (*ArtifactDownload, error)
 	ListWorkspaceEntries(ctx context.Context, in *ListWorkspaceEntriesRequest, opts ...grpc.CallOption) (*ListWorkspaceEntriesResponse, error)
-	CreateWorkspaceDirectory(ctx context.Context, in *CreateWorkspaceDirectoryRequest, opts ...grpc.CallOption) (*WorkspaceEntry, error)
-	UploadWorkspaceFile(ctx context.Context, in *UploadWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceEntry, error)
 	GetWorkspaceFile(ctx context.Context, in *GetWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceFile, error)
-	ClearWorkspace(ctx context.Context, in *ClearWorkspaceRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	CloneWorkspace(ctx context.Context, in *CloneWorkspaceRequest, opts ...grpc.CallOption) (*Workflow, error)
+	ConfigureWorkflowGitSource(ctx context.Context, in *ConfigureWorkflowGitSourceRequest, opts ...grpc.CallOption) (*Workflow, error)
 	ListExperts(ctx context.Context, in *ListExpertsRequest, opts ...grpc.CallOption) (*ListExpertsResponse, error)
 	GetExpert(ctx context.Context, in *GetExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*Expert, error)
@@ -387,6 +383,16 @@ func (c *agentWorkspaceServiceClient) GenerateWorkflowCredential(ctx context.Con
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowAccessToken, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WorkflowAccessToken)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...grpc.CallOption) (*Run, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Run)
@@ -487,26 +493,6 @@ func (c *agentWorkspaceServiceClient) ListWorkspaceEntries(ctx context.Context, 
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) CreateWorkspaceDirectory(ctx context.Context, in *CreateWorkspaceDirectoryRequest, opts ...grpc.CallOption) (*WorkspaceEntry, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(WorkspaceEntry)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateWorkspaceDirectory_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *agentWorkspaceServiceClient) UploadWorkspaceFile(ctx context.Context, in *UploadWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceEntry, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(WorkspaceEntry)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_UploadWorkspaceFile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *agentWorkspaceServiceClient) GetWorkspaceFile(ctx context.Context, in *GetWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceFile, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WorkspaceFile)
@@ -517,20 +503,10 @@ func (c *agentWorkspaceServiceClient) GetWorkspaceFile(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) ClearWorkspace(ctx context.Context, in *ClearWorkspaceRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_ClearWorkspace_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *agentWorkspaceServiceClient) CloneWorkspace(ctx context.Context, in *CloneWorkspaceRequest, opts ...grpc.CallOption) (*Workflow, error) {
+func (c *agentWorkspaceServiceClient) ConfigureWorkflowGitSource(ctx context.Context, in *ConfigureWorkflowGitSourceRequest, opts ...grpc.CallOption) (*Workflow, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Workflow)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_CloneWorkspace_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -853,6 +829,7 @@ type AgentWorkspaceServiceServer interface {
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
 	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteResponse, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
+	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
@@ -863,11 +840,8 @@ type AgentWorkspaceServiceServer interface {
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	GetArtifactDownload(context.Context, *GetArtifactDownloadRequest) (*ArtifactDownload, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
-	CreateWorkspaceDirectory(context.Context, *CreateWorkspaceDirectoryRequest) (*WorkspaceEntry, error)
-	UploadWorkspaceFile(context.Context, *UploadWorkspaceFileRequest) (*WorkspaceEntry, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
-	ClearWorkspace(context.Context, *ClearWorkspaceRequest) (*DeleteResponse, error)
-	CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error)
+	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
@@ -973,6 +947,9 @@ func (UnimplementedAgentWorkspaceServiceServer) DeleteWorkflow(context.Context, 
 func (UnimplementedAgentWorkspaceServiceServer) GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateWorkflowCredential not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExchangeWorkflowCredential not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method RunWorkflow not implemented")
 }
@@ -1003,20 +980,11 @@ func (UnimplementedAgentWorkspaceServiceServer) GetArtifactDownload(context.Cont
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkspaceEntries not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) CreateWorkspaceDirectory(context.Context, *CreateWorkspaceDirectoryRequest) (*WorkspaceEntry, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateWorkspaceDirectory not implemented")
-}
-func (UnimplementedAgentWorkspaceServiceServer) UploadWorkspaceFile(context.Context, *UploadWorkspaceFileRequest) (*WorkspaceEntry, error) {
-	return nil, status.Error(codes.Unimplemented, "method UploadWorkspaceFile not implemented")
-}
 func (UnimplementedAgentWorkspaceServiceServer) GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetWorkspaceFile not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) ClearWorkspace(context.Context, *ClearWorkspaceRequest) (*DeleteResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ClearWorkspace not implemented")
-}
-func (UnimplementedAgentWorkspaceServiceServer) CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error) {
-	return nil, status.Error(codes.Unimplemented, "method CloneWorkspace not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfigureWorkflowGitSource not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExperts not implemented")
@@ -1522,6 +1490,24 @@ func _AgentWorkspaceService_GenerateWorkflowCredential_Handler(srv interface{}, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ExchangeWorkflowCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeWorkflowCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ExchangeWorkflowCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ExchangeWorkflowCredential(ctx, req.(*ExchangeWorkflowCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_RunWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RunWorkflowRequest)
 	if err := dec(in); err != nil {
@@ -1702,42 +1688,6 @@ func _AgentWorkspaceService_ListWorkspaceEntries_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_CreateWorkspaceDirectory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateWorkspaceDirectoryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).CreateWorkspaceDirectory(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AgentWorkspaceService_CreateWorkspaceDirectory_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).CreateWorkspaceDirectory(ctx, req.(*CreateWorkspaceDirectoryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AgentWorkspaceService_UploadWorkspaceFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UploadWorkspaceFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).UploadWorkspaceFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AgentWorkspaceService_UploadWorkspaceFile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).UploadWorkspaceFile(ctx, req.(*UploadWorkspaceFileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AgentWorkspaceService_GetWorkspaceFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetWorkspaceFileRequest)
 	if err := dec(in); err != nil {
@@ -1756,38 +1706,20 @@ func _AgentWorkspaceService_GetWorkspaceFile_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_ClearWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClearWorkspaceRequest)
+func _AgentWorkspaceService_ConfigureWorkflowGitSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigureWorkflowGitSourceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).ClearWorkspace(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).ConfigureWorkflowGitSource(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_ClearWorkspace_FullMethodName,
+		FullMethod: AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).ClearWorkspace(ctx, req.(*ClearWorkspaceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AgentWorkspaceService_CloneWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CloneWorkspaceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).CloneWorkspace(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AgentWorkspaceService_CloneWorkspace_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).CloneWorkspace(ctx, req.(*CloneWorkspaceRequest))
+		return srv.(AgentWorkspaceServiceServer).ConfigureWorkflowGitSource(ctx, req.(*ConfigureWorkflowGitSourceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2410,6 +2342,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_GenerateWorkflowCredential_Handler,
 		},
 		{
+			MethodName: "ExchangeWorkflowCredential",
+			Handler:    _AgentWorkspaceService_ExchangeWorkflowCredential_Handler,
+		},
+		{
 			MethodName: "RunWorkflow",
 			Handler:    _AgentWorkspaceService_RunWorkflow_Handler,
 		},
@@ -2450,24 +2386,12 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_ListWorkspaceEntries_Handler,
 		},
 		{
-			MethodName: "CreateWorkspaceDirectory",
-			Handler:    _AgentWorkspaceService_CreateWorkspaceDirectory_Handler,
-		},
-		{
-			MethodName: "UploadWorkspaceFile",
-			Handler:    _AgentWorkspaceService_UploadWorkspaceFile_Handler,
-		},
-		{
 			MethodName: "GetWorkspaceFile",
 			Handler:    _AgentWorkspaceService_GetWorkspaceFile_Handler,
 		},
 		{
-			MethodName: "ClearWorkspace",
-			Handler:    _AgentWorkspaceService_ClearWorkspace_Handler,
-		},
-		{
-			MethodName: "CloneWorkspace",
-			Handler:    _AgentWorkspaceService_CloneWorkspace_Handler,
+			MethodName: "ConfigureWorkflowGitSource",
+			Handler:    _AgentWorkspaceService_ConfigureWorkflowGitSource_Handler,
 		},
 		{
 			MethodName: "ListExperts",

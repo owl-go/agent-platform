@@ -19,8 +19,7 @@ const _ = http.SupportPackageIsVersion3
 
 const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceService/CancelRun"
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
-const OperationAgentWorkspaceServiceClearWorkspace = "/workspace.v1.AgentWorkspaceService/ClearWorkspace"
-const OperationAgentWorkspaceServiceCloneWorkspace = "/workspace.v1.AgentWorkspaceService/CloneWorkspace"
+const OperationAgentWorkspaceServiceConfigureWorkflowGitSource = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
 const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
@@ -31,7 +30,6 @@ const OperationAgentWorkspaceServiceCreateSession = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceCreateSkill = "/workspace.v1.AgentWorkspaceService/CreateSkill"
 const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceService/CreateUser"
 const OperationAgentWorkspaceServiceCreateWorkflow = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
-const OperationAgentWorkspaceServiceCreateWorkspaceDirectory = "/workspace.v1.AgentWorkspaceService/CreateWorkspaceDirectory"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 const OperationAgentWorkspaceServiceDeleteMCPServer = "/workspace.v1.AgentWorkspaceService/DeleteMCPServer"
@@ -39,6 +37,7 @@ const OperationAgentWorkspaceServiceDeleteModelProviderConnection = "/workspace.
 const OperationAgentWorkspaceServiceDeleteSession = "/workspace.v1.AgentWorkspaceService/DeleteSession"
 const OperationAgentWorkspaceServiceDeleteSkill = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
 const OperationAgentWorkspaceServiceDeleteWorkflow = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
+const OperationAgentWorkspaceServiceExchangeWorkflowCredential = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
 const OperationAgentWorkspaceServiceGenerateWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
 const OperationAgentWorkspaceServiceGetArtifactDownload = "/workspace.v1.AgentWorkspaceService/GetArtifactDownload"
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
@@ -82,13 +81,11 @@ const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceUpdateSettings = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
 const OperationAgentWorkspaceServiceUpdateSkill = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
 const OperationAgentWorkspaceServiceUpdateWorkflow = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
-const OperationAgentWorkspaceServiceUploadWorkspaceFile = "/workspace.v1.AgentWorkspaceService/UploadWorkspaceFile"
 
 type AgentWorkspaceServiceHTTPServer interface {
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
-	ClearWorkspace(context.Context, *ClearWorkspaceRequest) (*DeleteResponse, error)
-	CloneWorkspace(context.Context, *CloneWorkspaceRequest) (*Workflow, error)
+	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
@@ -99,7 +96,6 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateSkill(context.Context, *CreateSkillRequest) (*Skill, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
-	CreateWorkspaceDirectory(context.Context, *CreateWorkspaceDirectoryRequest) (*WorkspaceEntry, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	DeleteMCPServer(context.Context, *DeleteMCPServerRequest) (*DeleteResponse, error)
@@ -107,6 +103,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error)
 	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteResponse, error)
+	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetArtifactDownload(context.Context, *GetArtifactDownloadRequest) (*ArtifactDownload, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
@@ -150,7 +147,6 @@ type AgentWorkspaceServiceHTTPServer interface {
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
-	UploadWorkspaceFile(context.Context, *UploadWorkspaceFileRequest) (*WorkspaceEntry, error)
 }
 
 func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceServiceHTTPServer) {
@@ -177,6 +173,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_DeleteWorkflow0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-token", _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_ListRuns0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs/{run_id}", _AgentWorkspaceService_GetRun0_HTTP_Handler(srv))
@@ -187,11 +184,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/artifacts", _AgentWorkspaceService_ListArtifacts0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download", _AgentWorkspaceService_GetArtifactDownload0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace", _AgentWorkspaceService_ListWorkspaceEntries0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/directories", _AgentWorkspaceService_CreateWorkspaceDirectory0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/files", _AgentWorkspaceService_UploadWorkspaceFile0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace/file", _AgentWorkspaceService_GetWorkspaceFile0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/clear", _AgentWorkspaceService_ClearWorkspace0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/workflows/{workflow_id}/workspace/clone", _AgentWorkspaceService_CloneWorkspace0_HTTP_Handler(srv))
+	r.Handle("PUT", "/api/v1/workflows/{workflow_id}/git-source", _AgentWorkspaceService_ConfigureWorkflowGitSource0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts", _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_GetExpert0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/experts", _AgentWorkspaceService_CreateExpert0_HTTP_Handler(srv))
@@ -686,6 +680,28 @@ func _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv AgentWo
 	}
 }
 
+func _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ExchangeWorkflowCredentialRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceExchangeWorkflowCredential)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ExchangeWorkflowCredential(ctx, req.(*ExchangeWorkflowCredentialRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*WorkflowAccessToken)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in RunWorkflowRequest
@@ -906,50 +922,6 @@ func _AgentWorkspaceService_ListWorkspaceEntries0_HTTP_Handler(srv AgentWorkspac
 	}
 }
 
-func _AgentWorkspaceService_CreateWorkspaceDirectory0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in CreateWorkspaceDirectoryRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateWorkspaceDirectory)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateWorkspaceDirectory(ctx, req.(*CreateWorkspaceDirectoryRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*WorkspaceEntry)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AgentWorkspaceService_UploadWorkspaceFile0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in UploadWorkspaceFileRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceUploadWorkspaceFile)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.UploadWorkspaceFile(ctx, req.(*UploadWorkspaceFileRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*WorkspaceEntry)
-		return ctx.Result(200, reply)
-	}
-}
-
 func _AgentWorkspaceService_GetWorkspaceFile0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in GetWorkspaceFileRequest
@@ -972,40 +944,18 @@ func _AgentWorkspaceService_GetWorkspaceFile0_HTTP_Handler(srv AgentWorkspaceSer
 	}
 }
 
-func _AgentWorkspaceService_ClearWorkspace0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+func _AgentWorkspaceService_ConfigureWorkflowGitSource0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in ClearWorkspaceRequest
+		var in ConfigureWorkflowGitSourceRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceClearWorkspace)
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceConfigureWorkflowGitSource)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ClearWorkspace(ctx, req.(*ClearWorkspaceRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*DeleteResponse)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AgentWorkspaceService_CloneWorkspace0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in CloneWorkspaceRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceCloneWorkspace)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CloneWorkspace(ctx, req.(*CloneWorkspaceRequest))
+			return srv.ConfigureWorkflowGitSource(ctx, req.(*ConfigureWorkflowGitSourceRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -1615,8 +1565,7 @@ func _AgentWorkspaceService_DeleteSkill0_HTTP_Handler(srv AgentWorkspaceServiceH
 type AgentWorkspaceServiceHTTPClient interface {
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
-	ClearWorkspace(ctx context.Context, req *ClearWorkspaceRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
-	CloneWorkspace(ctx context.Context, req *CloneWorkspaceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	ConfigureWorkflowGitSource(ctx context.Context, req *ConfigureWorkflowGitSourceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
@@ -1627,7 +1576,6 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateSkill(ctx context.Context, req *CreateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	CreateUser(ctx context.Context, req *CreateUserRequest, opts ...http.CallOption) (rsp *CreateUserResponse, err error)
 	CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
-	CreateWorkspaceDirectory(ctx context.Context, req *CreateWorkspaceDirectoryRequest, opts ...http.CallOption) (rsp *WorkspaceEntry, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteMCPServer(ctx context.Context, req *DeleteMCPServerRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -1635,6 +1583,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	DeleteSession(ctx context.Context, req *DeleteSessionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSkill(ctx context.Context, req *DeleteSkillRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteWorkflow(ctx context.Context, req *DeleteWorkflowRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	ExchangeWorkflowCredential(ctx context.Context, req *ExchangeWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowAccessToken, err error)
 	GenerateWorkflowCredential(ctx context.Context, req *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetArtifactDownload(ctx context.Context, req *GetArtifactDownloadRequest, opts ...http.CallOption) (rsp *ArtifactDownload, err error)
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
@@ -1678,7 +1627,6 @@ type AgentWorkspaceServiceHTTPClient interface {
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	UpdateSkill(ctx context.Context, req *UpdateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	UpdateWorkflow(ctx context.Context, req *UpdateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
-	UploadWorkspaceFile(ctx context.Context, req *UploadWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceEntry, err error)
 }
 
 type AgentWorkspaceServiceHTTPClientImpl struct {
@@ -1723,34 +1671,17 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CancelSessionMessage(ctx context.C
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) ClearWorkspace(ctx context.Context, in *ClearWorkspaceRequest, opts ...http.CallOption) (*DeleteResponse, error) {
-	var out DeleteResponse
-	pattern := "/api/v1/workflows/{workflow_id}/workspace/clear"
-	path := http.BuildPath(pattern, in)
-	opts = append([]http.CallOption{
-		http.Accept("application/protojson"),
-		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceClearWorkspace),
-		http.PathTemplate(pattern),
-	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AgentWorkspaceServiceHTTPClientImpl) CloneWorkspace(ctx context.Context, in *CloneWorkspaceRequest, opts ...http.CallOption) (*Workflow, error) {
+func (c *AgentWorkspaceServiceHTTPClientImpl) ConfigureWorkflowGitSource(ctx context.Context, in *ConfigureWorkflowGitSourceRequest, opts ...http.CallOption) (*Workflow, error) {
 	var out Workflow
-	pattern := "/api/v1/workflows/{workflow_id}/workspace/clone"
+	pattern := "/api/v1/workflows/{workflow_id}/git-source"
 	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceCloneWorkspace),
+		http.Operation(OperationAgentWorkspaceServiceConfigureWorkflowGitSource),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1927,23 +1858,6 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateWorkflow(ctx context.Context
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) CreateWorkspaceDirectory(ctx context.Context, in *CreateWorkspaceDirectoryRequest, opts ...http.CallOption) (*WorkspaceEntry, error) {
-	var out WorkspaceEntry
-	pattern := "/api/v1/workflows/{workflow_id}/workspace/directories"
-	path := http.BuildPath(pattern, in)
-	opts = append([]http.CallOption{
-		http.Accept("application/protojson"),
-		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceCreateWorkspaceDirectory),
-		http.PathTemplate(pattern),
-	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
 func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteExpert(ctx context.Context, in *DeleteExpertRequest, opts ...http.CallOption) (*DeleteResponse, error) {
 	var out DeleteResponse
 	pattern := "/api/v1/experts/{expert_id}"
@@ -2050,6 +1964,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteWorkflow(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...http.CallOption) (*WorkflowAccessToken, error) {
+	var out WorkflowAccessToken
+	pattern := "/api/v1/workflows/{workflow_id}/api-token"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceExchangeWorkflowCredential),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2757,23 +2688,6 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateWorkflow(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-func (c *AgentWorkspaceServiceHTTPClientImpl) UploadWorkspaceFile(ctx context.Context, in *UploadWorkspaceFileRequest, opts ...http.CallOption) (*WorkspaceEntry, error) {
-	var out WorkspaceEntry
-	pattern := "/api/v1/workflows/{workflow_id}/workspace/files"
-	path := http.BuildPath(pattern, in)
-	opts = append([]http.CallOption{
-		http.Accept("application/protojson"),
-		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceUploadWorkspaceFile),
-		http.PathTemplate(pattern),
-	}, opts...)
-	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

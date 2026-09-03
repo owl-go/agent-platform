@@ -31,6 +31,7 @@ const en = {
 
 Object.assign(zh.common, { send: "发送" });
 Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行", activityDetails: "查看执行过程", command: "命令", toolCompleted: "工具调用完成", updatingFiles: "正在更新文件", streamingAnswer: "正在生成回答", answerReady: "回答已生成" });
+Object.assign(zh.workflows, { apiTokenDescription: "先使用 API Key 与 API Secret 换取 15 分钟有效的 JWT，再通过 Bearer Header 调用工作流。", gitAuthentication: "认证方式", gitPublic: "公共 HTTPS", gitAccount: "账号密码", gitUsername: "Git 账号", gitPassword: "Git 密码 / Token", gitSaved: "Git 仓库已克隆并保存", cloneRepository: "保存并克隆仓库" });
 Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
 Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
 Object.assign(zh.experts, {
@@ -51,6 +52,7 @@ Object.assign(zh.experts, {
 });
 Object.assign(en.common, { send: "Send" });
 Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line", activityDetails: "View execution progress", command: "Command", toolCompleted: "Tool call completed", updatingFiles: "Updating files", streamingAnswer: "Generating the answer", answerReady: "Answer ready" });
+Object.assign(en.workflows, { apiTokenDescription: "Exchange the API Key and API Secret for a JWT valid for 15 minutes, then invoke the Workflow with a Bearer header.", gitAuthentication: "Authentication", gitPublic: "Public HTTPS", gitAccount: "Username and password", gitUsername: "Git username", gitPassword: "Git password / token", gitSaved: "Git repository cloned and saved", cloneRepository: "Save and clone repository" });
 Object.assign(en.sessions, { addAttachment: "Attach images or files", removeAttachment: "Remove attachment {name}", attachmentLimits: "Up to 10 attachments per message, 100 MB each" });
 Object.assign(en.sessions.progress, { finalizing: "Saving the session securely" });
 Object.assign(en.experts, {

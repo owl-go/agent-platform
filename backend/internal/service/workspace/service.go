@@ -41,7 +41,6 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))
 	server.Handle("/api/v1/workflows/{workflow_id}/runs/{run_id}/events", http.HandlerFunc(service.streamRunEvents))
 	server.Handle("/api/v1/workflows/{workflow_id}/workspace/download", http.HandlerFunc(service.downloadWorkspaceFile))
-	server.Handle("/api/v1/workflows/{workflow_id}/workspace/upload", http.HandlerFunc(service.uploadWorkspaceFile))
 	server.Handle("/api/v1/attachments/upload", http.HandlerFunc(service.uploadAttachment))
 	server.Handle("/api/v1/attachments/{attachment_id}/download", http.HandlerFunc(service.downloadAttachment))
 }

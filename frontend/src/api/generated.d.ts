@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/api-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ExchangeWorkflowCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/artifacts": {
         parameters: {
             query?: never;
@@ -509,6 +525,22 @@ export interface paths {
         };
         get: operations["AgentWorkspaceService_GetArtifactDownload"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/git-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["AgentWorkspaceService_ConfigureWorkflowGitSource"];
         post?: never;
         delete?: never;
         options?: never;
@@ -612,54 +644,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workflows/{workflow_id}/workspace/clear": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentWorkspaceService_ClearWorkspace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workflows/{workflow_id}/workspace/clone": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentWorkspaceService_CloneWorkspace"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workflows/{workflow_id}/workspace/directories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentWorkspaceService_CreateWorkspaceDirectory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/workflows/{workflow_id}/workspace/file": {
         parameters: {
             query?: never;
@@ -670,22 +654,6 @@ export interface paths {
         get: operations["AgentWorkspaceService_GetWorkspaceFile"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workflows/{workflow_id}/workspace/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentWorkspaceService_UploadWorkspaceFile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -730,13 +698,14 @@ export interface components {
     schemas: {
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
-        AgentWorkspaceServiceClearWorkspaceBody: {
-            confirmation?: string;
-        };
-        AgentWorkspaceServiceCloneWorkspaceBody: {
+        AgentWorkspaceServiceConfigureWorkflowGitSourceBody: {
             url?: string;
             branch?: string;
+            authentication?: string;
+            username?: string;
+            password?: string;
             ssh_private_key?: string;
+            config?: components["schemas"]["v1GitConfigEntry"][];
         };
         AgentWorkspaceServiceContinueRunConversationBody: {
             content?: string;
@@ -745,9 +714,7 @@ export interface components {
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
         };
-        AgentWorkspaceServiceCreateWorkspaceDirectoryBody: {
-            path?: string;
-        };
+        AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceRefreshProviderModelsBody: Record<string, never>;
         AgentWorkspaceServiceRerunWorkflowBody: Record<string, never>;
@@ -818,11 +785,6 @@ export interface components {
             workflow?: components["schemas"]["v1WorkflowInput"];
             /** Format: int64 */
             expected_version?: number;
-        };
-        AgentWorkspaceServiceUploadWorkspaceFileBody: {
-            path?: string;
-            /** Format: byte */
-            content?: string;
         };
         protobufAny: {
             "@type"?: string;
@@ -990,11 +952,17 @@ export interface components {
             expertise_tags?: string[];
             expert_ids?: string[];
         };
+        v1GitConfigEntry: {
+            key?: string;
+            value?: string;
+        };
         v1GitSource: {
             url?: string;
             branch?: string;
-            private_ssh?: boolean;
+            authentication?: string;
             credential_configured?: boolean;
+            username?: string;
+            config?: components["schemas"]["v1GitConfigEntry"][];
         };
         v1HealthResponse: {
             status?: string;
@@ -1282,6 +1250,12 @@ export interface components {
             /** Format: int64 */
             version?: number;
             expert_team_id?: string;
+        };
+        v1WorkflowAccessToken: {
+            jwt_token?: string;
+            token_type?: string;
+            /** Format: date-time */
+            expires_at?: string;
         };
         v1WorkflowCredential: {
             api_key?: string;
@@ -2983,6 +2957,41 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_ExchangeWorkflowCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceExchangeWorkflowCredentialBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkflowAccessToken"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListArtifacts: {
         parameters: {
             query?: never;
@@ -3033,6 +3042,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ArtifactDownload"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ConfigureWorkflowGitSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceConfigureWorkflowGitSourceBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Workflow"];
                 };
             };
             /** @description An unexpected error response. */
@@ -3317,111 +3361,6 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_ClearWorkspace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceClearWorkspaceBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1DeleteResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_CloneWorkspace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceCloneWorkspaceBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Workflow"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_CreateWorkspaceDirectory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceCreateWorkspaceDirectoryBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1WorkspaceEntry"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
     AgentWorkspaceService_GetWorkspaceFile: {
         parameters: {
             query?: {
@@ -3442,41 +3381,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1WorkspaceFile"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_UploadWorkspaceFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceUploadWorkspaceFileBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1WorkspaceEntry"];
                 };
             };
             /** @description An unexpected error response. */
