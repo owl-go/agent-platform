@@ -30,7 +30,7 @@ const en = {
 };
 
 Object.assign(zh.common, { send: "发送" });
-Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行" });
+Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行", activityDetails: "查看执行过程", command: "命令", toolCompleted: "工具调用完成", updatingFiles: "正在更新文件", streamingAnswer: "正在生成回答", answerReady: "回答已生成" });
 Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
 Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
 Object.assign(zh.experts, {
@@ -50,7 +50,7 @@ Object.assign(zh.experts, {
   deleteTeamHint: "工作流和未开始的会话会回到“不使用专家”。历史快照保持不变。", confirmDelete: "确认删除", deleteExpertFailed: "删除专家失败", deleteTeamFailed: "删除专家团失败"
 });
 Object.assign(en.common, { send: "Send" });
-Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line" });
+Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line", activityDetails: "View execution progress", command: "Command", toolCompleted: "Tool call completed", updatingFiles: "Updating files", streamingAnswer: "Generating the answer", answerReady: "Answer ready" });
 Object.assign(en.sessions, { addAttachment: "Attach images or files", removeAttachment: "Remove attachment {name}", attachmentLimits: "Up to 10 attachments per message, 100 MB each" });
 Object.assign(en.sessions.progress, { finalizing: "Saving the session securely" });
 Object.assign(en.experts, {

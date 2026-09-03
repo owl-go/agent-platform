@@ -34,7 +34,7 @@ func (service *Service) streamRunEvents(writer http.ResponseWriter, request *htt
 		http.Error(writer, "streaming unavailable", http.StatusInternalServerError)
 		return
 	}
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(150 * time.Millisecond)
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 	defer heartbeat.Stop()

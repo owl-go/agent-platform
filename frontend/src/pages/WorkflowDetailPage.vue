@@ -14,7 +14,7 @@ const route = useRoute(); const router = useRouter(); const { t, locale } = useI
 const workflowID = computed(() => String(route.params.workflowId));
 const origin = window.location.origin;
 const runConversationElement = ref<HTMLElement>();
-const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const streamingRunID = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const connections = ref<ModelProviderConnection[]>([]); const runtimes = ref<RuntimeEngineStatus[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const workspaceUsage = ref({ used: 0, limit: 1 }); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const pendingAttachments = ref<File[]>([]); const attachmentURLs = ref<Record<string, string>>({});
 const copiedStageKey = ref("");
 const models = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection_name: connection.name }))));
@@ -32,22 +32,28 @@ const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind 
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
 const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running"));
 const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => total + item.elapsed_ms, 0));
-const streamedRunOutput = computed(() => {
-  const stageStart = runEvents.value.findLastIndex((event) => event.type === "expert.stage.updated" && event.payload.state === "running");
-  return runEvents.value
-  .filter((event, index) => index > stageStart && event.type === "message.delta")
-  .map((event) => typeof event.payload.delta === "string" ? event.payload.delta : "")
-  .join("");
-});
 const currentExpertStage = computed(() => [...runEvents.value].reverse().find((event) => event.type === "expert.stage.updated")?.payload);
+const runtimeActivities = computed(() => {
+  const activities: Array<{ sequence: number; label: string; detail: string }> = [];
+  for (const event of runEvents.value) {
+    const activity = runtimeActivity(event);
+    if (!activity) continue;
+    const previous = activities.at(-1);
+    if (previous?.label === activity.label && previous.detail === activity.detail) previous.sequence = event.sequence;
+    else activities.push({ sequence: event.sequence, ...activity });
+  }
+  return activities.slice(-8);
+});
 watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
 });
 let runTimer: ReturnType<typeof setInterval> | undefined;
 let eventController: AbortController | undefined;
+let revealTimer: ReturnType<typeof setTimeout> | undefined;
+let revealTarget = "";
 onMounted(async () => { await refresh(); runTimer = setInterval(() => void refreshRuns(), 1500); });
-onBeforeUnmount(() => { if (runTimer) clearInterval(runTimer); eventController?.abort(); });
+onBeforeUnmount(() => { if (runTimer) clearInterval(runTimer); eventController?.abort(); stopRunReveal(); });
 async function refresh() { loading.value = true; error.value = ""; try { workflow.value = await api.getWorkflow(workflowID.value); settingsForm.value = { name: workflow.value.name, goal: workflow.value.goal, expert_id: workflow.value.expert_id, expert_team_id: workflow.value.expert_team_id, provider_model_id: workflow.value.provider_model_id, runtime_engine: workflow.value.runtime_engine, environment: workflow.value.environment ?? [], schedule: workflow.value.schedule }; [experts.value, expertTeams.value, connections.value, runtimes.value, runs.value, artifacts.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listModelProviderConnections(), api.listRuntimeEngines(), api.listRuns(workflowID.value), api.listArtifacts(workflowID.value)]); if (!workflow.value.deleted) await loadDirectory(""); else if (tab.value === "workspace" || tab.value === "settings") tab.value = "history"; } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
 async function refreshRuns() { try { runs.value = await api.listRuns(workflowID.value); if (selectedRun.value) { selectedRun.value = runs.value.find((item) => item.id === selectedRun.value?.id) ?? selectedRun.value; conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value.id); } if (!runs.value.some((item) => item.state === "queued" || item.state === "running")) artifacts.value = await api.listArtifacts(workflowID.value); } catch { /* Keep the last usable projection during a transient poll failure. */ } }
 async function runNow() { running.value = true; try { const created = await api.runWorkflow(workflowID.value); tab.value = "history"; runs.value = [created, ...runs.value.filter((item) => item.id !== created.id)]; await openRun(created); } catch { error.value = t("errors.generic"); } finally { running.value = false; } }
@@ -65,10 +71,12 @@ async function cancelRun(item: Run) { const turns = await api.listRunTurns(workf
 async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const latest = turns.at(-1); if (latest) await api.rerunWorkflow(workflowID.value, latest.id); runs.value = await api.listRuns(workflowID.value); }
 async function openRun(item: Run) {
 	eventController?.abort();
+	stopRunReveal();
 	selectedRun.value = item;
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
 	void hydrateAttachmentURLs(conversationRuns.value.flatMap((turn) => turn.attachments ?? []));
 	runEvents.value = [];
+	eventRunID.value = "";
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
 	if (active) void streamConversationTurn(active);
@@ -77,16 +85,60 @@ async function streamConversationTurn(item: Run) {
 	eventController?.abort();
 	eventController = new AbortController();
 	streamingRunID.value = item.id;
+	eventRunID.value = item.id;
 	runEvents.value = [];
+	stopRunReveal();
+	revealedRunOutput.value = "";
 	try {
-		await api.streamRunEvents(workflowID.value, item.id, (event) => { runEvents.value.push(event); void scrollConversationToEnd(); }, eventController.signal);
+		await api.streamRunEvents(workflowID.value, item.id, handleRunEvent, eventController.signal);
 		const completed = await api.getRun(workflowID.value, item.id);
+		if (completed.final_text) setRunRevealTarget(completed.final_text);
+		else if (completed.final_json) setRunRevealTarget(`\`\`\`json\n${JSON.stringify(completed.final_json, null, 2)}\n\`\`\``);
+		await waitForRunReveal(item.id);
 		conversationRuns.value = conversationRuns.value.map((turn) => turn.id === completed.id ? completed : turn);
 	} catch (streamError) {
 		if (!(streamError instanceof DOMException && streamError.name === "AbortError")) error.value = t("errors.generic");
 	} finally {
 		if (streamingRunID.value === item.id) streamingRunID.value = "";
 	}
+}
+function handleRunEvent(event: RunEvent) {
+	runEvents.value.push(event);
+	if (event.type === "expert.stage.updated" && event.payload.state === "running") {
+		stopRunReveal();
+		revealedRunOutput.value = "";
+	} else if (event.type === "message.delta" && typeof event.payload.delta === "string") {
+		setRunRevealTarget(revealTarget + event.payload.delta);
+	} else if (event.type === "message.completed" && typeof event.payload.message === "string") {
+		setRunRevealTarget(event.payload.message);
+	}
+	void scrollConversationToEnd();
+}
+function setRunRevealTarget(value: string) {
+	if (!value.startsWith(revealedRunOutput.value)) revealedRunOutput.value = "";
+	revealTarget = value;
+	revealNextRunChunk();
+}
+function revealNextRunChunk() {
+	if (revealTimer) return;
+	const tick = () => {
+		if (revealedRunOutput.value.length >= revealTarget.length) { revealTimer = undefined; return; }
+		const remaining = revealTarget.length - revealedRunOutput.value.length;
+		let end = revealedRunOutput.value.length + Math.min(24, Math.max(1, Math.ceil(remaining / 32)));
+		const lastCode = revealTarget.charCodeAt(end - 1);
+		if (lastCode >= 0xD800 && lastCode <= 0xDBFF) end += 1;
+		revealedRunOutput.value = revealTarget.slice(0, end);
+		revealTimer = setTimeout(tick, 22);
+	};
+	tick();
+}
+function stopRunReveal() {
+	if (revealTimer) clearTimeout(revealTimer);
+	revealTimer = undefined;
+	revealTarget = "";
+}
+async function waitForRunReveal(runID: string) {
+	while (streamingRunID.value === runID && (revealTimer || revealedRunOutput.value.length < revealTarget.length)) await new Promise((resolve) => setTimeout(resolve, 25));
 }
 async function sendFollowUp() {
 	if (!selectedRun.value || (!followUpInput.value.trim() && pendingAttachments.value.length === 0) || activeConversationRun.value || sendingFollowUp.value) return;
@@ -113,9 +165,18 @@ async function hydrateAttachmentURLs(attachments: Attachment[]) { await Promise.
 async function openTurnAttachment(attachment: Attachment) { try { window.open((await api.getAttachmentDownload(attachment.id)).url, "_blank", "noopener,noreferrer"); } catch { error.value = t("errors.generic"); } }
 async function copyStage(runID: string, position: number, value: string) { try { await navigator.clipboard.writeText(value); copiedStageKey.value = `${runID}:${position}`; window.setTimeout(() => { copiedStageKey.value = ""; }, 1600); } catch { error.value = t("errors.copy"); } }
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; streamingRunID.value = ""; followUpInput.value = ""; pendingAttachments.value = []; }
+function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; followUpInput.value = ""; pendingAttachments.value = []; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
-function runOutput(item: Run) { return item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || (item.id === streamingRunID.value ? streamedRunOutput.value : ""); }
+function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
+function runtimeActivity(event: RunEvent) {
+	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "" };
+	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), detail: typeof event.payload.tool === "string" ? event.payload.tool : t("workflows.command") };
+	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), detail: typeof event.payload.tool === "string" ? event.payload.tool : t("workflows.command") };
+	if (event.type === "file.changed") return { label: t("workflows.updatingFiles"), detail: "" };
+	if (event.type === "message.delta") return { label: t("workflows.streamingAnswer"), detail: "" };
+	if (event.type === "message.completed") return { label: t("workflows.answerReady"), detail: "" };
+	return undefined;
+}
 function visibleStages(item: Run) { const stages = item.expert_stages ?? []; return item.state === "failed" || item.state === "cancelled" ? stages : stages.slice(0, -1); }
 async function scrollConversationToEnd() { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior: "smooth" }); }
 function addEnvironment() { settingsForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }
@@ -138,7 +199,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div ref="runConversationElement" class="run-conversation">
         <template v-for="(turn, index) in conversationRuns" :key="turn.id">
           <article class="message user"><div class="message-content"><p v-if="runInputText(turn, index)">{{ runInputText(turn, index) }}</p><div v-if="turn.attachments?.length" class="turn-attachments"><button v-for="attachment in turn.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openTurnAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name"><span v-else class="attachment-file-mark">FILE</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article>
-          <article class="message assistant"><div class="message-content"><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(runOutput(turn))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong><small v-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }} · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(stage.final_text)"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><div v-if="fileArtifacts.some((item) => item.run_id === turn.id)" class="run-attachments"><button v-for="item in fileArtifacts.filter((artifact) => artifact.run_id === turn.id)" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">FILE</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
+          <article class="message assistant"><div class="message-content"><div v-if="turn.id === eventRunID && runtimeActivities.length" class="runtime-activity" aria-live="polite"><div class="runtime-activity-current"><span class="activity-pulse" :class="{ active: turn.id === streamingRunID }"></span><strong>{{ runtimeActivities.at(-1)?.label }}</strong><small v-if="runtimeActivities.at(-1)?.detail">{{ runtimeActivities.at(-1)?.detail }}</small></div><details v-if="runtimeActivities.length > 1"><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="activity in runtimeActivities" :key="activity.sequence"><span></span><div><strong>{{ activity.label }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(runOutput(turn))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong><small v-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small><small v-else>{{ t('sessions.progress.thinking') }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }} · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(stage.final_text)"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><div v-if="fileArtifacts.some((item) => item.run_id === turn.id)" class="run-attachments"><button v-for="item in fileArtifacts.filter((artifact) => artifact.run_id === turn.id)" :key="item.id" type="button" @click="openArtifact(item)"><span class="file-icon">FILE</span><span><strong>{{ item.name }}</strong><small>{{ item.size }} B</small></span></button></div><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
         </template>
       </div>
       <form v-if="!workflow?.deleted" class="run-composer" @submit.prevent="sendFollowUp"><div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removeConversationAttachment(index)"><X /></button></span></div><textarea v-model="followUpInput" rows="2" :placeholder="t('workflows.followUpPlaceholder')" :disabled="Boolean(activeConversationRun)" @keydown.enter.exact.prevent="sendFollowUp"></textarea><label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="Boolean(activeConversationRun) || sendingFollowUp" @change="chooseConversationAttachments"></label><button v-if="activeConversationRun" type="button" class="run-stop" :aria-label="t('sessions.stopGeneration')" @click="cancelConversationRun">■</button><button v-else type="submit" :disabled="sendingFollowUp || (!followUpInput.trim() && pendingAttachments.length === 0)" :aria-label="t('common.send')">↑</button></form>

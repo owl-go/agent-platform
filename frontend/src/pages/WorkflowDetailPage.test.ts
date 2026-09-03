@@ -192,4 +192,40 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.findAll(".run-conversation .message.user")).toHaveLength(2);
     wrapper.unmount();
   });
+
+  it("shows live Runtime activity and progressively reveals a whole final chunk", async () => {
+    vi.useFakeTimers();
+    const response = "这是 Runtime 最终一次性交付的完整回答，界面仍然需要逐步展示。";
+    const activeRun: Run = {
+      ...run,
+      state: "running",
+      final_text: undefined,
+      ended_at: undefined,
+      elapsed_ms: 0,
+    };
+    const api = apiStub({
+      listRuns: vi.fn(async () => [activeRun]),
+      listRunTurns: vi.fn(async () => [activeRun]),
+      streamRunEvents: vi.fn(async (_workflowID, _runID, onEvent, signal) => {
+        onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+        onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+        onEvent({ sequence: 3, type: "message.delta", payload: { delta: response }, raw: "{}" });
+        await new Promise<void>((_resolve, reject) => signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true }));
+      }),
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    const initiallyVisible = wrapper.get(".run-conversation .message.assistant .markdown-body").text();
+    expect(initiallyVisible.length).toBeGreaterThan(0);
+    expect(initiallyVisible.length).toBeLessThan(response.length);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+    expect(wrapper.get(".run-conversation .message.assistant .markdown-body").text()).toBe(response);
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
 });
