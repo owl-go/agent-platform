@@ -423,9 +423,9 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
 <template>
   <section class="session-layout">
     <aside class="collection-panel">
-      <div class="collection-head"><div><p class="eyebrow">01 / CONVERSATIONS</p><h1>{{ t('sessions.title') }}</h1></div><button class="icon-button" :disabled="creating" @click="create">＋</button></div>
+      <div class="collection-head"><div><p class="eyebrow">01 / CONVERSATIONS</p><h1>{{ t('sessions.title') }}</h1></div><el-button circle type="primary" class="icon-button" :loading="creating" aria-label="New session" @click="create">＋</el-button></div>
       <p class="muted collection-subtitle">{{ t('sessions.subtitle') }}</p>
-      <div v-if="loading" class="quiet-state">{{ t('common.loading') }}</div>
+      <el-skeleton v-if="loading" :rows="6" animated class="collection-loading" />
       <div v-else class="session-groups">
         <p class="group-label">{{ t('sessions.active') }} · {{ sessions.length }}</p>
         <div v-for="item in sessions" :key="item.id" class="session-row" :class="{ active: selected?.id === item.id, editing: editingSessionID === item.id }" role="button" tabindex="0" @click="open(item)" @keydown.enter="open(item)">
@@ -436,7 +436,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
             <ActionIconButton :label="t('sessions.deleteAction', { title: item.title })" :tooltip="t('common.delete')" tone="danger" @click.stop="requestRemove(item, $event)"><Trash2 aria-hidden="true" /></ActionIconButton>
           </span>
         </div>
-        <button class="archive-toggle" @click="showArchived = !showArchived"><span>▸</span>{{ t('sessions.archived') }} · {{ archived.length }}</button>
+        <el-button class="archive-toggle" text @click="showArchived = !showArchived"><span>▸</span>{{ t('sessions.archived') }} · {{ archived.length }}</el-button>
         <div v-if="showArchived">
           <div v-for="item in archived" :key="item.id" class="session-row archived" role="button" tabindex="0" @click="open(item)" @keydown.enter="open(item)">
             <span class="session-glyph">□</span><span><strong>{{ item.title }}</strong><small>{{ new Date(item.updated_at).toLocaleDateString() }}</small></span>
@@ -450,11 +450,11 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
     </aside>
     <article class="conversation-panel">
       <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
-      <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><button class="button ghost" @click="router.push('/settings')">{{ t('nav.settings') }} →</button></div>
+      <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
-        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p>{{ selectedExpertTeam?.name ?? selectedExpert?.name ?? t('sessions.noExpert') }} <span>·</span> {{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><span class="engine-chip">AUTO RUNTIME</span></header>
+        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p>{{ selectedExpertTeam?.name ?? selectedExpert?.name ?? t('sessions.noExpert') }} <span>·</span> {{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><el-tag effect="plain">AUTO RUNTIME</el-tag></header>
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
-          <div v-if="loadingMessages" class="message-loading" :aria-label="t('common.loading')"><span></span><span></span><span></span></div>
+          <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ t('sessions.welcome') }}</p></div>
           <div v-for="(message, index) in messages" :key="message.id" class="message" :class="message.role">
             <div class="message-content">
@@ -470,25 +470,25 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <div class="message-actions">
                 <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="message.response_snapshot" class="message-model" :title="`${message.response_snapshot.connection_name} · ${message.response_snapshot.model_id} · ${message.response_snapshot.runtime_engine}`"> · {{ message.response_snapshot.model_name }}</span></small>
                 <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
-                <button v-if="message.role === 'assistant' && message.state === 'failed'" class="text-button" @click="retry(index)">{{ t('common.retry') }}</button>
+                <el-button v-if="message.role === 'assistant' && message.state === 'failed'" text type="primary" @click="retry(index)">{{ t('common.retry') }}</el-button>
               </div>
             </div>
           </div>
         </div>
         <div ref="composerLayer" class="composer-layer">
-          <button v-if="showJumpToLatest" class="jump-to-latest" type="button" :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></button>
+          <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
           <footer class="composer">
             <div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removePendingAttachment(index)"><X /></button></span></div>
             <textarea v-model="draft" :placeholder="t('sessions.placeholder')" :disabled="selected.archived || sending" @keydown="keyboard"></textarea>
             <select v-if="messages.length === 0" class="specialist-selector" :value="specialistValue" :aria-label="t('sessions.chooseExpert')" :disabled="selected.archived || sending" @change="changeSpecialist"><option value="none">{{ t('sessions.noExpert') }}</option><optgroup :label="t('experts.title')"><option v-for="item in experts.filter((value) => value.available)" :key="item.id" :value="`expert:${item.id}`">{{ item.name }}</option></optgroup><optgroup :label="t('experts.teams')"><option v-for="item in expertTeams" :key="item.id" :value="`team:${item.id}`" :disabled="!item.available">{{ item.name }}{{ item.available ? '' : ` (${t('experts.teamUnavailable')})` }}</option></optgroup></select>
             <label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="selected.archived || sending || Boolean(activeAssistant)" @change="chooseAttachments"></label>
             <div class="composer-model-control"><label><span class="model-dot" :class="selectedCompatibility?.status"></span><select v-model="selectedModelID" :aria-label="t('sessions.modelSelector')" :disabled="selected.archived || sending || Boolean(activeAssistant)"><optgroup v-for="connection in connections" :key="connection.id" :label="connection.name"><option v-for="model in connection.models.filter((item) => item.available)" :key="model.id" :value="model.id" :disabled="model.compatibility.find((item) => item.runtime_engine === settings?.default_runtime_engine)?.status === 'incompatible'">{{ model.display_name }}</option></optgroup></select></label><small v-if="selectedCompatibility?.status === 'unverified'">{{ t('sessions.modelUnverified') }}</small></div>
-            <button v-if="activeAssistant" type="button" class="stop-generation" :class="{ stopping: cancellingMessageID === activeAssistant.id }" :disabled="cancellingMessageID === activeAssistant.id" :aria-label="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" :title="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" @click="cancelGeneration"><Square aria-hidden="true" /></button>
-            <button v-else type="button" :disabled="(!draft.trim() && pendingAttachments.length === 0) || !selectedModelID || selectedCompatibility?.status === 'incompatible' || sending || selected.archived" @click="send">↑</button>
+            <el-button v-if="activeAssistant" class="stop-generation" :class="{ stopping: cancellingMessageID === activeAssistant.id }" :loading="cancellingMessageID === activeAssistant.id" :aria-label="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" :title="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" @click="cancelGeneration"><Square aria-hidden="true" /></el-button>
+            <el-button v-else type="primary" :disabled="(!draft.trim() && pendingAttachments.length === 0) || !selectedModelID || selectedCompatibility?.status === 'incompatible' || sending || selected.archived" @click="send">↑</el-button>
           </footer>
         </div>
       </template>
-      <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><button class="button primary" :disabled="creating" @click="create">{{ t('sessions.new') }}</button></div>
+      <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>
     </article>
   </section>
   <div v-if="pendingDelete" class="modal-layer session-delete-layer" @click.self="cancelRemove">
@@ -501,8 +501,8 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <div class="delete-target"><small>{{ t('sessions.deleteTarget') }}</small><strong>{{ pendingDelete.title }}</strong></div>
       <p class="delete-warning"><span aria-hidden="true">!</span>{{ t('sessions.deleteWarning') }}</p>
       <div class="modal-actions delete-actions">
-        <button type="button" class="button ghost" :disabled="deleting" @click="cancelRemove">{{ t('common.cancel') }}</button>
-        <button type="button" class="button danger" :disabled="deleting" @click="confirmRemove">{{ deleting ? t('sessions.deleting') : t('sessions.deleteConfirm') }}</button>
+        <el-button class="button ghost" :disabled="deleting" @click="cancelRemove">{{ t('common.cancel') }}</el-button>
+        <el-button class="button danger" type="danger" :loading="deleting" @click="confirmRemove">{{ deleting ? t('sessions.deleting') : t('sessions.deleteConfirm') }}</el-button>
       </div>
     </section>
   </div>

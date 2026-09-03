@@ -1,12 +1,5 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
-import WorkflowsPage from "./pages/WorkflowsPage.vue";
-import WorkflowDetailPage from "./pages/WorkflowDetailPage.vue";
-import ExpertsPage from "./pages/ExpertsPage.vue";
-import ExpertEditorPage from "./pages/ExpertEditorPage.vue";
-import ExpertTeamEditorPage from "./pages/ExpertTeamEditorPage.vue";
-import SettingsPage from "./pages/SettingsPage.vue";
-import UsersPage from "./pages/UsersPage.vue";
 
 export type Surface = "sessions" | "workflows" | "experts" | "settings";
 
@@ -16,15 +9,15 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
     routes: [
       { path: "/", redirect: "/sessions" },
       { path: "/sessions", name: "sessions", component: SessionsPage },
-      { path: "/workflows", name: "workflows", component: WorkflowsPage },
-      { path: "/workflows/:workflowId", name: "workflow-detail", component: WorkflowDetailPage },
-      { path: "/experts", name: "experts", component: ExpertsPage },
-      { path: "/experts/new", name: "expert-new", component: ExpertEditorPage },
-      { path: "/experts/:expertId", name: "expert-edit", component: ExpertEditorPage },
-      { path: "/expert-teams/new", name: "expert-team-new", component: ExpertTeamEditorPage },
-      { path: "/expert-teams/:teamId", name: "expert-team-edit", component: ExpertTeamEditorPage },
-      { path: "/settings", name: "settings", component: SettingsPage },
-      { path: "/admin/users", name: "users", component: UsersPage },
+      { path: "/workflows", name: "workflows", component: () => import("./pages/WorkflowsPage.vue") },
+      { path: "/workflows/:workflowId", name: "workflow-detail", component: () => import("./pages/WorkflowDetailPage.vue") },
+      { path: "/experts", name: "experts", component: () => import("./pages/ExpertsPage.vue") },
+      { path: "/experts/new", name: "expert-new", component: () => import("./pages/ExpertEditorPage.vue") },
+      { path: "/experts/:expertId", name: "expert-edit", component: () => import("./pages/ExpertEditorPage.vue") },
+      { path: "/expert-teams/new", name: "expert-team-new", component: () => import("./pages/ExpertTeamEditorPage.vue") },
+      { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue") },
+      { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue") },
+      { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
       { path: "/:pathMatch(.*)*", redirect: "/sessions" },
     ],
   });

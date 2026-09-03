@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleCheck, TriangleAlert, X } from "@lucide/vue";
+import { CircleCheck, Close, WarningFilled } from "@element-plus/icons-vue";
 import { onBeforeUnmount, watch } from "vue";
 
 const props = withDefaults(defineProps<{
@@ -24,9 +24,9 @@ onBeforeUnmount(() => { if (timeout !== undefined) window.clearTimeout(timeout);
 <template>
   <Transition name="toast-pop" appear>
     <aside v-if="message" class="app-toast" :class="kind" :role="kind === 'error' ? 'alert' : 'status'" :aria-live="kind === 'error' ? 'assertive' : 'polite'">
-      <span class="toast-symbol"><CircleCheck v-if="kind === 'success'" :size="19" /><TriangleAlert v-else :size="19" /></span>
+      <el-icon class="toast-symbol" :size="19"><CircleCheck v-if="kind === 'success'" /><WarningFilled v-else /></el-icon>
       <span class="toast-copy"><strong>{{ title }}</strong><span>{{ message }}</span></span>
-      <button type="button" :aria-label="closeLabel" @click="emit('dismiss')"><X :size="16" /></button>
+      <el-button text circle :icon="Close" :aria-label="closeLabel" @click="emit('dismiss')" />
       <i v-if="duration > 0" class="toast-life" :style="{ animationDuration: `${duration}ms` }"></i>
     </aside>
   </Transition>

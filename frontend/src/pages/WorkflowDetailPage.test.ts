@@ -193,6 +193,15 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("uses the same centered composer layout as a Session", async () => {
+    const wrapper = await mountPage();
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".run-page > .composer-layer > .run-composer.composer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("shows live Runtime activity and progressively reveals a whole final chunk", async () => {
     vi.useFakeTimers();
     const response = "这是 Runtime 最终一次性交付的完整回答，界面仍然需要逐步展示。";

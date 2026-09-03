@@ -50,45 +50,45 @@ async function moveTab(tab: "experts" | "teams") {
   <section class="page-surface expert-catalog">
     <header class="expert-catalog-head">
       <div class="catalog-tabs" role="tablist" :aria-label="t('experts.catalog')">
-        <button id="experts-tab" :class="{ active: activeTab === 'experts' }" role="tab" :tabindex="activeTab === 'experts' ? 0 : -1" :aria-selected="activeTab === 'experts'" aria-controls="experts-panel" @click="selectTab('experts')" @keydown.right.prevent="moveTab('teams')" @keydown.end.prevent="moveTab('teams')">{{ t('experts.title') }}</button>
-        <button id="teams-tab" :class="{ active: activeTab === 'teams' }" role="tab" :tabindex="activeTab === 'teams' ? 0 : -1" :aria-selected="activeTab === 'teams'" aria-controls="teams-panel" @click="selectTab('teams')" @keydown.left.prevent="moveTab('experts')" @keydown.home.prevent="moveTab('experts')">{{ t('experts.teams') }}</button>
+        <el-button id="experts-tab" text :class="{ active: activeTab === 'experts' }" role="tab" :tabindex="activeTab === 'experts' ? 0 : -1" :aria-selected="activeTab === 'experts'" aria-controls="experts-panel" @click="selectTab('experts')" @keydown.right.prevent="moveTab('teams')" @keydown.end.prevent="moveTab('teams')">{{ t('experts.title') }}</el-button>
+        <el-button id="teams-tab" text :class="{ active: activeTab === 'teams' }" role="tab" :tabindex="activeTab === 'teams' ? 0 : -1" :aria-selected="activeTab === 'teams'" aria-controls="teams-panel" @click="selectTab('teams')" @keydown.left.prevent="moveTab('experts')" @keydown.home.prevent="moveTab('experts')">{{ t('experts.teams') }}</el-button>
       </div>
-      <RouterLink class="button primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink>
+      <RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink>
     </header>
 
     <div class="catalog-tools">
-      <label class="catalog-search"><Search :size="17" /><input v-model="query" :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"></label>
+      <el-input v-model="query" class="catalog-search" clearable :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"><template #prefix><Search :size="17" /></template></el-input>
       <div class="tag-filter" :aria-label="t('experts.expertiseFilter')">
-        <button :class="{ active: !tag }" @click="tag = ''">{{ t('experts.all') }}</button>
-        <button v-for="item in activeTags" :key="item" :class="{ active: tag === item }" @click="tag = item">{{ item }}</button>
+        <el-check-tag :checked="!tag" @change="tag = ''">{{ t('experts.all') }}</el-check-tag>
+        <el-check-tag v-for="item in activeTags" :key="item" :checked="tag === item" @change="tag = item">{{ item }}</el-check-tag>
       </div>
     </div>
 
     <ToastMessage v-if="error" kind="error" :title="t('experts.operationFailed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
 
     <div v-if="activeTab === 'experts'" id="experts-panel" class="expert-grid catalog-grid" role="tabpanel" aria-labelledby="experts-tab">
-      <RouterLink v-for="expert in visibleExperts" :key="expert.id" class="expert-card" :to="`/experts/${expert.id}`">
+      <RouterLink v-for="expert in visibleExperts" :key="expert.id" class="expert-card el-card is-hover-shadow" :to="`/experts/${expert.id}`">
         <span class="catalog-avatar"><UserRound :size="22" /></span>
         <div>
-          <div class="card-title-line"><h2>{{ expert.name }}</h2><span v-if="!expert.available" class="status-pill warning">{{ t('experts.incomplete') }}</span></div>
+          <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.available" type="warning" size="small">{{ t('experts.incomplete') }}</el-tag></div>
           <p>{{ expert.capability_introduction }}</p>
-          <div class="tag-row"><span v-for="item in expert.expertise_tags" :key="item">{{ item }}</span></div>
+          <div class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" type="info" effect="plain" size="small">{{ item }}</el-tag></div>
         </div>
       </RouterLink>
-      <div v-if="!visibleExperts.length" class="catalog-empty">{{ t('experts.noExperts') }}</div>
+      <el-empty v-if="!visibleExperts.length" class="catalog-empty" :description="t('experts.noExperts')" />
     </div>
 
     <div v-else id="teams-panel" class="expert-grid catalog-grid" role="tabpanel" aria-labelledby="teams-tab">
-      <RouterLink v-for="team in visibleTeams" :key="team.id" class="expert-card expert-team-card" :to="`/expert-teams/${team.id}`">
+      <RouterLink v-for="team in visibleTeams" :key="team.id" class="expert-card expert-team-card el-card is-hover-shadow" :to="`/expert-teams/${team.id}`">
         <span class="catalog-avatar team"><Users :size="22" /></span>
         <div>
-          <div class="card-title-line"><h2>{{ team.name }}</h2><span v-if="!team.available" class="status-pill warning">{{ t('experts.teamUnavailable') }}</span></div>
+          <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
           <p>{{ team.capability_introduction }}</p>
           <ol class="member-preview"><li v-for="member in team.experts" :key="member.id">{{ member.name }}</li></ol>
-          <div class="card-footer"><div class="tag-row"><span v-for="item in team.expertise_tags" :key="item">{{ item }}</span></div><strong>{{ t('experts.perRound', { count: team.experts.length }) }}</strong></div>
+          <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" type="info" effect="plain" size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.experts.length }) }}</strong></div>
         </div>
       </RouterLink>
-      <div v-if="!visibleTeams.length" class="catalog-empty">{{ t('experts.noTeams') }}</div>
+      <el-empty v-if="!visibleTeams.length" class="catalog-empty" :description="t('experts.noTeams')" />
     </div>
   </section>
 </template>
