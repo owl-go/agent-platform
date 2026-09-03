@@ -12,7 +12,7 @@
 4. Workspace 浏览、上传、下载、建目录、公共 HTTPS/私有 SSH Git Clone、1 GiB 限制和成功合并。
 5. Run 历史、SSE 实时事件、终态、最终结果与 Artifact 下载。
 6. Expert 选择与配置冻结；Git/ZIP Skill 安装；HTTPS/stdio MCP 隔离测试；四 Runtime 读取对应 MCP 配置。
-7. Claude Code、Codex、Hermes、OpenClaw 各自使用固定 RepoDigest 进行真实模型调用，并验证取消、超时、输出边界和 Secret canary 不泄漏。
+7. Claude Code、Codex、Hermes、OpenClaw、PI Agent 各自使用固定 RepoDigest 进行真实模型调用，并验证取消、超时、输出边界和 Secret canary 不泄漏。
 8. MinIO 完整上传/回读/签名下载；若生产选择阿里云 OSS，则额外执行真实 OSS Conformance。
 9. 中文/英文、桌面/移动端主要流程与刷新恢复。
 10. 数据库备份可恢复、旧业务 Schema 已清除、API/Worker 健康检查和重启恢复。

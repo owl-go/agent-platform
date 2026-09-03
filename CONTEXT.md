@@ -159,7 +159,7 @@ The verified, unverified, or incompatible relationship between one Provider Mode
 _Avoid_: Provider Model availability, Runtime Capability, provider verification
 
 **Runtime Engine**:
-The selected Claude Code, Codex, Hermes, or OpenClaw engine that generates a Session response or executes a Run.
+The selected Claude Code, Codex, Hermes, OpenClaw, or PI Agent engine that generates a Session response or executes a Run.
 _Avoid_: Provider Model, Expert, sandbox, Worker
 
 **Runtime Engine Setting**:

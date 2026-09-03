@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import ExtensionManager from "../components/ExtensionManager.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 
@@ -105,9 +105,9 @@ function selectPersonality(personality: Personality) {
           <div class="personality-grid"><label v-for="item in personalities" :key="item" :class="{ selected: settings.personality === item }"><input type="radio" :value="item" :checked="settings.personality === item" @change="selectPersonality(item)"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
           <label class="block-label">{{ t("settings.instructions") }}<textarea v-model="settings.personality_instructions" rows="6" :required="settings.personality === 'custom'"></textarea></label>
           <div class="form-grid">
-            <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtime.name === 'claude' ? 'Claude Code' : runtime.name === 'openclaw' ? 'OpenClaw' : runtime.name[0].toUpperCase() + runtime.name.slice(1) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
+            <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
             <label>{{ t("settings.language") }}<select v-model="settings.language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label><label>{{ t("settings.timezone") }}<input v-model="settings.timezone"></label>
-            <fieldset class="full runtime-defaults"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtime.name === 'claude' ? 'Claude Code' : runtime.name === 'openclaw' ? 'OpenClaw' : runtime.name[0].toUpperCase() + runtime.name.slice(1) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
+            <fieldset class="full runtime-defaults"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
           </div>
         </form>
         <div v-if="section === 'models'">

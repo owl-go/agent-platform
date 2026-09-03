@@ -23,12 +23,13 @@ const (
 	RuntimeCodex    RuntimeEngine = "codex"
 	RuntimeHermes   RuntimeEngine = "hermes"
 	RuntimeOpenClaw RuntimeEngine = "openclaw"
+	RuntimePI       RuntimeEngine = "pi"
 )
 
 func ParseRuntime(value string) (RuntimeEngine, error) {
 	runtime := RuntimeEngine(strings.TrimSpace(value))
 	switch runtime {
-	case RuntimeClaude, RuntimeCodex, RuntimeHermes, RuntimeOpenClaw:
+	case RuntimeClaude, RuntimeCodex, RuntimeHermes, RuntimeOpenClaw, RuntimePI:
 		return runtime, nil
 	default:
 		return "", fmt.Errorf("%w: unsupported Runtime Engine", ErrInvalid)
@@ -224,7 +225,7 @@ func ValidateEnvironment(values []EnvironmentVariable) error {
 
 func reservedEnvironmentName(name string) bool {
 	switch name {
-	case "HOME", "PATH", "SHELL", "ENV", "BASH_ENV", "PROMPT_COMMAND", "CODEX_HOME", "OPENCLAW_CONFIG_PATH", "GIT_SSH", "GIT_SSH_COMMAND", "NODE_OPTIONS", "PYTHONHOME", "PYTHONPATH":
+	case "HOME", "PATH", "SHELL", "ENV", "BASH_ENV", "PROMPT_COMMAND", "CODEX_HOME", "OPENCLAW_CONFIG_PATH", "PI_CODING_AGENT_DIR", "PI_CODING_AGENT_SESSION_DIR", "GIT_SSH", "GIT_SSH_COMMAND", "NODE_OPTIONS", "PYTHONHOME", "PYTHONPATH":
 		return true
 	}
 	for _, prefix := range []string{"AGENT_PLATFORM_", "AGENT_WORKSPACE_", "GIT_CONFIG_", "LD_", "DYLD_"} {
@@ -583,8 +584,8 @@ func CompatibilityForProtocols(protocols []string) []RuntimeModelCompatibility {
 		}
 		return false
 	}
-	items := make([]RuntimeModelCompatibility, 0, 4)
-	for _, runtime := range []RuntimeEngine{RuntimeClaude, RuntimeCodex, RuntimeHermes, RuntimeOpenClaw} {
+	items := make([]RuntimeModelCompatibility, 0, 5)
+	for _, runtime := range []RuntimeEngine{RuntimeClaude, RuntimeCodex, RuntimeHermes, RuntimeOpenClaw, RuntimePI} {
 		item := RuntimeModelCompatibility{RuntimeEngine: runtime, Status: "unverified", Reason: "This model and Runtime image have not passed conformance"}
 		if runtime == RuntimeCodex && !has("openai_responses") {
 			item.Status = "incompatible"

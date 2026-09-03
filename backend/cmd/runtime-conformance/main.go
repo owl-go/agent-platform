@@ -25,6 +25,7 @@ import (
 	"agent-platform/backend/internal/agentruntime/containerprocess"
 	"agent-platform/backend/internal/agentruntime/hermes"
 	"agent-platform/backend/internal/agentruntime/openclaw"
+	"agent-platform/backend/internal/agentruntime/pi"
 	"agent-platform/backend/internal/agentruntime/processharness"
 	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/runworker"
@@ -69,7 +70,7 @@ func main() {
 
 func parseFlags() options {
 	var opts options
-	flag.StringVar(&opts.runtime, "runtime", "", "claude, codex, hermes, or openclaw")
+	flag.StringVar(&opts.runtime, "runtime", "", "claude, codex, hermes, openclaw, or pi")
 	flag.StringVar(&opts.image, "image", "", "immutable runtime image repo digest")
 	flag.StringVar(&opts.model, "model", "", "configured model identifier")
 	flag.StringVar(&opts.workspace, "workspace", "", "absolute path to a prepared Git workspace")
@@ -203,6 +204,8 @@ func newAdapter(name string, config cliadapter.Config) (agentruntime.Adapter, er
 		return hermes.New(config), nil
 	case "openclaw":
 		return openclaw.New(config), nil
+	case "pi":
+		return pi.New(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported runtime %q", name)
 	}

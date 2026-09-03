@@ -40,6 +40,7 @@ for name in \
   CONFORMANCE_CODEX_IMAGE CONFORMANCE_CODEX_MODEL CONFORMANCE_CODEX_CREDENTIAL_DIR \
   CONFORMANCE_HERMES_IMAGE CONFORMANCE_HERMES_MODEL CONFORMANCE_HERMES_CREDENTIAL_DIR \
   CONFORMANCE_OPENCLAW_IMAGE CONFORMANCE_OPENCLAW_MODEL CONFORMANCE_OPENCLAW_CREDENTIAL_DIR \
+  CONFORMANCE_PI_IMAGE CONFORMANCE_PI_MODEL CONFORMANCE_PI_CREDENTIAL_DIR \
   ALIYUN_OSS_ENDPOINT ALIYUN_OSS_ACCESS_KEY ALIYUN_OSS_SECRET_KEY ALIYUN_OSS_BUCKET \
   MINIO_ENDPOINT MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_BUCKET; do
   require_value "${name}"
@@ -66,7 +67,7 @@ for url_name in SANDBOX_REDIRECT_TEST_URL SANDBOX_REBIND_TEST_URL SANDBOX_CONTRO
   require_http_url "${url_name}"
 done
 
-for runtime in CLAUDE CODEX HERMES OPENCLAW; do
+for runtime in CLAUDE CODEX HERMES OPENCLAW PI; do
   image_name="CONFORMANCE_${runtime}_IMAGE"
   image="${!image_name:-}"
   if [[ -n "${image}" && ! "${image}" =~ ^[^[:space:]@]+@sha256:[a-f0-9]{64}$ ]]; then
@@ -152,7 +153,7 @@ if ((${#failures[@]} > 0)); then
 fi
 
 # Fail before model calls if an immutable image or a Runtime-specific Git credential is unusable.
-for runtime in CLAUDE CODEX HERMES OPENCLAW; do
+for runtime in CLAUDE CODEX HERMES OPENCLAW PI; do
   image_name="CONFORMANCE_${runtime}_IMAGE"
   credential_name="CONFORMANCE_${runtime}_CREDENTIAL_DIR"
   image="${!image_name}"

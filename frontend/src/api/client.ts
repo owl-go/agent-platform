@@ -32,7 +32,14 @@ export interface ModelProviderPreset { provider_type: string; display_name: stri
 export interface MCPServer { id: string; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number }
-export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw";
+export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
+
+export function runtimeEngineDisplayName(runtime: RuntimeEngine): string {
+  if (runtime === "claude") return "Claude Code";
+  if (runtime === "openclaw") return "OpenClaw";
+  if (runtime === "pi") return "PI Agent";
+  return runtime[0].toUpperCase() + runtime.slice(1);
+}
 export type Personality = "gentle_professional" | "direct_efficient" | "lively_friendly" | "custom";
 
 export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";

@@ -199,7 +199,7 @@ func (service *Service) ListRuntimeEngines(ctx context.Context, _ *workspacev1.L
 		return nil, err
 	}
 	response := &workspacev1.ListRuntimeEnginesResponse{}
-	for _, name := range []string{"claude", "codex", "hermes", "openclaw"} {
+	for _, name := range []string{"claude", "codex", "hermes", "openclaw", "pi"} {
 		configured, exists := service.config.Worker.Runtimes[name]
 		response.Items = append(response.Items, &workspacev1.RuntimeEngineStatus{
 			Name: name, Available: exists && configured.Available,
@@ -601,7 +601,7 @@ func expertTeamResponse(item workspacedomain.ExpertTeam) *workspacev1.ExpertTeam
 
 func settingsResponse(item workspacedomain.Settings) *workspacev1.PersonalSettings {
 	response := &workspacev1.PersonalSettings{Personality: item.Personality, PersonalityInstructions: item.PersonalityInstructions, DefaultRuntimeEngine: string(item.DefaultRuntimeEngine), Language: item.Language, Timezone: item.Timezone, Version: item.Version}
-	for _, runtime := range []workspacedomain.RuntimeEngine{workspacedomain.RuntimeClaude, workspacedomain.RuntimeCodex, workspacedomain.RuntimeHermes, workspacedomain.RuntimeOpenClaw} {
+	for _, runtime := range []workspacedomain.RuntimeEngine{workspacedomain.RuntimeClaude, workspacedomain.RuntimeCodex, workspacedomain.RuntimeHermes, workspacedomain.RuntimeOpenClaw, workspacedomain.RuntimePI} {
 		if modelID := item.RuntimeModelDefaults[runtime]; modelID != "" {
 			response.RuntimeModelDefaults = append(response.RuntimeModelDefaults, &workspacev1.RuntimeModelDefault{RuntimeEngine: string(runtime), ProviderModelId: modelID})
 		}

@@ -37,6 +37,7 @@ worker:
     codex: {available: true, native_resume: true, image_digest: "${CODEX_RUNTIME_IMAGE}", cli_version: "0.147.0"}
     hermes: {available: true, native_resume: false, image_digest: "${HERMES_RUNTIME_IMAGE}", cli_version: "0.19.0"}
     openclaw: {available: true, native_resume: false, image_digest: "${OPENCLAW_RUNTIME_IMAGE}", cli_version: "2026.7.1-2"}
+    pi: {available: false, native_resume: false, image_digest: "", cli_version: "0.84.4"}
 
 database:
   dsn: "${DATABASE_URL}"

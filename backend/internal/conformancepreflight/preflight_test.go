@@ -12,8 +12,8 @@ import (
 func TestCanaryDoesNotCountAsModelCredential(t *testing.T) {
 	repoRoot := repositoryRoot(t)
 	temp := t.TempDir()
-	credentialDirectories := make([]string, 0, 4)
-	for _, runtimeName := range []string{"claude", "codex", "hermes", "openclaw"} {
+	credentialDirectories := make([]string, 0, 5)
+	for _, runtimeName := range []string{"claude", "codex", "hermes", "openclaw", "pi"} {
 		directory := filepath.Join(temp, runtimeName)
 		if err := os.MkdirAll(filepath.Join(directory, "env"), 0o700); err != nil {
 			t.Fatal(err)
@@ -48,6 +48,9 @@ func TestCanaryDoesNotCountAsModelCredential(t *testing.T) {
 		"CONFORMANCE_OPENCLAW_IMAGE=registry.example/openclaw@sha256:"+strings.Repeat("d", 64),
 		"CONFORMANCE_OPENCLAW_MODEL=model",
 		"CONFORMANCE_OPENCLAW_CREDENTIAL_DIR="+credentialDirectories[3],
+		"CONFORMANCE_PI_IMAGE=registry.example/pi@sha256:"+strings.Repeat("e", 64),
+		"CONFORMANCE_PI_MODEL=model",
+		"CONFORMANCE_PI_CREDENTIAL_DIR="+credentialDirectories[4],
 		"ALIYUN_OSS_ENDPOINT=https://oss.example.com",
 		"ALIYUN_OSS_ACCESS_KEY=access",
 		"ALIYUN_OSS_SECRET_KEY=secret",
@@ -61,7 +64,7 @@ func TestCanaryDoesNotCountAsModelCredential(t *testing.T) {
 	if err == nil {
 		t.Fatal("preflight unexpectedly accepted canary-only credential directories")
 	}
-	for _, runtimeName := range []string{"CLAUDE", "CODEX", "HERMES", "OPENCLAW"} {
+	for _, runtimeName := range []string{"CLAUDE", "CODEX", "HERMES", "OPENCLAW", "PI"} {
 		want := "CONFORMANCE_" + runtimeName + "_CREDENTIAL_DIR/env contains no model credential besides CONFORMANCE_CANARY_SECRET"
 		if !strings.Contains(string(output), want) {
 			t.Fatalf("preflight output does not contain %q:\n%s", want, output)

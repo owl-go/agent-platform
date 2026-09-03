@@ -85,7 +85,7 @@ wait_for_container() {
 SANDBOX_TEST_IMAGE="${CONFORMANCE_CLAUDE_IMAGE}" \
   "${repo_root}/scripts/conformance/sandbox-linux.sh" >"${suite_root}/sandbox.log" 2>&1
 
-runtimes=(claude codex hermes openclaw)
+runtimes=(claude codex hermes openclaw pi)
 for runtime in "${runtimes[@]}"; do
   upper="${runtime^^}"
   image_name="CONFORMANCE_${upper}_IMAGE"
@@ -321,6 +321,6 @@ for runtime in "${runtimes[@]}"; do
 done
 
 jq -s '{generated_at: now | todate, decision: "GO", runtimes: .}' \
-  "${suite_root}"/{claude,codex,hermes,openclaw}/scenario-summary.json >"${suite_root}/summary.json"
+  "${suite_root}"/{claude,codex,hermes,openclaw,pi}/scenario-summary.json >"${suite_root}/summary.json"
 
 echo "Production Conformance passed; evidence: ${suite_root}"

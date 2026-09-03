@@ -63,7 +63,7 @@ Login opens Sessions. A User without a usable Model Provider Connection, Provide
 ### 4.3 Native Resume
 
 - Claude Code and Codex may use native Session Resume only for Runtime images whose `native_resume` conformance evidence has passed.
-- Hermes and OpenClaw use the Rolling Summary and recent messages for every response until their native Resume capability is independently verified.
+- Hermes, OpenClaw, and PI Agent use the Rolling Summary and recent messages for every response until their native Resume capability is independently verified.
 - If the Runtime Engine name changes, the platform starts a new Native Session using the Rolling Summary.
 - Runtime identity comparison deliberately uses only the Runtime Engine name. A CLI, Adapter, or image upgrade does not proactively invalidate the Native Session; a safe classified Resume failure may cause fallback.
 - Changing the Provider Model while keeping the same Runtime Engine continues native Resume and passes the new model configuration to that Runtime. A Runtime rejection fails that response without losing platform history.
@@ -241,7 +241,7 @@ Run metadata and final text/JSON results are retained without a time limit in th
 - Provider management lists the resulting models and provides both Refresh Models and Add Model actions. A fallback catalog is not presented as a provider error, while a connection with neither discovered nor default models shows the discovery failure and still permits manual model entry through one Model field.
 - Provider Models have one identifier used for invocation and selection. Provider-discovered display metadata may improve presentation, but Users never configure a separate model name or model-type classification. Every available model appears in Session, Runtime, and Workflow selectors, subject only to Runtime Model Compatibility derived from the connection's Model API Protocols.
 - A Model Provider Connection referenced by a Runtime default, current Session, or Workflow cannot be deleted until those references are changed.
-- Runtime Settings shows only Claude Code, Codex, Hermes, and OpenClaw, their available state, and one default Provider Model per Runtime Engine. Creating a connection never changes these defaults automatically.
+- Runtime Settings shows only Claude Code, Codex, Hermes, OpenClaw, and PI Agent, their available state, and one default Provider Model per Runtime Engine. Creating a connection never changes these defaults automatically.
 - Runtime Model Compatibility is verified, unverified, or incompatible. Unverified combinations show a non-blocking warning and remain selectable; an incompatible invocation fails explicitly and is never silently replaced.
 - Personality controls communication style only and does not select a model.
 - Historical Agent responses show the effective model and expose connection, model identifier, and Runtime metadata on demand. Regeneration reuses the original Response Snapshot.

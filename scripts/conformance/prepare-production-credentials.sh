@@ -25,7 +25,7 @@ if [[ -e "${credential_root}" ]]; then
   fail "CONFORMANCE_CREDENTIAL_ROOT already exists; use a new path to avoid overwriting credentials"
 fi
 
-runtimes=(claude codex hermes openclaw)
+runtimes=(claude codex hermes openclaw pi)
 install -d -m 0700 "${credential_root}"
 for runtime in "${runtimes[@]}"; do
   upper="${runtime^^}"

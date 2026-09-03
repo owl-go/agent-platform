@@ -5,8 +5,8 @@ registry="${RUNTIME_IMAGE_REGISTRY:-agent-platform}"
 metadata_directory="${RUNTIME_BUILD_METADATA_DIR:-build/runtime-images}"
 mkdir -p "${metadata_directory}"
 
-runtimes=(claude codex hermes openclaw)
-versions=(2.1.233 0.147.0 0.19.0 2026.7.1-2)
+runtimes=(claude codex hermes openclaw pi)
+versions=(2.1.233 0.147.0 0.19.0 2026.7.1-2 0.84.4)
 
 for index in "${!runtimes[@]}"; do
   runtime="${runtimes[$index]}"

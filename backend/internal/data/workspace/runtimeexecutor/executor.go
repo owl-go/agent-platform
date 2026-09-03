@@ -25,6 +25,7 @@ import (
 	"agent-platform/backend/internal/agentruntime/containerprocess"
 	"agent-platform/backend/internal/agentruntime/hermes"
 	"agent-platform/backend/internal/agentruntime/openclaw"
+	"agent-platform/backend/internal/agentruntime/pi"
 	"agent-platform/backend/internal/agentruntime/processharness"
 	"agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
@@ -634,6 +635,8 @@ func mcpConfigPath(job application.ExecutionJob) string {
 		return "/run/agent-credentials/extensions/codex-config.toml"
 	case workspacedomain.RuntimeOpenClaw:
 		return "/run/agent-credentials/extensions/openclaw.json"
+	case workspacedomain.RuntimePI:
+		return "/run/agent-credentials/extensions/pi-mcp-unavailable"
 	default:
 		return ""
 	}
@@ -914,6 +917,8 @@ func runtimeAdapter(engine workspacedomain.RuntimeEngine, config cliadapter.Conf
 		return hermes.New(config), nil
 	case workspacedomain.RuntimeOpenClaw:
 		return openclaw.New(config), nil
+	case workspacedomain.RuntimePI:
+		return pi.New(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported Runtime %q", engine)
 	}

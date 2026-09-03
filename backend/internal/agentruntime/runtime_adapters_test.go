@@ -14,6 +14,7 @@ import (
 	"agent-platform/backend/internal/agentruntime/codex"
 	"agent-platform/backend/internal/agentruntime/hermes"
 	"agent-platform/backend/internal/agentruntime/openclaw"
+	"agent-platform/backend/internal/agentruntime/pi"
 	"agent-platform/backend/internal/agentruntime/processharness"
 	"agent-platform/backend/internal/runworker"
 )
@@ -28,6 +29,7 @@ func TestRuntimeAdaptersShareContract(t *testing.T) {
 		{name: "codex", version: codex.Version, new: func(config cliadapter.Config) agentruntime.Adapter { return codex.New(config) }},
 		{name: "hermes", version: hermes.Version, new: func(config cliadapter.Config) agentruntime.Adapter { return hermes.New(config) }},
 		{name: "openclaw", version: openclaw.Version, new: func(config cliadapter.Config) agentruntime.Adapter { return openclaw.New(config) }},
+		{name: "pi", version: pi.Version, new: func(config cliadapter.Config) agentruntime.Adapter { return pi.New(config) }},
 	}
 
 	for _, test := range tests {
@@ -85,6 +87,7 @@ func fakeRuntimeProcess(ctx context.Context, spec processharness.Spec, sink proc
 			"codex":    "codex-cli 0.147.0\n",
 			"hermes":   "Hermes Agent v0.19.0 (2026-07-20)\n",
 			"openclaw": "OpenClaw 2026.7.1-2\n",
+			"pi":       "pi 0.84.4\n",
 		}
 		output := versions[runtimeName]
 		if err := sink.Store(ctx, processharness.Output{Stream: processharness.StreamStdout, Reader: strings.NewReader(output), Size: int64(len(output)), UTF8: true, Inline: true}); err != nil {
@@ -107,6 +110,8 @@ func fakeRuntimeProcess(ctx context.Context, spec processharness.Spec, sink proc
 		output = "done\n"
 	case "openclaw":
 		output = "{\"payloads\":[{\"text\":\"done\"}],\"meta\":{\"agentMeta\":{\"sessionId\":\"session-1\"}}}\n"
+	case "pi":
+		output = "{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"done\"}}\n{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"done\"}],\"stopReason\":\"stop\",\"usage\":{}}}\n"
 	default:
 		return processharness.Result{}, fmt.Errorf("unknown fake runtime %q", runtimeName)
 	}

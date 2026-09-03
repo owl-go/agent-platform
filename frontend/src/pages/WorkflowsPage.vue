@@ -2,7 +2,7 @@
 import { inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type Expert, type ExpertTeam, type Workflow, type WorkflowInput } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Expert, type ExpertTeam, type Workflow, type WorkflowInput } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 
 const api = inject(platformApiKey)!;
@@ -26,7 +26,7 @@ function specialistName(workflow: Workflow) { return workflow.expert_team_id ? e
     <div v-else class="workflow-grid">
       <article v-for="(workflow, index) in workflows" :key="workflow.id" class="workflow-card" :style="{ '--delay': `${index * 45}ms` }">
         <div class="workflow-card-top"><span class="workflow-index">WF-{{ String(index + 1).padStart(2, '0') }}</span><span class="status-dot"></span></div><h2>{{ workflow.name }}</h2><p>{{ workflow.goal }}</p>
-        <div class="workflow-meta"><span>{{ workflow.runtime_engine ?? 'AUTO' }}</span><span>{{ specialistName(workflow) }}</span></div>
+        <div class="workflow-meta"><span>{{ workflow.runtime_engine ? runtimeEngineDisplayName(workflow.runtime_engine) : 'AUTO' }}</span><span>{{ specialistName(workflow) }}</span></div>
         <footer><button class="button ghost" @click="router.push(`/workflows/${workflow.id}`)">{{ t('workflows.open') }} →</button><button class="round-run" :aria-label="t('workflows.runNow')" @click="run(workflow)">▶</button></footer>
       </article>
     </div>

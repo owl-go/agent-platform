@@ -29,5 +29,6 @@ check_version claude 2.1.233
 check_version codex 0.147.0
 check_version hermes 0.19.0
 check_version openclaw 2026.7.1-2
+check_version pi 0.84.4
 
 echo "runtime image smoke tests passed"

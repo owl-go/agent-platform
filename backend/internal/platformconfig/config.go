@@ -348,7 +348,7 @@ func (config Config) ValidateWorker() error {
 		return fmt.Errorf("Worker Sandbox UID and GID must be non-root")
 	}
 	for name, runtime := range config.Worker.Runtimes {
-		if name != "claude" && name != "codex" && name != "hermes" && name != "openclaw" {
+		if name != "claude" && name != "codex" && name != "hermes" && name != "openclaw" && name != "pi" {
 			return fmt.Errorf("worker.runtimes contains unsupported Runtime %q", name)
 		}
 		if runtime.Available && (strings.TrimSpace(runtime.ImageDigest) == "" || !strings.Contains(runtime.ImageDigest, "@sha256:") || strings.TrimSpace(runtime.CLIVersion) == "") {

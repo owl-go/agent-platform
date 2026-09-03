@@ -117,6 +117,9 @@ func TestCompatibilityIsProtocolBased(t *testing.T) {
 	if responses[1].RuntimeEngine != RuntimeCodex || responses[1].Status != "unverified" {
 		t.Fatalf("Codex compatibility = %#v", responses[1])
 	}
+	if responses[4].RuntimeEngine != RuntimePI || responses[4].Status != "unverified" {
+		t.Fatalf("PI Agent compatibility = %#v", responses[4])
+	}
 
 	messages := CompatibilityForProtocols([]string{"anthropic_messages"})
 	if messages[0].Status != "unverified" || messages[1].Status != "incompatible" {
