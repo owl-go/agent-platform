@@ -89,6 +89,7 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 		Env: []string{"PI_CODING_AGENT_DIR=" + scratchDirectory},
 		Args: []string{
 			"--mode", "json",
+			"--print",
 			"--provider", providerName,
 			"--model", request.Model,
 			"--session-dir", sessionDirectory,
@@ -96,8 +97,9 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 			"--no-skills",
 			"--no-prompt-templates",
 			"--no-context-files",
+			"--",
+			request.Instruction,
 		},
-		Stdin: strings.NewReader(request.Instruction),
 	}, nil
 }
 

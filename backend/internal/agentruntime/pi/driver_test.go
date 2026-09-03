@@ -2,7 +2,6 @@ package pi
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,16 +23,12 @@ func TestDriverBuildsIsolatedJSONInvocation(t *testing.T) {
 		t.Fatalf("build invocation: %v", err)
 	}
 	want := []string{
-		"--mode", "json", "--provider", providerName, "--model", "configured-model",
+		"--mode", "json", "--print", "--provider", providerName, "--model", "configured-model",
 		"--session-dir", filepath.Join(scratch, "sessions"), "--no-extensions", "--no-skills",
-		"--no-prompt-templates", "--no-context-files",
+		"--no-prompt-templates", "--no-context-files", "--", "fix tests",
 	}
-	if !slices.Equal(invocation.Args, want) || !slices.Equal(invocation.Env, []string{"PI_CODING_AGENT_DIR=" + scratch}) || invocation.Stdin == nil {
+	if !slices.Equal(invocation.Args, want) || !slices.Equal(invocation.Env, []string{"PI_CODING_AGENT_DIR=" + scratch}) || invocation.Stdin != nil {
 		t.Fatalf("invocation = %+v", invocation)
-	}
-	instruction, err := io.ReadAll(invocation.Stdin)
-	if err != nil || string(instruction) != "fix tests" {
-		t.Fatalf("stdin = %q, err = %v", instruction, err)
 	}
 	contents, err := os.ReadFile(filepath.Join(scratch, "models.json"))
 	if err != nil {
