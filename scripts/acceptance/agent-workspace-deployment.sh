@@ -303,9 +303,9 @@ printf '%s\n' \
   'session_lifecycle=ok' \
   'session_execution_retry_delete=ok' \
   'session_generation_cancellation=ok' \
-  'workspace_upload_download=ok' \
-  'workspace_public_clone_and_clear=ok' \
-  'workflow_basic_auth=ok' \
+  'workspace_read_only_routes=ok' \
+  'workflow_git_settings_clone=ok' \
+  'workflow_jwt_exchange=ok' \
   'workflow_scheduled_trigger=ok' \
   'runtime_failure_and_sse=ok' \
   'run_cancellation_terminal_event=ok' \
