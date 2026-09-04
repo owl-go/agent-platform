@@ -134,10 +134,14 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	}
 	workspace := slot.workspace
 	nativeState := ""
+	retainWorkspace := false
 	defer func() {
 		returnErr = errors.Join(returnErr, releaseWarmLease(ctx, setupLease))
 		returnErr = errors.Join(returnErr, os.RemoveAll(slot.credentials))
-		returnErr = errors.Join(returnErr, os.RemoveAll(workspace), os.RemoveAll(slot.scratch))
+		if !retainWorkspace {
+			returnErr = errors.Join(returnErr, os.RemoveAll(workspace))
+		}
+		returnErr = errors.Join(returnErr, os.RemoveAll(slot.scratch))
 		if nativeState != "" && result.SuccessCommit == nil {
 			returnErr = errors.Join(returnErr, os.RemoveAll(nativeState))
 		}
@@ -394,8 +398,8 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			if settlementErr == nil {
 				creditStage := workspacedomain.CreditStageConsumption{
 					StagePosition: executionStage.Position, ProviderModel: executionStage.ProviderModel.ModelID,
-					RuntimeEngine: string(executionStage.RuntimeEngine), InputTokens: runtimeResult.Usage.InputTokens,
-					OutputTokens: runtimeResult.Usage.OutputTokens, UsageReported: runtimeResult.Usage.Reported,
+					RuntimeEngine: string(executionStage.RuntimeEngine), InputTokens: usage.InputTokens,
+					OutputTokens: usage.OutputTokens, UsageReported: usage.Known,
 					InputMultiplierMicros: consumption.Rate.InputMultiplierMicros, OutputMultiplierMicros: consumption.Rate.OutputMultiplierMicros,
 					FallbackHundredths: int64(consumption.Rate.Fallback), AmountHundredths: int64(consumption.Amount),
 					Estimated: consumption.Estimated, RateRevisionID: consumption.Rate.RevisionID,
@@ -480,9 +484,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		if err := preparePersistentWorkspaceTree(workspace, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
 			return result, fmt.Errorf("prepare persistent Workflow Workspace: %w", err)
 		}
-		if err := mergeSuccessfulWorkspace(persistent, workspace); err != nil {
-			return result, err
-		}
+		teamNativePromotions = append(teamNativePromotions, nativeStatePromotion{temporary: workspace, persistent: persistent})
+		teamNativeRoots = append(teamNativeRoots, workspace)
+		retainWorkspace = true
 	}
 	if len(teamNativePromotions) > 0 {
 		result.SuccessCommit = &nativeStateCommit{promotions: teamNativePromotions, temporaryRoots: teamNativeRoots}
@@ -498,15 +502,32 @@ func redactExecutionError(cause error, redactor *credentials.Redactor) error {
 		}
 		return string(redactor.Bytes([]byte(value)))
 	}
-	var runtimeErr *agentruntime.Error
-	if errors.As(cause, &runtimeErr) {
+	if joined, ok := cause.(interface{ Unwrap() []error }); ok {
+		children := joined.Unwrap()
+		redacted := make([]error, 0, len(children))
+		for _, child := range children {
+			redacted = append(redacted, redactExecutionError(child, redactor))
+		}
+		return errors.Join(redacted...)
+	}
+	if runtimeErr, ok := cause.(*agentruntime.Error); ok {
 		var redactedCause error
 		if runtimeErr.Cause != nil {
-			redactedCause = errors.New(redact(runtimeErr.Cause.Error()))
+			redactedCause = redactExecutionError(runtimeErr.Cause, redactor)
 		}
 		return &agentruntime.Error{Code: runtimeErr.Code, Message: redact(runtimeErr.Message), Cause: redactedCause}
 	}
-	return errors.New(redact(cause.Error()))
+	return redactedExecutionError{message: redact(cause.Error()), original: cause}
+}
+
+type redactedExecutionError struct {
+	message  string
+	original error
+}
+
+func (err redactedExecutionError) Error() string { return err.message }
+func (err redactedExecutionError) Is(target error) bool {
+	return errors.Is(err.original, target)
 }
 
 type stageSettlementRecorder interface {

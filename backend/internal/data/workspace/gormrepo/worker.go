@@ -206,8 +206,11 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	}
 	checkpoint := ""
 	stageCheckpoints := map[int]string(nil)
-	if len(prior) > 0 {
-		checkpoint = prior[len(prior)-1].NativeCheckpoint
+	for index := len(prior) - 1; index >= 0; index-- {
+		if prior[index].State != "succeeded" || prior[index].NativeCheckpoint == "" {
+			continue
+		}
+		checkpoint = prior[index].NativeCheckpoint
 		if stages, stageErr := snapshot.OrderedStages(); stageErr == nil && len(stages) > 1 && checkpoint != "" {
 			stageCheckpoints = make(map[int]string)
 			if err := json.Unmarshal([]byte(checkpoint), &stageCheckpoints); err != nil {
@@ -215,6 +218,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 			}
 			checkpoint = ""
 		}
+		break
 	}
 	instruction := workflowRunInstruction(snapshot.Goal, prior, input.Text, input.JSON)
 	result := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "running", "started_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
@@ -597,10 +601,15 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 		return nil
 	})
 	if err != nil {
+		var rollbackErr error
 		if commitAttempted {
-			return errors.Join(err, result.SuccessCommit.Rollback())
+			rollbackErr = result.SuccessCommit.Rollback()
 		}
-		return err
+		var cleanupErr error
+		if result.SuccessCommit != nil {
+			cleanupErr = result.SuccessCommit.Cleanup()
+		}
+		return errors.Join(err, rollbackErr, cleanupErr)
 	}
 	if result.SuccessCommit != nil {
 		return result.SuccessCommit.Cleanup()

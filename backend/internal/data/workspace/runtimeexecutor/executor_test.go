@@ -163,6 +163,7 @@ func TestExecuteMakesImageAttachmentReadableAndKeepsWorkspaceWritable(t *testing
 	if result.FinalMessage != "done" {
 		t.Fatalf("final message = %q", result.FinalMessage)
 	}
+	commitSuccessfulResult(t, result)
 	workspaceResult, err := os.ReadFile(filepath.Join(persistent, "result.txt"))
 	if err != nil || string(workspaceResult) != "workspace is writable" {
 		t.Fatalf("persisted Workspace result = %q, %v", workspaceResult, err)
@@ -273,6 +274,7 @@ func TestExecuteExpertTeamRunsInOrderAndCommitsOnlyTheFinalResult(t *testing.T) 
 	if result.FinalMessage != "final result" || len(result.ExpertStages) != 2 || result.ExpertStages[0].FinalText != "first result" || result.ExpertStages[1].FinalText != "final result" {
 		t.Fatalf("execution result = %#v", result)
 	}
+	commitSuccessfulResult(t, result)
 	body, err := os.ReadFile(filepath.Join(persistent, "shared.txt"))
 	if err != nil || string(body) != "stage one" {
 		t.Fatalf("committed Workspace = %q, %v", body, err)
@@ -380,6 +382,9 @@ func TestExecuteTreatsInvalidRuntimeUsageAsFrozenFallback(t *testing.T) {
 	}
 	if len(result.CreditSettlements) != 1 || result.CreditSettlements[0].Amount != int64(creditsdomain.DefaultFallback) || !result.CreditSettlements[0].Estimated {
 		t.Fatalf("fallback settlement = %#v", result.CreditSettlements)
+	}
+	if result.CreditConsumption == nil || len(result.CreditConsumption.Stages) != 1 || result.CreditConsumption.Stages[0].UsageReported || result.CreditConsumption.Stages[0].InputTokens != 0 {
+		t.Fatalf("fallback Stage audit = %#v", result.CreditConsumption)
 	}
 	if repository.aborted {
 		t.Fatal("valid fallback settlement aborted its execution lease")
@@ -615,6 +620,19 @@ func publishRuntimeFailure(t *testing.T, sink agentruntime.EventSink, runID, mes
 }
 
 type recordingProgress struct{ events []application.ExecutionEvent }
+
+func commitSuccessfulResult(t *testing.T, result application.ExecutionResult) {
+	t.Helper()
+	if result.SuccessCommit == nil {
+		t.Fatal("successful Workflow result has no deferred commit")
+	}
+	if err := result.SuccessCommit.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := result.SuccessCommit.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func (recorder *recordingProgress) RecordProgress(_ context.Context, _ application.ExecutionJob, event application.ExecutionEvent) error {
 	recorder.events = append(recorder.events, event)

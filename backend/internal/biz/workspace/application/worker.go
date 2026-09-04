@@ -146,12 +146,14 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 	if cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job); checkErr != nil {
+		discardSuccessCommit(result)
 		return true, checkErr
 	} else if cancelled {
 		discardSuccessCommit(result)
 		return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job, result)
 	}
 	if err := worker.repository.FinishSucceeded(ctx, *job, result); err != nil {
+		discardSuccessCommit(result)
 		return true, err
 	}
 	return true, nil
