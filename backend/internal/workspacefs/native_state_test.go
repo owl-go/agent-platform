@@ -27,6 +27,30 @@ func TestNativeSessionStatePathAndRemovalStayWithinRoot(t *testing.T) {
 	}
 }
 
+func TestNativeExpertSessionStatePathIncludesFrozenIdentity(t *testing.T) {
+	root := t.TempDir()
+	path, err := NativeExpertSessionStatePath(root, "owner-1", "session-1", "expert-1", 7, "codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, ".native-session-state", "owner-1", "session-1", "expert-expert-1-v7-codex")
+	if path != want {
+		t.Fatalf("path = %q, want %q", path, want)
+	}
+}
+
+func TestNativeExpertRunConversationStatePathIncludesFrozenIdentity(t *testing.T) {
+	root := t.TempDir()
+	path, err := NativeExpertRunConversationStatePath(root, "owner-1", "conversation-1", "expert-1", 7, "codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, ".native-run-conversation-state", "owner-1", "conversation-1", "expert-expert-1-v7-codex")
+	if path != want {
+		t.Fatalf("path = %q, want %q", path, want)
+	}
+}
+
 func TestNativeSessionStateRejectsPathTraversal(t *testing.T) {
 	for _, value := range []string{"", ".", "..", "../other", "owner/session"} {
 		if _, err := NativeSessionStatePath(t.TempDir(), value, "session-1", "codex"); err == nil {

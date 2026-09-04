@@ -8,51 +8,55 @@ import (
 
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+	creditrepo "agent-platform/backend/internal/data/credits/gormrepo"
 
 	"gorm.io/gorm"
 )
 
-type Repository struct{ db *gorm.DB }
+type Repository struct {
+	db      *gorm.DB
+	credits *creditrepo.Repository
+}
 
-func New(db *gorm.DB) *Repository { return &Repository{db: db} }
+func New(db *gorm.DB) *Repository { return &Repository{db: db, credits: creditrepo.New(db)} }
 
 var _ application.Repository = (*Repository)(nil)
 
 type sessionRecord struct {
-	ID                     string     `gorm:"column:id"`
-	OwnerID                string     `gorm:"column:owner_user_id"`
-	Title                  string     `gorm:"column:title"`
-	ExpertID               *string    `gorm:"column:expert_id"`
-	ExpertTeamID           *string    `gorm:"column:expert_team_id"`
-	ExpertSnapshot         []byte     `gorm:"column:expert_snapshot;type:jsonb"`
-	CurrentProviderModelID *string    `gorm:"column:current_provider_model_id"`
-	ArchivedAt             *time.Time `gorm:"column:archived_at"`
-	RuntimeEngine          *string    `gorm:"column:runtime_engine"`
-	NativeCheckpoint       string     `gorm:"column:native_checkpoint"`
-	RollingSummary         string     `gorm:"column:rolling_summary"`
-	SummaryThrough         *int64     `gorm:"column:summary_through_message_id"`
-	CreatedAt              time.Time  `gorm:"column:created_at"`
-	UpdatedAt              time.Time  `gorm:"column:updated_at"`
-	Version                int64      `gorm:"column:version"`
+	ID               string     `gorm:"column:id"`
+	OwnerID          string     `gorm:"column:owner_user_id"`
+	Title            string     `gorm:"column:title"`
+	ExpertID         *string    `gorm:"column:expert_id"`
+	ExpertTeamID     *string    `gorm:"column:expert_team_id"`
+	ExpertSnapshot   []byte     `gorm:"column:expert_snapshot;type:jsonb"`
+	ArchivedAt       *time.Time `gorm:"column:archived_at"`
+	RuntimeEngine    *string    `gorm:"column:runtime_engine"`
+	NativeCheckpoint string     `gorm:"column:native_checkpoint"`
+	RollingSummary   string     `gorm:"column:rolling_summary"`
+	SummaryThrough   *int64     `gorm:"column:summary_through_message_id"`
+	CreatedAt        time.Time  `gorm:"column:created_at"`
+	UpdatedAt        time.Time  `gorm:"column:updated_at"`
+	Version          int64      `gorm:"column:version"`
 }
 
 func (sessionRecord) TableName() string { return "sessions" }
 
 type messageRecord struct {
-	ID               int64      `gorm:"column:id"`
-	SessionID        string     `gorm:"column:session_id"`
-	Role             string     `gorm:"column:role"`
-	State            string     `gorm:"column:state"`
-	Content          string     `gorm:"column:content"`
-	Error            *string    `gorm:"column:error"`
-	ProgressStage    string     `gorm:"column:progress_stage"`
-	ElapsedMS        int64      `gorm:"column:elapsed_ms"`
-	CreatedAt        time.Time  `gorm:"column:created_at"`
-	Completed        *time.Time `gorm:"column:completed_at"`
-	CancelRequested  *time.Time `gorm:"column:cancel_requested_at"`
-	ResponseSnapshot []byte     `gorm:"column:response_snapshot;type:jsonb"`
-	Attachments      []byte     `gorm:"column:attachments;type:jsonb"`
-	ExpertStages     []byte     `gorm:"column:expert_stages;type:jsonb"`
+	ID                int64      `gorm:"column:id"`
+	SessionID         string     `gorm:"column:session_id"`
+	Role              string     `gorm:"column:role"`
+	State             string     `gorm:"column:state"`
+	Content           string     `gorm:"column:content"`
+	Error             *string    `gorm:"column:error"`
+	ProgressStage     string     `gorm:"column:progress_stage"`
+	ElapsedMS         int64      `gorm:"column:elapsed_ms"`
+	CreatedAt         time.Time  `gorm:"column:created_at"`
+	Completed         *time.Time `gorm:"column:completed_at"`
+	CancelRequested   *time.Time `gorm:"column:cancel_requested_at"`
+	ResponseSnapshot  []byte     `gorm:"column:response_snapshot;type:jsonb"`
+	Attachments       []byte     `gorm:"column:attachments;type:jsonb"`
+	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
+	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
 }
 
 func (messageRecord) TableName() string { return "session_messages" }
@@ -89,6 +93,8 @@ type expertRecord struct {
 	Name                   string    `gorm:"column:name"`
 	CapabilityIntroduction string    `gorm:"column:capability_introduction"`
 	ExecutionInstruction   string    `gorm:"column:execution_instruction"`
+	ProviderModelID        *string   `gorm:"column:provider_model_id"`
+	RuntimeEngine          *string   `gorm:"column:runtime_engine"`
 	ExpertiseTags          []byte    `gorm:"column:expertise_tags;type:jsonb"`
 	MCPServerIDs           []byte    `gorm:"column:mcp_server_ids;type:jsonb"`
 	SkillIDs               []byte    `gorm:"column:skill_ids;type:jsonb"`
@@ -128,7 +134,7 @@ func (settingsRecord) TableName() string { return "personal_settings" }
 
 type modelProviderConnectionRecord struct {
 	ID                 string     `gorm:"column:id"`
-	OwnerID            string     `gorm:"column:owner_user_id"`
+	CredentialOwnerID  string     `gorm:"column:credential_owner_user_id"`
 	Name               string     `gorm:"column:name"`
 	ProviderType       string     `gorm:"column:provider_type"`
 	Endpoint           string     `gorm:"column:endpoint"`
@@ -149,7 +155,6 @@ func (modelProviderConnectionRecord) TableName() string { return "model_provider
 type providerModelRecord struct {
 	ID            string    `gorm:"column:id"`
 	ConnectionID  string    `gorm:"column:connection_id"`
-	OwnerID       string    `gorm:"column:owner_user_id"`
 	ModelID       string    `gorm:"column:model_id"`
 	DisplayName   string    `gorm:"column:display_name"`
 	Available     bool      `gorm:"column:available"`
@@ -206,24 +211,26 @@ type skillRecord struct {
 func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
-	ID               string     `gorm:"column:id"`
-	ConversationID   string     `gorm:"column:conversation_id"`
-	TurnNumber       int        `gorm:"column:turn_number"`
-	OwnerID          string     `gorm:"column:owner_user_id"`
-	WorkflowID       *string    `gorm:"column:workflow_id"`
-	WorkflowName     string     `gorm:"column:workflow_name"`
-	Trigger          string     `gorm:"column:trigger"`
-	State            string     `gorm:"column:state"`
-	Input            []byte     `gorm:"column:input;type:jsonb"`
-	WorkflowSnapshot []byte     `gorm:"column:workflow_snapshot;type:jsonb"`
-	FinalResult      []byte     `gorm:"column:final_result;type:jsonb"`
-	TerminalError    *string    `gorm:"column:terminal_error"`
-	QueuedAt         time.Time  `gorm:"column:queued_at"`
-	StartedAt        *time.Time `gorm:"column:started_at"`
-	EndedAt          *time.Time `gorm:"column:ended_at"`
-	CancelRequested  *time.Time `gorm:"column:cancel_requested_at"`
-	ExpertStages     []byte     `gorm:"column:expert_stages;type:jsonb"`
-	Version          int64      `gorm:"column:version"`
+	ID                string     `gorm:"column:id"`
+	ConversationID    string     `gorm:"column:conversation_id"`
+	TurnNumber        int        `gorm:"column:turn_number"`
+	OwnerID           string     `gorm:"column:owner_user_id"`
+	WorkflowID        *string    `gorm:"column:workflow_id"`
+	WorkflowName      string     `gorm:"column:workflow_name"`
+	Trigger           string     `gorm:"column:trigger"`
+	State             string     `gorm:"column:state"`
+	Input             []byte     `gorm:"column:input;type:jsonb"`
+	WorkflowSnapshot  []byte     `gorm:"column:workflow_snapshot;type:jsonb"`
+	FinalResult       []byte     `gorm:"column:final_result;type:jsonb"`
+	TerminalError     *string    `gorm:"column:terminal_error"`
+	QueuedAt          time.Time  `gorm:"column:queued_at"`
+	StartedAt         *time.Time `gorm:"column:started_at"`
+	EndedAt           *time.Time `gorm:"column:ended_at"`
+	CancelRequested   *time.Time `gorm:"column:cancel_requested_at"`
+	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
+	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
+	NativeCheckpoint  string     `gorm:"column:native_checkpoint"`
+	Version           int64      `gorm:"column:version"`
 }
 
 func (runRecord) TableName() string { return "runs" }

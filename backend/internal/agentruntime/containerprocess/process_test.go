@@ -242,6 +242,8 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 		prepared = fmt.Sprintf("%s:%d:%d", path, uid, gid)
 		return nil
 	}
+	config.ScratchDirectory = "/workspaces/runtime-scratch"
+	config.AttachmentDirectory = "/workspaces/runtime-scratch/attachments"
 	runner, err := New(config)
 	if err != nil {
 		t.Fatal(err)
@@ -259,6 +261,10 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 	if !containsPair(captured.Command, "--mount", wantMount) {
 		t.Fatalf("scratch mount %q missing from %#v", wantMount, captured.Command)
 	}
+	wantAttachmentMount := "type=bind,src=/workspaces/runtime-scratch/attachments,dst=/workspace/.agent-platform-attachments,readonly=true"
+	if !containsPair(captured.Command, "--mount", wantAttachmentMount) {
+		t.Fatalf("attachment mount %q missing from %#v", wantAttachmentMount, captured.Command)
+	}
 }
 
 func TestNewRejectsUnsafeConfiguration(t *testing.T) {
@@ -268,6 +274,8 @@ func TestNewRejectsUnsafeConfiguration(t *testing.T) {
 		"root user":                  {Image: digestImage(), UID: 0, GID: 0},
 		"relative credential":        {Image: digestImage(), CredentialDirectory: "credentials"},
 		"relative native state":      {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "state"},
+		"relative attachment":        {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "attachments"},
+		"attachment outside scratch": {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "/other/attachments"},
 		"native state for non Codex": {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "/state"},
 		"relative resolver":          {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
 	}

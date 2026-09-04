@@ -144,6 +144,16 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 	if err != nil {
 		return nil, err
 	}
+	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
+		return nil, publicError(err)
+	}
+	workflow, err := service.workspace.Repository().GetWorkflow(ctx, owner, request.WorkflowId, false)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := service.validateExecutionRuntimes(ctx, owner, workflow.ExpertID, workflow.ExpertTeamID); err != nil {
+		return nil, publicError(err)
+	}
 	var jsonInput map[string]any
 	if request.JsonInput != nil {
 		jsonInput = request.JsonInput.AsMap()
@@ -240,6 +250,9 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 	if err != nil {
 		return nil, err
 	}
+	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
+		return nil, publicError(err)
+	}
 	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
 	if err != nil {
 		return nil, publicError(err)
@@ -267,6 +280,9 @@ func (service *Service) RerunWorkflow(ctx context.Context, request *workspacev1.
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
+		return nil, publicError(err)
 	}
 	item, err := service.workspace.Repository().Rerun(ctx, owner, request.WorkflowId, request.RunId)
 	if err != nil {
@@ -318,14 +334,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 	if input == nil {
 		return workspacedomain.WorkflowInput{}, nil, fmt.Errorf("%w: Workflow input is required", workspacedomain.ErrInvalid)
 	}
-	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId, ProviderModelID: input.ProviderModelId}
-	if input.RuntimeEngine != nil {
-		runtime, err := workspacedomain.ParseRuntime(*input.RuntimeEngine)
-		if err != nil {
-			return workspacedomain.WorkflowInput{}, nil, err
-		}
-		domainInput.RuntimeEngine = &runtime
-	}
+	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId}
 	secrets := make(map[string]string)
 	for _, value := range input.Environment {
 		if value == nil {
@@ -351,11 +360,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 }
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
-	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, ProviderModelId: item.ProviderModelID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
-	if item.RuntimeEngine != nil {
-		value := string(*item.RuntimeEngine)
-		response.RuntimeEngine = &value
-	}
+	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	for _, value := range item.Environment {
 		environment := &workspacev1.EnvironmentVariable{Name: value.Name, Secret: value.Secret, Configured: value.Configured}
 		if !value.Secret && value.Value != "" {
@@ -402,6 +407,7 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 	for _, stage := range item.ExpertStages {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
+	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
 	if item.StartedAt != nil {
 		end := time.Now()
 		if item.EndedAt != nil {

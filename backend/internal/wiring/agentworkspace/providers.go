@@ -6,10 +6,12 @@ import (
 
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	accountrepo "agent-platform/backend/internal/data/account/gormrepo"
 	"agent-platform/backend/internal/data/account/keycloak"
 	"agent-platform/backend/internal/data/account/tokenverifier"
+	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
 	"agent-platform/backend/internal/infrastructure/gormdb"
@@ -30,6 +32,7 @@ var ProviderSet = wire.NewSet(
 	NewIdentityProvider,
 	NewAccountService,
 	NewWorkspaceService,
+	NewCreditsService,
 	NewSecretBox,
 	NewWorkspaceFiles,
 	NewSkillStore,
@@ -65,6 +68,10 @@ func NewAccountService(ctx context.Context, config platformconfig.Config, databa
 
 func NewWorkspaceService(database *gormdb.Database) (*workspaceapplication.Service, error) {
 	return workspaceapplication.New(workspacerepo.New(database.ORM()), modeldiscovery.New(nil))
+}
+
+func NewCreditsService(database *gormdb.Database) (*creditsapplication.Service, error) {
+	return creditsapplication.New(creditsrepo.New(database.ORM()), nil)
 }
 
 func NewSecretBox(config platformconfig.Config) (*secretcrypto.Box, error) {

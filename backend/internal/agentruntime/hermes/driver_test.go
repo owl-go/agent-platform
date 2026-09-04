@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -69,5 +70,17 @@ func TestParserRejectsHermesFailedUsageReport(t *testing.T) {
 	result := parser.Result()
 	if result.Error == nil || agentruntime.ErrorCodeOf(result.Error) != agentruntime.ErrorAuthenticationFailed || result.FinalMessage != "HTTP 401: Missing Authentication header" {
 		t.Fatalf("parsed result = %+v", result)
+	}
+}
+
+func TestParserPreservesHermesUsageFailureDiagnostic(t *testing.T) {
+	scratch := t.TempDir()
+	usage := `{"completed":false,"failed":true,"failure":"The 'anthropic' package is required for the Anthropic provider.","input_tokens":null,"output_tokens":null,"estimated_cost_usd":null,"session_id":null}`
+	if err := os.WriteFile(filepath.Join(scratch, "usage.json"), []byte(usage), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	result := Driver{}.NewParser(scratch).Result()
+	if result.Error == nil || !strings.Contains(result.Error.Error(), "'anthropic' package is required") {
+		t.Fatalf("error = %v", result.Error)
 	}
 }

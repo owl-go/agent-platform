@@ -14,8 +14,16 @@ func (service *Service) GetCurrentUser(ctx context.Context, _ *workspacev1.GetCu
 	if err != nil {
 		return nil, publicError(err)
 	}
-	_, settingsErr := service.workspace.Repository().GetSettings(ctx, principal.UserID)
-	return &workspacev1.CurrentUser{Id: principal.UserID, Username: principal.Username, Email: principal.Email, DisplayName: principal.DisplayName, Administrator: principal.Administrator, SettingsReady: settingsErr == nil}, nil
+	settings, settingsErr := service.workspace.Repository().GetSettings(ctx, principal.UserID)
+	timezone := "Asia/Shanghai"
+	if settingsErr == nil {
+		timezone = settings.Timezone
+	}
+	balance, balanceErr := service.credits.Balance(ctx, principal.UserID, timezone)
+	if balanceErr != nil {
+		return nil, publicError(balanceErr)
+	}
+	return &workspacev1.CurrentUser{Id: principal.UserID, Username: principal.Username, Email: principal.Email, DisplayName: principal.DisplayName, Administrator: principal.Administrator, SettingsReady: settingsErr == nil, CreditBalance: creditBalanceResponse(balance)}, nil
 }
 
 func (service *Service) ListUsers(ctx context.Context, _ *workspacev1.ListUsersRequest) (*workspacev1.ListUsersResponse, error) {
@@ -25,7 +33,13 @@ func (service *Service) ListUsers(ctx context.Context, _ *workspacev1.ListUsersR
 	}
 	items := make([]*workspacev1.UserAccount, 0, len(users))
 	for _, user := range users {
-		items = append(items, userResponse(user))
+		response := userResponse(user)
+		balance, balanceErr := service.credits.Balance(ctx, user.ID, "")
+		if balanceErr != nil {
+			return nil, publicError(balanceErr)
+		}
+		response.CreditBalance = creditBalanceResponse(balance)
+		items = append(items, response)
 	}
 	return &workspacev1.ListUsersResponse{Items: items}, nil
 }

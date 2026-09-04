@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"time"
 	"unicode"
 
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
@@ -90,18 +91,22 @@ func (service *Service) downloadAttachment(writer http.ResponseWriter, request *
 		http.NotFound(writer, request)
 		return
 	}
-	if _, err := service.objects.Stat(request.Context(), attachmentObjectKey(owner, id)); err != nil {
+	reader, object, err := service.objects.Get(request.Context(), attachmentObjectKey(owner, id))
+	if err != nil {
 		http.NotFound(writer, request)
 		return
 	}
-	signed, err := service.objects.PresignGet(request.Context(), attachmentObjectKey(owner, id), 5*time.Minute)
-	if err != nil {
-		writeAuthError(writer, http.StatusInternalServerError, "attachment_download_failed")
-		return
+	defer reader.Close()
+	contentType := strings.TrimSpace(object.ContentType)
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
-	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Type", contentType)
+	writer.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
+	writer.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": object.Metadata["name"]}))
+	writer.Header().Set("X-Content-Type-Options", "nosniff")
 	writer.Header().Set("Cache-Control", "private, no-store")
-	_ = json.NewEncoder(writer).Encode(map[string]any{"url": signed.URL, "expires_at": signed.ExpiresAt})
+	_, _ = io.Copy(writer, io.LimitReader(reader, object.Size))
 }
 
 func (service *Service) resolveAttachments(ctx context.Context, owner string, ids []string) ([]workspacedomain.Attachment, error) {

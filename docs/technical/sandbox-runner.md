@@ -2,9 +2,9 @@
 
 状态：Linux + gVisor 生产边界
 
-Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 只读、Workspace 是唯一可写业务挂载、Egress 使用明确网络。
+Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 只读、Workspace 是唯一可写业务挂载、附件在 Workspace 文件访问边界内使用独立只读挂载、Egress 使用明确网络。
 
-Session 与 Workflow 分别按 Owner、资源 ID、Runtime Engine 和镜像 Digest 使用稳定的 Warm Container。一次执行中的版本探测与正式调用通过 `docker exec` 进入同一 Container；执行结束后立即停止 Container 以终止所有子进程并清理单次 Secret，但保留不可变 Container 定义。30 分钟内再次使用时直接启动，连续空闲 30 分钟后由 Worker Reaper 销毁。复用前必须校验 Container 配置指纹，漂移时 fail closed。
+Session 与 Run Conversation 的每个 Execution Stage 按 Owner、资源 ID、冻结 Expert 身份（无 Expert 时使用匿名 Stage）、Runtime Engine 和镜像 Digest 使用稳定且彼此隔离的 Warm Container。一次 Stage 中的版本探测与正式调用通过 `docker exec` 进入同一 Container；Expert Team 的不同成员不共享执行上下文，只按顺序挂载同一轮 Workflow 临时 Workspace。Stage 结束后立即停止 Container 以终止所有子进程并清理单次 Secret，但保留不可变 Container 定义。30 分钟内同一 Stage 身份再次使用时直接启动，连续空闲 30 分钟后由 Worker Reaper 销毁。复用前必须校验 Container 配置指纹，漂移时 fail closed。
 
 Workspace Run 在临时副本工作；仅成功执行才安全合并到 Workflow 的持久 Workspace。路径穿越、符号链接、特殊文件和超过 1 GiB 配额均 fail closed。失败或取消不会污染持久 Workspace。
 

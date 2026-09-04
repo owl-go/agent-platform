@@ -14,6 +14,14 @@ service AgentWorkspaceService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
   rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
   rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/password-reset" body: "*"}; }
+  rpc GetCreditBalance(GetCreditBalanceRequest) returns (CreditBalance) { option (google.api.http) = {get: "/api/v1/credits/balance"}; }
+  rpc ListCreditLedger(ListCreditLedgerRequest) returns (ListCreditLedgerResponse) { option (google.api.http) = {get: "/api/v1/credits/ledger"}; }
+  rpc RedeemCreditCode(RedeemCreditCodeRequest) returns (CreditBalance) { option (google.api.http) = {post: "/api/v1/credits/redemptions" body: "*"}; }
+  rpc ConfigureUserDailyCredits(ConfigureUserDailyCreditsRequest) returns (CreditBalance) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/daily-credits" body: "*"}; }
+  rpc AdjustUserCredits(AdjustUserCreditsRequest) returns (CreditBalance) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/credit-adjustments" body: "*"}; }
+  rpc ListModelCreditRates(ListModelCreditRatesRequest) returns (ListModelCreditRatesResponse) { option (google.api.http) = {get: "/api/v1/admin/model-credit-rates"}; }
+  rpc CreateModelCreditRate(CreateModelCreditRateRequest) returns (ModelCreditRate) { option (google.api.http) = {post: "/api/v1/admin/model-credit-rates" body: "*"}; }
+  rpc CreateRedemptionCodeBatch(CreateRedemptionCodeBatchRequest) returns (RedemptionCodeBatch) { option (google.api.http) = {post: "/api/v1/admin/redemption-code-batches" body: "*"}; }
 
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) { option (google.api.http) = {get: "/api/v1/sessions"}; }
   rpc CreateSession(CreateSessionRequest) returns (Session) { option (google.api.http) = {post: "/api/v1/sessions" body: "*"}; }
@@ -82,7 +90,7 @@ service AgentWorkspaceService {
 }
 
 message GetCurrentUserRequest {}
-message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; }
+message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; }
 message ListUsersRequest {}
 message ListUsersResponse { repeated UserAccount items = 1; }
 message CreateUserRequest { string username = 1; string display_name = 2; string email = 3; }
@@ -90,7 +98,23 @@ message CreateUserResponse { UserAccount user = 1; string temporary_password = 2
 message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; }
 message ResetUserPasswordRequest { string user_id = 1; }
 message ResetUserPasswordResponse { string temporary_password = 1; }
-message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; }
+message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; }
+
+message GetCreditBalanceRequest {}
+message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; }
+message ListCreditLedgerRequest { optional string cursor = 1; optional int32 limit = 2; }
+message ListCreditLedgerResponse { repeated CreditLedgerEntry items = 1; optional string next_cursor = 2; }
+message CreditLedgerEntry { string id = 1; string type = 2; int64 amount_hundredths = 3; int64 resulting_balance_hundredths = 4; string credit_day = 5; optional string reason = 6; google.protobuf.Timestamp created_at = 7; }
+message RedeemCreditCodeRequest { string code = 1; }
+message ConfigureUserDailyCreditsRequest { string user_id = 1; int64 allocation_hundredths = 2; }
+message AdjustUserCreditsRequest { string user_id = 1; int64 amount_hundredths = 2; string reason = 3; }
+message ListModelCreditRatesRequest {}
+message ListModelCreditRatesResponse { repeated ModelCreditRate items = 1; }
+message ModelCreditRate { string revision_id = 1; optional string provider_type = 2; optional string api_protocol = 3; optional string provider_model_id = 4; int64 input_multiplier_micros = 5; int64 output_multiplier_micros = 6; int64 fallback_hundredths = 7; google.protobuf.Timestamp created_at = 8; optional google.protobuf.Timestamp superseded_at = 9; }
+message CreateModelCreditRateRequest { optional string provider_type = 1; optional string api_protocol = 2; optional string provider_model_id = 3; int64 input_multiplier_micros = 4; int64 output_multiplier_micros = 5; int64 fallback_hundredths = 6; optional string expected_revision_id = 7; }
+message CreateRedemptionCodeBatchRequest { int32 count = 1; int64 value_hundredths = 2; optional google.protobuf.Timestamp expires_at = 3; }
+message RedemptionCodeBatch { string id = 1; int32 count = 2; int64 value_hundredths = 3; optional google.protobuf.Timestamp expires_at = 4; google.protobuf.Timestamp created_at = 5; repeated RedemptionCode codes = 6; }
+message RedemptionCode { string id = 1; string identifier = 2; string plaintext = 3; string state = 4; }
 
 message ListSessionsRequest { bool archived = 1; }
 message ListSessionsResponse { repeated Session items = 1; }
@@ -100,15 +124,20 @@ message UpdateSessionRequest { string session_id = 1; string title = 2; int64 ex
 message SetSessionArchivedRequest { string session_id = 1; bool archived = 2; int64 expected_version = 3; }
 message SetSessionExpertSelectionRequest { string session_id = 1; optional string expert_id = 2; optional string expert_team_id = 3; int64 expected_version = 4; }
 message DeleteSessionRequest { string session_id = 1; }
-message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; optional string current_provider_model_id = 8; optional string expert_team_id = 9; }
+message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; reserved 8; reserved "current_provider_model_id"; optional string expert_team_id = 9; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
-message SendSessionMessageRequest { string session_id = 1; string content = 2; string provider_model_id = 3; repeated string attachment_ids = 4; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
-message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; }
-message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; }
+message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; int32 schema_version = 12; repeated ExecutionStageSnapshot stages = 13; }
+message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; }
+message ExpertSnapshot { string id = 1; string name = 2; string execution_instruction = 3; int64 version = 4; }
+message ProviderModelSnapshot { string id = 1; string connection_id = 2; int64 connection_version = 3; string connection_name = 4; string provider_type = 5; string model_id = 6; string name = 7; string endpoint = 8; repeated string protocols = 9; string compatibility = 10; }
+message MCPServerSnapshot { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; }
+message SkillSnapshot { string id = 1; string name = 2; string object_key = 3; string sha256 = 4; }
 
 message ListWorkflowsRequest { bool deleted = 1; }
 message ListWorkflowsResponse { repeated Workflow items = 1; }
@@ -116,8 +145,8 @@ message CreateWorkflowRequest { WorkflowInput workflow = 1; }
 message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
-message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; optional string provider_model_id = 4; optional string runtime_engine = 5; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; optional string provider_model_id = 5; optional string runtime_engine = 6; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; }
+message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }
@@ -135,7 +164,7 @@ message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
 message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -156,8 +185,8 @@ message GetExpertRequest { string expert_id = 1; }
 message CreateExpertRequest { ExpertInput expert = 1; }
 message UpdateExpertRequest { string expert_id = 1; ExpertInput expert = 2; int64 expected_version = 3; }
 message DeleteExpertRequest { string expert_id = 1; }
-message ExpertInput { string name = 1; string capability_introduction = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; string execution_instruction = 5; repeated string expertise_tags = 6; }
-message Expert { string id = 1; string name = 2; string capability_introduction = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; string execution_instruction = 9; repeated string expertise_tags = 10; bool available = 11; }
+message ExpertInput { string name = 1; string capability_introduction = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; string execution_instruction = 5; repeated string expertise_tags = 6; string provider_model_id = 7; string runtime_engine = 8; }
+message Expert { string id = 1; string name = 2; string capability_introduction = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; string execution_instruction = 9; repeated string expertise_tags = 10; bool available = 11; string provider_model_id = 12; string runtime_engine = 13; bool complete = 14; optional string availability_reason = 15; string compatibility = 16; string provider_model_name = 17; }
 
 message ListExpertTeamsRequest {}
 message ListExpertTeamsResponse { repeated ExpertTeam items = 1; }
@@ -167,7 +196,9 @@ message UpdateExpertTeamRequest { string expert_team_id = 1; ExpertTeamInput exp
 message DeleteExpertTeamRequest { string expert_team_id = 1; }
 message ExpertTeamInput { string name = 1; string capability_introduction = 2; repeated string expertise_tags = 3; repeated string expert_ids = 4; }
 message ExpertTeam { string id = 1; string name = 2; string capability_introduction = 3; repeated string expertise_tags = 4; repeated Expert experts = 5; bool available = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
-message ExpertStage { string expert_id = 1; string expert_name = 2; int32 position = 3; string state = 4; int64 elapsed_ms = 5; optional string final_text = 6; optional string error = 7; int32 total = 8; }
+message ExpertStage { string expert_id = 1; string expert_name = 2; int32 position = 3; string state = 4; int64 elapsed_ms = 5; optional string final_text = 6; optional string error = 7; int32 total = 8; optional CreditStageConsumption credit_consumption = 9; string provider_model_id = 10; string provider_model_name = 11; string runtime_engine = 12; }
+message CreditConsumption { int64 total_hundredths = 1; repeated CreditStageConsumption stages = 2; }
+message CreditStageConsumption { int32 stage_position = 1; string provider_model = 2; string runtime_engine = 3; int64 input_tokens = 4; int64 output_tokens = 5; bool usage_reported = 6; int64 input_multiplier_micros = 7; int64 output_multiplier_micros = 8; int64 fallback_hundredths = 9; int64 amount_hundredths = 10; bool estimated = 11; string rate_revision_id = 12; }
 
 message GetSettingsRequest {}
 message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; }

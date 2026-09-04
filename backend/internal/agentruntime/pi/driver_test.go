@@ -104,6 +104,16 @@ func TestParserStreamsTextToolsFinalAndUsage(t *testing.T) {
 	}
 }
 
+func TestParserDoesNotReportOmittedUsage(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	if _, err := parser.Parse(processharness.StreamStdout, []byte(`{"type":"message_end","message":{"role":"assistant","content":[]}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if parser.Result().Usage.Reported {
+		t.Fatal("omitted usage was reported as measured zero")
+	}
+}
+
 func TestParserClassifiesAuthenticationFailure(t *testing.T) {
 	parser := (Driver{}).NewParser(t.TempDir())
 	_, err := parser.Parse(processharness.StreamStdout, []byte(`{"type":"message_end","message":{"role":"assistant","stopReason":"error","errorMessage":"HTTP 401 invalid API key"}}`))

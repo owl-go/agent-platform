@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -116,6 +117,45 @@ func TestHTTPServerMountsGinSSEBeforeBusinessPrefix(t *testing.T) {
 		if response.Code != test.wantStatus {
 			t.Fatalf("GET %s status=%d, want %d", test.path, response.Code, test.wantStatus)
 		}
+	}
+}
+
+func TestHTTPServerAllowsLargeBinaryAttachmentUploads(t *testing.T) {
+	service, err := platformservice.New(readinessFunc(func(context.Context) error { return nil }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := bytes.Repeat([]byte("image"), 16*1024)
+	var uploaded []byte
+	business := routesFunc(func(server *kratoshttp.Server) {
+		server.Handle("/api/v1/attachments/upload", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			uploaded, err = io.ReadAll(request.Body)
+			if err != nil {
+				http.Error(writer, "read upload", http.StatusInternalServerError)
+				return
+			}
+			writer.WriteHeader(http.StatusNoContent)
+		}))
+	})
+	handlers, err := platformserver.NewHTTPHandlers(business, http.NotFoundHandler(), func(next http.Handler) http.Handler { return next })
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := platformserver.NewHTTPServerFromConfig(platformconfig.Config{}, service, handlers, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/attachments/upload?name=photo.jpg", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "image/jpeg")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("POST attachment status=%d body=%q, want %d", response.Code, response.Body.String(), http.StatusNoContent)
+	}
+	if !bytes.Equal(uploaded, body) {
+		t.Fatalf("uploaded bytes=%d, want %d", len(uploaded), len(body))
 	}
 }
 

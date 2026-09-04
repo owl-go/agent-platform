@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
@@ -83,14 +85,9 @@ func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workf
 	if err != nil {
 		return domain.Workflow{}, err
 	}
-	var runtime *string
-	if input.RuntimeEngine != nil {
-		value := string(*input.RuntimeEngine)
-		runtime = &value
-	}
 	updates := map[string]any{
 		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID, "expert_team_id": input.ExpertTeamID,
-		"provider_model_id": input.ProviderModelID, "runtime_engine": runtime, "environment": environment,
+		"provider_model_id": nil, "runtime_engine": nil, "environment": environment,
 		"schedule": schedule, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 	}
 	if secretCiphertext != nil {
@@ -126,7 +123,6 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 	}{
 		{value: input.ExpertID, model: &expertRecord{}, name: "Expert", where: "owner_user_id = ? AND id = ?"},
 		{value: input.ExpertTeamID, model: &expertTeamRecord{}, name: "Expert Team", where: "owner_user_id = ? AND id = ?"},
-		{value: input.ProviderModelID, model: &providerModelRecord{}, name: "Provider Model", where: "owner_user_id = ? AND id = ? AND available"},
 	}
 	for _, check := range checks {
 		if check.value == nil {
@@ -156,7 +152,7 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 			return fmt.Errorf("%w: selected Expert Team requires at least two Experts", domain.ErrInvalid)
 		}
 		var available int64
-		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&available).Error; err != nil {
+		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(ids)) {
@@ -416,50 +412,9 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	if err := tx.Where("user_id = ?", workflow.OwnerID).Take(&settings).Error; err != nil {
 		return domain.ExecutionSnapshot{}, fmt.Errorf("load Personal Settings for Run: %w", err)
 	}
-	runtimeName := settings.DefaultRuntimeEngine
-	if workflow.RuntimeEngine != nil {
-		runtimeName = *workflow.RuntimeEngine
-	}
-	runtime, err := domain.ParseRuntime(runtimeName)
-	if err != nil {
-		return domain.ExecutionSnapshot{}, err
-	}
-	defaults := map[string]string{}
-	if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("decode Runtime model defaults: %w", err)
-	}
-	providerModelID := defaults[string(runtime)]
-	if workflow.ProviderModelID != nil {
-		providerModelID = *workflow.ProviderModelID
-	}
-	if providerModelID == "" {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("%w: choose a default Provider Model for %s before running this Workflow", domain.ErrInvalid, runtime)
-	}
-	var model providerModelRecord
-	if err := tx.Where("owner_user_id = ? AND id = ? AND available", workflow.OwnerID, providerModelID).Take(&model).Error; err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("load Provider Model for Run: %w", mapNotFound(err))
-	}
-	var connection modelProviderConnectionRecord
-	if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, model.ConnectionID).Take(&connection).Error; err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("load Model Provider Connection for Run: %w", mapNotFound(err))
-	}
-	var protocols []string
-	if err := json.Unmarshal(connection.Protocols, &protocols); err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("decode Model API Protocols: %w", err)
-	}
-	parsedModel, err := providerModelDomain(model)
-	if err != nil {
-		return domain.ExecutionSnapshot{}, err
-	}
-	for _, compatibility := range parsedModel.Compatibility {
-		if compatibility.RuntimeEngine == runtime && compatibility.Status == "incompatible" {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: selected Provider Model is incompatible with %s", domain.ErrInvalid, runtime)
-		}
-	}
 	snapshot := domain.ExecutionSnapshot{
-		WorkflowName: workflow.Name, Goal: workflow.Goal, RuntimeEngine: runtime,
-		ProviderModel: domain.ProviderModelSnapshot{ID: model.ID, ConnectionID: connection.ID, ConnectionVersion: connection.Version, ConnectionName: connection.Name, ProviderType: connection.ProviderType, ModelID: model.ModelID, Name: model.DisplayName, Endpoint: connection.Endpoint, Protocols: protocols},
-		Personality:   settings.Personality, PersonalityInstructions: settings.PersonalityInstructions,
+		SchemaVersion: 2, WorkflowName: workflow.Name, Goal: workflow.Goal,
+		Personality: settings.Personality, PersonalityInstructions: settings.PersonalityInstructions,
 		EnvironmentSecretCiphertext: workflow.EnvironmentSecret, GitSecretCiphertext: workflow.GitSecret,
 		WorkspacePath: workflow.WorkspacePath,
 	}
@@ -475,47 +430,131 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		}
 	}
 	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
-		return snapshot, nil
+		runtime, err := domain.ParseRuntime(settings.DefaultRuntimeEngine)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		defaults := map[string]string{}
+		if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Runtime model defaults: %w", err)
+		}
+		stage, err := loadExecutionStage(tx, workflow.OwnerID, defaults[string(runtime)], runtime, nil, nil, nil, 1)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		return application.PlanExecution(snapshot, application.ExecutionSelection{Anonymous: &stage})
 	}
 	if workflow.ExpertID != nil {
 		var expert expertRecord
 		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert for Run: %w", mapNotFound(err))
 		}
-		member, err := loadExpertMemberSnapshot(tx, workflow.OwnerID, expert, 1)
+		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, 1)
 		if err != nil {
-			return domain.ExecutionSnapshot{}, err
+			return domain.ExecutionSnapshot{}, fmt.Errorf("Expert %q: %w", expert.Name, err)
 		}
-		snapshot.Expert = &member.ExpertSnapshot
-		snapshot.MCPServers, snapshot.Skills = member.MCPServers, member.Skills
-		return snapshot, nil
+		return application.PlanExecution(snapshot, application.ExecutionSelection{Expert: &stage})
 	}
 	var team expertTeamRecord
 	if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertTeamID).Take(&team).Error; err != nil {
 		return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert Team for Run: %w", mapNotFound(err))
 	}
-	var expertIDs, tags []string
+	var expertIDs []string
 	if err := json.Unmarshal(team.ExpertIDs, &expertIDs); err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}
 	if len(expertIDs) < 2 {
 		return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team requires at least two Experts", domain.ErrInvalid)
 	}
-	_ = json.Unmarshal(team.ExpertiseTags, &tags)
-	teamSnapshot := &domain.ExpertTeamSnapshot{ID: team.ID, Name: team.Name, CapabilityIntroduction: team.CapabilityIntroduction, ExpertiseTags: tags}
 	for index, expertID := range expertIDs {
 		var expert expertRecord
 		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, expertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team member is unavailable", domain.ErrInvalid)
 		}
-		member, err := loadExpertMemberSnapshot(tx, workflow.OwnerID, expert, index+1)
+		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, index+1)
 		if err != nil {
-			return domain.ExecutionSnapshot{}, err
+			return domain.ExecutionSnapshot{}, fmt.Errorf("Expert %q: %w", expert.Name, err)
 		}
-		teamSnapshot.Members = append(teamSnapshot.Members, member)
+		snapshot.Stages = append(snapshot.Stages, stage)
 	}
-	snapshot.ExpertTeam = teamSnapshot
-	return snapshot, nil
+	teamStages := snapshot.Stages
+	snapshot.Stages = nil
+	return application.PlanExecution(snapshot, application.ExecutionSelection{Team: teamStages})
+}
+
+func loadExpertExecutionStage(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExecutionStageSnapshot, error) {
+	if expert.ProviderModelID == nil || expert.RuntimeEngine == nil {
+		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: Expert execution configuration is incomplete", domain.ErrInvalid)
+	}
+	runtime, err := domain.ParseRuntime(*expert.RuntimeEngine)
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	member, err := loadExpertMemberSnapshot(tx, ownerID, expert, position)
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	expertSnapshot := member.ExpertSnapshot
+	return loadExecutionStage(tx, ownerID, *expert.ProviderModelID, runtime, &expertSnapshot, member.MCPServers, member.Skills, position)
+}
+
+func loadExecutionStage(tx *gorm.DB, ownerID, providerModelID string, runtime domain.RuntimeEngine, expert *domain.ExpertSnapshot, servers []domain.MCPServerSnapshot, skills []domain.SkillSnapshot, position int) (domain.ExecutionStageSnapshot, error) {
+	if providerModelID == "" {
+		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: choose a default Provider Model for %s", domain.ErrInvalid, runtime)
+	}
+	var model providerModelRecord
+	if err := tx.Where("id = ? AND available", providerModelID).Take(&model).Error; err != nil {
+		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: selected Provider Model is unavailable", domain.ErrInvalid)
+	}
+	var connection modelProviderConnectionRecord
+	if err := tx.Where("id = ?", model.ConnectionID).Take(&connection).Error; err != nil {
+		return domain.ExecutionStageSnapshot{}, mapNotFound(err)
+	}
+	var protocols []string
+	if err := json.Unmarshal(connection.Protocols, &protocols); err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	parsed, err := providerModelDomain(model)
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	compatibility := "unverified"
+	for _, item := range parsed.Compatibility {
+		if item.RuntimeEngine == runtime {
+			compatibility = item.Status
+			break
+		}
+	}
+	if compatibility == "incompatible" {
+		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: selected Provider Model is incompatible with %s", domain.ErrInvalid, runtime)
+	}
+	provider := domain.ProviderModelSnapshot{ID: model.ID, ConnectionID: connection.ID, ConnectionVersion: connection.Version, ConnectionName: connection.Name, ProviderType: connection.ProviderType, ModelID: model.ModelID, Name: model.DisplayName, Endpoint: connection.Endpoint, Protocols: protocols, Compatibility: compatibility, CredentialOwnerID: connection.CredentialOwnerID}
+	protocol, err := domain.ModelProtocolForRuntime(runtime, protocols)
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	rate, err := loadCreditRateSnapshot(tx, connection.ProviderType, protocol, model.ModelID)
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	return domain.ExecutionStageSnapshot{Position: position, Expert: expert, RuntimeEngine: runtime, ProviderModel: provider, ModelProtocol: protocol, CreditRate: &rate, MCPServers: servers, Skills: skills}, nil
+}
+
+func loadCreditRateSnapshot(tx *gorm.DB, providerType, protocol, modelID string) (domain.CreditRateSnapshot, error) {
+	var row struct {
+		RevisionID             string `gorm:"column:id"`
+		InputMultiplierMicros  int64  `gorm:"column:input_multiplier_micros"`
+		OutputMultiplierMicros int64  `gorm:"column:output_multiplier_micros"`
+		FallbackHundredths     int64  `gorm:"column:fallback_hundredths"`
+	}
+	query := tx.Table("model_credit_rate_revisions").Where("provider_type = ? AND api_protocol = ? AND provider_model_id = ? AND superseded_at IS NULL", providerType, protocol, modelID).Take(&row)
+	if errors.Is(query.Error, gorm.ErrRecordNotFound) {
+		query = tx.Table("model_credit_rate_revisions").Where("provider_type IS NULL AND superseded_at IS NULL").Take(&row)
+	}
+	if query.Error != nil {
+		return domain.CreditRateSnapshot{}, fmt.Errorf("resolve Model Credit Rate snapshot: %w", query.Error)
+	}
+	return domain.CreditRateSnapshot{RevisionID: row.RevisionID, InputMultiplierMicros: row.InputMultiplierMicros, OutputMultiplierMicros: row.OutputMultiplierMicros, FallbackHundredths: row.FallbackHundredths}, nil
 }
 
 func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExpertMemberSnapshot, error) {
@@ -526,7 +565,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	if err := json.Unmarshal(expert.ExpertiseTags, &tags); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
-	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags}, Position: position}
+	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags, Version: expert.Version}, Position: position}
 	if err := json.Unmarshal(expert.MCPServerIDs, &mcpIDs); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
@@ -743,12 +782,7 @@ func workflowRecordForInput(id, ownerID, workspacePath string, input domain.Work
 	if err != nil {
 		return workflowRecord{}, err
 	}
-	var runtime *string
-	if input.RuntimeEngine != nil {
-		value := string(*input.RuntimeEngine)
-		runtime = &value
-	}
-	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ExpertTeamID: input.ExpertTeamID, ProviderModelID: input.ProviderModelID, RuntimeEngine: runtime, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
+	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ExpertTeamID: input.ExpertTeamID, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
 }
 
 func nextScheduledAt(schedule *domain.Schedule, after time.Time) *time.Time {
@@ -836,6 +870,12 @@ func runDomain(row runRecord) domain.Run {
 	if len(row.ExpertStages) > 0 && string(row.ExpertStages) != "null" {
 		_ = json.Unmarshal(row.ExpertStages, &item.ExpertStages)
 	}
+	if len(row.CreditConsumption) > 0 && string(row.CreditConsumption) != "null" {
+		item.CreditConsumption = &domain.CreditConsumption{}
+		if err := json.Unmarshal(row.CreditConsumption, item.CreditConsumption); err != nil {
+			item.CreditConsumption = nil
+		}
+	}
 	if row.TerminalError != nil {
 		item.Error = *row.TerminalError
 	}
@@ -874,6 +914,17 @@ func runDomain(row runRecord) domain.Run {
 			skills = append(skills, map[string]any{"id": skill.ID, "name": skill.Name, "sha256": skill.SHA256})
 		}
 		projection["skills"] = skills
+		if stages, err := snapshot.OrderedStages(); err == nil {
+			stageProjection := make([]map[string]any, 0, len(stages))
+			for _, stage := range stages {
+				value := map[string]any{"position": stage.Position, "runtime_engine": string(stage.RuntimeEngine), "provider_model": map[string]any{"id": stage.ProviderModel.ID, "connection_id": stage.ProviderModel.ConnectionID, "connection_name": stage.ProviderModel.ConnectionName, "provider_type": stage.ProviderModel.ProviderType, "name": stage.ProviderModel.Name, "model_id": stage.ProviderModel.ModelID, "endpoint": stage.ProviderModel.Endpoint, "protocols": stage.ProviderModel.Protocols, "compatibility": stage.ProviderModel.Compatibility}}
+				if stage.Expert != nil {
+					value["expert"] = map[string]any{"id": stage.Expert.ID, "name": stage.Expert.Name, "version": stage.Expert.Version}
+				}
+				stageProjection = append(stageProjection, value)
+			}
+			projection["execution_stages"] = stageProjection
+		}
 		item.WorkflowSnapshot = projection
 	}
 	return item

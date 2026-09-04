@@ -27,6 +27,8 @@ import (
 	"agent-platform/backend/internal/agentruntime/openclaw"
 	"agent-platform/backend/internal/agentruntime/pi"
 	"agent-platform/backend/internal/agentruntime/processharness"
+	creditsapplication "agent-platform/backend/internal/biz/credits/application"
+	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/credentials"
@@ -38,6 +40,8 @@ import (
 	"agent-platform/backend/internal/workspacefs"
 )
 
+const runtimeWorkspaceDirectory = "/workspace"
+
 type Executor struct {
 	config       platformconfig.Config
 	box          *secretcrypto.Box
@@ -47,6 +51,15 @@ type Executor struct {
 	checkout     func(context.Context, string) (runtimeLease, error)
 	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
 	executionTTL time.Duration
+	credits      *creditsapplication.Service
+}
+
+func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
+	if service == nil {
+		return fmt.Errorf("Credits service is required")
+	}
+	executor.credits = service
+	return nil
 }
 
 type runtimeLease interface {
@@ -90,6 +103,23 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if job.Kind == application.JobMCPTest {
 		return executor.testMCP(ctx, job)
 	}
+	executionStages, err := job.Snapshot.OrderedStages()
+	if err != nil {
+		return result, err
+	}
+	firstStage := executionStages[0]
+	job.Snapshot.RuntimeEngine, job.Snapshot.ProviderModel = firstStage.RuntimeEngine, firstStage.ProviderModel
+	job.Snapshot.Expert, job.Snapshot.MCPServers, job.Snapshot.Skills = firstStage.Expert, firstStage.MCPServers, firstStage.Skills
+	if len(executionStages) > 1 {
+		team := &workspacedomain.ExpertTeamSnapshot{Members: make([]workspacedomain.ExpertMemberSnapshot, 0, len(executionStages))}
+		for _, executionStage := range executionStages {
+			if executionStage.Expert == nil {
+				return result, fmt.Errorf("team Execution Stage %d has no Expert", executionStage.Position)
+			}
+			team.Members = append(team.Members, workspacedomain.ExpertMemberSnapshot{ExpertSnapshot: *executionStage.Expert, Position: executionStage.Position, MCPServers: executionStage.MCPServers, Skills: executionStage.Skills})
+		}
+		job.Snapshot.ExpertTeam = team
+	}
 	runtimeConfig, ok := executor.config.Worker.Runtimes[string(job.Snapshot.RuntimeEngine)]
 	if !ok || !runtimeConfig.Available {
 		return result, fmt.Errorf("Runtime %s is unavailable", job.Snapshot.RuntimeEngine)
@@ -108,7 +138,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		returnErr = errors.Join(returnErr, releaseWarmLease(ctx, setupLease))
 		returnErr = errors.Join(returnErr, os.RemoveAll(slot.credentials))
 		returnErr = errors.Join(returnErr, os.RemoveAll(workspace), os.RemoveAll(slot.scratch))
-		if nativeState != "" {
+		if nativeState != "" && result.SuccessCommit == nil {
 			returnErr = errors.Join(returnErr, os.RemoveAll(nativeState))
 		}
 	}()
@@ -116,16 +146,22 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if err != nil {
 		return result, err
 	}
+	if err := prepareRuntimeAttachmentMountpoint(workspace, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
+		return result, err
+	}
 	if err := prepareRuntimeScratch(slot.scratch, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
 		return result, err
 	}
-	attachmentPaths, err := executor.materializeAttachments(ctx, job, slot.scratch)
+	attachments, err := executor.materializeAttachments(ctx, job, slot.scratch)
 	if err != nil {
 		return result, err
 	}
-	nativeState, nativePersistent, err := executor.nativeStateDirectoriesAt(job, runtimeConfig, slot.nativeState)
-	if err != nil {
-		return result, err
+	nativePersistent := ""
+	if job.Snapshot.ExpertTeam == nil {
+		nativeState, nativePersistent, err = executor.nativeStateDirectoriesAt(job, runtimeConfig, slot.nativeState)
+		if err != nil {
+			return result, err
+		}
 	}
 	sink := &eventSink{runID: job.ID, job: job, progress: progress}
 	executionTTL := executor.executionTTL
@@ -143,40 +179,92 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	}
 	var finalMessage, checkpointAfter string
 	var allRedactValues [][]byte
+	var teamNativePromotions []nativeStatePromotion
+	var teamNativeRoots []string
+	defer func() {
+		if result.SuccessCommit == nil {
+			for _, root := range teamNativeRoots {
+				_ = os.RemoveAll(root)
+			}
+		}
+	}()
 	for index := range memberJobs {
 		memberJob := memberJobs[index]
-		var stage *workspacedomain.ExpertStage
+		executionStage := executionStages[index]
 		if job.Snapshot.ExpertTeam != nil {
 			member := job.Snapshot.ExpertTeam.Members[index]
-			value := workspacedomain.ExpertStage{ExpertID: member.ID, ExpertName: member.Name, Position: member.Position, Total: len(job.Snapshot.ExpertTeam.Members), State: "running", StartedAt: time.Now().UTC()}
-			stage = &value
-			if err := recordExpertStage(executionCtx, progress, job, value); err != nil {
-				return result, err
-			}
-			// Include every preceding final result when building this member's isolated context.
+			// Rebuild collaboration context before applying the stage-owned engine and model.
 			memberJob = teamMemberJob(job, member, result.ExpertStages)
 		}
+		memberJob.Snapshot.RuntimeEngine, memberJob.Snapshot.ProviderModel = executionStage.RuntimeEngine, executionStage.ProviderModel
+		memberJob.Snapshot.Expert, memberJob.Snapshot.MCPServers, memberJob.Snapshot.Skills = executionStage.Expert, executionStage.MCPServers, executionStage.Skills
+		stageRuntimeConfig, available := executor.config.Worker.Runtimes[string(executionStage.RuntimeEngine)]
+		if !available || !stageRuntimeConfig.Available {
+			return result, fmt.Errorf("Runtime %s is unavailable", executionStage.RuntimeEngine)
+		}
+		stageContainerName, stageSlot := containerName, slot
+		stageAttachments := attachments
+		value := workspacedomain.ExpertStage{ProviderModelID: executionStage.ProviderModel.ID, ProviderModelName: executionStage.ProviderModel.Name, RuntimeEngine: executionStage.RuntimeEngine, Position: executionStage.Position, Total: len(executionStages), State: "running", StartedAt: time.Now().UTC()}
+		if executionStage.Expert != nil {
+			value.ExpertID, value.ExpertName = executionStage.Expert.ID, executionStage.Expert.Name
+		}
+		stage := &value
+		var stageRedactor *credentials.Redactor
+		if err := recordExpertStage(executionCtx, progress, job, value); err != nil {
+			return result, err
+		}
 		failStage := func(cause error) error {
-			if stage == nil || stage.State != "running" {
+			if stage.State != "running" {
 				return cause
 			}
 			stage.State = "failed"
 			if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
 				stage.State = "cancelled"
 			}
-			stage.Error, stage.EndedAt = cause.Error(), time.Now().UTC()
+			message := cause.Error()
+			if stageRedactor != nil {
+				message = string(stageRedactor.Bytes([]byte(message)))
+			}
+			stage.Error, stage.EndedAt = message, time.Now().UTC()
 			stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
 			result.ExpertStages = append(result.ExpertStages, *stage)
-			recordCtx, recordCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-			recordErr := recordExpertStage(recordCtx, progress, job, *stage)
-			recordCancel()
-			return errors.Join(cause, recordErr)
+			sanitized := redactExecutionError(cause, stageRedactor)
+			if errors.Is(cause, context.Canceled) {
+				sanitized = errors.Join(context.Canceled, sanitized)
+			} else if errors.Is(cause, context.DeadlineExceeded) {
+				sanitized = errors.Join(context.DeadlineExceeded, sanitized)
+			}
+			return sanitized
 		}
 		lease := setupLease
 		if index > 0 {
-			lease, err = executor.checkout(executionCtx, containerName)
+			stageContainerName, stageSlot, err = executor.warmSlot(memberJob, stageRuntimeConfig)
 			if err != nil {
 				return result, failStage(err)
+			}
+			if err := prepareRuntimeScratch(stageSlot.scratch, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
+				return result, failStage(err)
+			}
+			stageAttachments, err = executor.materializeAttachments(executionCtx, memberJob, stageSlot.scratch)
+			if err != nil {
+				return result, failStage(err)
+			}
+			lease, err = executor.checkout(executionCtx, stageContainerName)
+			if err != nil {
+				return result, failStage(err)
+			}
+			defer os.RemoveAll(stageSlot.credentials)
+			defer os.RemoveAll(stageSlot.scratch)
+		}
+		stageNativeState, stageNativePersistent := nativeState, nativePersistent
+		if job.Snapshot.ExpertTeam != nil {
+			stageNativeState, stageNativePersistent, err = executor.nativeStateDirectoriesAt(memberJob, stageRuntimeConfig, stageSlot.nativeState)
+			if err != nil {
+				_ = releaseWarmLease(ctx, lease)
+				return result, failStage(err)
+			}
+			if stageNativeState != "" {
+				teamNativeRoots = append(teamNativeRoots, stageNativeState)
 			}
 		}
 		variables, environmentFiles, redactValues, prepareErr := executor.memberEnvironment(executionCtx, memberJob)
@@ -191,12 +279,12 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			allRedactValues = append(allRedactValues, append([]byte(nil), value...))
 		}
 		allRedactValues = append(allRedactValues, redactValues...)
-		environment, materializeErr := executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: environmentFiles, RedactValues: redactValues}, slot.credentials)
+		environment, materializeErr := executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: environmentFiles, RedactValues: redactValues}, stageSlot.credentials)
 		if materializeErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		containerConfig := executor.containerConfig(job, runtimeConfig, containerName, slot, workspace, nativeState, environment.Directory())
+		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory())
 		runProcess, startErr := lease.Start(executionCtx, containerConfig)
 		if startErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -204,12 +292,13 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(startErr)
 		}
 		redactor := environment.Redactor()
+		stageRedactor = redactor
 		sink.suppressMessages = job.Snapshot.ExpertTeam != nil && index < len(memberJobs)-1
-		adapter, adapterErr := executor.newAdapter(job.Snapshot.RuntimeEngine, cliadapter.Config{
-			ExpectedVersion: runtimeConfig.CLIVersion, RunProcess: runProcess,
-			ScratchRoot:          slot.scratch,
+		adapter, adapterErr := executor.newAdapter(executionStage.RuntimeEngine, cliadapter.Config{
+			ExpectedVersion: stageRuntimeConfig.CLIVersion, RunProcess: runProcess,
+			ScratchRoot:          stageSlot.scratch,
 			OutputSink:           processharness.NewRedactingSink(redactor, discardOutput{}),
-			VerifiedCapabilities: map[agentruntime.Capability]bool{agentruntime.CapabilityStreaming: true, agentruntime.CapabilityNativeResume: runtimeConfig.NativeResume},
+			VerifiedCapabilities: map[agentruntime.Capability]bool{agentruntime.CapabilityStreaming: true, agentruntime.CapabilityNativeResume: stageRuntimeConfig.NativeResume},
 		})
 		if adapterErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -221,50 +310,157 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = environment.Cleanup()
 			return result, failStage(describeErr)
 		}
-		instruction := buildInstruction(memberJob, attachmentPaths)
+		instruction := buildInstruction(memberJob, stageAttachments)
 		checkpoint := memberJob.CheckpointRef
-		if !runtimeConfig.NativeResume || job.Snapshot.ExpertTeam != nil {
+		if job.Snapshot.ExpertTeam != nil {
+			checkpoint = job.StageCheckpointRefs[executionStage.Position]
+		}
+		if !stageRuntimeConfig.NativeResume {
 			checkpoint = ""
 		}
 		if runtimeStartedAt.IsZero() {
 			runtimeStartedAt = time.Now()
 		}
-		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, agentruntime.ExecuteRequest{
-			RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: job.Snapshot.ProviderModel.ModelID,
-			ModelEndpoint: job.Snapshot.ProviderModel.Endpoint, ModelProvider: job.Snapshot.ProviderModel.ProviderType, ModelProtocols: job.Snapshot.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(memberJob),
-		}, agentruntime.NewRedactingEventSink(redactor, sink))
+		runtimeRequest := agentruntime.ExecuteRequest{
+			RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: executionStage.ProviderModel.ModelID,
+			ModelEndpoint: executionStage.ProviderModel.Endpoint, ModelProvider: executionStage.ProviderModel.ProviderType, ModelProtocols: executionStage.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(memberJob),
+			Attachments: stageAttachments,
+		}
+		if err := runtimeRequest.Validate(); err != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(err)
+		}
+		var creditAdmission creditsdomain.Admission
+		if executor.credits != nil {
+			protocol := executionStage.ModelProtocol
+			if protocol == "" {
+				protocol, err = workspacedomain.ModelProtocolForRuntime(executionStage.RuntimeEngine, executionStage.ProviderModel.Protocols)
+				if err != nil {
+					_ = releaseWarmLease(ctx, lease)
+					_ = environment.Cleanup()
+					return result, failStage(err)
+				}
+			}
+			var frozenRate *creditsdomain.ModelCreditRate
+			if executionStage.CreditRate != nil {
+				frozenRate = &creditsdomain.ModelCreditRate{RevisionID: executionStage.CreditRate.RevisionID, InputMultiplierMicros: executionStage.CreditRate.InputMultiplierMicros, OutputMultiplierMicros: executionStage.CreditRate.OutputMultiplierMicros, Fallback: creditsdomain.Amount(executionStage.CreditRate.FallbackHundredths)}
+			}
+			creditAdmission, err = executor.credits.Admit(executionCtx, creditsapplication.AdmissionRequest{
+				UserID: job.OwnerID, ExecutionID: job.ID, StagePosition: executionStage.Position,
+				Timezone: job.Timezone, ProviderType: executionStage.ProviderModel.ProviderType,
+				Protocol: protocol, ModelID: executionStage.ProviderModel.ModelID, FrozenRate: frozenRate,
+			})
+			if err != nil {
+				_ = releaseWarmLease(ctx, lease)
+				_ = environment.Cleanup()
+				return result, failStage(err)
+			}
+		}
+		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
 		runtimeFinishedAt = time.Now()
+		var settlementErr error
+		var intermediateSettlement *application.CreditSettlement
+		if executor.credits != nil {
+			usage := creditsdomain.Usage{InputTokens: runtimeResult.Usage.InputTokens, OutputTokens: runtimeResult.Usage.OutputTokens, Known: runtimeResult.Usage.Reported}
+			consumption, calculateErr := creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
+			if calculateErr != nil {
+				// Invalid or overflowing Runtime counters are untrusted Usage, so charge
+				// the frozen fallback rather than leaking the per-User execution lease.
+				usage = creditsdomain.Usage{}
+				consumption, settlementErr = creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
+			}
+			if settlementErr != nil {
+				abortCtx, abortCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+				settlementErr = errors.Join(calculateErr, settlementErr, executor.credits.Abort(abortCtx, creditAdmission))
+				abortCancel()
+			}
+			if settlementErr == nil {
+				settlement := application.CreditSettlement{
+					UserID: creditAdmission.UserID, ExecutionID: creditAdmission.ExecutionID, Source: creditAdmission.Source,
+					Timezone: creditAdmission.Timezone, CreditDay: creditAdmission.CreditDay, StagePosition: creditAdmission.StagePosition,
+					StartedAt: creditAdmission.StartedAt, SettledAt: time.Now().UTC(), RateRevisionID: creditAdmission.Rate.RevisionID,
+					InputMultiplierMicros: creditAdmission.Rate.InputMultiplierMicros, OutputMultiplierMicros: creditAdmission.Rate.OutputMultiplierMicros,
+					Fallback: int64(creditAdmission.Rate.Fallback), Amount: int64(consumption.Amount), Estimated: consumption.Estimated,
+					InputTokens: usage.InputTokens, OutputTokens: usage.OutputTokens, UsageKnown: usage.Known,
+				}
+				// Every terminal Stage and its Credit mutation share one database transaction.
+				if index == len(memberJobs)-1 || executeErr != nil {
+					result.CreditSettlements = append(result.CreditSettlements, settlement)
+				} else {
+					intermediateSettlement = &settlement
+				}
+			}
+			if settlementErr == nil {
+				creditStage := workspacedomain.CreditStageConsumption{
+					StagePosition: executionStage.Position, ProviderModel: executionStage.ProviderModel.ModelID,
+					RuntimeEngine: string(executionStage.RuntimeEngine), InputTokens: runtimeResult.Usage.InputTokens,
+					OutputTokens: runtimeResult.Usage.OutputTokens, UsageReported: runtimeResult.Usage.Reported,
+					InputMultiplierMicros: consumption.Rate.InputMultiplierMicros, OutputMultiplierMicros: consumption.Rate.OutputMultiplierMicros,
+					FallbackHundredths: int64(consumption.Rate.Fallback), AmountHundredths: int64(consumption.Amount),
+					Estimated: consumption.Estimated, RateRevisionID: consumption.Rate.RevisionID,
+				}
+				if result.CreditConsumption == nil {
+					result.CreditConsumption = &workspacedomain.CreditConsumption{}
+				}
+				result.CreditConsumption.Stages = append(result.CreditConsumption.Stages, creditStage)
+				result.CreditConsumption.TotalHundredths += creditStage.AmountHundredths
+				stage.CreditConsumption = &creditStage
+			}
+		}
 		releaseErr := releaseWarmLease(ctx, lease)
 		credentialCleanupErr := environment.Cleanup()
 		if index == 0 {
 			setupLease = nil
 		}
-		if executeErr != nil {
-			return result, failStage(errors.Join(executeErr, releaseErr, credentialCleanupErr))
+		if executeErr != nil || settlementErr != nil {
+			return result, failStage(errors.Join(executeErr, settlementErr, releaseErr, credentialCleanupErr))
 		}
 		if releaseErr != nil || credentialCleanupErr != nil {
 			return result, failStage(errors.Join(releaseErr, credentialCleanupErr))
 		}
 		finalMessage = string(redactor.Bytes([]byte(runtimeResult.FinalMessage)))
 		checkpointAfter = runtimeResult.CheckpointRef
-		if stage != nil {
-			stage.State, stage.FinalText, stage.EndedAt = "succeeded", finalMessage, time.Now().UTC()
-			stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
-			result.ExpertStages = append(result.ExpertStages, *stage)
-			if err := recordExpertStage(executionCtx, progress, job, *stage); err != nil {
+		if job.Snapshot.ExpertTeam != nil && stageNativeState != "" {
+			if result.StageCheckpointRefs == nil {
+				result.StageCheckpointRefs = make(map[int]string)
+			}
+			result.StageCheckpointRefs[executionStage.Position] = checkpointAfter
+			teamNativePromotions = append(teamNativePromotions, nativeStatePromotion{temporary: filepath.Join(stageNativeState, "sessions"), persistent: stageNativePersistent})
+		}
+		stage.State, stage.FinalText, stage.EndedAt = "succeeded", finalMessage, time.Now().UTC()
+		stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
+		result.ExpertStages = append(result.ExpertStages, *stage)
+		if intermediateSettlement != nil {
+			recorder, ok := progress.(stageSettlementRecorder)
+			if !ok {
+				result.CreditSettlements = append(result.CreditSettlements, *intermediateSettlement)
+				return result, fmt.Errorf("progress recorder cannot atomically settle an intermediate Stage")
+			}
+			if err := recorder.RecordStageSettlement(executionCtx, job, *stage, *intermediateSettlement); err != nil {
+				result.CreditSettlements = append(result.CreditSettlements, *intermediateSettlement)
 				return result, err
 			}
+		} else if err := recordExpertStage(executionCtx, progress, job, *stage); err != nil {
+			return result, err
 		}
 	}
+	if err := os.Remove(filepath.Join(workspace, filepath.Base(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory)))); err != nil {
+		return result, fmt.Errorf("remove Runtime attachment mountpoint: %w", err)
+	}
 	redactor := credentials.NewRedactor(allRedactValues...)
+	for _, promotion := range teamNativePromotions {
+		if err := sanitizeNativeState(promotion.temporary, redactor); err != nil {
+			return result, err
+		}
+	}
 	if nativeState != "" {
 		nativeSessions := filepath.Join(nativeState, "sessions")
 		if err := sanitizeNativeState(nativeSessions, redactor); err != nil {
 			return result, err
 		}
-		if err := mergeSuccessfulWorkspace(nativePersistent, nativeSessions); err != nil {
-			return result, fmt.Errorf("persist native Runtime state: %w", err)
-		}
+		teamNativePromotions = append(teamNativePromotions, nativeStatePromotion{temporary: nativeSessions, persistent: nativePersistent})
+		teamNativeRoots = append(teamNativeRoots, nativeState)
 	}
 	var artifacts []application.ExecutionArtifact
 	if persistent != "" {
@@ -288,8 +484,33 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, err
 		}
 	}
+	if len(teamNativePromotions) > 0 {
+		result.SuccessCommit = &nativeStateCommit{promotions: teamNativePromotions, temporaryRoots: teamNativeRoots}
+	}
 	result.FinalMessage, result.CheckpointRef, result.Artifacts = finalMessage, checkpointAfter, artifacts
 	return result, nil
+}
+
+func redactExecutionError(cause error, redactor *credentials.Redactor) error {
+	redact := func(value string) string {
+		if redactor == nil {
+			return value
+		}
+		return string(redactor.Bytes([]byte(value)))
+	}
+	var runtimeErr *agentruntime.Error
+	if errors.As(cause, &runtimeErr) {
+		var redactedCause error
+		if runtimeErr.Cause != nil {
+			redactedCause = errors.New(redact(runtimeErr.Cause.Error()))
+		}
+		return &agentruntime.Error{Code: runtimeErr.Code, Message: redact(runtimeErr.Message), Cause: redactedCause}
+	}
+	return errors.New(redact(cause.Error()))
+}
+
+type stageSettlementRecorder interface {
+	RecordStageSettlement(context.Context, application.ExecutionJob, workspacedomain.ExpertStage, application.CreditSettlement) error
 }
 
 func releaseWarmLease(ctx context.Context, lease runtimeLease) error {
@@ -322,8 +543,8 @@ func (executor *Executor) memberEnvironment(ctx context.Context, job application
 func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory string) containerprocess.Config {
 	return containerprocess.Config{
 		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
-		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: "/workspace",
-		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
+		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
+		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
 		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
@@ -348,7 +569,27 @@ func prepareRuntimeScratch(path string, uid, gid int) error {
 	if err := os.MkdirAll(path, 0o750); err != nil {
 		return fmt.Errorf("create Runtime scratch directory: %w", err)
 	}
-	return prepareSandboxDirectory(path, uid, gid)
+	if err := prepareSandboxDirectory(path, uid, gid); err != nil {
+		return err
+	}
+	attachments := filepath.Join(path, "attachments")
+	if err := os.Mkdir(attachments, 0o750); err != nil {
+		return fmt.Errorf("create Runtime attachment directory: %w", err)
+	}
+	return prepareSandboxDirectory(attachments, uid, gid)
+}
+
+func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
+	mountpoint := filepath.Join(workspace, filepath.Base(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory)))
+	if _, err := os.Lstat(mountpoint); err == nil {
+		return fmt.Errorf("Workspace contains reserved Runtime attachment path %q", filepath.Base(mountpoint))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect Runtime attachment mountpoint: %w", err)
+	}
+	if err := os.Mkdir(mountpoint, 0o750); err != nil {
+		return fmt.Errorf("create Runtime attachment mountpoint: %w", err)
+	}
+	return prepareSandboxDirectory(mountpoint, uid, gid)
 }
 
 type warmSlot struct {
@@ -364,9 +605,16 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 	case application.JobSession:
 		scope = "session:" + job.OwnerID + ":" + job.SessionID
 	case application.JobWorkflow:
-		scope = "workflow:" + job.OwnerID + ":" + job.WorkflowID
+		conversationID := job.ConversationID
+		if conversationID == "" {
+			conversationID = job.WorkflowID
+		}
+		scope = "workflow-conversation:" + job.OwnerID + ":" + conversationID
 	default:
 		return "", warmSlot{}, fmt.Errorf("job kind %q cannot use a warm Runtime container", job.Kind)
+	}
+	if job.Snapshot.Expert != nil {
+		scope += fmt.Sprintf(":expert:%s:%d", job.Snapshot.Expert.ID, job.Snapshot.Expert.Version)
 	}
 	name, err := containerprocess.WarmContainerName(scope, string(job.Snapshot.RuntimeEngine), runtime.ImageDigest)
 	if err != nil {
@@ -382,14 +630,36 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 }
 
 func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, temporary string) (string, string, error) {
-	if job.Kind != application.JobSession || !runtime.NativeResume || job.Snapshot.RuntimeEngine != workspacedomain.RuntimeCodex {
+	if !runtime.NativeResume || job.Snapshot.RuntimeEngine != workspacedomain.RuntimeCodex {
 		return "", "", nil
 	}
-	persistent, err := workspacefs.NativeSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, string(job.Snapshot.RuntimeEngine))
+	var persistent string
+	var err error
+	hiddenRoot := ""
+	switch job.Kind {
+	case application.JobSession:
+		hiddenRoot = filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-session-state")
+		if job.Snapshot.Expert != nil {
+			persistent, err = workspacefs.NativeExpertSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+		} else {
+			persistent, err = workspacefs.NativeSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, string(job.Snapshot.RuntimeEngine))
+		}
+	case application.JobWorkflow:
+		if job.Snapshot.Expert == nil {
+			return "", "", nil
+		}
+		conversationID := job.ConversationID
+		if conversationID == "" {
+			conversationID = job.WorkflowID
+		}
+		hiddenRoot = filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-run-conversation-state")
+		persistent, err = workspacefs.NativeExpertRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+	default:
+		return "", "", nil
+	}
 	if err != nil {
 		return "", "", err
 	}
-	hiddenRoot := filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-session-state")
 	parent := filepath.Dir(persistent)
 	current := hiddenRoot
 	relativeParent, _ := filepath.Rel(hiddenRoot, parent)
@@ -428,6 +698,65 @@ func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob,
 		return "", "", err
 	}
 	return temporary, persistent, nil
+}
+
+type nativeStatePromotion struct {
+	temporary  string
+	persistent string
+}
+
+type nativeStateCommit struct {
+	promotions     []nativeStatePromotion
+	temporaryRoots []string
+	promoted       []nativeStatePromotion
+}
+
+func (commit *nativeStateCommit) Commit() error {
+	for _, promotion := range commit.promotions {
+		backup := promotion.persistent + ".previous"
+		if err := os.RemoveAll(backup); err != nil {
+			_ = commit.Rollback()
+			return err
+		}
+		if err := os.Rename(promotion.persistent, backup); err != nil && !errors.Is(err, os.ErrNotExist) {
+			_ = commit.Rollback()
+			return err
+		}
+		if err := os.Rename(promotion.temporary, promotion.persistent); err != nil {
+			_ = os.Rename(backup, promotion.persistent)
+			_ = commit.Rollback()
+			return err
+		}
+		commit.promoted = append(commit.promoted, promotion)
+	}
+	return nil
+}
+
+func (commit *nativeStateCommit) Rollback() error {
+	var rollbackErr error
+	for index := len(commit.promoted) - 1; index >= 0; index-- {
+		promotion := commit.promoted[index]
+		rollbackErr = errors.Join(rollbackErr, os.RemoveAll(promotion.temporary))
+		if err := os.Rename(promotion.persistent, promotion.temporary); err != nil && !errors.Is(err, os.ErrNotExist) {
+			rollbackErr = errors.Join(rollbackErr, err)
+		}
+		if err := os.Rename(promotion.persistent+".previous", promotion.persistent); err != nil && !errors.Is(err, os.ErrNotExist) {
+			rollbackErr = errors.Join(rollbackErr, err)
+		}
+	}
+	commit.promoted = nil
+	return rollbackErr
+}
+
+func (commit *nativeStateCommit) Cleanup() error {
+	var cleanupErr error
+	for _, promotion := range commit.promotions {
+		cleanupErr = errors.Join(cleanupErr, os.RemoveAll(promotion.persistent+".previous"))
+	}
+	for _, root := range commit.temporaryRoots {
+		cleanupErr = errors.Join(cleanupErr, os.RemoveAll(root))
+	}
+	return cleanupErr
 }
 
 func ensureSandboxDirectoryOwnership(path string, uid, gid int) error {
@@ -551,7 +880,11 @@ func executionWorkspaceSize(root string) (int64, error) {
 }
 
 func (executor *Executor) environment(job application.ExecutionJob) (map[string]string, error) {
-	secret, err := executor.box.Decrypt(job.Snapshot.ProviderModel.APIKeyCiphertext, "model-provider:"+job.OwnerID)
+	credentialOwnerID := job.Snapshot.ProviderModel.CredentialOwnerID
+	if credentialOwnerID == "" {
+		credentialOwnerID = job.OwnerID
+	}
+	secret, err := executor.box.Decrypt(job.Snapshot.ProviderModel.APIKeyCiphertext, "model-provider:"+credentialOwnerID)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt Model Provider credential: %w", err)
 	}
@@ -797,7 +1130,7 @@ func workspaceManifest(root string) (map[string]string, error) {
 	return manifest, err
 }
 
-func buildInstruction(job application.ExecutionJob, attachmentPaths []string) string {
+func buildInstruction(job application.ExecutionJob, attachments []agentruntime.Attachment) string {
 	var sections []string
 	if job.Snapshot.Expert != nil {
 		if instruction := strings.TrimSpace(job.Snapshot.Expert.ExecutionInstruction); instruction != "" {
@@ -821,7 +1154,11 @@ func buildInstruction(job application.ExecutionJob, attachmentPaths []string) st
 		}
 		sections = append(sections, "Available isolated Skills: "+strings.Join(names, ", "))
 	}
-	if len(attachmentPaths) > 0 {
+	if len(attachments) > 0 {
+		attachmentPaths := make([]string, 0, len(attachments))
+		for _, attachment := range attachments {
+			attachmentPaths = append(attachmentPaths, attachment.Path)
+		}
 		sections = append(sections, "Files attached to the current user message (read-only; inspect them when relevant):\n- "+strings.Join(attachmentPaths, "\n- "))
 	}
 	sections = append(sections, job.Instruction)
@@ -845,7 +1182,7 @@ func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertM
 	return job
 }
 
-func (executor *Executor) materializeAttachments(ctx context.Context, job application.ExecutionJob, scratch string) ([]string, error) {
+func (executor *Executor) materializeAttachments(ctx context.Context, job application.ExecutionJob, scratch string) ([]agentruntime.Attachment, error) {
 	if len(job.Attachments) == 0 {
 		return nil, nil
 	}
@@ -853,7 +1190,8 @@ func (executor *Executor) materializeAttachments(ctx context.Context, job applic
 	if err := os.MkdirAll(root, 0o750); err != nil {
 		return nil, fmt.Errorf("create attachment directory: %w", err)
 	}
-	paths := make([]string, 0, len(job.Attachments))
+	runtimeRoot := containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory)
+	attachments := make([]agentruntime.Attachment, 0, len(job.Attachments))
 	for _, attachment := range job.Attachments {
 		expectedKey := "attachments/" + job.OwnerID + "/" + attachment.ID
 		if attachment.ObjectKey != expectedKey || filepath.Base(attachment.Name) != attachment.Name || attachment.Name == "." || attachment.Name == ".." {
@@ -867,6 +1205,10 @@ func (executor *Executor) materializeAttachments(ctx context.Context, job applic
 		if err := os.MkdirAll(directory, 0o750); err != nil {
 			_ = reader.Close()
 			return nil, fmt.Errorf("create attachment staging directory: %w", err)
+		}
+		if err := prepareSandboxDirectory(directory, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
+			_ = reader.Close()
+			return nil, fmt.Errorf("prepare attachment staging directory: %w", err)
 		}
 		path := filepath.Join(directory, attachment.Name)
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o400)
@@ -887,9 +1229,9 @@ func (executor *Executor) materializeAttachments(ctx context.Context, job applic
 		if err := os.Chmod(path, 0o400); err != nil {
 			return nil, fmt.Errorf("protect attachment copy: %w", err)
 		}
-		paths = append(paths, path)
+		attachments = append(attachments, agentruntime.Attachment{Path: filepath.Join(runtimeRoot, attachment.ID, attachment.Name), ContentType: attachment.ContentType})
 	}
-	return paths, nil
+	return attachments, nil
 }
 
 func personalityGuidance(personality string) string {

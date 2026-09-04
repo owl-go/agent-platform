@@ -37,7 +37,9 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
 	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
-	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, Version: 1}
+	providerModelID := strings.TrimSpace(input.ProviderModelID)
+	runtimeEngine := string(input.RuntimeEngine)
+	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: &providerModelID, RuntimeEngine: &runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
@@ -62,7 +64,7 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 		}
 		result := tx.Model(&expertRecord{}).
 			Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, expertID, expectedVersion).
-			Updates(map[string]any{"name": strings.TrimSpace(input.Name), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			Updates(map[string]any{"name": strings.TrimSpace(input.Name), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "provider_model_id": strings.TrimSpace(input.ProviderModelID), "runtime_engine": input.RuntimeEngine, "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -78,6 +80,22 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 }
 
 func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertInput) error {
+	var model providerModelRecord
+	if err := tx.Where("id = ? AND available", input.ProviderModelID).Take(&model).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("%w: Expert Provider Model is unavailable", domain.ErrInvalid)
+		}
+		return err
+	}
+	var compatibility []domain.RuntimeModelCompatibility
+	if err := json.Unmarshal(model.Compatibility, &compatibility); err != nil {
+		return fmt.Errorf("decode Provider Model compatibility: %w", err)
+	}
+	for _, item := range compatibility {
+		if item.RuntimeEngine == input.RuntimeEngine && item.Status == "incompatible" {
+			return fmt.Errorf("%w: Expert Provider Model is incompatible with %s", domain.ErrInvalid, input.RuntimeEngine)
+		}
+	}
 	if err := validateUniqueUUIDs(input.MCPServerIDs); err != nil {
 		return err
 	}
@@ -170,6 +188,12 @@ func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID s
 
 func expertDomain(row expertRecord) (domain.Expert, error) {
 	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	if row.ProviderModelID != nil {
+		item.ProviderModelID = *row.ProviderModelID
+	}
+	if row.RuntimeEngine != nil {
+		item.RuntimeEngine = domain.RuntimeEngine(*row.RuntimeEngine)
+	}
 	if err := json.Unmarshal(row.ExpertiseTags, &item.ExpertiseTags); err != nil {
 		return domain.Expert{}, fmt.Errorf("decode Expert tags: %w", err)
 	}
@@ -273,7 +297,7 @@ func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []strin
 		return err
 	}
 	var count int64
-	if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, expertIDs).Count(&count).Error; err != nil {
+	if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, expertIDs).Count(&count).Error; err != nil {
 		return err
 	}
 	if count != int64(len(expertIDs)) {
@@ -351,8 +375,8 @@ func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string
 				return fmt.Errorf("%w: invalid default Provider Model", domain.ErrInvalid)
 			}
 			var model providerModelRecord
-			if err := tx.Where("owner_user_id = ? AND id = ? AND available", ownerID, modelID).Take(&model).Error; err != nil {
-				return fmt.Errorf("%w: default Provider Model is unavailable or does not belong to the User", domain.ErrInvalid)
+			if err := tx.Where("id = ? AND available", modelID).Take(&model).Error; err != nil {
+				return fmt.Errorf("%w: default Provider Model is unavailable", domain.ErrInvalid)
 			}
 			parsed, err := providerModelDomain(model)
 			if err != nil {
@@ -388,9 +412,9 @@ func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string
 	return repository.GetSettings(ctx, ownerID)
 }
 
-func (repository *Repository) ListModelProviderConnections(ctx context.Context, ownerID string) ([]domain.ModelProviderConnection, error) {
+func (repository *Repository) ListModelProviderConnections(ctx context.Context) ([]domain.ModelProviderConnection, error) {
 	var rows []modelProviderConnectionRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Model Provider Connections: %w", err)
 	}
 	items := make([]domain.ModelProviderConnection, 0, len(rows))
@@ -406,7 +430,7 @@ func (repository *Repository) ListModelProviderConnections(ctx context.Context, 
 
 func (repository *Repository) CreateModelProviderConnection(ctx context.Context, ownerID string, connection domain.ModelProviderConnection, ciphertext []byte, models []domain.ProviderModel) (domain.ModelProviderConnection, error) {
 	protocols, _ := marshal(connection.Protocols)
-	row := modelProviderConnectionRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(connection.Name), ProviderType: connection.ProviderType, Endpoint: strings.TrimSpace(connection.Endpoint), Protocols: protocols, APIKeyCiphertext: ciphertext, VerificationStatus: connection.VerificationStatus, CustomEndpoint: connection.CustomEndpoint, Version: 1}
+	row := modelProviderConnectionRecord{ID: uuid.NewString(), CredentialOwnerID: ownerID, Name: strings.TrimSpace(connection.Name), ProviderType: connection.ProviderType, Endpoint: strings.TrimSpace(connection.Endpoint), Protocols: protocols, APIKeyCiphertext: ciphertext, VerificationStatus: connection.VerificationStatus, CustomEndpoint: connection.CustomEndpoint, Version: 1}
 	if connection.VerificationError != "" {
 		row.VerificationError = &connection.VerificationError
 	}
@@ -421,7 +445,7 @@ func (repository *Repository) CreateModelProviderConnection(ctx context.Context,
 		if err := tx.Create(&modelProviderCredentialVersionRecord{ConnectionID: row.ID, ConnectionVersion: 1, APIKeyCiphertext: ciphertext}).Error; err != nil {
 			return err
 		}
-		return replaceProviderModelRows(tx, ownerID, row.ID, models)
+		return replaceProviderModelRows(tx, row.ID, models)
 	})
 	if err != nil {
 		return domain.ModelProviderConnection{}, fmt.Errorf("create Model Provider Connection: %w", err)
@@ -442,12 +466,12 @@ func (repository *Repository) UpdateModelProviderConnection(ctx context.Context,
 		credential := ciphertext
 		if credential == nil {
 			var existing modelProviderConnectionRecord
-			if err := tx.Select("api_key_ciphertext").Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&existing).Error; err != nil {
+			if err := tx.Select("api_key_ciphertext").Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&existing).Error; err != nil {
 				return mapNotFound(err)
 			}
 			credential = existing.APIKeyCiphertext
 		}
-		result := tx.Model(&modelProviderConnectionRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, connectionID, expectedVersion).Updates(updates)
+		result := tx.Model(&modelProviderConnectionRecord{}).Where("credential_owner_user_id = ? AND id = ? AND version = ?", ownerID, connectionID, expectedVersion).Updates(updates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -458,7 +482,7 @@ func (repository *Repository) UpdateModelProviderConnection(ctx context.Context,
 			return err
 		}
 		if models != nil {
-			return replaceProviderModelRows(tx, ownerID, connectionID, models)
+			return replaceProviderModelRows(tx, connectionID, models)
 		}
 		return nil
 	})
@@ -471,39 +495,55 @@ func (repository *Repository) UpdateModelProviderConnection(ctx context.Context,
 func (repository *Repository) DeleteModelProviderConnection(ctx context.Context, ownerID, connectionID string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var modelIDs []string
-		if err := tx.Model(&providerModelRecord{}).Where("owner_user_id = ? AND connection_id = ?", ownerID, connectionID).Pluck("id", &modelIDs).Error; err != nil {
+		if err := tx.Model(&providerModelRecord{}).Where("connection_id = ?", connectionID).Pluck("id", &modelIDs).Error; err != nil {
 			return err
 		}
 		if len(modelIDs) > 0 {
 			var count int64
-			if err := tx.Model(&sessionRecord{}).Where("owner_user_id = ? AND current_provider_model_id IN ?", ownerID, modelIDs).Count(&count).Error; err != nil {
+			if err := tx.Model(&expertRecord{}).Where("provider_model_id IN ?", modelIDs).Count(&count).Error; err != nil {
 				return err
 			}
 			if count == 0 {
-				if err := tx.Model(&workflowRecord{}).Where("owner_user_id = ? AND provider_model_id IN ?", ownerID, modelIDs).Count(&count).Error; err != nil {
+				if err := tx.Model(&sessionRecord{}).Where("current_provider_model_id IN ?", modelIDs).Count(&count).Error; err != nil {
 					return err
 				}
 			}
-			var settings settingsRecord
-			if err := tx.Where("user_id = ?", ownerID).Take(&settings).Error; err != nil {
+			if count == 0 {
+				if err := tx.Model(&workflowRecord{}).Where("provider_model_id IN ?", modelIDs).Count(&count).Error; err != nil {
+					return err
+				}
+			}
+			var settings []settingsRecord
+			if err := tx.Find(&settings).Error; err != nil {
 				return err
 			}
-			defaults := map[string]string{}
-			_ = json.Unmarshal(settings.RuntimeModelDefaults, &defaults)
 			used := make(map[string]struct{}, len(modelIDs))
 			for _, id := range modelIDs {
 				used[id] = struct{}{}
 			}
-			for _, id := range defaults {
-				if _, ok := used[id]; ok {
+			for _, item := range settings {
+				defaults := map[string]string{}
+				_ = json.Unmarshal(item.RuntimeModelDefaults, &defaults)
+				for _, id := range defaults {
+					if _, ok := used[id]; ok {
+						count++
+					}
+				}
+			}
+			if count == 0 {
+				referenced, err := continuableSnapshotReferencesConnection(tx, connectionID)
+				if err != nil {
+					return err
+				}
+				if referenced {
 					count++
 				}
 			}
 			if count > 0 {
-				return fmt.Errorf("%w: change Runtime, Session, and Workflow model references before deleting this connection", domain.ErrConflict)
+				return fmt.Errorf("%w: change Personal Settings, Expert, Session, and Workflow model references before deleting this connection", domain.ErrConflict)
 			}
 		}
-		result := tx.Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Delete(&modelProviderConnectionRecord{})
+		result := tx.Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Delete(&modelProviderConnectionRecord{})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -514,9 +554,58 @@ func (repository *Repository) DeleteModelProviderConnection(ctx context.Context,
 	})
 }
 
+func continuableSnapshotReferencesConnection(tx *gorm.DB, connectionID string) (bool, error) {
+	var messages []struct {
+		ResponseSnapshot []byte `gorm:"column:response_snapshot"`
+	}
+	if err := tx.Table("session_messages message").Select("message.response_snapshot").
+		Joins("JOIN sessions session ON session.id = message.session_id AND session.archived_at IS NULL").
+		Where("message.response_snapshot IS NOT NULL").Scan(&messages).Error; err != nil {
+		return false, err
+	}
+	for _, row := range messages {
+		var snapshot domain.ResponseSnapshot
+		if json.Unmarshal(row.ResponseSnapshot, &snapshot) != nil {
+			continue
+		}
+		if snapshot.ConnectionID == connectionID {
+			return true, nil
+		}
+		for _, stage := range snapshot.Stages {
+			if stage.ProviderModel.ConnectionID == connectionID {
+				return true, nil
+			}
+		}
+	}
+	var runs []struct {
+		WorkflowSnapshot []byte `gorm:"column:workflow_snapshot"`
+	}
+	if err := tx.Table("runs run").Select("run.workflow_snapshot").
+		Joins("JOIN workflows workflow ON workflow.id = run.workflow_id AND workflow.deleted_at IS NULL").
+		Scan(&runs).Error; err != nil {
+		return false, err
+	}
+	for _, row := range runs {
+		var snapshot domain.ExecutionSnapshot
+		if json.Unmarshal(row.WorkflowSnapshot, &snapshot) != nil {
+			continue
+		}
+		stages, err := snapshot.OrderedStages()
+		if err != nil {
+			continue
+		}
+		for _, stage := range stages {
+			if stage.ProviderModel.ConnectionID == connectionID {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 func (repository *Repository) GetModelProviderAPIKey(ctx context.Context, ownerID, connectionID string) ([]byte, error) {
 	var row modelProviderConnectionRecord
-	if err := repository.db.WithContext(ctx).Select("api_key_ciphertext").Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Select("api_key_ciphertext").Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&row).Error; err != nil {
 		return nil, mapNotFound(err)
 	}
 	return row.APIKeyCiphertext, nil
@@ -525,11 +614,11 @@ func (repository *Repository) GetModelProviderAPIKey(ctx context.Context, ownerI
 func (repository *Repository) ReplaceProviderModels(ctx context.Context, ownerID, connectionID string, models []domain.ProviderModel, verificationStatus, syncError string) (domain.ModelProviderConnection, error) {
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var connection modelProviderConnectionRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&connection).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&connection).Error; err != nil {
 			return mapNotFound(err)
 		}
 		if models != nil {
-			if err := replaceProviderModelRows(tx, ownerID, connectionID, models); err != nil {
+			if err := replaceProviderModelRows(tx, connectionID, models); err != nil {
 				return err
 			}
 		}
@@ -538,7 +627,7 @@ func (repository *Repository) ReplaceProviderModels(ctx context.Context, ownerID
 			updates["last_sync_error"] = syncError
 			delete(updates, "last_synced_at")
 		}
-		result := tx.Model(&modelProviderConnectionRecord{}).Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Updates(updates)
+		result := tx.Model(&modelProviderConnectionRecord{}).Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Updates(updates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -553,9 +642,9 @@ func (repository *Repository) ReplaceProviderModels(ctx context.Context, ownerID
 	return repository.getProviderConnection(ctx, ownerID, connectionID)
 }
 
-func (repository *Repository) CreateProviderModel(ctx context.Context, ownerID, connectionID string, model domain.ProviderModel) (domain.ProviderModel, error) {
+func (repository *Repository) CreateProviderModel(ctx context.Context, connectionID string, model domain.ProviderModel) (domain.ProviderModel, error) {
 	compatibility, _ := marshal(model.Compatibility)
-	row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: strings.TrimSpace(model.ModelID), DisplayName: strings.TrimSpace(model.DisplayName), Available: true, ManuallyAdded: true, Compatibility: compatibility}
+	row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, ModelID: strings.TrimSpace(model.ModelID), DisplayName: strings.TrimSpace(model.DisplayName), Available: true, ManuallyAdded: true, Compatibility: compatibility}
 	if row.DisplayName == "" {
 		row.DisplayName = row.ModelID
 	}
@@ -565,13 +654,13 @@ func (repository *Repository) CreateProviderModel(ctx context.Context, ownerID, 
 	return providerModelDomain(row)
 }
 
-func replaceProviderModelRows(tx *gorm.DB, ownerID, connectionID string, models []domain.ProviderModel) error {
-	if err := tx.Model(&providerModelRecord{}).Where("owner_user_id = ? AND connection_id = ? AND NOT manually_added", ownerID, connectionID).Update("available", false).Error; err != nil {
+func replaceProviderModelRows(tx *gorm.DB, connectionID string, models []domain.ProviderModel) error {
+	if err := tx.Model(&providerModelRecord{}).Where("connection_id = ? AND NOT manually_added", connectionID).Update("available", false).Error; err != nil {
 		return err
 	}
 	for _, model := range models {
 		compatibility, _ := marshal(model.Compatibility)
-		row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, OwnerID: ownerID, ModelID: model.ModelID, DisplayName: model.DisplayName, Available: true, ManuallyAdded: model.ManuallyAdded, Compatibility: compatibility}
+		row := providerModelRecord{ID: uuid.NewString(), ConnectionID: connectionID, ModelID: model.ModelID, DisplayName: model.DisplayName, Available: true, ManuallyAdded: model.ManuallyAdded, Compatibility: compatibility}
 		if row.DisplayName == "" {
 			row.DisplayName = row.ModelID
 		}
@@ -584,14 +673,14 @@ func replaceProviderModelRows(tx *gorm.DB, ownerID, connectionID string, models 
 
 func (repository *Repository) getProviderConnection(ctx context.Context, ownerID, connectionID string) (domain.ModelProviderConnection, error) {
 	var row modelProviderConnectionRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("credential_owner_user_id = ? AND id = ?", ownerID, connectionID).Take(&row).Error; err != nil {
 		return domain.ModelProviderConnection{}, mapNotFound(err)
 	}
 	return repository.providerConnectionDomain(ctx, row)
 }
 
 func (repository *Repository) providerConnectionDomain(ctx context.Context, row modelProviderConnectionRecord) (domain.ModelProviderConnection, error) {
-	item := domain.ModelProviderConnection{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, ProviderType: row.ProviderType, Endpoint: row.Endpoint, HasAPIKey: len(row.APIKeyCiphertext) > 0, VerificationStatus: row.VerificationStatus, CustomEndpoint: row.CustomEndpoint, LastSyncedAt: row.LastSyncedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.ModelProviderConnection{ID: row.ID, CredentialOwnerID: row.CredentialOwnerID, Name: row.Name, ProviderType: row.ProviderType, Endpoint: row.Endpoint, HasAPIKey: len(row.APIKeyCiphertext) > 0, VerificationStatus: row.VerificationStatus, CustomEndpoint: row.CustomEndpoint, LastSyncedAt: row.LastSyncedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.VerificationError != nil {
 		item.VerificationError = *row.VerificationError
 	}
@@ -602,7 +691,7 @@ func (repository *Repository) providerConnectionDomain(ctx context.Context, row 
 		return domain.ModelProviderConnection{}, err
 	}
 	var models []providerModelRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND connection_id = ?", row.OwnerID, row.ID).Order("available DESC, display_name, model_id").Find(&models).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("connection_id = ?", row.ID).Order("available DESC, display_name, model_id").Find(&models).Error; err != nil {
 		return domain.ModelProviderConnection{}, err
 	}
 	for _, model := range models {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { authContextKey } from "../auth/session";
 import ExtensionManager from "../components/ExtensionManager.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -9,7 +10,9 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 type Section = "personal" | "models" | "extensions";
 
 const api = inject(platformApiKey)!;
+const auth = inject(authContextKey)!;
 const { t, locale } = useI18n();
+const canManageModels = computed(() => auth.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const settings = ref<PersonalSettings>();
 const connections = ref<ModelProviderConnection[]>([]);
 const presets = ref<ModelProviderPreset[]>([]);
@@ -53,6 +56,11 @@ const selectableModels = computed(() => connections.value.flatMap((connection) =
 function choosePreset(providerType: string) { const preset = presets.value.find((item) => item.provider_type === providerType); if (!preset || editingConnection.value) return; connectionForm.value.endpoint = preset.official_endpoint; connectionForm.value.protocols = [...preset.protocols]; if (!connectionForm.value.name) connectionForm.value.name = preset.display_name; }
 function openNewConnection() { clearFeedback(); connectionError.value = ""; editingConnection.value = undefined; const preset = presets.value[0]; connectionForm.value = { name: preset?.display_name ?? "", provider_type: preset?.provider_type ?? "openai", endpoint: preset?.official_endpoint ?? "", protocols: [...(preset?.protocols ?? [])], api_key: "" }; showConnection.value = true; }
 function openConnection(item: ModelProviderConnection) { clearFeedback(); connectionError.value = ""; editingConnection.value = item; connectionForm.value = { name: item.name, provider_type: item.provider_type, endpoint: item.endpoint, protocols: [...item.protocols], api_key: "" }; showConnection.value = true; }
+function providerSaveError(cause: unknown) {
+  if (cause instanceof ApiError && cause.kind === "validation") return t("settings.providerValidationFailed");
+  if (cause instanceof ApiError && cause.kind === "conflict") return t("errors.conflict");
+  return t("settings.providerSaveFailed");
+}
 async function saveConnection() {
 	if (savingConnection.value) return;
   clearFeedback();
@@ -67,8 +75,8 @@ async function saveConnection() {
     else connections.value = connections.value.map((item) => item.id === saved.id ? saved : item);
     showConnection.value = false;
     notice.value = t("settings.providerSaved");
-  } catch {
-    connectionError.value = t("settings.providerSaveFailed");
+  } catch (cause) {
+    connectionError.value = providerSaveError(cause);
   } finally {
     savingConnection.value = false;
   }
@@ -93,17 +101,17 @@ function selectPersonality(personality: Personality) {
 
 <template>
   <section class="page-surface settings-page">
-    <header class="page-header"><div><p class="eyebrow">04 / PERSONAL DEFAULTS</p><h1>{{ t("settings.title") }}</h1></div></header>
+    <header class="page-header"><div><h1>{{ t("settings.title") }}</h1></div></header>
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" /><ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
     <div class="settings-layout">
       <nav class="settings-nav">
-        <el-button text :class="{ active: section === 'personal' }" @click="section = 'personal'"><span>01</span>{{ t("settings.personality") }}</el-button>
-        <el-button text :class="{ active: section === 'models' }" @click="section = 'models'"><span>02</span>{{ t("settings.model") }}</el-button>
-        <el-button text :class="{ active: section === 'extensions' }" @click="section = 'extensions'"><span>03</span>{{ t("settings.extensions") }}</el-button>
+        <el-button text :class="{ active: section === 'personal' }" @click="section = 'personal'">{{ t("settings.personality") }}</el-button>
+        <el-button v-if="canManageModels" text :class="{ active: section === 'models' }" @click="section = 'models'">{{ t("settings.model") }}</el-button>
+        <el-button text :class="{ active: section === 'extensions' }" @click="section = 'extensions'">{{ t("settings.extensions") }}</el-button>
       </nav>
       <div class="settings-canvas">
         <form v-if="section === 'personal' && settings" @submit.prevent="saveSettings">
-          <div class="section-heading"><div><p class="eyebrow">BEHAVIOR / PERSONAL</p></div><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div>
+          <div class="section-heading section-heading-actions"><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div>
           <div class="personality-grid"><label v-for="item in personalities" :key="item" :class="{ selected: settings.personality === item }"><input type="radio" :value="item" :checked="settings.personality === item" @change="selectPersonality(item)"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
           <label class="block-label">{{ t("settings.instructions") }}<textarea v-model="settings.personality_instructions" rows="6" :required="settings.personality === 'custom'"></textarea></label>
           <div class="form-grid">
@@ -112,18 +120,17 @@ function selectPersonality(personality: Personality) {
             <fieldset class="full runtime-defaults"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
           </div>
         </form>
-        <div v-if="section === 'models'">
-          <div class="section-heading"><div><p class="eyebrow">MODEL PROVIDERS / WRITE-ONLY API KEYS</p><h2>{{ t("settings.providers") }}</h2></div><el-button type="primary" @click="openNewConnection">＋ {{ t("settings.addProvider") }}</el-button></div>
+        <div v-if="section === 'models' && canManageModels">
+          <div class="section-heading"><div><h2>{{ t("settings.providers") }}</h2></div><el-button type="primary" @click="openNewConnection">＋ {{ t("settings.addProvider") }}</el-button></div>
           <div class="provider-grid"><article v-for="item in connections" :key="item.id" class="provider-card el-card"><header><span class="resource-mark">{{ item.name.slice(0, 2).toUpperCase() }}</span><div><strong>{{ item.name }}</strong><p>{{ presets.find((preset) => preset.provider_type === item.provider_type)?.display_name ?? item.provider_type }}</p></div><el-tag :type="item.verification_status === 'verified' ? 'success' : 'warning'" size="small">{{ t(`settings.${item.verification_status}`) }}</el-tag></header><p class="provider-endpoint">{{ item.endpoint }}</p><el-alert v-if="item.last_sync_error || item.verification_error" type="error" :closable="false" :title="item.last_sync_error || item.verification_error" /><div class="provider-model-summary"><strong>{{ item.models.filter((model) => model.available).length }}</strong><span>{{ t("settings.importedModels") }}</span><small v-if="item.last_synced_at">{{ new Date(item.last_synced_at).toLocaleString() }}</small></div><div class="provider-actions"><el-button class="button" @click="refreshModels(item)">↻ {{ t("settings.refreshModels") }}</el-button><el-button class="button" @click="openManualModel(item)">＋ {{ t("settings.manualModel") }}</el-button><el-button circle :aria-label="t('common.edit')" @click="openConnection(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="pendingConnectionDelete = item">×</el-button></div><el-collapse><el-collapse-item :title="t('settings.modelCatalog')"><div class="catalog-list"><span v-for="model in item.models" :key="model.id" :class="{ unavailable: !model.available }"><strong>{{ model.display_name }}</strong><small>{{ model.model_id }}</small></span></div></el-collapse-item></el-collapse></article><el-empty v-if="!connections.length" :description="t('common.empty')" /></div>
         </div>
         <div v-if="section === 'extensions'">
-          <div class="section-heading"><div><p class="eyebrow">EXTENSIONS / ISOLATED RUNTIME</p></div></div>
           <ExtensionManager @error="showError('validation')" />
         </div>
       </div>
     </div>
   </section>
-  <div v-if="showConnection" class="modal-layer" @click.self="showConnection = false"><form class="modal-card el-card" :aria-busy="savingConnection" @submit.prevent="saveConnection"><p class="eyebrow">MODEL PROVIDER</p><h2>{{ editingConnection ? t("common.edit") : t("settings.addProvider") }}</h2><label>{{ t("settings.provider") }}<select v-model="connectionForm.provider_type" :disabled="Boolean(editingConnection)" @change="choosePreset(connectionForm.provider_type)"><option v-for="preset in presets" :key="preset.provider_type" :value="preset.provider_type">{{ preset.display_name }}</option></select></label><label>{{ t("common.name") }}<input v-model="connectionForm.name" required></label><label>{{ t("settings.endpoint") }}<input v-model="connectionForm.endpoint" type="url" placeholder="http://… 或 https://…" required></label><fieldset><legend>{{ t("settings.protocols") }}</legend><label v-for="protocol in ['openai_responses','openai_chat','anthropic_messages','gemini']" :key="protocol" class="check-row"><input v-model="connectionForm.protocols" type="checkbox" :value="protocol"><span>{{ protocol }}</span></label></fieldset><label>API Key<input v-model="connectionForm.api_key" type="password" :required="!editingConnection" :placeholder="editingConnection ? t('settings.keepSecret') : ''"></label><ToastMessage v-if="connectionError" kind="error" :title="t('common.failed')" :message="connectionError" :close-label="t('common.close')" @dismiss="connectionError = ''" /><div class="modal-actions"><el-button :disabled="savingConnection" @click="showConnection = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary" :loading="savingConnection">{{ savingConnection ? t("common.saving") : t("common.save") }}</el-button></div></form></div>
-  <div v-if="manualConnection" class="modal-layer" @click.self="manualConnection = undefined"><form class="modal-card el-card" @submit.prevent="saveManualModel"><p class="eyebrow">{{ manualConnection.name }} / MODEL</p><h2>{{ t("settings.manualModel") }}</h2><label>{{ t("modelField") }}<input v-model="manualModel.model_id" placeholder="gpt-5.6-sol" required></label><div class="modal-actions"><el-button @click="manualConnection = undefined">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
+  <div v-if="showConnection" class="modal-layer" @click.self="showConnection = false"><form class="modal-card el-card" :aria-busy="savingConnection" @submit.prevent="saveConnection"><h2>{{ editingConnection ? t("common.edit") : t("settings.addProvider") }}</h2><label>{{ t("settings.provider") }}<select v-model="connectionForm.provider_type" :disabled="Boolean(editingConnection)" @change="choosePreset(connectionForm.provider_type)"><option v-for="preset in presets" :key="preset.provider_type" :value="preset.provider_type">{{ preset.display_name }}</option></select></label><label>{{ t("common.name") }}<input v-model="connectionForm.name" required></label><label>{{ t("settings.endpoint") }}<input v-model="connectionForm.endpoint" type="url" placeholder="http://… 或 https://…" required></label><fieldset><legend>{{ t("settings.protocols") }}</legend><label v-for="protocol in ['openai_responses','openai_chat','anthropic_messages','gemini']" :key="protocol" class="check-row"><input v-model="connectionForm.protocols" type="checkbox" :value="protocol"><span>{{ protocol }}</span></label></fieldset><label>API Key<input v-model="connectionForm.api_key" type="password" :required="!editingConnection" :placeholder="editingConnection ? t('settings.keepSecret') : ''"></label><ToastMessage v-if="connectionError" kind="error" :title="t('common.failed')" :message="connectionError" :close-label="t('common.close')" @dismiss="connectionError = ''" /><div class="modal-actions"><el-button :disabled="savingConnection" @click="showConnection = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary" :loading="savingConnection">{{ savingConnection ? t("common.saving") : t("common.save") }}</el-button></div></form></div>
+  <div v-if="manualConnection" class="modal-layer" @click.self="manualConnection = undefined"><form class="modal-card el-card" @submit.prevent="saveManualModel"><h2>{{ t("settings.manualModel") }}</h2><label>{{ t("modelField") }}<input v-model="manualModel.model_id" placeholder="gpt-5.6-sol" required></label><div class="modal-actions"><el-button @click="manualConnection = undefined">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
   <ConfirmDialog :open="Boolean(pendingConnectionDelete)" :title="t('common.delete')" :message="pendingConnectionDelete ? `${t('common.delete')} ${pendingConnectionDelete.name}?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger @cancel="pendingConnectionDelete = undefined" @confirm="removeConnection" />
 </template>

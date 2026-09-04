@@ -24,9 +24,11 @@ func (*cancellationRepository) FinishSucceeded(context.Context, ExecutionJob, Ex
 	return nil
 }
 
-func (*cancellationRepository) FinishFailed(context.Context, ExecutionJob, string) error { return nil }
+func (*cancellationRepository) FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error {
+	return nil
+}
 
-func (repository *cancellationRepository) FinishCancelled(context.Context, ExecutionJob) error {
+func (repository *cancellationRepository) FinishCancelled(context.Context, ExecutionJob, ExecutionResult) error {
 	close(repository.finished)
 	return nil
 }

@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import SessionsPage from "./SessionsPage.vue";
@@ -56,8 +56,15 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn(function (this: HTMLElement, options?: ScrollToOptions | number) {
       if (typeof options === "object") this.scrollTop = options.top ?? this.scrollTop;
     }) });
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:attachment-preview") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
-  afterEach(() => { delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo; vi.restoreAllMocks(); });
+  afterEach(() => {
+    delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
+    delete (URL as { createObjectURL?: unknown }).createObjectURL;
+    delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+    vi.restoreAllMocks();
+  });
 
   it("keeps user and Agent messages in distinct role rows", async () => {
     const wrapper = await mountPage();
@@ -65,6 +72,43 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".message.assistant .message-content").text()).toContain("Agent 的消息");
     expect(wrapper.find(".message-avatar").exists()).toBe(false);
     expect(wrapper.find(".composer-layer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("omits decorative English labels from the Chinese Session view", async () => {
+    const wrapper = await mountPage();
+
+    expect(wrapper.text()).not.toContain("CONVERSATIONS");
+    expect(wrapper.text()).not.toContain("AUTO RUNTIME");
+    expect(wrapper.find(".collection-head .eyebrow").exists()).toBe(false);
+    expect(wrapper.find(".conversation-head .el-tag").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("renders an uploaded image from authenticated attachment content", async () => {
+    const api = apiStub([{ ...messages[0]!, attachments: [{ id: "attachment-1", name: "photo.jpeg", content_type: "image/jpeg", size: 5, sha256: "digest", image: true }] }]);
+    api.getAttachmentDownload = vi.fn(async () => new Blob(["image"], { type: "image/jpeg" }));
+
+    const wrapper = await mountPageWithAPI(api);
+    await flushPromises();
+
+    expect(api.getAttachmentDownload).toHaveBeenCalledWith("attachment-1");
+    expect(wrapper.get<HTMLImageElement>('.turn-attachment img[alt="photo.jpeg"]').attributes("src")).toBe("blob:attachment-preview");
+    wrapper.unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:attachment-preview");
+  });
+
+  it("downloads an uploaded file through the authenticated attachment API", async () => {
+    const api = apiStub([{ ...messages[0]!, attachments: [{ id: "attachment-2", name: "notes.txt", content_type: "text/plain", size: 5, sha256: "digest", image: false }] }]);
+    api.getAttachmentDownload = vi.fn(async () => new Blob(["notes"], { type: "text/plain" }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".turn-attachment").trigger("click");
+    await flushPromises();
+
+    expect(api.getAttachmentDownload).toHaveBeenCalledWith("attachment-2");
+    expect(click).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
 
@@ -80,6 +124,32 @@ describe("SessionsPage conversation layout", () => {
     expect(api.createSession).toHaveBeenCalledWith();
     expect(wrapper.find(".modal-layer").exists()).toBe(false);
     expect(wrapper.get(".conversation-head h2").text()).toBe("New session");
+    wrapper.unmount();
+  });
+
+  it("omits empty Expert selection UI when no specialist is available", async () => {
+    const wrapper = await mountPage([]);
+
+    expect(wrapper.find(".specialist-selector").exists()).toBe(false);
+    expect(wrapper.find(".model-dot").exists()).toBe(false);
+    expect(wrapper.get(".conversation-head p").text()).toBe("当前会话");
+    expect(wrapper.text()).not.toContain("不选择专家");
+    wrapper.unmount();
+  });
+
+  it("keeps Expert selection available before the first message when an Expert exists", async () => {
+    const expert: Expert = {
+      id: "expert-1", name: "架构专家", capability_introduction: "负责架构设计", execution_instruction: "给出架构建议。",
+      provider_model_id: "model-1", provider_model_name: "GPT 5", runtime_engine: "codex",
+      complete: true, compatibility: "verified",
+      expertise_tags: [], mcp_server_ids: [], skill_ids: [], available: true,
+      created_at: session.created_at, updated_at: session.updated_at, version: 1,
+    };
+    const api = apiStub([]);
+    api.listExperts = vi.fn(async () => [expert]);
+    const wrapper = await mountPageWithAPI(api);
+
+    expect(wrapper.get(".specialist-selector").text()).toContain(expert.name);
     wrapper.unmount();
   });
 
@@ -216,7 +286,7 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
   });
 
-  it("sends the model selected in the composer and keeps the selector disabled in flight", async () => {
+  it("sends without a per-message model override", async () => {
     let releaseStream!: () => void;
     const streamPending = new Promise<void>((resolve) => { releaseStream = resolve; });
     const api = apiStub();
@@ -237,15 +307,12 @@ describe("SessionsPage conversation layout", () => {
     api.streamSessionMessage = vi.fn(async () => streamPending);
     const wrapper = await mountPageWithAPI(api);
 
-    const selector = wrapper.get<HTMLSelectElement>('.composer-model-control select');
-    expect(selector.element.value).toBe("model-1");
-    await selector.setValue("model-2");
+    expect(wrapper.find('.composer-model-control').exists()).toBe(false);
     await wrapper.get<HTMLTextAreaElement>(".composer textarea").setValue("使用选中模型");
     await wrapper.get(".composer > button:last-child").trigger("click");
     await flushPromises();
 
-    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", "model-2", []);
-    expect(selector.element.disabled).toBe(true);
+    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", []);
     releaseStream();
     await flushPromises();
     wrapper.unmount();
@@ -294,6 +361,26 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("reconciles a completed message after the event stream closes without a terminal snapshot", async () => {
+    const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
+    const completed: SessionMessage = { ...pending, state: "completed", content: "图片内容已识别", progress_stage: undefined, elapsed_ms: 1200 };
+    const api = apiStub([messages[0]!, pending]);
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce([messages[0]!, pending])
+      .mockResolvedValueOnce([messages[0]!, completed]);
+    api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, onSnapshot) => {
+      onSnapshot({ state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 500 });
+    });
+
+    const wrapper = await mountPageWithAPI(api);
+    await flushPromises();
+
+    expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain("图片内容已识别");
+    expect(wrapper.text()).not.toContain("正在调用工具");
+    wrapper.unmount();
+  });
+
   it("replaces send with stop and cancels the active backend generation", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "thinking", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const api = apiStub([messages[0]!, pending]);
@@ -315,13 +402,18 @@ describe("SessionsPage conversation layout", () => {
   it("reveals a completed response progressively instead of replacing the whole message", async () => {
     vi.useFakeTimers();
     const response = "这是一个会被逐步展示的完整回答，不会在一个渲染帧里全部出现。";
-    const wrapper = await mountPage([
+    const pendingMessages = [
       messages[0]!,
       { id: 2, role: "assistant", state: "queued", content: "", progress_stage: "preparing", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" },
-    ], async (onSnapshot) => {
+    ] satisfies SessionMessage[];
+    const api = apiStub(pendingMessages, async (onSnapshot) => {
       onSnapshot({ state: "generating", content: "", progress_stage: "thinking", elapsed_ms: 0 });
       onSnapshot({ state: "completed", content: response, elapsed_ms: 900 });
     });
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce(pendingMessages)
+      .mockResolvedValueOnce([messages[0]!, { ...pendingMessages[1]!, state: "completed", content: response, progress_stage: undefined, elapsed_ms: 900 }]);
+    const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
     const initiallyVisible = wrapper.get(".message.assistant p").text();

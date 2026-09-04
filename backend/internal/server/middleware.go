@@ -87,7 +87,7 @@ func isEventStreamRequest(request *http.Request) bool {
 
 func rawBodyFilter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method == http.MethodGet || request.Method == http.MethodHead || request.Method == http.MethodOptions {
+		if request.Method == http.MethodGet || request.Method == http.MethodHead || request.Method == http.MethodOptions || isAttachmentUpload(request) {
 			next.ServeHTTP(writer, request)
 			return
 		}
@@ -98,6 +98,11 @@ func rawBodyFilter(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(writer, transportmeta.WithRawBody(request, body))
 	})
+}
+
+func isAttachmentUpload(request *http.Request) bool {
+	// The attachment handler enforces its own 100 MiB limit for opaque file bytes.
+	return request.Method == http.MethodPost && request.URL.Path == "/api/v1/attachments/upload"
 }
 
 func recoveryFilter(logger *slog.Logger) kratoshttp.FilterFunc {

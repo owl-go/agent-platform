@@ -40,7 +40,7 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
 				return domain.ErrInvalid
 			}
 		}
@@ -54,22 +54,9 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 				return domain.ErrInvalid
 			}
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
 				return domain.ErrInvalid
 			}
-		}
-		var settings settingsRecord
-		if err := tx.Where("user_id = ?", ownerID).Take(&settings).Error; err != nil {
-			return err
-		}
-		defaults := map[string]string{}
-		if len(settings.RuntimeModelDefaults) > 0 {
-			if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
-				return err
-			}
-		}
-		if modelID := defaults[settings.DefaultRuntimeEngine]; modelID != "" {
-			row.CurrentProviderModelID = &modelID
 		}
 		return tx.Create(&row).Error
 	})
@@ -146,7 +133,7 @@ func (repository *Repository) SetSessionExpertSelection(ctx context.Context, own
 		}
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
 				return fmt.Errorf("%w: selected Expert is unavailable", domain.ErrInvalid)
 			}
 		}
@@ -160,7 +147,7 @@ func (repository *Repository) SetSessionExpertSelection(ctx context.Context, own
 				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
 			}
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
 				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
 			}
 		}
@@ -224,11 +211,11 @@ func (repository *Repository) GetMessage(ctx context.Context, ownerID, sessionID
 	return messageDomain(row), nil
 }
 
-func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {
-	return repository.createMessagePair(ctx, ownerID, sessionID, content, providerModelID, attachments, nil)
+func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil)
 }
 
-func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content, providerModelID string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
+func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain text or an attachment", domain.ErrInvalid)
@@ -245,7 +232,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		}
 		snapshot := frozen
 		if snapshot == nil {
-			selected, err := responseSnapshotOnTx(tx, session, providerModelID)
+			selected, err := responseSnapshotOnTx(tx, session)
 			if err != nil {
 				return err
 			}
@@ -270,9 +257,6 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			return err
 		}
 		updates := map[string]any{"updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
-		if frozen == nil {
-			updates["current_provider_model_id"] = snapshot.ProviderModelID
-		}
 		if session.Title == "New session" {
 			title := content
 			if strings.TrimSpace(title) == "" && len(attachments) > 0 {
@@ -320,7 +304,7 @@ func (repository *Repository) RetryMessage(ctx context.Context, ownerID, session
 	if len(original.Attachments) > 0 {
 		_ = json.Unmarshal(original.Attachments, &attachments)
 	}
-	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, "", attachments, &snapshot)
+	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, attachments, &snapshot)
 }
 
 func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {
@@ -377,7 +361,7 @@ func (repository *Repository) session(ctx context.Context, ownerID, sessionID st
 }
 
 func sessionDomain(row sessionRecord) domain.Session {
-	return domain.Session{ID: row.ID, OwnerID: row.OwnerID, Title: row.Title, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, CurrentProviderModelID: row.CurrentProviderModelID, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Session{ID: row.ID, OwnerID: row.OwnerID, Title: row.Title, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 
 func messageDomain(row messageRecord) domain.Message {
@@ -397,58 +381,37 @@ func messageDomain(row messageRecord) domain.Message {
 	if len(row.ExpertStages) > 0 && string(row.ExpertStages) != "null" {
 		_ = json.Unmarshal(row.ExpertStages, &value.ExpertStages)
 	}
+	if len(row.CreditConsumption) > 0 && string(row.CreditConsumption) != "null" {
+		value.CreditConsumption = &domain.CreditConsumption{}
+		if err := json.Unmarshal(row.CreditConsumption, value.CreditConsumption); err != nil {
+			value.CreditConsumption = nil
+		}
+	}
 	return value
 }
 
-func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord, selectedID string) (domain.ResponseSnapshot, error) {
-	var settings settingsRecord
-	if err := tx.Where("user_id = ?", session.OwnerID).Take(&settings).Error; err != nil {
-		return domain.ResponseSnapshot{}, err
+func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord) (domain.ResponseSnapshot, error) {
+	if (session.ExpertID != nil || session.ExpertTeamID != nil) && len(session.ExpertSnapshot) > 0 && string(session.ExpertSnapshot) != "null" {
+		var frozen domain.ExecutionSnapshot
+		if err := json.Unmarshal(session.ExpertSnapshot, &frozen); err != nil {
+			return domain.ResponseSnapshot{}, fmt.Errorf("decode frozen Session execution plan: %w", err)
+		}
+		return responseSnapshotFromExecution(frozen)
 	}
-	runtime, err := domain.ParseRuntime(settings.DefaultRuntimeEngine)
+	fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
+	plan, err := loadExecutionSnapshot(tx, fake)
 	if err != nil {
 		return domain.ResponseSnapshot{}, err
 	}
-	if strings.TrimSpace(selectedID) == "" && session.CurrentProviderModelID != nil {
-		selectedID = *session.CurrentProviderModelID
-	}
-	if strings.TrimSpace(selectedID) == "" {
-		defaults := map[string]string{}
-		if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
-			return domain.ResponseSnapshot{}, err
-		}
-		selectedID = defaults[string(runtime)]
-	}
-	if selectedID == "" {
-		return domain.ResponseSnapshot{}, fmt.Errorf("%w: choose a default Provider Model for %s", domain.ErrInvalid, runtime)
-	}
-	var model providerModelRecord
-	if err := tx.Where("owner_user_id = ? AND id = ? AND available", session.OwnerID, selectedID).Take(&model).Error; err != nil {
-		return domain.ResponseSnapshot{}, fmt.Errorf("%w: selected Provider Model is unavailable", domain.ErrInvalid)
-	}
-	var connection modelProviderConnectionRecord
-	if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, model.ConnectionID).Take(&connection).Error; err != nil {
-		return domain.ResponseSnapshot{}, mapNotFound(err)
-	}
-	var protocols []string
-	if err := json.Unmarshal(connection.Protocols, &protocols); err != nil {
-		return domain.ResponseSnapshot{}, err
-	}
-	parsedModel, err := providerModelDomain(model)
+	return responseSnapshotFromExecution(plan)
+}
+
+func responseSnapshotFromExecution(plan domain.ExecutionSnapshot) (domain.ResponseSnapshot, error) {
+	stages, err := plan.OrderedStages()
 	if err != nil {
 		return domain.ResponseSnapshot{}, err
 	}
-	compatibility := "unverified"
-	for _, item := range parsedModel.Compatibility {
-		if item.RuntimeEngine == runtime {
-			compatibility = item.Status
-			break
-		}
-	}
-	if compatibility == "incompatible" {
-		return domain.ResponseSnapshot{}, fmt.Errorf("%w: selected Provider Model is incompatible with %s", domain.ErrInvalid, runtime)
-	}
-	return domain.ResponseSnapshot{ProviderModelID: model.ID, ConnectionID: connection.ID, ConnectionName: connection.Name, ProviderType: connection.ProviderType, ModelID: model.ModelID, ModelName: model.DisplayName, Endpoint: connection.Endpoint, Protocols: protocols, RuntimeEngine: runtime, Compatibility: compatibility, ConnectionVersion: connection.Version}, nil
+	return domain.ResponseSnapshot{SchemaVersion: 2, Stages: stages}, nil
 }
 
 var _ = time.Second

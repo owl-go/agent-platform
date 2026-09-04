@@ -9,6 +9,8 @@ import ExpertsPage from "./ExpertsPage.vue";
 
 const expert: Expert = {
   id: "expert-1", name: "架构专家", capability_introduction: "负责系统架构与边界设计", execution_instruction: "审查需求并给出架构方案。",
+  provider_model_id: "model-1", provider_model_name: "GPT 5", runtime_engine: "codex",
+  complete: true, compatibility: "verified",
   expertise_tags: ["架构", "Go"], mcp_server_ids: [], skill_ids: [], available: true,
   created_at: "2026-09-02T00:00:00Z", updated_at: "2026-09-02T00:00:00Z", version: 1,
 };
@@ -18,7 +20,7 @@ const team: ExpertTeam = {
 };
 
 function api(): PlatformApi {
-  return { listExperts: vi.fn(async () => [expert]), listExpertTeams: vi.fn(async () => [team]) } as unknown as PlatformApi;
+  return { listExperts: vi.fn(async () => [expert]), listExpertTeams: vi.fn(async () => [team]), listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "OpenAI", models: [{ id: "model-1", display_name: "GPT 5", available: true, compatibility: [] }] }]) } as unknown as PlatformApi;
 }
 
 describe("ExpertsPage", () => {
@@ -31,6 +33,7 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-card h2").text()).toBe("架构专家");
     expect(wrapper.get(".expert-card").text()).toContain("负责系统架构与边界设计");
     expect(wrapper.get(".expert-card").text()).toContain("架构");
+    expect(wrapper.get(".expert-card").text()).toContain("GPT 5 · Codex");
     expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
   });
 
@@ -42,6 +45,7 @@ describe("ExpertsPage", () => {
 
     expect(wrapper.get(".expert-team-card").text()).toContain("交付专家团");
     expect(wrapper.get(".expert-team-card").text()).toContain("架构专家");
+    expect(wrapper.get(".expert-team-card").text()).toContain("GPT 5 · Codex");
     expect(wrapper.get(".expert-team-card").text()).toContain("2 位专家 / 每轮");
   });
 });

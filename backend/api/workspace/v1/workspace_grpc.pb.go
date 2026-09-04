@@ -24,6 +24,14 @@ const (
 	AgentWorkspaceService_CreateUser_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateUser"
 	AgentWorkspaceService_SetUserEnabled_FullMethodName                = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
 	AgentWorkspaceService_ResetUserPassword_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
+	AgentWorkspaceService_GetCreditBalance_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
+	AgentWorkspaceService_ListCreditLedger_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
+	AgentWorkspaceService_RedeemCreditCode_FullMethodName              = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
+	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName     = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
+	AgentWorkspaceService_AdjustUserCredits_FullMethodName             = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
+	AgentWorkspaceService_ListModelCreditRates_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
+	AgentWorkspaceService_CreateModelCreditRate_FullMethodName         = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
+	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName     = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
 	AgentWorkspaceService_ListSessions_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessions"
 	AgentWorkspaceService_CreateSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateSession"
 	AgentWorkspaceService_GetSession_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -94,6 +102,14 @@ type AgentWorkspaceServiceClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	SetUserEnabled(ctx context.Context, in *SetUserEnabledRequest, opts ...grpc.CallOption) (*UserAccount, error)
 	ResetUserPassword(ctx context.Context, in *ResetUserPasswordRequest, opts ...grpc.CallOption) (*ResetUserPasswordResponse, error)
+	GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*CreditBalance, error)
+	ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...grpc.CallOption) (*ListCreditLedgerResponse, error)
+	RedeemCreditCode(ctx context.Context, in *RedeemCreditCodeRequest, opts ...grpc.CallOption) (*CreditBalance, error)
+	ConfigureUserDailyCredits(ctx context.Context, in *ConfigureUserDailyCreditsRequest, opts ...grpc.CallOption) (*CreditBalance, error)
+	AdjustUserCredits(ctx context.Context, in *AdjustUserCreditsRequest, opts ...grpc.CallOption) (*CreditBalance, error)
+	ListModelCreditRates(ctx context.Context, in *ListModelCreditRatesRequest, opts ...grpc.CallOption) (*ListModelCreditRatesResponse, error)
+	CreateModelCreditRate(ctx context.Context, in *CreateModelCreditRateRequest, opts ...grpc.CallOption) (*ModelCreditRate, error)
+	CreateRedemptionCodeBatch(ctx context.Context, in *CreateRedemptionCodeBatchRequest, opts ...grpc.CallOption) (*RedemptionCodeBatch, error)
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
@@ -207,6 +223,86 @@ func (c *agentWorkspaceServiceClient) ResetUserPassword(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResetUserPasswordResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_ResetUserPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*CreditBalance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditBalance)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetCreditBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...grpc.CallOption) (*ListCreditLedgerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCreditLedgerResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListCreditLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) RedeemCreditCode(ctx context.Context, in *RedeemCreditCodeRequest, opts ...grpc.CallOption) (*CreditBalance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditBalance)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_RedeemCreditCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ConfigureUserDailyCredits(ctx context.Context, in *ConfigureUserDailyCreditsRequest, opts ...grpc.CallOption) (*CreditBalance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditBalance)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) AdjustUserCredits(ctx context.Context, in *AdjustUserCreditsRequest, opts ...grpc.CallOption) (*CreditBalance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditBalance)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_AdjustUserCredits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListModelCreditRates(ctx context.Context, in *ListModelCreditRatesRequest, opts ...grpc.CallOption) (*ListModelCreditRatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListModelCreditRatesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListModelCreditRates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateModelCreditRate(ctx context.Context, in *CreateModelCreditRateRequest, opts ...grpc.CallOption) (*ModelCreditRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModelCreditRate)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateModelCreditRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateRedemptionCodeBatch(ctx context.Context, in *CreateRedemptionCodeBatchRequest, opts ...grpc.CallOption) (*RedemptionCodeBatch, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedemptionCodeBatch)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -812,6 +908,14 @@ type AgentWorkspaceServiceServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
+	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
+	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
+	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
+	ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error)
+	AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error)
+	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
+	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
+	CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	CreateSession(context.Context, *CreateSessionRequest) (*Session, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -895,6 +999,30 @@ func (UnimplementedAgentWorkspaceServiceServer) SetUserEnabled(context.Context, 
 }
 func (UnimplementedAgentWorkspaceServiceServer) ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetUserPassword not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCreditBalance not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCreditLedger not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error) {
+	return nil, status.Error(codes.Unimplemented, "method RedeemCreditCode not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfigureUserDailyCredits not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdjustUserCredits not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListModelCreditRates not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateModelCreditRate not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateRedemptionCodeBatch not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
@@ -1180,6 +1308,150 @@ func _AgentWorkspaceService_ResetUserPassword_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).ResetUserPassword(ctx, req.(*ResetUserPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetCreditBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreditBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetCreditBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetCreditBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetCreditBalance(ctx, req.(*GetCreditBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListCreditLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCreditLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListCreditLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListCreditLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListCreditLedger(ctx, req.(*ListCreditLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_RedeemCreditCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RedeemCreditCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).RedeemCreditCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_RedeemCreditCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).RedeemCreditCode(ctx, req.(*RedeemCreditCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ConfigureUserDailyCredits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigureUserDailyCreditsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ConfigureUserDailyCredits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ConfigureUserDailyCredits(ctx, req.(*ConfigureUserDailyCreditsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_AdjustUserCredits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustUserCreditsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).AdjustUserCredits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_AdjustUserCredits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).AdjustUserCredits(ctx, req.(*AdjustUserCreditsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListModelCreditRates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListModelCreditRatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListModelCreditRates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListModelCreditRates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListModelCreditRates(ctx, req.(*ListModelCreditRatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateModelCreditRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateModelCreditRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateModelCreditRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateModelCreditRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateModelCreditRate(ctx, req.(*CreateModelCreditRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateRedemptionCodeBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRedemptionCodeBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateRedemptionCodeBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateRedemptionCodeBatch(ctx, req.(*CreateRedemptionCodeBatchRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2272,6 +2544,38 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResetUserPassword",
 			Handler:    _AgentWorkspaceService_ResetUserPassword_Handler,
+		},
+		{
+			MethodName: "GetCreditBalance",
+			Handler:    _AgentWorkspaceService_GetCreditBalance_Handler,
+		},
+		{
+			MethodName: "ListCreditLedger",
+			Handler:    _AgentWorkspaceService_ListCreditLedger_Handler,
+		},
+		{
+			MethodName: "RedeemCreditCode",
+			Handler:    _AgentWorkspaceService_RedeemCreditCode_Handler,
+		},
+		{
+			MethodName: "ConfigureUserDailyCredits",
+			Handler:    _AgentWorkspaceService_ConfigureUserDailyCredits_Handler,
+		},
+		{
+			MethodName: "AdjustUserCredits",
+			Handler:    _AgentWorkspaceService_AdjustUserCredits_Handler,
+		},
+		{
+			MethodName: "ListModelCreditRates",
+			Handler:    _AgentWorkspaceService_ListModelCreditRates_Handler,
+		},
+		{
+			MethodName: "CreateModelCreditRate",
+			Handler:    _AgentWorkspaceService_CreateModelCreditRate_Handler,
+		},
+		{
+			MethodName: "CreateRedemptionCodeBatch",
+			Handler:    _AgentWorkspaceService_CreateRedemptionCodeBatch_Handler,
 		},
 		{
 			MethodName: "ListSessions",

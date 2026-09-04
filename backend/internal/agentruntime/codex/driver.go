@@ -62,6 +62,13 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 	if request.CheckpointRef != "" {
 		args = append(args, "resume")
 	}
+	for _, attachment := range request.Attachments {
+		if strings.HasPrefix(strings.ToLower(attachment.ContentType), "image/") {
+			args = append(args, "--image", attachment.Path)
+		}
+	}
+	// A following option terminates Codex's variadic --image values so stdin's
+	// prompt marker is not misparsed as another image path on a new Session.
 	args = append(args,
 		"--json",
 		"--model", request.Model,
@@ -97,8 +104,8 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 			Changes  any    `json:"changes"`
 		} `json:"item"`
 		Usage struct {
-			InputTokens  int64 `json:"input_tokens"`
-			OutputTokens int64 `json:"output_tokens"`
+			InputTokens  *int64 `json:"input_tokens"`
+			OutputTokens *int64 `json:"output_tokens"`
 		} `json:"usage"`
 	}
 	if err := json.Unmarshal(line, &envelope); err != nil {
@@ -128,8 +135,11 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventFileChanged, Payload: map[string]any{"changes": envelope.Item.Changes}}}, nil
 		}
 	case "turn.completed":
-		p.result.Usage.InputTokens = envelope.Usage.InputTokens
-		p.result.Usage.OutputTokens = envelope.Usage.OutputTokens
+		if envelope.Usage.InputTokens != nil && envelope.Usage.OutputTokens != nil {
+			p.result.Usage.InputTokens = *envelope.Usage.InputTokens
+			p.result.Usage.OutputTokens = *envelope.Usage.OutputTokens
+			p.result.Usage.Reported = true
+		}
 		if p.result.FinalMessage != "" {
 			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventMessageCompleted, Payload: map[string]string{"message": p.result.FinalMessage}}}, nil
 		}

@@ -1,10 +1,13 @@
-.PHONY: build test web-build web-typecheck web-deploy oidc-browser-acceptance runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
+.PHONY: build test deploy web-build web-typecheck web-deploy oidc-browser-acceptance runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
 
 build:
 	cd backend && go build ./...
 
 test:
 	cd backend && go test ./...
+
+deploy:
+	scripts/deploy-platform.sh
 
 web-build:
 	pnpm --dir frontend build

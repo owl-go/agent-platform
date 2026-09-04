@@ -17,27 +17,55 @@ const (
 )
 
 type ExecutionJob struct {
-	Kind               JobKind
-	ID                 string
-	OwnerID            string
-	WorkflowID         string
-	SessionID          string
-	AssistantMessageID int64
-	MCPServerID        string
-	MCPServer          domain.MCPServerSnapshot
-	Instruction        string
-	Attachments        []domain.Attachment
-	CheckpointRef      string
-	Snapshot           domain.ExecutionSnapshot
+	Kind                JobKind
+	ID                  string
+	OwnerID             string
+	Timezone            string
+	WorkflowID          string
+	ConversationID      string
+	SessionID           string
+	AssistantMessageID  int64
+	MCPServerID         string
+	MCPServer           domain.MCPServerSnapshot
+	Instruction         string
+	Attachments         []domain.Attachment
+	CheckpointRef       string
+	StageCheckpointRefs map[int]string
+	Snapshot            domain.ExecutionSnapshot
 }
 
 type ExecutionResult struct {
-	FinalMessage  string
-	FinalJSON     map[string]any
-	CheckpointRef string
-	Events        []ExecutionEvent
-	Artifacts     []ExecutionArtifact
-	ExpertStages  []domain.ExpertStage
+	FinalMessage        string
+	FinalJSON           map[string]any
+	CheckpointRef       string
+	StageCheckpointRefs map[int]string
+	Events              []ExecutionEvent
+	Artifacts           []ExecutionArtifact
+	ExpertStages        []domain.ExpertStage
+	CreditConsumption   *domain.CreditConsumption
+	CreditSettlements   []CreditSettlement
+	SuccessCommit       SuccessCommit
+}
+
+// SuccessCommit coordinates durable side effects that must advance with the
+// terminal database transaction and be discarded for every failed turn.
+type SuccessCommit interface {
+	Commit() error
+	Rollback() error
+	Cleanup() error
+}
+
+// CreditSettlement is the execution context's neutral handoff to the data layer.
+// The Credits adapter translates it into its own bounded-context model.
+type CreditSettlement struct {
+	UserID, ExecutionID, Source, Timezone, CreditDay, RateRevisionID string
+	StagePosition                                                    int
+	StartedAt, SettledAt                                             time.Time
+	InputMultiplierMicros, OutputMultiplierMicros, Fallback          int64
+	Amount                                                           int64
+	Estimated                                                        bool
+	InputTokens, OutputTokens                                        int64
+	UsageKnown                                                       bool
 }
 
 type ExecutionArtifact struct {
@@ -58,8 +86,8 @@ type ExecutionEvent struct {
 type WorkerRepository interface {
 	ClaimNext(context.Context) (*ExecutionJob, error)
 	FinishSucceeded(context.Context, ExecutionJob, ExecutionResult) error
-	FinishFailed(context.Context, ExecutionJob, string) error
-	FinishCancelled(context.Context, ExecutionJob) error
+	FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error
+	FinishCancelled(context.Context, ExecutionJob, ExecutionResult) error
 	FinishMCPTest(context.Context, ExecutionJob, string) error
 	RecordProgress(context.Context, ExecutionJob, ExecutionEvent) error
 	CancellationRequested(context.Context, ExecutionJob) (bool, error)
@@ -107,11 +135,12 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	close(monitorDone)
 	cancel()
 	if executeErr != nil {
+		discardSuccessCommit(result)
 		cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job)
 		if checkErr == nil && cancelled {
-			return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job)
+			return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job, result)
 		}
-		if err := worker.repository.FinishFailed(context.WithoutCancel(ctx), *job, executeErr.Error()); err != nil {
+		if err := worker.repository.FinishFailed(context.WithoutCancel(ctx), *job, result, executeErr.Error()); err != nil {
 			return true, fmt.Errorf("record failed execution after %v: %w", executeErr, err)
 		}
 		return true, nil
@@ -119,12 +148,21 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	if cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job); checkErr != nil {
 		return true, checkErr
 	} else if cancelled {
-		return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job)
+		discardSuccessCommit(result)
+		return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job, result)
 	}
 	if err := worker.repository.FinishSucceeded(ctx, *job, result); err != nil {
 		return true, err
 	}
 	return true, nil
+}
+
+func discardSuccessCommit(result ExecutionResult) {
+	if result.SuccessCommit == nil {
+		return
+	}
+	_ = result.SuccessCommit.Rollback()
+	_ = result.SuccessCommit.Cleanup()
 }
 
 func (worker *Worker) monitorCancellation(ctx context.Context, job ExecutionJob, cancel context.CancelFunc, done <-chan struct{}) {

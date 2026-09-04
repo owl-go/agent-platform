@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { Search, Users, UserRound } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type Expert, type ExpertTeam } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Expert, type ExpertTeam, type ModelProviderConnection } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 
 const api = inject(platformApiKey)!;
@@ -12,6 +12,7 @@ const router = useRouter();
 const { t } = useI18n();
 const experts = ref<Expert[]>([]);
 const teams = ref<ExpertTeam[]>([]);
+const connections = ref<ModelProviderConnection[]>([]);
 const query = ref("");
 const tag = ref("");
 const error = ref("");
@@ -25,10 +26,15 @@ watch(activeTab, () => { query.value = ""; tag.value = ""; });
 
 async function refresh() {
   try {
-    [experts.value, teams.value] = await Promise.all([api.listExperts(), api.listExpertTeams()]);
+    [experts.value, teams.value, connections.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listModelProviderConnections()]);
   } catch {
     error.value = t("experts.loadFailed");
   }
+}
+
+function executionProfile(expert: Expert): string {
+  const model = connections.value.flatMap((connection) => connection.models).find((item) => item.id === expert.provider_model_id);
+  return `${expert.provider_model_name || model?.display_name || t("experts.modelUnavailable")} · ${runtimeEngineDisplayName(expert.runtime_engine)}`;
 }
 
 function filter<T extends { name: string; capability_introduction: string; expertise_tags: string[] }>(items: T[]): T[] {
@@ -70,8 +76,9 @@ async function moveTab(tab: "experts" | "teams") {
       <RouterLink v-for="expert in visibleExperts" :key="expert.id" class="expert-card el-card is-hover-shadow" :to="`/experts/${expert.id}`">
         <span class="catalog-avatar"><UserRound :size="22" /></span>
         <div>
-          <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.available" type="warning" size="small">{{ t('experts.incomplete') }}</el-tag></div>
+          <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.compatibility === 'incompatible'" type="danger" size="small">{{ t('experts.incompatible') }}</el-tag><el-tag v-else-if="!expert.available" type="danger" size="small">{{ t('settings.unavailable') }}</el-tag><el-tag v-else-if="expert.compatibility === 'unverified'" type="warning" size="small">{{ t('settings.unverified') }}</el-tag></div>
           <p>{{ expert.capability_introduction }}</p>
+          <small class="expert-execution-profile">{{ executionProfile(expert) }}</small>
           <div class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" type="info" effect="plain" size="small">{{ item }}</el-tag></div>
         </div>
       </RouterLink>
@@ -84,7 +91,7 @@ async function moveTab(tab: "experts" | "teams") {
         <div>
           <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
           <p>{{ team.capability_introduction }}</p>
-          <ol class="member-preview"><li v-for="member in team.experts" :key="member.id">{{ member.name }}</li></ol>
+          <ol class="member-preview"><li v-for="member in team.experts" :key="member.id"><span>{{ member.name }}</span><small>{{ executionProfile(member) }} · {{ member.compatibility === 'incompatible' ? t('experts.incompatible') : member.compatibility === 'unverified' ? t('settings.unverified') : t('settings.verified') }}</small></li></ol>
           <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" type="info" effect="plain" size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.experts.length }) }}</strong></div>
         </div>
       </RouterLink>

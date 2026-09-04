@@ -11,7 +11,10 @@ import (
 
 func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 	driver := Driver{}
-	request := agentruntime.ExecuteRequest{Model: "configured-model", ModelEndpoint: "https://models.example.test/openai", Instruction: "fix tests"}
+	request := agentruntime.ExecuteRequest{
+		Model: "configured-model", ModelEndpoint: "https://models.example.test/openai", Instruction: "inspect attachments",
+		Attachments: []agentruntime.Attachment{{Path: "/workspace/.agent-platform-attachments/image/photo.png", ContentType: "image/png"}, {Path: "/workspace/.agent-platform-attachments/text/notes.txt", ContentType: "text/plain"}},
+	}
 	created, err := driver.Build(request, t.TempDir())
 	if err != nil {
 		t.Fatalf("build new invocation: %v", err)
@@ -24,7 +27,7 @@ func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 		"-c", `model_providers.agent_workspace.env_key="OPENAI_API_KEY"`,
 		"-c", `model_providers.agent_workspace.wire_api="responses"`,
 	}
-	wantNew := append(slices.Clone(wantPrefix), "exec", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "-")
+	wantNew := append(slices.Clone(wantPrefix), "exec", "--image", "/workspace/.agent-platform-attachments/image/photo.png", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "-")
 	if !slices.Equal(created.Args, wantNew) || created.Stdin == nil {
 		t.Fatalf("new invocation = %+v", created)
 	}
@@ -34,7 +37,7 @@ func TestDriverBuildsNewAndResumeInvocations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build resume invocation: %v", err)
 	}
-	wantResume := append(slices.Clone(wantPrefix), "exec", "resume", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "thread-1", "-")
+	wantResume := append(slices.Clone(wantPrefix), "exec", "resume", "--image", "/workspace/.agent-platform-attachments/image/photo.png", "--json", "--model", "configured-model", "--dangerously-bypass-approvals-and-sandbox", "--ignore-rules", "thread-1", "-")
 	if !slices.Equal(resumed.Args, wantResume) {
 		t.Fatalf("resume args = %v, want %v", resumed.Args, wantResume)
 	}
@@ -110,5 +113,15 @@ func TestParserReadsThreadItemsAndUsage(t *testing.T) {
 	result := parser.Result()
 	if result.FinalMessage != "done" || result.CheckpointRef != "thread-1" || result.Usage.InputTokens != 14 || result.Usage.OutputTokens != 8 {
 		t.Fatalf("parsed result = %+v", result)
+	}
+}
+
+func TestParserDoesNotReportOmittedUsage(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	if _, err := parser.Parse(processharness.StreamStdout, []byte(`{"type":"turn.completed"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if parser.Result().Usage.Reported {
+		t.Fatal("omitted usage was reported as measured zero")
 	}
 }

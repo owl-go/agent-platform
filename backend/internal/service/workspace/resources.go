@@ -22,8 +22,12 @@ func (service *Service) ListExperts(ctx context.Context, _ *workspacev1.ListExpe
 		return nil, publicError(err)
 	}
 	response := make([]*workspacev1.Expert, 0, len(items))
+	availability, err := service.expertAvailability(ctx, items)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	for _, item := range items {
-		response = append(response, expertResponse(item))
+		response = append(response, expertResponse(item, availability[item.ID]))
 	}
 	return &workspacev1.ListExpertsResponse{Items: response}, nil
 }
@@ -37,7 +41,11 @@ func (service *Service) GetExpert(ctx context.Context, request *workspacev1.GetE
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertResponse(item), nil
+	availability, err := service.expertAvailability(ctx, []workspacedomain.Expert{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertResponse(item, availability[item.ID]), nil
 }
 
 func (service *Service) CreateExpert(ctx context.Context, request *workspacev1.CreateExpertRequest) (*workspacev1.Expert, error) {
@@ -49,11 +57,18 @@ func (service *Service) CreateExpert(ctx context.Context, request *workspacev1.C
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if err := service.validateExpertInputAvailability(ctx, input); err != nil {
+		return nil, publicError(err)
+	}
 	item, err := service.workspace.Repository().CreateExpert(ctx, owner, input)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertResponse(item), nil
+	availability, err := service.expertAvailability(ctx, []workspacedomain.Expert{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertResponse(item, availability[item.ID]), nil
 }
 
 func (service *Service) UpdateExpert(ctx context.Context, request *workspacev1.UpdateExpertRequest) (*workspacev1.Expert, error) {
@@ -65,11 +80,18 @@ func (service *Service) UpdateExpert(ctx context.Context, request *workspacev1.U
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if err := service.validateExpertInputAvailability(ctx, input); err != nil {
+		return nil, publicError(err)
+	}
 	item, err := service.workspace.Repository().UpdateExpert(ctx, owner, request.ExpertId, input, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertResponse(item), nil
+	availability, err := service.expertAvailability(ctx, []workspacedomain.Expert{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertResponse(item, availability[item.ID]), nil
 }
 
 func (service *Service) DeleteExpert(ctx context.Context, request *workspacev1.DeleteExpertRequest) (*workspacev1.DeleteResponse, error) {
@@ -93,8 +115,12 @@ func (service *Service) ListExpertTeams(ctx context.Context, _ *workspacev1.List
 		return nil, publicError(err)
 	}
 	response := make([]*workspacev1.ExpertTeam, 0, len(items))
+	availability, err := service.teamExpertAvailability(ctx, items)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	for _, item := range items {
-		response = append(response, expertTeamResponse(item))
+		response = append(response, expertTeamResponse(item, availability))
 	}
 	return &workspacev1.ListExpertTeamsResponse{Items: response}, nil
 }
@@ -108,7 +134,11 @@ func (service *Service) GetExpertTeam(ctx context.Context, request *workspacev1.
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertTeamResponse(item), nil
+	availability, err := service.teamExpertAvailability(ctx, []workspacedomain.ExpertTeam{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item, availability), nil
 }
 
 func (service *Service) CreateExpertTeam(ctx context.Context, request *workspacev1.CreateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
@@ -124,7 +154,11 @@ func (service *Service) CreateExpertTeam(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertTeamResponse(item), nil
+	availability, err := service.teamExpertAvailability(ctx, []workspacedomain.ExpertTeam{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item, availability), nil
 }
 
 func (service *Service) UpdateExpertTeam(ctx context.Context, request *workspacev1.UpdateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
@@ -140,7 +174,11 @@ func (service *Service) UpdateExpertTeam(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return expertTeamResponse(item), nil
+	availability, err := service.teamExpertAvailability(ctx, []workspacedomain.ExpertTeam{item})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return expertTeamResponse(item, availability), nil
 }
 
 func (service *Service) DeleteExpertTeam(ctx context.Context, request *workspacev1.DeleteExpertTeamRequest) (*workspacev1.DeleteResponse, error) {
@@ -222,11 +260,10 @@ func (service *Service) ListModelProviderPresets(ctx context.Context, _ *workspa
 }
 
 func (service *Service) ListModelProviderConnections(ctx context.Context, _ *workspacev1.ListModelProviderConnectionsRequest) (*workspacev1.ListModelProviderConnectionsResponse, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
+	if _, err := service.owner(ctx); err != nil {
 		return nil, err
 	}
-	items, err := service.workspace.Repository().ListModelProviderConnections(ctx, owner)
+	items, err := service.workspace.Repository().ListModelProviderConnections(ctx)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -238,10 +275,11 @@ func (service *Service) ListModelProviderConnections(ctx context.Context, _ *wor
 }
 
 func (service *Service) CreateModelProviderConnection(ctx context.Context, request *workspacev1.CreateModelProviderConnectionRequest) (*workspacev1.ModelProviderConnection, error) {
-	owner, err := service.owner(ctx)
+	administrator, err := service.administrator(ctx)
 	if err != nil {
 		return nil, err
 	}
+	owner := administrator.UserID
 	if err := workspacedomain.ValidateModelProviderConnection(request.Name, request.ProviderType, request.Endpoint, request.Protocols, request.ApiKey, true); err != nil {
 		return nil, publicError(err)
 	}
@@ -260,11 +298,10 @@ func (service *Service) CreateModelProviderConnection(ctx context.Context, reque
 }
 
 func (service *Service) UpdateModelProviderConnection(ctx context.Context, request *workspacev1.UpdateModelProviderConnectionRequest) (*workspacev1.ModelProviderConnection, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
+	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	existing, err := service.findProviderConnection(ctx, owner, request.ConnectionId)
+	existing, err := service.findProviderConnection(ctx, request.ConnectionId)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -278,16 +315,16 @@ func (service *Service) UpdateModelProviderConnection(ctx context.Context, reque
 	var ciphertext []byte
 	apiKey := replacement
 	if request.ReplacementApiKey != nil {
-		ciphertext, err = service.box.Encrypt([]byte(replacement), "model-provider:"+owner)
+		ciphertext, err = service.box.Encrypt([]byte(replacement), "model-provider:"+existing.CredentialOwnerID)
 		if err != nil {
 			return nil, publicError(err)
 		}
 	} else {
-		existingCiphertext, loadErr := service.workspace.Repository().GetModelProviderAPIKey(ctx, owner, request.ConnectionId)
+		existingCiphertext, loadErr := service.workspace.Repository().GetModelProviderAPIKey(ctx, existing.CredentialOwnerID, request.ConnectionId)
 		if loadErr != nil {
 			return nil, publicError(loadErr)
 		}
-		plaintext, decryptErr := service.box.Decrypt(existingCiphertext, "model-provider:"+owner)
+		plaintext, decryptErr := service.box.Decrypt(existingCiphertext, "model-provider:"+existing.CredentialOwnerID)
 		if decryptErr != nil {
 			return nil, publicError(decryptErr)
 		}
@@ -297,7 +334,7 @@ func (service *Service) UpdateModelProviderConnection(ctx context.Context, reque
 	connection := workspacedomain.ModelProviderConnection{Name: request.Name, ProviderType: existing.ProviderType, Endpoint: request.Endpoint, Protocols: append([]string(nil), request.Protocols...), VerificationStatus: "unverified", CustomEndpoint: customProviderEndpoint(existing.ProviderType, request.Endpoint)}
 	catalog, discoveryErr := service.workspace.DiscoverProviderModels(ctx, connection, apiKey)
 	models := applyCatalogResult(&connection, catalog, discoveryErr)
-	item, err := service.workspace.Repository().UpdateModelProviderConnection(ctx, owner, request.ConnectionId, connection, ciphertext, models, request.ExpectedVersion)
+	item, err := service.workspace.Repository().UpdateModelProviderConnection(ctx, existing.CredentialOwnerID, request.ConnectionId, connection, ciphertext, models, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -305,30 +342,32 @@ func (service *Service) UpdateModelProviderConnection(ctx context.Context, reque
 }
 
 func (service *Service) DeleteModelProviderConnection(ctx context.Context, request *workspacev1.DeleteModelProviderConnectionRequest) (*workspacev1.DeleteResponse, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
+	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	if err := service.workspace.Repository().DeleteModelProviderConnection(ctx, owner, request.ConnectionId); err != nil {
+	existing, err := service.findProviderConnection(ctx, request.ConnectionId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := service.workspace.Repository().DeleteModelProviderConnection(ctx, existing.CredentialOwnerID, request.ConnectionId); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
 }
 
 func (service *Service) RefreshProviderModels(ctx context.Context, request *workspacev1.RefreshProviderModelsRequest) (*workspacev1.ModelProviderConnection, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
+	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	connection, err := service.findProviderConnection(ctx, owner, request.ConnectionId)
+	connection, err := service.findProviderConnection(ctx, request.ConnectionId)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	ciphertext, err := service.workspace.Repository().GetModelProviderAPIKey(ctx, owner, request.ConnectionId)
+	ciphertext, err := service.workspace.Repository().GetModelProviderAPIKey(ctx, connection.CredentialOwnerID, request.ConnectionId)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	plaintext, err := service.box.Decrypt(ciphertext, "model-provider:"+owner)
+	plaintext, err := service.box.Decrypt(ciphertext, "model-provider:"+connection.CredentialOwnerID)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -342,7 +381,7 @@ func (service *Service) RefreshProviderModels(ctx context.Context, request *work
 		models = nil
 		syncError = discoveryErr.Error()
 	}
-	updated, err := service.workspace.Repository().ReplaceProviderModels(ctx, owner, request.ConnectionId, models, status, syncError)
+	updated, err := service.workspace.Repository().ReplaceProviderModels(ctx, connection.CredentialOwnerID, request.ConnectionId, models, status, syncError)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -361,11 +400,10 @@ func applyCatalogResult(connection *workspacedomain.ModelProviderConnection, res
 }
 
 func (service *Service) CreateProviderModel(ctx context.Context, request *workspacev1.CreateProviderModelRequest) (*workspacev1.ProviderModel, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
+	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	connection, err := service.findProviderConnection(ctx, owner, request.ConnectionId)
+	connection, err := service.findProviderConnection(ctx, request.ConnectionId)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -373,7 +411,7 @@ func (service *Service) CreateProviderModel(ctx context.Context, request *worksp
 		return nil, publicError(err)
 	}
 	model := workspacedomain.ProviderModel{ModelID: request.ModelId, DisplayName: request.ModelId, Available: true, ManuallyAdded: true, Compatibility: workspacedomain.CompatibilityForProtocols(connection.Protocols)}
-	item, err := service.workspace.Repository().CreateProviderModel(ctx, owner, request.ConnectionId, model)
+	item, err := service.workspace.Repository().CreateProviderModel(ctx, request.ConnectionId, model)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -577,11 +615,19 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 	if input == nil {
 		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Expert input is required", workspacedomain.ErrInvalid)
 	}
-	return workspacedomain.ExpertInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExecutionInstruction: input.ExecutionInstruction, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
+	runtime, err := workspacedomain.ParseRuntime(input.RuntimeEngine)
+	if err != nil {
+		return workspacedomain.ExpertInput{}, err
+	}
+	return workspacedomain.ExpertInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelId, RuntimeEngine: runtime, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
 }
 
-func expertResponse(item workspacedomain.Expert) *workspacev1.Expert {
-	return &workspacev1.Expert{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExecutionInstruction: item.ExecutionInstruction, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Available: item.Available(), CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
+	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExecutionInstruction: item.ExecutionInstruction, ProviderModelId: item.ProviderModelID, ProviderModelName: status.ModelName, RuntimeEngine: string(item.RuntimeEngine), ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	if status.Reason != "" {
+		response.AvailabilityReason = &status.Reason
+	}
+	return response
 }
 
 func expertTeamInput(input *workspacev1.ExpertTeamInput) (workspacedomain.ExpertTeamInput, error) {
@@ -591,12 +637,67 @@ func expertTeamInput(input *workspacev1.ExpertTeamInput) (workspacedomain.Expert
 	return workspacedomain.ExpertTeamInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), ExpertIDs: append([]string(nil), input.ExpertIds...)}, nil
 }
 
-func expertTeamResponse(item workspacedomain.ExpertTeam) *workspacev1.ExpertTeam {
+func expertTeamResponse(item workspacedomain.ExpertTeam, availability map[string]expertAvailabilityStatus) *workspacev1.ExpertTeam {
 	experts := make([]*workspacev1.Expert, 0, len(item.Experts))
+	available := len(item.Experts) >= 2
 	for _, expert := range item.Experts {
-		experts = append(experts, expertResponse(expert))
+		status := availability[expert.ID]
+		available = available && status.Available
+		experts = append(experts, expertResponse(expert, status))
 	}
-	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: item.Available(), CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: available, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+}
+
+func (service *Service) teamExpertAvailability(ctx context.Context, teams []workspacedomain.ExpertTeam) (map[string]expertAvailabilityStatus, error) {
+	var experts []workspacedomain.Expert
+	for _, team := range teams {
+		experts = append(experts, team.Experts...)
+	}
+	return service.expertAvailability(ctx, experts)
+}
+
+type expertAvailabilityStatus struct {
+	Complete      bool
+	Available     bool
+	Compatibility string
+	ModelName     string
+	Reason        string
+}
+
+func (service *Service) expertAvailability(ctx context.Context, experts []workspacedomain.Expert) (map[string]expertAvailabilityStatus, error) {
+	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
+	if err != nil {
+		return nil, err
+	}
+	models := make(map[string]workspacedomain.ProviderModel)
+	for _, connection := range connections {
+		for _, model := range connection.Models {
+			models[model.ID] = model
+		}
+	}
+	result := make(map[string]expertAvailabilityStatus, len(experts))
+	for _, expert := range experts {
+		status := expertAvailabilityStatus{Complete: expert.Available(), Compatibility: "unavailable"}
+		if !status.Complete {
+			status.Reason = "Expert execution configuration is incomplete"
+			result[expert.ID] = status
+			continue
+		}
+		runtimeConfig, runtimeAvailable := service.config.Worker.Runtimes[string(expert.RuntimeEngine)]
+		model, modelExists := models[expert.ProviderModelID]
+		status.ModelName = model.DisplayName
+		for _, item := range model.Compatibility {
+			if item.RuntimeEngine == expert.RuntimeEngine {
+				status.Compatibility = item.Status
+			}
+		}
+		status.Available = runtimeAvailable && runtimeConfig.Available && modelExists && model.Available && status.Compatibility != "incompatible" && status.Compatibility != "unavailable"
+		if !status.Available {
+			status.Reason = "Expert model, connection, Runtime Engine, or compatibility is unavailable"
+		}
+		result[expert.ID] = status
+	}
+	return result, nil
 }
 
 func settingsResponse(item workspacedomain.Settings) *workspacev1.PersonalSettings {
@@ -638,8 +739,8 @@ func providerModelResponse(item workspacedomain.ProviderModel) *workspacev1.Prov
 	return response
 }
 
-func (service *Service) findProviderConnection(ctx context.Context, owner, connectionID string) (workspacedomain.ModelProviderConnection, error) {
-	items, err := service.workspace.Repository().ListModelProviderConnections(ctx, owner)
+func (service *Service) findProviderConnection(ctx context.Context, connectionID string) (workspacedomain.ModelProviderConnection, error) {
+	items, err := service.workspace.Repository().ListModelProviderConnections(ctx)
 	if err != nil {
 		return workspacedomain.ModelProviderConnection{}, err
 	}

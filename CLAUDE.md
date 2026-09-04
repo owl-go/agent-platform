@@ -8,6 +8,14 @@
 
 ## Agent skills
 
+### Issue tracker
+
+本仓库使用 `owl-go/agent-platform` 的 GitHub Issues。参见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+本仓库使用默认的五类 triage 标签。参见 `docs/agents/triage-labels.md`。
+
 ### Domain docs
 
 本仓库使用根目录 `CONTEXT.md` 与 `docs/adr/` 的 single-context 领域文档布局。参见 `docs/agents/domain.md`。

@@ -199,8 +199,8 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 				Text string `json:"text"`
 			} `json:"content"`
 			Usage struct {
-				Input  int64 `json:"input"`
-				Output int64 `json:"output"`
+				Input  *int64 `json:"input"`
+				Output *int64 `json:"output"`
 				Cost   struct {
 					Total float64 `json:"total"`
 				} `json:"cost"`
@@ -234,9 +234,11 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 		if message != "" {
 			p.result.FinalMessage = message
 		}
-		p.result.Usage = agentruntime.Usage{
-			InputTokens: envelope.Message.Usage.Input, OutputTokens: envelope.Message.Usage.Output,
-			CostMicros: int64(math.Round(envelope.Message.Usage.Cost.Total * 1_000_000)),
+		if envelope.Message.Usage.Input != nil && envelope.Message.Usage.Output != nil {
+			p.result.Usage = agentruntime.Usage{
+				InputTokens: *envelope.Message.Usage.Input, OutputTokens: *envelope.Message.Usage.Output,
+				CostMicros: int64(math.Round(envelope.Message.Usage.Cost.Total * 1_000_000)), Reported: true,
+			}
 		}
 		if envelope.Message.StopReason == "error" || envelope.Message.StopReason == "aborted" {
 			cause := fmt.Errorf("PI Agent stopped with %s: %s", envelope.Message.StopReason, envelope.Message.ErrorMessage)

@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/v1/admin/model-credit-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListModelCreditRates"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateModelCreditRate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/redemption-code-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateRedemptionCodeBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -18,6 +50,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/credit-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_AdjustUserCredits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/daily-credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_ConfigureUserDailyCredits"];
         trace?: never;
     };
     "/api/v1/admin/users/{user_id}/enabled": {
@@ -46,6 +110,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AgentWorkspaceService_ResetUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credits/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetCreditBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credits/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCreditLedger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credits/redemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RedeemCreditCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -696,8 +808,17 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgentWorkspaceServiceAdjustUserCreditsBody: {
+            /** Format: int64 */
+            amount_hundredths?: number;
+            reason?: string;
+        };
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceConfigureUserDailyCreditsBody: {
+            /** Format: int64 */
+            allocation_hundredths?: number;
+        };
         AgentWorkspaceServiceConfigureWorkflowGitSourceBody: {
             url?: string;
             branch?: string;
@@ -726,7 +847,6 @@ export interface components {
         };
         AgentWorkspaceServiceSendSessionMessageBody: {
             content?: string;
-            provider_model_id?: string;
             attachment_ids?: string[];
         };
         AgentWorkspaceServiceSetSessionArchivedBody: {
@@ -847,12 +967,32 @@ export interface components {
         v1CreateMCPServerRequest: {
             mcp_server?: components["schemas"]["v1MCPServerInput"];
         };
+        v1CreateModelCreditRateRequest: {
+            provider_type?: string;
+            api_protocol?: string;
+            provider_model_id?: string;
+            /** Format: int64 */
+            input_multiplier_micros?: number;
+            /** Format: int64 */
+            output_multiplier_micros?: number;
+            /** Format: int64 */
+            fallback_hundredths?: number;
+            expected_revision_id?: string;
+        };
         v1CreateModelProviderConnectionRequest: {
             name?: string;
             provider_type?: string;
             endpoint?: string;
             protocols?: string[];
             api_key?: string;
+        };
+        v1CreateRedemptionCodeBatchRequest: {
+            /** Format: int32 */
+            count?: number;
+            /** Format: int64 */
+            value_hundredths?: number;
+            /** Format: date-time */
+            expires_at?: string;
         };
         v1CreateSessionRequest: {
             expert_id?: string;
@@ -878,6 +1018,65 @@ export interface components {
         v1CreateWorkflowRequest: {
             workflow?: components["schemas"]["v1WorkflowInput"];
         };
+        v1CreditBalance: {
+            /** Format: int64 */
+            total_hundredths?: number;
+            /** Format: int64 */
+            daily_remaining_hundredths?: number;
+            /** Format: int64 */
+            persistent_hundredths?: number;
+            /** Format: int64 */
+            today_consumed_hundredths?: number;
+            /** Format: int64 */
+            daily_allocation_hundredths?: number;
+            credit_day?: string;
+            timezone?: string;
+            /** Format: date-time */
+            next_allocation_at?: string;
+            /** Format: int64 */
+            pending_daily_allocation_hundredths?: number;
+            pending_effective_day?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1CreditConsumption: {
+            /** Format: int64 */
+            total_hundredths?: number;
+            stages?: components["schemas"]["v1CreditStageConsumption"][];
+        };
+        v1CreditLedgerEntry: {
+            id?: string;
+            type?: string;
+            /** Format: int64 */
+            amount_hundredths?: number;
+            /** Format: int64 */
+            resulting_balance_hundredths?: number;
+            credit_day?: string;
+            reason?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1CreditStageConsumption: {
+            /** Format: int32 */
+            stage_position?: number;
+            provider_model?: string;
+            runtime_engine?: string;
+            /** Format: int64 */
+            input_tokens?: number;
+            /** Format: int64 */
+            output_tokens?: number;
+            usage_reported?: boolean;
+            /** Format: int64 */
+            input_multiplier_micros?: number;
+            /** Format: int64 */
+            output_multiplier_micros?: number;
+            /** Format: int64 */
+            fallback_hundredths?: number;
+            /** Format: int64 */
+            amount_hundredths?: number;
+            estimated?: boolean;
+            rate_revision_id?: string;
+        };
         v1CurrentUser: {
             id?: string;
             username?: string;
@@ -885,6 +1084,7 @@ export interface components {
             display_name?: string;
             administrator?: boolean;
             settings_ready?: boolean;
+            credit_balance?: components["schemas"]["v1CreditBalance"];
         };
         v1DeleteResponse: {
             deleted?: boolean;
@@ -894,6 +1094,15 @@ export interface components {
             value?: string;
             secret?: boolean;
             configured?: boolean;
+        };
+        v1ExecutionStageSnapshot: {
+            /** Format: int32 */
+            position?: number;
+            expert?: components["schemas"]["v1ExpertSnapshot"];
+            runtime_engine?: string;
+            provider_model?: components["schemas"]["v1ProviderModelSnapshot"];
+            mcp_servers?: components["schemas"]["v1MCPServerSnapshot"][];
+            skills?: components["schemas"]["v1SkillSnapshot"][];
         };
         v1Expert: {
             id?: string;
@@ -910,6 +1119,12 @@ export interface components {
             execution_instruction?: string;
             expertise_tags?: string[];
             available?: boolean;
+            provider_model_id?: string;
+            runtime_engine?: string;
+            complete?: boolean;
+            availability_reason?: string;
+            compatibility?: string;
+            provider_model_name?: string;
         };
         v1ExpertInput: {
             name?: string;
@@ -918,6 +1133,15 @@ export interface components {
             skill_ids?: string[];
             execution_instruction?: string;
             expertise_tags?: string[];
+            provider_model_id?: string;
+            runtime_engine?: string;
+        };
+        v1ExpertSnapshot: {
+            id?: string;
+            name?: string;
+            execution_instruction?: string;
+            /** Format: int64 */
+            version?: number;
         };
         v1ExpertStage: {
             expert_id?: string;
@@ -931,6 +1155,10 @@ export interface components {
             error?: string;
             /** Format: int32 */
             total?: number;
+            credit_consumption?: components["schemas"]["v1CreditStageConsumption"];
+            provider_model_id?: string;
+            provider_model_name?: string;
+            runtime_engine?: string;
         };
         v1ExpertTeam: {
             id?: string;
@@ -970,6 +1198,10 @@ export interface components {
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
         };
+        v1ListCreditLedgerResponse: {
+            items?: components["schemas"]["v1CreditLedgerEntry"][];
+            next_cursor?: string;
+        };
         v1ListExpertTeamsResponse: {
             items?: components["schemas"]["v1ExpertTeam"][];
         };
@@ -978,6 +1210,9 @@ export interface components {
         };
         v1ListMCPServersResponse: {
             items?: components["schemas"]["v1MCPServer"][];
+        };
+        v1ListModelCreditRatesResponse: {
+            items?: components["schemas"]["v1ModelCreditRate"][];
         };
         v1ListModelProviderConnectionsResponse: {
             items?: components["schemas"]["v1ModelProviderConnection"][];
@@ -1043,6 +1278,32 @@ export interface components {
             arguments?: string[];
             environment?: components["schemas"]["v1EnvironmentVariable"][];
         };
+        v1MCPServerSnapshot: {
+            id?: string;
+            name?: string;
+            transport?: string;
+            url?: string;
+            runner?: string;
+            package?: string;
+            package_version?: string;
+            arguments?: string[];
+        };
+        v1ModelCreditRate: {
+            revision_id?: string;
+            provider_type?: string;
+            api_protocol?: string;
+            provider_model_id?: string;
+            /** Format: int64 */
+            input_multiplier_micros?: number;
+            /** Format: int64 */
+            output_multiplier_micros?: number;
+            /** Format: int64 */
+            fallback_hundredths?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            superseded_at?: string;
+        };
         v1ModelProviderConnection: {
             id?: string;
             name?: string;
@@ -1089,8 +1350,42 @@ export interface components {
             manually_added?: boolean;
             compatibility?: components["schemas"]["v1RuntimeModelCompatibility"][];
         };
+        v1ProviderModelSnapshot: {
+            id?: string;
+            connection_id?: string;
+            /** Format: int64 */
+            connection_version?: number;
+            connection_name?: string;
+            provider_type?: string;
+            model_id?: string;
+            name?: string;
+            endpoint?: string;
+            protocols?: string[];
+            compatibility?: string;
+        };
         v1ReadyResponse: {
             status?: string;
+        };
+        v1RedeemCreditCodeRequest: {
+            code?: string;
+        };
+        v1RedemptionCode: {
+            id?: string;
+            identifier?: string;
+            plaintext?: string;
+            state?: string;
+        };
+        v1RedemptionCodeBatch: {
+            id?: string;
+            /** Format: int32 */
+            count?: number;
+            /** Format: int64 */
+            value_hundredths?: number;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            created_at?: string;
+            codes?: components["schemas"]["v1RedemptionCode"][];
         };
         v1ResetUserPasswordResponse: {
             temporary_password?: string;
@@ -1108,6 +1403,9 @@ export interface components {
             compatibility?: string;
             /** Format: int64 */
             connection_version?: number;
+            /** Format: int32 */
+            schema_version?: number;
+            stages?: components["schemas"]["v1ExecutionStageSnapshot"][];
         };
         v1Run: {
             id?: string;
@@ -1134,6 +1432,7 @@ export interface components {
             turn_number?: number;
             attachments?: components["schemas"]["v1Attachment"][];
             expert_stages?: components["schemas"]["v1ExpertStage"][];
+            credit_consumption?: components["schemas"]["v1CreditConsumption"];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -1176,7 +1475,6 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
-            current_provider_model_id?: string;
             expert_team_id?: string;
         };
         v1SessionMessage: {
@@ -1194,6 +1492,7 @@ export interface components {
             response_snapshot?: components["schemas"]["v1ResponseSnapshot"];
             attachments?: components["schemas"]["v1Attachment"][];
             expert_stages?: components["schemas"]["v1ExpertStage"][];
+            credit_consumption?: components["schemas"]["v1CreditConsumption"];
         };
         v1Skill: {
             id?: string;
@@ -1208,6 +1507,12 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+        };
+        v1SkillSnapshot: {
+            id?: string;
+            name?: string;
+            object_key?: string;
+            sha256?: string;
         };
         v1UpdateSettingsRequest: {
             personality?: string;
@@ -1230,14 +1535,13 @@ export interface components {
             created_at?: string;
             /** Format: int64 */
             version?: number;
+            credit_balance?: components["schemas"]["v1CreditBalance"];
         };
         v1Workflow: {
             id?: string;
             name?: string;
             goal?: string;
             expert_id?: string;
-            provider_model_id?: string;
-            runtime_engine?: string;
             environment?: components["schemas"]["v1EnvironmentVariable"][];
             schedule?: components["schemas"]["v1Schedule"];
             git_source?: components["schemas"]["v1GitSource"];
@@ -1267,8 +1571,6 @@ export interface components {
             name?: string;
             goal?: string;
             expert_id?: string;
-            provider_model_id?: string;
-            runtime_engine?: string;
             environment?: components["schemas"]["v1EnvironmentVariable"][];
             schedule?: components["schemas"]["v1Schedule"];
             expert_team_id?: string;
@@ -1301,6 +1603,101 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AgentWorkspaceService_ListModelCreditRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListModelCreditRatesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateModelCreditRate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateModelCreditRateRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ModelCreditRate"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateRedemptionCodeBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateRedemptionCodeBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1RedemptionCodeBatch"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListUsers: {
         parameters: {
             query?: never;
@@ -1350,6 +1747,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CreateUserResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_AdjustUserCredits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceAdjustUserCreditsBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditBalance"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ConfigureUserDailyCredits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceConfigureUserDailyCreditsBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditBalance"];
                 };
             };
             /** @description An unexpected error response. */
@@ -1420,6 +1887,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ResetUserPasswordResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetCreditBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditBalance"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCreditLedger: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCreditLedgerResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RedeemCreditCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1RedeemCreditCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditBalance"];
                 };
             };
             /** @description An unexpected error response. */

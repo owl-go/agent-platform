@@ -5,7 +5,7 @@ ARG UV_VERSION=0.8.13
 
 RUN apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl git jq nodejs npm openssh-client ripgrep \
-    && python -m pip install --no-cache-dir "hermes-agent[mcp]==${HERMES_VERSION}" "uv==${UV_VERSION}" \
+    && python -m pip install --no-cache-dir "hermes-agent[mcp,anthropic]==${HERMES_VERSION}" "uv==${UV_VERSION}" \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 65532 agent \
     && useradd --uid 65532 --gid 65532 --create-home --home-dir /home/agent agent \

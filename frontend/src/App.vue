@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
-import { getHealth } from "./api/client";
+import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
 import { authContextKey } from "./auth/session";
 import { localeStorageKey, type SupportedLocale } from "./i18n";
+import CreditPanel from "./components/CreditPanel.vue";
 
 const auth = inject(authContextKey)!;
+const api = inject(platformApiKey)!;
 const route = useRoute();
 const router = useRouter();
 const { locale, t } = useI18n();
@@ -17,19 +19,30 @@ const authState = auth.session.state;
 const currentUser = computed(() => authState.value.kind === "authenticated" ? authState.value.currentUser : undefined);
 const online = ref<boolean | undefined>();
 const mobileOpen = ref(false);
+const creditPanelOpen = ref(false);
+const creditBalance = ref<CreditBalance>();
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 const nav = [
   { id: "sessions", icon: ChatDotRound }, { id: "workflows", icon: Connection }, { id: "experts", icon: MagicStick }, { id: "settings", icon: Setting },
 ] as const;
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
+const formatCredits = (hundredths: number | undefined) => (Number(hundredths ?? 0) / 100).toFixed(2);
+
+watch(currentUser, (user) => { if (user?.credit_balance) creditBalance.value = user.credit_balance; }, { immediate: true });
+
+async function refreshCredits() {
+  if (!currentUser.value) return;
+  try { creditBalance.value = await api.getCreditBalance(); } catch { /* Keep the last known projection. */ }
+}
 
 onMounted(() => {
   void auth.session.initialize(auth.isCallback);
   controller = new AbortController();
   getHealth(controller.signal).then(() => { online.value = true; }).catch(() => { online.value = false; });
+  window.addEventListener("credits-updated", refreshCredits);
 });
-onUnmounted(() => { controller?.abort(); auth.session.dispose(); });
+onUnmounted(() => { controller?.abort(); auth.session.dispose(); window.removeEventListener("credits-updated", refreshCredits); });
 
 function setLocale(value: SupportedLocale) {
   locale.value = value;
@@ -37,7 +50,8 @@ function setLocale(value: SupportedLocale) {
   document.documentElement.lang = value;
 }
 
-function handleUserCommand(command: "users" | "locale" | "signout") {
+function handleUserCommand(command: "credits" | "users" | "locale" | "signout") {
+  if (command === "credits") creditPanelOpen.value = true;
   if (command === "users") void router.push("/admin/users");
   if (command === "locale") setLocale(locale.value === "zh-CN" ? "en-US" : "zh-CN");
   if (command === "signout") void auth.session.signOut();
@@ -66,6 +80,7 @@ function handleUserCommand(command: "users" | "locale" | "signout") {
           <el-dropdown placement="top-start" trigger="click" @command="handleUserCommand">
             <button class="user-button"><el-avatar :size="34">{{ initials }}</el-avatar><span><strong>{{ currentUser?.display_name }}</strong><small>@{{ currentUser?.username }}</small></span><el-icon><MoreFilled /></el-icon></button>
             <template #dropdown><el-dropdown-menu>
+              <el-dropdown-item command="credits"><span class="credit-menu-row"><b>✧</b><span>{{ t('credits.balance') }}</span><strong>{{ formatCredits(creditBalance?.total_hundredths) }} ›</strong></span></el-dropdown-item>
               <el-dropdown-item v-if="currentUser?.administrator" command="users" :icon="User">{{ t('nav.users') }}</el-dropdown-item>
               <el-dropdown-item command="locale" :icon="UserFilled">{{ locale === 'zh-CN' ? 'English' : '中文' }}</el-dropdown-item>
               <el-dropdown-item command="signout" :icon="SwitchButton" divided>{{ t('auth.signOut') }}</el-dropdown-item>
@@ -78,6 +93,7 @@ function handleUserCommand(command: "users" | "locale" | "signout") {
         <header class="mobile-header"><el-button text :icon="Menu" @click="mobileOpen = true" /><strong>{{ t('product') }}</strong><el-avatar :size="32">{{ initials }}</el-avatar></header>
         <RouterView :key="String(route.name)" />
       </el-main>
+      <CreditPanel :open="creditPanelOpen" @close="creditPanelOpen = false" @updated="creditBalance = $event" />
     </el-container>
   </el-config-provider>
 </template>

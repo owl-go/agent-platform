@@ -1,26 +1,33 @@
 import type { InjectionKey } from "vue";
 
-export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean }
-export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; current_provider_model_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
-export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number }
+export interface CreditBalance { total_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number }
+export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
+export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
+export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
+export interface ModelCreditRate { revision_id: string; provider_type?: string; api_protocol?: string; provider_model_id?: string; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; created_at: string; superseded_at?: string }
+export interface RedemptionCodeBatch { id: string; count: number; value_hundredths: number; expires_at?: string; created_at: string; codes: Array<{ id: string; identifier: string; plaintext: string; state: string }> }
+export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
+export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
+export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus } }
+export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
-export interface ExpertStage { expert_id: string; expert_name: string; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[] }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[] }
+export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
 export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; credential_configured: boolean }
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[] }
-export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; provider_model_id?: string; runtime_engine?: RuntimeEngine; environment: EnvironmentVariable[]; schedule?: Schedule }
+export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[] }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id: string; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
-export interface ExpertInput { name: string; capability_introduction: string; execution_instruction: string; expertise_tags: string[]; mcp_server_ids: string[]; skill_ids: string[] }
-export interface Expert extends ExpertInput { id: string; available: boolean; created_at: string; updated_at: string; version: number }
+export interface ExpertInput { name: string; capability_introduction: string; execution_instruction: string; provider_model_id: string; runtime_engine: RuntimeEngine; expertise_tags: string[]; mcp_server_ids: string[]; skill_ids: string[] }
+export interface Expert extends ExpertInput { id: string; provider_model_name: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
 export interface ExpertTeamInput { name: string; capability_introduction: string; expertise_tags: string[]; expert_ids: string[] }
 export interface ExpertTeam extends Omit<ExpertTeamInput, "expert_ids"> { id: string; experts: Expert[]; available: boolean; created_at: string; updated_at: string; version: number }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
@@ -33,7 +40,7 @@ export interface ModelProviderConnection { id: string; name: string; provider_ty
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
-export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number }
+export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
 export function runtimeEngineDisplayName(runtime: RuntimeEngine): string {
@@ -53,6 +60,14 @@ export class ApiError extends Error {
 }
 
 export interface PlatformApi {
+  getCreditBalance(signal?: AbortSignal): Promise<CreditBalance>;
+  listCreditLedger(cursor?: string, signal?: AbortSignal): Promise<{ items: CreditLedgerEntry[]; next_cursor?: string }>;
+  redeemCreditCode(code: string, signal?: AbortSignal): Promise<CreditBalance>;
+  configureUserDailyCredits(userID: string, allocationHundredths: number, signal?: AbortSignal): Promise<CreditBalance>;
+  adjustUserCredits(userID: string, amountHundredths: number, reason: string, signal?: AbortSignal): Promise<CreditBalance>;
+  listModelCreditRates(signal?: AbortSignal): Promise<ModelCreditRate[]>;
+  createModelCreditRate(rate: Omit<ModelCreditRate, "revision_id" | "created_at" | "superseded_at"> & { expected_revision_id?: string }, signal?: AbortSignal): Promise<ModelCreditRate>;
+  createRedemptionCodeBatch(count: number, valueHundredths: number, expiresAt?: string, signal?: AbortSignal): Promise<RedemptionCodeBatch>;
   listSessions(archived?: boolean, signal?: AbortSignal): Promise<Session[]>;
   createSession(selection?: { expert_id?: string; expert_team_id?: string }, signal?: AbortSignal): Promise<Session>;
   renameSession(id: string, title: string, version: number, signal?: AbortSignal): Promise<Session>;
@@ -62,8 +77,8 @@ export interface PlatformApi {
   listSessionMessages(id: string, signal?: AbortSignal): Promise<SessionMessage[]>;
   streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
   uploadAttachment(file: File, signal?: AbortSignal): Promise<Attachment>;
-  getAttachmentDownload(id: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }>;
-  sendSessionMessage(id: string, content: string, providerModelID: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
+  getAttachmentDownload(id: string, signal?: AbortSignal): Promise<Blob>;
+  sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -150,6 +165,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
   };
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
+    getCreditBalance(signal) { return call("/api/v1/credits/balance", { signal }); },
+    listCreditLedger(cursor = "", signal) { return call(`/api/v1/credits/ledger?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
+    redeemCreditCode(code, signal) { return call("/api/v1/credits/redemptions", json("POST", { code }, signal)); },
+    configureUserDailyCredits(userID, allocationHundredths, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/daily-credits`, json("PATCH", { allocation_hundredths: allocationHundredths }, signal)); },
+    adjustUserCredits(userID, amountHundredths, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/credit-adjustments`, json("POST", { amount_hundredths: amountHundredths, reason }, signal)); },
+    async listModelCreditRates(signal) { return (await call<{ items: ModelCreditRate[] }>("/api/v1/admin/model-credit-rates", { signal })).items ?? []; },
+    createModelCreditRate(rate, signal) { return call("/api/v1/admin/model-credit-rates", json("POST", rate, signal)); },
+    createRedemptionCodeBatch(count, valueHundredths, expiresAt, signal) { return call("/api/v1/admin/redemption-code-batches", json("POST", { count, value_hundredths: valueHundredths, ...(expiresAt ? { expires_at: expiresAt } : {}) }, signal)); },
     async listSessions(archived = false, signal) { return (await call<{ items: Session[] }>(`/api/v1/sessions?archived=${archived}`, { signal })).items ?? []; },
     createSession(selection = {}, signal) { return call("/api/v1/sessions", json("POST", selection, signal)); },
     renameSession(id, title, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}`, json("PATCH", { title, expected_version: version }, signal)); },
@@ -175,23 +198,29 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       if (!response.ok || !response.body) throw new ApiError(response.status === 404 ? "not_found" : "unknown", response.status, "message_stream_failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let pending = "";
+      const handleBlock = (value: string) => {
+        const fields = Object.fromEntries(value.split("\n").filter((line) => line.includes(":") && !line.startsWith(":"))
+          .map((line) => { const index = line.indexOf(":"); return [line.slice(0, index), line.slice(index + 1).trimStart()]; }));
+        if (fields.event === "message.snapshot") {
+          try { onSnapshot(JSON.parse(fields.data ?? "{}") as SessionMessageSnapshot); } catch { throw new ApiError("unknown", 500, "message_stream_invalid"); }
+        } else if (fields.event === "stream.error") {
+          throw new ApiError("unknown", 500, "message_stream_failed");
+        }
+      };
       while (true) {
         const { value, done } = await reader.read();
-        pending += value ?? "";
+        pending = (pending + (value ?? "")).replace(/\r\n/g, "\n");
         let boundary = pending.indexOf("\n\n");
         while (boundary >= 0) {
-          const block = pending.slice(0, boundary).replace(/\r/g, "");
+          const block = pending.slice(0, boundary);
           pending = pending.slice(boundary + 2);
-          const fields = Object.fromEntries(block.split("\n").filter((line) => line.includes(":") && !line.startsWith(":"))
-            .map((line) => { const index = line.indexOf(":"); return [line.slice(0, index), line.slice(index + 1).trimStart()]; }));
-          if (fields.event === "message.snapshot") {
-            try { onSnapshot(JSON.parse(fields.data ?? "{}") as SessionMessageSnapshot); } catch { throw new ApiError("unknown", 500, "message_stream_invalid"); }
-          } else if (fields.event === "stream.error") {
-            throw new ApiError("unknown", 500, "message_stream_failed");
-          }
+          handleBlock(block);
           boundary = pending.indexOf("\n\n");
         }
-        if (done) return;
+        if (done) {
+          if (pending.trim()) handleBlock(pending.replace(/\r/g, ""));
+          return;
+        }
       }
     },
     async uploadAttachment(file, signal) {
@@ -201,8 +230,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       if (!response.ok) throw new ApiError(response.status === 413 || response.status === 422 ? "validation" : "unknown", response.status, "attachment_upload_failed");
       return response.json() as Promise<Attachment>;
     },
-    getAttachmentDownload(id, signal) { return call(`/api/v1/attachments/${encodeURIComponent(id)}/download`, { signal }); },
-    sendSessionMessage(id, content, providerModelID, attachmentIDs = [], signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, provider_model_id: providerModelID, attachment_ids: attachmentIDs }, signal)); },
+    getAttachmentDownload(id, signal) { return download(`/api/v1/attachments/${encodeURIComponent(id)}/download`, signal); },
+    sendSessionMessage(id, content, attachmentIDs = [], signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
@@ -292,7 +321,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       }));
     },
     createModelProviderConnection(input, signal) { return call("/api/v1/model-provider-connections", json("POST", input, signal)); },
-    updateModelProviderConnection(id, input, version, signal) { const { api_key, ...values } = input; return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}`, json("PATCH", { ...values, replacement_api_key: api_key || undefined, expected_version: version }, signal)); },
+    updateModelProviderConnection(id, input, version, signal) {
+      const { name, endpoint, protocols, api_key } = input;
+      return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}`, json("PATCH", { name, endpoint, protocols, replacement_api_key: api_key || undefined, expected_version: version }, signal));
+    },
     deleteModelProviderConnection(id, signal) { return remove(`/api/v1/model-provider-connections/${encodeURIComponent(id)}`, signal); },
     refreshProviderModels(id, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}/refresh`, json("POST", {}, signal)); },
     createProviderModel(connectionID, input, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(connectionID)}/models`, json("POST", input, signal)); },

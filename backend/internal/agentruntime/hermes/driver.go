@@ -91,6 +91,7 @@ func (p *parser) Result() cliadapter.ParsedResult {
 		SessionID        string  `json:"session_id"`
 		Completed        bool    `json:"completed"`
 		Failed           bool    `json:"failed"`
+		Failure          string  `json:"failure"`
 	}
 	if err := json.Unmarshal(contents, &usage); err != nil {
 		p.result.Error = fmt.Errorf("decode Hermes usage report: %w", err)
@@ -99,11 +100,14 @@ func (p *parser) Result() cliadapter.ParsedResult {
 	p.result.CheckpointRef = usage.SessionID
 	p.result.Usage = agentruntime.Usage{
 		InputTokens: usage.InputTokens, OutputTokens: usage.OutputTokens,
-		CostMicros: int64(math.Round(usage.EstimatedCostUSD * 1_000_000)),
+		CostMicros: int64(math.Round(usage.EstimatedCostUSD * 1_000_000)), Reported: true,
 	}
 	if usage.Failed || !usage.Completed {
 		cause := fmt.Errorf("Hermes usage report marked execution as failed or incomplete")
-		diagnostic := strings.ToLower(p.result.FinalMessage)
+		if failure := strings.TrimSpace(usage.Failure); failure != "" {
+			cause = fmt.Errorf("Hermes execution failed: %s", failure)
+		}
+		diagnostic := strings.ToLower(p.result.FinalMessage + "\n" + usage.Failure)
 		if strings.Contains(diagnostic, "401") || strings.Contains(diagnostic, "authentication") {
 			p.result.Error = &agentruntime.Error{
 				Code: agentruntime.ErrorAuthenticationFailed, Message: "Hermes model authentication failed", Cause: cause,

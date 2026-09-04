@@ -43,6 +43,7 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 	args := []string{
 		"--print",
 		"--bare",
+		"--verbose",
 		"--output-format", "stream-json",
 		"--include-partial-messages",
 		"--permission-mode", "bypassPermissions",
@@ -91,8 +92,8 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 			} `json:"content"`
 		} `json:"message"`
 		Usage struct {
-			InputTokens  int64 `json:"input_tokens"`
-			OutputTokens int64 `json:"output_tokens"`
+			InputTokens  *int64 `json:"input_tokens"`
+			OutputTokens *int64 `json:"output_tokens"`
 		} `json:"usage"`
 		TotalCostUSD float64 `json:"total_cost_usd"`
 	}
@@ -118,9 +119,11 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 	case "result":
 		p.result.FinalMessage = envelope.Result
 		p.result.CheckpointRef = envelope.SessionID
-		p.result.Usage = agentruntime.Usage{
-			InputTokens: envelope.Usage.InputTokens, OutputTokens: envelope.Usage.OutputTokens,
-			CostMicros: int64(envelope.TotalCostUSD * 1_000_000),
+		if envelope.Usage.InputTokens != nil && envelope.Usage.OutputTokens != nil {
+			p.result.Usage = agentruntime.Usage{
+				InputTokens: *envelope.Usage.InputTokens, OutputTokens: *envelope.Usage.OutputTokens,
+				CostMicros: int64(envelope.TotalCostUSD * 1_000_000), Reported: true,
+			}
 		}
 	}
 	return nil, nil

@@ -45,6 +45,7 @@ type Config struct {
 	CredentialDirectory  string
 	NativeStateDirectory string
 	ScratchDirectory     string
+	AttachmentDirectory  string
 	PublicEgressNetwork  string
 	ResolverConfigFile   string
 	Egress               sandbox.EgressMode
@@ -212,6 +213,14 @@ func validateConfig(config Config) error {
 	if config.ScratchDirectory != "" && !filepath.IsAbs(config.ScratchDirectory) {
 		return fmt.Errorf("Runtime scratch directory must be absolute")
 	}
+	if config.AttachmentDirectory != "" {
+		if !filepath.IsAbs(config.AttachmentDirectory) || strings.Contains(config.AttachmentDirectory, ",") {
+			return fmt.Errorf("Runtime attachment directory must be an absolute path without commas")
+		}
+		if config.ScratchDirectory == "" || filepath.Clean(config.AttachmentDirectory) != filepath.Join(filepath.Clean(config.ScratchDirectory), "attachments") {
+			return fmt.Errorf("Runtime attachment directory must be the attachments child of Runtime scratch")
+		}
+	}
 	if config.NativeStateDirectory != "" && config.RuntimeCommand != "codex" {
 		return fmt.Errorf("native Runtime state directory is only supported for Codex")
 	}
@@ -288,6 +297,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	if config.NativeStateDirectory != "" {
 		args = append(args, "--mount", "type=bind,src="+config.NativeStateDirectory+",dst=/tmp/runtime-home/.codex,readonly=false")
 	}
+	if config.AttachmentDirectory != "" {
+		args = append(args, "--mount", "type=bind,src="+config.AttachmentDirectory+",dst="+RuntimeAttachmentDirectory(config.ContainerWorkspace)+",readonly=true")
+	}
 	if config.Egress == sandbox.EgressPublic {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
@@ -320,6 +332,11 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		return append(args, spec.Command...)
 	}
 	return append(args, spec.Command[1:]...)
+}
+
+// RuntimeAttachmentDirectory is the read-only attachment mount inside the Workspace boundary.
+func RuntimeAttachmentDirectory(containerWorkspace string) string {
+	return filepath.Join(containerWorkspace, ".agent-platform-attachments")
 }
 
 func prepareAdapterScratch(config Config, command []string) ([]string, error) {

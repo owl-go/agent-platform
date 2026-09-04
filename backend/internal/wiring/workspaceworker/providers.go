@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/agentruntime/containerprocess"
+	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
 	"agent-platform/backend/internal/infrastructure/gormdb"
@@ -33,6 +35,13 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	}
 	executor, err := runtimeexecutor.New(config, box, objects, warm)
 	if err != nil {
+		return nil, err
+	}
+	credits, err := creditsapplication.New(creditsrepo.New(database.ORM()), nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := executor.EnableCredits(credits); err != nil {
 		return nil, err
 	}
 	return workspaceapplication.NewWorker(workspacerepo.New(database.ORM()), executor)

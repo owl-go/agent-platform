@@ -7,15 +7,20 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	"agent-platform/backend/internal/agentruntime"
 	"agent-platform/backend/internal/agentruntime/cliadapter"
 	"agent-platform/backend/internal/agentruntime/containerprocess"
+	creditsapplication "agent-platform/backend/internal/biz/credits/application"
+	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/credentials"
@@ -23,6 +28,7 @@ import (
 	"agent-platform/backend/internal/objectstore/memory"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
+	"agent-platform/backend/internal/workspacefs"
 )
 
 func TestMaterializeAttachmentsVerifiesAndProtectsCopies(t *testing.T) {
@@ -34,22 +40,138 @@ func TestMaterializeAttachmentsVerifiesAndProtectsCopies(t *testing.T) {
 	if _, err := provider.Put(context.Background(), key, bytes.NewReader(content), objectstore.PutOptions{Size: int64(len(content)), SHA256: sha, ContentType: "text/plain", Metadata: map[string]string{"name": "notes.txt"}}); err != nil {
 		t.Fatal(err)
 	}
-	executor := &Executor{objects: provider, config: platformconfig.Config{Worker: platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()}}}
+	sandboxUID, sandboxGID := os.Getuid(), os.Getgid()
+	if os.Geteuid() == 0 {
+		sandboxUID, sandboxGID = 65532, 65532
+	}
+	executor := &Executor{objects: provider, config: platformconfig.Config{Worker: platformconfig.WorkerConfig{SandboxUID: sandboxUID, SandboxGID: sandboxGID}}}
 	root := t.TempDir()
-	paths, err := executor.materializeAttachments(context.Background(), application.ExecutionJob{OwnerID: "owner-1", Attachments: []domain.Attachment{{ID: "11111111-1111-4111-8111-111111111111", Name: "notes.txt", ObjectKey: key, Size: int64(len(content)), SHA256: sha}}}, root)
+	attachmentDirectory := filepath.Join(root, "attachments", "11111111-1111-4111-8111-111111111111")
+	if err := os.MkdirAll(attachmentDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	attachments, err := executor.materializeAttachments(context.Background(), application.ExecutionJob{OwnerID: "owner-1", Attachments: []domain.Attachment{{ID: "11111111-1111-4111-8111-111111111111", Name: "notes.txt", ContentType: "text/plain", ObjectKey: key, Size: int64(len(content)), SHA256: sha}}}, root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(paths) != 1 {
-		t.Fatalf("paths = %v", paths)
+	if len(attachments) != 1 || attachments[0].ContentType != "text/plain" {
+		t.Fatalf("attachments = %v", attachments)
 	}
-	got, err := os.ReadFile(paths[0])
+	wantRuntimePath := "/workspace/.agent-platform-attachments/11111111-1111-4111-8111-111111111111/notes.txt"
+	if attachments[0].Path != wantRuntimePath {
+		t.Fatalf("Runtime attachment path = %q, want %q", attachments[0].Path, wantRuntimePath)
+	}
+	copyPath := filepath.Join(root, "attachments", "11111111-1111-4111-8111-111111111111", "notes.txt")
+	got, err := os.ReadFile(copyPath)
 	if err != nil || !bytes.Equal(got, content) {
 		t.Fatalf("copy = %q, %v", got, err)
 	}
-	info, err := os.Stat(paths[0])
+	info, err := os.Stat(copyPath)
 	if err != nil || info.Mode().Perm() != 0o400 {
 		t.Fatalf("copy mode = %v, %v", info.Mode().Perm(), err)
+	}
+	directoryInfo, err := os.Stat(attachmentDirectory)
+	if err != nil || directoryInfo.Mode().Perm() != 0o750 {
+		t.Fatalf("attachment directory mode = %v, %v", directoryInfo.Mode().Perm(), err)
+	}
+	if stat, ok := directoryInfo.Sys().(*syscall.Stat_t); !ok || int(stat.Uid) != sandboxUID || int(stat.Gid) != sandboxGID {
+		t.Fatalf("attachment directory owner = %#v, want %d:%d", directoryInfo.Sys(), sandboxUID, sandboxGID)
+	}
+}
+
+func TestEnvironmentDecryptsGlobalModelCredentialWithItsOriginalScope(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, err := box.Encrypt([]byte("global-key"), "model-provider:administrator-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{box: box}
+	job := application.ExecutionJob{OwnerID: "ordinary-user-1", Snapshot: domain.ExecutionSnapshot{ProviderModel: domain.ProviderModelSnapshot{
+		Endpoint: "https://models.example.test", APIKeyCiphertext: ciphertext, CredentialOwnerID: "administrator-1",
+	}}}
+
+	variables, err := executor.environment(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if variables["OPENAI_API_KEY"] != "global-key" || variables["ANTHROPIC_API_KEY"] != "global-key" {
+		t.Fatalf("global Model Provider credential was not materialized: %#v", variables)
+	}
+}
+
+func TestExecuteMakesImageAttachmentReadableAndKeepsWorkspaceWritable(t *testing.T) {
+	executor, job, persistent := newTeamTestExecutor(t)
+	job.Snapshot.ExpertTeam = nil
+	_, slot, err := executor.warmSlot(job, executor.config.Worker.Runtimes[string(domain.RuntimeCodex)])
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := []byte("synthetic image contents")
+	digest := sha256.Sum256(content)
+	sha := hex.EncodeToString(digest[:])
+	attachmentID := "33333333-3333-4333-8333-333333333333"
+	key := "attachments/owner-1/" + attachmentID
+	provider, ok := executor.objects.(*memory.Provider)
+	if !ok {
+		t.Fatalf("Object Store = %T, want *memory.Provider", executor.objects)
+	}
+	if _, err := provider.Put(context.Background(), key, bytes.NewReader(content), objectstore.PutOptions{Size: int64(len(content)), SHA256: sha, ContentType: "image/png", Metadata: map[string]string{"name": "photo.png"}}); err != nil {
+		t.Fatal(err)
+	}
+	job.Attachments = []domain.Attachment{{ID: attachmentID, Name: "photo.png", ContentType: "image/png", ObjectKey: key, Size: int64(len(content)), SHA256: sha, Image: true}}
+
+	var hostAttachmentPath string
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			if len(request.Attachments) != 1 || request.Attachments[0].ContentType != "image/png" {
+				return agentruntime.Result{}, fmt.Errorf("Runtime attachments = %#v", request.Attachments)
+			}
+			if !strings.HasPrefix(filepath.Clean(request.Attachments[0].Path), "/workspace/.agent-platform-attachments/") {
+				return agentruntime.Result{}, fmt.Errorf("Runtime attachment path %q is outside /workspace", request.Attachments[0].Path)
+			}
+			relative, err := filepath.Rel(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory), request.Attachments[0].Path)
+			if err != nil {
+				return agentruntime.Result{}, fmt.Errorf("map Runtime attachment path %q: %w", request.Attachments[0].Path, err)
+			}
+			if relative == "." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+				return agentruntime.Result{}, fmt.Errorf("Runtime attachment path %q escapes its mount", request.Attachments[0].Path)
+			}
+			hostAttachmentPath = filepath.Join(slot.scratch, "attachments", relative)
+			got, err := os.ReadFile(hostAttachmentPath)
+			if err != nil {
+				return agentruntime.Result{}, fmt.Errorf("read Runtime attachment: %w", err)
+			}
+			if !bytes.Equal(got, content) {
+				return agentruntime.Result{}, fmt.Errorf("Runtime attachment content = %q", got)
+			}
+			if err := os.WriteFile(filepath.Join(request.WorkspacePath, "result.txt"), []byte("workspace is writable"), 0o600); err != nil {
+				return agentruntime.Result{}, fmt.Errorf("write Runtime Workspace: %w", err)
+			}
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done"}, nil
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.FinalMessage != "done" {
+		t.Fatalf("final message = %q", result.FinalMessage)
+	}
+	workspaceResult, err := os.ReadFile(filepath.Join(persistent, "result.txt"))
+	if err != nil || string(workspaceResult) != "workspace is writable" {
+		t.Fatalf("persisted Workspace result = %q, %v", workspaceResult, err)
+	}
+	if _, err := os.Stat(hostAttachmentPath); !os.IsNotExist(err) {
+		t.Fatalf("ephemeral attachment was not cleaned up: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(persistent, ".agent-platform-attachments")); !os.IsNotExist(err) {
+		t.Fatalf("reserved attachment mountpoint was persisted: %v", err)
 	}
 }
 
@@ -157,6 +279,192 @@ func TestExecuteExpertTeamRunsInOrderAndCommitsOnlyTheFinalResult(t *testing.T) 
 	}
 }
 
+func TestExecuteExpertTeamUsesEachStagesRuntimeAndModel(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	executor.config.Worker.Runtimes["claude"] = platformconfig.RuntimeEngineConfig{Available: true, ImageDigest: "registry.example/claude@sha256:" + strings.Repeat("1", 64), CLIVersion: "test"}
+	claudeSecret, err := executor.box.Encrypt([]byte("claude-key"), "model-provider:owner-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	codexSecret, err := executor.box.Encrypt([]byte("codex-key"), "model-provider:owner-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.Snapshot = domain.ExecutionSnapshot{SchemaVersion: 2, WorkspacePath: job.Snapshot.WorkspacePath, Stages: []domain.ExecutionStageSnapshot{
+		{Position: 1, Expert: &domain.ExpertSnapshot{ID: "expert-1", Name: "First Expert", ExecutionInstruction: "First Expert instruction", Version: 2}, RuntimeEngine: domain.RuntimeClaude, ProviderModel: domain.ProviderModelSnapshot{ID: "model-claude", ModelID: "claude-model", Endpoint: "https://claude.example.test", APIKeyCiphertext: claudeSecret}},
+		{Position: 2, Expert: &domain.ExpertSnapshot{ID: "expert-2", Name: "Second Expert", ExecutionInstruction: "Second Expert instruction", Version: 3}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{ID: "model-codex", ModelID: "codex-model", Endpoint: "https://codex.example.test", APIKeyCiphertext: codexSecret}},
+	}}
+	var containerConfigs []containerprocess.Config
+	var credentialKeys []string
+	executor.checkout = func(context.Context, string) (runtimeLease, error) {
+		return &recordingLease{start: func(config containerprocess.Config) {
+			containerConfigs = append(containerConfigs, config)
+			key, readErr := os.ReadFile(filepath.Join(config.CredentialDirectory, "env", "OPENAI_API_KEY"))
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			credentialKeys = append(credentialKeys, string(key))
+		}}, nil
+	}
+	var engines []domain.RuntimeEngine
+	var models []string
+	executor.newAdapter = func(engine domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		engines = append(engines, engine)
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			models = append(models, request.Model)
+			publishSuccessfulRuntime(t, events, request.RunID, request.Model)
+			return agentruntime.Result{FinalMessage: request.Model}, nil
+		}}, nil
+	}
+
+	if _, err := executor.Execute(context.Background(), job, &recordingProgress{}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(engines, []domain.RuntimeEngine{domain.RuntimeClaude, domain.RuntimeCodex}) || !reflect.DeepEqual(models, []string{"claude-model", "codex-model"}) {
+		t.Fatalf("stage runtime/model calls = %#v / %#v", engines, models)
+	}
+	if len(containerConfigs) != 2 || containerConfigs[0].RuntimeCommand != "claude" || containerConfigs[1].RuntimeCommand != "codex" || containerConfigs[0].Image == containerConfigs[1].Image {
+		t.Fatalf("stage container configs = %#v", containerConfigs)
+	}
+	if !reflect.DeepEqual(credentialKeys, []string{"claude-key", "codex-key"}) {
+		t.Fatalf("stage credential identities = %#v", credentialKeys)
+	}
+}
+
+func TestExecuteAnonymousStageProducesTerminalAuditRecord(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Snapshot.ExpertTeam = nil
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done"}, nil
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.ExpertStages) != 1 || result.ExpertStages[0].State != "succeeded" || result.ExpertStages[0].Position != 1 || result.ExpertStages[0].Total != 1 {
+		t.Fatalf("anonymous terminal stage = %#v", result.ExpertStages)
+	}
+}
+
+func TestExecuteTreatsInvalidRuntimeUsageAsFrozenFallback(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Timezone = "UTC"
+	job.Snapshot.ExpertTeam = nil
+	job.Snapshot.ProviderModel.ID = "model-1"
+	job.Snapshot.ProviderModel.ProviderType = "openai"
+	job.Snapshot.ProviderModel.Protocols = []string{"openai_responses"}
+	repository := &fallbackCreditRepository{}
+	creditService, err := creditsapplication.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.EnableCredits(creditService); err != nil {
+		t.Fatal(err)
+	}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done", Usage: agentruntime.Usage{InputTokens: -1, Reported: true}}, nil
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.CreditSettlements) != 1 || result.CreditSettlements[0].Amount != int64(creditsdomain.DefaultFallback) || !result.CreditSettlements[0].Estimated {
+		t.Fatalf("fallback settlement = %#v", result.CreditSettlements)
+	}
+	if repository.aborted {
+		t.Fatal("valid fallback settlement aborted its execution lease")
+	}
+}
+
+func TestExecuteTeamStagesAndReusesIndependentNativeState(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Kind, job.SessionID = application.JobSession, "session-1"
+	executor.config.Worker.Runtimes["codex"] = platformconfig.RuntimeEngineConfig{Available: true, NativeResume: true, ImageDigest: "registry.example/runtime@sha256:" + strings.Repeat("0", 64), CLIVersion: "test"}
+	model := job.Snapshot.ProviderModel
+	model.ID = "model-1"
+	job.Snapshot = domain.ExecutionSnapshot{SchemaVersion: 2, Stages: []domain.ExecutionStageSnapshot{
+		{Position: 1, Expert: &domain.ExpertSnapshot{ID: "expert-1", Name: "First", Version: 2}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: model},
+		{Position: 2, Expert: &domain.ExpertSnapshot{ID: "expert-2", Name: "Second", Version: 3}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: model},
+	}}
+	startIndex := 0
+	executor.checkout = func(context.Context, string) (runtimeLease, error) {
+		return &recordingLease{start: func(config containerprocess.Config) {
+			startIndex++
+			if config.NativeStateDirectory == "" {
+				t.Fatal("team stage has no isolated native state directory")
+			}
+			if err := os.WriteFile(filepath.Join(config.NativeStateDirectory, "sessions", "state.txt"), []byte(fmt.Sprintf("stage-%d", startIndex)), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}}, nil
+	}
+	var checkpoints []string
+	call := 0
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			call++
+			checkpoints = append(checkpoints, request.CheckpointRef)
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done", CheckpointRef: fmt.Sprintf("checkpoint-%d", call)}, nil
+		}}, nil
+	}
+
+	first, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first.StageCheckpointRefs, map[int]string{1: "checkpoint-1", 2: "checkpoint-2"}) {
+		t.Fatalf("stage checkpoints = %#v", first.StageCheckpointRefs)
+	}
+	if first.SuccessCommit == nil {
+		t.Fatal("team native state has no deferred success commit")
+	}
+	if err := first.SuccessCommit.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.SuccessCommit.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+	for _, stage := range job.Snapshot.Stages {
+		path, pathErr := workspacefs.NativeExpertSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, stage.Expert.ID, stage.Expert.Version, "codex")
+		if pathErr != nil {
+			t.Fatal(pathErr)
+		}
+		if _, statErr := os.Stat(filepath.Join(path, "state.txt")); statErr != nil {
+			t.Fatalf("stage %d native state was not promoted: %v", stage.Position, statErr)
+		}
+	}
+
+	job.StageCheckpointRefs = first.StageCheckpointRefs
+	call, startIndex, checkpoints = 0, 0, nil
+	second, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(checkpoints, []string{"checkpoint-1", "checkpoint-2"}) {
+		t.Fatalf("resumed checkpoints = %#v", checkpoints)
+	}
+	if second.SuccessCommit == nil {
+		t.Fatal("resumed native state has no deferred success commit")
+	}
+	if err := second.SuccessCommit.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := second.SuccessCommit.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestExecuteExpertTeamFailsFastAndRollsBackWorkspace(t *testing.T) {
 	executor, job, persistent := newTeamTestExecutor(t)
 	adapterCalls := 0
@@ -173,7 +481,7 @@ func TestExecuteExpertTeamFailsFastAndRollsBackWorkspace(t *testing.T) {
 				return agentruntime.Result{FinalMessage: "first result"}, nil
 			}
 			publishRuntimeFailure(t, events, request.RunID, "second failed")
-			return agentruntime.Result{}, errors.New("second failed")
+			return agentruntime.Result{}, &agentruntime.Error{Code: agentruntime.ErrorAuthenticationFailed, Message: "provider rejected test-key", Cause: errors.New("second failed test-key")}
 		}}, nil
 	}
 
@@ -183,6 +491,12 @@ func TestExecuteExpertTeamFailsFastAndRollsBackWorkspace(t *testing.T) {
 	}
 	if adapterCalls != 2 || len(result.ExpertStages) != 2 || result.ExpertStages[1].State != "failed" {
 		t.Fatalf("fail-fast result = %#v, calls = %d", result, adapterCalls)
+	}
+	if strings.Contains(err.Error(), "test-key") || strings.Contains(result.ExpertStages[1].Error, "test-key") || !strings.Contains(result.ExpertStages[1].Error, "[REDACTED]") {
+		t.Fatalf("Runtime error was not redacted: result=%#v error=%v", result.ExpertStages[1], err)
+	}
+	if got := agentruntime.ErrorCodeOf(err); got != agentruntime.ErrorAuthenticationFailed {
+		t.Fatalf("Runtime error code = %q", got)
 	}
 	if _, err := os.Stat(filepath.Join(persistent, "uncommitted.txt")); !os.IsNotExist(err) {
 		t.Fatalf("failed Workspace changes were committed: %v", err)
@@ -250,9 +564,14 @@ func newTeamTestExecutor(t *testing.T) (*Executor, application.ExecutionJob, str
 	return executor, job, persistent
 }
 
-type recordingLease struct{}
+type recordingLease struct {
+	start func(containerprocess.Config)
+}
 
-func (*recordingLease) Start(context.Context, containerprocess.Config) (cliadapter.RunProcess, error) {
+func (lease *recordingLease) Start(_ context.Context, config containerprocess.Config) (cliadapter.RunProcess, error) {
+	if lease.start != nil {
+		lease.start(config)
+	}
 	return nil, nil
 }
 func (*recordingLease) Release(context.Context) error { return nil }
@@ -302,6 +621,24 @@ func (recorder *recordingProgress) RecordProgress(_ context.Context, _ applicati
 	return nil
 }
 
+type fallbackCreditRepository struct {
+	creditsapplication.Repository
+	aborted bool
+}
+
+func (*fallbackCreditRepository) ResolveRate(context.Context, creditsdomain.ModelRateKey) (creditsdomain.ModelCreditRate, error) {
+	return creditsdomain.ModelCreditRate{RevisionID: "default-1", InputMultiplierMicros: creditsdomain.MultiplierScale, OutputMultiplierMicros: creditsdomain.MultiplierScale, Fallback: creditsdomain.DefaultFallback}, nil
+}
+
+func (*fallbackCreditRepository) Admit(_ context.Context, admission creditsdomain.Admission) (creditsdomain.Admission, error) {
+	return admission, nil
+}
+
+func (repository *fallbackCreditRepository) Abort(context.Context, creditsdomain.Admission) error {
+	repository.aborted = true
+	return nil
+}
+
 func TestSanitizeNativeStateRemovesTransientConfigAndRedactsSessionFiles(t *testing.T) {
 	root := t.TempDir()
 	secret := "native-state-secret-canary"
@@ -328,6 +665,46 @@ func TestSanitizeNativeStateRemovesTransientConfigAndRedactsSessionFiles(t *test
 	}
 	if strings.Contains(string(content), secret) || !strings.Contains(string(content), "[REDACTED]") {
 		t.Fatalf("session state was not redacted: %s", content)
+	}
+}
+
+func TestNativeStateCommitCanRollbackAllPromotedMembers(t *testing.T) {
+	root := t.TempDir()
+	commit := &nativeStateCommit{}
+	for _, name := range []string{"first", "second"} {
+		persistent := filepath.Join(root, name, "persistent")
+		temporaryRoot := filepath.Join(root, name, "temporary")
+		temporary := filepath.Join(temporaryRoot, "sessions")
+		if err := os.MkdirAll(persistent, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(temporary, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(persistent, "state"), []byte("old-"+name), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(temporary, "state"), []byte("new-"+name), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		commit.promotions = append(commit.promotions, nativeStatePromotion{temporary: temporary, persistent: persistent})
+		commit.temporaryRoots = append(commit.temporaryRoots, temporaryRoot)
+	}
+
+	if err := commit.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := commit.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"first", "second"} {
+		content, err := os.ReadFile(filepath.Join(root, name, "persistent", "state"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(content) != "old-"+name {
+			t.Fatalf("%s state after rollback = %q", name, content)
+		}
 	}
 }
 
@@ -368,6 +745,28 @@ func TestPrepareRuntimeScratchCreatesAnInitiallyMissingDirectory(t *testing.T) {
 	}
 	if !info.IsDir() || info.Mode().Perm() != 0o750 {
 		t.Fatalf("Runtime scratch directory = mode %o, directory=%t", info.Mode().Perm(), info.IsDir())
+	}
+	attachmentInfo, err := os.Stat(filepath.Join(path, "attachments"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !attachmentInfo.IsDir() || attachmentInfo.Mode().Perm() != 0o750 {
+		t.Fatalf("Runtime attachment directory = mode %o, directory=%t", attachmentInfo.Mode().Perm(), attachmentInfo.IsDir())
+	}
+}
+
+func TestPrepareRuntimeAttachmentMountpointRejectsWorkspaceCollision(t *testing.T) {
+	workspace := t.TempDir()
+	reserved := filepath.Join(workspace, ".agent-platform-attachments")
+	if err := os.WriteFile(reserved, []byte("user data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareRuntimeAttachmentMountpoint(workspace, os.Getuid(), os.Getgid()); err == nil || !strings.Contains(err.Error(), "reserved Runtime attachment path") {
+		t.Fatalf("collision error = %v", err)
+	}
+	contents, err := os.ReadFile(reserved)
+	if err != nil || string(contents) != "user data" {
+		t.Fatalf("reserved Workspace entry was changed: %q, %v", contents, err)
 	}
 }
 

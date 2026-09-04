@@ -37,31 +37,31 @@ func ParseRuntime(value string) (RuntimeEngine, error) {
 }
 
 type Session struct {
-	ID                     string
-	OwnerID                string
-	Title                  string
-	ExpertID               *string
-	ExpertTeamID           *string
-	CurrentProviderModelID *string
-	ArchivedAt             *time.Time
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	Version                int64
+	ID           string
+	OwnerID      string
+	Title        string
+	ExpertID     *string
+	ExpertTeamID *string
+	ArchivedAt   *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Version      int64
 }
 
 type Message struct {
-	ID               int64
-	SessionID        string
-	Role             string
-	State            string
-	Content          string
-	Error            string
-	ProgressStage    string
-	ElapsedMS        int64
-	CreatedAt        time.Time
-	ResponseSnapshot *ResponseSnapshot
-	Attachments      []Attachment
-	ExpertStages     []ExpertStage
+	ID                int64
+	SessionID         string
+	Role              string
+	State             string
+	Content           string
+	Error             string
+	ProgressStage     string
+	ElapsedMS         int64
+	CreatedAt         time.Time
+	ResponseSnapshot  *ResponseSnapshot
+	Attachments       []Attachment
+	ExpertStages      []ExpertStage
+	CreditConsumption *CreditConsumption
 }
 
 // Attachment is an immutable reference to a user upload frozen onto one turn.
@@ -76,17 +76,19 @@ type Attachment struct {
 }
 
 type ResponseSnapshot struct {
-	ProviderModelID   string        `json:"provider_model_id"`
-	ConnectionID      string        `json:"connection_id"`
-	ConnectionName    string        `json:"connection_name"`
-	ProviderType      string        `json:"provider_type"`
-	ModelID           string        `json:"model_id"`
-	ModelName         string        `json:"model_name"`
-	Endpoint          string        `json:"endpoint"`
-	Protocols         []string      `json:"protocols"`
-	RuntimeEngine     RuntimeEngine `json:"runtime_engine"`
-	Compatibility     string        `json:"compatibility"`
-	ConnectionVersion int64         `json:"connection_version"`
+	SchemaVersion     int                      `json:"schema_version,omitempty"`
+	Stages            []ExecutionStageSnapshot `json:"stages,omitempty"`
+	ProviderModelID   string                   `json:"provider_model_id"`
+	ConnectionID      string                   `json:"connection_id"`
+	ConnectionName    string                   `json:"connection_name"`
+	ProviderType      string                   `json:"provider_type"`
+	ModelID           string                   `json:"model_id"`
+	ModelName         string                   `json:"model_name"`
+	Endpoint          string                   `json:"endpoint"`
+	Protocols         []string                 `json:"protocols"`
+	RuntimeEngine     RuntimeEngine            `json:"runtime_engine"`
+	Compatibility     string                   `json:"compatibility"`
+	ConnectionVersion int64                    `json:"connection_version"`
 }
 
 type MCPServer struct {
@@ -333,6 +335,9 @@ func (input WorkflowInput) Validate() error {
 	if input.ExpertID != nil && input.ExpertTeamID != nil {
 		return fmt.Errorf("%w: choose either an Expert or an Expert Team", ErrInvalid)
 	}
+	if input.ProviderModelID != nil || input.RuntimeEngine != nil {
+		return fmt.Errorf("%w: Workflow model and Runtime overrides are no longer supported", ErrInvalid)
+	}
 	if err := ValidateEnvironment(input.Environment); err != nil {
 		return err
 	}
@@ -366,6 +371,8 @@ type ExpertInput struct {
 	Name                   string
 	CapabilityIntroduction string
 	ExecutionInstruction   string
+	ProviderModelID        string
+	RuntimeEngine          RuntimeEngine
 	ExpertiseTags          []string
 	MCPServerIDs           []string
 	SkillIDs               []string
@@ -380,6 +387,12 @@ func (input ExpertInput) Validate() error {
 	}
 	if instruction := strings.TrimSpace(input.ExecutionInstruction); len(instruction) < 1 || len(instruction) > 20_000 {
 		return fmt.Errorf("%w: Execution Instruction must contain 1-20000 characters", ErrInvalid)
+	}
+	if strings.TrimSpace(input.ProviderModelID) == "" {
+		return fmt.Errorf("%w: Expert Provider Model is required", ErrInvalid)
+	}
+	if _, err := ParseRuntime(string(input.RuntimeEngine)); err != nil {
+		return fmt.Errorf("%w: Expert Runtime Engine is required", ErrInvalid)
 	}
 	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
 		return err
@@ -396,6 +409,8 @@ type Expert struct {
 	Name                   string
 	CapabilityIntroduction string
 	ExecutionInstruction   string
+	ProviderModelID        string
+	RuntimeEngine          RuntimeEngine
 	ExpertiseTags          []string
 	MCPServerIDs           []string
 	SkillIDs               []string
@@ -405,7 +420,11 @@ type Expert struct {
 }
 
 func (expert Expert) Available() bool {
-	return strings.TrimSpace(expert.ExecutionInstruction) != ""
+	if strings.TrimSpace(expert.ExecutionInstruction) == "" || strings.TrimSpace(expert.ProviderModelID) == "" {
+		return false
+	}
+	_, err := ParseRuntime(string(expert.RuntimeEngine))
+	return err == nil
 }
 
 func ValidateExpertiseTags(tags []string) error {
@@ -493,7 +512,7 @@ type ModelProviderPreset struct {
 
 type ModelProviderConnection struct {
 	ID                 string
-	OwnerID            string
+	CredentialOwnerID  string
 	Name               string
 	ProviderType       string
 	Endpoint           string
@@ -666,38 +685,64 @@ func (settings Settings) Validate() error {
 }
 
 type Run struct {
-	ID               string
-	ConversationID   string
-	TurnNumber       int
-	OwnerID          string
-	WorkflowID       string
-	WorkflowName     string
-	Trigger          string
-	State            string
-	TextInput        *string
-	JSONInput        map[string]any
-	Attachments      []Attachment
-	ExpertStages     []ExpertStage
-	FinalText        *string
-	FinalJSON        map[string]any
-	Error            string
-	WorkflowSnapshot map[string]any
-	QueuedAt         time.Time
-	StartedAt        *time.Time
-	EndedAt          *time.Time
+	ID                string
+	ConversationID    string
+	TurnNumber        int
+	OwnerID           string
+	WorkflowID        string
+	WorkflowName      string
+	Trigger           string
+	State             string
+	TextInput         *string
+	JSONInput         map[string]any
+	Attachments       []Attachment
+	ExpertStages      []ExpertStage
+	FinalText         *string
+	FinalJSON         map[string]any
+	Error             string
+	WorkflowSnapshot  map[string]any
+	QueuedAt          time.Time
+	StartedAt         *time.Time
+	EndedAt           *time.Time
+	CreditConsumption *CreditConsumption
 }
 
 type ExpertStage struct {
-	ExpertID   string    `json:"expert_id"`
-	ExpertName string    `json:"expert_name"`
-	Position   int       `json:"position"`
-	Total      int       `json:"total"`
-	State      string    `json:"state"`
-	ElapsedMS  int64     `json:"elapsed_ms"`
-	FinalText  string    `json:"final_text,omitempty"`
-	Error      string    `json:"error,omitempty"`
-	StartedAt  time.Time `json:"started_at,omitempty"`
-	EndedAt    time.Time `json:"ended_at,omitempty"`
+	ExpertID          string                  `json:"expert_id"`
+	ExpertName        string                  `json:"expert_name"`
+	ProviderModelID   string                  `json:"provider_model_id"`
+	ProviderModelName string                  `json:"provider_model_name"`
+	RuntimeEngine     RuntimeEngine           `json:"runtime_engine"`
+	Position          int                     `json:"position"`
+	Total             int                     `json:"total"`
+	State             string                  `json:"state"`
+	ElapsedMS         int64                   `json:"elapsed_ms"`
+	FinalText         string                  `json:"final_text,omitempty"`
+	Error             string                  `json:"error,omitempty"`
+	StartedAt         time.Time               `json:"started_at,omitempty"`
+	EndedAt           time.Time               `json:"ended_at,omitempty"`
+	CreditConsumption *CreditStageConsumption `json:"credit_consumption,omitempty"`
+}
+
+// CreditConsumption is the safe, owner-visible accounting result for a turn.
+type CreditConsumption struct {
+	TotalHundredths int64                    `json:"total_hundredths"`
+	Stages          []CreditStageConsumption `json:"stages"`
+}
+
+type CreditStageConsumption struct {
+	StagePosition          int    `json:"stage_position"`
+	ProviderModel          string `json:"provider_model"`
+	RuntimeEngine          string `json:"runtime_engine"`
+	InputTokens            int64  `json:"input_tokens,omitempty"`
+	OutputTokens           int64  `json:"output_tokens,omitempty"`
+	UsageReported          bool   `json:"usage_reported"`
+	InputMultiplierMicros  int64  `json:"input_multiplier_micros"`
+	OutputMultiplierMicros int64  `json:"output_multiplier_micros"`
+	FallbackHundredths     int64  `json:"fallback_hundredths"`
+	AmountHundredths       int64  `json:"amount_hundredths"`
+	Estimated              bool   `json:"estimated"`
+	RateRevisionID         string `json:"rate_revision_id"`
 }
 
 func ValidateWorkspacePath(value string) (string, error) {

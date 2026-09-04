@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPlatformApi } from "./client";
+import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -46,6 +46,27 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
+  it("allowlists fields when updating a Model Provider Connection", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const editForm = {
+      name: "OpenAI",
+      provider_type: "openai",
+      endpoint: "https://models.example.test/openai/v1",
+      protocols: ["openai_responses", "openai_chat"],
+      api_key: "",
+    };
+
+    await createPlatformApi(() => "token").updateModelProviderConnection("connection-1", editForm, 12);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      name: "OpenAI",
+      endpoint: "https://models.example.test/openai/v1",
+      protocols: ["openai_responses", "openai_chat"],
+      expected_version: 12,
+    });
+  });
+
   it("configures Git separately from the read-only Workspace", async () => {
     const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
       expect(JSON.parse(String(init?.body))).toEqual({ url: "https://git.example.com/team/project.git", branch: "main", authentication: "basic", username: "developer", password: "secret", config: [{ key: "user.name", value: "Agent" }] });
@@ -71,6 +92,17 @@ describe("Agent Workspace API client", () => {
 
     expect(attachment.image).toBe(true);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/attachments/upload?name=diagram.png");
+  });
+
+  it("downloads attachment content through the authenticated API", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "Content-Type": "image/png" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const content = await createPlatformApi(() => "token").getAttachmentDownload("attachment-1");
+
+    expect(content).toBeInstanceOf(Blob);
+    expect(content.type).toBe("image/png");
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
   it("normalizes Workspace byte counters from protobuf JSON", async () => {
@@ -136,6 +168,19 @@ describe("Agent Workspace API client", () => {
     await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, (snapshot) => snapshots.push(`${snapshot.progress_stage ?? "done"}:${snapshot.content}`));
 
     expect(snapshots).toEqual(["thinking:", "responding:你好", "done:你好！"]);
+  });
+
+  it("parses the final Session snapshot when the stream closes without a blank-line delimiter", async () => {
+    const body = new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode("id: 1\nevent: message.snapshot\ndata: {\"state\":\"completed\",\"content\":\"完成\",\"elapsed_ms\":1200}"));
+      controller.close();
+    } });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));
+    const snapshots: SessionMessageSnapshot[] = [];
+
+    await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, (snapshot) => snapshots.push(snapshot));
+
+    expect(snapshots).toEqual([{ state: "completed", content: "完成", elapsed_ms: 1200 }]);
   });
 
   it("requests backend cancellation for the active Session response", async () => {

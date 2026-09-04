@@ -7,9 +7,9 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 )
 
-// Repository is the persistence port for private, per-user Agent Workspace data.
-// Every method receives the owner explicitly so adapters cannot accidentally
-// perform an unscoped lookup.
+// Repository is the persistence port for Agent Workspace data. User-owned
+// methods receive the owner explicitly; Model Catalog reads are platform-wide
+// and its mutation scope is authorized at the service boundary.
 type Repository interface {
 	ListSessions(context.Context, string, bool) ([]domain.Session, error)
 	CreateSession(context.Context, string, *string, *string) (domain.Session, error)
@@ -20,7 +20,7 @@ type Repository interface {
 	DeleteSession(context.Context, string, string) error
 	ListMessages(context.Context, string, string, int64, int) ([]domain.Message, error)
 	GetMessage(context.Context, string, string, int64) (domain.Message, error)
-	CreateMessagePair(context.Context, string, string, string, string, []domain.Attachment) (domain.Message, domain.Message, error)
+	CreateMessagePair(context.Context, string, string, string, []domain.Attachment) (domain.Message, domain.Message, error)
 	RetryMessage(context.Context, string, string, int64) (domain.Message, domain.Message, error)
 	CancelMessage(context.Context, string, string, int64) (domain.Message, error)
 
@@ -58,13 +58,13 @@ type Repository interface {
 
 	GetSettings(context.Context, string) (domain.Settings, error)
 	UpdateSettings(context.Context, string, domain.Settings, int64) (domain.Settings, error)
-	ListModelProviderConnections(context.Context, string) ([]domain.ModelProviderConnection, error)
+	ListModelProviderConnections(context.Context) ([]domain.ModelProviderConnection, error)
 	CreateModelProviderConnection(context.Context, string, domain.ModelProviderConnection, []byte, []domain.ProviderModel) (domain.ModelProviderConnection, error)
 	UpdateModelProviderConnection(context.Context, string, string, domain.ModelProviderConnection, []byte, []domain.ProviderModel, int64) (domain.ModelProviderConnection, error)
 	DeleteModelProviderConnection(context.Context, string, string) error
 	GetModelProviderAPIKey(context.Context, string, string) ([]byte, error)
 	ReplaceProviderModels(context.Context, string, string, []domain.ProviderModel, string, string) (domain.ModelProviderConnection, error)
-	CreateProviderModel(context.Context, string, string, domain.ProviderModel) (domain.ProviderModel, error)
+	CreateProviderModel(context.Context, string, domain.ProviderModel) (domain.ProviderModel, error)
 
 	ListMCPServers(context.Context, string) ([]domain.MCPServer, error)
 	CreateMCPServer(context.Context, string, domain.MCPServer, []byte) (domain.MCPServer, error)

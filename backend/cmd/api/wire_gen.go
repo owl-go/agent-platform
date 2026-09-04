@@ -38,7 +38,11 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	service2, err := agentworkspace.NewWorkspaceService(database)
+	service2, err := agentworkspace.NewCreditsService(database)
+	if err != nil {
+		return nil, err
+	}
+	service3, err := agentworkspace.NewWorkspaceService(database)
 	if err != nil {
 		return nil, err
 	}
@@ -58,11 +62,11 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, box, store, skillstoreStore, objectstoreProvider, config)
+	workspaceService, err := workspace.New(applicationService, service2, service3, box, store, skillstoreStore, objectstoreProvider, config)
 	if err != nil {
 		return nil, err
 	}
-	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service2)
+	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service3)
 	if err != nil {
 		return nil, err
 	}

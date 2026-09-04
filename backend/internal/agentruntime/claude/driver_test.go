@@ -17,7 +17,7 @@ func TestDriverBuildsHeadlessSandboxInvocation(t *testing.T) {
 		t.Fatalf("build invocation: %v", err)
 	}
 	want := []string{
-		"--print", "--bare", "--output-format", "stream-json", "--include-partial-messages",
+		"--print", "--bare", "--verbose", "--output-format", "stream-json", "--include-partial-messages",
 		"--permission-mode", "bypassPermissions", "--dangerously-skip-permissions",
 		"--strict-mcp-config", "--disable-slash-commands", "--no-chrome",
 		"--model", "claude-sonnet-configured",
@@ -53,5 +53,15 @@ func TestParserReadsStreamingTextResultUsageAndSession(t *testing.T) {
 	result := parser.Result()
 	if result.FinalMessage != "done" || result.CheckpointRef != "session-1" || result.Usage.InputTokens != 12 || result.Usage.OutputTokens != 7 {
 		t.Fatalf("parsed result = %+v", result)
+	}
+}
+
+func TestParserDoesNotReportOmittedUsage(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	if _, err := parser.Parse(processharness.StreamStdout, []byte(`{"type":"result","result":"done"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if parser.Result().Usage.Reported {
+		t.Fatal("omitted usage was reported as measured zero")
 	}
 }

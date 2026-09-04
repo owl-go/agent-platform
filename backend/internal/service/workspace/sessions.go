@@ -31,6 +31,11 @@ func (service *Service) CreateSession(ctx context.Context, request *workspacev1.
 	if err != nil {
 		return nil, err
 	}
+	if request.ExpertId != nil || request.ExpertTeamId != nil {
+		if err := service.validateExecutionRuntimes(ctx, owner, request.ExpertId, request.ExpertTeamId); err != nil {
+			return nil, publicError(err)
+		}
+	}
 	item, err := service.workspace.Repository().CreateSession(ctx, owner, request.ExpertId, request.ExpertTeamId)
 	if err != nil {
 		return nil, publicError(err)
@@ -78,6 +83,11 @@ func (service *Service) SetSessionExpertSelection(ctx context.Context, request *
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if request.ExpertId != nil || request.ExpertTeamId != nil {
+		if err := service.validateExecutionRuntimes(ctx, owner, request.ExpertId, request.ExpertTeamId); err != nil {
+			return nil, publicError(err)
+		}
 	}
 	item, err := service.workspace.Repository().SetSessionExpertSelection(ctx, owner, request.SessionId, request.ExpertId, request.ExpertTeamId, request.ExpectedVersion)
 	if err != nil {
@@ -128,11 +138,21 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, err
 	}
+	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
+		return nil, publicError(err)
+	}
+	session, err := service.workspace.Repository().GetSession(ctx, owner, request.SessionId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := service.validateExecutionRuntimes(ctx, owner, session.ExpertID, session.ExpertTeamID); err != nil {
+		return nil, publicError(err)
+	}
 	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	user, assistant, err := service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, request.ProviderModelId, attachments)
+	user, assistant, err := service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, attachments)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -143,6 +163,9 @@ func (service *Service) RetrySessionMessage(ctx context.Context, request *worksp
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
+		return nil, publicError(err)
 	}
 	user, assistant, err := service.workspace.Repository().RetryMessage(ctx, owner, request.SessionId, request.MessageId)
 	if err != nil {
@@ -164,7 +187,7 @@ func (service *Service) CancelSessionMessage(ctx context.Context, request *works
 }
 
 func sessionResponse(item workspacedomain.Session) *workspacev1.Session {
-	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, CurrentProviderModelId: item.CurrentProviderModelID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	return response
 }
 
@@ -175,7 +198,10 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	}
 	if item.ResponseSnapshot != nil {
 		snapshot := item.ResponseSnapshot
-		response.ResponseSnapshot = &workspacev1.ResponseSnapshot{ProviderModelId: snapshot.ProviderModelID, ConnectionId: snapshot.ConnectionID, ConnectionName: snapshot.ConnectionName, ProviderType: snapshot.ProviderType, ModelId: snapshot.ModelID, ModelName: snapshot.ModelName, Endpoint: snapshot.Endpoint, Protocols: snapshot.Protocols, RuntimeEngine: string(snapshot.RuntimeEngine), Compatibility: snapshot.Compatibility, ConnectionVersion: snapshot.ConnectionVersion}
+		response.ResponseSnapshot = &workspacev1.ResponseSnapshot{ProviderModelId: snapshot.ProviderModelID, ConnectionId: snapshot.ConnectionID, ConnectionName: snapshot.ConnectionName, ProviderType: snapshot.ProviderType, ModelId: snapshot.ModelID, ModelName: snapshot.ModelName, Endpoint: snapshot.Endpoint, Protocols: snapshot.Protocols, RuntimeEngine: string(snapshot.RuntimeEngine), Compatibility: snapshot.Compatibility, ConnectionVersion: snapshot.ConnectionVersion, SchemaVersion: int32(snapshot.SchemaVersion)}
+		for _, stage := range snapshot.Stages {
+			response.ResponseSnapshot.Stages = append(response.ResponseSnapshot.Stages, executionStageSnapshotResponse(stage))
+		}
 	}
 	for _, attachment := range item.Attachments {
 		response.Attachments = append(response.Attachments, attachmentResponse(attachment))
@@ -183,18 +209,52 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	for _, stage := range item.ExpertStages {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
+	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	return response
+}
+
+func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot) *workspacev1.ExecutionStageSnapshot {
+	model := item.ProviderModel
+	response := &workspacev1.ExecutionStageSnapshot{Position: int32(item.Position), RuntimeEngine: string(item.RuntimeEngine), ProviderModel: &workspacev1.ProviderModelSnapshot{Id: model.ID, ConnectionId: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ProviderType: model.ProviderType, ModelId: model.ModelID, Name: model.Name, Endpoint: model.Endpoint, Protocols: model.Protocols, Compatibility: model.Compatibility}}
+	if item.Expert != nil {
+		response.Expert = &workspacev1.ExpertSnapshot{Id: item.Expert.ID, Name: item.Expert.Name, ExecutionInstruction: item.Expert.ExecutionInstruction, Version: item.Expert.Version}
+	}
+	for _, server := range item.MCPServers {
+		response.McpServers = append(response.McpServers, &workspacev1.MCPServerSnapshot{Id: server.ID, Name: server.Name, Transport: server.Transport})
+	}
+	for _, skill := range item.Skills {
+		response.Skills = append(response.Skills, &workspacev1.SkillSnapshot{Id: skill.ID, Name: skill.Name, ObjectKey: skill.ObjectKey, Sha256: skill.SHA256})
+	}
 	return response
 }
 
 func expertStageResponse(item workspacedomain.ExpertStage) *workspacev1.ExpertStage {
-	response := &workspacev1.ExpertStage{ExpertId: item.ExpertID, ExpertName: item.ExpertName, Position: int32(item.Position), Total: int32(item.Total), State: item.State, ElapsedMs: item.ElapsedMS}
+	response := &workspacev1.ExpertStage{ExpertId: item.ExpertID, ExpertName: item.ExpertName, ProviderModelId: item.ProviderModelID, ProviderModelName: item.ProviderModelName, RuntimeEngine: string(item.RuntimeEngine), Position: int32(item.Position), Total: int32(item.Total), State: item.State, ElapsedMs: item.ElapsedMS}
 	if item.FinalText != "" {
 		response.FinalText = &item.FinalText
 	}
 	if item.Error != "" {
 		response.Error = &item.Error
 	}
+	if item.CreditConsumption != nil {
+		response.CreditConsumption = creditStageConsumptionResponse(*item.CreditConsumption)
+	}
 	return response
+}
+
+func creditConsumptionResponse(item *workspacedomain.CreditConsumption) *workspacev1.CreditConsumption {
+	if item == nil {
+		return nil
+	}
+	response := &workspacev1.CreditConsumption{TotalHundredths: item.TotalHundredths}
+	for _, stage := range item.Stages {
+		response.Stages = append(response.Stages, creditStageConsumptionResponse(stage))
+	}
+	return response
+}
+
+func creditStageConsumptionResponse(item workspacedomain.CreditStageConsumption) *workspacev1.CreditStageConsumption {
+	return &workspacev1.CreditStageConsumption{StagePosition: int32(item.StagePosition), ProviderModel: item.ProviderModel, RuntimeEngine: item.RuntimeEngine, InputTokens: item.InputTokens, OutputTokens: item.OutputTokens, UsageReported: item.UsageReported, InputMultiplierMicros: item.InputMultiplierMicros, OutputMultiplierMicros: item.OutputMultiplierMicros, FallbackHundredths: item.FallbackHundredths, AmountHundredths: item.AmountHundredths, Estimated: item.Estimated, RateRevisionId: item.RateRevisionID}
 }
 
 func attachmentResponse(item workspacedomain.Attachment) *workspacev1.Attachment {

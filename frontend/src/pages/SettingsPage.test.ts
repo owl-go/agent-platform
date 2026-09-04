@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
+import { ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type ModelProviderConnection, type PersonalSettings, type PlatformApi } from "../api/client";
+import { ApiError, platformApiKey, type ModelProviderConnection, type PersonalSettings, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
+import { authContextKey, type AuthContext } from "../auth/session";
 import SettingsPage from "./SettingsPage.vue";
 
 const connection: ModelProviderConnection = {
@@ -32,11 +34,25 @@ function apiStub(): PlatformApi {
   } as unknown as PlatformApi;
 }
 
+function authContext(administrator: boolean): AuthContext {
+  return {
+    isCallback: false,
+    session: {
+      state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "user@example.test", display_name: "User", administrator, settings_ready: true } }),
+      accessToken: () => "token",
+      initialize: vi.fn(async () => {}),
+      signIn: vi.fn(async () => {}),
+      signOut: vi.fn(async () => {}),
+      dispose: vi.fn(),
+    },
+  };
+}
+
 async function openConnectionEditor(api: PlatformApi) {
   const wrapper = mount(SettingsPage, {
     global: {
       plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-      provide: { [platformApiKey as symbol]: api },
+      provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) },
     },
   });
   await flushPromises();
@@ -60,7 +76,7 @@ describe("SettingsPage model provider feedback", () => {
     const wrapper = mount(SettingsPage, {
       global: {
         plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-        provide: { [platformApiKey as symbol]: api },
+        provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) },
       },
     });
     await flushPromises();
@@ -81,11 +97,13 @@ describe("SettingsPage model provider feedback", () => {
     const wrapper = mount(SettingsPage, {
       global: {
         plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-        provide: { [platformApiKey as symbol]: apiStub() },
+        provide: { [platformApiKey as symbol]: apiStub(), [authContextKey as symbol]: authContext(true) },
       },
     });
     await flushPromises();
 
+    expect(wrapper.find(".page-header .eyebrow").exists()).toBe(false);
+    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "模型设置", "扩展"]);
     expect(wrapper.get(".page-header").text()).not.toContain("定义你的默认个性");
     expect(wrapper.find(".settings-canvas .section-heading h2").exists()).toBe(false);
     await wrapper.findAll(".settings-nav button")[1]!.trigger("click");
@@ -123,6 +141,18 @@ describe("SettingsPage model provider feedback", () => {
     wrapper.unmount();
   });
 
+  it("classifies a rejected provider update as a validation error", async () => {
+    const api = apiStub();
+    api.updateModelProviderConnection = vi.fn(async () => { throw new ApiError("validation", 400, "invalid_request_body"); });
+    const wrapper = await openConnectionEditor(api);
+    await wrapper.get(".modal-card").trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("请求参数无效");
+    expect(wrapper.get('.app-toast.error[role="alert"]').text()).not.toContain("API Key");
+    wrapper.unmount();
+  });
+
   it("adds a model with one model field", async () => {
     const api = apiStub();
     api.createProviderModel = vi.fn(async (_connectionID, input) => ({ id: "model-1", connection_id: connection.id, model_id: input.model_id, display_name: input.model_id, available: true, manually_added: true, compatibility: [] }));
@@ -138,6 +168,23 @@ describe("SettingsPage model provider feedback", () => {
 
     expect(api.createProviderModel).toHaveBeenCalledWith(connection.id, { model_id: "gpt-5.6-sol" });
     expect(wrapper.find(".modal-card select").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("hides global model management from ordinary Users while keeping global models selectable", async () => {
+    const api = apiStub();
+    api.listModelProviderConnections = vi.fn(async () => [{ ...connection, models: [{ id: "model-1", connection_id: connection.id, model_id: "gpt-5.6-sol", display_name: "GPT 5.6", available: true, manually_added: false, compatibility: [] }] }]);
+    const wrapper = mount(SettingsPage, {
+      global: {
+        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+        provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(false) },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "扩展"]);
+    expect(wrapper.find('.runtime-defaults option[value="model-1"]').exists()).toBe(true);
+    expect(wrapper.find(".provider-actions").exists()).toBe(false);
     wrapper.unmount();
   });
 });

@@ -9,21 +9,63 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Experts, Extensions, Model Provider Connections, and Personal Settings.
+An authenticated person who exclusively owns their Sessions, Workflows, Experts, Extensions, Personal Settings, Credit Balance, and Credit Ledger, and selects from the platform-wide Model Catalog.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
-The single bootstrap identity that creates, disables, enables, and resets passwords for User accounts without access to User-owned content.
+The single bootstrap identity that manages User accounts, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to User-owned content or execution-level consumption.
 _Avoid_: Platform operator, Organization administrator, support user
+
+## Credits And Usage
+
+**Credit**:
+A product usage unit available to one User and consumed by Provider Model usage; at a Model Credit Rate of 1.00, one Credit represents 10,000 input or output Tokens. A User without available Credits cannot start another model execution.
+_Avoid_: Currency, Provider charge, Token
+
+**Credit Balance**:
+The sum of one User's remaining Daily Credit Allocation and Redeemed Credit Balance. A completed execution may make it temporarily negative, preventing another execution until Credits become available again.
+_Avoid_: Daily Credit Limit, Provider balance, Token balance
+
+**Daily Credit Allocation**:
+A User-specific amount of expiring Credits restored at the start of each calendar day in that User's configured time zone. Unused daily Credits do not carry forward and are consumed before redeemed Credits.
+_Avoid_: Daily Credit Limit, recurring Credit Grant, rolling allowance
+
+**Redeemed Credit Balance**:
+The persistent Credits a User has received by redeeming Redemption Codes. They remain available across daily boundaries and are consumed after Daily Credits.
+_Avoid_: Daily Credit Allocation, payment balance
+
+**Redemption Code**:
+A platform-issued, globally single-use code with a fixed Credit value and optional expiry. A successful redemption adds persistent Credits to the redeeming User.
+_Avoid_: Workflow Access Token, coupon, payment
+
+**Model Credit Rate**:
+The platform-managed input multiplier, output multiplier, and missing-Usage fallback that determine Credit Consumption for a Provider type, Model API Protocol, and exact Provider Model identifier.
+_Avoid_: Provider price, User model setting, single model multiplier
+
+**Credit Adjustment**:
+An Administrator's reasoned addition to or subtraction from one User's persistent Credit Balance, preserved as an immutable account record.
+_Avoid_: Balance overwrite, Redemption Code, Daily Credit Allocation
+
+**Credit Ledger**:
+The immutable chronological record of one User's daily allocations, redemptions, adjustments, and Credit Consumption. The current Credit Balance and daily usage are projections of this record.
+_Avoid_: Mutable balance, Runtime Event stream, Provider invoice
+
+**Credit Day**:
+The calendar day used for one User's Daily Credit Allocation and daily consumption, bounded by midnight in that User's effective Personal Settings time zone.
+_Avoid_: Rolling 24-hour window, UTC day, billing cycle
+
+**Credit Consumption**:
+The immutable two-decimal Credit amount charged to one completed, failed, or cancelled model execution from its measured input and output Tokens and frozen Model Credit Rate.
+_Avoid_: Token Usage, Provider cost, Session total
 
 ## Conversations
 
 **Session**:
-A private, continuing text conversation owned by one User. It may use one Expert or Expert Team snapshot chosen before the first message, and it retains the User's current Provider Model selection.
+A private, continuing text conversation owned by one User. It may use one Expert or Expert Team snapshot chosen before the first message. Without an Expert, each Response resolves the current Personal Settings defaults; the Session has no Provider Model or Runtime Engine selection.
 _Avoid_: Workflow Run, Coding Task, runtime process
 
 **Response Snapshot**:
-The immutable Provider Model, Model Provider Connection identity, API Protocol, and Runtime Engine selected when one Session message is sent and reused when that response is regenerated. It records no API Key and is the execution identity shown with the resulting Agent response.
+The immutable ordered Execution Stage Snapshots resolved when one Session message is sent and reused when that response is regenerated. It records no API Key and preserves the execution identity of every model invocation shown with the resulting Agent response.
 _Avoid_: Workflow Snapshot, current Session model, Native Session
 
 **Archived Session**:
@@ -45,8 +87,12 @@ A reusable executable configuration that combines a name, goal, optional Expert 
 _Avoid_: Pipeline, visual DAG
 
 **Workflow Snapshot**:
-The immutable copy of a Workflow's goal, optional Expert or Expert Team, Provider Model, Model Provider Connection version, API Protocol, Endpoint, Runtime Engine, Extensions, and environment used by one Run Conversation; its API Key is referenced through protected versioned credentials rather than copied into the ordinary snapshot.
+The immutable copy of a Workflow's goal, ordered Execution Stage Snapshots, environment, and other execution inputs used by one Run Conversation. API Keys are referenced through protected versioned credentials rather than copied into the ordinary snapshot.
 _Avoid_: Published Workflow, Workflow release
+
+**Execution Stage Snapshot**:
+The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert identity, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, Execution Instruction, and Extensions. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
+_Avoid_: Expert Stage result, mutable Expert, team Runtime Engine
 
 **Workflow API Credential**:
 The single API Key and write-only API Secret pair used only to exchange for a short-lived Workflow Access Token. Regeneration immediately invalidates the previous pair and every token derived from it.
@@ -85,7 +131,7 @@ _Avoid_: Run result, Workspace file, Run Event, temporary output
 ## Experts And Extensions
 
 **Expert**:
-A reusable specialist profile with a display name, display-only Capability Introduction, visible Execution Instruction, Expertise Tags, and selected MCP Servers and Skills. It executes directly when selected alone and as a Subagent when included in an Expert Team.
+A reusable specialist profile with a display name, display-only Capability Introduction, visible Execution Instruction, required Provider Model and Runtime Engine, Expertise Tags, and selected MCP Servers and Skills. Its Provider Model and Runtime Engine govern every new execution of that Expert, whether selected alone or included in an Expert Team.
 _Avoid_: Persona, Workflow
 
 **Capability Introduction**:
@@ -105,20 +151,24 @@ A reusable named profile with a Capability Introduction, Expertise Tags, and an 
 _Avoid_: User team, organization, visual workflow
 
 **Subagent**:
-A platform-managed execution of one Expert in its own process and context inside an Expert Team. Runtime-specific native subagent support is not required for this behavior.
+A platform-managed execution of one Expert in its own isolated execution context inside an Expert Team. It uses that Expert's Runtime Engine; Runtime-specific native subagent support is not required for this behavior.
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
-A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, follows the team's member order, and shares the selected Provider Model and Runtime Engine. The final member produces the official response; retry restarts the whole collaboration.
+A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes in member order using its Expert's Provider Model and Runtime Engine. A team may mix Provider Models and Runtime Engines; the final member produces the official response and retry restarts the whole collaboration.
 _Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
 
 **Expert Snapshot**:
-The immutable Expert or Expert Team definition used by one Session or Run Conversation, including member order, Execution Instructions, and exact Extension revisions. Deleting or editing the source profile does not change this snapshot.
+The immutable Expert or Expert Team definition used by one Session or Run Conversation, including each Expert's Provider Model and Runtime Engine, member order, Execution Instructions, and exact Extension revisions. Deleting or editing the source profile does not change this snapshot.
 _Avoid_: Current Expert, mutable team, Provider Model snapshot
 
 **Incomplete Expert**:
-A migrated Expert that has a Capability Introduction but no Execution Instruction. It remains editable and visible but cannot be selected for new execution until completed.
+A migrated Expert missing an Execution Instruction, Provider Model, or Runtime Engine. It remains editable and visible but cannot be selected for new execution until completed.
 _Avoid_: Disabled Expert, deleted Expert
+
+**Unavailable Expert**:
+An otherwise complete Expert whose selected Provider Model, Model Provider Connection, Runtime Engine, or compatibility is not currently usable. It remains visible and editable but cannot be selected for new execution and never falls back to another model or engine.
+_Avoid_: Incomplete Expert, Disabled Expert, deleted Expert
 
 **Extension**:
 A User-owned MCP Server or Skill that can be selected by an Expert.
@@ -135,7 +185,7 @@ _Avoid_: Prompt, MCP Server, Runtime Engine
 ## Personal Configuration
 
 **Personal Settings**:
-A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone.
+A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone. Its default Provider Model and Runtime Engine apply only to execution without an Expert.
 _Avoid_: Organization policy, Expert configuration, Workflow settings
 
 **Personality**:
@@ -143,7 +193,7 @@ One of the gentle-professional, direct-efficient, lively-friendly, or custom com
 _Avoid_: Expert, model system prompt, display name
 
 **Model Provider Connection**:
-A User-owned named connection containing a provider type, Endpoint, and write-only API Key. A User may keep multiple connections for the same built-in or custom OpenAI-compatible provider.
+A platform-wide named connection containing a provider type, Endpoint, and write-only API Key. Only the Administrator manages connections; every User may select their available Provider Models.
 _Avoid_: Model Profile, Provider Model, Runtime Engine
 
 **Model API Protocol**:
@@ -151,7 +201,7 @@ The wire contract exposed by a Model Provider Connection, such as OpenAI Respons
 _Avoid_: Model Provider, Endpoint, Runtime Adapter
 
 **Provider Model**:
-A model identifier under one Model Provider Connection, loaded from its `/models` API, the platform-maintained provider defaults, or explicit User configuration. The platform does not classify model types; every available Provider Model is selectable subject to Runtime Model Compatibility.
+A platform-wide model identifier under one Model Provider Connection, loaded from its `/models` API, the platform-maintained provider defaults, or explicit Administrator configuration. The platform does not classify model types; every available Provider Model is selectable subject to Runtime Model Compatibility.
 _Avoid_: Model Profile, provider connection, Runtime Engine
 
 **Runtime Model Compatibility**:
@@ -163,7 +213,7 @@ The selected Claude Code, Codex, Hermes, OpenClaw, or PI Agent engine that gener
 _Avoid_: Provider Model, Expert, sandbox, Worker
 
 **Runtime Engine Setting**:
-A User's preference for one Runtime Engine, including that engine's default Provider Model. A Session initially selects this model and may retain another Provider Model without changing the default.
+A User's preference for one Runtime Engine, including that engine's default Provider Model. It supplies the execution configuration when no Expert is selected; Sessions and Workflows do not override it.
 _Avoid_: global default model, Personality model, fixed Session model
 
 **Runtime Adapter**:

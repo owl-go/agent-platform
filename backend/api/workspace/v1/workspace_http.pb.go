@@ -17,15 +17,19 @@ var _ = new(context.Context)
 
 const _ = http.SupportPackageIsVersion3
 
+const OperationAgentWorkspaceServiceAdjustUserCredits = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
 const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceService/CancelRun"
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+const OperationAgentWorkspaceServiceConfigureUserDailyCredits = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
 const OperationAgentWorkspaceServiceConfigureWorkflowGitSource = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
 const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
 const OperationAgentWorkspaceServiceCreateMCPServer = "/workspace.v1.AgentWorkspaceService/CreateMCPServer"
+const OperationAgentWorkspaceServiceCreateModelCreditRate = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
 const OperationAgentWorkspaceServiceCreateProviderModel = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
+const OperationAgentWorkspaceServiceCreateRedemptionCodeBatch = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
 const OperationAgentWorkspaceServiceCreateSession = "/workspace.v1.AgentWorkspaceService/CreateSession"
 const OperationAgentWorkspaceServiceCreateSkill = "/workspace.v1.AgentWorkspaceService/CreateSkill"
 const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceService/CreateUser"
@@ -40,6 +44,7 @@ const OperationAgentWorkspaceServiceDeleteWorkflow = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceExchangeWorkflowCredential = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
 const OperationAgentWorkspaceServiceGenerateWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
 const OperationAgentWorkspaceServiceGetArtifactDownload = "/workspace.v1.AgentWorkspaceService/GetArtifactDownload"
+const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
@@ -49,9 +54,11 @@ const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
+const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
 const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceService/ListExperts"
 const OperationAgentWorkspaceServiceListMCPServers = "/workspace.v1.AgentWorkspaceService/ListMCPServers"
+const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
 const OperationAgentWorkspaceServiceListRunTurns = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
@@ -63,6 +70,7 @@ const OperationAgentWorkspaceServiceListSkills = "/workspace.v1.AgentWorkspaceSe
 const OperationAgentWorkspaceServiceListUsers = "/workspace.v1.AgentWorkspaceService/ListUsers"
 const OperationAgentWorkspaceServiceListWorkflows = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 const OperationAgentWorkspaceServiceListWorkspaceEntries = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
+const OperationAgentWorkspaceServiceRedeemCreditCode = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
 const OperationAgentWorkspaceServiceRefreshProviderModels = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
 const OperationAgentWorkspaceServiceRerunWorkflow = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
 const OperationAgentWorkspaceServiceResetUserPassword = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
@@ -83,15 +91,19 @@ const OperationAgentWorkspaceServiceUpdateSkill = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceUpdateWorkflow = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
 
 type AgentWorkspaceServiceHTTPServer interface {
+	AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error)
 	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
 	CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error)
+	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	CreateProviderModel(context.Context, *CreateProviderModelRequest) (*ProviderModel, error)
+	CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error)
 	CreateSession(context.Context, *CreateSessionRequest) (*Session, error)
 	CreateSkill(context.Context, *CreateSkillRequest) (*Skill, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
@@ -106,6 +118,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetArtifactDownload(context.Context, *GetArtifactDownloadRequest) (*ArtifactDownload, error)
+	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
@@ -115,9 +128,11 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
+	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
 	ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error)
+	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
 	ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error)
@@ -129,6 +144,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
+	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
 	RefreshProviderModels(context.Context, *RefreshProviderModelsRequest) (*ModelProviderConnection, error)
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
@@ -156,6 +172,14 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/admin/users", _AgentWorkspaceService_CreateUser0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/enabled", _AgentWorkspaceService_SetUserEnabled0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/users/{user_id}/password-reset", _AgentWorkspaceService_ResetUserPassword0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/credits/balance", _AgentWorkspaceService_GetCreditBalance0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/credits/ledger", _AgentWorkspaceService_ListCreditLedger0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/credits/redemptions", _AgentWorkspaceService_RedeemCreditCode0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/daily-credits", _AgentWorkspaceService_ConfigureUserDailyCredits0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/users/{user_id}/credit-adjustments", _AgentWorkspaceService_AdjustUserCredits0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/model-credit-rates", _AgentWorkspaceService_ListModelCreditRates0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/model-credit-rates", _AgentWorkspaceService_CreateModelCreditRate0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/redemption-code-batches", _AgentWorkspaceService_CreateRedemptionCodeBatch0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions", _AgentWorkspaceService_ListSessions0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions", _AgentWorkspaceService_CreateSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_GetSession0_HTTP_Handler(srv))
@@ -314,6 +338,164 @@ func _AgentWorkspaceService_ResetUserPassword0_HTTP_Handler(srv AgentWorkspaceSe
 			return err
 		}
 		reply := out.(*ResetUserPasswordResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetCreditBalance0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetCreditBalanceRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetCreditBalance)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetCreditBalance(ctx, req.(*GetCreditBalanceRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditBalance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListCreditLedger0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListCreditLedgerRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListCreditLedger)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListCreditLedger(ctx, req.(*ListCreditLedgerRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListCreditLedgerResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_RedeemCreditCode0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in RedeemCreditCodeRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceRedeemCreditCode)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RedeemCreditCode(ctx, req.(*RedeemCreditCodeRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditBalance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ConfigureUserDailyCredits0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ConfigureUserDailyCreditsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceConfigureUserDailyCredits)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ConfigureUserDailyCredits(ctx, req.(*ConfigureUserDailyCreditsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditBalance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_AdjustUserCredits0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in AdjustUserCreditsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceAdjustUserCredits)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.AdjustUserCredits(ctx, req.(*AdjustUserCreditsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditBalance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListModelCreditRates0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListModelCreditRatesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListModelCreditRates)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListModelCreditRates(ctx, req.(*ListModelCreditRatesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListModelCreditRatesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateModelCreditRate0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateModelCreditRateRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateModelCreditRate)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateModelCreditRate(ctx, req.(*CreateModelCreditRateRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ModelCreditRate)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateRedemptionCodeBatch0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateRedemptionCodeBatchRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateRedemptionCodeBatch)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateRedemptionCodeBatch(ctx, req.(*CreateRedemptionCodeBatchRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*RedemptionCodeBatch)
 		return ctx.Result(200, reply)
 	}
 }
@@ -1563,15 +1745,19 @@ func _AgentWorkspaceService_DeleteSkill0_HTTP_Handler(srv AgentWorkspaceServiceH
 }
 
 type AgentWorkspaceServiceHTTPClient interface {
+	AdjustUserCredits(ctx context.Context, req *AdjustUserCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
+	ConfigureUserDailyCredits(ctx context.Context, req *ConfigureUserDailyCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	ConfigureWorkflowGitSource(ctx context.Context, req *ConfigureWorkflowGitSourceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	CreateMCPServer(ctx context.Context, req *CreateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
+	CreateModelCreditRate(ctx context.Context, req *CreateModelCreditRateRequest, opts ...http.CallOption) (rsp *ModelCreditRate, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	CreateProviderModel(ctx context.Context, req *CreateProviderModelRequest, opts ...http.CallOption) (rsp *ProviderModel, err error)
+	CreateRedemptionCodeBatch(ctx context.Context, req *CreateRedemptionCodeBatchRequest, opts ...http.CallOption) (rsp *RedemptionCodeBatch, err error)
 	CreateSession(ctx context.Context, req *CreateSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	CreateSkill(ctx context.Context, req *CreateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	CreateUser(ctx context.Context, req *CreateUserRequest, opts ...http.CallOption) (rsp *CreateUserResponse, err error)
@@ -1586,6 +1772,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ExchangeWorkflowCredential(ctx context.Context, req *ExchangeWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowAccessToken, err error)
 	GenerateWorkflowCredential(ctx context.Context, req *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetArtifactDownload(ctx context.Context, req *GetArtifactDownloadRequest, opts ...http.CallOption) (rsp *ArtifactDownload, err error)
+	GetCreditBalance(ctx context.Context, req *GetCreditBalanceRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
@@ -1595,9 +1782,11 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
+	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
 	ListExperts(ctx context.Context, req *ListExpertsRequest, opts ...http.CallOption) (rsp *ListExpertsResponse, err error)
 	ListMCPServers(ctx context.Context, req *ListMCPServersRequest, opts ...http.CallOption) (rsp *ListMCPServersResponse, err error)
+	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
 	ListRunTurns(ctx context.Context, req *ListRunTurnsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
@@ -1609,6 +1798,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListUsers(ctx context.Context, req *ListUsersRequest, opts ...http.CallOption) (rsp *ListUsersResponse, err error)
 	ListWorkflows(ctx context.Context, req *ListWorkflowsRequest, opts ...http.CallOption) (rsp *ListWorkflowsResponse, err error)
 	ListWorkspaceEntries(ctx context.Context, req *ListWorkspaceEntriesRequest, opts ...http.CallOption) (rsp *ListWorkspaceEntriesResponse, err error)
+	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	RefreshProviderModels(ctx context.Context, req *RefreshProviderModelsRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	RerunWorkflow(ctx context.Context, req *RerunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	ResetUserPassword(ctx context.Context, req *ResetUserPasswordRequest, opts ...http.CallOption) (rsp *ResetUserPasswordResponse, err error)
@@ -1635,6 +1825,23 @@ type AgentWorkspaceServiceHTTPClientImpl struct {
 
 func NewAgentWorkspaceServiceHTTPClient(client *http.Client) AgentWorkspaceServiceHTTPClient {
 	return &AgentWorkspaceServiceHTTPClientImpl{client}
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) AdjustUserCredits(ctx context.Context, in *AdjustUserCreditsRequest, opts ...http.CallOption) (*CreditBalance, error) {
+	var out CreditBalance
+	pattern := "/api/v1/admin/users/{user_id}/credit-adjustments"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceAdjustUserCredits),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func (c *AgentWorkspaceServiceHTTPClientImpl) CancelRun(ctx context.Context, in *CancelRunRequest, opts ...http.CallOption) (*Run, error) {
@@ -1665,6 +1872,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CancelSessionMessage(ctx context.C
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ConfigureUserDailyCredits(ctx context.Context, in *ConfigureUserDailyCreditsRequest, opts ...http.CallOption) (*CreditBalance, error) {
+	var out CreditBalance
+	pattern := "/api/v1/admin/users/{user_id}/daily-credits"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceConfigureUserDailyCredits),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1756,6 +1980,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateMCPServer(ctx context.Contex
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateModelCreditRate(ctx context.Context, in *CreateModelCreditRateRequest, opts ...http.CallOption) (*ModelCreditRate, error) {
+	var out ModelCreditRate
+	pattern := "/api/v1/admin/model-credit-rates"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateModelCreditRate),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) CreateModelProviderConnection(ctx context.Context, in *CreateModelProviderConnectionRequest, opts ...http.CallOption) (*ModelProviderConnection, error) {
 	var out ModelProviderConnection
 	pattern := "/api/v1/model-provider-connections"
@@ -1781,6 +2022,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateProviderModel(ctx context.Co
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCreateProviderModel),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateRedemptionCodeBatch(ctx context.Context, in *CreateRedemptionCodeBatchRequest, opts ...http.CallOption) (*RedemptionCodeBatch, error) {
+	var out RedemptionCodeBatch
+	pattern := "/api/v1/admin/redemption-code-batches"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateRedemptionCodeBatch),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -2020,6 +2278,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetArtifactDownload(ctx context.Co
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...http.CallOption) (*CreditBalance, error) {
+	var out CreditBalance
+	pattern := "/api/v1/credits/balance"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetCreditBalance),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...http.CallOption) (*CurrentUser, error) {
 	var out CurrentUser
 	pattern := "/api/v1/me"
@@ -2164,6 +2438,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListArtifacts(ctx context.Context,
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...http.CallOption) (*ListCreditLedgerResponse, error) {
+	var out ListCreditLedgerResponse
+	pattern := "/api/v1/credits/ledger"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListCreditLedger),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListExpertTeams(ctx context.Context, in *ListExpertTeamsRequest, opts ...http.CallOption) (*ListExpertTeamsResponse, error) {
 	var out ListExpertTeamsResponse
 	pattern := "/api/v1/expert-teams"
@@ -2203,6 +2493,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListMCPServers(ctx context.Context
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListMCPServers),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListModelCreditRates(ctx context.Context, in *ListModelCreditRatesRequest, opts ...http.CallOption) (*ListModelCreditRatesResponse, error) {
+	var out ListModelCreditRatesResponse
+	pattern := "/api/v1/admin/model-credit-rates"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListModelCreditRates),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -2382,6 +2688,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListWorkspaceEntries(ctx context.C
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) RedeemCreditCode(ctx context.Context, in *RedeemCreditCodeRequest, opts ...http.CallOption) (*CreditBalance, error) {
+	var out CreditBalance
+	pattern := "/api/v1/credits/redemptions"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceRedeemCreditCode),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,114 @@
     }
   ],
   "paths": {
+    "/api/v1/admin/model-credit-rates": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListModelCreditRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListModelCreditRatesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateModelCreditRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ModelCreditRate"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateModelCreditRateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/redemption-code-batches": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateRedemptionCodeBatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RedemptionCodeBatch"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateRedemptionCodeBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "operationId": "AgentWorkspaceService_ListUsers",
@@ -71,6 +179,106 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/v1CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/credit-adjustments": {
+      "post": {
+        "operationId": "AgentWorkspaceService_AdjustUserCredits",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreditBalance"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceAdjustUserCreditsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/daily-credits": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_ConfigureUserDailyCredits",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreditBalance"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceConfigureUserDailyCreditsBody"
               }
             }
           },
@@ -171,6 +379,125 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AgentWorkspaceServiceResetUserPasswordBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/credits/balance": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetCreditBalance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreditBalance"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/credits/ledger": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCreditLedger",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCreditLedgerResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/credits/redemptions": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RedeemCreditCode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreditBalance"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1RedeemCreditCodeRequest"
               }
             }
           },
@@ -2830,11 +3157,32 @@
   },
   "components": {
     "schemas": {
+      "AgentWorkspaceServiceAdjustUserCreditsBody": {
+        "type": "object",
+        "properties": {
+          "amount_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "AgentWorkspaceServiceCancelRunBody": {
         "type": "object"
       },
       "AgentWorkspaceServiceCancelSessionMessageBody": {
         "type": "object"
+      },
+      "AgentWorkspaceServiceConfigureUserDailyCreditsBody": {
+        "type": "object",
+        "properties": {
+          "allocation_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "AgentWorkspaceServiceConfigureWorkflowGitSourceBody": {
         "type": "object",
@@ -2920,9 +3268,6 @@
         "type": "object",
         "properties": {
           "content": {
-            "type": "string"
-          },
-          "provider_model_id": {
             "type": "string"
           },
           "attachment_ids": {
@@ -3211,6 +3556,35 @@
           }
         }
       },
+      "v1CreateModelCreditRateRequest": {
+        "type": "object",
+        "properties": {
+          "provider_type": {
+            "type": "string"
+          },
+          "api_protocol": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "input_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fallback_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expected_revision_id": {
+            "type": "string"
+          }
+        }
+      },
       "v1CreateModelProviderConnectionRequest": {
         "type": "object",
         "properties": {
@@ -3231,6 +3605,23 @@
           },
           "api_key": {
             "type": "string"
+          }
+        }
+      },
+      "v1CreateRedemptionCodeBatchRequest": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -3299,6 +3690,144 @@
           }
         }
       },
+      "v1CreditBalance": {
+        "type": "object",
+        "properties": {
+          "total_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "daily_remaining_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "persistent_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "today_consumed_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "daily_allocation_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "credit_day": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "next_allocation_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pending_daily_allocation_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending_effective_day": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1CreditConsumption": {
+        "type": "object",
+        "properties": {
+          "total_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CreditStageConsumption"
+            }
+          }
+        }
+      },
+      "v1CreditLedgerEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "amount_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "resulting_balance_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "credit_day": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1CreditStageConsumption": {
+        "type": "object",
+        "properties": {
+          "stage_position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "provider_model": {
+            "type": "string"
+          },
+          "runtime_engine": {
+            "type": "string"
+          },
+          "input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usage_reported": {
+            "type": "boolean"
+          },
+          "input_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fallback_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "amount_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "estimated": {
+            "type": "boolean"
+          },
+          "rate_revision_id": {
+            "type": "string"
+          }
+        }
+      },
       "v1CurrentUser": {
         "type": "object",
         "properties": {
@@ -3319,6 +3848,9 @@
           },
           "settings_ready": {
             "type": "boolean"
+          },
+          "credit_balance": {
+            "$ref": "#/components/schemas/v1CreditBalance"
           }
         }
       },
@@ -3344,6 +3876,36 @@
           },
           "configured": {
             "type": "boolean"
+          }
+        }
+      },
+      "v1ExecutionStageSnapshot": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expert": {
+            "$ref": "#/components/schemas/v1ExpertSnapshot"
+          },
+          "runtime_engine": {
+            "type": "string"
+          },
+          "provider_model": {
+            "$ref": "#/components/schemas/v1ProviderModelSnapshot"
+          },
+          "mcp_servers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1MCPServerSnapshot"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SkillSnapshot"
+            }
           }
         }
       },
@@ -3394,6 +3956,24 @@
           },
           "available": {
             "type": "boolean"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "runtime_engine": {
+            "type": "string"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "availability_reason": {
+            "type": "string"
+          },
+          "compatibility": {
+            "type": "string"
+          },
+          "provider_model_name": {
+            "type": "string"
           }
         }
       },
@@ -3426,6 +4006,30 @@
             "items": {
               "type": "string"
             }
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "runtime_engine": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ExpertSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "execution_instruction": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -3458,6 +4062,18 @@
           "total": {
             "type": "integer",
             "format": "int32"
+          },
+          "credit_consumption": {
+            "$ref": "#/components/schemas/v1CreditStageConsumption"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "provider_model_name": {
+            "type": "string"
+          },
+          "runtime_engine": {
+            "type": "string"
           }
         }
       },
@@ -3581,6 +4197,20 @@
           }
         }
       },
+      "v1ListCreditLedgerResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CreditLedgerEntry"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
       "v1ListExpertTeamsResponse": {
         "type": "object",
         "properties": {
@@ -3610,6 +4240,17 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1MCPServer"
+            }
+          }
+        }
+      },
+      "v1ListModelCreditRatesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ModelCreditRate"
             }
           }
         }
@@ -3826,6 +4467,75 @@
           }
         }
       },
+      "v1MCPServerSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "transport": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "runner": {
+            "type": "string"
+          },
+          "package": {
+            "type": "string"
+          },
+          "package_version": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "v1ModelCreditRate": {
+        "type": "object",
+        "properties": {
+          "revision_id": {
+            "type": "string"
+          },
+          "provider_type": {
+            "type": "string"
+          },
+          "api_protocol": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "input_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_multiplier_micros": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fallback_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "superseded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "v1ModelProviderConnection": {
         "type": "object",
         "properties": {
@@ -3965,11 +4675,105 @@
           }
         }
       },
+      "v1ProviderModelSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "connection_id": {
+            "type": "string"
+          },
+          "connection_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "provider_type": {
+            "type": "string"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "protocols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compatibility": {
+            "type": "string"
+          }
+        }
+      },
       "v1ReadyResponse": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "v1RedeemCreditCodeRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "v1RedemptionCode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "plaintext": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "v1RedemptionCodeBatch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "codes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RedemptionCode"
+            }
           }
         }
       },
@@ -4020,6 +4824,16 @@
           "connection_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "schema_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ExecutionStageSnapshot"
+            }
           }
         }
       },
@@ -4093,6 +4907,9 @@
             "items": {
               "$ref": "#/components/schemas/v1ExpertStage"
             }
+          },
+          "credit_consumption": {
+            "$ref": "#/components/schemas/v1CreditConsumption"
           }
         }
       },
@@ -4202,9 +5019,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "current_provider_model_id": {
-            "type": "string"
-          },
           "expert_team_id": {
             "type": "string"
           }
@@ -4254,6 +5068,9 @@
             "items": {
               "$ref": "#/components/schemas/v1ExpertStage"
             }
+          },
+          "credit_consumption": {
+            "$ref": "#/components/schemas/v1CreditConsumption"
           }
         }
       },
@@ -4289,6 +5106,23 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "v1SkillSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object_key": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
           }
         }
       },
@@ -4350,6 +5184,9 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "credit_balance": {
+            "$ref": "#/components/schemas/v1CreditBalance"
           }
         }
       },
@@ -4366,12 +5203,6 @@
             "type": "string"
           },
           "expert_id": {
-            "type": "string"
-          },
-          "provider_model_id": {
-            "type": "string"
-          },
-          "runtime_engine": {
             "type": "string"
           },
           "environment": {
@@ -4449,12 +5280,6 @@
             "type": "string"
           },
           "expert_id": {
-            "type": "string"
-          },
-          "provider_model_id": {
-            "type": "string"
-          },
-          "runtime_engine": {
             "type": "string"
           },
           "environment": {

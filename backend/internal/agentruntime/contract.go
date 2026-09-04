@@ -3,6 +3,8 @@ package agentruntime
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -37,6 +39,12 @@ type ExecuteRequest struct {
 	CheckpointRef  string
 	EnvironmentRef string
 	MCPConfigPath  string
+	Attachments    []Attachment
+}
+
+type Attachment struct {
+	Path        string
+	ContentType string
 }
 
 func (r ExecuteRequest) SupportsModelProtocol(protocol string) bool {
@@ -66,6 +74,16 @@ func (r ExecuteRequest) Validate() error {
 			}
 		}
 	}
+	if len(r.Attachments) > 10 {
+		return &Error{Code: ErrorInvalidConfiguration, Message: "at most 10 attachments are allowed"}
+	}
+	for _, attachment := range r.Attachments {
+		clean := filepath.Clean(attachment.Path)
+		const attachmentRoot = "/workspace/.agent-platform-attachments"
+		if !filepath.IsAbs(clean) || clean == attachmentRoot || !strings.HasPrefix(clean, attachmentRoot+string(filepath.Separator)) || strings.TrimSpace(attachment.ContentType) == "" {
+			return &Error{Code: ErrorInvalidConfiguration, Message: "attachment path and content type are invalid"}
+		}
+	}
 	return nil
 }
 
@@ -81,6 +99,8 @@ type Usage struct {
 	InputTokens  int64
 	OutputTokens int64
 	CostMicros   int64
+	// Reported distinguishes an actual zero-token report from missing Usage.
+	Reported bool
 }
 
 type Event struct {

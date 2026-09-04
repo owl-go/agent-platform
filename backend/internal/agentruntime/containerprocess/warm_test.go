@@ -66,6 +66,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	}
 	exists, running, fingerprint := false, false, ""
 	creates := 0
+	var createArguments []string
 	manager.docker = func(_ context.Context, arguments ...string) ([]byte, error) {
 		switch arguments[0] {
 		case "inspect":
@@ -81,6 +82,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 			return []byte("false\n"), nil
 		case "create":
 			exists, creates = true, creates+1
+			createArguments = append([]string(nil), arguments...)
 			for index, argument := range arguments {
 				if argument == "--label" && index+1 < len(arguments) && strings.HasPrefix(arguments[index+1], "agent-platform.warm-config=") {
 					fingerprint = strings.TrimPrefix(arguments[index+1], "agent-platform.warm-config=")
@@ -106,6 +108,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	config := validConfig(nil, nil)
 	config.ContainerWorkspace = "/workspace"
 	config.ScratchDirectory = "/workspaces/scratch"
+	config.AttachmentDirectory = "/workspaces/scratch/attachments"
 
 	for _, command := range [][]string{{"claude", "--version"}, {"claude", "execute"}} {
 		lease, err := manager.Checkout(context.Background(), name)
@@ -125,6 +128,10 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	}
 	if creates != 1 {
 		t.Fatalf("container create count = %d, want one retained definition", creates)
+	}
+	wantAttachmentMount := "type=bind,src=/workspaces/scratch/attachments,dst=/workspace/.agent-platform-attachments,readonly=true"
+	if !containsPair(createArguments, "--mount", wantAttachmentMount) {
+		t.Fatalf("attachment mount %q missing from %#v", wantAttachmentMount, createArguments)
 	}
 	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", name, "/usr/local/bin/runtime-entrypoint", "claude"}
 	for _, command := range commands {

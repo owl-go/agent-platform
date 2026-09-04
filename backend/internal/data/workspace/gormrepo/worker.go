@@ -3,11 +3,13 @@ package gormrepo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 
@@ -47,7 +49,17 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job = claimed
 		return err
 	})
-	return job, err
+	if err != nil || job == nil || job.Kind == application.JobMCPTest {
+		return job, err
+	}
+	job.Timezone = "Asia/Shanghai"
+	var timezone string
+	if queryErr := repository.db.WithContext(ctx).Table("personal_settings").Select("timezone").Where("user_id = ?", job.OwnerID).Scan(&timezone).Error; queryErr != nil {
+		return nil, queryErr
+	} else if strings.TrimSpace(timezone) != "" {
+		job.Timezone = timezone
+	}
+	return job, nil
 }
 
 func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -115,10 +127,36 @@ func enqueueDueSchedule(tx *gorm.DB, now time.Time) error {
 		return fmt.Errorf("decode due Workflow schedule: %w", err)
 	}
 	if _, err := createRunOnTx(tx, workflow.OwnerID, workflow.ID, "scheduled", nil, nil); err != nil {
-		return err
+		if !errors.Is(err, domain.ErrInvalid) && !errors.Is(err, domain.ErrNotFound) {
+			return err
+		}
+		if failureErr := createFailedScheduledRun(tx, workflow, err, now); failureErr != nil {
+			return failureErr
+		}
 	}
 	next := nextScheduledAt(&schedule, now)
 	return tx.Model(&workflowRecord{}).Where("id = ?", workflow.ID).Update("next_scheduled_at", next).Error
+}
+
+func createFailedScheduledRun(tx *gorm.DB, workflow workflowRecord, cause error, now time.Time) error {
+	id := uuid.NewString()
+	input, err := marshal(map[string]any{"text": nil, "json": nil})
+	if err != nil {
+		return err
+	}
+	snapshot, err := marshal(map[string]any{"schema_version": 2, "workflow_name": workflow.Name, "goal": workflow.Goal, "stages": []any{}})
+	if err != nil {
+		return err
+	}
+	message := cause.Error()
+	if len(message) > 4_096 {
+		message = message[:4_096]
+	}
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: workflow.OwnerID, WorkflowID: &workflow.ID, WorkflowName: workflow.Name, Trigger: "scheduled", State: "failed", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), TerminalError: &message, QueuedAt: now, EndedAt: &now, Version: 1}
+	if err := tx.Create(&created).Error; err != nil {
+		return err
+	}
+	return tx.Table("run_events").Create(map[string]any{"run_id": id, "sequence": 1, "event_type": "run.failed", "payload": []byte(`{}`), "occurred_at": now}).Error
 }
 
 func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -128,6 +166,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		JOIN users owner ON owner.id = candidate.owner_user_id AND owner.disabled_at IS NULL
 		JOIN workflows workflow ON workflow.id = candidate.workflow_id AND workflow.deleted_at IS NULL
 		WHERE candidate.state = 'queued'
+		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = candidate.owner_user_id)
 		  AND NOT EXISTS (SELECT 1 FROM runs active WHERE active.workflow_id = candidate.workflow_id AND active.state = 'running')
 		ORDER BY candidate.queued_at, candidate.id
 		FOR UPDATE OF candidate, workflow SKIP LOCKED LIMIT 1`).Scan(&row).Error
@@ -138,11 +177,19 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := json.Unmarshal(row.WorkflowSnapshot, &snapshot); err != nil {
 		return nil, fmt.Errorf("decode claimed Workflow snapshot: %w", err)
 	}
-	var credential modelProviderCredentialVersionRecord
-	if err := tx.Where("connection_id = ? AND connection_version = ?", snapshot.ProviderModel.ConnectionID, snapshot.ProviderModel.ConnectionVersion).Take(&credential).Error; err != nil {
-		return nil, fmt.Errorf("load versioned Model Provider credential: %w", mapNotFound(err))
+	if err := validateQueuedSnapshotAvailability(tx, snapshot); err != nil {
+		now, message := time.Now().UTC(), err.Error()
+		if updateErr := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "ended_at": now, "version": gorm.Expr("version + 1")}).Error; updateErr != nil {
+			return nil, updateErr
+		}
+		if eventErr := tx.Table("run_events").Create(map[string]any{"run_id": row.ID, "sequence": 1, "event_type": "run.failed", "payload": []byte(`{}`), "occurred_at": now}).Error; eventErr != nil {
+			return nil, eventErr
+		}
+		return nil, nil
 	}
-	snapshot.ProviderModel.APIKeyCiphertext = credential.APIKeyCiphertext
+	if err := hydrateStageCredentials(tx, &snapshot); err != nil {
+		return nil, err
+	}
 	var input struct {
 		Text        *string             `json:"text"`
 		JSON        map[string]any      `json:"json"`
@@ -157,6 +204,18 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 			return nil, fmt.Errorf("load prior Run Conversation turns: %w", err)
 		}
 	}
+	checkpoint := ""
+	stageCheckpoints := map[int]string(nil)
+	if len(prior) > 0 {
+		checkpoint = prior[len(prior)-1].NativeCheckpoint
+		if stages, stageErr := snapshot.OrderedStages(); stageErr == nil && len(stages) > 1 && checkpoint != "" {
+			stageCheckpoints = make(map[int]string)
+			if err := json.Unmarshal([]byte(checkpoint), &stageCheckpoints); err != nil {
+				return nil, fmt.Errorf("decode Run Conversation team native checkpoints: %w", err)
+			}
+			checkpoint = ""
+		}
+	}
 	instruction := workflowRunInstruction(snapshot.Goal, prior, input.Text, input.JSON)
 	result := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "running", "started_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 	if result.Error != nil || result.RowsAffected != 1 {
@@ -169,7 +228,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if row.WorkflowID != nil {
 		workflowID = *row.WorkflowID
 	}
-	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, Instruction: instruction, Attachments: input.Attachments, Snapshot: snapshot}, nil
+	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, ConversationID: row.ConversationID, Instruction: instruction, Attachments: input.Attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
 }
 
 func workflowRunInstruction(goal string, prior []runRecord, textInput *string, jsonInput map[string]any) string {
@@ -231,6 +290,7 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 		JOIN users owner ON owner.id = session.owner_user_id
 		WHERE message.role = 'assistant' AND message.state = 'queued'
 		  AND session.archived_at IS NULL AND owner.disabled_at IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = session.owner_user_id)
 		  AND NOT EXISTS (
 			SELECT 1 FROM session_messages active
 			WHERE active.session_id = message.session_id AND active.state = 'generating'
@@ -262,13 +322,29 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateQueuedSnapshotAvailability(tx, snapshot); err != nil {
+		now, message := time.Now().UTC(), err.Error()
+		if updateErr := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "failed", "error": message, "progress_stage": "", "completed_at": now}).Error; updateErr != nil {
+			return nil, updateErr
+		}
+		return nil, nil
+	}
 	checkpoint := ""
-	if session.RuntimeEngine != nil && *session.RuntimeEngine == string(snapshot.RuntimeEngine) {
+	var stageCheckpoints map[int]string
+	stages, err := snapshot.OrderedStages()
+	if err != nil {
+		return nil, err
+	}
+	if len(stages) == 1 && session.RuntimeEngine != nil && *session.RuntimeEngine == string(stages[0].RuntimeEngine) {
 		var checkpointRow struct {
 			NativeCheckpoint string `gorm:"column:native_checkpoint"`
 		}
 		if err := tx.Table("sessions").Select("native_checkpoint").Where("id = ?", session.ID).Take(&checkpointRow).Error; err == nil {
 			checkpoint = checkpointRow.NativeCheckpoint
+		}
+	} else if len(stages) > 1 && session.NativeCheckpoint != "" {
+		if err := json.Unmarshal([]byte(session.NativeCheckpoint), &stageCheckpoints); err != nil {
+			return nil, fmt.Errorf("decode team native checkpoints: %w", err)
 		}
 	}
 	if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "generating", "progress_stage": "thinking"}).Error; err != nil {
@@ -281,31 +357,131 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 			return nil, fmt.Errorf("decode Session attachments: %w", err)
 		}
 	}
-	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, Attachments: attachments, CheckpointRef: checkpoint, Snapshot: snapshot}, nil
+	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, Attachments: attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
+}
+
+func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSnapshot) error {
+	stages, err := snapshot.OrderedStages()
+	if err != nil {
+		return err
+	}
+	for _, stage := range stages {
+		var current struct {
+			Available     bool   `gorm:"column:available"`
+			Protocols     []byte `gorm:"column:protocols"`
+			Compatibility []byte `gorm:"column:compatibility"`
+		}
+		query := tx.Table("provider_models model").Select("model.available, model.compatibility, connection.protocols").Joins("JOIN model_provider_connections connection ON connection.id = model.connection_id").Where("model.id = ?", stage.ProviderModel.ID).Take(&current)
+		if query.Error != nil || !current.Available {
+			return fmt.Errorf("%w: queued Provider Model for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+		}
+		var protocols []string
+		if err := json.Unmarshal(current.Protocols, &protocols); err != nil {
+			return err
+		}
+		protocol := stage.ModelProtocol
+		if protocol == "" {
+			protocol, err = domain.ModelProtocolForRuntime(stage.RuntimeEngine, protocols)
+			if err != nil {
+				return fmt.Errorf("Stage %d: %w", stage.Position, err)
+			}
+		}
+		found := false
+		for _, currentProtocol := range protocols {
+			found = found || currentProtocol == protocol
+		}
+		if !found {
+			return fmt.Errorf("%w: queued Provider Model protocol for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+		}
+		var compatibility []domain.RuntimeModelCompatibility
+		if err := json.Unmarshal(current.Compatibility, &compatibility); err != nil {
+			return err
+		}
+		for _, item := range compatibility {
+			if item.RuntimeEngine == stage.RuntimeEngine && item.Status == "incompatible" {
+				return fmt.Errorf("%w: queued Provider Model for Stage %d is incompatible", domain.ErrInvalid, stage.Position)
+			}
+		}
+	}
+	return nil
 }
 
 func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.ResponseSnapshot) (domain.ExecutionSnapshot, error) {
-	runtimeName := string(response.RuntimeEngine)
-	providerModelID := response.ProviderModelID
-	fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, Goal: "", ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, ProviderModelID: &providerModelID, RuntimeEngine: &runtimeName, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
-	stored := session.ExpertSnapshot
-	if len(stored) > 0 && string(stored) != "null" {
-		// Frozen Expert configuration remains executable after the live Expert or Team is edited or deleted.
-		fake.ExpertID, fake.ExpertTeamID = nil, nil
+	if response.SchemaVersion == 2 && len(response.Stages) > 0 {
+		var current domain.ExecutionSnapshot
+		stored := session.ExpertSnapshot
+		if len(stored) > 0 && string(stored) != "null" {
+			if err := json.Unmarshal(stored, &current); err != nil {
+				return domain.ExecutionSnapshot{}, fmt.Errorf("decode frozen Session execution plan: %w", err)
+			}
+		} else {
+			fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, Goal: "", ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
+			var err error
+			current, err = loadExecutionSnapshot(tx, fake)
+			if err != nil {
+				return domain.ExecutionSnapshot{}, err
+			}
+			current.Stages = append([]domain.ExecutionStageSnapshot(nil), response.Stages...)
+			if session.ExpertID != nil || session.ExpertTeamID != nil {
+				encoded, err := marshal(current)
+				if err != nil {
+					return domain.ExecutionSnapshot{}, err
+				}
+				if err := tx.Table("sessions").Where("id = ?", session.ID).Update("expert_snapshot", encoded).Error; err != nil {
+					return domain.ExecutionSnapshot{}, err
+				}
+			}
+		}
+		if err := hydrateStageCredentials(tx, &current); err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		return current, nil
 	}
-	current, err := loadExecutionSnapshot(tx, fake)
-	if err != nil {
+	var settings settingsRecord
+	if err := tx.Where("user_id = ?", session.OwnerID).Take(&settings).Error; err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}
-	var credential modelProviderCredentialVersionRecord
-	if err := tx.Where("connection_id = ? AND connection_version = ?", response.ConnectionID, response.ConnectionVersion).Take(&credential).Error; err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("load versioned Model Provider credential: %w", mapNotFound(err))
-	}
-	current.ProviderModel = domain.ProviderModelSnapshot{ID: response.ProviderModelID, ConnectionID: response.ConnectionID, ConnectionVersion: response.ConnectionVersion, ConnectionName: response.ConnectionName, ProviderType: response.ProviderType, ModelID: response.ModelID, Name: response.ModelName, Endpoint: response.Endpoint, Protocols: response.Protocols, APIKeyCiphertext: credential.APIKeyCiphertext}
-	if len(stored) == 0 || string(stored) == "null" {
-		if session.ExpertID == nil && session.ExpertTeamID == nil {
-			return current, nil
+	current := domain.ExecutionSnapshot{WorkflowName: session.Title, RuntimeEngine: response.RuntimeEngine, ProviderModel: domain.ProviderModelSnapshot{ID: response.ProviderModelID, ConnectionID: response.ConnectionID, ConnectionVersion: response.ConnectionVersion, ConnectionName: response.ConnectionName, ProviderType: response.ProviderType, ModelID: response.ModelID, Name: response.ModelName, Endpoint: response.Endpoint, Protocols: response.Protocols, Compatibility: response.Compatibility}, Personality: settings.Personality, PersonalityInstructions: settings.PersonalityInstructions, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
+	stored := session.ExpertSnapshot
+	if len(stored) > 0 && string(stored) != "null" {
+		var frozen domain.ExecutionSnapshot
+		if err := json.Unmarshal(stored, &frozen); err != nil {
+			return domain.ExecutionSnapshot{}, err
 		}
+		current.Expert, current.ExpertTeam, current.MCPServers, current.Skills = frozen.Expert, frozen.ExpertTeam, frozen.MCPServers, frozen.Skills
+	} else if session.ExpertID != nil {
+		var expert expertRecord
+		if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, *session.ExpertID).Take(&expert).Error; err != nil {
+			return domain.ExecutionSnapshot{}, mapNotFound(err)
+		}
+		member, err := loadExpertMemberSnapshot(tx, session.OwnerID, expert, 1)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		current.Expert, current.MCPServers, current.Skills = &member.ExpertSnapshot, member.MCPServers, member.Skills
+	} else if session.ExpertTeamID != nil {
+		var team expertTeamRecord
+		if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, *session.ExpertTeamID).Take(&team).Error; err != nil {
+			return domain.ExecutionSnapshot{}, mapNotFound(err)
+		}
+		var ids []string
+		if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		current.ExpertTeam = &domain.ExpertTeamSnapshot{ID: team.ID, Name: team.Name, CapabilityIntroduction: team.CapabilityIntroduction}
+		for index, id := range ids {
+			var expert expertRecord
+			if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, id).Take(&expert).Error; err != nil {
+				return domain.ExecutionSnapshot{}, mapNotFound(err)
+			}
+			member, err := loadExpertMemberSnapshot(tx, session.OwnerID, expert, index+1)
+			if err != nil {
+				return domain.ExecutionSnapshot{}, err
+			}
+			current.ExpertTeam.Members = append(current.ExpertTeam.Members, member)
+		}
+	}
+	if len(stored) == 0 && (session.ExpertID != nil || session.ExpertTeamID != nil) {
 		encoded, err := marshal(current)
 		if err != nil {
 			return domain.ExecutionSnapshot{}, err
@@ -313,40 +489,96 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 		if err := tx.Table("sessions").Where("id = ?", session.ID).Update("expert_snapshot", encoded).Error; err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
-		return current, nil
 	}
-	var frozen domain.ExecutionSnapshot
-	if err := json.Unmarshal(stored, &frozen); err != nil {
+	if err := hydrateStageCredentials(tx, &current); err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}
-	current.Expert, current.ExpertTeam, current.MCPServers, current.Skills = frozen.Expert, frozen.ExpertTeam, frozen.MCPServers, frozen.Skills
 	return current, nil
 }
 
+func hydrateStageCredentials(tx *gorm.DB, snapshot *domain.ExecutionSnapshot) error {
+	stages, err := snapshot.OrderedStages()
+	if err != nil {
+		return err
+	}
+	for index := range stages {
+		var credential modelProviderCredentialVersionRecord
+		model := &stages[index].ProviderModel
+		if err := tx.Where("connection_id = ? AND connection_version = ?", model.ConnectionID, model.ConnectionVersion).Take(&credential).Error; err != nil {
+			return fmt.Errorf("load versioned Model Provider credential: %w", mapNotFound(err))
+		}
+		var connection modelProviderConnectionRecord
+		if err := tx.Select("credential_owner_user_id").Where("id = ?", model.ConnectionID).Take(&connection).Error; err != nil {
+			return fmt.Errorf("load Model Provider credential scope: %w", mapNotFound(err))
+		}
+		model.APIKeyCiphertext = credential.APIKeyCiphertext
+		model.CredentialOwnerID = connection.CredentialOwnerID
+	}
+	if snapshot.SchemaVersion == 2 {
+		snapshot.Stages = stages
+	} else {
+		snapshot.ProviderModel = stages[0].ProviderModel
+	}
+	return nil
+}
+
 func (repository *Repository) FinishSucceeded(ctx context.Context, job application.ExecutionJob, result application.ExecutionResult) error {
-	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	commitAttempted := false
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now().UTC()
+		if err := repository.settleTerminalCredits(tx, result); err != nil {
+			return err
+		}
+		credit, err := marshal(result.CreditConsumption)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			stages, _ := marshal(result.ExpertStages)
-			update := tx.Model(&messageRecord{}).Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).Updates(map[string]any{"state": "completed", "content": result.FinalMessage, "expert_stages": stages, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
+			update := tx.Model(&messageRecord{}).Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).Updates(map[string]any{"state": "completed", "content": result.FinalMessage, "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
 			if update.Error != nil || update.RowsAffected != 1 {
 				if update.Error != nil {
 					return fmt.Errorf("complete Session message: %w", update.Error)
 				}
-				return finishCancelledSessionMessage(tx, job, now)
+				return finishCancelledSessionMessage(tx, job, result, now)
 			}
 			summary, through, err := advanceRollingSummary(tx, job.SessionID, job.AssistantMessageID)
 			if err != nil {
 				return err
 			}
-			return tx.Model(&sessionRecord{}).Where("id = ?", job.SessionID).Updates(map[string]any{"runtime_engine": string(job.Snapshot.RuntimeEngine), "native_checkpoint": result.CheckpointRef, "rolling_summary": summary, "summary_through_message_id": through, "updated_at": now, "version": gorm.Expr("version + 1")}).Error
+			runtimeEngine, checkpoint := "", result.CheckpointRef
+			if stages, stageErr := job.Snapshot.OrderedStages(); stageErr == nil && len(stages) == 1 {
+				runtimeEngine = string(stages[0].RuntimeEngine)
+			} else if stageErr == nil && len(stages) > 1 {
+				encoded, marshalErr := json.Marshal(result.StageCheckpointRefs)
+				if marshalErr != nil {
+					return marshalErr
+				}
+				checkpoint = string(encoded)
+			}
+			if err := tx.Model(&sessionRecord{}).Where("id = ?", job.SessionID).Updates(map[string]any{"runtime_engine": runtimeEngine, "native_checkpoint": checkpoint, "rolling_summary": summary, "summary_through_message_id": through, "updated_at": now, "version": gorm.Expr("version + 1")}).Error; err != nil {
+				return err
+			}
+			if result.SuccessCommit != nil {
+				commitAttempted = true
+				return result.SuccessCommit.Commit()
+			}
+			return nil
 		}
 		finalResult, err := marshal(map[string]any{"text": result.FinalMessage, "json": result.FinalJSON})
 		if err != nil {
 			return err
 		}
 		stages, _ := marshal(result.ExpertStages)
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "ended_at": now, "version": gorm.Expr("version + 1")})
+		checkpoint := result.CheckpointRef
+		if executionStages, stageErr := job.Snapshot.OrderedStages(); stageErr == nil && len(executionStages) > 1 {
+			encoded, marshalErr := json.Marshal(result.StageCheckpointRefs)
+			if marshalErr != nil {
+				return marshalErr
+			}
+			checkpoint = string(encoded)
+		}
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "credit_consumption": credit, "native_checkpoint": checkpoint, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return fmt.Errorf("complete Workflow Run: %w", update.Error)
 		}
@@ -358,8 +590,22 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 				return err
 			}
 		}
+		if result.SuccessCommit != nil {
+			commitAttempted = true
+			return result.SuccessCommit.Commit()
+		}
 		return nil
 	})
+	if err != nil {
+		if commitAttempted {
+			return errors.Join(err, result.SuccessCommit.Rollback())
+		}
+		return err
+	}
+	if result.SuccessCommit != nil {
+		return result.SuccessCommit.Cleanup()
+	}
+	return nil
 }
 
 func fileArtifactRecords(job application.ExecutionJob, artifacts []application.ExecutionArtifact, createdAt time.Time) []artifactRecord {
@@ -412,24 +658,31 @@ func advanceRollingSummary(tx *gorm.DB, sessionID string, completedMessageID int
 	return boundedSummary(summary), &through, nil
 }
 
-func (repository *Repository) FinishFailed(ctx context.Context, job application.ExecutionJob, message string) error {
+func (repository *Repository) FinishFailed(ctx context.Context, job application.ExecutionJob, executionResult application.ExecutionResult, message string) error {
 	if len(message) > 4_096 {
 		message = message[:4_096]
 	}
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now().UTC()
+		if err := repository.settleTerminalCredits(tx, executionResult); err != nil {
+			return err
+		}
+		credit, err := marshal(executionResult.CreditConsumption)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
 			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stageState, terminalState := "failed", "failed"
-			updates := map[string]any{"state": terminalState, "error": message, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			updates := map[string]any{"state": terminalState, "error": message, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
 			if row.CancelRequested != nil {
 				stageState, terminalState = "cancelled", "cancelled"
 				updates["state"], updates["error"] = terminalState, nil
 			}
-			stages, err := closeRunningExpertStages(row.ExpertStages, stageState, message, now)
+			stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, stageState, message, now)
 			if err != nil {
 				return err
 			}
@@ -440,11 +693,11 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		stages, err := closeRunningExpertStages(row.ExpertStages, "failed", message, now)
+		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "failed", message, now)
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "ended_at": now, "version": gorm.Expr("version + 1")})
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "credit_consumption": credit, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -452,34 +705,59 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 	})
 }
 
-func (repository *Repository) FinishCancelled(ctx context.Context, job application.ExecutionJob) error {
+func (repository *Repository) FinishCancelled(ctx context.Context, job application.ExecutionJob, executionResult application.ExecutionResult) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now().UTC()
+		if err := repository.settleTerminalCredits(tx, executionResult); err != nil {
+			return err
+		}
+		credit, err := marshal(executionResult.CreditConsumption)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
 			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
-			stages, err := closeRunningExpertStages(row.ExpertStages, "cancelled", "", now)
+			stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
 			if err != nil {
 				return err
 			}
-			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}).Error
+			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}).Error
 		}
 		var row runRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		stages, err := closeRunningExpertStages(row.ExpertStages, "cancelled", "", now)
+		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "ended_at": now, "version": gorm.Expr("version + 1")})
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
 		return appendRunEvents(tx, job.ID, nil, "run.cancelled", now)
 	})
+}
+
+func (repository *Repository) settleTerminalCredits(tx *gorm.DB, result application.ExecutionResult) error {
+	for _, settlement := range result.CreditSettlements {
+		creditSettlement := creditsdomain.Settlement{
+			Admission: creditsdomain.Admission{
+				UserID: settlement.UserID, ExecutionID: settlement.ExecutionID, Source: settlement.Source,
+				Timezone: settlement.Timezone, CreditDay: settlement.CreditDay, StagePosition: settlement.StagePosition,
+				StartedAt: settlement.StartedAt, Rate: creditsdomain.ModelCreditRate{RevisionID: settlement.RateRevisionID, InputMultiplierMicros: settlement.InputMultiplierMicros, OutputMultiplierMicros: settlement.OutputMultiplierMicros, Fallback: creditsdomain.Amount(settlement.Fallback)},
+			},
+			Source: settlement.Source, Amount: creditsdomain.Amount(settlement.Amount), Estimated: settlement.Estimated,
+			Usage: creditsdomain.Usage{InputTokens: settlement.InputTokens, OutputTokens: settlement.OutputTokens, Known: settlement.UsageKnown}, SettledAt: settlement.SettledAt,
+		}
+		if _, err := repository.credits.SettleTx(tx, creditSettlement); err != nil {
+			return fmt.Errorf("settle terminal Credits: %w", err)
+		}
+	}
+	return nil
 }
 
 func closeRunningExpertStages(encoded []byte, state, terminalError string, endedAt time.Time) ([]byte, error) {
@@ -504,10 +782,26 @@ func closeRunningExpertStages(encoded []byte, state, terminalError string, ended
 	return marshal(stages)
 }
 
-func finishCancelledSessionMessage(tx *gorm.DB, job application.ExecutionJob, now time.Time) error {
+func terminalExpertStages(encoded []byte, completed []domain.ExpertStage, state, terminalError string, endedAt time.Time) ([]byte, error) {
+	if len(completed) > 0 {
+		stages := append([]domain.ExpertStage(nil), completed...)
+		if state == "cancelled" && stages[len(stages)-1].State != "succeeded" {
+			stages[len(stages)-1].State = "cancelled"
+			stages[len(stages)-1].Error = ""
+		}
+		return marshal(stages)
+	}
+	return closeRunningExpertStages(encoded, state, terminalError, endedAt)
+}
+
+func finishCancelledSessionMessage(tx *gorm.DB, job application.ExecutionJob, executionResult application.ExecutionResult, now time.Time) error {
+	credit, err := marshal(executionResult.CreditConsumption)
+	if err != nil {
+		return err
+	}
 	result := tx.Model(&messageRecord{}).
 		Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NOT NULL", job.AssistantMessageID, job.SessionID).
-		Updates(map[string]any{"state": "cancelled", "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
+		Updates(map[string]any{"state": "cancelled", "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -615,66 +909,83 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 	})
 }
 
+func (repository *Repository) RecordStageSettlement(ctx context.Context, job application.ExecutionJob, stage domain.ExpertStage, settlement application.CreditSettlement) error {
+	payload, err := json.Marshal(stage)
+	if err != nil {
+		return err
+	}
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := repository.settleTerminalCredits(tx, application.ExecutionResult{CreditSettlements: []application.CreditSettlement{settlement}}); err != nil {
+			return err
+		}
+		return repository.recordExpertStageTx(tx, job, application.ExecutionEvent{Type: "expert.stage.updated", Payload: payload}, stage)
+	})
+}
+
 func (repository *Repository) recordExpertStage(ctx context.Context, job application.ExecutionJob, event application.ExecutionEvent) error {
 	var stage domain.ExpertStage
 	if err := json.Unmarshal(event.Payload, &stage); err != nil {
 		return fmt.Errorf("invalid Expert stage payload: %w", err)
 	}
-	if stage.ExpertID == "" || stage.Position < 1 {
+	if stage.Position < 1 {
 		return fmt.Errorf("invalid Expert stage payload")
 	}
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var encoded []byte
-		if job.Kind == application.JobSession {
-			var row messageRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
-				return mapNotFound(err)
-			}
-			encoded = row.ExpertStages
-		} else if job.Kind == application.JobWorkflow {
-			var row runRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
-				return mapNotFound(err)
-			}
-			encoded = row.ExpertStages
-		} else {
-			return nil
-		}
-		var stages []domain.ExpertStage
-		if len(encoded) > 0 {
-			_ = json.Unmarshal(encoded, &stages)
-		}
-		replaced := false
-		for index := range stages {
-			if stages[index].Position == stage.Position && stages[index].ExpertID == stage.ExpertID {
-				stages[index] = stage
-				replaced = true
-				break
-			}
-		}
-		if !replaced {
-			stages = append(stages, stage)
-		}
-		encoded, err := marshal(stages)
-		if err != nil {
-			return err
-		}
-		if job.Kind == application.JobSession {
-			updates := map[string]any{"expert_stages": encoded, "progress_stage": "thinking"}
-			if stage.State == "running" {
-				updates["content"] = ""
-			}
-			return tx.Model(&messageRecord{}).Where("id = ?", job.AssistantMessageID).Updates(updates).Error
-		}
-		if err := tx.Model(&runRecord{}).Where("id = ?", job.ID).Update("expert_stages", encoded).Error; err != nil {
-			return err
-		}
-		var sequence int64
-		if err := tx.Table("run_events").Select("COALESCE(MAX(sequence), 0)").Where("run_id = ?", job.ID).Scan(&sequence).Error; err != nil {
-			return err
-		}
-		return tx.Table("run_events").Create(map[string]any{"run_id": job.ID, "sequence": sequence + 1, "event_type": event.Type, "payload": event.Payload, "occurred_at": time.Now().UTC()}).Error
+		return repository.recordExpertStageTx(tx, job, event, stage)
 	})
+}
+
+func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.ExecutionJob, event application.ExecutionEvent, stage domain.ExpertStage) error {
+	var encoded []byte
+	if job.Kind == application.JobSession {
+		var row messageRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		encoded = row.ExpertStages
+	} else if job.Kind == application.JobWorkflow {
+		var row runRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		encoded = row.ExpertStages
+	} else {
+		return nil
+	}
+	var stages []domain.ExpertStage
+	if len(encoded) > 0 {
+		_ = json.Unmarshal(encoded, &stages)
+	}
+	replaced := false
+	for index := range stages {
+		if stages[index].Position == stage.Position {
+			stages[index] = stage
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		stages = append(stages, stage)
+	}
+	encoded, err := marshal(stages)
+	if err != nil {
+		return err
+	}
+	if job.Kind == application.JobSession {
+		updates := map[string]any{"expert_stages": encoded, "progress_stage": "thinking"}
+		if stage.State == "running" {
+			updates["content"] = ""
+		}
+		return tx.Model(&messageRecord{}).Where("id = ?", job.AssistantMessageID).Updates(updates).Error
+	}
+	if err := tx.Model(&runRecord{}).Where("id = ?", job.ID).Update("expert_stages", encoded).Error; err != nil {
+		return err
+	}
+	var sequence int64
+	if err := tx.Table("run_events").Select("COALESCE(MAX(sequence), 0)").Where("run_id = ?", job.ID).Scan(&sequence).Error; err != nil {
+		return err
+	}
+	return tx.Table("run_events").Create(map[string]any{"run_id": job.ID, "sequence": sequence + 1, "event_type": event.Type, "payload": event.Payload, "occurred_at": time.Now().UTC()}).Error
 }
 
 func (repository *Repository) CancellationRequested(ctx context.Context, job application.ExecutionJob) (bool, error) {

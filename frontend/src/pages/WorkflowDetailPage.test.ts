@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { platformApiKey, type Artifact, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
@@ -68,14 +68,27 @@ async function mountPage(api = apiStub()) {
 }
 
 describe("WorkflowDetailPage", () => {
+  beforeEach(() => {
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:workflow-attachment") });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+  });
+  afterEach(() => {
+    delete (URL as { createObjectURL?: unknown }).createObjectURL;
+    delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+    vi.restoreAllMocks();
+  });
+
   it("does not repeat the active tab label as a section title", async () => {
     const wrapper = await mountPage();
+
+    expect(wrapper.find(".detail-hero .eyebrow").exists()).toBe(false);
 
     for (const tabButton of wrapper.findAll(".tabs button")) {
       await tabButton.trigger("click");
       await wrapper.vm.$nextTick();
       expect(wrapper.find(".tab-content .section-heading h2").exists()).toBe(false);
     }
+    expect(wrapper.find(".settings-section .section-number").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -89,9 +102,24 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find(".run-page").exists()).toBe(true);
     expect(wrapper.find(".run-dialog").exists()).toBe(false);
     expect(wrapper.find(".detail-hero").exists()).toBe(false);
+    expect(wrapper.find(".run-conversation-head .eyebrow").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
     wrapper.unmount();
+  });
+
+  it("renders a Run Conversation image from authenticated attachment content", async () => {
+    const turn: Run = { ...run, attachments: [{ id: "attachment-1", name: "photo.png", content_type: "image/png", size: 5, sha256: "digest", image: true }] };
+    const getAttachmentDownload = vi.fn(async () => new Blob(["image"], { type: "image/png" }));
+    const wrapper = await mountPage(apiStub({ listRunTurns: vi.fn(async () => [turn]), getAttachmentDownload }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(getAttachmentDownload).toHaveBeenCalledWith("attachment-1");
+    expect(wrapper.get<HTMLImageElement>('.turn-attachment img[alt="photo.png"]').attributes("src")).toBe("blob:workflow-attachment");
+    wrapper.unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:workflow-attachment");
   });
 
   it("shows the latest turn state and time in the Run Conversation header", async () => {
