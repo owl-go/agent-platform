@@ -1,7 +1,4 @@
 services:
-  web:
-    ports: !reset []
-
   caddy:
     image: ${CADDY_IMAGE:?CADDY_IMAGE must be an immutable repository digest}
     restart: unless-stopped
@@ -13,6 +10,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${WEB_RELEASE_ROOT:?WEB_RELEASE_ROOT is required}:/srv/web:ro
       - caddy-data:/data
       - caddy-config:/config
     ports:
@@ -20,6 +18,8 @@ services:
       - "443:443"
       - "443:443/udp"
     depends_on:
+      api:
+        condition: service_healthy
       identity:
         condition: service_started
     networks:

@@ -1,10 +1,10 @@
 # Agent Workspace Single-Worker Deployment
 
-This Compose stack runs the current API, Worker, Web, PostgreSQL, and MinIO services on one Linux Worker. Only the Web port is published; PostgreSQL and MinIO remain on an internal Docker network.
+This deployment runs API, Worker, PostgreSQL, MinIO, Caddy, and Keycloak on one Linux Worker. The Vue application is built on the release workstation and uploaded as a versioned `dist` directory; it does not run in a separate container. Caddy is the only public entrypoint, while PostgreSQL and MinIO remain on internal Docker networks.
 
 The one-shot `minio-init` service idempotently creates the configured private Bucket after MinIO becomes healthy. API and Worker wait for that initialization to succeed, so a missing Bucket fails during startup instead of after a completed Runtime execution.
 
-The base stack is suitable for loopback smoke tests. `compose.https.yaml` adds automatic TLS, same-origin Web/API/SSE routing, and a PostgreSQL-backed Keycloak OIDC issuer. Runtime availability is reported separately and remains disabled until its image has passed the target Linux + gVisor checks.
+The base stack contains the private control and storage services. `compose.https.yaml` adds automatic TLS, static Web hosting, same-origin API/SSE routing, and a PostgreSQL-backed Keycloak OIDC issuer. Runtime availability is reported separately and remains disabled until its image has passed the target Linux + gVisor checks.
 
 ## Configuration
 
@@ -38,17 +38,41 @@ docker compose --env-file /opt/agent-platform/config/platform.env \
   -f deploy/platform/compose.yaml up -d --build
 ```
 
-Verify the public entrypoint and proxied API health endpoint:
+Verify the base API from inside its private container network:
 
 ```bash
-curl --fail http://127.0.0.1/
-curl --fail http://127.0.0.1/api/healthz
-curl --fail http://127.0.0.1/api/readyz
+docker compose --env-file /opt/agent-platform/config/platform.env \
+  -f deploy/platform/compose.yaml exec -T api \
+  wget -qO- http://127.0.0.1:8080/readyz
 ```
 
 ## Same-origin HTTPS and OIDC
 
-Set `PUBLIC_HOST` to a DNS name whose A/AAAA record reaches the Worker, allow inbound TCP 80/443 and UDP 443, and set all OIDC URLs to that exact HTTPS origin. `Dockerfile.web` consumes the four `VITE_OIDC_*` values at build time; API and Worker consume `platform.https.yaml` at startup. They are configuration, not source-code constants.
+Set `PUBLIC_HOST` to a DNS name whose A/AAAA record reaches the Worker, allow inbound TCP 80/443 and UDP 443, and set all OIDC URLs to that exact HTTPS origin. `scripts/deploy-web.sh` requires the four `VITE_OIDC_*` values in the release workstation environment and consumes them during the local production build. API and Worker consume `platform.https.yaml` at startup. These values are configuration, not source-code constants.
+
+The Web release root defaults to `/opt/agent-platform/web` and has this layout:
+
+```text
+/opt/agent-platform/web/
+├── current -> releases/<revision>
+└── releases/
+    ├── <previous-revision>/
+    └── <revision>/
+```
+
+Build and upload a release from the workstation that has the repository checkout and production OIDC values. `WEB_DEPLOY_HOST` is an SSH destination understood by both `ssh` and `rsync`. The script builds locally, rejects incomplete or symlinked output, uploads into a new immutable release directory, normalizes public-file permissions, and atomically changes `current` only after verification succeeds.
+
+```bash
+export PUBLIC_HOST="agent-platform.example.test"
+export VITE_OIDC_AUTHORITY="https://${PUBLIC_HOST}/identity/realms/agent-platform"
+export VITE_OIDC_CLIENT_ID="agent-platform-web"
+export VITE_OIDC_REDIRECT_URI="https://${PUBLIC_HOST}/auth/callback"
+export VITE_OIDC_POST_LOGOUT_REDIRECT_URI="https://${PUBLIC_HOST}"
+
+WEB_DEPLOY_HOST=agent-platform \
+WEB_RELEASE_ROOT=/opt/agent-platform/web \
+make web-deploy
+```
 
 `MODEL_RELAY_UPSTREAM` optionally points at a host-local HTTP model gateway. Caddy exposes it only through the authenticated `/model-relay/` TLS route, so Model Provider API Keys are not sent over public plaintext HTTP.
 
@@ -80,6 +104,8 @@ docker compose --env-file /opt/agent-platform/config/platform.env \
   -f deploy/platform/compose.https.yaml up -d --build
 ```
 
+`WEB_RELEASE_ROOT` must exist and contain a valid `current` release before Caddy starts. Subsequent Web releases only run `make web-deploy`; they do not rebuild or restart any Compose service.
+
 Verify TLS, security headers, OIDC discovery, Health, Readiness, an authenticated API, and an SSE response without exposing a Token in shell history:
 
 ```bash
@@ -93,17 +119,25 @@ docker compose --env-file /opt/agent-platform/config/platform.env \
   -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml ps
 ```
 
-Use `docker compose ... logs --since 15m api worker web caddy identity` for diagnostics. Logs must be scanned for planted Secret values before being retained as evidence.
+Use `docker compose ... logs --since 15m api worker caddy identity` for diagnostics. Logs must be scanned for planted Secret values before being retained as evidence.
 
 ## Rollback
 
-Keep the previous source bundle or immutable service image references until verification completes. To roll back application code while preserving PostgreSQL, MinIO, Keycloak, and Caddy volumes:
+Keep the previous source bundle or immutable service image references until verification completes. To roll back API or Worker code while preserving PostgreSQL, MinIO, Keycloak, and Caddy volumes:
 
 ```bash
 cd /opt/agent-platform/src.previous
 PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.https.yaml \
 docker compose --env-file /opt/agent-platform/config/platform.env \
   -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml up -d --build
+```
+
+Roll back only the Web UI by atomically selecting an existing static release; this does not restart Caddy or any application service:
+
+```bash
+WEB_DEPLOY_HOST=agent-platform \
+WEB_RELEASE_ROOT=/opt/agent-platform/web \
+scripts/deploy-web.sh activate <previous-revision>
 ```
 
 Do not run `down -v`: the named volumes contain persistent product and identity data. Database migrations are append-only; a rollback must use a binary compatible with the migrated schema or restore a tested database backup.

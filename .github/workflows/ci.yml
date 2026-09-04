@@ -76,7 +76,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose -f deploy/platform/compose.yaml config --quiet
-      - run: docker compose -f deploy/platform/compose.yaml build api worker web
+      - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml -f deploy/platform/compose.execution.yaml config --quiet
+      - run: docker compose -f deploy/platform/compose.yaml build api worker
+      - run: bash -n scripts/deploy-web.sh
 
   frontend:
     runs-on: ubuntu-latest

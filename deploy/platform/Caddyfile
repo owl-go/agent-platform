@@ -77,12 +77,8 @@
     }
 
     handle {
-        reverse_proxy web:8080 {
-            transport http {
-                dial_timeout 5s
-                response_header_timeout 10s
-                keepalive 30s
-            }
-        }
+        root * /srv/web/current
+        try_files {path} /index.html
+        file_server
     }
 }
