@@ -3,6 +3,8 @@ package containerprocess
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,6 +12,48 @@ import (
 
 	"agent-platform/backend/internal/agentruntime/processharness"
 )
+
+func TestWarmRunProcessPreparesConfiguredAdapterScratchBeforeExec(t *testing.T) {
+	scratchRoot := t.TempDir()
+	adapterScratch, err := os.MkdirTemp(scratchRoot, "agent-runtime-adapter-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessionDirectory := filepath.Join(adapterScratch, "sessions")
+	if err := os.Mkdir(sessionDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	manager, err := NewWarmManager("docker", 30*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preparedBeforeExec := false
+	config := validConfig(nil, nil)
+	config.RuntimeCommand = "pi"
+	config.ScratchDirectory = scratchRoot
+	config.PrepareScratch = func(path string, uid, gid int) error {
+		if path != adapterScratch || uid != 65532 || gid != 65532 {
+			t.Fatalf("prepared scratch = %q:%d:%d", path, uid, gid)
+		}
+		preparedBeforeExec = true
+		return nil
+	}
+	manager.runHost = func(_ context.Context, _ processharness.Spec, _ processharness.OutputSink) (processharness.Result, error) {
+		if !preparedBeforeExec {
+			t.Fatal("warm Runtime executed before preparing adapter scratch")
+		}
+		return processharness.Result{}, nil
+	}
+
+	run := warmRunProcess(manager, config, warmContainerPrefix+strings.Repeat("a", 32))
+	if _, err := run(context.Background(), processharness.Spec{
+		Command: []string{"pi", "--session-dir", sessionDirectory},
+		Dir:     config.WorkspaceDirectory,
+	}, discardSink{}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testing.T) {
 	manager, err := NewWarmManager("docker", 30*time.Minute)

@@ -166,6 +166,9 @@ func warmRunProcess(manager *WarmManager, config Config, name string) cliadapter
 		if err := validateProcessSpec(config, spec); err != nil {
 			return processharness.Result{}, err
 		}
+		if _, err := prepareAdapterScratch(config, spec.Command); err != nil {
+			return processharness.Result{}, err
+		}
 		hostSpec := spec
 		hostSpec.Dir = ""
 		hostSpec.Command = warmExecCommand(manager.dockerCommand, config, spec, name)

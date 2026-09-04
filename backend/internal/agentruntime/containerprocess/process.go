@@ -100,14 +100,9 @@ func New(config Config) (cliadapter.RunProcess, error) {
 		if !runIDPattern.MatchString(name) {
 			return processharness.Result{}, fmt.Errorf("invalid sandbox container name")
 		}
-		scratchDirectories, err := findScratchDirectories(spec.Command)
+		scratchDirectories, err := prepareAdapterScratch(config, spec.Command)
 		if err != nil {
 			return processharness.Result{}, err
-		}
-		for _, directory := range scratchDirectories {
-			if err := config.PrepareScratch(directory, config.UID, config.GID); err != nil {
-				return processharness.Result{}, fmt.Errorf("prepare adapter scratch directory: %w", err)
-			}
 		}
 
 		hostSpec := spec
@@ -327,31 +322,54 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	return append(args, spec.Command[1:]...)
 }
 
-func findScratchDirectories(command []string) ([]string, error) {
-	temporaryRoot := filepath.Clean(os.TempDir())
+func prepareAdapterScratch(config Config, command []string) ([]string, error) {
+	directories, err := findScratchDirectories(config.ScratchDirectory, command)
+	if err != nil {
+		return nil, err
+	}
+	prepare := config.PrepareScratch
+	if prepare == nil {
+		prepare = prepareScratch
+	}
+	for _, directory := range directories {
+		if err := prepare(directory, config.UID, config.GID); err != nil {
+			return nil, fmt.Errorf("prepare adapter scratch directory: %w", err)
+		}
+	}
+	return directories, nil
+}
+
+func findScratchDirectories(configuredRoot string, command []string) ([]string, error) {
+	roots := []string{filepath.Clean(os.TempDir())}
+	if configuredRoot != "" && filepath.Clean(configuredRoot) != roots[0] {
+		roots = append(roots, filepath.Clean(configuredRoot))
+	}
 	directories := make(map[string]struct{})
 	for _, argument := range command[1:] {
 		if !filepath.IsAbs(argument) {
 			continue
 		}
 		cleaned := filepath.Clean(argument)
-		relative, err := filepath.Rel(temporaryRoot, cleaned)
-		if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
-			continue
+		for _, root := range roots {
+			relative, err := filepath.Rel(root, cleaned)
+			if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
+				continue
+			}
+			first := strings.Split(relative, string(os.PathSeparator))[0]
+			if !strings.HasPrefix(first, "agent-runtime-adapter-") {
+				continue
+			}
+			directory := filepath.Join(root, first)
+			info, err := os.Stat(directory)
+			if err != nil {
+				return nil, fmt.Errorf("inspect adapter scratch directory: %w", err)
+			}
+			if !info.IsDir() {
+				return nil, fmt.Errorf("adapter scratch path is not a directory")
+			}
+			directories[directory] = struct{}{}
+			break
 		}
-		first := strings.Split(relative, string(os.PathSeparator))[0]
-		if !strings.HasPrefix(first, "agent-runtime-adapter-") {
-			continue
-		}
-		directory := filepath.Join(temporaryRoot, first)
-		info, err := os.Stat(directory)
-		if err != nil {
-			return nil, fmt.Errorf("inspect adapter scratch directory: %w", err)
-		}
-		if !info.IsDir() {
-			return nil, fmt.Errorf("adapter scratch path is not a directory")
-		}
-		directories[directory] = struct{}{}
 	}
 	result := make([]string, 0, len(directories))
 	for directory := range directories {
