@@ -58,7 +58,7 @@ function handleUserCommand(command: "users" | "locale" | "signout") {
         <RouterLink to="/sessions" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
         <el-button class="new-session" @click="$router.push('/sessions?new=1'); mobileOpen = false"><el-icon><Plus /></el-icon>{{ t('sessions.new') }}</el-button>
         <nav>
-          <RouterLink v-for="item in nav" :key="item.id" :to="`/${item.id}`" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}</RouterLink>
+          <RouterLink v-for="item in nav" :key="item.id" :to="`/${item.id}`" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}</RouterLink>
         </nav>
         <div class="sidebar-spacer"></div>
         <div class="connection-state"><el-badge is-dot :type="online === true ? 'success' : online === false ? 'danger' : 'info'" /><span>{{ online === true ? t('auth.online') : online === false ? t('auth.offline') : t('auth.checkingApi') }}</span></div>
