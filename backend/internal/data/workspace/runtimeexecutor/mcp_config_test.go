@@ -32,7 +32,9 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 	files, variables, redactions, err := executor.nativeMCPFiles(application.ExecutionJob{
 		OwnerID: "owner-1",
 		Snapshot: domain.ExecutionSnapshot{
-			RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{ModelID: "openai/test"},
+			RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{
+				ModelID: "claude-fable-5", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"},
+			},
 			MCPServers: []domain.MCPServerSnapshot{
 				{ID: "11111111-1111-1111-1111-111111111111", Name: "remote", Transport: "streamable_http", Configuration: httpConfig, SecretCiphertext: secret},
 				{ID: "22222222-2222-2222-2222-222222222222", Name: "local", Transport: "stdio", Configuration: stdioConfig},
@@ -55,5 +57,11 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 	}
 	if !strings.Contains(string(files["extensions/codex-config.toml"]), `@example/server@1.2.3`) {
 		t.Fatalf("Codex stdio config = %s", files["extensions/codex-config.toml"])
+	}
+	openClawConfig := string(files["extensions/openclaw.json"])
+	for _, want := range []string{`"agent-workspace/claude-fable-5"`, `"https://models.example.test"`, `"anthropic-messages"`, `"${ANTHROPIC_API_KEY}"`, `"mcp"`} {
+		if !strings.Contains(openClawConfig, want) {
+			t.Fatalf("OpenClaw config = %s, missing %s", openClawConfig, want)
+		}
 	}
 }

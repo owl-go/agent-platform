@@ -21,7 +21,10 @@ import (
 
 var routeIDPattern = regexp.MustCompile(`(?i)/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}`)
 
-const defaultUnaryTimeout = 30 * time.Second
+const (
+	defaultUnaryTimeout       = 30 * time.Second
+	defaultEventStreamTimeout = 30 * time.Minute
+)
 
 type httpMetrics struct {
 	requests atomic.Uint64
@@ -56,15 +59,30 @@ func securityHeadersFilter(next http.Handler) http.Handler {
 func unaryTimeoutFilter(timeout time.Duration) kratoshttp.FilterFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			if strings.HasPrefix(request.URL.Path, "/v1/runs/") && strings.HasSuffix(request.URL.Path, "/events") {
-				next.ServeHTTP(writer, request)
-				return
+			requestTimeout := timeout
+			if isEventStreamRequest(request) {
+				requestTimeout = defaultEventStreamTimeout
 			}
-			ctx, cancel := context.WithTimeout(request.Context(), timeout)
+			ctx, cancel := context.WithTimeout(request.Context(), requestTimeout)
 			defer cancel()
 			next.ServeHTTP(writer, request.WithContext(ctx))
 		})
 	}
+}
+
+func isEventStreamRequest(request *http.Request) bool {
+	if request.Method != http.MethodGet {
+		return false
+	}
+	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
+	if len(parts) == 4 {
+		return parts[0] == "v1" && parts[1] == "runs" && parts[3] == "events"
+	}
+	if len(parts) != 7 || parts[0] != "api" || parts[1] != "v1" || parts[6] != "events" {
+		return false
+	}
+	return (parts[2] == "sessions" && parts[4] == "messages") ||
+		(parts[2] == "workflows" && parts[4] == "runs")
 }
 
 func rawBodyFilter(next http.Handler) http.Handler {

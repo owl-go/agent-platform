@@ -3,9 +3,9 @@ package openclaw
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -15,7 +15,7 @@ import (
 
 const Version = "2026.7.1-2"
 
-var providerPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
+const providerName = "agent-workspace"
 
 type Driver struct{}
 
@@ -47,41 +47,21 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 	if request.CheckpointRef != "" {
 		return cliadapter.Invocation{}, fmt.Errorf("OpenClaw native resume is not verified")
 	}
-	model := strings.ToLower(request.Model)
-	for _, forbidden := range []string{"claude-cli", "codex-cli", "cli-backend"} {
-		if strings.Contains(model, forbidden) {
-			return cliadapter.Invocation{}, fmt.Errorf("OpenClaw nested CLI backend %q is forbidden", request.Model)
-		}
-	}
-	provider, modelID, found := strings.Cut(model, "/")
-	if !found || !providerPattern.MatchString(provider) || strings.TrimSpace(modelID) == "" {
-		return cliadapter.Invocation{}, fmt.Errorf("OpenClaw model must use provider/model format")
+	model, err := modelReference(request.Model)
+	if err != nil {
+		return cliadapter.Invocation{}, err
 	}
 	promptPath := filepath.Join(scratchDirectory, "instruction.txt")
 	if err := os.WriteFile(promptPath, []byte(request.Instruction), 0o600); err != nil {
 		return cliadapter.Invocation{}, fmt.Errorf("write OpenClaw instruction: %w", err)
 	}
+	encoded, err := EncodeRuntimeConfig(request, nil)
+	if err != nil {
+		return cliadapter.Invocation{}, err
+	}
 	configPath := request.MCPConfigPath
 	if configPath == "" {
 		configPath = filepath.Join(scratchDirectory, "openclaw.json")
-	}
-	config := struct {
-		Plugins struct {
-			Allow            []string                   `json:"allow"`
-			BundledDiscovery string                     `json:"bundledDiscovery"`
-			Slots            map[string]string          `json:"slots"`
-			Entries          map[string]map[string]bool `json:"entries"`
-		} `json:"plugins"`
-	}{}
-	config.Plugins.Allow = []string{provider}
-	config.Plugins.BundledDiscovery = "allowlist"
-	config.Plugins.Slots = map[string]string{"memory": "none"}
-	config.Plugins.Entries = map[string]map[string]bool{provider: {"enabled": true}}
-	if request.MCPConfigPath == "" {
-		encoded, err := json.Marshal(config)
-		if err != nil {
-			return cliadapter.Invocation{}, fmt.Errorf("encode OpenClaw runtime config: %w", err)
-		}
 		if err := os.WriteFile(configPath, append(encoded, '\n'), 0o600); err != nil {
 			return cliadapter.Invocation{}, fmt.Errorf("write OpenClaw runtime config: %w", err)
 		}
@@ -92,10 +72,144 @@ func (Driver) Build(request agentruntime.ExecuteRequest, scratchDirectory string
 		"--agent", "main",
 		"--session-key", request.RunID,
 		"--message-file", promptPath,
-		"--model", request.Model,
+		"--model", model,
 		"--timeout", "0",
 		"--json",
 	}}, nil
+}
+
+type MCPServer struct {
+	Enabled   bool              `json:"enabled"`
+	Command   string            `json:"command,omitempty"`
+	Args      []string          `json:"args,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
+	URL       string            `json:"url,omitempty"`
+	Headers   map[string]string `json:"headers,omitempty"`
+	Transport string            `json:"transport,omitempty"`
+}
+
+type providerConfiguration struct {
+	BaseURL string               `json:"baseUrl"`
+	APIKey  string               `json:"apiKey"`
+	API     string               `json:"api"`
+	Models  []modelConfiguration `json:"models"`
+}
+
+type modelConfiguration struct {
+	ID    string   `json:"id"`
+	Name  string   `json:"name"`
+	Input []string `json:"input"`
+}
+
+// EncodeRuntimeConfig keeps OpenClaw's model and MCP configuration in one per-run file.
+func EncodeRuntimeConfig(request agentruntime.ExecuteRequest, servers map[string]MCPServer) ([]byte, error) {
+	model, err := modelReference(request.Model)
+	if err != nil {
+		return nil, err
+	}
+	protocol, apiKey, defaultEndpoint, err := modelProtocol(request.ModelProtocols)
+	if err != nil {
+		return nil, err
+	}
+	endpoint, err := modelEndpoint(request.ModelEndpoint, defaultEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	config := struct {
+		Models struct {
+			Mode      string                           `json:"mode"`
+			Providers map[string]providerConfiguration `json:"providers"`
+		} `json:"models"`
+		Agents struct {
+			Defaults struct {
+				Model struct {
+					Primary string `json:"primary"`
+				} `json:"model"`
+				Models map[string]map[string]map[string]string `json:"models"`
+			} `json:"defaults"`
+		} `json:"agents"`
+		Plugins struct {
+			Allow            []string                   `json:"allow"`
+			BundledDiscovery string                     `json:"bundledDiscovery"`
+			Slots            map[string]string          `json:"slots"`
+			Entries          map[string]map[string]bool `json:"entries"`
+		} `json:"plugins"`
+		MCP *struct {
+			Servers map[string]MCPServer `json:"servers"`
+		} `json:"mcp,omitempty"`
+	}{}
+	config.Models.Mode = "replace"
+	modelID := strings.TrimSpace(request.Model)
+	config.Models.Providers = map[string]providerConfiguration{providerName: {
+		BaseURL: endpoint, APIKey: apiKey, API: protocol,
+		Models: []modelConfiguration{{ID: modelID, Name: modelID, Input: []string{"text"}}},
+	}}
+	config.Agents.Defaults.Model.Primary = model
+	config.Agents.Defaults.Models = map[string]map[string]map[string]string{
+		model: {"agentRuntime": {"id": "openclaw"}},
+	}
+	config.Plugins.Allow = []string{}
+	config.Plugins.BundledDiscovery = "allowlist"
+	config.Plugins.Slots = map[string]string{"memory": "none"}
+	config.Plugins.Entries = map[string]map[string]bool{}
+	if len(servers) > 0 {
+		config.MCP = &struct {
+			Servers map[string]MCPServer `json:"servers"`
+		}{Servers: servers}
+	}
+	encoded, err := json.Marshal(config)
+	if err != nil {
+		return nil, fmt.Errorf("encode OpenClaw runtime config: %w", err)
+	}
+	return encoded, nil
+}
+
+func modelReference(value string) (string, error) {
+	model := strings.TrimSpace(value)
+	if model == "" {
+		return "", fmt.Errorf("OpenClaw model is required")
+	}
+	lower := strings.ToLower(model)
+	for _, forbidden := range []string{"claude-cli", "codex-cli", "cli-backend"} {
+		if strings.Contains(lower, forbidden) {
+			return "", fmt.Errorf("OpenClaw nested CLI backend %q is forbidden", value)
+		}
+	}
+	return providerName + "/" + model, nil
+}
+
+func modelEndpoint(value, defaultValue string) (string, error) {
+	if value == "" {
+		value = defaultValue
+	}
+	endpoint, err := url.Parse(value)
+	scheme := ""
+	if endpoint != nil {
+		scheme = strings.ToLower(endpoint.Scheme)
+	}
+	if err != nil || endpoint == nil || (scheme != "http" && scheme != "https") || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return "", fmt.Errorf("OpenClaw model endpoint must be an HTTP or HTTPS URL without credentials, query, or fragment")
+	}
+	return endpoint.String(), nil
+}
+
+func modelProtocol(protocols []string) (string, string, string, error) {
+	protocol := "openai_responses"
+	if len(protocols) > 0 {
+		protocol = protocols[0]
+	}
+	switch protocol {
+	case "openai_responses":
+		return "openai-responses", "${OPENAI_API_KEY}", "https://api.openai.com/v1", nil
+	case "openai_chat":
+		return "openai-completions", "${OPENAI_API_KEY}", "https://api.openai.com/v1", nil
+	case "anthropic_messages":
+		return "anthropic-messages", "${ANTHROPIC_API_KEY}", "https://api.anthropic.com", nil
+	case "gemini":
+		return "google-generative-ai", "${OPENAI_API_KEY}", "https://generativelanguage.googleapis.com/v1beta", nil
+	default:
+		return "", "", "", fmt.Errorf("OpenClaw requires OpenAI Responses, OpenAI Chat, Anthropic Messages, or Gemini protocol")
+	}
 }
 
 func (Driver) NewParser(string) cliadapter.Parser { return &parser{} }

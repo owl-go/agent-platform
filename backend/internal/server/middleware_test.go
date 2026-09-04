@@ -7,24 +7,30 @@ import (
 	"time"
 )
 
-func TestUnaryTimeoutDoesNotBoundRunEventSSE(t *testing.T) {
+func TestRequestTimeoutAllowsLongLivedEventStreams(t *testing.T) {
 	tests := []struct {
-		name         string
-		path         string
-		wantDeadline bool
+		name        string
+		path        string
+		wantTimeout time.Duration
 	}{
-		{name: "unary", path: "/v1/runs", wantDeadline: true},
-		{name: "sse", path: "/v1/runs/00000000-0000-4000-8000-000000000001/events", wantDeadline: false},
+		{name: "unary", path: "/api/v1/sessions", wantTimeout: time.Second},
+		{name: "legacy Run SSE", path: "/v1/runs/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
+		{name: "Session message SSE", path: "/api/v1/sessions/00000000-0000-4000-8000-000000000001/messages/2/events", wantTimeout: 30 * time.Minute},
+		{name: "Workflow Run SSE", path: "/api/v1/workflows/00000000-0000-4000-8000-000000000001/runs/00000000-0000-4000-8000-000000000002/events", wantTimeout: 30 * time.Minute},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var found bool
+			var remaining time.Duration
 			handler := unaryTimeoutFilter(time.Second)(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
-				_, found = request.Context().Deadline()
+				deadline, found := request.Context().Deadline()
+				if !found {
+					t.Fatal("request context has no deadline")
+				}
+				remaining = time.Until(deadline)
 			}))
 			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, test.path, nil))
-			if found != test.wantDeadline {
-				t.Fatalf("deadline found=%t, want %t", found, test.wantDeadline)
+			if remaining < test.wantTimeout-time.Second || remaining > test.wantTimeout {
+				t.Fatalf("remaining timeout=%s, want approximately %s", remaining, test.wantTimeout)
 			}
 		})
 	}

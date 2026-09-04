@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"agent-platform/backend/internal/agentruntime"
+	"agent-platform/backend/internal/agentruntime/openclaw"
 	"agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 
@@ -46,7 +48,7 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 	claudeServers := make(map[string]nativeMCPServer)
 	codexServers := make(map[string]codexMCPServer)
 	hermesServers := make(map[string]nativeMCPServer)
-	openClawServers := make(map[string]map[string]any)
+	openClawServers := make(map[string]openclaw.MCPServer)
 	for _, server := range job.Snapshot.MCPServers {
 		var configuration storedMCPConfiguration
 		if err := json.Unmarshal(server.Configuration, &configuration); err != nil {
@@ -81,10 +83,10 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 			}
 			native := nativeMCPServer{URL: *configuration.URL}
 			codex := codexMCPServer{URL: *configuration.URL}
-			openClaw := map[string]any{"enabled": true, "url": *configuration.URL, "transport": "streamable-http"}
+			openClaw := openclaw.MCPServer{Enabled: true, URL: *configuration.URL, Transport: "streamable-http"}
 			if token := secretValues["MCP_BEARER_TOKEN"]; token != "" {
 				native.Headers = map[string]string{"Authorization": "Bearer " + token}
-				openClaw["headers"] = native.Headers
+				openClaw.Headers = native.Headers
 				variableName := mcpTokenVariable(server.ID)
 				variables[variableName] = token
 				codex.BearerTokenEnvVar = variableName
@@ -104,7 +106,7 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 		claudeServers[server.Name] = native
 		codexServers[server.Name] = codexMCPServer{Command: command, Args: arguments, Env: environment}
 		hermesServers[server.Name] = native
-		openClawServers[server.Name] = map[string]any{"enabled": true, "command": command, "args": arguments, "env": environment}
+		openClawServers[server.Name] = openclaw.MCPServer{Enabled: true, Command: command, Args: arguments, Env: environment}
 	}
 	claudeConfig, err := json.Marshal(map[string]any{"mcpServers": claudeServers})
 	if err != nil {
@@ -120,14 +122,10 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	provider, _, _ := strings.Cut(strings.ToLower(job.Snapshot.ProviderModel.ModelID), "/")
-	openClawConfig, err := json.Marshal(map[string]any{
-		"plugins": map[string]any{
-			"allow": []string{provider}, "bundledDiscovery": "allowlist", "slots": map[string]string{"memory": "none"},
-			"entries": map[string]map[string]bool{provider: {"enabled": true}},
-		},
-		"mcp": map[string]any{"servers": openClawServers},
-	})
+	openClawConfig, err := openclaw.EncodeRuntimeConfig(agentruntime.ExecuteRequest{
+		Model: job.Snapshot.ProviderModel.ModelID, ModelEndpoint: job.Snapshot.ProviderModel.Endpoint,
+		ModelProvider: job.Snapshot.ProviderModel.ProviderType, ModelProtocols: job.Snapshot.ProviderModel.Protocols,
+	}, openClawServers)
 	if err != nil {
 		return nil, nil, nil, err
 	}
