@@ -202,6 +202,22 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("reserves the measured composer height so the latest Run message stays visible", async () => {
+    const wrapper = await mountPage();
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    const composer = wrapper.get<HTMLElement>(".run-composer-layer");
+    vi.spyOn(composer.element, "getBoundingClientRect").mockReturnValue({
+      width: 780, height: 214, top: 486, right: 780, bottom: 700, left: 0, x: 0, y: 486, toJSON: () => ({}),
+    });
+
+    window.dispatchEvent(new Event("resize"));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get<HTMLElement>(".run-conversation").element.style.paddingBottom).toBe("230px");
+    wrapper.unmount();
+  });
+
   it("shows live Runtime activity and progressively reveals a whole final chunk", async () => {
     vi.useFakeTimers();
     const response = "这是 Runtime 最终一次性交付的完整回答，界面仍然需要逐步展示。";
