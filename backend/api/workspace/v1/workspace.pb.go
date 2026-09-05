@@ -8908,16 +8908,61 @@ func (x *TestMCPConnectorRequest) GetMcpConnectorId() string {
 	return ""
 }
 
-type DeleteMCPConnectorRequest struct {
+type GetMCPConnectorDeletionImpactRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	McpConnectorId string                 `protobuf:"bytes,1,opt,name=mcp_connector_id,json=mcpConnectorId,proto3" json:"mcp_connector_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
+func (x *GetMCPConnectorDeletionImpactRequest) Reset() {
+	*x = GetMCPConnectorDeletionImpactRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMCPConnectorDeletionImpactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMCPConnectorDeletionImpactRequest) ProtoMessage() {}
+
+func (x *GetMCPConnectorDeletionImpactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMCPConnectorDeletionImpactRequest.ProtoReflect.Descriptor instead.
+func (*GetMCPConnectorDeletionImpactRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{133}
+}
+
+func (x *GetMCPConnectorDeletionImpactRequest) GetMcpConnectorId() string {
+	if x != nil {
+		return x.McpConnectorId
+	}
+	return ""
+}
+
+type DeleteMCPConnectorRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	McpConnectorId    string                 `protobuf:"bytes,1,opt,name=mcp_connector_id,json=mcpConnectorId,proto3" json:"mcp_connector_id,omitempty"`
+	ConfirmationToken string                 `protobuf:"bytes,2,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
 func (x *DeleteMCPConnectorRequest) Reset() {
 	*x = DeleteMCPConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8929,7 +8974,7 @@ func (x *DeleteMCPConnectorRequest) String() string {
 func (*DeleteMCPConnectorRequest) ProtoMessage() {}
 
 func (x *DeleteMCPConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8942,12 +8987,19 @@ func (x *DeleteMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMCPConnectorRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMCPConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{133}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *DeleteMCPConnectorRequest) GetMcpConnectorId() string {
 	if x != nil {
 		return x.McpConnectorId
+	}
+	return ""
+}
+
+func (x *DeleteMCPConnectorRequest) GetConfirmationToken() string {
+	if x != nil {
+		return x.ConfirmationToken
 	}
 	return ""
 }
@@ -8968,7 +9020,7 @@ type MCPConnectorInput struct {
 
 func (x *MCPConnectorInput) Reset() {
 	*x = MCPConnectorInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8980,7 +9032,7 @@ func (x *MCPConnectorInput) String() string {
 func (*MCPConnectorInput) ProtoMessage() {}
 
 func (x *MCPConnectorInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8993,7 +9045,7 @@ func (x *MCPConnectorInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MCPConnectorInput.ProtoReflect.Descriptor instead.
 func (*MCPConnectorInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{134}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *MCPConnectorInput) GetName() string {
@@ -9075,7 +9127,7 @@ type MCPConnector struct {
 
 func (x *MCPConnector) Reset() {
 	*x = MCPConnector{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9087,7 +9139,7 @@ func (x *MCPConnector) String() string {
 func (*MCPConnector) ProtoMessage() {}
 
 func (x *MCPConnector) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9100,7 +9152,7 @@ func (x *MCPConnector) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MCPConnector.ProtoReflect.Descriptor instead.
 func (*MCPConnector) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{135}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *MCPConnector) GetId() string {
@@ -9216,7 +9268,7 @@ type ListSkillsRequest struct {
 
 func (x *ListSkillsRequest) Reset() {
 	*x = ListSkillsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9228,7 +9280,7 @@ func (x *ListSkillsRequest) String() string {
 func (*ListSkillsRequest) ProtoMessage() {}
 
 func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9241,7 +9293,7 @@ func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{136}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{137}
 }
 
 type ListSkillsResponse struct {
@@ -9253,7 +9305,7 @@ type ListSkillsResponse struct {
 
 func (x *ListSkillsResponse) Reset() {
 	*x = ListSkillsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9265,7 +9317,7 @@ func (x *ListSkillsResponse) String() string {
 func (*ListSkillsResponse) ProtoMessage() {}
 
 func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9278,7 +9330,7 @@ func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{137}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *ListSkillsResponse) GetItems() []*Skill {
@@ -9301,7 +9353,7 @@ type CreateSkillRequest struct {
 
 func (x *CreateSkillRequest) Reset() {
 	*x = CreateSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9313,7 +9365,7 @@ func (x *CreateSkillRequest) String() string {
 func (*CreateSkillRequest) ProtoMessage() {}
 
 func (x *CreateSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9326,7 +9378,7 @@ func (x *CreateSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillRequest.ProtoReflect.Descriptor instead.
 func (*CreateSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{138}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *CreateSkillRequest) GetName() string {
@@ -9376,7 +9428,7 @@ type UpdateSkillRequest struct {
 
 func (x *UpdateSkillRequest) Reset() {
 	*x = UpdateSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9388,7 +9440,7 @@ func (x *UpdateSkillRequest) String() string {
 func (*UpdateSkillRequest) ProtoMessage() {}
 
 func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9401,7 +9453,7 @@ func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSkillRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{139}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *UpdateSkillRequest) GetSkillId() string {
@@ -9432,16 +9484,61 @@ func (x *UpdateSkillRequest) GetExpectedVersion() int64 {
 	return 0
 }
 
-type DeleteSkillRequest struct {
+type GetSkillDeletionImpactRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SkillId       string                 `protobuf:"bytes,1,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
+func (x *GetSkillDeletionImpactRequest) Reset() {
+	*x = GetSkillDeletionImpactRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSkillDeletionImpactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSkillDeletionImpactRequest) ProtoMessage() {}
+
+func (x *GetSkillDeletionImpactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSkillDeletionImpactRequest.ProtoReflect.Descriptor instead.
+func (*GetSkillDeletionImpactRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{141}
+}
+
+func (x *GetSkillDeletionImpactRequest) GetSkillId() string {
+	if x != nil {
+		return x.SkillId
+	}
+	return ""
+}
+
+type DeleteSkillRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SkillId           string                 `protobuf:"bytes,1,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
+	ConfirmationToken string                 `protobuf:"bytes,2,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
 func (x *DeleteSkillRequest) Reset() {
 	*x = DeleteSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9453,7 +9550,7 @@ func (x *DeleteSkillRequest) String() string {
 func (*DeleteSkillRequest) ProtoMessage() {}
 
 func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9466,12 +9563,19 @@ func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{140}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *DeleteSkillRequest) GetSkillId() string {
 	if x != nil {
 		return x.SkillId
+	}
+	return ""
+}
+
+func (x *DeleteSkillRequest) GetConfirmationToken() string {
+	if x != nil {
+		return x.ConfirmationToken
 	}
 	return ""
 }
@@ -9493,7 +9597,7 @@ type Skill struct {
 
 func (x *Skill) Reset() {
 	*x = Skill{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9505,7 +9609,7 @@ func (x *Skill) String() string {
 func (*Skill) ProtoMessage() {}
 
 func (x *Skill) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9518,7 +9622,7 @@ func (x *Skill) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Skill.ProtoReflect.Descriptor instead.
 func (*Skill) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{141}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *Skill) GetId() string {
@@ -9584,6 +9688,118 @@ func (x *Skill) GetVersion() int64 {
 	return 0
 }
 
+type AffectedExpert struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Version       int64                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AffectedExpert) Reset() {
+	*x = AffectedExpert{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AffectedExpert) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AffectedExpert) ProtoMessage() {}
+
+func (x *AffectedExpert) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AffectedExpert.ProtoReflect.Descriptor instead.
+func (*AffectedExpert) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{144}
+}
+
+func (x *AffectedExpert) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AffectedExpert) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AffectedExpert) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+type ResourceDeletionImpact struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	AffectedExperts   []*AffectedExpert      `protobuf:"bytes,1,rep,name=affected_experts,json=affectedExperts,proto3" json:"affected_experts,omitempty"`
+	ConfirmationToken string                 `protobuf:"bytes,2,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ResourceDeletionImpact) Reset() {
+	*x = ResourceDeletionImpact{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceDeletionImpact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceDeletionImpact) ProtoMessage() {}
+
+func (x *ResourceDeletionImpact) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceDeletionImpact.ProtoReflect.Descriptor instead.
+func (*ResourceDeletionImpact) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{145}
+}
+
+func (x *ResourceDeletionImpact) GetAffectedExperts() []*AffectedExpert {
+	if x != nil {
+		return x.AffectedExperts
+	}
+	return nil
+}
+
+func (x *ResourceDeletionImpact) GetConfirmationToken() string {
+	if x != nil {
+		return x.ConfirmationToken
+	}
+	return ""
+}
+
 type CLICapability struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -9599,7 +9815,7 @@ type CLICapability struct {
 
 func (x *CLICapability) Reset() {
 	*x = CLICapability{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9611,7 +9827,7 @@ func (x *CLICapability) String() string {
 func (*CLICapability) ProtoMessage() {}
 
 func (x *CLICapability) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9624,7 +9840,7 @@ func (x *CLICapability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLICapability.ProtoReflect.Descriptor instead.
 func (*CLICapability) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{142}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *CLICapability) GetId() string {
@@ -9677,21 +9893,23 @@ func (x *CLICapability) GetTimeoutSeconds() int32 {
 }
 
 type CLIConnectorDefinitionInput struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Name                 string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	NpmPackage           string                 `protobuf:"bytes,2,opt,name=npm_package,json=npmPackage,proto3" json:"npm_package,omitempty"`
-	NpmVersion           string                 `protobuf:"bytes,3,opt,name=npm_version,json=npmVersion,proto3" json:"npm_version,omitempty"`
-	NpmIntegrity         string                 `protobuf:"bytes,4,opt,name=npm_integrity,json=npmIntegrity,proto3" json:"npm_integrity,omitempty"`
-	Executable           string                 `protobuf:"bytes,5,opt,name=executable,proto3" json:"executable,omitempty"`
-	AuthenticationDriver string                 `protobuf:"bytes,6,opt,name=authentication_driver,json=authenticationDriver,proto3" json:"authentication_driver,omitempty"`
-	Capabilities         []*CLICapability       `protobuf:"bytes,7,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	NpmPackage             string                 `protobuf:"bytes,2,opt,name=npm_package,json=npmPackage,proto3" json:"npm_package,omitempty"`
+	NpmVersion             string                 `protobuf:"bytes,3,opt,name=npm_version,json=npmVersion,proto3" json:"npm_version,omitempty"`
+	NpmIntegrity           string                 `protobuf:"bytes,4,opt,name=npm_integrity,json=npmIntegrity,proto3" json:"npm_integrity,omitempty"`
+	Executable             string                 `protobuf:"bytes,5,opt,name=executable,proto3" json:"executable,omitempty"`
+	AuthenticationDriver   string                 `protobuf:"bytes,6,opt,name=authentication_driver,json=authenticationDriver,proto3" json:"authentication_driver,omitempty"`
+	Capabilities           []*CLICapability       `protobuf:"bytes,7,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	SupportedArchitectures []string               `protobuf:"bytes,8,rep,name=supported_architectures,json=supportedArchitectures,proto3" json:"supported_architectures,omitempty"`
+	RecommendedSkillIds    []string               `protobuf:"bytes,9,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CLIConnectorDefinitionInput) Reset() {
 	*x = CLIConnectorDefinitionInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9703,7 +9921,7 @@ func (x *CLIConnectorDefinitionInput) String() string {
 func (*CLIConnectorDefinitionInput) ProtoMessage() {}
 
 func (x *CLIConnectorDefinitionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9716,7 +9934,7 @@ func (x *CLIConnectorDefinitionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorDefinitionInput.ProtoReflect.Descriptor instead.
 func (*CLIConnectorDefinitionInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{143}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *CLIConnectorDefinitionInput) GetName() string {
@@ -9768,28 +9986,44 @@ func (x *CLIConnectorDefinitionInput) GetCapabilities() []*CLICapability {
 	return nil
 }
 
+func (x *CLIConnectorDefinitionInput) GetSupportedArchitectures() []string {
+	if x != nil {
+		return x.SupportedArchitectures
+	}
+	return nil
+}
+
+func (x *CLIConnectorDefinitionInput) GetRecommendedSkillIds() []string {
+	if x != nil {
+		return x.RecommendedSkillIds
+	}
+	return nil
+}
+
 type CLIConnectorDefinition struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                 string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	NpmPackage           string                 `protobuf:"bytes,3,opt,name=npm_package,json=npmPackage,proto3" json:"npm_package,omitempty"`
-	NpmVersion           string                 `protobuf:"bytes,4,opt,name=npm_version,json=npmVersion,proto3" json:"npm_version,omitempty"`
-	NpmIntegrity         string                 `protobuf:"bytes,5,opt,name=npm_integrity,json=npmIntegrity,proto3" json:"npm_integrity,omitempty"`
-	Executable           string                 `protobuf:"bytes,6,opt,name=executable,proto3" json:"executable,omitempty"`
-	AuthenticationDriver string                 `protobuf:"bytes,7,opt,name=authentication_driver,json=authenticationDriver,proto3" json:"authentication_driver,omitempty"`
-	Capabilities         []*CLICapability       `protobuf:"bytes,8,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	State                string                 `protobuf:"bytes,9,opt,name=state,proto3" json:"state,omitempty"`
-	FailureReason        *string                `protobuf:"bytes,10,opt,name=failure_reason,json=failureReason,proto3,oneof" json:"failure_reason,omitempty"`
-	BundleSha256         *string                `protobuf:"bytes,11,opt,name=bundle_sha256,json=bundleSha256,proto3,oneof" json:"bundle_sha256,omitempty"`
-	Mutable              bool                   `protobuf:"varint,12,opt,name=mutable,proto3" json:"mutable,omitempty"`
-	Version              int64                  `protobuf:"varint,13,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	NpmPackage             string                 `protobuf:"bytes,3,opt,name=npm_package,json=npmPackage,proto3" json:"npm_package,omitempty"`
+	NpmVersion             string                 `protobuf:"bytes,4,opt,name=npm_version,json=npmVersion,proto3" json:"npm_version,omitempty"`
+	NpmIntegrity           string                 `protobuf:"bytes,5,opt,name=npm_integrity,json=npmIntegrity,proto3" json:"npm_integrity,omitempty"`
+	Executable             string                 `protobuf:"bytes,6,opt,name=executable,proto3" json:"executable,omitempty"`
+	AuthenticationDriver   string                 `protobuf:"bytes,7,opt,name=authentication_driver,json=authenticationDriver,proto3" json:"authentication_driver,omitempty"`
+	Capabilities           []*CLICapability       `protobuf:"bytes,8,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	State                  string                 `protobuf:"bytes,9,opt,name=state,proto3" json:"state,omitempty"`
+	FailureReason          *string                `protobuf:"bytes,10,opt,name=failure_reason,json=failureReason,proto3,oneof" json:"failure_reason,omitempty"`
+	BundleSha256           *string                `protobuf:"bytes,11,opt,name=bundle_sha256,json=bundleSha256,proto3,oneof" json:"bundle_sha256,omitempty"`
+	Mutable                bool                   `protobuf:"varint,12,opt,name=mutable,proto3" json:"mutable,omitempty"`
+	Version                int64                  `protobuf:"varint,13,opt,name=version,proto3" json:"version,omitempty"`
+	SupportedArchitectures []string               `protobuf:"bytes,14,rep,name=supported_architectures,json=supportedArchitectures,proto3" json:"supported_architectures,omitempty"`
+	RecommendedSkillIds    []string               `protobuf:"bytes,15,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CLIConnectorDefinition) Reset() {
 	*x = CLIConnectorDefinition{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9801,7 +10035,7 @@ func (x *CLIConnectorDefinition) String() string {
 func (*CLIConnectorDefinition) ProtoMessage() {}
 
 func (x *CLIConnectorDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9814,7 +10048,7 @@ func (x *CLIConnectorDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorDefinition.ProtoReflect.Descriptor instead.
 func (*CLIConnectorDefinition) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{144}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{148}
 }
 
 func (x *CLIConnectorDefinition) GetId() string {
@@ -9908,6 +10142,20 @@ func (x *CLIConnectorDefinition) GetVersion() int64 {
 	return 0
 }
 
+func (x *CLIConnectorDefinition) GetSupportedArchitectures() []string {
+	if x != nil {
+		return x.SupportedArchitectures
+	}
+	return nil
+}
+
+func (x *CLIConnectorDefinition) GetRecommendedSkillIds() []string {
+	if x != nil {
+		return x.RecommendedSkillIds
+	}
+	return nil
+}
+
 type ListCLIConnectorDefinitionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -9916,7 +10164,7 @@ type ListCLIConnectorDefinitionsRequest struct {
 
 func (x *ListCLIConnectorDefinitionsRequest) Reset() {
 	*x = ListCLIConnectorDefinitionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9928,7 +10176,7 @@ func (x *ListCLIConnectorDefinitionsRequest) String() string {
 func (*ListCLIConnectorDefinitionsRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorDefinitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9941,7 +10189,7 @@ func (x *ListCLIConnectorDefinitionsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListCLIConnectorDefinitionsRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorDefinitionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{145}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{149}
 }
 
 type ListCLIConnectorDefinitionsResponse struct {
@@ -9953,7 +10201,7 @@ type ListCLIConnectorDefinitionsResponse struct {
 
 func (x *ListCLIConnectorDefinitionsResponse) Reset() {
 	*x = ListCLIConnectorDefinitionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9965,7 +10213,7 @@ func (x *ListCLIConnectorDefinitionsResponse) String() string {
 func (*ListCLIConnectorDefinitionsResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorDefinitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9978,7 +10226,7 @@ func (x *ListCLIConnectorDefinitionsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListCLIConnectorDefinitionsResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorDefinitionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{146}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{150}
 }
 
 func (x *ListCLIConnectorDefinitionsResponse) GetItems() []*CLIConnectorDefinition {
@@ -9997,7 +10245,7 @@ type CreateCLIConnectorDefinitionRequest struct {
 
 func (x *CreateCLIConnectorDefinitionRequest) Reset() {
 	*x = CreateCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10009,7 +10257,7 @@ func (x *CreateCLIConnectorDefinitionRequest) String() string {
 func (*CreateCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *CreateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10022,7 +10270,7 @@ func (x *CreateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CreateCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*CreateCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{147}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *CreateCLIConnectorDefinitionRequest) GetDefinition() *CLIConnectorDefinitionInput {
@@ -10043,7 +10291,7 @@ type UpdateCLIConnectorDefinitionRequest struct {
 
 func (x *UpdateCLIConnectorDefinitionRequest) Reset() {
 	*x = UpdateCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10055,7 +10303,7 @@ func (x *UpdateCLIConnectorDefinitionRequest) String() string {
 func (*UpdateCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *UpdateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10068,7 +10316,7 @@ func (x *UpdateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UpdateCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{148}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *UpdateCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -10101,7 +10349,7 @@ type DeleteCLIConnectorDefinitionRequest struct {
 
 func (x *DeleteCLIConnectorDefinitionRequest) Reset() {
 	*x = DeleteCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10113,7 +10361,7 @@ func (x *DeleteCLIConnectorDefinitionRequest) String() string {
 func (*DeleteCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *DeleteCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10126,7 +10374,7 @@ func (x *DeleteCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use DeleteCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{149}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *DeleteCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -10145,7 +10393,7 @@ type EnableCLIConnectorRequest struct {
 
 func (x *EnableCLIConnectorRequest) Reset() {
 	*x = EnableCLIConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10157,7 +10405,7 @@ func (x *EnableCLIConnectorRequest) String() string {
 func (*EnableCLIConnectorRequest) ProtoMessage() {}
 
 func (x *EnableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10170,7 +10418,7 @@ func (x *EnableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableCLIConnectorRequest.ProtoReflect.Descriptor instead.
 func (*EnableCLIConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{150}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{154}
 }
 
 func (x *EnableCLIConnectorRequest) GetDefinitionId() string {
@@ -10194,7 +10442,7 @@ type CLIConnectorEnablement struct {
 
 func (x *CLIConnectorEnablement) Reset() {
 	*x = CLIConnectorEnablement{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10206,7 +10454,7 @@ func (x *CLIConnectorEnablement) String() string {
 func (*CLIConnectorEnablement) ProtoMessage() {}
 
 func (x *CLIConnectorEnablement) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10219,7 +10467,7 @@ func (x *CLIConnectorEnablement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorEnablement.ProtoReflect.Descriptor instead.
 func (*CLIConnectorEnablement) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{151}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *CLIConnectorEnablement) GetId() string {
@@ -10272,7 +10520,7 @@ type ListCLIConnectorEnablementsRequest struct {
 
 func (x *ListCLIConnectorEnablementsRequest) Reset() {
 	*x = ListCLIConnectorEnablementsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10284,7 +10532,7 @@ func (x *ListCLIConnectorEnablementsRequest) String() string {
 func (*ListCLIConnectorEnablementsRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorEnablementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10297,7 +10545,7 @@ func (x *ListCLIConnectorEnablementsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListCLIConnectorEnablementsRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorEnablementsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{152}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{156}
 }
 
 type ListCLIConnectorEnablementsResponse struct {
@@ -10309,7 +10557,7 @@ type ListCLIConnectorEnablementsResponse struct {
 
 func (x *ListCLIConnectorEnablementsResponse) Reset() {
 	*x = ListCLIConnectorEnablementsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10321,7 +10569,7 @@ func (x *ListCLIConnectorEnablementsResponse) String() string {
 func (*ListCLIConnectorEnablementsResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorEnablementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10334,7 +10582,7 @@ func (x *ListCLIConnectorEnablementsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListCLIConnectorEnablementsResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorEnablementsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{153}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *ListCLIConnectorEnablementsResponse) GetItems() []*CLIConnectorEnablement {
@@ -10363,7 +10611,7 @@ type CommandApproval struct {
 
 func (x *CommandApproval) Reset() {
 	*x = CommandApproval{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10375,7 +10623,7 @@ func (x *CommandApproval) String() string {
 func (*CommandApproval) ProtoMessage() {}
 
 func (x *CommandApproval) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10388,7 +10636,7 @@ func (x *CommandApproval) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandApproval.ProtoReflect.Descriptor instead.
 func (*CommandApproval) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{154}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{158}
 }
 
 func (x *CommandApproval) GetId() string {
@@ -10476,7 +10724,7 @@ type ListCommandApprovalsRequest struct {
 
 func (x *ListCommandApprovalsRequest) Reset() {
 	*x = ListCommandApprovalsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10488,7 +10736,7 @@ func (x *ListCommandApprovalsRequest) String() string {
 func (*ListCommandApprovalsRequest) ProtoMessage() {}
 
 func (x *ListCommandApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10501,7 +10749,7 @@ func (x *ListCommandApprovalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommandApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*ListCommandApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{155}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{159}
 }
 
 type ListCommandApprovalsResponse struct {
@@ -10513,7 +10761,7 @@ type ListCommandApprovalsResponse struct {
 
 func (x *ListCommandApprovalsResponse) Reset() {
 	*x = ListCommandApprovalsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10525,7 +10773,7 @@ func (x *ListCommandApprovalsResponse) String() string {
 func (*ListCommandApprovalsResponse) ProtoMessage() {}
 
 func (x *ListCommandApprovalsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10538,7 +10786,7 @@ func (x *ListCommandApprovalsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommandApprovalsResponse.ProtoReflect.Descriptor instead.
 func (*ListCommandApprovalsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{156}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{160}
 }
 
 func (x *ListCommandApprovalsResponse) GetItems() []*CommandApproval {
@@ -10560,7 +10808,7 @@ type DecideCommandApprovalRequest struct {
 
 func (x *DecideCommandApprovalRequest) Reset() {
 	*x = DecideCommandApprovalRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10572,7 +10820,7 @@ func (x *DecideCommandApprovalRequest) String() string {
 func (*DecideCommandApprovalRequest) ProtoMessage() {}
 
 func (x *DecideCommandApprovalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10585,7 +10833,7 @@ func (x *DecideCommandApprovalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideCommandApprovalRequest.ProtoReflect.Descriptor instead.
 func (*DecideCommandApprovalRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{157}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *DecideCommandApprovalRequest) GetApprovalId() string {
@@ -10625,7 +10873,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10637,7 +10885,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10650,7 +10898,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{158}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *DeleteResponse) GetDeleted() bool {
@@ -10674,7 +10922,7 @@ type Attachment struct {
 
 func (x *Attachment) Reset() {
 	*x = Attachment{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10686,7 +10934,7 @@ func (x *Attachment) String() string {
 func (*Attachment) ProtoMessage() {}
 
 func (x *Attachment) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10699,7 +10947,7 @@ func (x *Attachment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Attachment.ProtoReflect.Descriptor instead.
 func (*Attachment) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{159}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *Attachment) GetId() string {
@@ -10754,7 +11002,7 @@ type ExecutionActivity struct {
 
 func (x *ExecutionActivity) Reset() {
 	*x = ExecutionActivity{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10766,7 +11014,7 @@ func (x *ExecutionActivity) String() string {
 func (*ExecutionActivity) ProtoMessage() {}
 
 func (x *ExecutionActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10779,7 +11027,7 @@ func (x *ExecutionActivity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionActivity.ProtoReflect.Descriptor instead.
 func (*ExecutionActivity) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{160}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *ExecutionActivity) GetType() string {
@@ -11646,9 +11894,12 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\rmcp_connector\x18\x02 \x01(\v2\x1f.workspace.v1.MCPConnectorInputR\fmcpConnector\x12)\n" +
 	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\"C\n" +
 	"\x17TestMCPConnectorRequest\x12(\n" +
-	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"E\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"P\n" +
+	"$GetMCPConnectorDeletionImpactRequest\x12(\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"t\n" +
 	"\x19DeleteMCPConnectorRequest\x12(\n" +
-	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"\xdc\x02\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\x12-\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xdc\x02\n" +
 	"\x11MCPConnectorInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\ttransport\x18\x02 \x01(\tR\ttransport\x12\x15\n" +
@@ -11712,9 +11963,12 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"\b_git_refB\n" +
 	"\n" +
-	"\b_archive\"/\n" +
+	"\b_archive\":\n" +
+	"\x1dGetSkillDeletionImpactRequest\x12\x19\n" +
+	"\bskill_id\x18\x01 \x01(\tR\askillId\"^\n" +
 	"\x12DeleteSkillRequest\x12\x19\n" +
-	"\bskill_id\x18\x01 \x01(\tR\askillId\"\xbf\x02\n" +
+	"\bskill_id\x18\x01 \x01(\tR\askillId\x12-\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xbf\x02\n" +
 	"\x05Skill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -11730,7 +11984,14 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"\b_git_urlB\n" +
 	"\n" +
-	"\b_git_ref\"\xd8\x01\n" +
+	"\b_git_ref\"N\n" +
+	"\x0eAffectedExpert\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\x03R\aversion\"\x90\x01\n" +
+	"\x16ResourceDeletionImpact\x12G\n" +
+	"\x10affected_experts\x18\x01 \x03(\v2\x1c.workspace.v1.AffectedExpertR\x0faffectedExperts\x12-\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xd8\x01\n" +
 	"\rCLICapability\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vargv_prefix\x18\x02 \x03(\tR\n" +
@@ -11741,7 +12002,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"identities\x12\x16\n" +
 	"\x06scopes\x18\x05 \x03(\tR\x06scopes\x12!\n" +
 	"\fegress_hosts\x18\x06 \x03(\tR\vegressHosts\x12'\n" +
-	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\"\xae\x02\n" +
+	"\x0ftimeout_seconds\x18\a \x01(\x05R\x0etimeoutSeconds\"\x9b\x03\n" +
 	"\x1bCLIConnectorDefinitionInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vnpm_package\x18\x02 \x01(\tR\n" +
@@ -11753,7 +12014,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"executable\x18\x05 \x01(\tR\n" +
 	"executable\x123\n" +
 	"\x15authentication_driver\x18\x06 \x01(\tR\x14authenticationDriver\x12?\n" +
-	"\fcapabilities\x18\a \x03(\v2\x1b.workspace.v1.CLICapabilityR\fcapabilities\"\xfe\x03\n" +
+	"\fcapabilities\x18\a \x03(\v2\x1b.workspace.v1.CLICapabilityR\fcapabilities\x127\n" +
+	"\x17supported_architectures\x18\b \x03(\tR\x16supportedArchitectures\x122\n" +
+	"\x15recommended_skill_ids\x18\t \x03(\tR\x13recommendedSkillIds\"\xeb\x04\n" +
 	"\x16CLIConnectorDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -11772,7 +12035,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	" \x01(\tH\x00R\rfailureReason\x88\x01\x01\x12(\n" +
 	"\rbundle_sha256\x18\v \x01(\tH\x01R\fbundleSha256\x88\x01\x01\x12\x18\n" +
 	"\amutable\x18\f \x01(\bR\amutable\x12\x18\n" +
-	"\aversion\x18\r \x01(\x03R\aversionB\x11\n" +
+	"\aversion\x18\r \x01(\x03R\aversion\x127\n" +
+	"\x17supported_architectures\x18\x0e \x03(\tR\x16supportedArchitectures\x122\n" +
+	"\x15recommended_skill_ids\x18\x0f \x03(\tR\x13recommendedSkillIdsB\x11\n" +
 	"\x0f_failure_reasonB\x10\n" +
 	"\x0e_bundle_sha256\"$\n" +
 	"\"ListCLIConnectorDefinitionsRequest\"a\n" +
@@ -11842,7 +12107,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x05image\x18\x06 \x01(\bR\x05image\"?\n" +
 	"\x11ExecutionActivity\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
-	"\x06detail\x18\x02 \x01(\tR\x06detail2\xe5Y\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail2\xc5\\\n" +
 	"\x15AgentWorkspaceService\x12d\n" +
 	"\x0eGetCurrentUser\x12#.workspace.v1.GetCurrentUserRequest\x1a\x19.workspace.v1.CurrentUser\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/api/v1/me\x12i\n" +
@@ -11915,12 +12180,14 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x11ListMCPConnectors\x12&.workspace.v1.ListMCPConnectorsRequest\x1a'.workspace.v1.ListMCPConnectorsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/connectors/mcp\x12|\n" +
 	"\x12CreateMCPConnector\x12'.workspace.v1.CreateMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/connectors/mcp\x12\x8f\x01\n" +
 	"\x12UpdateMCPConnector\x12'.workspace.v1.UpdateMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"4\x82\xd3\xe4\x93\x02.:\x01*2)/api/v1/connectors/mcp/{mcp_connector_id}\x12\x90\x01\n" +
-	"\x10TestMCPConnector\x12%.workspace.v1.TestMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/connectors/mcp/{mcp_connector_id}/test\x12\x8e\x01\n" +
+	"\x10TestMCPConnector\x12%.workspace.v1.TestMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/connectors/mcp/{mcp_connector_id}/test\x12\xbc\x01\n" +
+	"\x1dGetMCPConnectorDeletionImpact\x122.workspace.v1.GetMCPConnectorDeletionImpactRequest\x1a$.workspace.v1.ResourceDeletionImpact\"A\x82\xd3\xe4\x93\x02;\x129/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact\x12\x8e\x01\n" +
 	"\x12DeleteMCPConnector\x12'.workspace.v1.DeleteMCPConnectorRequest\x1a\x1c.workspace.v1.DeleteResponse\"1\x82\xd3\xe4\x93\x02+*)/api/v1/connectors/mcp/{mcp_connector_id}\x12g\n" +
 	"\n" +
 	"ListSkills\x12\x1f.workspace.v1.ListSkillsRequest\x1a .workspace.v1.ListSkillsResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/skills\x12_\n" +
 	"\vCreateSkill\x12 .workspace.v1.CreateSkillRequest\x1a\x13.workspace.v1.Skill\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/v1/skills\x12j\n" +
-	"\vUpdateSkill\x12 .workspace.v1.UpdateSkillRequest\x1a\x13.workspace.v1.Skill\"$\x82\xd3\xe4\x93\x02\x1e:\x01*2\x19/api/v1/skills/{skill_id}\x12p\n" +
+	"\vUpdateSkill\x12 .workspace.v1.UpdateSkillRequest\x1a\x13.workspace.v1.Skill\"$\x82\xd3\xe4\x93\x02\x1e:\x01*2\x19/api/v1/skills/{skill_id}\x12\x9e\x01\n" +
+	"\x16GetSkillDeletionImpact\x12+.workspace.v1.GetSkillDeletionImpactRequest\x1a$.workspace.v1.ResourceDeletionImpact\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/skills/{skill_id}/deletion-impact\x12p\n" +
 	"\vDeleteSkill\x12 .workspace.v1.DeleteSkillRequest\x1a\x1c.workspace.v1.DeleteResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/api/v1/skills/{skill_id}\x12\xa2\x01\n" +
 	"\x1bListCLIConnectorDefinitions\x120.workspace.v1.ListCLIConnectorDefinitionsRequest\x1a1.workspace.v1.ListCLIConnectorDefinitionsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/connectors/cli\x12\xa0\x01\n" +
 	"\x1cCreateCLIConnectorDefinition\x121.workspace.v1.CreateCLIConnectorDefinitionRequest\x1a$.workspace.v1.CLIConnectorDefinition\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/admin/connectors/cli\x12\xb0\x01\n" +
@@ -11943,7 +12210,7 @@ func file_workspace_v1_workspace_proto_rawDescGZIP() []byte {
 	return file_workspace_v1_workspace_proto_rawDescData
 }
 
-var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 161)
+var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 165)
 var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*GetCurrentUserRequest)(nil),                // 0: workspace.v1.GetCurrentUserRequest
 	(*CurrentUser)(nil),                          // 1: workspace.v1.CurrentUser
@@ -12078,70 +12345,74 @@ var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*CreateMCPConnectorRequest)(nil),            // 130: workspace.v1.CreateMCPConnectorRequest
 	(*UpdateMCPConnectorRequest)(nil),            // 131: workspace.v1.UpdateMCPConnectorRequest
 	(*TestMCPConnectorRequest)(nil),              // 132: workspace.v1.TestMCPConnectorRequest
-	(*DeleteMCPConnectorRequest)(nil),            // 133: workspace.v1.DeleteMCPConnectorRequest
-	(*MCPConnectorInput)(nil),                    // 134: workspace.v1.MCPConnectorInput
-	(*MCPConnector)(nil),                         // 135: workspace.v1.MCPConnector
-	(*ListSkillsRequest)(nil),                    // 136: workspace.v1.ListSkillsRequest
-	(*ListSkillsResponse)(nil),                   // 137: workspace.v1.ListSkillsResponse
-	(*CreateSkillRequest)(nil),                   // 138: workspace.v1.CreateSkillRequest
-	(*UpdateSkillRequest)(nil),                   // 139: workspace.v1.UpdateSkillRequest
-	(*DeleteSkillRequest)(nil),                   // 140: workspace.v1.DeleteSkillRequest
-	(*Skill)(nil),                                // 141: workspace.v1.Skill
-	(*CLICapability)(nil),                        // 142: workspace.v1.CLICapability
-	(*CLIConnectorDefinitionInput)(nil),          // 143: workspace.v1.CLIConnectorDefinitionInput
-	(*CLIConnectorDefinition)(nil),               // 144: workspace.v1.CLIConnectorDefinition
-	(*ListCLIConnectorDefinitionsRequest)(nil),   // 145: workspace.v1.ListCLIConnectorDefinitionsRequest
-	(*ListCLIConnectorDefinitionsResponse)(nil),  // 146: workspace.v1.ListCLIConnectorDefinitionsResponse
-	(*CreateCLIConnectorDefinitionRequest)(nil),  // 147: workspace.v1.CreateCLIConnectorDefinitionRequest
-	(*UpdateCLIConnectorDefinitionRequest)(nil),  // 148: workspace.v1.UpdateCLIConnectorDefinitionRequest
-	(*DeleteCLIConnectorDefinitionRequest)(nil),  // 149: workspace.v1.DeleteCLIConnectorDefinitionRequest
-	(*EnableCLIConnectorRequest)(nil),            // 150: workspace.v1.EnableCLIConnectorRequest
-	(*CLIConnectorEnablement)(nil),               // 151: workspace.v1.CLIConnectorEnablement
-	(*ListCLIConnectorEnablementsRequest)(nil),   // 152: workspace.v1.ListCLIConnectorEnablementsRequest
-	(*ListCLIConnectorEnablementsResponse)(nil),  // 153: workspace.v1.ListCLIConnectorEnablementsResponse
-	(*CommandApproval)(nil),                      // 154: workspace.v1.CommandApproval
-	(*ListCommandApprovalsRequest)(nil),          // 155: workspace.v1.ListCommandApprovalsRequest
-	(*ListCommandApprovalsResponse)(nil),         // 156: workspace.v1.ListCommandApprovalsResponse
-	(*DecideCommandApprovalRequest)(nil),         // 157: workspace.v1.DecideCommandApprovalRequest
-	(*DeleteResponse)(nil),                       // 158: workspace.v1.DeleteResponse
-	(*Attachment)(nil),                           // 159: workspace.v1.Attachment
-	(*ExecutionActivity)(nil),                    // 160: workspace.v1.ExecutionActivity
-	(*timestamppb.Timestamp)(nil),                // 161: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                      // 162: google.protobuf.Struct
+	(*GetMCPConnectorDeletionImpactRequest)(nil), // 133: workspace.v1.GetMCPConnectorDeletionImpactRequest
+	(*DeleteMCPConnectorRequest)(nil),            // 134: workspace.v1.DeleteMCPConnectorRequest
+	(*MCPConnectorInput)(nil),                    // 135: workspace.v1.MCPConnectorInput
+	(*MCPConnector)(nil),                         // 136: workspace.v1.MCPConnector
+	(*ListSkillsRequest)(nil),                    // 137: workspace.v1.ListSkillsRequest
+	(*ListSkillsResponse)(nil),                   // 138: workspace.v1.ListSkillsResponse
+	(*CreateSkillRequest)(nil),                   // 139: workspace.v1.CreateSkillRequest
+	(*UpdateSkillRequest)(nil),                   // 140: workspace.v1.UpdateSkillRequest
+	(*GetSkillDeletionImpactRequest)(nil),        // 141: workspace.v1.GetSkillDeletionImpactRequest
+	(*DeleteSkillRequest)(nil),                   // 142: workspace.v1.DeleteSkillRequest
+	(*Skill)(nil),                                // 143: workspace.v1.Skill
+	(*AffectedExpert)(nil),                       // 144: workspace.v1.AffectedExpert
+	(*ResourceDeletionImpact)(nil),               // 145: workspace.v1.ResourceDeletionImpact
+	(*CLICapability)(nil),                        // 146: workspace.v1.CLICapability
+	(*CLIConnectorDefinitionInput)(nil),          // 147: workspace.v1.CLIConnectorDefinitionInput
+	(*CLIConnectorDefinition)(nil),               // 148: workspace.v1.CLIConnectorDefinition
+	(*ListCLIConnectorDefinitionsRequest)(nil),   // 149: workspace.v1.ListCLIConnectorDefinitionsRequest
+	(*ListCLIConnectorDefinitionsResponse)(nil),  // 150: workspace.v1.ListCLIConnectorDefinitionsResponse
+	(*CreateCLIConnectorDefinitionRequest)(nil),  // 151: workspace.v1.CreateCLIConnectorDefinitionRequest
+	(*UpdateCLIConnectorDefinitionRequest)(nil),  // 152: workspace.v1.UpdateCLIConnectorDefinitionRequest
+	(*DeleteCLIConnectorDefinitionRequest)(nil),  // 153: workspace.v1.DeleteCLIConnectorDefinitionRequest
+	(*EnableCLIConnectorRequest)(nil),            // 154: workspace.v1.EnableCLIConnectorRequest
+	(*CLIConnectorEnablement)(nil),               // 155: workspace.v1.CLIConnectorEnablement
+	(*ListCLIConnectorEnablementsRequest)(nil),   // 156: workspace.v1.ListCLIConnectorEnablementsRequest
+	(*ListCLIConnectorEnablementsResponse)(nil),  // 157: workspace.v1.ListCLIConnectorEnablementsResponse
+	(*CommandApproval)(nil),                      // 158: workspace.v1.CommandApproval
+	(*ListCommandApprovalsRequest)(nil),          // 159: workspace.v1.ListCommandApprovalsRequest
+	(*ListCommandApprovalsResponse)(nil),         // 160: workspace.v1.ListCommandApprovalsResponse
+	(*DecideCommandApprovalRequest)(nil),         // 161: workspace.v1.DecideCommandApprovalRequest
+	(*DeleteResponse)(nil),                       // 162: workspace.v1.DeleteResponse
+	(*Attachment)(nil),                           // 163: workspace.v1.Attachment
+	(*ExecutionActivity)(nil),                    // 164: workspace.v1.ExecutionActivity
+	(*timestamppb.Timestamp)(nil),                // 165: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                      // 166: google.protobuf.Struct
 }
 var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	11,  // 0: workspace.v1.CurrentUser.credit_balance:type_name -> workspace.v1.CreditBalance
 	9,   // 1: workspace.v1.ListUsersResponse.items:type_name -> workspace.v1.UserAccount
 	9,   // 2: workspace.v1.CreateUserResponse.user:type_name -> workspace.v1.UserAccount
-	161, // 3: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
+	165, // 3: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
 	11,  // 4: workspace.v1.UserAccount.credit_balance:type_name -> workspace.v1.CreditBalance
-	161, // 5: workspace.v1.CreditBalance.next_allocation_at:type_name -> google.protobuf.Timestamp
+	165, // 5: workspace.v1.CreditBalance.next_allocation_at:type_name -> google.protobuf.Timestamp
 	14,  // 6: workspace.v1.ListCreditLedgerResponse.items:type_name -> workspace.v1.CreditLedgerEntry
-	161, // 7: workspace.v1.CreditLedgerEntry.created_at:type_name -> google.protobuf.Timestamp
+	165, // 7: workspace.v1.CreditLedgerEntry.created_at:type_name -> google.protobuf.Timestamp
 	20,  // 8: workspace.v1.ListModelCreditRatesResponse.items:type_name -> workspace.v1.ModelCreditRate
-	161, // 9: workspace.v1.ModelCreditRate.created_at:type_name -> google.protobuf.Timestamp
-	161, // 10: workspace.v1.ModelCreditRate.superseded_at:type_name -> google.protobuf.Timestamp
-	161, // 11: workspace.v1.CreateRedemptionCodeBatchRequest.expires_at:type_name -> google.protobuf.Timestamp
-	161, // 12: workspace.v1.RedemptionCodeBatch.expires_at:type_name -> google.protobuf.Timestamp
-	161, // 13: workspace.v1.RedemptionCodeBatch.created_at:type_name -> google.protobuf.Timestamp
+	165, // 9: workspace.v1.ModelCreditRate.created_at:type_name -> google.protobuf.Timestamp
+	165, // 10: workspace.v1.ModelCreditRate.superseded_at:type_name -> google.protobuf.Timestamp
+	165, // 11: workspace.v1.CreateRedemptionCodeBatchRequest.expires_at:type_name -> google.protobuf.Timestamp
+	165, // 12: workspace.v1.RedemptionCodeBatch.expires_at:type_name -> google.protobuf.Timestamp
+	165, // 13: workspace.v1.RedemptionCodeBatch.created_at:type_name -> google.protobuf.Timestamp
 	24,  // 14: workspace.v1.RedemptionCodeBatch.codes:type_name -> workspace.v1.RedemptionCode
 	28,  // 15: workspace.v1.ListRedemptionCodesResponse.items:type_name -> workspace.v1.RedemptionCodeStatus
-	161, // 16: workspace.v1.RedemptionCodeStatus.expires_at:type_name -> google.protobuf.Timestamp
-	161, // 17: workspace.v1.RedemptionCodeStatus.redeemed_at:type_name -> google.protobuf.Timestamp
-	161, // 18: workspace.v1.RedemptionCodeStatus.voided_at:type_name -> google.protobuf.Timestamp
-	161, // 19: workspace.v1.RedemptionCodeStatus.created_at:type_name -> google.protobuf.Timestamp
+	165, // 16: workspace.v1.RedemptionCodeStatus.expires_at:type_name -> google.protobuf.Timestamp
+	165, // 17: workspace.v1.RedemptionCodeStatus.redeemed_at:type_name -> google.protobuf.Timestamp
+	165, // 18: workspace.v1.RedemptionCodeStatus.voided_at:type_name -> google.protobuf.Timestamp
+	165, // 19: workspace.v1.RedemptionCodeStatus.created_at:type_name -> google.protobuf.Timestamp
 	37,  // 20: workspace.v1.ListSessionsResponse.items:type_name -> workspace.v1.Session
-	161, // 21: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
-	161, // 22: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
+	165, // 21: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	165, // 22: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
 	44,  // 23: workspace.v1.ListSessionMessagesResponse.items:type_name -> workspace.v1.SessionMessage
 	44,  // 24: workspace.v1.SendSessionMessageResponse.user_message:type_name -> workspace.v1.SessionMessage
 	44,  // 25: workspace.v1.SendSessionMessageResponse.assistant_message:type_name -> workspace.v1.SessionMessage
-	161, // 26: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
+	165, // 26: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
 	45,  // 27: workspace.v1.SessionMessage.response_snapshot:type_name -> workspace.v1.ResponseSnapshot
-	159, // 28: workspace.v1.SessionMessage.attachments:type_name -> workspace.v1.Attachment
+	163, // 28: workspace.v1.SessionMessage.attachments:type_name -> workspace.v1.Attachment
 	105, // 29: workspace.v1.SessionMessage.expert_stages:type_name -> workspace.v1.ExpertStage
 	106, // 30: workspace.v1.SessionMessage.credit_consumption:type_name -> workspace.v1.CreditConsumption
-	160, // 31: workspace.v1.SessionMessage.activities:type_name -> workspace.v1.ExecutionActivity
+	164, // 31: workspace.v1.SessionMessage.activities:type_name -> workspace.v1.ExecutionActivity
 	46,  // 32: workspace.v1.ResponseSnapshot.stages:type_name -> workspace.v1.ExecutionStageSnapshot
 	47,  // 33: workspace.v1.ExecutionStageSnapshot.expert:type_name -> workspace.v1.ExpertSnapshot
 	48,  // 34: workspace.v1.ExecutionStageSnapshot.provider_model:type_name -> workspace.v1.ProviderModelSnapshot
@@ -12155,43 +12426,43 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	59,  // 42: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
 	60,  // 43: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
 	62,  // 44: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
-	161, // 45: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	161, // 46: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
+	165, // 45: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	165, // 46: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
 	61,  // 47: workspace.v1.GitSource.config:type_name -> workspace.v1.GitConfigEntry
-	161, // 48: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
-	161, // 49: workspace.v1.WorkflowAccessToken.expires_at:type_name -> google.protobuf.Timestamp
-	162, // 50: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
+	165, // 48: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
+	165, // 49: workspace.v1.WorkflowAccessToken.expires_at:type_name -> google.protobuf.Timestamp
+	166, // 50: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
 	75,  // 51: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
-	162, // 52: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
-	162, // 53: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
-	161, // 54: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
-	161, // 55: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	161, // 56: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	162, // 57: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
-	159, // 58: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
+	166, // 52: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
+	166, // 53: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
+	165, // 54: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
+	165, // 55: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	165, // 56: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	166, // 57: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
+	163, // 58: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
 	105, // 59: workspace.v1.Run.expert_stages:type_name -> workspace.v1.ExpertStage
 	106, // 60: workspace.v1.Run.credit_consumption:type_name -> workspace.v1.CreditConsumption
 	80,  // 61: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
-	161, // 62: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
-	161, // 63: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
-	161, // 64: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
+	165, // 62: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
+	165, // 63: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
+	165, // 64: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
 	86,  // 65: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
-	161, // 66: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
+	165, // 66: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
 	61,  // 67: workspace.v1.ConfigureWorkflowGitSourceRequest.config:type_name -> workspace.v1.GitConfigEntry
-	161, // 68: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
+	165, // 68: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
 	94,  // 69: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
 	93,  // 70: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
 	93,  // 71: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	161, // 72: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
-	161, // 73: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
+	165, // 72: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
+	165, // 73: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
 	104, // 74: workspace.v1.ListExpertTeamsResponse.items:type_name -> workspace.v1.ExpertTeam
 	101, // 75: workspace.v1.CreateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
 	101, // 76: workspace.v1.UpdateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
 	102, // 77: workspace.v1.ExpertTeamInput.members:type_name -> workspace.v1.ExpertTeamMemberInput
 	94,  // 78: workspace.v1.ExpertTeamMember.expert:type_name -> workspace.v1.Expert
 	94,  // 79: workspace.v1.ExpertTeam.experts:type_name -> workspace.v1.Expert
-	161, // 80: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
-	161, // 81: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
+	165, // 80: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
+	165, // 81: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
 	103, // 82: workspace.v1.ExpertTeam.members:type_name -> workspace.v1.ExpertTeamMember
 	107, // 83: workspace.v1.ExpertStage.credit_consumption:type_name -> workspace.v1.CreditStageConsumption
 	107, // 84: workspace.v1.CreditConsumption.stages:type_name -> workspace.v1.CreditStageConsumption
@@ -12200,199 +12471,204 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	114, // 87: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
 	117, // 88: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
 	125, // 89: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
-	161, // 90: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
+	165, // 90: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
 	126, // 91: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
-	161, // 92: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
-	161, // 93: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
+	165, // 92: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
+	165, // 93: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
 	127, // 94: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
-	135, // 95: workspace.v1.ListMCPConnectorsResponse.items:type_name -> workspace.v1.MCPConnector
-	134, // 96: workspace.v1.CreateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
-	134, // 97: workspace.v1.UpdateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	136, // 95: workspace.v1.ListMCPConnectorsResponse.items:type_name -> workspace.v1.MCPConnector
+	135, // 96: workspace.v1.CreateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	135, // 97: workspace.v1.UpdateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
 	59,  // 98: workspace.v1.MCPConnectorInput.environment:type_name -> workspace.v1.EnvironmentVariable
 	59,  // 99: workspace.v1.MCPConnector.environment:type_name -> workspace.v1.EnvironmentVariable
-	161, // 100: workspace.v1.MCPConnector.created_at:type_name -> google.protobuf.Timestamp
-	161, // 101: workspace.v1.MCPConnector.updated_at:type_name -> google.protobuf.Timestamp
-	141, // 102: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
-	161, // 103: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
-	161, // 104: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
-	142, // 105: workspace.v1.CLIConnectorDefinitionInput.capabilities:type_name -> workspace.v1.CLICapability
-	142, // 106: workspace.v1.CLIConnectorDefinition.capabilities:type_name -> workspace.v1.CLICapability
-	144, // 107: workspace.v1.ListCLIConnectorDefinitionsResponse.items:type_name -> workspace.v1.CLIConnectorDefinition
-	143, // 108: workspace.v1.CreateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
-	143, // 109: workspace.v1.UpdateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
-	161, // 110: workspace.v1.CLIConnectorEnablement.action_expires_at:type_name -> google.protobuf.Timestamp
-	151, // 111: workspace.v1.ListCLIConnectorEnablementsResponse.items:type_name -> workspace.v1.CLIConnectorEnablement
-	161, // 112: workspace.v1.CommandApproval.expires_at:type_name -> google.protobuf.Timestamp
-	154, // 113: workspace.v1.ListCommandApprovalsResponse.items:type_name -> workspace.v1.CommandApproval
-	0,   // 114: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
-	2,   // 115: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
-	4,   // 116: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
-	6,   // 117: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
-	7,   // 118: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
-	10,  // 119: workspace.v1.AgentWorkspaceService.GetCreditBalance:input_type -> workspace.v1.GetCreditBalanceRequest
-	12,  // 120: workspace.v1.AgentWorkspaceService.ListCreditLedger:input_type -> workspace.v1.ListCreditLedgerRequest
-	15,  // 121: workspace.v1.AgentWorkspaceService.RedeemCreditCode:input_type -> workspace.v1.RedeemCreditCodeRequest
-	16,  // 122: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:input_type -> workspace.v1.ConfigureUserDailyCreditsRequest
-	17,  // 123: workspace.v1.AgentWorkspaceService.AdjustUserCredits:input_type -> workspace.v1.AdjustUserCreditsRequest
-	18,  // 124: workspace.v1.AgentWorkspaceService.ListModelCreditRates:input_type -> workspace.v1.ListModelCreditRatesRequest
-	21,  // 125: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:input_type -> workspace.v1.CreateModelCreditRateRequest
-	22,  // 126: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:input_type -> workspace.v1.CreateRedemptionCodeBatchRequest
-	25,  // 127: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:input_type -> workspace.v1.ListRedemptionCodesRequest
-	27,  // 128: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:input_type -> workspace.v1.VoidRedemptionCodeRequest
-	29,  // 129: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
-	31,  // 130: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
-	32,  // 131: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
-	33,  // 132: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
-	34,  // 133: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
-	35,  // 134: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
-	36,  // 135: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
-	38,  // 136: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
-	40,  // 137: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
-	42,  // 138: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
-	43,  // 139: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
-	51,  // 140: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
-	53,  // 141: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
-	54,  // 142: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
-	55,  // 143: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
-	56,  // 144: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
-	63,  // 145: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
-	65,  // 146: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
-	67,  // 147: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
-	68,  // 148: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
-	70,  // 149: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
-	71,  // 150: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
-	72,  // 151: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
-	73,  // 152: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
-	74,  // 153: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
-	76,  // 154: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
-	78,  // 155: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
-	81,  // 156: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
-	83,  // 157: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
-	85,  // 158: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
-	87,  // 159: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
-	89,  // 160: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
-	90,  // 161: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
-	91,  // 162: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
-	92,  // 163: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
-	95,  // 164: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
-	97,  // 165: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
-	98,  // 166: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
-	99,  // 167: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
-	100, // 168: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
-	108, // 169: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
-	109, // 170: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
-	112, // 171: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
-	115, // 172: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
-	118, // 173: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
-	120, // 174: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
-	121, // 175: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
-	122, // 176: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
-	123, // 177: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
-	124, // 178: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	128, // 179: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
-	130, // 180: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
-	131, // 181: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
-	132, // 182: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
-	133, // 183: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
-	136, // 184: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
-	138, // 185: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
-	139, // 186: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
-	140, // 187: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
-	145, // 188: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
-	147, // 189: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
-	148, // 190: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
-	149, // 191: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:input_type -> workspace.v1.DeleteCLIConnectorDefinitionRequest
-	150, // 192: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
-	152, // 193: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
-	155, // 194: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
-	157, // 195: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
-	1,   // 196: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
-	3,   // 197: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
-	5,   // 198: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
-	9,   // 199: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
-	8,   // 200: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
-	11,  // 201: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
-	13,  // 202: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
-	11,  // 203: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
-	11,  // 204: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
-	11,  // 205: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
-	19,  // 206: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
-	20,  // 207: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
-	23,  // 208: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
-	26,  // 209: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
-	28,  // 210: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
-	30,  // 211: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
-	37,  // 212: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
-	37,  // 213: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
-	37,  // 214: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
-	37,  // 215: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
-	37,  // 216: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
-	158, // 217: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
-	39,  // 218: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
-	41,  // 219: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	41,  // 220: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	44,  // 221: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
-	52,  // 222: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
-	58,  // 223: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
-	58,  // 224: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
-	58,  // 225: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
-	158, // 226: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
-	64,  // 227: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	66,  // 228: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
-	75,  // 229: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
-	69,  // 230: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
-	75,  // 231: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
-	69,  // 232: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
-	75,  // 233: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
-	75,  // 234: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
-	75,  // 235: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
-	77,  // 236: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
-	79,  // 237: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
-	82,  // 238: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
-	84,  // 239: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
-	58,  // 240: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
-	88,  // 241: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
-	94,  // 242: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
-	94,  // 243: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
-	94,  // 244: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
-	158, // 245: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
-	96,  // 246: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
-	104, // 247: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
-	104, // 248: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	104, // 249: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	158, // 250: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
-	110, // 251: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
-	110, // 252: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
-	113, // 253: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
-	116, // 254: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
-	119, // 255: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
-	125, // 256: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	125, // 257: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	158, // 258: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
-	125, // 259: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
-	126, // 260: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	129, // 261: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
-	135, // 262: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
-	135, // 263: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
-	135, // 264: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
-	158, // 265: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
-	137, // 266: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
-	141, // 267: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
-	141, // 268: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
-	158, // 269: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
-	146, // 270: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
-	144, // 271: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	144, // 272: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	158, // 273: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:output_type -> workspace.v1.DeleteResponse
-	151, // 274: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
-	153, // 275: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
-	156, // 276: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
-	154, // 277: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
-	196, // [196:278] is the sub-list for method output_type
-	114, // [114:196] is the sub-list for method input_type
-	114, // [114:114] is the sub-list for extension type_name
-	114, // [114:114] is the sub-list for extension extendee
-	0,   // [0:114] is the sub-list for field type_name
+	165, // 100: workspace.v1.MCPConnector.created_at:type_name -> google.protobuf.Timestamp
+	165, // 101: workspace.v1.MCPConnector.updated_at:type_name -> google.protobuf.Timestamp
+	143, // 102: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
+	165, // 103: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
+	165, // 104: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
+	144, // 105: workspace.v1.ResourceDeletionImpact.affected_experts:type_name -> workspace.v1.AffectedExpert
+	146, // 106: workspace.v1.CLIConnectorDefinitionInput.capabilities:type_name -> workspace.v1.CLICapability
+	146, // 107: workspace.v1.CLIConnectorDefinition.capabilities:type_name -> workspace.v1.CLICapability
+	148, // 108: workspace.v1.ListCLIConnectorDefinitionsResponse.items:type_name -> workspace.v1.CLIConnectorDefinition
+	147, // 109: workspace.v1.CreateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
+	147, // 110: workspace.v1.UpdateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
+	165, // 111: workspace.v1.CLIConnectorEnablement.action_expires_at:type_name -> google.protobuf.Timestamp
+	155, // 112: workspace.v1.ListCLIConnectorEnablementsResponse.items:type_name -> workspace.v1.CLIConnectorEnablement
+	165, // 113: workspace.v1.CommandApproval.expires_at:type_name -> google.protobuf.Timestamp
+	158, // 114: workspace.v1.ListCommandApprovalsResponse.items:type_name -> workspace.v1.CommandApproval
+	0,   // 115: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
+	2,   // 116: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
+	4,   // 117: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
+	6,   // 118: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
+	7,   // 119: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
+	10,  // 120: workspace.v1.AgentWorkspaceService.GetCreditBalance:input_type -> workspace.v1.GetCreditBalanceRequest
+	12,  // 121: workspace.v1.AgentWorkspaceService.ListCreditLedger:input_type -> workspace.v1.ListCreditLedgerRequest
+	15,  // 122: workspace.v1.AgentWorkspaceService.RedeemCreditCode:input_type -> workspace.v1.RedeemCreditCodeRequest
+	16,  // 123: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:input_type -> workspace.v1.ConfigureUserDailyCreditsRequest
+	17,  // 124: workspace.v1.AgentWorkspaceService.AdjustUserCredits:input_type -> workspace.v1.AdjustUserCreditsRequest
+	18,  // 125: workspace.v1.AgentWorkspaceService.ListModelCreditRates:input_type -> workspace.v1.ListModelCreditRatesRequest
+	21,  // 126: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:input_type -> workspace.v1.CreateModelCreditRateRequest
+	22,  // 127: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:input_type -> workspace.v1.CreateRedemptionCodeBatchRequest
+	25,  // 128: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:input_type -> workspace.v1.ListRedemptionCodesRequest
+	27,  // 129: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:input_type -> workspace.v1.VoidRedemptionCodeRequest
+	29,  // 130: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
+	31,  // 131: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
+	32,  // 132: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
+	33,  // 133: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
+	34,  // 134: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
+	35,  // 135: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
+	36,  // 136: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
+	38,  // 137: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
+	40,  // 138: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
+	42,  // 139: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
+	43,  // 140: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
+	51,  // 141: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
+	53,  // 142: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
+	54,  // 143: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
+	55,  // 144: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
+	56,  // 145: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
+	63,  // 146: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
+	65,  // 147: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
+	67,  // 148: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
+	68,  // 149: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
+	70,  // 150: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
+	71,  // 151: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
+	72,  // 152: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
+	73,  // 153: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
+	74,  // 154: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
+	76,  // 155: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
+	78,  // 156: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
+	81,  // 157: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
+	83,  // 158: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
+	85,  // 159: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
+	87,  // 160: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
+	89,  // 161: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
+	90,  // 162: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
+	91,  // 163: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
+	92,  // 164: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
+	95,  // 165: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
+	97,  // 166: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
+	98,  // 167: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
+	99,  // 168: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
+	100, // 169: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
+	108, // 170: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
+	109, // 171: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
+	112, // 172: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
+	115, // 173: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
+	118, // 174: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
+	120, // 175: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
+	121, // 176: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
+	122, // 177: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
+	123, // 178: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
+	124, // 179: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
+	128, // 180: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
+	130, // 181: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
+	131, // 182: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
+	132, // 183: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
+	133, // 184: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:input_type -> workspace.v1.GetMCPConnectorDeletionImpactRequest
+	134, // 185: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
+	137, // 186: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
+	139, // 187: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
+	140, // 188: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
+	141, // 189: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:input_type -> workspace.v1.GetSkillDeletionImpactRequest
+	142, // 190: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
+	149, // 191: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
+	151, // 192: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
+	152, // 193: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
+	153, // 194: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:input_type -> workspace.v1.DeleteCLIConnectorDefinitionRequest
+	154, // 195: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
+	156, // 196: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
+	159, // 197: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
+	161, // 198: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
+	1,   // 199: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
+	3,   // 200: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
+	5,   // 201: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
+	9,   // 202: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
+	8,   // 203: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
+	11,  // 204: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
+	13,  // 205: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
+	11,  // 206: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
+	11,  // 207: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
+	11,  // 208: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
+	19,  // 209: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
+	20,  // 210: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
+	23,  // 211: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
+	26,  // 212: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
+	28,  // 213: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
+	30,  // 214: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
+	37,  // 215: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
+	37,  // 216: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
+	37,  // 217: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
+	37,  // 218: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
+	37,  // 219: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
+	162, // 220: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
+	39,  // 221: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
+	41,  // 222: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	41,  // 223: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	44,  // 224: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
+	52,  // 225: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
+	58,  // 226: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
+	58,  // 227: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
+	58,  // 228: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
+	162, // 229: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
+	64,  // 230: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	66,  // 231: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
+	75,  // 232: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
+	69,  // 233: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
+	75,  // 234: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
+	69,  // 235: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
+	75,  // 236: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
+	75,  // 237: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
+	75,  // 238: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
+	77,  // 239: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
+	79,  // 240: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
+	82,  // 241: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
+	84,  // 242: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
+	58,  // 243: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
+	88,  // 244: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
+	94,  // 245: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
+	94,  // 246: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
+	94,  // 247: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
+	162, // 248: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
+	96,  // 249: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
+	104, // 250: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
+	104, // 251: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	104, // 252: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	162, // 253: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
+	110, // 254: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
+	110, // 255: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
+	113, // 256: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
+	116, // 257: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
+	119, // 258: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
+	125, // 259: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	125, // 260: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	162, // 261: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
+	125, // 262: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
+	126, // 263: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
+	129, // 264: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
+	136, // 265: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
+	136, // 266: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
+	136, // 267: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
+	145, // 268: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	162, // 269: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
+	138, // 270: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
+	143, // 271: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
+	143, // 272: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
+	145, // 273: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	162, // 274: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
+	150, // 275: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
+	148, // 276: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	148, // 277: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	162, // 278: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:output_type -> workspace.v1.DeleteResponse
+	155, // 279: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
+	157, // 280: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
+	160, // 281: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
+	158, // 282: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
+	199, // [199:283] is the sub-list for method output_type
+	115, // [115:199] is the sub-list for method input_type
+	115, // [115:115] is the sub-list for extension type_name
+	115, // [115:115] is the sub-list for extension extendee
+	0,   // [0:115] is the sub-list for field type_name
 }
 
 func init() { file_workspace_v1_workspace_proto_init() }
@@ -12434,22 +12710,22 @@ func file_workspace_v1_workspace_proto_init() {
 	file_workspace_v1_workspace_proto_msgTypes[121].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[125].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[127].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[134].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[135].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[138].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[136].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[139].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[141].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[144].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[151].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[154].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[157].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[140].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[143].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[148].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[155].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[158].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[161].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_workspace_v1_workspace_proto_rawDesc), len(file_workspace_v1_workspace_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   161,
+			NumMessages:   165,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

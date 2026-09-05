@@ -70,7 +70,7 @@ describe("ExtensionManager", () => {
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => [saved]),
-      listExperts: vi.fn(async () => [{ id: "expert-1", name: "审查专家", mcp_server_ids: [], skill_ids: [saved.id] }]),
+      getSkillDeletionImpact: vi.fn(async () => ({ affected_experts: [{ id: "expert-1", name: "审查专家", version: 2 }], confirmation_token: "confirmation" })),
     } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
@@ -98,6 +98,10 @@ describe("ExtensionManager", () => {
     const administrator = mountManager(api, true);
     await flushPromises();
     expect(administrator.text()).toContain("CLI 连接器定义");
+    await administrator.findAll("button").find((button) => button.text().includes("CLI 连接器定义"))!.trigger("click");
+    await flushPromises();
+    expect(document.body.textContent).toContain("能力策略");
+    expect(document.body.textContent).toContain("风险等级");
     administrator.unmount();
   });
 });

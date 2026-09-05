@@ -142,21 +142,23 @@ type expertTeamRecord struct {
 func (expertTeamRecord) TableName() string { return "expert_teams" }
 
 type cliConnectorDefinitionRecord struct {
-	ID                   string    `gorm:"column:id"`
-	Name                 string    `gorm:"column:name"`
-	NPMPackage           string    `gorm:"column:npm_package"`
-	NPMVersion           string    `gorm:"column:npm_version"`
-	NPMIntegrity         string    `gorm:"column:npm_integrity"`
-	Executable           string    `gorm:"column:executable"`
-	AuthenticationDriver string    `gorm:"column:authentication_driver"`
-	Capabilities         []byte    `gorm:"column:capabilities;type:jsonb"`
-	State                string    `gorm:"column:state"`
-	FailureReason        *string   `gorm:"column:failure_reason"`
-	BundleSHA256         *string   `gorm:"column:bundle_sha256"`
-	CreatedByUserID      string    `gorm:"column:created_by_user_id"`
-	CreatedAt            time.Time `gorm:"column:created_at"`
-	UpdatedAt            time.Time `gorm:"column:updated_at"`
-	Version              int64     `gorm:"column:version"`
+	ID                     string    `gorm:"column:id"`
+	Name                   string    `gorm:"column:name"`
+	NPMPackage             string    `gorm:"column:npm_package"`
+	NPMVersion             string    `gorm:"column:npm_version"`
+	NPMIntegrity           string    `gorm:"column:npm_integrity"`
+	Executable             string    `gorm:"column:executable"`
+	AuthenticationDriver   string    `gorm:"column:authentication_driver"`
+	Capabilities           []byte    `gorm:"column:capabilities;type:jsonb"`
+	SupportedArchitectures []byte    `gorm:"column:supported_architectures;type:jsonb"`
+	RecommendedSkillIDs    []byte    `gorm:"column:recommended_skill_ids;type:jsonb"`
+	State                  string    `gorm:"column:state"`
+	FailureReason          *string   `gorm:"column:failure_reason"`
+	BundleSHA256           *string   `gorm:"column:bundle_sha256"`
+	CreatedByUserID        string    `gorm:"column:created_by_user_id"`
+	CreatedAt              time.Time `gorm:"column:created_at"`
+	UpdatedAt              time.Time `gorm:"column:updated_at"`
+	Version                int64     `gorm:"column:version"`
 }
 
 func (cliConnectorDefinitionRecord) TableName() string { return "cli_connector_definitions" }

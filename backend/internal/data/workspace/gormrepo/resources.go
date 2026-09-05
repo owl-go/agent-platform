@@ -2,8 +2,12 @@ package gormrepo
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,6 +17,35 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+func deletionImpact(resourceKind, resourceID string, resourceVersion int64, experts []expertRecord) (domain.ResourceDeletionImpact, error) {
+	affected := make([]domain.AffectedExpert, 0)
+	for _, expert := range experts {
+		var ids []string
+		var encoded []byte
+		if resourceKind == "mcp" {
+			encoded = expert.MCPServerIDs
+		} else {
+			encoded = expert.SkillIDs
+		}
+		if err := json.Unmarshal(encoded, &ids); err != nil {
+			return domain.ResourceDeletionImpact{}, err
+		}
+		for _, id := range ids {
+			if id == resourceID {
+				affected = append(affected, domain.AffectedExpert{ID: expert.ID, Name: expert.Name, Version: expert.Version})
+				break
+			}
+		}
+	}
+	sort.Slice(affected, func(left, right int) bool { return affected[left].ID < affected[right].ID })
+	value := fmt.Sprintf("%s\x00%s\x00%d", resourceKind, resourceID, resourceVersion)
+	for _, expert := range affected {
+		value += fmt.Sprintf("\x00%s\x00%d", expert.ID, expert.Version)
+	}
+	sum := sha256.Sum256([]byte(value))
+	return domain.ResourceDeletionImpact{AffectedExperts: affected, ConfirmationToken: hex.EncodeToString(sum[:])}, nil
+}
 
 func (repository *Repository) ListExperts(ctx context.Context, ownerID string) ([]domain.Expert, error) {
 	var rows []expertRecord
@@ -884,10 +917,41 @@ func (repository *Repository) SetMCPTestResult(ctx context.Context, ownerID, ser
 }
 
 func (repository *Repository) DeleteMCPServer(ctx context.Context, ownerID, serverID string) error {
+	impact, err := repository.GetMCPServerDeletionImpact(ctx, ownerID, serverID)
+	if err != nil {
+		return err
+	}
+	return repository.DeleteMCPServerConfirmed(ctx, ownerID, serverID, impact.ConfirmationToken)
+}
+
+func (repository *Repository) GetMCPServerDeletionImpact(ctx context.Context, ownerID, serverID string) (domain.ResourceDeletionImpact, error) {
+	var resource mcpRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
+		return domain.ResourceDeletionImpact{}, mapNotFound(err)
+	}
+	var experts []expertRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		return domain.ResourceDeletionImpact{}, err
+	}
+	return deletionImpact("mcp", serverID, resource.Version, experts)
+}
+
+func (repository *Repository) DeleteMCPServerConfirmed(ctx context.Context, ownerID, serverID, confirmationToken string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var resource mcpRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
+			return mapNotFound(err)
+		}
 		var experts []expertRecord
-		if err := tx.Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
 			return err
+		}
+		impact, err := deletionImpact("mcp", serverID, resource.Version, experts)
+		if err != nil {
+			return err
+		}
+		if subtle.ConstantTimeCompare([]byte(impact.ConfirmationToken), []byte(confirmationToken)) != 1 {
+			return domain.ErrConflict
 		}
 		for _, expert := range experts {
 			var ids []string
@@ -992,10 +1056,41 @@ func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID 
 }
 
 func (repository *Repository) DeleteSkill(ctx context.Context, ownerID, skillID string) error {
+	impact, err := repository.GetSkillDeletionImpact(ctx, ownerID, skillID)
+	if err != nil {
+		return err
+	}
+	return repository.DeleteSkillConfirmed(ctx, ownerID, skillID, impact.ConfirmationToken)
+}
+
+func (repository *Repository) GetSkillDeletionImpact(ctx context.Context, ownerID, skillID string) (domain.ResourceDeletionImpact, error) {
+	var resource skillRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
+		return domain.ResourceDeletionImpact{}, mapNotFound(err)
+	}
+	var experts []expertRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		return domain.ResourceDeletionImpact{}, err
+	}
+	return deletionImpact("skill", skillID, resource.Version, experts)
+}
+
+func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID, skillID, confirmationToken string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var resource skillRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
+			return mapNotFound(err)
+		}
 		var experts []expertRecord
-		if err := tx.Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
 			return err
+		}
+		impact, err := deletionImpact("skill", skillID, resource.Version, experts)
+		if err != nil {
+			return err
+		}
+		if subtle.ConstantTimeCompare([]byte(impact.ConfirmationToken), []byte(confirmationToken)) != 1 {
+			return domain.ErrConflict
 		}
 		for _, expert := range experts {
 			var ids []string

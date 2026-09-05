@@ -48,20 +48,22 @@ type Capability struct {
 }
 
 type Definition struct {
-	ID                   string
-	Name                 string
-	Package              string
-	Version              string
-	Integrity            string
-	Executable           string
-	AuthenticationDriver string
-	State                State
-	BundleSHA256         string
-	RuntimeDigests       []string
-	Capabilities         []Capability
-	VersionNumber        int64
-	FailureReason        string
-	CreatedByUserID      string
+	ID                     string
+	Name                   string
+	Package                string
+	Version                string
+	Integrity              string
+	Executable             string
+	AuthenticationDriver   string
+	State                  State
+	BundleSHA256           string
+	RuntimeDigests         []string
+	SupportedArchitectures []string
+	RecommendedSkillIDs    []string
+	Capabilities           []Capability
+	VersionNumber          int64
+	FailureReason          string
+	CreatedByUserID        string
 }
 
 type Enablement struct {
@@ -92,6 +94,14 @@ func (definition Definition) Validate() error {
 	}
 	if len(definition.Capabilities) == 0 {
 		return errors.New("at least one reviewed CLI capability is required")
+	}
+	if len(definition.SupportedArchitectures) == 0 {
+		return errors.New("at least one supported CLI architecture is required")
+	}
+	for _, architecture := range definition.SupportedArchitectures {
+		if architecture != "linux-amd64" && architecture != "linux-arm64" {
+			return errors.New("unsupported CLI architecture")
+		}
 	}
 	seen := map[string]struct{}{}
 	for _, capability := range definition.Capabilities {

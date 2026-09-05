@@ -697,6 +697,12 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "confirmation_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -733,6 +739,36 @@
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPConnectorBody"
             }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetMCPConnectorDeletionImpact",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResourceDeletionImpact"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_connector_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1948,6 +1984,12 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "confirmation_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1984,6 +2026,36 @@
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceUpdateSkillBody"
             }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}/deletion-impact": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetSkillDeletionImpact",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResourceDeletionImpact"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -3050,6 +3122,21 @@
         }
       }
     },
+    "v1AffectedExpert": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1Artifact": {
       "type": "object",
       "properties": {
@@ -3212,6 +3299,18 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "supported_architectures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -3241,6 +3340,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1CLICapability"
+          }
+        },
+        "supported_architectures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
@@ -4811,6 +4922,21 @@
       "type": "object",
       "properties": {
         "temporary_password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ResourceDeletionImpact": {
+      "type": "object",
+      "properties": {
+        "affected_experts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AffectedExpert"
+          }
+        },
+        "confirmation_token": {
           "type": "string"
         }
       }

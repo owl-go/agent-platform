@@ -88,10 +88,12 @@ const (
 	AgentWorkspaceService_CreateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
 	AgentWorkspaceService_UpdateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
 	AgentWorkspaceService_TestMCPConnector_FullMethodName              = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
+	AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 	AgentWorkspaceService_DeleteMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
 	AgentWorkspaceService_ListSkills_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListSkills"
 	AgentWorkspaceService_CreateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateSkill"
 	AgentWorkspaceService_UpdateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
+	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName        = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 	AgentWorkspaceService_DeleteSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
 	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
 	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
@@ -176,10 +178,12 @@ type AgentWorkspaceServiceClient interface {
 	CreateMCPConnector(ctx context.Context, in *CreateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
 	UpdateMCPConnector(ctx context.Context, in *UpdateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
 	TestMCPConnector(ctx context.Context, in *TestMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
+	GetMCPConnectorDeletionImpact(ctx context.Context, in *GetMCPConnectorDeletionImpactRequest, opts ...grpc.CallOption) (*ResourceDeletionImpact, error)
 	DeleteMCPConnector(ctx context.Context, in *DeleteMCPConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*Skill, error)
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*Skill, error)
+	GetSkillDeletionImpact(ctx context.Context, in *GetSkillDeletionImpactRequest, opts ...grpc.CallOption) (*ResourceDeletionImpact, error)
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(ctx context.Context, in *ListCLIConnectorDefinitionsRequest, opts ...grpc.CallOption) (*ListCLIConnectorDefinitionsResponse, error)
 	CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
@@ -889,6 +893,16 @@ func (c *agentWorkspaceServiceClient) TestMCPConnector(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) GetMCPConnectorDeletionImpact(ctx context.Context, in *GetMCPConnectorDeletionImpactRequest, opts ...grpc.CallOption) (*ResourceDeletionImpact, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResourceDeletionImpact)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) DeleteMCPConnector(ctx context.Context, in *DeleteMCPConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
@@ -923,6 +937,16 @@ func (c *agentWorkspaceServiceClient) UpdateSkill(ctx context.Context, in *Updat
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Skill)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetSkillDeletionImpact(ctx context.Context, in *GetSkillDeletionImpactRequest, opts ...grpc.CallOption) (*ResourceDeletionImpact, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResourceDeletionImpact)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1092,10 +1116,12 @@ type AgentWorkspaceServiceServer interface {
 	CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error)
 	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
 	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
+	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
 	CreateSkill(context.Context, *CreateSkillRequest) (*Skill, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
+	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
@@ -1322,6 +1348,9 @@ func (UnimplementedAgentWorkspaceServiceServer) UpdateMCPConnector(context.Conte
 func (UnimplementedAgentWorkspaceServiceServer) TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error) {
 	return nil, status.Error(codes.Unimplemented, "method TestMCPConnector not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMCPConnectorDeletionImpact not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteMCPConnector not implemented")
 }
@@ -1333,6 +1362,9 @@ func (UnimplementedAgentWorkspaceServiceServer) CreateSkill(context.Context, *Cr
 }
 func (UnimplementedAgentWorkspaceServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSkill not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillDeletionImpact not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSkill not implemented")
@@ -2624,6 +2656,24 @@ func _AgentWorkspaceService_TestMCPConnector_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_GetMCPConnectorDeletionImpact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMCPConnectorDeletionImpactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetMCPConnectorDeletionImpact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetMCPConnectorDeletionImpact(ctx, req.(*GetMCPConnectorDeletionImpactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_DeleteMCPConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteMCPConnectorRequest)
 	if err := dec(in); err != nil {
@@ -2692,6 +2742,24 @@ func _AgentWorkspaceService_UpdateSkill_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).UpdateSkill(ctx, req.(*UpdateSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetSkillDeletionImpact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillDeletionImpactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetSkillDeletionImpact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetSkillDeletionImpact(ctx, req.(*GetSkillDeletionImpactRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3142,6 +3210,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_TestMCPConnector_Handler,
 		},
 		{
+			MethodName: "GetMCPConnectorDeletionImpact",
+			Handler:    _AgentWorkspaceService_GetMCPConnectorDeletionImpact_Handler,
+		},
+		{
 			MethodName: "DeleteMCPConnector",
 			Handler:    _AgentWorkspaceService_DeleteMCPConnector_Handler,
 		},
@@ -3156,6 +3228,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSkill",
 			Handler:    _AgentWorkspaceService_UpdateSkill_Handler,
+		},
+		{
+			MethodName: "GetSkillDeletionImpact",
+			Handler:    _AgentWorkspaceService_GetSkillDeletionImpact_Handler,
 		},
 		{
 			MethodName: "DeleteSkill",

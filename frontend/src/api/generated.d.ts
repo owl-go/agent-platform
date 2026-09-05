@@ -292,6 +292,22 @@ export interface paths {
         patch: operations["AgentWorkspaceService_UpdateMCPConnector"];
         trace?: never;
     };
+    "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetMCPConnectorDeletionImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/mcp/{mcp_connector_id}/test": {
         parameters: {
             query?: never;
@@ -692,6 +708,22 @@ export interface paths {
         patch: operations["AgentWorkspaceService_UpdateSkill"];
         trace?: never;
     };
+    "/api/v1/skills/{skill_id}/deletion-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetSkillDeletionImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows": {
         parameters: {
             query?: never;
@@ -1087,6 +1119,12 @@ export interface components {
             message?: string;
             details?: components["schemas"]["protobufAny"][];
         };
+        v1AffectedExpert: {
+            id?: string;
+            name?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         v1Artifact: {
             id?: string;
             run_id?: string;
@@ -1142,6 +1180,8 @@ export interface components {
             mutable?: boolean;
             /** Format: int64 */
             version?: number;
+            supported_architectures?: string[];
+            recommended_skill_ids?: string[];
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1151,6 +1191,8 @@ export interface components {
             executable?: string;
             authentication_driver?: string;
             capabilities?: components["schemas"]["v1CLICapability"][];
+            supported_architectures?: string[];
+            recommended_skill_ids?: string[];
         };
         v1CLIConnectorEnablement: {
             id?: string;
@@ -1682,6 +1724,10 @@ export interface components {
         };
         v1ResetUserPasswordResponse: {
             temporary_password?: string;
+        };
+        v1ResourceDeletionImpact: {
+            affected_experts?: components["schemas"]["v1AffectedExpert"][];
+            confirmation_token?: string;
         };
         v1ResponseSnapshot: {
             provider_model_id?: string;
@@ -2581,7 +2627,9 @@ export interface operations {
     };
     AgentWorkspaceService_DeleteMCPConnector: {
         parameters: {
-            query?: never;
+            query?: {
+                confirmation_token?: string;
+            };
             header?: never;
             path: {
                 mcp_connector_id: string;
@@ -2632,6 +2680,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1MCPConnector"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetMCPConnectorDeletionImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ResourceDeletionImpact"];
                 };
             };
             /** @description An unexpected error response. */
@@ -3875,7 +3954,9 @@ export interface operations {
     };
     AgentWorkspaceService_DeleteSkill: {
         parameters: {
-            query?: never;
+            query?: {
+                confirmation_token?: string;
+            };
             header?: never;
             path: {
                 skill_id: string;
@@ -3926,6 +4007,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Skill"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetSkillDeletionImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ResourceDeletionImpact"];
                 };
             };
             /** @description An unexpected error response. */

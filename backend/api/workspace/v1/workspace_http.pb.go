@@ -52,9 +52,11 @@ const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorks
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
 const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceService/GetSettings"
+const OperationAgentWorkspaceServiceGetSkillDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
@@ -136,9 +138,11 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
+	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
+	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
@@ -256,10 +260,12 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/connectors/mcp", _AgentWorkspaceService_CreateMCPConnector0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/connectors/mcp/{mcp_connector_id}", _AgentWorkspaceService_UpdateMCPConnector0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/connectors/mcp/{mcp_connector_id}/test", _AgentWorkspaceService_TestMCPConnector0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact", _AgentWorkspaceService_GetMCPConnectorDeletionImpact0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/connectors/mcp/{mcp_connector_id}", _AgentWorkspaceService_DeleteMCPConnector0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/skills", _AgentWorkspaceService_ListSkills0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/skills", _AgentWorkspaceService_CreateSkill0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/skills/{skill_id}", _AgentWorkspaceService_UpdateSkill0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/skills/{skill_id}/deletion-impact", _AgentWorkspaceService_GetSkillDeletionImpact0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/skills/{skill_id}", _AgentWorkspaceService_DeleteSkill0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/connectors/cli", _AgentWorkspaceService_ListCLIConnectorDefinitions0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/connectors/cli", _AgentWorkspaceService_CreateCLIConnectorDefinition0_HTTP_Handler(srv))
@@ -1711,6 +1717,28 @@ func _AgentWorkspaceService_TestMCPConnector0_HTTP_Handler(srv AgentWorkspaceSer
 	}
 }
 
+func _AgentWorkspaceService_GetMCPConnectorDeletionImpact0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetMCPConnectorDeletionImpactRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetMCPConnectorDeletionImpact(ctx, req.(*GetMCPConnectorDeletionImpactRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ResourceDeletionImpact)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_DeleteMCPConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in DeleteMCPConnectorRequest
@@ -1789,6 +1817,28 @@ func _AgentWorkspaceService_UpdateSkill0_HTTP_Handler(srv AgentWorkspaceServiceH
 			return err
 		}
 		reply := out.(*Skill)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetSkillDeletionImpact0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetSkillDeletionImpactRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetSkillDeletionImpact)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetSkillDeletionImpact(ctx, req.(*GetSkillDeletionImpactRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ResourceDeletionImpact)
 		return ctx.Result(200, reply)
 	}
 }
@@ -2015,9 +2065,11 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	GetSettings(ctx context.Context, req *GetSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
+	GetSkillDeletionImpact(ctx context.Context, req *GetSkillDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
@@ -2654,6 +2706,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetExpertTeam(ctx context.Context,
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetMCPConnectorDeletionImpact(ctx context.Context, in *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (*ResourceDeletionImpact, error) {
+	var out ResourceDeletionImpact
+	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GetRun(ctx context.Context, in *GetRunRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}"
@@ -2693,6 +2761,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetSettings(ctx context.Context, i
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetSettings),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetSkillDeletionImpact(ctx context.Context, in *GetSkillDeletionImpactRequest, opts ...http.CallOption) (*ResourceDeletionImpact, error) {
+	var out ResourceDeletionImpact
+	pattern := "/api/v1/skills/{skill_id}/deletion-impact"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetSkillDeletionImpact),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

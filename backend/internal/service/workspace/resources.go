@@ -12,6 +12,21 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+type resourceDeletionRepository interface {
+	GetMCPServerDeletionImpact(context.Context, string, string) (workspacedomain.ResourceDeletionImpact, error)
+	DeleteMCPServerConfirmed(context.Context, string, string, string) error
+	GetSkillDeletionImpact(context.Context, string, string) (workspacedomain.ResourceDeletionImpact, error)
+	DeleteSkillConfirmed(context.Context, string, string, string) error
+}
+
+func (service *Service) resourceDeletion() (resourceDeletionRepository, error) {
+	repository, ok := service.workspace.Repository().(resourceDeletionRepository)
+	if !ok {
+		return nil, fmt.Errorf("resource deletion preview is unavailable")
+	}
+	return repository, nil
+}
+
 func (service *Service) ListExperts(ctx context.Context, _ *workspacev1.ListExpertsRequest) (*workspacev1.ListExpertsResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
@@ -490,12 +505,32 @@ func (service *Service) TestMCPConnector(ctx context.Context, request *workspace
 	return mcpResponse(item), nil
 }
 
+func (service *Service) GetMCPConnectorDeletionImpact(ctx context.Context, request *workspacev1.GetMCPConnectorDeletionImpactRequest) (*workspacev1.ResourceDeletionImpact, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.resourceDeletion()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	impact, err := repository.GetMCPServerDeletionImpact(ctx, owner, request.McpConnectorId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return deletionImpactResponse(impact), nil
+}
+
 func (service *Service) DeleteMCPConnector(ctx context.Context, request *workspacev1.DeleteMCPConnectorRequest) (*workspacev1.DeleteResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := service.workspace.Repository().DeleteMCPServer(ctx, owner, request.McpConnectorId); err != nil {
+	repository, err := service.resourceDeletion()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := repository.DeleteMCPServerConfirmed(ctx, owner, request.McpConnectorId, request.ConfirmationToken); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
@@ -605,10 +640,38 @@ func (service *Service) DeleteSkill(ctx context.Context, request *workspacev1.De
 	if err != nil {
 		return nil, err
 	}
-	if err := service.workspace.Repository().DeleteSkill(ctx, owner, request.SkillId); err != nil {
+	repository, err := service.resourceDeletion()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := repository.DeleteSkillConfirmed(ctx, owner, request.SkillId, request.ConfirmationToken); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
+func (service *Service) GetSkillDeletionImpact(ctx context.Context, request *workspacev1.GetSkillDeletionImpactRequest) (*workspacev1.ResourceDeletionImpact, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.resourceDeletion()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	impact, err := repository.GetSkillDeletionImpact(ctx, owner, request.SkillId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return deletionImpactResponse(impact), nil
+}
+
+func deletionImpactResponse(impact workspacedomain.ResourceDeletionImpact) *workspacev1.ResourceDeletionImpact {
+	experts := make([]*workspacev1.AffectedExpert, 0, len(impact.AffectedExperts))
+	for _, expert := range impact.AffectedExperts {
+		experts = append(experts, &workspacev1.AffectedExpert{Id: expert.ID, Name: expert.Name, Version: expert.Version})
+	}
+	return &workspacev1.ResourceDeletionImpact{AffectedExperts: experts, ConfirmationToken: impact.ConfirmationToken}
 }
 
 func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, error) {

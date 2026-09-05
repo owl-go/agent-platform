@@ -70,7 +70,7 @@ func TestWrapperRejectsExpiredApprovalBeforeConsumption(t *testing.T) {
 }
 
 func TestDefinitionRejectsIncompleteOrUnsafeCapabilityPolicy(t *testing.T) {
-	base := Definition{Name: "Feishu", Package: "@larksuite/cli", Version: "1.0.93", Integrity: "sha512-test", Executable: "lark-cli", AuthenticationDriver: "feishu", Capabilities: []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}}
+	base := Definition{Name: "Feishu", Package: "@larksuite/cli", Version: "1.0.93", Integrity: "sha512-test", Executable: "lark-cli", AuthenticationDriver: "feishu", SupportedArchitectures: []string{"linux-amd64"}, Capabilities: []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}}
 	tests := []struct {
 		name   string
 		mutate func(*Definition)

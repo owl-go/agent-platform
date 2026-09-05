@@ -84,10 +84,12 @@ service AgentWorkspaceService {
   rpc CreateMCPConnector(CreateMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {post: "/api/v1/connectors/mcp" body: "*"}; }
   rpc UpdateMCPConnector(UpdateMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {patch: "/api/v1/connectors/mcp/{mcp_connector_id}" body: "*"}; }
   rpc TestMCPConnector(TestMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {post: "/api/v1/connectors/mcp/{mcp_connector_id}/test" body: "*"}; }
+  rpc GetMCPConnectorDeletionImpact(GetMCPConnectorDeletionImpactRequest) returns (ResourceDeletionImpact) { option (google.api.http) = {get: "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact"}; }
   rpc DeleteMCPConnector(DeleteMCPConnectorRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/mcp/{mcp_connector_id}"}; }
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) { option (google.api.http) = {get: "/api/v1/skills"}; }
   rpc CreateSkill(CreateSkillRequest) returns (Skill) { option (google.api.http) = {post: "/api/v1/skills" body: "*"}; }
   rpc UpdateSkill(UpdateSkillRequest) returns (Skill) { option (google.api.http) = {patch: "/api/v1/skills/{skill_id}" body: "*"}; }
+  rpc GetSkillDeletionImpact(GetSkillDeletionImpactRequest) returns (ResourceDeletionImpact) { option (google.api.http) = {get: "/api/v1/skills/{skill_id}/deletion-impact"}; }
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/skills/{skill_id}"}; }
   rpc ListCLIConnectorDefinitions(ListCLIConnectorDefinitionsRequest) returns (ListCLIConnectorDefinitionsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli"}; }
   rpc CreateCLIConnectorDefinition(CreateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli" body: "*"}; }
@@ -242,7 +244,8 @@ message ListMCPConnectorsResponse { repeated MCPConnector items = 1; }
 message CreateMCPConnectorRequest { MCPConnectorInput mcp_connector = 1; }
 message UpdateMCPConnectorRequest { string mcp_connector_id = 1; MCPConnectorInput mcp_connector = 2; int64 expected_version = 3; }
 message TestMCPConnectorRequest { string mcp_connector_id = 1; }
-message DeleteMCPConnectorRequest { string mcp_connector_id = 1; }
+message GetMCPConnectorDeletionImpactRequest { string mcp_connector_id = 1; }
+message DeleteMCPConnectorRequest { string mcp_connector_id = 1; string confirmation_token = 2; }
 message MCPConnectorInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; }
 message MCPConnector { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; }
 
@@ -250,12 +253,15 @@ message ListSkillsRequest {}
 message ListSkillsResponse { repeated Skill items = 1; }
 message CreateSkillRequest { string name = 1; string source = 2; optional string git_url = 3; optional string git_ref = 4; optional bytes archive = 5; }
 message UpdateSkillRequest { string skill_id = 1; optional string git_ref = 2; optional bytes archive = 3; int64 expected_version = 4; }
-message DeleteSkillRequest { string skill_id = 1; }
+message GetSkillDeletionImpactRequest { string skill_id = 1; }
+message DeleteSkillRequest { string skill_id = 1; string confirmation_token = 2; }
 message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
+message AffectedExpert { string id = 1; string name = 2; int64 version = 3; }
+message ResourceDeletionImpact { repeated AffectedExpert affected_experts = 1; string confirmation_token = 2; }
 
 message CLICapability { string id = 1; repeated string argv_prefix = 2; string risk = 3; repeated string identities = 4; repeated string scopes = 5; repeated string egress_hosts = 6; int32 timeout_seconds = 7; }
-message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; }
-message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; }
+message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; repeated string supported_architectures = 8; repeated string recommended_skill_ids = 9; }
+message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; repeated string supported_architectures = 14; repeated string recommended_skill_ids = 15; }
 message ListCLIConnectorDefinitionsRequest {}
 message ListCLIConnectorDefinitionsResponse { repeated CLIConnectorDefinition items = 1; }
 message CreateCLIConnectorDefinitionRequest { CLIConnectorDefinitionInput definition = 1; }

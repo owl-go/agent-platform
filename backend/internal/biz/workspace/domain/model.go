@@ -172,6 +172,17 @@ type Skill struct {
 	Version   int64
 }
 
+type AffectedExpert struct {
+	ID      string
+	Name    string
+	Version int64
+}
+
+type ResourceDeletionImpact struct {
+	AffectedExperts   []AffectedExpert
+	ConfirmationToken string
+}
+
 type Artifact struct {
 	ID          string
 	RunID       string

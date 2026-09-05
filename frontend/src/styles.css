@@ -352,9 +352,12 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .approval-card div { display: grid; gap: 4px; min-width: 0; }
 .approval-card p, .approval-card small { margin: 0; }
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cli-capabilities { display: grid; gap: 12px; margin-top: 8px; }
+.cli-capabilities article { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; }
 
 @media (max-width: 720px) {
   .approval-inbox { margin: 8px 12px 0; }
   .approval-card { grid-template-columns: 1fr 1fr; }
   .approval-card div { grid-column: 1 / -1; }
+  .cli-capabilities article { grid-template-columns: 1fr; }
 }
