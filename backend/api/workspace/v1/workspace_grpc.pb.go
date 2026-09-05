@@ -84,11 +84,11 @@ const (
 	AgentWorkspaceService_DeleteModelProviderConnection_FullMethodName = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
 	AgentWorkspaceService_RefreshProviderModels_FullMethodName         = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
 	AgentWorkspaceService_CreateProviderModel_FullMethodName           = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
-	AgentWorkspaceService_ListMCPServers_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListMCPServers"
-	AgentWorkspaceService_CreateMCPServer_FullMethodName               = "/workspace.v1.AgentWorkspaceService/CreateMCPServer"
-	AgentWorkspaceService_UpdateMCPServer_FullMethodName               = "/workspace.v1.AgentWorkspaceService/UpdateMCPServer"
-	AgentWorkspaceService_TestMCPServer_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/TestMCPServer"
-	AgentWorkspaceService_DeleteMCPServer_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DeleteMCPServer"
+	AgentWorkspaceService_ListMCPConnectors_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
+	AgentWorkspaceService_CreateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
+	AgentWorkspaceService_UpdateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
+	AgentWorkspaceService_TestMCPConnector_FullMethodName              = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
+	AgentWorkspaceService_DeleteMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
 	AgentWorkspaceService_ListSkills_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListSkills"
 	AgentWorkspaceService_CreateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateSkill"
 	AgentWorkspaceService_UpdateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
@@ -172,11 +172,11 @@ type AgentWorkspaceServiceClient interface {
 	DeleteModelProviderConnection(ctx context.Context, in *DeleteModelProviderConnectionRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	RefreshProviderModels(ctx context.Context, in *RefreshProviderModelsRequest, opts ...grpc.CallOption) (*ModelProviderConnection, error)
 	CreateProviderModel(ctx context.Context, in *CreateProviderModelRequest, opts ...grpc.CallOption) (*ProviderModel, error)
-	ListMCPServers(ctx context.Context, in *ListMCPServersRequest, opts ...grpc.CallOption) (*ListMCPServersResponse, error)
-	CreateMCPServer(ctx context.Context, in *CreateMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error)
-	UpdateMCPServer(ctx context.Context, in *UpdateMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error)
-	TestMCPServer(ctx context.Context, in *TestMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error)
-	DeleteMCPServer(ctx context.Context, in *DeleteMCPServerRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	ListMCPConnectors(ctx context.Context, in *ListMCPConnectorsRequest, opts ...grpc.CallOption) (*ListMCPConnectorsResponse, error)
+	CreateMCPConnector(ctx context.Context, in *CreateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
+	UpdateMCPConnector(ctx context.Context, in *UpdateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
+	TestMCPConnector(ctx context.Context, in *TestMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error)
+	DeleteMCPConnector(ctx context.Context, in *DeleteMCPConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
 	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*Skill, error)
 	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*Skill, error)
@@ -849,50 +849,50 @@ func (c *agentWorkspaceServiceClient) CreateProviderModel(ctx context.Context, i
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) ListMCPServers(ctx context.Context, in *ListMCPServersRequest, opts ...grpc.CallOption) (*ListMCPServersResponse, error) {
+func (c *agentWorkspaceServiceClient) ListMCPConnectors(ctx context.Context, in *ListMCPConnectorsRequest, opts ...grpc.CallOption) (*ListMCPConnectorsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListMCPServersResponse)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListMCPServers_FullMethodName, in, out, cOpts...)
+	out := new(ListMCPConnectorsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListMCPConnectors_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) CreateMCPServer(ctx context.Context, in *CreateMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error) {
+func (c *agentWorkspaceServiceClient) CreateMCPConnector(ctx context.Context, in *CreateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MCPServer)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateMCPServer_FullMethodName, in, out, cOpts...)
+	out := new(MCPConnector)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateMCPConnector_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) UpdateMCPServer(ctx context.Context, in *UpdateMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error) {
+func (c *agentWorkspaceServiceClient) UpdateMCPConnector(ctx context.Context, in *UpdateMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MCPServer)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateMCPServer_FullMethodName, in, out, cOpts...)
+	out := new(MCPConnector)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateMCPConnector_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) TestMCPServer(ctx context.Context, in *TestMCPServerRequest, opts ...grpc.CallOption) (*MCPServer, error) {
+func (c *agentWorkspaceServiceClient) TestMCPConnector(ctx context.Context, in *TestMCPConnectorRequest, opts ...grpc.CallOption) (*MCPConnector, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MCPServer)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_TestMCPServer_FullMethodName, in, out, cOpts...)
+	out := new(MCPConnector)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_TestMCPConnector_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) DeleteMCPServer(ctx context.Context, in *DeleteMCPServerRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+func (c *agentWorkspaceServiceClient) DeleteMCPConnector(ctx context.Context, in *DeleteMCPConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteMCPServer_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteMCPConnector_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1088,11 +1088,11 @@ type AgentWorkspaceServiceServer interface {
 	DeleteModelProviderConnection(context.Context, *DeleteModelProviderConnectionRequest) (*DeleteResponse, error)
 	RefreshProviderModels(context.Context, *RefreshProviderModelsRequest) (*ModelProviderConnection, error)
 	CreateProviderModel(context.Context, *CreateProviderModelRequest) (*ProviderModel, error)
-	ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error)
-	CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error)
-	UpdateMCPServer(context.Context, *UpdateMCPServerRequest) (*MCPServer, error)
-	TestMCPServer(context.Context, *TestMCPServerRequest) (*MCPServer, error)
-	DeleteMCPServer(context.Context, *DeleteMCPServerRequest) (*DeleteResponse, error)
+	ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error)
+	CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error)
+	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
+	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
+	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
 	CreateSkill(context.Context, *CreateSkillRequest) (*Skill, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
@@ -1310,20 +1310,20 @@ func (UnimplementedAgentWorkspaceServiceServer) RefreshProviderModels(context.Co
 func (UnimplementedAgentWorkspaceServiceServer) CreateProviderModel(context.Context, *CreateProviderModelRequest) (*ProviderModel, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProviderModel not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListMCPServers not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMCPConnectors not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateMCPServer not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateMCPConnector not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) UpdateMCPServer(context.Context, *UpdateMCPServerRequest) (*MCPServer, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateMCPServer not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMCPConnector not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) TestMCPServer(context.Context, *TestMCPServerRequest) (*MCPServer, error) {
-	return nil, status.Error(codes.Unimplemented, "method TestMCPServer not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error) {
+	return nil, status.Error(codes.Unimplemented, "method TestMCPConnector not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) DeleteMCPServer(context.Context, *DeleteMCPServerRequest) (*DeleteResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteMCPServer not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMCPConnector not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSkills not implemented")
@@ -2552,92 +2552,92 @@ func _AgentWorkspaceService_CreateProviderModel_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_ListMCPServers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListMCPServersRequest)
+func _AgentWorkspaceService_ListMCPConnectors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMCPConnectorsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).ListMCPServers(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).ListMCPConnectors(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_ListMCPServers_FullMethodName,
+		FullMethod: AgentWorkspaceService_ListMCPConnectors_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).ListMCPServers(ctx, req.(*ListMCPServersRequest))
+		return srv.(AgentWorkspaceServiceServer).ListMCPConnectors(ctx, req.(*ListMCPConnectorsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_CreateMCPServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateMCPServerRequest)
+func _AgentWorkspaceService_CreateMCPConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateMCPConnectorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).CreateMCPServer(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).CreateMCPConnector(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_CreateMCPServer_FullMethodName,
+		FullMethod: AgentWorkspaceService_CreateMCPConnector_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).CreateMCPServer(ctx, req.(*CreateMCPServerRequest))
+		return srv.(AgentWorkspaceServiceServer).CreateMCPConnector(ctx, req.(*CreateMCPConnectorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_UpdateMCPServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateMCPServerRequest)
+func _AgentWorkspaceService_UpdateMCPConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMCPConnectorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).UpdateMCPServer(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).UpdateMCPConnector(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_UpdateMCPServer_FullMethodName,
+		FullMethod: AgentWorkspaceService_UpdateMCPConnector_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).UpdateMCPServer(ctx, req.(*UpdateMCPServerRequest))
+		return srv.(AgentWorkspaceServiceServer).UpdateMCPConnector(ctx, req.(*UpdateMCPConnectorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_TestMCPServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TestMCPServerRequest)
+func _AgentWorkspaceService_TestMCPConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TestMCPConnectorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).TestMCPServer(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).TestMCPConnector(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_TestMCPServer_FullMethodName,
+		FullMethod: AgentWorkspaceService_TestMCPConnector_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).TestMCPServer(ctx, req.(*TestMCPServerRequest))
+		return srv.(AgentWorkspaceServiceServer).TestMCPConnector(ctx, req.(*TestMCPConnectorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_DeleteMCPServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteMCPServerRequest)
+func _AgentWorkspaceService_DeleteMCPConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMCPConnectorRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).DeleteMCPServer(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).DeleteMCPConnector(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_DeleteMCPServer_FullMethodName,
+		FullMethod: AgentWorkspaceService_DeleteMCPConnector_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).DeleteMCPServer(ctx, req.(*DeleteMCPServerRequest))
+		return srv.(AgentWorkspaceServiceServer).DeleteMCPConnector(ctx, req.(*DeleteMCPConnectorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3126,24 +3126,24 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_CreateProviderModel_Handler,
 		},
 		{
-			MethodName: "ListMCPServers",
-			Handler:    _AgentWorkspaceService_ListMCPServers_Handler,
+			MethodName: "ListMCPConnectors",
+			Handler:    _AgentWorkspaceService_ListMCPConnectors_Handler,
 		},
 		{
-			MethodName: "CreateMCPServer",
-			Handler:    _AgentWorkspaceService_CreateMCPServer_Handler,
+			MethodName: "CreateMCPConnector",
+			Handler:    _AgentWorkspaceService_CreateMCPConnector_Handler,
 		},
 		{
-			MethodName: "UpdateMCPServer",
-			Handler:    _AgentWorkspaceService_UpdateMCPServer_Handler,
+			MethodName: "UpdateMCPConnector",
+			Handler:    _AgentWorkspaceService_UpdateMCPConnector_Handler,
 		},
 		{
-			MethodName: "TestMCPServer",
-			Handler:    _AgentWorkspaceService_TestMCPServer_Handler,
+			MethodName: "TestMCPConnector",
+			Handler:    _AgentWorkspaceService_TestMCPConnector_Handler,
 		},
 		{
-			MethodName: "DeleteMCPServer",
-			Handler:    _AgentWorkspaceService_DeleteMCPServer_Handler,
+			MethodName: "DeleteMCPConnector",
+			Handler:    _AgentWorkspaceService_DeleteMCPConnector_Handler,
 		},
 		{
 			MethodName: "ListSkills",

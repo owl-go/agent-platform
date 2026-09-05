@@ -624,12 +624,12 @@
     },
     "/api/v1/connectors/mcp": {
       "get": {
-        "operationId": "AgentWorkspaceService_ListMCPServers",
+        "operationId": "AgentWorkspaceService_ListMCPConnectors",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListMCPServersResponse"
+              "$ref": "#/definitions/v1ListMCPConnectorsResponse"
             }
           },
           "default": {
@@ -644,12 +644,12 @@
         ]
       },
       "post": {
-        "operationId": "AgentWorkspaceService_CreateMCPServer",
+        "operationId": "AgentWorkspaceService_CreateMCPConnector",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1MCPServer"
+              "$ref": "#/definitions/v1MCPConnector"
             }
           },
           "default": {
@@ -665,7 +665,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateMCPServerRequest"
+              "$ref": "#/definitions/v1CreateMCPConnectorRequest"
             }
           }
         ],
@@ -674,9 +674,9 @@
         ]
       }
     },
-    "/api/v1/connectors/mcp/{mcp_server_id}": {
+    "/api/v1/connectors/mcp/{mcp_connector_id}": {
       "delete": {
-        "operationId": "AgentWorkspaceService_DeleteMCPServer",
+        "operationId": "AgentWorkspaceService_DeleteMCPConnector",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -693,7 +693,7 @@
         },
         "parameters": [
           {
-            "name": "mcp_server_id",
+            "name": "mcp_connector_id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -704,12 +704,12 @@
         ]
       },
       "patch": {
-        "operationId": "AgentWorkspaceService_UpdateMCPServer",
+        "operationId": "AgentWorkspaceService_UpdateMCPConnector",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1MCPServer"
+              "$ref": "#/definitions/v1MCPConnector"
             }
           },
           "default": {
@@ -721,7 +721,7 @@
         },
         "parameters": [
           {
-            "name": "mcp_server_id",
+            "name": "mcp_connector_id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -731,7 +731,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPServerBody"
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPConnectorBody"
             }
           }
         ],
@@ -740,14 +740,14 @@
         ]
       }
     },
-    "/api/v1/connectors/mcp/{mcp_server_id}/test": {
+    "/api/v1/connectors/mcp/{mcp_connector_id}/test": {
       "post": {
-        "operationId": "AgentWorkspaceService_TestMCPServer",
+        "operationId": "AgentWorkspaceService_TestMCPConnector",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1MCPServer"
+              "$ref": "#/definitions/v1MCPConnector"
             }
           },
           "default": {
@@ -759,7 +759,7 @@
         },
         "parameters": [
           {
-            "name": "mcp_server_id",
+            "name": "mcp_connector_id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -769,7 +769,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AgentWorkspaceServiceTestMCPServerBody"
+              "$ref": "#/definitions/AgentWorkspaceServiceTestMCPConnectorBody"
             }
           }
         ],
@@ -2896,7 +2896,7 @@
         }
       }
     },
-    "AgentWorkspaceServiceTestMCPServerBody": {
+    "AgentWorkspaceServiceTestMCPConnectorBody": {
       "type": "object"
     },
     "AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody": {
@@ -2935,11 +2935,11 @@
         }
       }
     },
-    "AgentWorkspaceServiceUpdateMCPServerBody": {
+    "AgentWorkspaceServiceUpdateMCPConnectorBody": {
       "type": "object",
       "properties": {
-        "mcp_server": {
-          "$ref": "#/definitions/v1MCPServerInput"
+        "mcp_connector": {
+          "$ref": "#/definitions/v1MCPConnectorInput"
         },
         "expected_version": {
           "type": "string",
@@ -3334,11 +3334,11 @@
         }
       }
     },
-    "v1CreateMCPServerRequest": {
+    "v1CreateMCPConnectorRequest": {
       "type": "object",
       "properties": {
-        "mcp_server": {
-          "$ref": "#/definitions/v1MCPServerInput"
+        "mcp_connector": {
+          "$ref": "#/definitions/v1MCPConnectorInput"
         }
       }
     },
@@ -4193,14 +4193,14 @@
         }
       }
     },
-    "v1ListMCPServersResponse": {
+    "v1ListMCPConnectorsResponse": {
       "type": "object",
       "properties": {
         "items": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1MCPServer"
+            "$ref": "#/definitions/v1MCPConnector"
           }
         }
       }
@@ -4360,7 +4360,7 @@
         }
       }
     },
-    "v1MCPServer": {
+    "v1MCPConnector": {
       "type": "object",
       "properties": {
         "id": {
@@ -4420,7 +4420,7 @@
         }
       }
     },
-    "v1MCPServerInput": {
+    "v1MCPConnectorInput": {
       "type": "object",
       "properties": {
         "name": {

@@ -418,7 +418,7 @@ func (service *Service) CreateProviderModel(ctx context.Context, request *worksp
 	return providerModelResponse(item), nil
 }
 
-func (service *Service) ListMCPServers(ctx context.Context, _ *workspacev1.ListMCPServersRequest) (*workspacev1.ListMCPServersResponse, error) {
+func (service *Service) ListMCPConnectors(ctx context.Context, _ *workspacev1.ListMCPConnectorsRequest) (*workspacev1.ListMCPConnectorsResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
@@ -427,19 +427,19 @@ func (service *Service) ListMCPServers(ctx context.Context, _ *workspacev1.ListM
 	if err != nil {
 		return nil, publicError(err)
 	}
-	response := make([]*workspacev1.MCPServer, 0, len(items))
+	response := make([]*workspacev1.MCPConnector, 0, len(items))
 	for _, item := range items {
 		response = append(response, mcpResponse(item))
 	}
-	return &workspacev1.ListMCPServersResponse{Items: response}, nil
+	return &workspacev1.ListMCPConnectorsResponse{Items: response}, nil
 }
 
-func (service *Service) CreateMCPServer(ctx context.Context, request *workspacev1.CreateMCPServerRequest) (*workspacev1.MCPServer, error) {
+func (service *Service) CreateMCPConnector(ctx context.Context, request *workspacev1.CreateMCPConnectorRequest) (*workspacev1.MCPConnector, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
 	}
-	input, submittedSecrets, err := service.mcpInput(request.McpServer)
+	input, submittedSecrets, err := service.mcpInput(request.McpConnector)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -454,16 +454,16 @@ func (service *Service) CreateMCPServer(ctx context.Context, request *workspacev
 	return mcpResponse(item), nil
 }
 
-func (service *Service) UpdateMCPServer(ctx context.Context, request *workspacev1.UpdateMCPServerRequest) (*workspacev1.MCPServer, error) {
+func (service *Service) UpdateMCPConnector(ctx context.Context, request *workspacev1.UpdateMCPConnectorRequest) (*workspacev1.MCPConnector, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
 	}
-	input, submittedSecrets, err := service.mcpInput(request.McpServer)
+	input, submittedSecrets, err := service.mcpInput(request.McpConnector)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	existingCiphertext, err := service.workspace.Repository().GetMCPSecret(ctx, owner, request.McpServerId)
+	existingCiphertext, err := service.workspace.Repository().GetMCPSecret(ctx, owner, request.McpConnectorId)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -471,31 +471,31 @@ func (service *Service) UpdateMCPServer(ctx context.Context, request *workspacev
 	if err != nil {
 		return nil, publicError(err)
 	}
-	item, err := service.workspace.Repository().UpdateMCPServer(ctx, owner, request.McpServerId, input, secrets, request.ExpectedVersion)
+	item, err := service.workspace.Repository().UpdateMCPServer(ctx, owner, request.McpConnectorId, input, secrets, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	return mcpResponse(item), nil
 }
 
-func (service *Service) TestMCPServer(ctx context.Context, request *workspacev1.TestMCPServerRequest) (*workspacev1.MCPServer, error) {
+func (service *Service) TestMCPConnector(ctx context.Context, request *workspacev1.TestMCPConnectorRequest) (*workspacev1.MCPConnector, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
 	}
-	item, err := service.workspace.Repository().RequestMCPTest(ctx, owner, request.McpServerId)
+	item, err := service.workspace.Repository().RequestMCPTest(ctx, owner, request.McpConnectorId)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	return mcpResponse(item), nil
 }
 
-func (service *Service) DeleteMCPServer(ctx context.Context, request *workspacev1.DeleteMCPServerRequest) (*workspacev1.DeleteResponse, error) {
+func (service *Service) DeleteMCPConnector(ctx context.Context, request *workspacev1.DeleteMCPConnectorRequest) (*workspacev1.DeleteResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := service.workspace.Repository().DeleteMCPServer(ctx, owner, request.McpServerId); err != nil {
+	if err := service.workspace.Repository().DeleteMCPServer(ctx, owner, request.McpConnectorId); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
@@ -791,7 +791,7 @@ func customProviderEndpoint(providerType, endpoint string) bool {
 	return true
 }
 
-func (service *Service) mcpInput(input *workspacev1.MCPServerInput) (workspacedomain.MCPServer, map[string]string, error) {
+func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspacedomain.MCPServer, map[string]string, error) {
 	if input == nil {
 		return workspacedomain.MCPServer{}, nil, fmt.Errorf("%w: MCP input is required", workspacedomain.ErrInvalid)
 	}
@@ -817,8 +817,8 @@ func (service *Service) mcpInput(input *workspacev1.MCPServerInput) (workspacedo
 	return item, secretValues, nil
 }
 
-func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPServer {
-	response := &workspacev1.MCPServer{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
+	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	if item.TestError != "" {
 		response.TestError = &item.TestError
 	}

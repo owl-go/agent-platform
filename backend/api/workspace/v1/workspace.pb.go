@@ -8680,26 +8680,26 @@ func (x *RuntimeModelCompatibility) GetReason() string {
 	return ""
 }
 
-type ListMCPServersRequest struct {
+type ListMCPConnectorsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListMCPServersRequest) Reset() {
-	*x = ListMCPServersRequest{}
+func (x *ListMCPConnectorsRequest) Reset() {
+	*x = ListMCPConnectorsRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListMCPServersRequest) String() string {
+func (x *ListMCPConnectorsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListMCPServersRequest) ProtoMessage() {}
+func (*ListMCPConnectorsRequest) ProtoMessage() {}
 
-func (x *ListMCPServersRequest) ProtoReflect() protoreflect.Message {
+func (x *ListMCPConnectorsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8711,32 +8711,32 @@ func (x *ListMCPServersRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListMCPServersRequest.ProtoReflect.Descriptor instead.
-func (*ListMCPServersRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListMCPConnectorsRequest.ProtoReflect.Descriptor instead.
+func (*ListMCPConnectorsRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{128}
 }
 
-type ListMCPServersResponse struct {
+type ListMCPConnectorsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*MCPServer           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Items         []*MCPConnector        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListMCPServersResponse) Reset() {
-	*x = ListMCPServersResponse{}
+func (x *ListMCPConnectorsResponse) Reset() {
+	*x = ListMCPConnectorsResponse{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListMCPServersResponse) String() string {
+func (x *ListMCPConnectorsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListMCPServersResponse) ProtoMessage() {}
+func (*ListMCPConnectorsResponse) ProtoMessage() {}
 
-func (x *ListMCPServersResponse) ProtoReflect() protoreflect.Message {
+func (x *ListMCPConnectorsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8748,39 +8748,39 @@ func (x *ListMCPServersResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListMCPServersResponse.ProtoReflect.Descriptor instead.
-func (*ListMCPServersResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListMCPConnectorsResponse.ProtoReflect.Descriptor instead.
+func (*ListMCPConnectorsResponse) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{129}
 }
 
-func (x *ListMCPServersResponse) GetItems() []*MCPServer {
+func (x *ListMCPConnectorsResponse) GetItems() []*MCPConnector {
 	if x != nil {
 		return x.Items
 	}
 	return nil
 }
 
-type CreateMCPServerRequest struct {
+type CreateMCPConnectorRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	McpServer     *MCPServerInput        `protobuf:"bytes,1,opt,name=mcp_server,json=mcpServer,proto3" json:"mcp_server,omitempty"`
+	McpConnector  *MCPConnectorInput     `protobuf:"bytes,1,opt,name=mcp_connector,json=mcpConnector,proto3" json:"mcp_connector,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateMCPServerRequest) Reset() {
-	*x = CreateMCPServerRequest{}
+func (x *CreateMCPConnectorRequest) Reset() {
+	*x = CreateMCPConnectorRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateMCPServerRequest) String() string {
+func (x *CreateMCPConnectorRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateMCPServerRequest) ProtoMessage() {}
+func (*CreateMCPConnectorRequest) ProtoMessage() {}
 
-func (x *CreateMCPServerRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8792,41 +8792,41 @@ func (x *CreateMCPServerRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateMCPServerRequest.ProtoReflect.Descriptor instead.
-func (*CreateMCPServerRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateMCPConnectorRequest.ProtoReflect.Descriptor instead.
+func (*CreateMCPConnectorRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{130}
 }
 
-func (x *CreateMCPServerRequest) GetMcpServer() *MCPServerInput {
+func (x *CreateMCPConnectorRequest) GetMcpConnector() *MCPConnectorInput {
 	if x != nil {
-		return x.McpServer
+		return x.McpConnector
 	}
 	return nil
 }
 
-type UpdateMCPServerRequest struct {
+type UpdateMCPConnectorRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	McpServerId     string                 `protobuf:"bytes,1,opt,name=mcp_server_id,json=mcpServerId,proto3" json:"mcp_server_id,omitempty"`
-	McpServer       *MCPServerInput        `protobuf:"bytes,2,opt,name=mcp_server,json=mcpServer,proto3" json:"mcp_server,omitempty"`
+	McpConnectorId  string                 `protobuf:"bytes,1,opt,name=mcp_connector_id,json=mcpConnectorId,proto3" json:"mcp_connector_id,omitempty"`
+	McpConnector    *MCPConnectorInput     `protobuf:"bytes,2,opt,name=mcp_connector,json=mcpConnector,proto3" json:"mcp_connector,omitempty"`
 	ExpectedVersion int64                  `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
-func (x *UpdateMCPServerRequest) Reset() {
-	*x = UpdateMCPServerRequest{}
+func (x *UpdateMCPConnectorRequest) Reset() {
+	*x = UpdateMCPConnectorRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateMCPServerRequest) String() string {
+func (x *UpdateMCPConnectorRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateMCPServerRequest) ProtoMessage() {}
+func (*UpdateMCPConnectorRequest) ProtoMessage() {}
 
-func (x *UpdateMCPServerRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8838,53 +8838,53 @@ func (x *UpdateMCPServerRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateMCPServerRequest.ProtoReflect.Descriptor instead.
-func (*UpdateMCPServerRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateMCPConnectorRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMCPConnectorRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{131}
 }
 
-func (x *UpdateMCPServerRequest) GetMcpServerId() string {
+func (x *UpdateMCPConnectorRequest) GetMcpConnectorId() string {
 	if x != nil {
-		return x.McpServerId
+		return x.McpConnectorId
 	}
 	return ""
 }
 
-func (x *UpdateMCPServerRequest) GetMcpServer() *MCPServerInput {
+func (x *UpdateMCPConnectorRequest) GetMcpConnector() *MCPConnectorInput {
 	if x != nil {
-		return x.McpServer
+		return x.McpConnector
 	}
 	return nil
 }
 
-func (x *UpdateMCPServerRequest) GetExpectedVersion() int64 {
+func (x *UpdateMCPConnectorRequest) GetExpectedVersion() int64 {
 	if x != nil {
 		return x.ExpectedVersion
 	}
 	return 0
 }
 
-type TestMCPServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	McpServerId   string                 `protobuf:"bytes,1,opt,name=mcp_server_id,json=mcpServerId,proto3" json:"mcp_server_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type TestMCPConnectorRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	McpConnectorId string                 `protobuf:"bytes,1,opt,name=mcp_connector_id,json=mcpConnectorId,proto3" json:"mcp_connector_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *TestMCPServerRequest) Reset() {
-	*x = TestMCPServerRequest{}
+func (x *TestMCPConnectorRequest) Reset() {
+	*x = TestMCPConnectorRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TestMCPServerRequest) String() string {
+func (x *TestMCPConnectorRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TestMCPServerRequest) ProtoMessage() {}
+func (*TestMCPConnectorRequest) ProtoMessage() {}
 
-func (x *TestMCPServerRequest) ProtoReflect() protoreflect.Message {
+func (x *TestMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8896,39 +8896,39 @@ func (x *TestMCPServerRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TestMCPServerRequest.ProtoReflect.Descriptor instead.
-func (*TestMCPServerRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use TestMCPConnectorRequest.ProtoReflect.Descriptor instead.
+func (*TestMCPConnectorRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{132}
 }
 
-func (x *TestMCPServerRequest) GetMcpServerId() string {
+func (x *TestMCPConnectorRequest) GetMcpConnectorId() string {
 	if x != nil {
-		return x.McpServerId
+		return x.McpConnectorId
 	}
 	return ""
 }
 
-type DeleteMCPServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	McpServerId   string                 `protobuf:"bytes,1,opt,name=mcp_server_id,json=mcpServerId,proto3" json:"mcp_server_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type DeleteMCPConnectorRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	McpConnectorId string                 `protobuf:"bytes,1,opt,name=mcp_connector_id,json=mcpConnectorId,proto3" json:"mcp_connector_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *DeleteMCPServerRequest) Reset() {
-	*x = DeleteMCPServerRequest{}
+func (x *DeleteMCPConnectorRequest) Reset() {
+	*x = DeleteMCPConnectorRequest{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteMCPServerRequest) String() string {
+func (x *DeleteMCPConnectorRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteMCPServerRequest) ProtoMessage() {}
+func (*DeleteMCPConnectorRequest) ProtoMessage() {}
 
-func (x *DeleteMCPServerRequest) ProtoReflect() protoreflect.Message {
+func (x *DeleteMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8940,19 +8940,19 @@ func (x *DeleteMCPServerRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteMCPServerRequest.ProtoReflect.Descriptor instead.
-func (*DeleteMCPServerRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteMCPConnectorRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMCPConnectorRequest) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{133}
 }
 
-func (x *DeleteMCPServerRequest) GetMcpServerId() string {
+func (x *DeleteMCPConnectorRequest) GetMcpConnectorId() string {
 	if x != nil {
-		return x.McpServerId
+		return x.McpConnectorId
 	}
 	return ""
 }
 
-type MCPServerInput struct {
+type MCPConnectorInput struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Transport      string                 `protobuf:"bytes,2,opt,name=transport,proto3" json:"transport,omitempty"`
@@ -8966,20 +8966,20 @@ type MCPServerInput struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *MCPServerInput) Reset() {
-	*x = MCPServerInput{}
+func (x *MCPConnectorInput) Reset() {
+	*x = MCPConnectorInput{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MCPServerInput) String() string {
+func (x *MCPConnectorInput) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MCPServerInput) ProtoMessage() {}
+func (*MCPConnectorInput) ProtoMessage() {}
 
-func (x *MCPServerInput) ProtoReflect() protoreflect.Message {
+func (x *MCPConnectorInput) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8991,68 +8991,68 @@ func (x *MCPServerInput) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MCPServerInput.ProtoReflect.Descriptor instead.
-func (*MCPServerInput) Descriptor() ([]byte, []int) {
+// Deprecated: Use MCPConnectorInput.ProtoReflect.Descriptor instead.
+func (*MCPConnectorInput) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{134}
 }
 
-func (x *MCPServerInput) GetName() string {
+func (x *MCPConnectorInput) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetTransport() string {
+func (x *MCPConnectorInput) GetTransport() string {
 	if x != nil {
 		return x.Transport
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetUrl() string {
+func (x *MCPConnectorInput) GetUrl() string {
 	if x != nil && x.Url != nil {
 		return *x.Url
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetRunner() string {
+func (x *MCPConnectorInput) GetRunner() string {
 	if x != nil && x.Runner != nil {
 		return *x.Runner
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetPackage() string {
+func (x *MCPConnectorInput) GetPackage() string {
 	if x != nil && x.Package != nil {
 		return *x.Package
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetPackageVersion() string {
+func (x *MCPConnectorInput) GetPackageVersion() string {
 	if x != nil && x.PackageVersion != nil {
 		return *x.PackageVersion
 	}
 	return ""
 }
 
-func (x *MCPServerInput) GetArguments() []string {
+func (x *MCPConnectorInput) GetArguments() []string {
 	if x != nil {
 		return x.Arguments
 	}
 	return nil
 }
 
-func (x *MCPServerInput) GetEnvironment() []*EnvironmentVariable {
+func (x *MCPConnectorInput) GetEnvironment() []*EnvironmentVariable {
 	if x != nil {
 		return x.Environment
 	}
 	return nil
 }
 
-type MCPServer struct {
+type MCPConnector struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -9073,20 +9073,20 @@ type MCPServer struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *MCPServer) Reset() {
-	*x = MCPServer{}
+func (x *MCPConnector) Reset() {
+	*x = MCPConnector{}
 	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MCPServer) String() string {
+func (x *MCPConnector) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MCPServer) ProtoMessage() {}
+func (*MCPConnector) ProtoMessage() {}
 
-func (x *MCPServer) ProtoReflect() protoreflect.Message {
+func (x *MCPConnector) ProtoReflect() protoreflect.Message {
 	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9098,110 +9098,110 @@ func (x *MCPServer) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MCPServer.ProtoReflect.Descriptor instead.
-func (*MCPServer) Descriptor() ([]byte, []int) {
+// Deprecated: Use MCPConnector.ProtoReflect.Descriptor instead.
+func (*MCPConnector) Descriptor() ([]byte, []int) {
 	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{135}
 }
 
-func (x *MCPServer) GetId() string {
+func (x *MCPConnector) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *MCPServer) GetName() string {
+func (x *MCPConnector) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *MCPServer) GetTransport() string {
+func (x *MCPConnector) GetTransport() string {
 	if x != nil {
 		return x.Transport
 	}
 	return ""
 }
 
-func (x *MCPServer) GetUrl() string {
+func (x *MCPConnector) GetUrl() string {
 	if x != nil && x.Url != nil {
 		return *x.Url
 	}
 	return ""
 }
 
-func (x *MCPServer) GetRunner() string {
+func (x *MCPConnector) GetRunner() string {
 	if x != nil && x.Runner != nil {
 		return *x.Runner
 	}
 	return ""
 }
 
-func (x *MCPServer) GetPackage() string {
+func (x *MCPConnector) GetPackage() string {
 	if x != nil && x.Package != nil {
 		return *x.Package
 	}
 	return ""
 }
 
-func (x *MCPServer) GetPackageVersion() string {
+func (x *MCPConnector) GetPackageVersion() string {
 	if x != nil && x.PackageVersion != nil {
 		return *x.PackageVersion
 	}
 	return ""
 }
 
-func (x *MCPServer) GetArguments() []string {
+func (x *MCPConnector) GetArguments() []string {
 	if x != nil {
 		return x.Arguments
 	}
 	return nil
 }
 
-func (x *MCPServer) GetEnvironment() []*EnvironmentVariable {
+func (x *MCPConnector) GetEnvironment() []*EnvironmentVariable {
 	if x != nil {
 		return x.Environment
 	}
 	return nil
 }
 
-func (x *MCPServer) GetTested() bool {
+func (x *MCPConnector) GetTested() bool {
 	if x != nil {
 		return x.Tested
 	}
 	return false
 }
 
-func (x *MCPServer) GetTestError() string {
+func (x *MCPConnector) GetTestError() string {
 	if x != nil && x.TestError != nil {
 		return *x.TestError
 	}
 	return ""
 }
 
-func (x *MCPServer) GetCreatedAt() *timestamppb.Timestamp {
+func (x *MCPConnector) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
 	return nil
 }
 
-func (x *MCPServer) GetUpdatedAt() *timestamppb.Timestamp {
+func (x *MCPConnector) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
 	}
 	return nil
 }
 
-func (x *MCPServer) GetVersion() int64 {
+func (x *MCPConnector) GetVersion() int64 {
 	if x != nil {
 		return x.Version
 	}
 	return 0
 }
 
-func (x *MCPServer) GetTestPending() bool {
+func (x *MCPConnector) GetTestPending() bool {
 	if x != nil {
 		return x.TestPending
 	}
@@ -11635,23 +11635,21 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1b\n" +
 	"\x06reason\x18\x03 \x01(\tH\x00R\x06reason\x88\x01\x01B\t\n" +
-	"\a_reason\"\x17\n" +
-	"\x15ListMCPServersRequest\"G\n" +
-	"\x16ListMCPServersResponse\x12-\n" +
-	"\x05items\x18\x01 \x03(\v2\x17.workspace.v1.MCPServerR\x05items\"U\n" +
-	"\x16CreateMCPServerRequest\x12;\n" +
-	"\n" +
-	"mcp_server\x18\x01 \x01(\v2\x1c.workspace.v1.MCPServerInputR\tmcpServer\"\xa4\x01\n" +
-	"\x16UpdateMCPServerRequest\x12\"\n" +
-	"\rmcp_server_id\x18\x01 \x01(\tR\vmcpServerId\x12;\n" +
-	"\n" +
-	"mcp_server\x18\x02 \x01(\v2\x1c.workspace.v1.MCPServerInputR\tmcpServer\x12)\n" +
-	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\":\n" +
-	"\x14TestMCPServerRequest\x12\"\n" +
-	"\rmcp_server_id\x18\x01 \x01(\tR\vmcpServerId\"<\n" +
-	"\x16DeleteMCPServerRequest\x12\"\n" +
-	"\rmcp_server_id\x18\x01 \x01(\tR\vmcpServerId\"\xd9\x02\n" +
-	"\x0eMCPServerInput\x12\x12\n" +
+	"\a_reason\"\x1a\n" +
+	"\x18ListMCPConnectorsRequest\"M\n" +
+	"\x19ListMCPConnectorsResponse\x120\n" +
+	"\x05items\x18\x01 \x03(\v2\x1a.workspace.v1.MCPConnectorR\x05items\"a\n" +
+	"\x19CreateMCPConnectorRequest\x12D\n" +
+	"\rmcp_connector\x18\x01 \x01(\v2\x1f.workspace.v1.MCPConnectorInputR\fmcpConnector\"\xb6\x01\n" +
+	"\x19UpdateMCPConnectorRequest\x12(\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\x12D\n" +
+	"\rmcp_connector\x18\x02 \x01(\v2\x1f.workspace.v1.MCPConnectorInputR\fmcpConnector\x12)\n" +
+	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\"C\n" +
+	"\x17TestMCPConnectorRequest\x12(\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"E\n" +
+	"\x19DeleteMCPConnectorRequest\x12(\n" +
+	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"\xdc\x02\n" +
+	"\x11MCPConnectorInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\ttransport\x18\x02 \x01(\tR\ttransport\x12\x15\n" +
 	"\x03url\x18\x03 \x01(\tH\x00R\x03url\x88\x01\x01\x12\x1b\n" +
@@ -11664,8 +11662,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\a_runnerB\n" +
 	"\n" +
 	"\b_packageB\x12\n" +
-	"\x10_package_version\"\xe2\x04\n" +
-	"\tMCPServer\x12\x0e\n" +
+	"\x10_package_version\"\xe5\x04\n" +
+	"\fMCPConnector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
 	"\ttransport\x18\x03 \x01(\tR\ttransport\x12\x15\n" +
@@ -11844,7 +11842,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x05image\x18\x06 \x01(\bR\x05image\"?\n" +
 	"\x11ExecutionActivity\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
-	"\x06detail\x18\x02 \x01(\tR\x06detail2\xb1Y\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail2\xe5Y\n" +
 	"\x15AgentWorkspaceService\x12d\n" +
 	"\x0eGetCurrentUser\x12#.workspace.v1.GetCurrentUserRequest\x1a\x19.workspace.v1.CurrentUser\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/api/v1/me\x12i\n" +
@@ -11913,12 +11911,12 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x1dUpdateModelProviderConnection\x122.workspace.v1.UpdateModelProviderConnectionRequest\x1a%.workspace.v1.ModelProviderConnection\"=\x82\xd3\xe4\x93\x027:\x01*22/api/v1/model-provider-connections/{connection_id}\x12\xad\x01\n" +
 	"\x1dDeleteModelProviderConnection\x122.workspace.v1.DeleteModelProviderConnectionRequest\x1a\x1c.workspace.v1.DeleteResponse\":\x82\xd3\xe4\x93\x024*2/api/v1/model-provider-connections/{connection_id}\x12\xb1\x01\n" +
 	"\x15RefreshProviderModels\x12*.workspace.v1.RefreshProviderModelsRequest\x1a%.workspace.v1.ModelProviderConnection\"E\x82\xd3\xe4\x93\x02?:\x01*\":/api/v1/model-provider-connections/{connection_id}/refresh\x12\xa2\x01\n" +
-	"\x13CreateProviderModel\x12(.workspace.v1.CreateProviderModelRequest\x1a\x1b.workspace.v1.ProviderModel\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/model-provider-connections/{connection_id}/models\x12{\n" +
-	"\x0eListMCPServers\x12#.workspace.v1.ListMCPServersRequest\x1a$.workspace.v1.ListMCPServersResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/connectors/mcp\x12s\n" +
-	"\x0fCreateMCPServer\x12$.workspace.v1.CreateMCPServerRequest\x1a\x17.workspace.v1.MCPServer\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/connectors/mcp\x12\x83\x01\n" +
-	"\x0fUpdateMCPServer\x12$.workspace.v1.UpdateMCPServerRequest\x1a\x17.workspace.v1.MCPServer\"1\x82\xd3\xe4\x93\x02+:\x01*2&/api/v1/connectors/mcp/{mcp_server_id}\x12\x84\x01\n" +
-	"\rTestMCPServer\x12\".workspace.v1.TestMCPServerRequest\x1a\x17.workspace.v1.MCPServer\"6\x82\xd3\xe4\x93\x020:\x01*\"+/api/v1/connectors/mcp/{mcp_server_id}/test\x12\x85\x01\n" +
-	"\x0fDeleteMCPServer\x12$.workspace.v1.DeleteMCPServerRequest\x1a\x1c.workspace.v1.DeleteResponse\".\x82\xd3\xe4\x93\x02(*&/api/v1/connectors/mcp/{mcp_server_id}\x12g\n" +
+	"\x13CreateProviderModel\x12(.workspace.v1.CreateProviderModelRequest\x1a\x1b.workspace.v1.ProviderModel\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/model-provider-connections/{connection_id}/models\x12\x84\x01\n" +
+	"\x11ListMCPConnectors\x12&.workspace.v1.ListMCPConnectorsRequest\x1a'.workspace.v1.ListMCPConnectorsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/connectors/mcp\x12|\n" +
+	"\x12CreateMCPConnector\x12'.workspace.v1.CreateMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/connectors/mcp\x12\x8f\x01\n" +
+	"\x12UpdateMCPConnector\x12'.workspace.v1.UpdateMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"4\x82\xd3\xe4\x93\x02.:\x01*2)/api/v1/connectors/mcp/{mcp_connector_id}\x12\x90\x01\n" +
+	"\x10TestMCPConnector\x12%.workspace.v1.TestMCPConnectorRequest\x1a\x1a.workspace.v1.MCPConnector\"9\x82\xd3\xe4\x93\x023:\x01*\"./api/v1/connectors/mcp/{mcp_connector_id}/test\x12\x8e\x01\n" +
+	"\x12DeleteMCPConnector\x12'.workspace.v1.DeleteMCPConnectorRequest\x1a\x1c.workspace.v1.DeleteResponse\"1\x82\xd3\xe4\x93\x02+*)/api/v1/connectors/mcp/{mcp_connector_id}\x12g\n" +
 	"\n" +
 	"ListSkills\x12\x1f.workspace.v1.ListSkillsRequest\x1a .workspace.v1.ListSkillsResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/skills\x12_\n" +
 	"\vCreateSkill\x12 .workspace.v1.CreateSkillRequest\x1a\x13.workspace.v1.Skill\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/v1/skills\x12j\n" +
@@ -12075,14 +12073,14 @@ var file_workspace_v1_workspace_proto_goTypes = []any{
 	(*ModelProviderConnection)(nil),              // 125: workspace.v1.ModelProviderConnection
 	(*ProviderModel)(nil),                        // 126: workspace.v1.ProviderModel
 	(*RuntimeModelCompatibility)(nil),            // 127: workspace.v1.RuntimeModelCompatibility
-	(*ListMCPServersRequest)(nil),                // 128: workspace.v1.ListMCPServersRequest
-	(*ListMCPServersResponse)(nil),               // 129: workspace.v1.ListMCPServersResponse
-	(*CreateMCPServerRequest)(nil),               // 130: workspace.v1.CreateMCPServerRequest
-	(*UpdateMCPServerRequest)(nil),               // 131: workspace.v1.UpdateMCPServerRequest
-	(*TestMCPServerRequest)(nil),                 // 132: workspace.v1.TestMCPServerRequest
-	(*DeleteMCPServerRequest)(nil),               // 133: workspace.v1.DeleteMCPServerRequest
-	(*MCPServerInput)(nil),                       // 134: workspace.v1.MCPServerInput
-	(*MCPServer)(nil),                            // 135: workspace.v1.MCPServer
+	(*ListMCPConnectorsRequest)(nil),             // 128: workspace.v1.ListMCPConnectorsRequest
+	(*ListMCPConnectorsResponse)(nil),            // 129: workspace.v1.ListMCPConnectorsResponse
+	(*CreateMCPConnectorRequest)(nil),            // 130: workspace.v1.CreateMCPConnectorRequest
+	(*UpdateMCPConnectorRequest)(nil),            // 131: workspace.v1.UpdateMCPConnectorRequest
+	(*TestMCPConnectorRequest)(nil),              // 132: workspace.v1.TestMCPConnectorRequest
+	(*DeleteMCPConnectorRequest)(nil),            // 133: workspace.v1.DeleteMCPConnectorRequest
+	(*MCPConnectorInput)(nil),                    // 134: workspace.v1.MCPConnectorInput
+	(*MCPConnector)(nil),                         // 135: workspace.v1.MCPConnector
 	(*ListSkillsRequest)(nil),                    // 136: workspace.v1.ListSkillsRequest
 	(*ListSkillsResponse)(nil),                   // 137: workspace.v1.ListSkillsResponse
 	(*CreateSkillRequest)(nil),                   // 138: workspace.v1.CreateSkillRequest
@@ -12207,13 +12205,13 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	161, // 92: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
 	161, // 93: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
 	127, // 94: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
-	135, // 95: workspace.v1.ListMCPServersResponse.items:type_name -> workspace.v1.MCPServer
-	134, // 96: workspace.v1.CreateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	134, // 97: workspace.v1.UpdateMCPServerRequest.mcp_server:type_name -> workspace.v1.MCPServerInput
-	59,  // 98: workspace.v1.MCPServerInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	59,  // 99: workspace.v1.MCPServer.environment:type_name -> workspace.v1.EnvironmentVariable
-	161, // 100: workspace.v1.MCPServer.created_at:type_name -> google.protobuf.Timestamp
-	161, // 101: workspace.v1.MCPServer.updated_at:type_name -> google.protobuf.Timestamp
+	135, // 95: workspace.v1.ListMCPConnectorsResponse.items:type_name -> workspace.v1.MCPConnector
+	134, // 96: workspace.v1.CreateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	134, // 97: workspace.v1.UpdateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	59,  // 98: workspace.v1.MCPConnectorInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	59,  // 99: workspace.v1.MCPConnector.environment:type_name -> workspace.v1.EnvironmentVariable
+	161, // 100: workspace.v1.MCPConnector.created_at:type_name -> google.protobuf.Timestamp
+	161, // 101: workspace.v1.MCPConnector.updated_at:type_name -> google.protobuf.Timestamp
 	141, // 102: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
 	161, // 103: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
 	161, // 104: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
@@ -12291,11 +12289,11 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	122, // 176: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
 	123, // 177: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
 	124, // 178: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	128, // 179: workspace.v1.AgentWorkspaceService.ListMCPServers:input_type -> workspace.v1.ListMCPServersRequest
-	130, // 180: workspace.v1.AgentWorkspaceService.CreateMCPServer:input_type -> workspace.v1.CreateMCPServerRequest
-	131, // 181: workspace.v1.AgentWorkspaceService.UpdateMCPServer:input_type -> workspace.v1.UpdateMCPServerRequest
-	132, // 182: workspace.v1.AgentWorkspaceService.TestMCPServer:input_type -> workspace.v1.TestMCPServerRequest
-	133, // 183: workspace.v1.AgentWorkspaceService.DeleteMCPServer:input_type -> workspace.v1.DeleteMCPServerRequest
+	128, // 179: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
+	130, // 180: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
+	131, // 181: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
+	132, // 182: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
+	133, // 183: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
 	136, // 184: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
 	138, // 185: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
 	139, // 186: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
@@ -12373,11 +12371,11 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	158, // 258: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
 	125, // 259: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
 	126, // 260: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	129, // 261: workspace.v1.AgentWorkspaceService.ListMCPServers:output_type -> workspace.v1.ListMCPServersResponse
-	135, // 262: workspace.v1.AgentWorkspaceService.CreateMCPServer:output_type -> workspace.v1.MCPServer
-	135, // 263: workspace.v1.AgentWorkspaceService.UpdateMCPServer:output_type -> workspace.v1.MCPServer
-	135, // 264: workspace.v1.AgentWorkspaceService.TestMCPServer:output_type -> workspace.v1.MCPServer
-	158, // 265: workspace.v1.AgentWorkspaceService.DeleteMCPServer:output_type -> workspace.v1.DeleteResponse
+	129, // 261: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
+	135, // 262: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
+	135, // 263: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
+	135, // 264: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
+	158, // 265: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
 	137, // 266: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
 	141, // 267: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
 	141, // 268: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill

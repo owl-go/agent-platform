@@ -38,7 +38,7 @@ Object.assign(zh.workflows, { apiTokenDescription: "先使用 API Key 与 API Se
 Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
 Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
 Object.assign(zh.nav, { resources: "技能·连接器" });
-Object.assign(zh, { resources: { title: "技能·连接器", subtitle: "管理可复用的技能与连接器", skills: "技能", connectors: "连接器", cli: "第三方 CLI", cliDefinition: "CLI 连接器定义", continueSetup: "继续完成授权", enable: "启用", exactVersion: "固定版本", executable: "可执行命令" } });
+Object.assign(zh, { resources: { title: "技能·连接器", subtitle: "管理可复用的技能与连接器", skills: "技能", connectors: "连接器", cli: "第三方 CLI", cliDefinition: "CLI 连接器定义", continueSetup: "继续完成授权", enable: "启用", exactVersion: "固定版本", executable: "可执行命令", feishuCLI: "飞书 CLI", deleteAffected: "删除“{resource}”会同时从这些专家中解除绑定：{experts}。历史快照不会改变。", deleteUnaffected: "确认删除“{resource}”？历史快照不会改变。", state: { draft: "草稿", building: "构建中", testing: "验证中", available: "可用", failed: "失败", disabled: "已停用" } } });
 Object.assign(zh, { approvals: { title: "等待你的确认", expires: "{time} 前有效", identity: "执行身份", user: "以用户身份", bot: "以机器人身份", reject: "拒绝", approveOnce: "仅批准本次" } });
 Object.assign(zh.experts, {
   teams: "专家团", catalog: "专家目录", createTeam: "创建专家团", editExpert: "编辑专家", editTeam: "编辑专家团",
@@ -66,7 +66,7 @@ Object.assign(en.workflows, { apiTokenDescription: "Exchange the API Key and API
 Object.assign(en.sessions, { addAttachment: "Attach images or files", removeAttachment: "Remove attachment {name}", attachmentLimits: "Up to 10 attachments per message, 100 MB each" });
 Object.assign(en.sessions.progress, { finalizing: "Saving the session securely" });
 Object.assign(en.nav, { resources: "Skills & Connectors" });
-Object.assign(en, { resources: { title: "Skills & Connectors", subtitle: "Manage reusable Skills and Connectors", skills: "Skills", connectors: "Connectors", cli: "Third-party CLI", cliDefinition: "CLI Connector Definition", continueSetup: "Continue authorization", enable: "Enable", exactVersion: "Exact version", executable: "Executable" } });
+Object.assign(en, { resources: { title: "Skills & Connectors", subtitle: "Manage reusable Skills and Connectors", skills: "Skills", connectors: "Connectors", cli: "Third-party CLI", cliDefinition: "CLI Connector Definition", continueSetup: "Continue authorization", enable: "Enable", exactVersion: "Exact version", executable: "Executable", feishuCLI: "Feishu CLI", deleteAffected: "Deleting “{resource}” also detaches it from these Experts: {experts}. Historical snapshots stay unchanged.", deleteUnaffected: "Delete “{resource}”? Historical snapshots stay unchanged.", state: { draft: "Draft", building: "Building", testing: "Testing", available: "Available", failed: "Failed", disabled: "Disabled" } } });
 Object.assign(en, { approvals: { title: "Waiting for your confirmation", expires: "Valid until {time}", identity: "Execution identity", user: "Send as user", bot: "Send as bot", reject: "Reject", approveOnce: "Approve once" } });
 Object.assign(en.experts, {
   teams: "Expert Teams", catalog: "Expert catalog", createTeam: "Create Expert Team", editExpert: "Edit Expert", editTeam: "Edit Expert Team",
@@ -90,6 +90,10 @@ Object.assign(zh.settings, { subtitle: "定义你的默认个性、模型与 Run
 Object.assign(en.settings, { subtitle: "Choose your default personality, model, and Runtime" });
 Object.assign(zh.experts, { extensions: "技能与连接器", extensionsHint: "绑定此专家可以使用的技能与连接器。", extensionFailed: "技能或连接器操作失败" });
 Object.assign(en.experts, { extensions: "Skills & Connectors", extensionsHint: "Bind the Skills and Connectors this Expert may use.", extensionFailed: "Skill or Connector operation failed" });
+Object.assign(zh.experts, { iconTeam: "团队", iconSparkles: "闪光", iconCompass: "指南针" });
+Object.assign(en.experts, { iconTeam: "Team", iconSparkles: "Sparkles", iconCompass: "Compass" });
+Object.assign(zh.experts, { deleteExpertHint: "被专家团引用的专家不允许删除；请先移除对应成员。历史快照不会改变。" });
+Object.assign(en.experts, { deleteExpertHint: "An Expert referenced by an Expert Team cannot be deleted; remove those members first. Historical snapshots stay unchanged." });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;

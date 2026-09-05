@@ -169,13 +169,6 @@ func (repository *Repository) DecideCommandApproval(ctx context.Context, ownerID
 		if result.RowsAffected != 1 {
 			return domain.ErrConflict
 		}
-		if row.ExecutionKind == "session" {
-			if err := tx.Model(&messageRecord{}).Where("id::text = ? AND state = 'waiting_for_user'", row.ExecutionID).Update("state", "generating").Error; err != nil {
-				return err
-			}
-		} else if err := tx.Model(&runRecord{}).Where("id::text = ? AND state = 'waiting_for_user'", row.ExecutionID).Update("state", "running").Error; err != nil {
-			return err
-		}
 		return tx.Where("id = ?", row.ID).Take(&row).Error
 	})
 	if err != nil {

@@ -35,11 +35,37 @@ func TestWrapperStartsOnlyAnExactLowRiskCapability(t *testing.T) {
 
 func TestWrapperRejectsChangedHighRiskCommandBeforeProcessStart(t *testing.T) {
 	process := &recordingProcess{}
-	wrapper := Wrapper{Process: process, ConsumeApproval: func(_ context.Context, digest, nonce string) error { return errors.New("approval does not match") }}
+	wrapper := Wrapper{Process: process, ConsumeApproval: func(_ context.Context, digest, nonce string) error { return errors.New("approval does not match") }, Now: func() time.Time { return time.Unix(100, 0) }}
 	definition := Definition{State: StateAvailable, Executable: "lark", BundleSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "send", ArgvPrefix: []string{"message", "send"}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Timeout: time.Minute}}}
-	_, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "send", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"message", "send", "--target", "changed"}, ApprovalNonce: "once"})
+	_, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "send", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"message", "send", "--target", "changed"}, Target: "chat-1", ApprovalNonce: "once", ApprovalExpiresAt: time.Unix(200, 0)})
 	if err == nil || process.starts != 0 {
 		t.Fatalf("starts=%d err=%v", process.starts, err)
+	}
+}
+
+func TestHighRiskCommandDigestBindsTargetAndExpiry(t *testing.T) {
+	definition := Definition{ID: "connector-1", VersionNumber: 3, Executable: "lark-cli"}
+	request := Request{CapabilityID: "send", Identity: IdentityUser, Argv: []string{"message", "send"}, Target: "chat-1", BundleSHA256: "bundle", RuntimeDigest: "runtime", ApprovalExpiresAt: time.Unix(200, 0)}
+	first := CommandDigest(definition, request)
+	request.Target = "chat-2"
+	if first == CommandDigest(definition, request) {
+		t.Fatal("target was not bound to command digest")
+	}
+	request.Target = "chat-1"
+	request.ApprovalExpiresAt = time.Unix(201, 0)
+	if first == CommandDigest(definition, request) {
+		t.Fatal("approval expiry was not bound to command digest")
+	}
+}
+
+func TestWrapperRejectsExpiredApprovalBeforeConsumption(t *testing.T) {
+	process := &recordingProcess{}
+	consumed := false
+	wrapper := Wrapper{Process: process, ConsumeApproval: func(context.Context, string, string) error { consumed = true; return nil }, Now: func() time.Time { return time.Unix(200, 0) }}
+	definition := Definition{State: StateAvailable, Executable: "lark", BundleSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "send", ArgvPrefix: []string{"message", "send"}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Timeout: time.Minute}}}
+	_, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "send", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"message", "send"}, Target: "chat-1", ApprovalNonce: "once", ApprovalExpiresAt: time.Unix(199, 0)})
+	if err == nil || consumed || process.starts != 0 {
+		t.Fatalf("consumed=%v starts=%d err=%v", consumed, process.starts, err)
 	}
 }
 

@@ -137,10 +137,12 @@ func (definition Definition) Validate() error {
 
 type Request struct {
 	CapabilityID, RuntimeDigest, BundleSHA256 string
+	Target                                    string
 	Identity                                  Identity
 	Argv                                      []string
 	Environment                               map[string]string
 	ApprovalNonce                             string
+	ApprovalExpiresAt                         time.Time
 }
 type Result struct {
 	Stdout, Stderr []byte
@@ -179,8 +181,15 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 		}
 	}
 	if capability.Risk == RiskHigh {
-		if wrapper.ConsumeApproval == nil || request.ApprovalNonce == "" {
+		now := time.Now().UTC()
+		if wrapper.Now != nil {
+			now = wrapper.Now().UTC()
+		}
+		if wrapper.ConsumeApproval == nil || request.ApprovalNonce == "" || strings.TrimSpace(request.Target) == "" || request.ApprovalExpiresAt.IsZero() {
 			return Result{}, errors.New("high-risk CLI command requires one-use approval")
+		}
+		if !now.Before(request.ApprovalExpiresAt) {
+			return Result{}, errors.New("CLI command approval expired")
 		}
 		if err := wrapper.ConsumeApproval(ctx, CommandDigest(definition, request), request.ApprovalNonce); err != nil {
 			return Result{}, fmt.Errorf("consume CLI approval: %w", err)
@@ -196,7 +205,7 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 }
 
 func CommandDigest(definition Definition, request Request) string {
-	sum := sha256.Sum256([]byte(strings.Join([]string{definition.ID, fmt.Sprint(definition.VersionNumber), definition.Executable, strings.Join(request.Argv, "\x00"), request.CapabilityID, string(request.Identity), request.BundleSHA256, request.RuntimeDigest}, "\x1f")))
+	sum := sha256.Sum256([]byte(strings.Join([]string{definition.ID, fmt.Sprint(definition.VersionNumber), definition.Executable, strings.Join(request.Argv, "\x00"), request.Target, request.CapabilityID, string(request.Identity), request.BundleSHA256, request.RuntimeDigest, request.ApprovalExpiresAt.UTC().Format(time.RFC3339Nano)}, "\x1f")))
 	return hex.EncodeToString(sum[:])
 }
 func hasPrefix(value, prefix []string) bool {

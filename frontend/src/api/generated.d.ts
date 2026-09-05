@@ -267,16 +267,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AgentWorkspaceService_ListMCPServers"];
+        get: operations["AgentWorkspaceService_ListMCPConnectors"];
         put?: never;
-        post: operations["AgentWorkspaceService_CreateMCPServer"];
+        post: operations["AgentWorkspaceService_CreateMCPConnector"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/connectors/mcp/{mcp_server_id}": {
+    "/api/v1/connectors/mcp/{mcp_connector_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -286,13 +286,13 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["AgentWorkspaceService_DeleteMCPServer"];
+        delete: operations["AgentWorkspaceService_DeleteMCPConnector"];
         options?: never;
         head?: never;
-        patch: operations["AgentWorkspaceService_UpdateMCPServer"];
+        patch: operations["AgentWorkspaceService_UpdateMCPConnector"];
         trace?: never;
     };
-    "/api/v1/connectors/mcp/{mcp_server_id}/test": {
+    "/api/v1/connectors/mcp/{mcp_connector_id}/test": {
         parameters: {
             query?: never;
             header?: never;
@@ -301,7 +301,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AgentWorkspaceService_TestMCPServer"];
+        post: operations["AgentWorkspaceService_TestMCPConnector"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1018,7 +1018,7 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
-        AgentWorkspaceServiceTestMCPServerBody: Record<string, never>;
+        AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
         AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
             /** Format: int64 */
@@ -1034,8 +1034,8 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
-        AgentWorkspaceServiceUpdateMCPServerBody: {
-            mcp_server?: components["schemas"]["v1MCPServerInput"];
+        AgentWorkspaceServiceUpdateMCPConnectorBody: {
+            mcp_connector?: components["schemas"]["v1MCPConnectorInput"];
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1186,8 +1186,8 @@ export interface components {
         v1CreateExpertTeamRequest: {
             expert_team?: components["schemas"]["v1ExpertTeamInput"];
         };
-        v1CreateMCPServerRequest: {
-            mcp_server?: components["schemas"]["v1MCPServerInput"];
+        v1CreateMCPConnectorRequest: {
+            mcp_connector?: components["schemas"]["v1MCPConnectorInput"];
         };
         v1CreateModelCreditRateRequest: {
             provider_type?: string;
@@ -1481,8 +1481,8 @@ export interface components {
         v1ListExpertsResponse: {
             items?: components["schemas"]["v1Expert"][];
         };
-        v1ListMCPServersResponse: {
-            items?: components["schemas"]["v1MCPServer"][];
+        v1ListMCPConnectorsResponse: {
+            items?: components["schemas"]["v1MCPConnector"][];
         };
         v1ListModelCreditRatesResponse: {
             items?: components["schemas"]["v1ModelCreditRate"][];
@@ -1525,7 +1525,7 @@ export interface components {
             /** Format: int64 */
             limit_bytes?: number;
         };
-        v1MCPServer: {
+        v1MCPConnector: {
             id?: string;
             name?: string;
             transport?: string;
@@ -1545,7 +1545,7 @@ export interface components {
             version?: number;
             test_pending?: boolean;
         };
-        v1MCPServerInput: {
+        v1MCPConnectorInput: {
             name?: string;
             transport?: string;
             url?: string;
@@ -2517,7 +2517,7 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_ListMCPServers: {
+    AgentWorkspaceService_ListMCPConnectors: {
         parameters: {
             query?: never;
             header?: never;
@@ -2532,7 +2532,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["v1ListMCPServersResponse"];
+                    "application/json": components["schemas"]["v1ListMCPConnectorsResponse"];
                 };
             };
             /** @description An unexpected error response. */
@@ -2546,7 +2546,7 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_CreateMCPServer: {
+    AgentWorkspaceService_CreateMCPConnector: {
         parameters: {
             query?: never;
             header?: never;
@@ -2555,7 +2555,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["v1CreateMCPServerRequest"];
+                "application/json": components["schemas"]["v1CreateMCPConnectorRequest"];
             };
         };
         responses: {
@@ -2565,7 +2565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
+                    "application/json": components["schemas"]["v1MCPConnector"];
                 };
             };
             /** @description An unexpected error response. */
@@ -2579,12 +2579,12 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_DeleteMCPServer: {
+    AgentWorkspaceService_DeleteMCPConnector: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                mcp_server_id: string;
+                mcp_connector_id: string;
             };
             cookie?: never;
         };
@@ -2610,18 +2610,18 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_UpdateMCPServer: {
+    AgentWorkspaceService_UpdateMCPConnector: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                mcp_server_id: string;
+                mcp_connector_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateMCPServerBody"];
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateMCPConnectorBody"];
             };
         };
         responses: {
@@ -2631,7 +2631,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
+                    "application/json": components["schemas"]["v1MCPConnector"];
                 };
             };
             /** @description An unexpected error response. */
@@ -2645,18 +2645,18 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_TestMCPServer: {
+    AgentWorkspaceService_TestMCPConnector: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                mcp_server_id: string;
+                mcp_connector_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceTestMCPServerBody"];
+                "application/json": components["schemas"]["AgentWorkspaceServiceTestMCPConnectorBody"];
             };
         };
         responses: {
@@ -2666,7 +2666,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
+                    "application/json": components["schemas"]["v1MCPConnector"];
                 };
             };
             /** @description An unexpected error response. */

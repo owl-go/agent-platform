@@ -80,11 +80,11 @@ service AgentWorkspaceService {
   rpc RefreshProviderModels(RefreshProviderModelsRequest) returns (ModelProviderConnection) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/refresh" body: "*"}; }
   rpc CreateProviderModel(CreateProviderModelRequest) returns (ProviderModel) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/models" body: "*"}; }
 
-  rpc ListMCPServers(ListMCPServersRequest) returns (ListMCPServersResponse) { option (google.api.http) = {get: "/api/v1/connectors/mcp"}; }
-  rpc CreateMCPServer(CreateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/connectors/mcp" body: "*"}; }
-  rpc UpdateMCPServer(UpdateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {patch: "/api/v1/connectors/mcp/{mcp_server_id}" body: "*"}; }
-  rpc TestMCPServer(TestMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/connectors/mcp/{mcp_server_id}/test" body: "*"}; }
-  rpc DeleteMCPServer(DeleteMCPServerRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/mcp/{mcp_server_id}"}; }
+  rpc ListMCPConnectors(ListMCPConnectorsRequest) returns (ListMCPConnectorsResponse) { option (google.api.http) = {get: "/api/v1/connectors/mcp"}; }
+  rpc CreateMCPConnector(CreateMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {post: "/api/v1/connectors/mcp" body: "*"}; }
+  rpc UpdateMCPConnector(UpdateMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {patch: "/api/v1/connectors/mcp/{mcp_connector_id}" body: "*"}; }
+  rpc TestMCPConnector(TestMCPConnectorRequest) returns (MCPConnector) { option (google.api.http) = {post: "/api/v1/connectors/mcp/{mcp_connector_id}/test" body: "*"}; }
+  rpc DeleteMCPConnector(DeleteMCPConnectorRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/mcp/{mcp_connector_id}"}; }
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) { option (google.api.http) = {get: "/api/v1/skills"}; }
   rpc CreateSkill(CreateSkillRequest) returns (Skill) { option (google.api.http) = {post: "/api/v1/skills" body: "*"}; }
   rpc UpdateSkill(UpdateSkillRequest) returns (Skill) { option (google.api.http) = {patch: "/api/v1/skills/{skill_id}" body: "*"}; }
@@ -237,14 +237,14 @@ message ModelProviderConnection { string id = 1; string name = 2; string provide
 message ProviderModel { string id = 1; string connection_id = 2; string model_id = 3; string display_name = 4; reserved 5; reserved "model_type"; bool available = 6; bool manually_added = 7; repeated RuntimeModelCompatibility compatibility = 8; }
 message RuntimeModelCompatibility { string runtime_engine = 1; string status = 2; optional string reason = 3; }
 
-message ListMCPServersRequest {}
-message ListMCPServersResponse { repeated MCPServer items = 1; }
-message CreateMCPServerRequest { MCPServerInput mcp_server = 1; }
-message UpdateMCPServerRequest { string mcp_server_id = 1; MCPServerInput mcp_server = 2; int64 expected_version = 3; }
-message TestMCPServerRequest { string mcp_server_id = 1; }
-message DeleteMCPServerRequest { string mcp_server_id = 1; }
-message MCPServerInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; }
-message MCPServer { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; }
+message ListMCPConnectorsRequest {}
+message ListMCPConnectorsResponse { repeated MCPConnector items = 1; }
+message CreateMCPConnectorRequest { MCPConnectorInput mcp_connector = 1; }
+message UpdateMCPConnectorRequest { string mcp_connector_id = 1; MCPConnectorInput mcp_connector = 2; int64 expected_version = 3; }
+message TestMCPConnectorRequest { string mcp_connector_id = 1; }
+message DeleteMCPConnectorRequest { string mcp_connector_id = 1; }
+message MCPConnectorInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; }
+message MCPConnector { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; }
 
 message ListSkillsRequest {}
 message ListSkillsResponse { repeated Skill items = 1; }

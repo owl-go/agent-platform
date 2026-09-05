@@ -62,4 +62,21 @@ describe("ExtensionManager", () => {
     expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
     wrapper.unmount();
   });
+
+  it("names affected Experts before deleting a Skill", async () => {
+    const saved: Skill = { id: "skill-1", name: "代码审查", source: "git", git_url: "https://example.test/skill.git", git_ref: "main", sha256: "a".repeat(64), ...timestamps };
+    const api = {
+      listMCPServers: vi.fn(async () => []),
+      listSkills: vi.fn(async () => [saved]),
+      listExperts: vi.fn(async () => [{ id: "expert-1", name: "审查专家", mcp_server_ids: [], skill_ids: [saved.id] }]),
+    } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
+    await wrapper.findAll(".resource-list article button").at(-1)!.trigger("click");
+    await flushPromises();
+
+    expect(document.body.textContent).toContain("审查专家");
+    wrapper.unmount();
+  });
 });

@@ -26,7 +26,7 @@ const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.Age
 const OperationAgentWorkspaceServiceCreateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
-const OperationAgentWorkspaceServiceCreateMCPServer = "/workspace.v1.AgentWorkspaceService/CreateMCPServer"
+const OperationAgentWorkspaceServiceCreateMCPConnector = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
 const OperationAgentWorkspaceServiceCreateModelCreditRate = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
 const OperationAgentWorkspaceServiceCreateProviderModel = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
@@ -39,7 +39,7 @@ const OperationAgentWorkspaceServiceDecideCommandApproval = "/workspace.v1.Agent
 const OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
-const OperationAgentWorkspaceServiceDeleteMCPServer = "/workspace.v1.AgentWorkspaceService/DeleteMCPServer"
+const OperationAgentWorkspaceServiceDeleteMCPConnector = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
 const OperationAgentWorkspaceServiceDeleteModelProviderConnection = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
 const OperationAgentWorkspaceServiceDeleteSession = "/workspace.v1.AgentWorkspaceService/DeleteSession"
 const OperationAgentWorkspaceServiceDeleteSkill = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
@@ -64,7 +64,7 @@ const OperationAgentWorkspaceServiceListCommandApprovals = "/workspace.v1.AgentW
 const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
 const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceService/ListExperts"
-const OperationAgentWorkspaceServiceListMCPServers = "/workspace.v1.AgentWorkspaceService/ListMCPServers"
+const OperationAgentWorkspaceServiceListMCPConnectors = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
@@ -88,11 +88,11 @@ const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWor
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
 const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
-const OperationAgentWorkspaceServiceTestMCPServer = "/workspace.v1.AgentWorkspaceService/TestMCPServer"
+const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
 const OperationAgentWorkspaceServiceUpdateExpertTeam = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
-const OperationAgentWorkspaceServiceUpdateMCPServer = "/workspace.v1.AgentWorkspaceService/UpdateMCPServer"
+const OperationAgentWorkspaceServiceUpdateMCPConnector = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
 const OperationAgentWorkspaceServiceUpdateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
 const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspaceService/UpdateSession"
 const OperationAgentWorkspaceServiceUpdateSettings = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
@@ -110,7 +110,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
-	CreateMCPServer(context.Context, *CreateMCPServerRequest) (*MCPServer, error)
+	CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error)
 	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	CreateProviderModel(context.Context, *CreateProviderModelRequest) (*ProviderModel, error)
@@ -123,7 +123,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
-	DeleteMCPServer(context.Context, *DeleteMCPServerRequest) (*DeleteResponse, error)
+	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
 	DeleteModelProviderConnection(context.Context, *DeleteModelProviderConnectionRequest) (*DeleteResponse, error)
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error)
@@ -148,7 +148,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
-	ListMCPServers(context.Context, *ListMCPServersRequest) (*ListMCPServersResponse, error)
+	ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error)
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
@@ -172,11 +172,11 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
 	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
-	TestMCPServer(context.Context, *TestMCPServerRequest) (*MCPServer, error)
+	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
 	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
-	UpdateMCPServer(context.Context, *UpdateMCPServerRequest) (*MCPServer, error)
+	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
 	UpdateModelProviderConnection(context.Context, *UpdateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	UpdateSession(context.Context, *UpdateSessionRequest) (*Session, error)
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
@@ -252,11 +252,11 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("DELETE", "/api/v1/model-provider-connections/{connection_id}", _AgentWorkspaceService_DeleteModelProviderConnection0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/model-provider-connections/{connection_id}/refresh", _AgentWorkspaceService_RefreshProviderModels0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/model-provider-connections/{connection_id}/models", _AgentWorkspaceService_CreateProviderModel0_HTTP_Handler(srv))
-	r.Handle("GET", "/api/v1/connectors/mcp", _AgentWorkspaceService_ListMCPServers0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/connectors/mcp", _AgentWorkspaceService_CreateMCPServer0_HTTP_Handler(srv))
-	r.Handle("PATCH", "/api/v1/connectors/mcp/{mcp_server_id}", _AgentWorkspaceService_UpdateMCPServer0_HTTP_Handler(srv))
-	r.Handle("POST", "/api/v1/connectors/mcp/{mcp_server_id}/test", _AgentWorkspaceService_TestMCPServer0_HTTP_Handler(srv))
-	r.Handle("DELETE", "/api/v1/connectors/mcp/{mcp_server_id}", _AgentWorkspaceService_DeleteMCPServer0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/connectors/mcp", _AgentWorkspaceService_ListMCPConnectors0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connectors/mcp", _AgentWorkspaceService_CreateMCPConnector0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/connectors/mcp/{mcp_connector_id}", _AgentWorkspaceService_UpdateMCPConnector0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connectors/mcp/{mcp_connector_id}/test", _AgentWorkspaceService_TestMCPConnector0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/connectors/mcp/{mcp_connector_id}", _AgentWorkspaceService_DeleteMCPConnector0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/skills", _AgentWorkspaceService_ListSkills0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/skills", _AgentWorkspaceService_CreateSkill0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/skills/{skill_id}", _AgentWorkspaceService_UpdateSkill0_HTTP_Handler(srv))
@@ -1629,100 +1629,100 @@ func _AgentWorkspaceService_CreateProviderModel0_HTTP_Handler(srv AgentWorkspace
 	}
 }
 
-func _AgentWorkspaceService_ListMCPServers0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+func _AgentWorkspaceService_ListMCPConnectors0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in ListMCPServersRequest
+		var in ListMCPConnectorsRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceListMCPServers)
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListMCPConnectors)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ListMCPServers(ctx, req.(*ListMCPServersRequest))
+			return srv.ListMCPConnectors(ctx, req.(*ListMCPConnectorsRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*ListMCPServersResponse)
+		reply := out.(*ListMCPConnectorsResponse)
 		return ctx.Result(200, reply)
 	}
 }
 
-func _AgentWorkspaceService_CreateMCPServer0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+func _AgentWorkspaceService_CreateMCPConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in CreateMCPServerRequest
+		var in CreateMCPConnectorRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateMCPServer)
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateMCPConnector)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateMCPServer(ctx, req.(*CreateMCPServerRequest))
+			return srv.CreateMCPConnector(ctx, req.(*CreateMCPConnectorRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*MCPServer)
+		reply := out.(*MCPConnector)
 		return ctx.Result(200, reply)
 	}
 }
 
-func _AgentWorkspaceService_UpdateMCPServer0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+func _AgentWorkspaceService_UpdateMCPConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in UpdateMCPServerRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateMCPServer)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.UpdateMCPServer(ctx, req.(*UpdateMCPServerRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*MCPServer)
-		return ctx.Result(200, reply)
-	}
-}
-
-func _AgentWorkspaceService_TestMCPServer0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in TestMCPServerRequest
+		var in UpdateMCPConnectorRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceTestMCPServer)
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateMCPConnector)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.TestMCPServer(ctx, req.(*TestMCPServerRequest))
+			return srv.UpdateMCPConnector(ctx, req.(*UpdateMCPConnectorRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*MCPServer)
+		reply := out.(*MCPConnector)
 		return ctx.Result(200, reply)
 	}
 }
 
-func _AgentWorkspaceService_DeleteMCPServer0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+func _AgentWorkspaceService_TestMCPConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in DeleteMCPServerRequest
+		var in TestMCPConnectorRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceTestMCPConnector)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.TestMCPConnector(ctx, req.(*TestMCPConnectorRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*MCPConnector)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteMCPConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteMCPConnectorRequest
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindVars(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteMCPServer)
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteMCPConnector)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.DeleteMCPServer(ctx, req.(*DeleteMCPServerRequest))
+			return srv.DeleteMCPConnector(ctx, req.(*DeleteMCPConnectorRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -1989,7 +1989,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateCLIConnectorDefinition(ctx context.Context, req *CreateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
-	CreateMCPServer(ctx context.Context, req *CreateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
+	CreateMCPConnector(ctx context.Context, req *CreateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	CreateModelCreditRate(ctx context.Context, req *CreateModelCreditRateRequest, opts ...http.CallOption) (rsp *ModelCreditRate, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	CreateProviderModel(ctx context.Context, req *CreateProviderModelRequest, opts ...http.CallOption) (rsp *ProviderModel, err error)
@@ -2002,7 +2002,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	DeleteCLIConnectorDefinition(ctx context.Context, req *DeleteCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
-	DeleteMCPServer(ctx context.Context, req *DeleteMCPServerRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteMCPConnector(ctx context.Context, req *DeleteMCPConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteModelProviderConnection(ctx context.Context, req *DeleteModelProviderConnectionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSession(ctx context.Context, req *DeleteSessionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSkill(ctx context.Context, req *DeleteSkillRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -2027,7 +2027,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
 	ListExperts(ctx context.Context, req *ListExpertsRequest, opts ...http.CallOption) (rsp *ListExpertsResponse, err error)
-	ListMCPServers(ctx context.Context, req *ListMCPServersRequest, opts ...http.CallOption) (rsp *ListMCPServersResponse, err error)
+	ListMCPConnectors(ctx context.Context, req *ListMCPConnectorsRequest, opts ...http.CallOption) (rsp *ListMCPConnectorsResponse, err error)
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
@@ -2051,11 +2051,11 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
-	TestMCPServer(ctx context.Context, req *TestMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
+	TestMCPConnector(ctx context.Context, req *TestMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	UpdateExpertTeam(ctx context.Context, req *UpdateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
-	UpdateMCPServer(ctx context.Context, req *UpdateMCPServerRequest, opts ...http.CallOption) (rsp *MCPServer, err error)
+	UpdateMCPConnector(ctx context.Context, req *UpdateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateModelProviderConnection(ctx context.Context, req *UpdateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
@@ -2225,14 +2225,14 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateExpertTeam(ctx context.Conte
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) CreateMCPServer(ctx context.Context, in *CreateMCPServerRequest, opts ...http.CallOption) (*MCPServer, error) {
-	var out MCPServer
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateMCPConnector(ctx context.Context, in *CreateMCPConnectorRequest, opts ...http.CallOption) (*MCPConnector, error) {
+	var out MCPConnector
 	pattern := "/api/v1/connectors/mcp"
 	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceCreateMCPServer),
+		http.Operation(OperationAgentWorkspaceServiceCreateMCPConnector),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -2443,13 +2443,13 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteExpertTeam(ctx context.Conte
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteMCPServer(ctx context.Context, in *DeleteMCPServerRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteMCPConnector(ctx context.Context, in *DeleteMCPConnectorRequest, opts ...http.CallOption) (*DeleteResponse, error) {
 	var out DeleteResponse
-	pattern := "/api/v1/connectors/mcp/{mcp_server_id}"
+	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceDeleteMCPServer),
+		http.Operation(OperationAgentWorkspaceServiceDeleteMCPConnector),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
@@ -2846,13 +2846,13 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListExperts(ctx context.Context, i
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) ListMCPServers(ctx context.Context, in *ListMCPServersRequest, opts ...http.CallOption) (*ListMCPServersResponse, error) {
-	var out ListMCPServersResponse
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListMCPConnectors(ctx context.Context, in *ListMCPConnectorsRequest, opts ...http.CallOption) (*ListMCPConnectorsResponse, error) {
+	var out ListMCPConnectorsResponse
 	pattern := "/api/v1/connectors/mcp"
 	path := http.BuildPath(pattern, in, http.WithQueryParams())
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceListMCPServers),
+		http.Operation(OperationAgentWorkspaceServiceListMCPConnectors),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -3240,14 +3240,14 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserEnabled(ctx context.Context
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) TestMCPServer(ctx context.Context, in *TestMCPServerRequest, opts ...http.CallOption) (*MCPServer, error) {
-	var out MCPServer
-	pattern := "/api/v1/connectors/mcp/{mcp_server_id}/test"
+func (c *AgentWorkspaceServiceHTTPClientImpl) TestMCPConnector(ctx context.Context, in *TestMCPConnectorRequest, opts ...http.CallOption) (*MCPConnector, error) {
+	var out MCPConnector
+	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}/test"
 	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceTestMCPServer),
+		http.Operation(OperationAgentWorkspaceServiceTestMCPConnector),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -3308,14 +3308,14 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateExpertTeam(ctx context.Conte
 	return &out, nil
 }
 
-func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateMCPServer(ctx context.Context, in *UpdateMCPServerRequest, opts ...http.CallOption) (*MCPServer, error) {
-	var out MCPServer
-	pattern := "/api/v1/connectors/mcp/{mcp_server_id}"
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateMCPConnector(ctx context.Context, in *UpdateMCPConnectorRequest, opts ...http.CallOption) (*MCPConnector, error) {
+	var out MCPConnector
+	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}"
 	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
-		http.Operation(OperationAgentWorkspaceServiceUpdateMCPServer),
+		http.Operation(OperationAgentWorkspaceServiceUpdateMCPConnector),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
