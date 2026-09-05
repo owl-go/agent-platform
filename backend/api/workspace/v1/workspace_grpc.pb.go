@@ -98,7 +98,8 @@ const (
 	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
 	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
-	AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
+	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
+	AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName = "/workspace.v1.AgentWorkspaceService/DisableCLIConnectorDefinition"
 	AgentWorkspaceService_EnableCLIConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
 	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
 	AgentWorkspaceService_ListCommandApprovals_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
@@ -188,7 +189,8 @@ type AgentWorkspaceServiceClient interface {
 	ListCLIConnectorDefinitions(ctx context.Context, in *ListCLIConnectorDefinitionsRequest, opts ...grpc.CallOption) (*ListCLIConnectorDefinitionsResponse, error)
 	CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(ctx context.Context, in *UpdateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
-	DeleteCLIConnectorDefinition(ctx context.Context, in *DeleteCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
+	DisableCLIConnectorDefinition(ctx context.Context, in *DisableCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	EnableCLIConnector(ctx context.Context, in *EnableCLIConnectorRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error)
 	ListCLIConnectorEnablements(ctx context.Context, in *ListCLIConnectorEnablementsRequest, opts ...grpc.CallOption) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(ctx context.Context, in *ListCommandApprovalsRequest, opts ...grpc.CallOption) (*ListCommandApprovalsResponse, error)
@@ -993,10 +995,20 @@ func (c *agentWorkspaceServiceClient) UpdateCLIConnectorDefinition(ctx context.C
 	return out, nil
 }
 
-func (c *agentWorkspaceServiceClient) DeleteCLIConnectorDefinition(ctx context.Context, in *DeleteCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+func (c *agentWorkspaceServiceClient) PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName, in, out, cOpts...)
+	out := new(CLIConnectorDefinition)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DisableCLIConnectorDefinition(ctx context.Context, in *DisableCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CLIConnectorDefinition)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1126,7 +1138,8 @@ type AgentWorkspaceServiceServer interface {
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
-	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
+	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
+	DisableCLIConnectorDefinition(context.Context, *DisableCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	EnableCLIConnector(context.Context, *EnableCLIConnectorRequest) (*CLIConnectorEnablement, error)
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
@@ -1378,8 +1391,11 @@ func (UnimplementedAgentWorkspaceServiceServer) CreateCLIConnectorDefinition(con
 func (UnimplementedAgentWorkspaceServiceServer) UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateCLIConnectorDefinition not implemented")
 }
-func (UnimplementedAgentWorkspaceServiceServer) DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteCLIConnectorDefinition not implemented")
+func (UnimplementedAgentWorkspaceServiceServer) PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
+	return nil, status.Error(codes.Unimplemented, "method PublishCLIConnectorDefinition not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisableCLIConnectorDefinition(context.Context, *DisableCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableCLIConnectorDefinition not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) EnableCLIConnector(context.Context, *EnableCLIConnectorRequest) (*CLIConnectorEnablement, error) {
 	return nil, status.Error(codes.Unimplemented, "method EnableCLIConnector not implemented")
@@ -2836,20 +2852,38 @@ func _AgentWorkspaceService_UpdateCLIConnectorDefinition_Handler(srv interface{}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AgentWorkspaceService_DeleteCLIConnectorDefinition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteCLIConnectorDefinitionRequest)
+func _AgentWorkspaceService_PublishCLIConnectorDefinition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishCLIConnectorDefinitionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentWorkspaceServiceServer).DeleteCLIConnectorDefinition(ctx, in)
+		return srv.(AgentWorkspaceServiceServer).PublishCLIConnectorDefinition(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName,
+		FullMethod: AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentWorkspaceServiceServer).DeleteCLIConnectorDefinition(ctx, req.(*DeleteCLIConnectorDefinitionRequest))
+		return srv.(AgentWorkspaceServiceServer).PublishCLIConnectorDefinition(ctx, req.(*PublishCLIConnectorDefinitionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DisableCLIConnectorDefinition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableCLIConnectorDefinitionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisableCLIConnectorDefinition(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisableCLIConnectorDefinition(ctx, req.(*DisableCLIConnectorDefinitionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3250,8 +3284,12 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_UpdateCLIConnectorDefinition_Handler,
 		},
 		{
-			MethodName: "DeleteCLIConnectorDefinition",
-			Handler:    _AgentWorkspaceService_DeleteCLIConnectorDefinition_Handler,
+			MethodName: "PublishCLIConnectorDefinition",
+			Handler:    _AgentWorkspaceService_PublishCLIConnectorDefinition_Handler,
+		},
+		{
+			MethodName: "DisableCLIConnectorDefinition",
+			Handler:    _AgentWorkspaceService_DisableCLIConnectorDefinition_Handler,
 		},
 		{
 			MethodName: "EnableCLIConnector",

@@ -94,7 +94,8 @@ service AgentWorkspaceService {
   rpc ListCLIConnectorDefinitions(ListCLIConnectorDefinitionsRequest) returns (ListCLIConnectorDefinitionsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli"}; }
   rpc CreateCLIConnectorDefinition(CreateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli" body: "*"}; }
   rpc UpdateCLIConnectorDefinition(UpdateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {patch: "/api/v1/admin/connectors/cli/{definition_id}" body: "*"}; }
-  rpc DeleteCLIConnectorDefinition(DeleteCLIConnectorDefinitionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/admin/connectors/cli/{definition_id}"}; }
+  rpc PublishCLIConnectorDefinition(PublishCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/publish" body: "*"}; }
+  rpc DisableCLIConnectorDefinition(DisableCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/disable" body: "*"}; }
   rpc EnableCLIConnector(EnableCLIConnectorRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/{definition_id}/enable" body: "*"}; }
   rpc ListCLIConnectorEnablements(ListCLIConnectorEnablementsRequest) returns (ListCLIConnectorEnablementsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements"}; }
   rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
@@ -261,12 +262,13 @@ message ResourceDeletionImpact { repeated AffectedExpert affected_experts = 1; s
 
 message CLICapability { string id = 1; repeated string argv_prefix = 2; string risk = 3; repeated string identities = 4; repeated string scopes = 5; repeated string egress_hosts = 6; int32 timeout_seconds = 7; }
 message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; repeated string supported_architectures = 8; repeated string recommended_skill_ids = 9; }
-message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; repeated string supported_architectures = 14; repeated string recommended_skill_ids = 15; }
+message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; repeated string supported_architectures = 14; repeated string recommended_skill_ids = 15; repeated string conformance_runtime_digests = 16; }
 message ListCLIConnectorDefinitionsRequest {}
 message ListCLIConnectorDefinitionsResponse { repeated CLIConnectorDefinition items = 1; }
 message CreateCLIConnectorDefinitionRequest { CLIConnectorDefinitionInput definition = 1; }
 message UpdateCLIConnectorDefinitionRequest { string definition_id = 1; CLIConnectorDefinitionInput definition = 2; int64 expected_version = 3; }
-message DeleteCLIConnectorDefinitionRequest { string definition_id = 1; }
+message PublishCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
+message DisableCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
 message EnableCLIConnectorRequest { string definition_id = 1; }
 message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; }
 message ListCLIConnectorEnablementsRequest {}

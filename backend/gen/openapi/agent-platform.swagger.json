@@ -52,34 +52,6 @@
       }
     },
     "/api/v1/admin/connectors/cli/{definition_id}": {
-      "delete": {
-        "operationId": "AgentWorkspaceService_DeleteCLIConnectorDefinition",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "definition_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
       "patch": {
         "operationId": "AgentWorkspaceService_UpdateCLIConnectorDefinition",
         "responses": {
@@ -109,6 +81,82 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/cli/{definition_id}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorDefinition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisableCLIConnectorDefinitionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/cli/{definition_id}/publish": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PublishCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorDefinition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServicePublishCLIConnectorDefinitionBody"
             }
           }
         ],
@@ -2883,6 +2931,15 @@
         }
       }
     },
+    "AgentWorkspaceServiceDisableCLIConnectorDefinitionBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "AgentWorkspaceServiceEnableCLIConnectorBody": {
       "type": "object"
     },
@@ -2891,6 +2948,15 @@
     },
     "AgentWorkspaceServiceGenerateWorkflowCredentialBody": {
       "type": "object"
+    },
+    "AgentWorkspaceServicePublishCLIConnectorDefinitionBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "AgentWorkspaceServiceRefreshProviderModelsBody": {
       "type": "object"
@@ -3307,6 +3373,12 @@
           }
         },
         "recommended_skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conformance_runtime_digests": {
           "type": "array",
           "items": {
             "type": "string"

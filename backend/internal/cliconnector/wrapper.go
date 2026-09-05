@@ -56,6 +56,7 @@ type Definition struct {
 	Executable             string
 	AuthenticationDriver   string
 	State                  State
+	BundleObjectKey        string
 	BundleSHA256           string
 	RuntimeDigests         []string
 	SupportedArchitectures []string

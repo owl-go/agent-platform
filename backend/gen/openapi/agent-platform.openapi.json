@@ -54,44 +54,6 @@
       }
     },
     "/api/v1/admin/connectors/cli/{definition_id}": {
-      "delete": {
-        "operationId": "AgentWorkspaceService_DeleteCLIConnectorDefinition",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/v1DeleteResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/rpcStatus"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "definition_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
       "patch": {
         "operationId": "AgentWorkspaceService_UpdateCLIConnectorDefinition",
         "responses": {
@@ -131,6 +93,106 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/cli/{definition_id}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CLIConnectorDefinition"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceDisableCLIConnectorDefinitionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/cli/{definition_id}/publish": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PublishCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CLIConnectorDefinition"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServicePublishCLIConnectorDefinitionBody"
               }
             }
           },
@@ -3769,6 +3831,15 @@
           }
         }
       },
+      "AgentWorkspaceServiceDisableCLIConnectorDefinitionBody": {
+        "type": "object",
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "AgentWorkspaceServiceEnableCLIConnectorBody": {
         "type": "object"
       },
@@ -3777,6 +3848,15 @@
       },
       "AgentWorkspaceServiceGenerateWorkflowCredentialBody": {
         "type": "object"
+      },
+      "AgentWorkspaceServicePublishCLIConnectorDefinitionBody": {
+        "type": "object",
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "AgentWorkspaceServiceRefreshProviderModelsBody": {
         "type": "object"
@@ -4191,6 +4271,12 @@
             }
           },
           "recommended_skill_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conformance_runtime_digests": {
             "type": "array",
             "items": {
               "type": "string"

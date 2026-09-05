@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/cliconnector"
 )
 
 type JobKind string
@@ -15,6 +16,7 @@ const (
 	JobSession             JobKind = "session"
 	JobMCPTest             JobKind = "mcp_test"
 	JobExpertTagProjection JobKind = "expert_tag_projection"
+	JobCLIConnectorBuild   JobKind = "cli_connector_build"
 )
 
 type ExecutionJob struct {
@@ -35,6 +37,7 @@ type ExecutionJob struct {
 	CheckpointRef       string
 	StageCheckpointRefs map[int]string
 	Snapshot            domain.ExecutionSnapshot
+	CLIConnector        cliconnector.Definition
 }
 
 type ExecutionResult struct {
@@ -93,6 +96,7 @@ type WorkerRepository interface {
 	FinishCancelled(context.Context, ExecutionJob, ExecutionResult) error
 	FinishMCPTest(context.Context, ExecutionJob, string) error
 	FinishExpertTagProjection(context.Context, ExecutionJob, ExecutionResult, string) error
+	FinishCLIConnectorBuild(context.Context, ExecutionJob, cliconnector.BuildResult, string) error
 	RecordProgress(context.Context, ExecutionJob, ExecutionEvent) error
 	CancellationRequested(context.Context, ExecutionJob) (bool, error)
 }
@@ -106,17 +110,22 @@ type ProgressRecorder interface {
 }
 
 type Worker struct {
-	repository WorkerRepository
-	executor   Executor
+	repository       WorkerRepository
+	executor         Executor
+	connectorBuilder *cliconnector.Builder
 }
 
 const cancellationPollInterval = 200 * time.Millisecond
 
-func NewWorker(repository WorkerRepository, executor Executor) (*Worker, error) {
+func NewWorker(repository WorkerRepository, executor Executor, connectorBuilders ...*cliconnector.Builder) (*Worker, error) {
 	if repository == nil || executor == nil {
 		return nil, fmt.Errorf("Agent Workspace Worker Repository and Executor are required")
 	}
-	return &Worker{repository: repository, executor: executor}, nil
+	worker := &Worker{repository: repository, executor: executor}
+	if len(connectorBuilders) > 0 {
+		worker.connectorBuilder = connectorBuilders[0]
+	}
+	return worker, nil
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -139,6 +148,17 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 			message = executeErr.Error()
 		}
 		return true, worker.repository.FinishExpertTagProjection(context.WithoutCancel(ctx), *job, result, message)
+	}
+	if job.Kind == JobCLIConnectorBuild {
+		if worker.connectorBuilder == nil {
+			return true, worker.repository.FinishCLIConnectorBuild(context.WithoutCancel(ctx), *job, cliconnector.BuildResult{}, "isolated CLI Connector Builder is not configured")
+		}
+		result, buildErr := worker.connectorBuilder.Build(ctx, job.CLIConnector)
+		message := ""
+		if buildErr != nil {
+			message = buildErr.Error()
+		}
+		return true, worker.repository.FinishCLIConnectorBuild(context.WithoutCancel(ctx), *job, result, message)
 	}
 	executionCtx, cancel := context.WithCancel(ctx)
 	monitorDone := make(chan struct{})

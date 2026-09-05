@@ -12,6 +12,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/cliconnector"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -26,7 +27,15 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		if err := cancelDisabledOwnerWork(tx, time.Now().UTC()); err != nil {
 			return err
 		}
-		claimed, err := claimExpertTagProjection(tx)
+		claimed, err := claimCLIConnectorBuild(tx)
+		if err != nil {
+			return err
+		}
+		if claimed != nil {
+			job = claimed
+			return nil
+		}
+		claimed, err = claimExpertTagProjection(tx)
 		if err != nil {
 			return err
 		}
@@ -57,7 +66,7 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job = claimed
 		return err
 	})
-	if err != nil || job == nil || job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection {
+	if err != nil || job == nil || job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection || job.Kind == application.JobCLIConnectorBuild {
 		return job, err
 	}
 	job.Timezone = "Asia/Shanghai"
@@ -68,6 +77,66 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job.Timezone = timezone
 	}
 	return job, nil
+}
+
+func claimCLIConnectorBuild(tx *gorm.DB) (*application.ExecutionJob, error) {
+	var row cliConnectorDefinitionRecord
+	err := tx.Raw(`SELECT * FROM cli_connector_definitions WHERE state = 'building' ORDER BY updated_at, id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&row).Error
+	if err != nil || row.ID == "" {
+		return nil, err
+	}
+	result := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state = 'building'", row.ID, row.Version).Updates(map[string]any{"state": string(cliconnector.StateTesting), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, domain.ErrConflict
+	}
+	row.Version++
+	definition, err := cliDefinitionDomain(row)
+	if err != nil {
+		return nil, err
+	}
+	definition.State = cliconnector.StateBuilding
+	return &application.ExecutionJob{Kind: application.JobCLIConnectorBuild, ID: "cli-build-" + row.ID, CLIConnector: definition}, nil
+}
+
+func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job application.ExecutionJob, build cliconnector.BuildResult, failure string) error {
+	if job.Kind != application.JobCLIConnectorBuild || job.CLIConnector.ID == "" {
+		return domain.ErrInvalid
+	}
+	if len(failure) > 4096 {
+		failure = failure[:4096]
+	}
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		query := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state = 'testing'", job.CLIConnector.ID, job.CLIConnector.VersionNumber)
+		if failure != "" {
+			result := query.Updates(map[string]any{"state": string(cliconnector.StateFailed), "failure_reason": failure, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return domain.ErrConflict
+			}
+			return nil
+		}
+		if build.State != cliconnector.StateAvailable || build.BundleObjectKey == "" || len(build.BundleSHA256) != 64 || len(build.RuntimeDigests) == 0 {
+			return fmt.Errorf("%w: invalid CLI Connector build result", domain.ErrInvalid)
+		}
+		for _, digest := range build.RuntimeDigests {
+			if err := tx.Table("cli_connector_conformance").Create(map[string]any{"definition_id": job.CLIConnector.ID, "bundle_sha256": build.BundleSHA256, "runtime_repo_digest": digest, "environment": []byte(`{}`), "tested_at": time.Now().UTC(), "passed": true}).Error; err != nil {
+				return err
+			}
+		}
+		result := query.Updates(map[string]any{"state": string(cliconnector.StateAvailable), "failure_reason": nil, "bundle_object_key": build.BundleObjectKey, "bundle_sha256": build.BundleSHA256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		return nil
+	})
 }
 
 func claimExpertTagProjection(tx *gorm.DB) (*application.ExecutionJob, error) {

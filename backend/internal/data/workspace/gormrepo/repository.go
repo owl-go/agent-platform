@@ -154,6 +154,7 @@ type cliConnectorDefinitionRecord struct {
 	RecommendedSkillIDs    []byte    `gorm:"column:recommended_skill_ids;type:jsonb"`
 	State                  string    `gorm:"column:state"`
 	FailureReason          *string   `gorm:"column:failure_reason"`
+	BundleObjectKey        *string   `gorm:"column:bundle_object_key"`
 	BundleSHA256           *string   `gorm:"column:bundle_sha256"`
 	CreatedByUserID        string    `gorm:"column:created_by_user_id"`
 	CreatedAt              time.Time `gorm:"column:created_at"`

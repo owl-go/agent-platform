@@ -22,12 +22,24 @@ func (repository *Repository) ListCLIConnectorDefinitions(ctx context.Context, i
 	if err := query.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list CLI Connector Definitions: %w", err)
 	}
+	var conformances []struct {
+		DefinitionID  string `gorm:"column:definition_id"`
+		RuntimeDigest string `gorm:"column:runtime_repo_digest"`
+	}
+	if err := repository.db.WithContext(ctx).Table("cli_connector_conformance").Select("definition_id, runtime_repo_digest").Where("passed = ?", true).Order("runtime_repo_digest").Scan(&conformances).Error; err != nil {
+		return nil, fmt.Errorf("list CLI Connector conformance: %w", err)
+	}
+	runtimeDigests := make(map[string][]string)
+	for _, row := range conformances {
+		runtimeDigests[row.DefinitionID] = append(runtimeDigests[row.DefinitionID], row.RuntimeDigest)
+	}
 	items := make([]cliconnector.Definition, 0, len(rows))
 	for _, row := range rows {
 		item, err := cliDefinitionDomain(row)
 		if err != nil {
 			return nil, err
 		}
+		item.RuntimeDigests = runtimeDigests[item.ID]
 		items = append(items, item)
 	}
 	return items, nil
@@ -68,15 +80,56 @@ func (repository *Repository) UpdateCLIConnectorDefinition(ctx context.Context, 
 	return cliDefinitionDomain(row)
 }
 
-func (repository *Repository) DeleteCLIConnectorDefinition(ctx context.Context, id string) error {
-	result := repository.db.WithContext(ctx).Where("id = ? AND state IN ?", id, []string{"draft", "failed"}).Delete(&cliConnectorDefinitionRecord{})
-	if result.Error != nil {
-		return result.Error
+func (repository *Repository) PublishCLIConnectorDefinition(ctx context.Context, id string, expectedVersion int64) (cliconnector.Definition, error) {
+	var row cliConnectorDefinitionRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if row.Version != expectedVersion || (row.State != string(cliconnector.StateDraft) && row.State != string(cliconnector.StateFailed)) {
+			return domain.ErrConflict
+		}
+		definition, err := cliDefinitionDomain(row)
+		if err != nil {
+			return err
+		}
+		if err := definition.Validate(); err != nil {
+			return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
+		}
+		result := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ?", id, expectedVersion).Updates(map[string]any{"state": string(cliconnector.StateBuilding), "failure_reason": nil, "bundle_object_key": nil, "bundle_sha256": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		return tx.Where("id = ?", id).Take(&row).Error
+	})
+	if err != nil {
+		return cliconnector.Definition{}, err
 	}
-	if result.RowsAffected != 1 {
-		return domain.ErrConflict
+	return cliDefinitionDomain(row)
+}
+
+func (repository *Repository) DisableCLIConnectorDefinition(ctx context.Context, id string, expectedVersion int64) (cliconnector.Definition, error) {
+	var row cliConnectorDefinitionRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state = ?", id, expectedVersion, cliconnector.StateAvailable).Updates(map[string]any{"state": string(cliconnector.StateDisabled), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		if err := tx.Model(&cliConnectorEnablementRecord{}).Where("definition_id = ? AND state <> 'disabled'", id).Updates(map[string]any{"state": "disabled", "action_url": nil, "action_expires_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", id).Take(&row).Error
+	})
+	if err != nil {
+		return cliconnector.Definition{}, err
 	}
-	return nil
+	return cliDefinitionDomain(row)
 }
 
 func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, definitionID, actionURL string, expiry time.Time) (cliconnector.Enablement, error) {
@@ -125,6 +178,9 @@ func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definit
 		return cliconnector.Definition{}, err
 	}
 	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
+	if row.BundleObjectKey != nil {
+		item.BundleObjectKey = *row.BundleObjectKey
+	}
 	if row.BundleSHA256 != nil {
 		item.BundleSHA256 = *row.BundleSHA256
 	}

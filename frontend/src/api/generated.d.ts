@@ -30,10 +30,42 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["AgentWorkspaceService_DeleteCLIConnectorDefinition"];
+        delete?: never;
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateCLIConnectorDefinition"];
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/cli/{definition_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisableCLIConnectorDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/cli/{definition_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_PublishCLIConnectorDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/model-credit-rates": {
@@ -1019,9 +1051,17 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceDisableCLIConnectorDefinitionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
         AgentWorkspaceServiceEnableCLIConnectorBody: Record<string, never>;
         AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
+        AgentWorkspaceServicePublishCLIConnectorDefinitionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
         AgentWorkspaceServiceRefreshProviderModelsBody: Record<string, never>;
         AgentWorkspaceServiceRerunWorkflowBody: Record<string, never>;
         AgentWorkspaceServiceResetUserPasswordBody: Record<string, never>;
@@ -1182,6 +1222,7 @@ export interface components {
             version?: number;
             supported_architectures?: string[];
             recommended_skill_ids?: string[];
+            conformance_runtime_digests?: string[];
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1976,7 +2017,7 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_DeleteCLIConnectorDefinition: {
+    AgentWorkspaceService_UpdateCLIConnectorDefinition: {
         parameters: {
             query?: never;
             header?: never;
@@ -1985,7 +2026,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"];
+            };
+        };
         responses: {
             /** @description A successful response. */
             200: {
@@ -1993,7 +2038,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["v1DeleteResponse"];
+                    "application/json": components["schemas"]["v1CLIConnectorDefinition"];
                 };
             };
             /** @description An unexpected error response. */
@@ -2007,7 +2052,7 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_UpdateCLIConnectorDefinition: {
+    AgentWorkspaceService_DisableCLIConnectorDefinition: {
         parameters: {
             query?: never;
             header?: never;
@@ -2018,7 +2063,42 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"];
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisableCLIConnectorDefinitionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorDefinition"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PublishCLIConnectorDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServicePublishCLIConnectorDefinitionBody"];
             };
         };
         responses: {
