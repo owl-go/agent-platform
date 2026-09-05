@@ -236,7 +236,8 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
     if (message && (message.state === "queued" || message.state === "generating")) {
       pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 900);
     } else {
-	  window.dispatchEvent(new Event("credits-updated"));
+      if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
+      window.dispatchEvent(new Event("credits-updated"));
       const refreshed = sessions.value.find((item) => item.id === sessionID);
       if (refreshed) {
         const current = await api.listSessions(false);
@@ -258,7 +259,7 @@ async function streamAssistant(sessionID: string, messageID: number, generation:
       applySnapshot(messageID, snapshot);
     }, controller.signal);
     await waitForReveal(messageID, generation);
-    if (generation === pollGeneration && selected.value?.id === sessionID) await pollAssistant(sessionID, messageID, generation);
+    if (!controller.signal.aborted && generation === pollGeneration && selected.value?.id === sessionID) await pollAssistant(sessionID, messageID, generation);
   } catch (streamError) {
     if (!controller.signal.aborted && generation === pollGeneration) void pollAssistant(sessionID, messageID, generation);
   } finally {
@@ -309,6 +310,10 @@ async function cancelGeneration() {
       responseController?.abort();
       stopReveal();
       cancellingMessageID.value = undefined;
+    } else {
+      responseController?.abort();
+      stopReveal();
+      await pollAssistant(sessionID, message.id, pollGeneration);
     }
   } catch {
     if (selected.value?.id === sessionID) {
