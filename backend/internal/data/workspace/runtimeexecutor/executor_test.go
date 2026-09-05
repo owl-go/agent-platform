@@ -217,6 +217,53 @@ func TestEnvironmentDecryptsGlobalModelCredentialWithItsOriginalScope(t *testing
 	}
 }
 
+func TestEnvironmentUsesDeepSeekAnthropicEndpointWithoutChangingOpenAIEndpoint(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, err := box.Encrypt([]byte("deepseek-key"), "model-provider:administrator-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{box: box}
+	job := application.ExecutionJob{OwnerID: "ordinary-user-1", Snapshot: domain.ExecutionSnapshot{ProviderModel: domain.ProviderModelSnapshot{
+		ProviderType: "deepseek", Endpoint: "https://api.deepseek.com", APIKeyCiphertext: ciphertext, CredentialOwnerID: "administrator-1",
+	}}}
+
+	variables, err := executor.environment(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := variables["ANTHROPIC_BASE_URL"]; got != "https://api.deepseek.com/anthropic" {
+		t.Fatalf("ANTHROPIC_BASE_URL = %q, want DeepSeek Anthropic endpoint", got)
+	}
+	if got := variables["OPENAI_BASE_URL"]; got != "https://api.deepseek.com" {
+		t.Fatalf("OPENAI_BASE_URL = %q, want unchanged DeepSeek endpoint", got)
+	}
+}
+
+func TestAnthropicBaseURLOnlyDerivesDeepSeekRouteOnce(t *testing.T) {
+	tests := []struct {
+		name         string
+		providerType string
+		endpoint     string
+		want         string
+	}{
+		{name: "DeepSeek root", providerType: "deepseek", endpoint: "https://api.deepseek.com", want: "https://api.deepseek.com/anthropic"},
+		{name: "DeepSeek trailing slash", providerType: "deepseek", endpoint: "https://api.deepseek.com/", want: "https://api.deepseek.com/anthropic"},
+		{name: "DeepSeek Anthropic route", providerType: "deepseek", endpoint: "https://api.deepseek.com/anthropic", want: "https://api.deepseek.com/anthropic"},
+		{name: "Anthropic unchanged", providerType: "anthropic", endpoint: "https://api.anthropic.com/", want: "https://api.anthropic.com/"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := anthropicBaseURL(test.providerType, test.endpoint); got != test.want {
+				t.Fatalf("Anthropic Base URL = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func TestExecuteMakesImageAttachmentReadableAndKeepsWorkspaceWritable(t *testing.T) {
 	executor, job, persistent := newTeamTestExecutor(t)
 	job.Snapshot.ExpertTeam = nil

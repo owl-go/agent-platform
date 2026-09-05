@@ -798,7 +798,7 @@ var providerPresets = []ModelProviderPreset{
 	{ProviderType: "anthropic", DisplayName: "Anthropic", OfficialEndpoint: "https://api.anthropic.com", Protocols: []string{"anthropic_messages"}},
 	{ProviderType: "google_gemini", DisplayName: "Google Gemini", OfficialEndpoint: "https://generativelanguage.googleapis.com/v1beta", Protocols: []string{"gemini"}},
 	{ProviderType: "xai", DisplayName: "xAI", OfficialEndpoint: "https://api.x.ai/v1", Protocols: []string{"openai_responses", "openai_chat"}},
-	{ProviderType: "deepseek", DisplayName: "DeepSeek", OfficialEndpoint: "https://api.deepseek.com", Protocols: []string{"openai_chat"}},
+	{ProviderType: "deepseek", DisplayName: "DeepSeek", OfficialEndpoint: "https://api.deepseek.com", Protocols: []string{"openai_chat", "anthropic_messages"}},
 	{ProviderType: "alibaba_bailian", DisplayName: "阿里云百炼", OfficialEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1", Protocols: []string{"openai_responses", "openai_chat", "anthropic_messages"}},
 	{ProviderType: "volcengine_ark", DisplayName: "火山方舟", OfficialEndpoint: "https://ark.cn-beijing.volces.com/api/v3", Protocols: []string{"openai_chat"}},
 	{ProviderType: "moonshot", DisplayName: "Moonshot", OfficialEndpoint: "https://api.moonshot.cn/v1", Protocols: []string{"openai_chat"}},

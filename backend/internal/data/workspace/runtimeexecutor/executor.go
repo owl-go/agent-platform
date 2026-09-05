@@ -1125,13 +1125,24 @@ func (executor *Executor) environment(job application.ExecutionJob) (map[string]
 		}
 	}
 	variables["ANTHROPIC_API_KEY"] = string(secret)
-	variables["ANTHROPIC_BASE_URL"] = job.Snapshot.ProviderModel.Endpoint
+	variables["ANTHROPIC_BASE_URL"] = anthropicBaseURL(job.Snapshot.ProviderModel.ProviderType, job.Snapshot.ProviderModel.Endpoint)
 	variables["OPENAI_API_KEY"] = string(secret)
 	variables["OPENAI_BASE_URL"] = job.Snapshot.ProviderModel.Endpoint
 	if len(job.Snapshot.MCPServers) > 0 {
 		variables["AGENT_WORKSPACE_MCP_CONFIG"] = "/run/agent-credentials/extensions/mcp.json"
 	}
 	return variables, nil
+}
+
+func anthropicBaseURL(providerType, endpoint string) string {
+	if providerType != "deepseek" {
+		return endpoint
+	}
+	base := strings.TrimRight(endpoint, "/")
+	if strings.HasSuffix(base, "/anthropic") {
+		return base
+	}
+	return base + "/anthropic"
 }
 
 func (executor *Executor) extensionFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {

@@ -185,6 +185,21 @@ func TestCompatibilityIsProtocolBased(t *testing.T) {
 	}
 }
 
+func TestDeepSeekProviderPresetSupportsClaudeCodeProtocol(t *testing.T) {
+	for _, preset := range ModelProviderPresets() {
+		if preset.ProviderType != "deepseek" {
+			continue
+		}
+		for _, protocol := range preset.Protocols {
+			if protocol == "anthropic_messages" {
+				return
+			}
+		}
+		t.Fatalf("DeepSeek protocols = %v, want anthropic_messages", preset.Protocols)
+	}
+	t.Fatal("DeepSeek provider preset is missing")
+}
+
 func TestProviderModelValidationHasNoModelType(t *testing.T) {
 	if err := ValidateProviderModel("gpt-5.6-sol", "GPT 5.6 Sol"); err != nil {
 		t.Fatalf("valid Provider Model rejected: %v", err)
