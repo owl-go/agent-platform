@@ -4,6 +4,7 @@ export type SupportedLocale = "zh-CN" | "en-US";
 export const localeStorageKey = "agent-workspace-locale";
 
 const zh = {
+  artifactDisclosure: { viewAllArtifacts: "查看所有产物 ({count})", viewAllChanges: "查看所有变更 ({count})" },
   product: "Agent Workspace", nav: { sessions: "会话", workflows: "工作流", experts: "专家", settings: "设置", users: "账号管理" },
   auth: { checking: "正在连接工作空间", required: "登录后开始使用", body: "你的会话、工作流、技能和连接器均属于你的工作空间。", signIn: "登录", unavailable: "身份服务暂时不可用", signOut: "退出登录", online: "API 在线", offline: "API 离线", checkingApi: "正在检查 API" },
   common: { new: "新增", edit: "编辑", name: "名称", save: "保存", saving: "保存中…", cancel: "取消", cancelled: "已取消", delete: "删除", archive: "归档", unarchive: "取消归档", rename: "重命名", loading: "加载中…", empty: "这里还没有内容", close: "关闭", retry: "重试", run: "运行", running: "运行中", success: "成功", failed: "失败", queued: "排队中", copied: "已复制", copy: "复制", back: "返回", comingSoon: "即将开放", readOnly: "只读", upload: "上传", download: "下载", folder: "文件夹", enabled: "已启用" },
@@ -17,6 +18,7 @@ const zh = {
 };
 
 const en = {
+  artifactDisclosure: { viewAllArtifacts: "View all artifacts ({count})", viewAllChanges: "View all changes ({count})" },
   product: "Agent Workspace", nav: { sessions: "Sessions", workflows: "Workflows", experts: "Experts", settings: "Settings", users: "User accounts" },
   auth: { checking: "Connecting to your workspace", required: "Sign in to continue", body: "Your sessions, workflows, Skills, and Connectors belong to your workspace.", signIn: "Sign in", unavailable: "Identity service is unavailable", signOut: "Sign out", online: "API online", offline: "API offline", checkingApi: "Checking API" },
   common: { new: "New", edit: "Edit", name: "Name", save: "Save", saving: "Saving…", cancel: "Cancel", cancelled: "Cancelled", delete: "Delete", archive: "Archive", unarchive: "Unarchive", rename: "Rename", loading: "Loading…", empty: "Nothing here yet", close: "Close", retry: "Retry", run: "Run", running: "Running", success: "Succeeded", failed: "Failed", queued: "Queued", copied: "Copied", copy: "Copy", back: "Back", comingSoon: "Coming soon", readOnly: "Read only", upload: "Upload", download: "Download", folder: "Folder", enabled: "Enabled" },

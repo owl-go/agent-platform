@@ -187,13 +187,15 @@ describe("WorkflowDetailPage", () => {
     await wrapper.findAll(".tabs button").at(2)!.trigger("click");
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
+    expect(wrapper.findAll(".artifact-disclosure-links button").map((item) => item.text())).toEqual(["查看所有产物 (1)", "查看所有变更 (1)"]);
+    await wrapper.findAll(".artifact-disclosure-links button")[0]!.trigger("click");
     expect(wrapper.get(".generated-artifacts").text()).toContain("report.md");
     expect(wrapper.get(".generated-artifacts").text()).not.toContain("Final result");
     wrapper.unmount();
   });
 
   it("downloads a Run Artifact from its conversation card", async () => {
-    const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 1536, sha256: "abc", expired: false, created_at: run.ended_at! };
+    const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 1536, sha256: "abc", text_preview: "workflow report", expired: false, created_at: run.ended_at! };
     const artifactRun = { ...run, final_text: "已生成 `/workspace/report.md`" };
     const getArtifactDownload = vi.fn(async () => new Blob(["workflow report"], { type: "application/octet-stream" }));
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
@@ -201,9 +203,13 @@ describe("WorkflowDetailPage", () => {
 
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
+    const disclosureLinks = wrapper.findAll(".artifact-disclosure-links button");
+    await disclosureLinks[0]!.trigger("click");
     expect(wrapper.get(".generated-artifact").text()).toContain("1.5 KB");
     expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
     expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
+    await disclosureLinks[1]!.trigger("click");
+    expect(wrapper.get(".artifact-changes").text()).toContain("workflow report");
     await wrapper.get(".generated-artifact").trigger("click");
     await flushPromises();
 
