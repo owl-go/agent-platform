@@ -7,6 +7,7 @@ import (
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
+	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -181,10 +182,14 @@ func (service *Service) ListCommandApprovals(ctx context.Context, _ *workspacev1
 }
 
 func (service *Service) DecideCommandApproval(ctx context.Context, request *workspacev1.DecideCommandApprovalRequest) (*workspacev1.CommandApproval, error) {
-	owner, err := service.owner(ctx)
+	principal, err := service.accounts.Current(ctx)
 	if err != nil {
-		return nil, err
+		return nil, publicError(err)
 	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
+	}
+	owner := principal.UserID
 	decision := workspacedomain.ApprovalState(request.Decision)
 	if decision != workspacedomain.ApprovalApproved && decision != workspacedomain.ApprovalRejected {
 		return nil, publicError(fmt.Errorf("%w: decision must be approved or rejected", workspacedomain.ErrInvalid))

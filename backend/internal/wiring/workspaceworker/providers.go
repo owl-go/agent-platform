@@ -37,6 +37,8 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
+	creditsRepository := creditsrepo.New(database.ORM())
+	repository := workspacerepo.New(database.ORM(), creditsRepository)
 	executor, err := runtimeexecutor.New(config, box, objects, warm)
 	if err != nil {
 		return nil, err
@@ -51,7 +53,9 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err := executor.EnableCLIConnectors(egress); err != nil {
 		return nil, err
 	}
-	creditsRepository := creditsrepo.New(database.ORM())
+	if err := executor.EnableCLIApprovals(repository); err != nil {
+		return nil, err
+	}
 	credits, err := creditsapplication.New(creditsRepository, nil)
 	if err != nil {
 		return nil, err
@@ -63,7 +67,7 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return workspaceapplication.NewWorker(workspacerepo.New(database.ORM(), creditsRepository), executor, connectorBuilder)
+	return workspaceapplication.NewWorker(repository, executor, connectorBuilder)
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {

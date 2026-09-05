@@ -50,6 +50,7 @@ type Executor struct {
 	objects      objectstore.Provider
 	connectors   *cliconnector.ArtifactStore
 	cliEgress    cliconnector.EgressGate
+	cliApprovals cliconnector.ApprovalCoordinator
 	warm         *containerprocess.WarmManager
 	checkout     func(context.Context, string) (runtimeLease, error)
 	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -70,6 +71,14 @@ func (executor *Executor) EnableCLIConnectors(gate cliconnector.EgressGate) erro
 		return fmt.Errorf("CLI Connector Egress Gate is required")
 	}
 	executor.cliEgress = gate
+	return nil
+}
+
+func (executor *Executor) EnableCLIApprovals(coordinator cliconnector.ApprovalCoordinator) error {
+	if coordinator == nil {
+		return fmt.Errorf("CLI Connector Approval Coordinator is required")
+	}
+	executor.cliApprovals = coordinator
 	return nil
 }
 
@@ -308,7 +317,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch)
+		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, executionStage.Position, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch)
 		if brokerErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()
@@ -710,7 +719,7 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 	return directory, nil
 }
 
-func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string) (*cliconnector.UnixBrokerServer, string, error) {
+func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, stagePosition int, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string) (*cliconnector.UnixBrokerServer, string, error) {
 	if len(job.Snapshot.CLIConnectors) == 0 {
 		return nil, "", nil
 	}
@@ -722,6 +731,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", fmt.Errorf("Runtime image has no pinned digest")
 	}
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
+	requiresApproval := false
 	for _, snapshot := range job.Snapshot.CLIConnectors {
 		var capabilities []cliconnector.Capability
 		if err := json.Unmarshal(snapshot.Capabilities, &capabilities); err != nil {
@@ -733,6 +743,12 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: append([]string(nil), snapshot.RuntimeDigests...),
 			Capabilities: capabilities, VersionNumber: snapshot.Version,
 		})
+		for _, capability := range capabilities {
+			requiresApproval = requiresApproval || capability.Risk == cliconnector.RiskHigh
+		}
+	}
+	if requiresApproval && executor.cliApprovals == nil {
+		return nil, "", fmt.Errorf("CLI Connector approvals are unavailable on this Worker")
 	}
 	process, err := cliconnector.NewDockerContainerProcess(cliconnector.DockerContainerProcessConfig{
 		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
@@ -744,8 +760,16 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	if err != nil {
 		return nil, "", err
 	}
+	executionKind, executionID := "run", job.ID
+	if job.Kind == application.JobSession {
+		executionKind, executionID = "session", fmt.Sprint(job.AssistantMessageID)
+	}
+	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
 		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
+		Approval: executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
+			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
+		},
 	})
 	if err != nil {
 		return nil, "", err

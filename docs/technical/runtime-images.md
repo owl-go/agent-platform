@@ -1,6 +1,6 @@
 # Runtime Images
 
-状态：Runtime、隔离 CLI Builder、User Run 的已校验 bundle 物化，以及公共 broker 协议与 Runtime 客户端已实现；模型 Runtime 不挂载 CLI bundle，专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定及窄协议宿主 Egress Controller 已实现，Linux + gVisor 端到端证据与 User Action Wait 尚未完成；部署前必须重新构建并记录 RepoDigest
+状态：Runtime、隔离 CLI Builder、User Run 的已校验 bundle 物化，以及公共 broker 协议与 Runtime 客户端已实现；模型 Runtime 不挂载 CLI bundle，专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定、窄协议宿主 Egress Controller，以及存活 Worker 内持久化 User Action Wait 与一次性命令绑定已实现；Worker 重启恢复、飞书授权和 Linux + gVisor 端到端证据尚未完成；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |
 |---|---|---:|

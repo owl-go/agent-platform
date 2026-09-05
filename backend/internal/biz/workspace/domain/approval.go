@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
 )
@@ -24,7 +26,7 @@ const (
 )
 
 type CommandApproval struct {
-	ID, OwnerID, StageID, CommandDigest, Nonce          string
+	ID, OwnerID, StageID, CommandDigest, NonceHash      string
 	ExecutionKind, ExecutionID                          string
 	ConnectorName, Operation, Target, RedactedArguments string
 	State                                               ApprovalState
@@ -35,10 +37,11 @@ type CommandApproval struct {
 }
 
 func NewCommandApproval(id, ownerID, stageID, digest, nonce string, now time.Time, timeout time.Duration) (CommandApproval, error) {
-	if id == "" || ownerID == "" || stageID == "" || digest == "" || nonce == "" || timeout <= 0 || timeout > 15*time.Minute {
+	decodedDigest, digestErr := hex.DecodeString(digest)
+	if id == "" || ownerID == "" || stageID == "" || digestErr != nil || len(decodedDigest) != sha256.Size || nonce == "" || timeout <= 0 || timeout > 15*time.Minute {
 		return CommandApproval{}, fmt.Errorf("%w: invalid command approval", ErrInvalid)
 	}
-	return CommandApproval{ID: id, OwnerID: ownerID, StageID: stageID, CommandDigest: digest, Nonce: nonce, State: ApprovalPending, ExpiresAt: now.Add(timeout)}, nil
+	return CommandApproval{ID: id, OwnerID: ownerID, StageID: stageID, CommandDigest: digest, NonceHash: ApprovalNonceHash(nonce), State: ApprovalPending, ExpiresAt: now.Add(timeout)}, nil
 }
 
 func (approval *CommandApproval) Decide(ownerID string, decision ApprovalState, identity ExecutionIdentity, now time.Time) error {
@@ -58,6 +61,9 @@ func (approval *CommandApproval) Decide(ownerID string, decision ApprovalState, 
 	if decision == ApprovalApproved && identity != IdentityUser && identity != IdentityBot {
 		return fmt.Errorf("%w: execution identity is required", ErrInvalid)
 	}
+	if decision == ApprovalApproved && approval.Identity != "" && identity != approval.Identity {
+		return fmt.Errorf("%w: execution identity does not match the requested command", ErrConflict)
+	}
 	approval.State, approval.Identity = decision, identity
 	decided := now
 	approval.DecidedAt = &decided
@@ -68,11 +74,16 @@ func (approval *CommandApproval) Consume(ownerID, digest, nonce string, now time
 	if ownerID != approval.OwnerID {
 		return ErrNotFound
 	}
-	if approval.State != ApprovalApproved || digest != approval.CommandDigest || nonce != approval.Nonce || !now.Before(approval.ExpiresAt) {
+	if approval.State != ApprovalApproved || digest != approval.CommandDigest || ApprovalNonceHash(nonce) != approval.NonceHash || !now.Before(approval.ExpiresAt) {
 		return fmt.Errorf("%w: approval cannot authorize this command", ErrConflict)
 	}
 	approval.State = ApprovalConsumed
 	consumed := now
 	approval.ConsumedAt = &consumed
 	return nil
+}
+
+func ApprovalNonceHash(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }

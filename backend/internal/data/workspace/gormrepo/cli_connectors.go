@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -209,7 +211,7 @@ func cliEnablementDomain(row cliConnectorEnablementRecord) cliconnector.Enableme
 }
 
 func (repository *Repository) ListCommandApprovals(ctx context.Context, ownerID string, now time.Time) ([]domain.CommandApproval, error) {
-	if err := repository.db.WithContext(ctx).Model(&cliCommandApprovalRecord{}).Where("owner_user_id = ? AND state = 'pending' AND expires_at <= ?", ownerID, now).Updates(map[string]any{"state": "expired", "version": gorm.Expr("version + 1")}).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Model(&cliCommandApprovalRecord{}).Where("owner_user_id = ? AND state IN ? AND expires_at <= ?", ownerID, []string{"pending", "approved"}, now).Updates(map[string]any{"state": "expired", "version": gorm.Expr("version + 1")}).Error; err != nil {
 		return nil, err
 	}
 	var rows []cliCommandApprovalRecord
@@ -256,9 +258,209 @@ func (repository *Repository) DecideCommandApproval(ctx context.Context, ownerID
 }
 
 func commandApprovalDomain(row cliCommandApprovalRecord) domain.CommandApproval {
-	value := domain.CommandApproval{ID: row.ID, OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID, CommandDigest: row.CommandDigest, ConnectorName: row.ConnectorName, Operation: row.Operation, Target: row.Target, RedactedArguments: row.RedactedArguments, State: domain.ApprovalState(row.State), ExpiresAt: row.ExpiresAt, DecidedAt: row.DecidedAt, ConsumedAt: row.ConsumedAt, Version: row.Version}
+	value := domain.CommandApproval{ID: row.ID, OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID, CommandDigest: row.CommandDigest, NonceHash: row.NonceHash, ConnectorName: row.ConnectorName, Operation: row.Operation, Target: row.Target, RedactedArguments: row.RedactedArguments, State: domain.ApprovalState(row.State), ExpiresAt: row.ExpiresAt, DecidedAt: row.DecidedAt, ConsumedAt: row.ConsumedAt, Version: row.Version}
 	if row.Identity != nil {
 		value.Identity = domain.ExecutionIdentity(*row.Identity)
 	}
 	return value
+}
+
+func (repository *Repository) Await(ctx context.Context, request cliconnector.ApprovalRequest) (cliconnector.ApprovalGrant, error) {
+	now := time.Now().UTC()
+	timeout := request.ExpiresAt.Sub(now)
+	approval, err := domain.NewCommandApproval(uuid.NewString(), request.OwnerID, request.StageID, request.CommandDigest, request.Nonce, now, timeout)
+	if err != nil || (request.ExecutionKind != "session" && request.ExecutionKind != "run") || request.ExecutionID == "" || request.ConnectorName == "" || request.Operation == "" || request.Target == "" || !slices.Contains(request.AllowedIdentities, request.Identity) || request.CommandDigests[request.Identity] != request.CommandDigest {
+		return cliconnector.ApprovalGrant{}, fmt.Errorf("%w: invalid CLI command approval request", domain.ErrInvalid)
+	}
+	for _, identity := range request.AllowedIdentities {
+		if (identity != cliconnector.IdentityUser && identity != cliconnector.IdentityBot) || len(request.CommandDigests[identity]) != 64 {
+			return cliconnector.ApprovalGrant{}, fmt.Errorf("%w: invalid CLI command approval identities", domain.ErrInvalid)
+		}
+	}
+	approval.ExecutionKind, approval.ExecutionID = request.ExecutionKind, request.ExecutionID
+	approval.ConnectorName, approval.Operation, approval.Target = request.ConnectorName, request.Operation, request.Target
+	approval.RedactedArguments = request.RedactedArguments
+	row := cliCommandApprovalRecord{
+		ID: approval.ID, OwnerID: approval.OwnerID, ExecutionKind: approval.ExecutionKind, ExecutionID: approval.ExecutionID,
+		StageID: approval.StageID, ConnectorName: approval.ConnectorName, Operation: approval.Operation,
+		Target: approval.Target, RedactedArguments: approval.RedactedArguments, CommandDigest: approval.CommandDigest,
+		NonceHash: approval.NonceHash, State: string(approval.State), ExpiresAt: approval.ExpiresAt, Version: 1,
+	}
+	if len(request.AllowedIdentities) == 1 {
+		approval.Identity = domain.ExecutionIdentity(request.AllowedIdentities[0])
+		identity := string(approval.Identity)
+		row.Identity = &identity
+	}
+	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := transitionApprovalExecution(tx, request, false, approval.ID, "user_action.required"); err != nil {
+			return err
+		}
+		return tx.Create(&row).Error
+	}); err != nil {
+		return cliconnector.ApprovalGrant{}, fmt.Errorf("persist CLI command approval: %w", err)
+	}
+
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+	timer := time.NewTimer(time.Until(request.ExpiresAt))
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			_ = repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalClosed)
+			return cliconnector.ApprovalGrant{}, ctx.Err()
+		case <-timer.C:
+			if err := repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalExpired); err != nil {
+				return cliconnector.ApprovalGrant{}, err
+			}
+			return cliconnector.ApprovalGrant{}, cliconnector.ErrApprovalExpired
+		case <-ticker.C:
+			var current cliCommandApprovalRecord
+			if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", row.ID, request.OwnerID).Take(&current).Error; err != nil {
+				_ = repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalClosed)
+				return cliconnector.ApprovalGrant{}, err
+			}
+			switch domain.ApprovalState(current.State) {
+			case domain.ApprovalApproved:
+				if current.Identity == nil || !slices.Contains(request.AllowedIdentities, cliconnector.Identity(*current.Identity)) {
+					_ = repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalClosed)
+					return cliconnector.ApprovalGrant{}, domain.ErrConflict
+				}
+				identity := cliconnector.Identity(*current.Identity)
+				if err := repository.bindApprovedCommand(ctx, row.ID, request.OwnerID, request.CommandDigests[identity], identity); err != nil {
+					_ = repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalClosed)
+					return cliconnector.ApprovalGrant{}, err
+				}
+				return cliconnector.ApprovalGrant{Nonce: request.Nonce, Identity: identity, ExpiresAt: request.ExpiresAt}, nil
+			case domain.ApprovalRejected:
+				if err := repository.closeCommandApproval(ctx, row.ID, request, domain.ApprovalRejected); err != nil {
+					return cliconnector.ApprovalGrant{}, err
+				}
+				return cliconnector.ApprovalGrant{}, cliconnector.ErrApprovalRejected
+			case domain.ApprovalExpired, domain.ApprovalClosed:
+				if err := repository.closeCommandApproval(context.WithoutCancel(ctx), row.ID, request, domain.ApprovalState(current.State)); err != nil {
+					return cliconnector.ApprovalGrant{}, err
+				}
+				return cliconnector.ApprovalGrant{}, cliconnector.ErrApprovalExpired
+			}
+		}
+	}
+}
+
+func (repository *Repository) bindApprovedCommand(ctx context.Context, approvalID, ownerID, digest string, identity cliconnector.Identity) error {
+	if len(digest) != 64 {
+		return domain.ErrInvalid
+	}
+	result := repository.db.WithContext(ctx).Model(&cliCommandApprovalRecord{}).
+		Where("id = ? AND owner_user_id = ? AND state = 'approved' AND identity = ?", approvalID, ownerID, identity).
+		Update("command_digest", digest)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}
+
+func (repository *Repository) Consume(ctx context.Context, ownerID, digest, nonce string) error {
+	now := time.Now().UTC()
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row cliCommandApprovalRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND command_digest = ? AND nonce_hash = ?", ownerID, digest, domain.ApprovalNonceHash(nonce)).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		approval := commandApprovalDomain(row)
+		if err := approval.Consume(ownerID, digest, nonce, now); err != nil {
+			return err
+		}
+		result := tx.Model(&cliCommandApprovalRecord{}).Where("id = ? AND version = ? AND state = 'approved'", row.ID, row.Version).Updates(map[string]any{
+			"state": string(domain.ApprovalConsumed), "consumed_at": approval.ConsumedAt, "version": gorm.Expr("version + 1"),
+		})
+		if result.Error != nil || result.RowsAffected != 1 {
+			if result.Error != nil {
+				return result.Error
+			}
+			return domain.ErrConflict
+		}
+		request := cliconnector.ApprovalRequest{OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID}
+		return transitionApprovalExecution(tx, request, true, row.ID, "user_action.resolved")
+	})
+}
+
+func (repository *Repository) Close(ctx context.Context, ownerID, nonce string) error {
+	var row cliCommandApprovalRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND nonce_hash = ?", ownerID, domain.ApprovalNonceHash(nonce)).Take(&row).Error; err != nil {
+		return mapNotFound(err)
+	}
+	request := cliconnector.ApprovalRequest{OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID}
+	return repository.closeCommandApproval(ctx, row.ID, request, domain.ApprovalClosed)
+}
+
+func (repository *Repository) closeCommandApproval(ctx context.Context, approvalID string, request cliconnector.ApprovalRequest, state domain.ApprovalState) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row cliCommandApprovalRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ?", approvalID, request.OwnerID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if row.State == string(domain.ApprovalConsumed) {
+			return nil
+		}
+		shouldClose := state == domain.ApprovalExpired && (row.State == string(domain.ApprovalPending) || row.State == string(domain.ApprovalApproved))
+		shouldClose = shouldClose || state == domain.ApprovalClosed && (row.State == string(domain.ApprovalPending) || row.State == string(domain.ApprovalApproved))
+		if shouldClose {
+			if err := tx.Model(&cliCommandApprovalRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": string(state), "version": gorm.Expr("version + 1")}).Error; err != nil {
+				return err
+			}
+		}
+		return transitionApprovalExecution(tx, request, true, row.ID, "user_action.resolved")
+	})
+}
+
+func transitionApprovalExecution(tx *gorm.DB, request cliconnector.ApprovalRequest, resume bool, approvalID, eventType string) error {
+	from, to := "running", "waiting_for_user"
+	if resume {
+		from, to = to, from
+	}
+	if request.ExecutionKind == "session" {
+		messageID, err := strconv.ParseInt(request.ExecutionID, 10, 64)
+		if err != nil || messageID <= 0 {
+			return domain.ErrInvalid
+		}
+		if !resume {
+			from, to = "generating", "waiting_for_user"
+		} else {
+			from, to = "waiting_for_user", "generating"
+		}
+		result := tx.Model(&messageRecord{}).Where("id = ? AND state = ? AND session_id IN (SELECT id FROM sessions WHERE owner_user_id = ?)", messageID, from, request.OwnerID).Updates(map[string]any{"state": to, "progress_stage": map[bool]string{false: "waiting_for_user", true: "using_tool"}[resume]})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			if resume && result.RowsAffected == 0 {
+				return nil
+			}
+			return domain.ErrConflict
+		}
+		return nil
+	}
+	result := tx.Model(&runRecord{}).Where("id = ? AND owner_user_id = ? AND state = ?", request.ExecutionID, request.OwnerID, from).Updates(map[string]any{"state": to, "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		if resume && result.RowsAffected == 0 {
+			return nil
+		}
+		return domain.ErrConflict
+	}
+	payload, err := json.Marshal(map[string]string{"approval_id": approvalID})
+	if err != nil {
+		return err
+	}
+	var sequence int64
+	if err := tx.Table("run_events").Select("COALESCE(MAX(sequence), 0)").Where("run_id = ?", request.ExecutionID).Scan(&sequence).Error; err != nil {
+		return err
+	}
+	return tx.Table("run_events").Create(map[string]any{"run_id": request.ExecutionID, "sequence": sequence + 1, "event_type": eventType, "payload": payload, "occurred_at": time.Now().UTC()}).Error
 }

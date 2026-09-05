@@ -1,6 +1,6 @@
 # Sandbox Runner
 
-状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定及窄协议宿主 Egress Controller 已实现；模型 Runtime 不挂载 CLI bundle，Linux + gVisor 端到端证据与 User Action Wait 尚未完成
+状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定、窄协议宿主 Egress Controller，以及存活 Worker 内持久化 User Action Wait 与一次性命令绑定已实现；模型 Runtime 不挂载 CLI bundle，Worker 重启恢复、普通执行 deadline 暂停和 Linux + gVisor 端到端证据尚未完成
 
 Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 与 CLI Connector bundle Mount 只读、Workspace 是唯一可写业务挂载、附件在 Workspace 文件访问边界内使用独立只读挂载、Egress 使用明确网络。Connector bundle 的 SHA-256 与该 Runtime RepoDigest 的可用性组合必须匹配冻结快照。
 

@@ -262,7 +262,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		JOIN workflows workflow ON workflow.id = candidate.workflow_id AND workflow.deleted_at IS NULL
 		WHERE candidate.state = 'queued'
 		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = candidate.owner_user_id)
-		  AND NOT EXISTS (SELECT 1 FROM runs active WHERE active.workflow_id = candidate.workflow_id AND active.state = 'running')
+		  AND NOT EXISTS (SELECT 1 FROM runs active WHERE active.workflow_id = candidate.workflow_id AND active.state IN ('running', 'waiting_for_user'))
 		ORDER BY candidate.queued_at, candidate.id
 		FOR UPDATE OF candidate, workflow SKIP LOCKED LIMIT 1`).Scan(&row).Error
 	if err != nil || row.ID == "" {
@@ -392,7 +392,7 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = session.owner_user_id)
 		  AND NOT EXISTS (
 			SELECT 1 FROM session_messages active
-			WHERE active.session_id = message.session_id AND active.state = 'generating'
+			WHERE active.session_id = message.session_id AND active.state IN ('generating', 'waiting_for_user')
 		  )
 		ORDER BY message.id FOR UPDATE OF message SKIP LOCKED LIMIT 1`).Scan(&assistant).Error
 	if err != nil || assistant.ID == 0 {
@@ -1237,13 +1237,13 @@ func (repository *Repository) CancellationRequested(ctx context.Context, job app
 		err := repository.db.WithContext(ctx).Table("session_messages message").
 			Joins("JOIN sessions session ON session.id = message.session_id").
 			Joins("JOIN users owner ON owner.id = session.owner_user_id").
-			Where("message.id = ? AND message.state = 'generating' AND message.cancel_requested_at IS NULL AND session.archived_at IS NULL AND owner.disabled_at IS NULL", job.AssistantMessageID).
+			Where("message.id = ? AND message.state IN ? AND message.cancel_requested_at IS NULL AND session.archived_at IS NULL AND owner.disabled_at IS NULL", job.AssistantMessageID, []string{"generating", "waiting_for_user"}).
 			Count(&count).Error
 		return count == 0, err
 	}
 	err := repository.db.WithContext(ctx).Table("runs run").
 		Joins("JOIN users owner ON owner.id = run.owner_user_id").
-		Where("run.id = ? AND run.state = 'running' AND run.cancel_requested_at IS NULL AND owner.disabled_at IS NULL", job.ID).
+		Where("run.id = ? AND run.state IN ? AND run.cancel_requested_at IS NULL AND owner.disabled_at IS NULL", job.ID, []string{"running", "waiting_for_user"}).
 		Count(&count).Error
 	return count == 0, err
 }

@@ -388,9 +388,9 @@ func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessio
 			}).Error; err != nil {
 				return err
 			}
-		case "generating":
+		case "generating", "waiting_for_user":
 			if row.CancelRequested == nil {
-				if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'generating'", row.ID).Update("cancel_requested_at", now).Error; err != nil {
+				if err := tx.Model(&messageRecord{}).Where("id = ? AND state IN ?", row.ID, []string{"generating", "waiting_for_user"}).Update("cancel_requested_at", now).Error; err != nil {
 					return err
 				}
 			}

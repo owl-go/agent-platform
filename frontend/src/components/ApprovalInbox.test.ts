@@ -24,4 +24,17 @@ describe("ApprovalInbox", () => {
     expect(decideCommandApproval).toHaveBeenCalledWith("approval-1", "approved", "bot", 4);
     wrapper.unmount();
   });
+
+  it("locks a single-identity command to the persisted identity", async () => {
+    vi.useFakeTimers();
+    const approval: CommandApproval = { id: "approval-2", execution_kind: "session", execution_id: "42", connector_name: "Feishu CLI", operation: "send message", target: "chat-1", redacted_arguments: "message send [arguments redacted]", state: "pending", identity: "bot", expires_at: "2026-09-05T12:00:00Z", version: 1 };
+    const api = { listCommandApprovals: vi.fn().mockResolvedValue([approval]), decideCommandApproval: vi.fn() } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    const identity = wrapper.get<HTMLSelectElement>("select");
+    expect(identity.element.value).toBe("bot");
+    expect(identity.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
 });

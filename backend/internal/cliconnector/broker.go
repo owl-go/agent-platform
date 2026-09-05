@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -44,8 +47,17 @@ type BrokerConfig struct {
 	RuntimeDigest      string
 	Wrapper            Wrapper
 	ResolveEnvironment EnvironmentResolver
+	Approval           ApprovalCoordinator
+	ApprovalContext    ApprovalContext
+	ApprovalTimeout    time.Duration
+	Now                func() time.Time
+	GenerateNonce      func() (string, error)
 	RequestLimit       int64
 	OutputLimit        int
+}
+
+type ApprovalContext struct {
+	OwnerID, ExecutionKind, ExecutionID, StageID string
 }
 
 // Broker serializes CLI commands for one Execution Stage and resolves all
@@ -55,6 +67,11 @@ type Broker struct {
 	runtimeDigest      string
 	wrapper            Wrapper
 	resolveEnvironment EnvironmentResolver
+	approval           ApprovalCoordinator
+	approvalContext    ApprovalContext
+	approvalTimeout    time.Duration
+	now                func() time.Time
+	generateNonce      func() (string, error)
 	requestLimit       int64
 	outputLimit        int
 	mu                 sync.Mutex
@@ -77,7 +94,27 @@ func NewBroker(config BrokerConfig) (*Broker, error) {
 		}
 		definitions[definition.ID] = cloneDefinition(definition)
 	}
-	return &Broker{definitions: definitions, runtimeDigest: config.RuntimeDigest, wrapper: config.Wrapper, resolveEnvironment: config.ResolveEnvironment, requestLimit: config.RequestLimit, outputLimit: config.OutputLimit}, nil
+	approvalTimeout := config.ApprovalTimeout
+	if approvalTimeout <= 0 {
+		approvalTimeout = 5 * time.Minute
+	}
+	if approvalTimeout > 15*time.Minute {
+		return nil, errors.New("CLI approval timeout exceeds fifteen minutes")
+	}
+	now := config.Now
+	if now == nil {
+		now = func() time.Time { return time.Now().UTC() }
+	}
+	generateNonce := config.GenerateNonce
+	if generateNonce == nil {
+		generateNonce = randomApprovalNonce
+	}
+	return &Broker{
+		definitions: definitions, runtimeDigest: config.RuntimeDigest, wrapper: config.Wrapper,
+		resolveEnvironment: config.ResolveEnvironment, approval: config.Approval,
+		approvalContext: config.ApprovalContext, approvalTimeout: approvalTimeout,
+		now: now, generateNonce: generateNonce, requestLimit: config.RequestLimit, outputLimit: config.OutputLimit,
+	}, nil
 }
 
 func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerResponse {
@@ -94,29 +131,82 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 	if capability == nil {
 		return brokerFailure("capability_unavailable", "CLI capability is unavailable")
 	}
-	if capability.Risk == RiskHigh {
-		return brokerFailure("user_action_required", "CLI command requires user confirmation")
+	request := Request{
+		CapabilityID: command.Capability, RuntimeDigest: broker.runtimeDigest,
+		BundleSHA256: definition.BundleSHA256, Target: command.Target,
+		Identity: command.Identity, Argv: append([]string(nil), command.Arguments...),
 	}
+	wrapper := broker.wrapper
+	wrapper.Now = broker.now
 	environment := map[string]string{}
 	if definition.AuthenticationDriver != "none" && broker.resolveEnvironment == nil {
 		return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
 	}
 	if broker.resolveEnvironment != nil {
-		resolved, err := broker.resolveEnvironment(ctx, definition, command.Identity)
+		resolved, err := broker.resolveEnvironment(ctx, definition, request.Identity)
 		if err != nil {
 			return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
 		}
 		environment = resolved
 	}
-	result, err := broker.wrapper.Execute(ctx, definition, Request{
-		CapabilityID:  command.Capability,
-		RuntimeDigest: broker.runtimeDigest,
-		BundleSHA256:  definition.BundleSHA256,
-		Target:        command.Target,
-		Identity:      command.Identity,
-		Argv:          append([]string(nil), command.Arguments...),
-		Environment:   environment,
-	})
+	request.Environment = environment
+	if capability.Risk == RiskHigh {
+		if broker.approval == nil || !validApprovalContext(broker.approvalContext) {
+			return brokerFailure("user_action_required", "CLI command requires user confirmation")
+		}
+		nonce, err := broker.generateNonce()
+		if err != nil {
+			return brokerFailure("user_action_unavailable", "CLI command confirmation is unavailable")
+		}
+		request.ApprovalNonce = nonce
+		request.ApprovalExpiresAt = broker.now().UTC().Add(broker.approvalTimeout)
+		digests := make(map[Identity]string, len(capability.Identities))
+		for _, identity := range capability.Identities {
+			candidate := request
+			candidate.Identity = identity
+			digests[identity] = CommandDigest(definition, candidate)
+		}
+		grant, err := broker.approval.Await(ctx, ApprovalRequest{
+			OwnerID: broker.approvalContext.OwnerID, ExecutionKind: broker.approvalContext.ExecutionKind,
+			ExecutionID: broker.approvalContext.ExecutionID, StageID: broker.approvalContext.StageID,
+			ConnectorName: definition.Name, Operation: capability.ID, Target: command.Target,
+			RedactedArguments: redactArguments(capability, command.Arguments),
+			CommandDigest:     CommandDigest(definition, request), Nonce: nonce,
+			Identity: command.Identity, AllowedIdentities: append([]Identity(nil), capability.Identities...),
+			CommandDigests: digests, ExpiresAt: request.ApprovalExpiresAt,
+		})
+		switch {
+		case errors.Is(err, ErrApprovalRejected):
+			return brokerFailure("user_action_rejected", "CLI command confirmation was rejected")
+		case errors.Is(err, ErrApprovalExpired):
+			return brokerFailure("user_action_expired", "CLI command confirmation expired")
+		case err != nil:
+			return brokerFailure("user_action_unavailable", "CLI command confirmation is unavailable")
+		}
+		if grant.Nonce != nonce || !slices.Contains(capability.Identities, grant.Identity) || !grant.ExpiresAt.Equal(request.ApprovalExpiresAt) {
+			return brokerFailure("user_action_unavailable", "CLI command confirmation did not match")
+		}
+		request.Identity = grant.Identity
+		approvalConsumed := false
+		defer func() {
+			if !approvalConsumed {
+				_ = broker.approval.Close(context.WithoutCancel(ctx), broker.approvalContext.OwnerID, nonce)
+			}
+		}()
+		if broker.resolveEnvironment != nil {
+			resolved, err := broker.resolveEnvironment(ctx, definition, request.Identity)
+			if err != nil {
+				return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
+			}
+			request.Environment = resolved
+		}
+		wrapper.ConsumeApproval = func(ctx context.Context, digest, approvalNonce string) error {
+			err := broker.approval.Consume(ctx, broker.approvalContext.OwnerID, digest, approvalNonce)
+			approvalConsumed = err == nil
+			return err
+		}
+	}
+	result, err := wrapper.Execute(ctx, definition, request)
 	if err != nil {
 		return brokerFailure("execution_rejected", "CLI command was rejected")
 	}
@@ -128,6 +218,26 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 		return brokerFailure("output_limit", "CLI command output exceeded the limit")
 	}
 	return BrokerResponse{StdoutBase64: base64.StdEncoding.EncodeToString(result.Stdout), StderrBase64: base64.StdEncoding.EncodeToString(result.Stderr), ExitCode: result.ExitCode}
+}
+
+func randomApprovalNonce() (string, error) {
+	value := make([]byte, 32)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(value), nil
+}
+
+func validApprovalContext(value ApprovalContext) bool {
+	return value.OwnerID != "" && (value.ExecutionKind == "session" || value.ExecutionKind == "run") && value.ExecutionID != "" && value.StageID != ""
+}
+
+func redactArguments(capability *Capability, arguments []string) string {
+	visible := strings.Join(capability.ArgvPrefix, " ")
+	if len(arguments) > len(capability.ArgvPrefix) {
+		visible += " [arguments redacted]"
+	}
+	return visible
 }
 
 func (broker *Broker) Serve(ctx context.Context, listener net.Listener) error {

@@ -721,7 +721,7 @@ func (repository *Repository) CancelRun(ctx context.Context, ownerID, workflowID
 			Where("owner_user_id = ? AND workflow_id = ? AND id = ?", ownerID, workflowID, runID).Take(&run).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if run.State != "queued" && run.State != "running" {
+		if run.State != "queued" && run.State != "running" && run.State != "waiting_for_user" {
 			return domain.ErrConflict
 		}
 		now := time.Now().UTC()

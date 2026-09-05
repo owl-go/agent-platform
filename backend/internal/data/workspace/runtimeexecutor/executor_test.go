@@ -112,7 +112,7 @@ func TestStartCLIConnectorBrokerExposesOnlyProtectedSocketToModelRuntime(t *test
 		BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{runtimeDigest}, Capabilities: capabilities, Version: 1,
 	}}}}
 	runtime := platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@" + runtimeDigest}
-	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root)
+	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, 1, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root)
 	if err != nil {
 		t.Fatal(err)
 	}
