@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -15,6 +16,8 @@ import (
 )
 
 const DefaultPath = "config/platform.yaml"
+
+var immutableImageDigest = regexp.MustCompile(`^[^\s@]+@sha256:[0-9a-f]{64}$`)
 
 type Config struct {
 	API            APIConfig            `yaml:"api"`
@@ -76,6 +79,14 @@ type WorkerConfig struct {
 	SandboxUID         int                            `yaml:"sandbox_uid"`
 	SandboxGID         int                            `yaml:"sandbox_gid"`
 	Runtimes           map[string]RuntimeEngineConfig `yaml:"runtimes"`
+	CLIBuilder         CLIBuilderConfig               `yaml:"cli_builder"`
+}
+
+type CLIBuilderConfig struct {
+	Enabled       bool     `yaml:"enabled"`
+	ImageDigest   string   `yaml:"image_digest"`
+	EgressNetwork string   `yaml:"egress_network"`
+	Timeout       Duration `yaml:"timeout"`
 }
 
 type RuntimeEngineConfig struct {
@@ -351,8 +362,27 @@ func (config Config) ValidateWorker() error {
 		if name != "claude" && name != "codex" && name != "hermes" && name != "openclaw" && name != "pi" {
 			return fmt.Errorf("worker.runtimes contains unsupported Runtime %q", name)
 		}
-		if runtime.Available && (strings.TrimSpace(runtime.ImageDigest) == "" || !strings.Contains(runtime.ImageDigest, "@sha256:") || strings.TrimSpace(runtime.CLIVersion) == "") {
+		if runtime.Available && (!immutableImageDigest.MatchString(runtime.ImageDigest) || strings.TrimSpace(runtime.CLIVersion) == "") {
 			return fmt.Errorf("available Runtime %q requires an immutable image digest and CLI version", name)
+		}
+	}
+	if config.Worker.CLIBuilder.Enabled {
+		builder := config.Worker.CLIBuilder
+		if !immutableImageDigest.MatchString(builder.ImageDigest) {
+			return fmt.Errorf("worker.cli_builder.image_digest must be an immutable repository digest")
+		}
+		if strings.TrimSpace(builder.EgressNetwork) == "" {
+			return fmt.Errorf("worker.cli_builder.egress_network is required")
+		}
+		if builder.Timeout.Value() <= 0 || builder.Timeout.Value() > 30*time.Minute {
+			return fmt.Errorf("worker.cli_builder.timeout must be positive and no greater than 30m")
+		}
+		availableRuntime := false
+		for _, runtime := range config.Worker.Runtimes {
+			availableRuntime = availableRuntime || runtime.Available
+		}
+		if !availableRuntime {
+			return fmt.Errorf("worker.cli_builder requires at least one available Runtime")
 		}
 	}
 	return nil

@@ -1,6 +1,6 @@
 # Object Storage
 
-状态：MinIO 与阿里云 OSS 双 Provider；CLI Connector bundle 为已接受但尚未实现的目标修订
+状态：MinIO 与阿里云 OSS 双 Provider；CLI Connector bundle 的不可变写入与下载后二次校验已实现，生产 Digest 证据待补
 
 Artifact、Skill 包、CLI Connector bundle 与消息附件只通过 `internal/objectstore.Provider` 访问对象存储。业务表仅保存经过路径校验的逻辑 Object Key，不保存 Provider URL、Endpoint 或签名参数。
 

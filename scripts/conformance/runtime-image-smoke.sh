@@ -31,4 +31,10 @@ check_version hermes 0.19.0
 check_version openclaw 2026.7.1-2
 check_version pi 0.84.4
 
-echo "runtime image smoke tests passed"
+builder_uid="$(docker run --rm --network none --entrypoint id "${registry}/cli-builder:1.0.0" -u)"
+if [[ "${builder_uid}" != "65532" ]]; then
+  echo "CLI Builder image must run as UID 65532, got ${builder_uid}" >&2
+  exit 1
+fi
+
+echo "runtime and CLI Builder image smoke tests passed"

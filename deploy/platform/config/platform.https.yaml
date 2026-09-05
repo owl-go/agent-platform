@@ -40,6 +40,11 @@ worker:
   credential_temp_root: "${CREDENTIAL_TEMP_ROOT}"
   sandbox_uid: 65532
   sandbox_gid: 65532
+  cli_builder:
+    enabled: false
+    image_digest: ""
+    egress_network: ""
+    timeout: 10m
   runtimes:
     claude: {available: true, native_resume: false, image_digest: "${CLAUDE_RUNTIME_IMAGE}", cli_version: "2.1.233"}
     codex: {available: true, native_resume: true, image_digest: "${CODEX_RUNTIME_IMAGE}", cli_version: "0.147.0"}

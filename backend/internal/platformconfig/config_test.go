@@ -165,6 +165,27 @@ func TestWorkerExecutionConfigurationIsFailClosed(t *testing.T) {
 	}
 }
 
+func TestCLIBuilderConfigurationRequiresPinnedIsolatedInputs(t *testing.T) {
+	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.Worker.Runtimes = map[string]RuntimeEngineConfig{"codex": {Available: true, ImageDigest: "registry.example/codex@sha256:" + strings.Repeat("b", 64), CLIVersion: "test"}}
+	config.Worker.CLIBuilder = CLIBuilderConfig{Enabled: true, ImageDigest: "registry.example/cli-builder@sha256:" + strings.Repeat("a", 64), EgressNetwork: "agent-npm-egress", Timeout: Duration(10 * time.Minute)}
+	if err := config.ValidateWorker(); err != nil {
+		t.Fatalf("ValidateWorker rejected CLI Builder: %v", err)
+	}
+	config.Worker.CLIBuilder.ImageDigest = "cli-builder:latest"
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted a mutable CLI Builder image")
+	}
+	config.Worker.CLIBuilder.ImageDigest = "registry.example/cli-builder@sha256:" + strings.Repeat("a", 64)
+	config.Worker.CLIBuilder.Timeout = Duration(31 * time.Minute)
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted an excessive CLI build timeout")
+	}
+}
+
 func writeConfig(t *testing.T, contents string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "platform.yaml")

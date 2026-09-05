@@ -21,4 +21,13 @@ for index in "${!runtimes[@]}"; do
   printf '%s\n' "${tag} ${image_id}" >"${metadata_directory}/${runtime}.txt"
 done
 
+builder_tag="${registry}/cli-builder:1.0.0"
+docker build \
+  --pull \
+  --tag "${builder_tag}" \
+  --file deploy/runtimes/cli-builder/Dockerfile \
+  .
+builder_image_id="$(docker image inspect --format '{{.Id}}' "${builder_tag}")"
+printf '%s\n' "${builder_tag} ${builder_image_id}" >"${metadata_directory}/cli-builder.txt"
+
 echo "local image IDs written to ${metadata_directory}; production releases must use registry repo digests"

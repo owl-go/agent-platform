@@ -1,6 +1,6 @@
 # Runtime Images
 
-状态：Runtime 构建定义已实现；CLI Connector bundle 为已接受但尚未实现的目标修订；部署前必须重新构建并记录 RepoDigest
+状态：Runtime 与隔离 CLI Builder 构建定义已实现；CLI bundle 的 Runtime 挂载尚未接入 User Run；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |
 |---|---|---:|
@@ -15,6 +15,8 @@
 公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型与 Connector 环境变量，并复制 Runtime 配置到 HOME。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
 
 Third-party CLI 不烘焙进 Runtime 镜像，也不在 User Run 中动态安装。管理员发布的固定版本 npm 包由隔离 Builder 生成不可变 bundle；Sandbox 只读挂载后由公共 CLI Connector Wrapper 调用。一个 Connector 组合只有在 exact bundle SHA-256 与 Runtime RepoDigest 的联合 Conformance 通过后才可标记 available。
+
+CLI Builder 使用 `deploy/runtimes/cli-builder/Dockerfile`。Worker 仅在 `worker.cli_builder.enabled` 为 true，且 Builder 镜像为 RepoDigest、Egress Network 与超时均显式配置时装配它；验证集合只取当前可用 Runtime 的配置 RepoDigest。Builder 禁用或配置不完整时发布 fail closed。
 
 Codex 调用会把本次 Run Scratch 中已校验的 `image/*` 只读附件逐个传给 `codex exec --image`；文件名和用户文本仍分别通过受控参数与 stdin 传递。其他 Runtime 当前仅通过公共 Instruction 中的只读路径读取附件，不声明图片输入已经通过固定镜像 Conformance。
 
