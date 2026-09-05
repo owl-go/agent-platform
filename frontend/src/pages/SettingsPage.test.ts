@@ -103,16 +103,11 @@ describe("SettingsPage model provider feedback", () => {
     await flushPromises();
 
     expect(wrapper.find(".page-header .eyebrow").exists()).toBe(false);
-    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "模型设置", "扩展"]);
+    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "模型设置"]);
     expect(wrapper.get(".page-header").text()).not.toContain("定义你的默认个性");
     expect(wrapper.find(".settings-canvas .section-heading h2").exists()).toBe(false);
     await wrapper.findAll(".settings-nav button")[1]!.trigger("click");
     expect(wrapper.get(".settings-canvas .section-heading h2").text()).toBe("模型供应商");
-    await wrapper.findAll(".settings-nav button")[2]!.trigger("click");
-    await flushPromises();
-    expect(wrapper.find(".settings-canvas .section-heading h2").exists()).toBe(false);
-    await wrapper.findAll(".extension-manager .subtabs button")[2]!.trigger("click");
-    expect(wrapper.find(".coming-soon h3").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -182,7 +177,7 @@ describe("SettingsPage model provider feedback", () => {
     });
     await flushPromises();
 
-    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "扩展"]);
+    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性"]);
     expect(wrapper.find('.runtime-defaults option[value="model-1"]').exists()).toBe(true);
     expect(wrapper.find(".provider-actions").exists()).toBe(false);
     wrapper.unmount();

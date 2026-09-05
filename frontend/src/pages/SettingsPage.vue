@@ -3,11 +3,10 @@ import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import { authContextKey } from "../auth/session";
-import ExtensionManager from "../components/ExtensionManager.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 
-type Section = "personal" | "models" | "extensions";
+type Section = "personal" | "models";
 
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey)!;
@@ -107,7 +106,6 @@ function selectPersonality(personality: Personality) {
       <nav class="settings-nav">
         <el-button text :class="{ active: section === 'personal' }" @click="section = 'personal'">{{ t("settings.personality") }}</el-button>
         <el-button v-if="canManageModels" text :class="{ active: section === 'models' }" @click="section = 'models'">{{ t("settings.model") }}</el-button>
-        <el-button text :class="{ active: section === 'extensions' }" @click="section = 'extensions'">{{ t("settings.extensions") }}</el-button>
       </nav>
       <div class="settings-canvas">
         <form v-if="section === 'personal' && settings" @submit.prevent="saveSettings">
@@ -123,9 +121,6 @@ function selectPersonality(personality: Personality) {
         <div v-if="section === 'models' && canManageModels">
           <div class="section-heading"><div><h2>{{ t("settings.providers") }}</h2></div><el-button type="primary" @click="openNewConnection">＋ {{ t("settings.addProvider") }}</el-button></div>
           <div class="provider-grid"><article v-for="item in connections" :key="item.id" class="provider-card el-card"><header><span class="resource-mark">{{ item.name.slice(0, 2).toUpperCase() }}</span><div><strong>{{ item.name }}</strong><p>{{ presets.find((preset) => preset.provider_type === item.provider_type)?.display_name ?? item.provider_type }}</p></div><el-tag :type="item.verification_status === 'verified' ? 'success' : 'warning'" size="small">{{ t(`settings.${item.verification_status}`) }}</el-tag></header><p class="provider-endpoint">{{ item.endpoint }}</p><el-alert v-if="item.last_sync_error || item.verification_error" type="error" :closable="false" :title="item.last_sync_error || item.verification_error" /><div class="provider-model-summary"><strong>{{ item.models.filter((model) => model.available).length }}</strong><span>{{ t("settings.importedModels") }}</span><small v-if="item.last_synced_at">{{ new Date(item.last_synced_at).toLocaleString() }}</small></div><div class="provider-actions"><el-button class="button" @click="refreshModels(item)">↻ {{ t("settings.refreshModels") }}</el-button><el-button class="button" @click="openManualModel(item)">＋ {{ t("settings.manualModel") }}</el-button><el-button circle :aria-label="t('common.edit')" @click="openConnection(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="pendingConnectionDelete = item">×</el-button></div><el-collapse><el-collapse-item :title="t('settings.modelCatalog')"><div class="catalog-list"><span v-for="model in item.models" :key="model.id" :class="{ unavailable: !model.available }"><strong>{{ model.display_name }}</strong><small>{{ model.model_id }}</small></span></div></el-collapse-item></el-collapse></article><el-empty v-if="!connections.length" :description="t('common.empty')" /></div>
-        </div>
-        <div v-if="section === 'extensions'">
-          <ExtensionManager @error="showError('validation')" />
         </div>
       </div>
     </div>

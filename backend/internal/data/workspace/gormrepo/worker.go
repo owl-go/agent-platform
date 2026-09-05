@@ -26,7 +26,15 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		if err := cancelDisabledOwnerWork(tx, time.Now().UTC()); err != nil {
 			return err
 		}
-		claimed, err := claimMCPTest(tx)
+		claimed, err := claimExpertTagProjection(tx)
+		if err != nil {
+			return err
+		}
+		if claimed != nil {
+			job = claimed
+			return nil
+		}
+		claimed, err = claimMCPTest(tx)
 		if err != nil {
 			return err
 		}
@@ -49,7 +57,7 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job = claimed
 		return err
 	})
-	if err != nil || job == nil || job.Kind == application.JobMCPTest {
+	if err != nil || job == nil || job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection {
 		return job, err
 	}
 	job.Timezone = "Asia/Shanghai"
@@ -60,6 +68,24 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job.Timezone = timezone
 	}
 	return job, nil
+}
+
+func claimExpertTagProjection(tx *gorm.DB) (*application.ExecutionJob, error) {
+	var row expertRecord
+	err := tx.Raw(`SELECT expert.* FROM experts expert JOIN users owner ON owner.id = expert.owner_user_id AND owner.disabled_at IS NULL WHERE expert.tag_projection_status = 'queued' ORDER BY expert.tag_projection_requested_at, expert.id FOR UPDATE OF expert SKIP LOCKED LIMIT 1`).Scan(&row).Error
+	if err != nil || row.ID == "" {
+		return nil, err
+	}
+	if err := tx.Model(&expertRecord{}).Where("id = ? AND tag_projection_status = 'queued'", row.ID).Updates(map[string]any{"tag_projection_status": "running", "tag_projection_error": nil}).Error; err != nil {
+		return nil, err
+	}
+	fake := workflowRecord{OwnerID: row.OwnerID, Name: "Expert tag projection", Goal: "", WorkspacePath: "tag-projections/" + row.OwnerID + "/" + row.ID}
+	snapshot, err := loadExecutionSnapshot(tx, fake)
+	if err != nil {
+		_ = tx.Model(&expertRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"tag_projection_status": "failed", "tag_projection_error": err.Error()}).Error
+		return nil, nil
+	}
+	return &application.ExecutionJob{Kind: application.JobExpertTagProjection, ID: "expert-tags-" + row.ID, OwnerID: row.OwnerID, ExpertID: row.ID, Instruction: "Generate up to five concise discovery tags for this Expert's core capability. Return only a JSON array of strings, each at most 20 characters.\n\nCore capability:\n" + row.CoreCapability, Snapshot: snapshot}, nil
 }
 
 func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -426,14 +452,12 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 				return domain.ExecutionSnapshot{}, err
 			}
 			current.Stages = append([]domain.ExecutionStageSnapshot(nil), response.Stages...)
-			if session.ExpertID != nil || session.ExpertTeamID != nil {
-				encoded, err := marshal(current)
-				if err != nil {
-					return domain.ExecutionSnapshot{}, err
-				}
-				if err := tx.Table("sessions").Where("id = ?", session.ID).Update("expert_snapshot", encoded).Error; err != nil {
-					return domain.ExecutionSnapshot{}, err
-				}
+			encoded, err := marshal(current)
+			if err != nil {
+				return domain.ExecutionSnapshot{}, err
+			}
+			if err := tx.Table("sessions").Where("id = ?", session.ID).Update("expert_snapshot", encoded).Error; err != nil {
+				return domain.ExecutionSnapshot{}, err
 			}
 		}
 		if err := hydrateStageCredentials(tx, &current); err != nil {
@@ -846,9 +870,64 @@ func (repository *Repository) FinishMCPTest(ctx context.Context, job application
 	return nil
 }
 
+func (repository *Repository) FinishExpertTagProjection(ctx context.Context, job application.ExecutionJob, result application.ExecutionResult, executionError string) error {
+	updates := map[string]any{"tag_projection_status": "failed", "tag_projection_error": executionError, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+	if executionError == "" {
+		tags, err := parseProjectedTags(result.FinalMessage)
+		if err != nil {
+			updates["tag_projection_error"] = err.Error()
+		} else {
+			encoded, _ := marshal(tags)
+			updates["expertise_tags"], updates["tag_projection_status"], updates["tag_projection_error"] = encoded, "succeeded", nil
+		}
+	}
+	resultDB := repository.db.WithContext(ctx).Model(&expertRecord{}).Where("id = ? AND owner_user_id = ? AND tag_projection_status = 'running'", job.ExpertID, job.OwnerID).Updates(updates)
+	if resultDB.Error != nil {
+		return resultDB.Error
+	}
+	if resultDB.RowsAffected != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}
+
+func parseProjectedTags(value string) ([]string, error) {
+	trimmed := strings.TrimSpace(value)
+	trimmed = strings.TrimPrefix(trimmed, "```json")
+	trimmed = strings.TrimPrefix(trimmed, "```")
+	trimmed = strings.TrimSuffix(strings.TrimSpace(trimmed), "```")
+	var input []string
+	if err := json.Unmarshal([]byte(strings.TrimSpace(trimmed)), &input); err != nil {
+		return nil, fmt.Errorf("parse projected Expertise Tags: %w", err)
+	}
+	result, seen := make([]string, 0, 5), map[string]struct{}{}
+	for _, item := range input {
+		tag := strings.TrimSpace(item)
+		key := strings.ToLower(tag)
+		if tag == "" || len([]rune(tag)) > 20 {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, tag)
+		if len(result) == 5 {
+			break
+		}
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("tag projection returned no valid tags")
+	}
+	return result, nil
+}
+
 func (repository *Repository) RecordProgress(ctx context.Context, job application.ExecutionJob, event application.ExecutionEvent) error {
 	if len(event.Payload) > 256<<10 || !json.Valid(event.Payload) {
 		return fmt.Errorf("invalid Runtime progress payload")
+	}
+	if job.Kind == application.JobExpertTagProjection {
+		return nil
 	}
 	if event.Type == "expert.stage.updated" {
 		return repository.recordExpertStage(ctx, job, event)
@@ -1042,7 +1121,7 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 }
 
 func (repository *Repository) CancellationRequested(ctx context.Context, job application.ExecutionJob) (bool, error) {
-	if job.Kind == application.JobMCPTest {
+	if job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection {
 		return false, nil
 	}
 	// The cancellation monitor doubles as the Credit execution-lease heartbeat.

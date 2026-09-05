@@ -80,15 +80,23 @@ service AgentWorkspaceService {
   rpc RefreshProviderModels(RefreshProviderModelsRequest) returns (ModelProviderConnection) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/refresh" body: "*"}; }
   rpc CreateProviderModel(CreateProviderModelRequest) returns (ProviderModel) { option (google.api.http) = {post: "/api/v1/model-provider-connections/{connection_id}/models" body: "*"}; }
 
-  rpc ListMCPServers(ListMCPServersRequest) returns (ListMCPServersResponse) { option (google.api.http) = {get: "/api/v1/extensions/mcp"}; }
-  rpc CreateMCPServer(CreateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/extensions/mcp" body: "*"}; }
-  rpc UpdateMCPServer(UpdateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {patch: "/api/v1/extensions/mcp/{mcp_server_id}" body: "*"}; }
-  rpc TestMCPServer(TestMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/extensions/mcp/{mcp_server_id}/test" body: "*"}; }
-  rpc DeleteMCPServer(DeleteMCPServerRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/extensions/mcp/{mcp_server_id}"}; }
-  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) { option (google.api.http) = {get: "/api/v1/extensions/skills"}; }
-  rpc CreateSkill(CreateSkillRequest) returns (Skill) { option (google.api.http) = {post: "/api/v1/extensions/skills" body: "*"}; }
-  rpc UpdateSkill(UpdateSkillRequest) returns (Skill) { option (google.api.http) = {patch: "/api/v1/extensions/skills/{skill_id}" body: "*"}; }
-  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/extensions/skills/{skill_id}"}; }
+  rpc ListMCPServers(ListMCPServersRequest) returns (ListMCPServersResponse) { option (google.api.http) = {get: "/api/v1/connectors/mcp"}; }
+  rpc CreateMCPServer(CreateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/connectors/mcp" body: "*"}; }
+  rpc UpdateMCPServer(UpdateMCPServerRequest) returns (MCPServer) { option (google.api.http) = {patch: "/api/v1/connectors/mcp/{mcp_server_id}" body: "*"}; }
+  rpc TestMCPServer(TestMCPServerRequest) returns (MCPServer) { option (google.api.http) = {post: "/api/v1/connectors/mcp/{mcp_server_id}/test" body: "*"}; }
+  rpc DeleteMCPServer(DeleteMCPServerRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/mcp/{mcp_server_id}"}; }
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse) { option (google.api.http) = {get: "/api/v1/skills"}; }
+  rpc CreateSkill(CreateSkillRequest) returns (Skill) { option (google.api.http) = {post: "/api/v1/skills" body: "*"}; }
+  rpc UpdateSkill(UpdateSkillRequest) returns (Skill) { option (google.api.http) = {patch: "/api/v1/skills/{skill_id}" body: "*"}; }
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/skills/{skill_id}"}; }
+  rpc ListCLIConnectorDefinitions(ListCLIConnectorDefinitionsRequest) returns (ListCLIConnectorDefinitionsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli"}; }
+  rpc CreateCLIConnectorDefinition(CreateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli" body: "*"}; }
+  rpc UpdateCLIConnectorDefinition(UpdateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {patch: "/api/v1/admin/connectors/cli/{definition_id}" body: "*"}; }
+  rpc DeleteCLIConnectorDefinition(DeleteCLIConnectorDefinitionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/admin/connectors/cli/{definition_id}"}; }
+  rpc EnableCLIConnector(EnableCLIConnectorRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/{definition_id}/enable" body: "*"}; }
+  rpc ListCLIConnectorEnablements(ListCLIConnectorEnablementsRequest) returns (ListCLIConnectorEnablementsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements"}; }
+  rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
+  rpc DecideCommandApproval(DecideCommandApprovalRequest) returns (CommandApproval) { option (google.api.http) = {post: "/api/v1/command-approvals/{approval_id}/decision" body: "*"}; }
 }
 
 message GetCurrentUserRequest {}
@@ -139,8 +147,8 @@ message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; int32 schema_version = 12; repeated ExecutionStageSnapshot stages = 13; }
-message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; }
-message ExpertSnapshot { string id = 1; string name = 2; string execution_instruction = 3; int64 version = 4; }
+message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; optional string team_member_id = 7; optional string team_member_name = 8; repeated string team_member_labels = 9; }
+message ExpertSnapshot { string id = 1; string name = 2; string execution_instruction = 3; int64 version = 4; string icon = 5; string icon_background = 6; string introduction = 7; string core_capability = 8; string operating_procedure = 9; string output_standard = 10; string cautions = 11; }
 message ProviderModelSnapshot { string id = 1; string connection_id = 2; int64 connection_version = 3; string connection_name = 4; string provider_type = 5; string model_id = 6; string name = 7; string endpoint = 8; repeated string protocols = 9; string compatibility = 10; }
 message MCPServerSnapshot { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; }
 message SkillSnapshot { string id = 1; string name = 2; string object_key = 3; string sha256 = 4; }
@@ -191,8 +199,8 @@ message GetExpertRequest { string expert_id = 1; }
 message CreateExpertRequest { ExpertInput expert = 1; }
 message UpdateExpertRequest { string expert_id = 1; ExpertInput expert = 2; int64 expected_version = 3; }
 message DeleteExpertRequest { string expert_id = 1; }
-message ExpertInput { string name = 1; string capability_introduction = 2; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; string execution_instruction = 5; repeated string expertise_tags = 6; string provider_model_id = 7; string runtime_engine = 8; }
-message Expert { string id = 1; string name = 2; string capability_introduction = 3; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; string execution_instruction = 9; repeated string expertise_tags = 10; bool available = 11; string provider_model_id = 12; string runtime_engine = 13; bool complete = 14; optional string availability_reason = 15; string compatibility = 16; string provider_model_name = 17; }
+message ExpertInput { reserved 2, 5, 6, 7, 8; reserved "capability_introduction", "execution_instruction", "expertise_tags", "provider_model_id", "runtime_engine"; string name = 1; repeated string mcp_server_ids = 3; repeated string skill_ids = 4; string icon = 9; string icon_background = 10; string introduction = 11; string core_capability = 12; string operating_procedure = 13; string output_standard = 14; string cautions = 15; }
+message Expert { reserved 3, 9, 12, 13, 17; reserved "capability_introduction", "execution_instruction", "provider_model_id", "runtime_engine", "provider_model_name"; string id = 1; string name = 2; repeated string mcp_server_ids = 4; repeated string skill_ids = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; int64 version = 8; repeated string expertise_tags = 10; bool available = 11; bool complete = 14; optional string availability_reason = 15; string compatibility = 16; string icon = 18; string icon_background = 19; string introduction = 20; string core_capability = 21; string operating_procedure = 22; string output_standard = 23; string cautions = 24; string tag_projection_status = 25; optional string tag_projection_error = 26; }
 
 message ListExpertTeamsRequest {}
 message ListExpertTeamsResponse { repeated ExpertTeam items = 1; }
@@ -200,8 +208,10 @@ message GetExpertTeamRequest { string expert_team_id = 1; }
 message CreateExpertTeamRequest { ExpertTeamInput expert_team = 1; }
 message UpdateExpertTeamRequest { string expert_team_id = 1; ExpertTeamInput expert_team = 2; int64 expected_version = 3; }
 message DeleteExpertTeamRequest { string expert_team_id = 1; }
-message ExpertTeamInput { string name = 1; string capability_introduction = 2; repeated string expertise_tags = 3; repeated string expert_ids = 4; }
-message ExpertTeam { string id = 1; string name = 2; string capability_introduction = 3; repeated string expertise_tags = 4; repeated Expert experts = 5; bool available = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
+message ExpertTeamInput { reserved 2, 3, 4; reserved "capability_introduction", "expertise_tags", "expert_ids"; string name = 1; string icon = 5; string icon_background = 6; string introduction = 7; string core_capability = 8; repeated ExpertTeamMemberInput members = 9; }
+message ExpertTeamMemberInput { string id = 1; string name = 2; string expert_id = 3; repeated string labels = 4; }
+message ExpertTeamMember { string id = 1; string name = 2; Expert expert = 3; repeated string labels = 4; int32 position = 5; }
+message ExpertTeam { string id = 1; string name = 2; string capability_introduction = 3; repeated string expertise_tags = 4; repeated Expert experts = 5; bool available = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; string icon = 10; string icon_background = 11; string introduction = 12; string core_capability = 13; repeated ExpertTeamMember members = 14; }
 message ExpertStage { string expert_id = 1; string expert_name = 2; int32 position = 3; string state = 4; int64 elapsed_ms = 5; optional string final_text = 6; optional string error = 7; int32 total = 8; optional CreditStageConsumption credit_consumption = 9; string provider_model_id = 10; string provider_model_name = 11; string runtime_engine = 12; }
 message CreditConsumption { int64 total_hundredths = 1; repeated CreditStageConsumption stages = 2; }
 message CreditStageConsumption { int32 stage_position = 1; string provider_model = 2; string runtime_engine = 3; int64 input_tokens = 4; int64 output_tokens = 5; bool usage_reported = 6; int64 input_multiplier_micros = 7; int64 output_multiplier_micros = 8; int64 fallback_hundredths = 9; int64 amount_hundredths = 10; bool estimated = 11; string rate_revision_id = 12; }
@@ -242,6 +252,23 @@ message CreateSkillRequest { string name = 1; string source = 2; optional string
 message UpdateSkillRequest { string skill_id = 1; optional string git_ref = 2; optional bytes archive = 3; int64 expected_version = 4; }
 message DeleteSkillRequest { string skill_id = 1; }
 message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; }
+
+message CLICapability { string id = 1; repeated string argv_prefix = 2; string risk = 3; repeated string identities = 4; repeated string scopes = 5; repeated string egress_hosts = 6; int32 timeout_seconds = 7; }
+message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; }
+message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; }
+message ListCLIConnectorDefinitionsRequest {}
+message ListCLIConnectorDefinitionsResponse { repeated CLIConnectorDefinition items = 1; }
+message CreateCLIConnectorDefinitionRequest { CLIConnectorDefinitionInput definition = 1; }
+message UpdateCLIConnectorDefinitionRequest { string definition_id = 1; CLIConnectorDefinitionInput definition = 2; int64 expected_version = 3; }
+message DeleteCLIConnectorDefinitionRequest { string definition_id = 1; }
+message EnableCLIConnectorRequest { string definition_id = 1; }
+message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; }
+message ListCLIConnectorEnablementsRequest {}
+message ListCLIConnectorEnablementsResponse { repeated CLIConnectorEnablement items = 1; }
+message CommandApproval { string id = 1; string execution_kind = 2; string execution_id = 3; string connector_name = 4; string operation = 5; string target = 6; string redacted_arguments = 7; string state = 8; optional string identity = 9; google.protobuf.Timestamp expires_at = 10; int64 version = 11; }
+message ListCommandApprovalsRequest {}
+message ListCommandApprovalsResponse { repeated CommandApproval items = 1; }
+message DecideCommandApprovalRequest { string approval_id = 1; string decision = 2; optional string identity = 3; int64 expected_version = 4; }
 
 message DeleteResponse { bool deleted = 1; }
 message Attachment { string id = 1; string name = 2; string content_type = 3; int64 size = 4; string sha256 = 5; bool image = 6; }

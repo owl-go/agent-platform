@@ -152,7 +152,7 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 			return fmt.Errorf("%w: selected Expert Team requires at least two Experts", domain.ErrInvalid)
 		}
 		var available int64
-		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&available).Error; err != nil {
+		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(ids)) {
@@ -418,6 +418,15 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		EnvironmentSecretCiphertext: workflow.EnvironmentSecret, GitSecretCiphertext: workflow.GitSecret,
 		WorkspacePath: workflow.WorkspacePath,
 	}
+	runtime, err := domain.ParseRuntime(settings.DefaultRuntimeEngine)
+	if err != nil {
+		return domain.ExecutionSnapshot{}, err
+	}
+	defaults := map[string]string{}
+	if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
+		return domain.ExecutionSnapshot{}, fmt.Errorf("decode Runtime model defaults: %w", err)
+	}
+	providerModelID := defaults[string(runtime)]
 	if len(workflow.Environment) > 0 {
 		if err := json.Unmarshal(workflow.Environment, &snapshot.Environment); err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow environment snapshot: %w", err)
@@ -430,15 +439,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		}
 	}
 	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
-		runtime, err := domain.ParseRuntime(settings.DefaultRuntimeEngine)
-		if err != nil {
-			return domain.ExecutionSnapshot{}, err
-		}
-		defaults := map[string]string{}
-		if err := json.Unmarshal(settings.RuntimeModelDefaults, &defaults); err != nil {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Runtime model defaults: %w", err)
-		}
-		stage, err := loadExecutionStage(tx, workflow.OwnerID, defaults[string(runtime)], runtime, nil, nil, nil, 1)
+		stage, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, 1)
 		if err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
@@ -449,7 +450,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert for Run: %w", mapNotFound(err))
 		}
-		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, 1)
+		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, providerModelID, runtime, 1)
 		if err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("Expert %q: %w", expert.Name, err)
 		}
@@ -460,7 +461,15 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert Team for Run: %w", mapNotFound(err))
 	}
 	var expertIDs []string
-	if err := json.Unmarshal(team.ExpertIDs, &expertIDs); err != nil {
+	var members []domain.ExpertTeamMemberInput
+	if len(team.Members) > 0 && string(team.Members) != "null" {
+		_ = json.Unmarshal(team.Members, &members)
+	}
+	if len(members) > 0 {
+		for _, member := range members {
+			expertIDs = append(expertIDs, member.ExpertID)
+		}
+	} else if err := json.Unmarshal(team.ExpertIDs, &expertIDs); err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}
 	if len(expertIDs) < 2 {
@@ -471,9 +480,14 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, expertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team member is unavailable", domain.ErrInvalid)
 		}
-		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, index+1)
+		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, providerModelID, runtime, index+1)
 		if err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("Expert %q: %w", expert.Name, err)
+		}
+		if len(members) > 0 {
+			stage.TeamMemberID = members[index].ID
+			stage.TeamMemberName = members[index].Name
+			stage.TeamMemberLabels = append([]string(nil), members[index].Labels...)
 		}
 		snapshot.Stages = append(snapshot.Stages, stage)
 	}
@@ -482,20 +496,13 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	return application.PlanExecution(snapshot, application.ExecutionSelection{Team: teamStages})
 }
 
-func loadExpertExecutionStage(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExecutionStageSnapshot, error) {
-	if expert.ProviderModelID == nil || expert.RuntimeEngine == nil {
-		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: Expert execution configuration is incomplete", domain.ErrInvalid)
-	}
-	runtime, err := domain.ParseRuntime(*expert.RuntimeEngine)
-	if err != nil {
-		return domain.ExecutionStageSnapshot{}, err
-	}
+func loadExpertExecutionStage(tx *gorm.DB, ownerID string, expert expertRecord, providerModelID string, runtime domain.RuntimeEngine, position int) (domain.ExecutionStageSnapshot, error) {
 	member, err := loadExpertMemberSnapshot(tx, ownerID, expert, position)
 	if err != nil {
 		return domain.ExecutionStageSnapshot{}, err
 	}
 	expertSnapshot := member.ExpertSnapshot
-	return loadExecutionStage(tx, ownerID, *expert.ProviderModelID, runtime, &expertSnapshot, member.MCPServers, member.Skills, position)
+	return loadExecutionStage(tx, ownerID, providerModelID, runtime, &expertSnapshot, member.MCPServers, member.Skills, position)
 }
 
 func loadExecutionStage(tx *gorm.DB, ownerID, providerModelID string, runtime domain.RuntimeEngine, expert *domain.ExpertSnapshot, servers []domain.MCPServerSnapshot, skills []domain.SkillSnapshot, position int) (domain.ExecutionStageSnapshot, error) {
@@ -558,14 +565,15 @@ func loadCreditRateSnapshot(tx *gorm.DB, providerType, protocol, modelID string)
 }
 
 func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExpertMemberSnapshot, error) {
-	if strings.TrimSpace(expert.ExecutionInstruction) == "" {
-		return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert Execution Instruction is required", domain.ErrInvalid)
+	structured := strings.TrimSpace(expert.Introduction) != "" && strings.TrimSpace(expert.CoreCapability) != "" && strings.TrimSpace(expert.OperatingProcedure) != "" && strings.TrimSpace(expert.OutputStandard) != ""
+	if !structured && strings.TrimSpace(expert.ExecutionInstruction) == "" {
+		return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert guidance is incomplete", domain.ErrInvalid)
 	}
 	var tags, mcpIDs, skillIDs []string
 	if err := json.Unmarshal(expert.ExpertiseTags, &tags); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
-	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags, Version: expert.Version}, Position: position}
+	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, Icon: expert.Icon, IconBackground: expert.IconBackground, Introduction: expert.Introduction, CoreCapability: expert.CoreCapability, OperatingProcedure: expert.OperatingProcedure, OutputStandard: expert.OutputStandard, Cautions: expert.Cautions, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags, Version: expert.Version}, Position: position}
 	if err := json.Unmarshal(expert.MCPServerIDs, &mcpIDs); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}

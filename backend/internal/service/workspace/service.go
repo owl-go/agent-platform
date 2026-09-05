@@ -106,7 +106,7 @@ func (service *Service) validateExecutionRuntimes(ctx context.Context, owner str
 }
 
 func (service *Service) validateExpertInputAvailability(ctx context.Context, input workspacedomain.ExpertInput) error {
-	expert := workspacedomain.Expert{ID: "candidate", ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelID, RuntimeEngine: input.RuntimeEngine}
+	expert := workspacedomain.Expert{ID: "candidate", Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelID, RuntimeEngine: input.RuntimeEngine}
 	availability, err := service.expertAvailability(ctx, []workspacedomain.Expert{expert})
 	if err != nil {
 		return err

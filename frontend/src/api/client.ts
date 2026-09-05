@@ -23,15 +23,17 @@ export interface GitSource { url: string; branch: string; authentication: "none"
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[]; ssh_config?: string }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id: string; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
-export interface ExpertInput { name: string; capability_introduction: string; execution_instruction: string; provider_model_id: string; runtime_engine: RuntimeEngine; expertise_tags: string[]; mcp_server_ids: string[]; skill_ids: string[] }
-export interface Expert extends ExpertInput { id: string; provider_model_name: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
-export interface ExpertTeamInput { name: string; capability_introduction: string; expertise_tags: string[]; expert_ids: string[] }
-export interface ExpertTeam extends Omit<ExpertTeamInput, "expert_ids"> { id: string; experts: Expert[]; available: boolean; created_at: string; updated_at: string; version: number }
+export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[] }
+export interface Expert extends ExpertInput { id: string; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
+export interface ExpertTeamMemberInput { id: string; name: string; expert_id: string; labels: string[] }
+export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert; position: number }
+export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
+export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
 export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number }
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
@@ -42,6 +44,11 @@ export interface ModelProviderConnection { id: string; name: string; provider_ty
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
+export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
+export interface CLIConnectorDefinitionInput { name: string; npm_package: string; npm_version: string; npm_integrity: string; executable: string; authentication_driver: "none" | "feishu"; capabilities: CLICapability[] }
+export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number }
+export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; version: number }
+export interface CommandApproval { id: string; execution_kind: "session" | "run"; execution_id: string; connector_name: string; operation: string; target: string; redacted_arguments: string; state: "pending" | "approved" | "rejected" | "consumed" | "expired" | "closed"; identity?: "user" | "bot"; expires_at: string; version: number }
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
@@ -136,6 +143,14 @@ export interface PlatformApi {
   createUploadSkill(input: { name: string; archive: string }, signal?: AbortSignal): Promise<Skill>;
   updateSkill(id: string, input: { git_ref?: string; archive?: string }, version: number, signal?: AbortSignal): Promise<Skill>;
   deleteSkill(id: string, signal?: AbortSignal): Promise<void>;
+  listCLIConnectorDefinitions(signal?: AbortSignal): Promise<CLIConnectorDefinition[]>;
+  createCLIConnectorDefinition(input: CLIConnectorDefinitionInput, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
+  updateCLIConnectorDefinition(id: string, input: CLIConnectorDefinitionInput, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
+  deleteCLIConnectorDefinition(id: string, signal?: AbortSignal): Promise<void>;
+  enableCLIConnector(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
+  listCLIConnectorEnablements(signal?: AbortSignal): Promise<CLIConnectorEnablement[]>;
+  listCommandApprovals(signal?: AbortSignal): Promise<CommandApproval[]>;
+  decideCommandApproval(id: string, decision: "approved" | "rejected", identity: "user" | "bot" | undefined, version: number, signal?: AbortSignal): Promise<CommandApproval>;
   listUsers(signal?: AbortSignal): Promise<UserAccount[]>;
   createUser(input: { username: string; email: string; display_name: string }, signal?: AbortSignal): Promise<{ user: UserAccount; temporary_password: string }>;
   setUserEnabled(id: string, enabled: boolean, version: number, signal?: AbortSignal): Promise<UserAccount>;
@@ -335,16 +350,24 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteModelProviderConnection(id, signal) { return remove(`/api/v1/model-provider-connections/${encodeURIComponent(id)}`, signal); },
     refreshProviderModels(id, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}/refresh`, json("POST", {}, signal)); },
     createProviderModel(connectionID, input, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(connectionID)}/models`, json("POST", input, signal)); },
-    async listMCPServers(signal) { return (await call<{ items: MCPServer[] }>("/api/v1/extensions/mcp", { signal })).items ?? []; },
-    createMCPServer(input, signal) { return call("/api/v1/extensions/mcp", json("POST", { mcp_server: input }, signal)); },
-    updateMCPServer(id, input, version, signal) { return call(`/api/v1/extensions/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_server: input, expected_version: version }, signal)); },
-    testMCPServer(id, signal) { return call(`/api/v1/extensions/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
-    deleteMCPServer(id, signal) { return remove(`/api/v1/extensions/mcp/${encodeURIComponent(id)}`, signal); },
-    async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/extensions/skills", { signal })).items ?? []; },
-    createGitSkill(input, signal) { return call("/api/v1/extensions/skills", json("POST", { name: input.name, source: "git", git_url: input.git_url, git_ref: input.git_ref }, signal)); },
-    createUploadSkill(input, signal) { return call("/api/v1/extensions/skills", json("POST", { name: input.name, source: "upload", archive: input.archive }, signal)); },
-    updateSkill(id, input, version, signal) { return call(`/api/v1/extensions/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },
-    deleteSkill(id, signal) { return remove(`/api/v1/extensions/skills/${encodeURIComponent(id)}`, signal); },
+    async listMCPServers(signal) { return (await call<{ items: MCPServer[] }>("/api/v1/connectors/mcp", { signal })).items ?? []; },
+    createMCPServer(input, signal) { return call("/api/v1/connectors/mcp", json("POST", { mcp_server: input }, signal)); },
+    updateMCPServer(id, input, version, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_server: input, expected_version: version }, signal)); },
+    testMCPServer(id, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
+    deleteMCPServer(id, signal) { return remove(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, signal); },
+    async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/skills", { signal })).items ?? []; },
+    createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "git", git_url: input.git_url, git_ref: input.git_ref }, signal)); },
+    createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "upload", archive: input.archive }, signal)); },
+    updateSkill(id, input, version, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },
+    deleteSkill(id, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}`, signal); },
+    async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
+    createCLIConnectorDefinition(input, signal) { return call("/api/v1/admin/connectors/cli", json("POST", { definition: input }, signal)); },
+    updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },
+    deleteCLIConnectorDefinition(id, signal) { return remove(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, signal); },
+    enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
+    async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },
+    async listCommandApprovals(signal) { return (await call<{ items: CommandApproval[] }>("/api/v1/command-approvals", { signal })).items ?? []; },
+    decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
     setUserEnabled(id, enabled, version, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version }, signal)); },
@@ -357,7 +380,7 @@ function normalizeExpert(expert: Expert): Expert {
 }
 
 function normalizeExpertTeam(team: ExpertTeam): ExpertTeam {
-  return { ...team, expertise_tags: team.expertise_tags ?? [], experts: (team.experts ?? []).map(normalizeExpert) };
+  return { ...team, expertise_tags: team.expertise_tags ?? [], experts: (team.experts ?? []).map(normalizeExpert), members: (team.members ?? []).map((member) => ({ ...member, labels: member.labels ?? [], expert: normalizeExpert(member.expert) })) };
 }
 
 async function request<T>(accessToken: string, path: string, init: RequestInit = {}): Promise<T> {

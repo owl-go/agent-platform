@@ -2,13 +2,14 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { Box, ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
 import { authContextKey } from "./auth/session";
 import { localeStorageKey, type SupportedLocale } from "./i18n";
 import CreditPanel from "./components/CreditPanel.vue";
+import ApprovalInbox from "./components/ApprovalInbox.vue";
 
 const auth = inject(authContextKey)!;
 const api = inject(platformApiKey)!;
@@ -23,7 +24,7 @@ const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 const nav = [
-  { id: "sessions", icon: ChatDotRound }, { id: "workflows", icon: Connection }, { id: "experts", icon: MagicStick }, { id: "settings", icon: Setting },
+  { id: "sessions", icon: ChatDotRound }, { id: "workflows", icon: Connection }, { id: "experts", icon: MagicStick }, { id: "resources", icon: Box }, { id: "settings", icon: Setting },
 ] as const;
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
@@ -91,6 +92,7 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
       <button v-if="mobileOpen" class="scrim" @click="mobileOpen = false"></button>
       <el-main class="main-stage">
         <header class="mobile-header"><el-button text :icon="Menu" @click="mobileOpen = true" /><strong>{{ t('product') }}</strong><el-avatar :size="32">{{ initials }}</el-avatar></header>
+        <ApprovalInbox v-if="currentUser" />
         <RouterView :key="String(route.name)" />
       </el-main>
       <CreditPanel :open="creditPanelOpen" @close="creditPanelOpen = false" @updated="creditBalance = $event" />

@@ -218,7 +218,13 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 
 func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot) *workspacev1.ExecutionStageSnapshot {
 	model := item.ProviderModel
-	response := &workspacev1.ExecutionStageSnapshot{Position: int32(item.Position), RuntimeEngine: string(item.RuntimeEngine), ProviderModel: &workspacev1.ProviderModelSnapshot{Id: model.ID, ConnectionId: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ProviderType: model.ProviderType, ModelId: model.ModelID, Name: model.Name, Endpoint: model.Endpoint, Protocols: model.Protocols, Compatibility: model.Compatibility}}
+	response := &workspacev1.ExecutionStageSnapshot{Position: int32(item.Position), RuntimeEngine: string(item.RuntimeEngine), ProviderModel: &workspacev1.ProviderModelSnapshot{Id: model.ID, ConnectionId: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ProviderType: model.ProviderType, ModelId: model.ModelID, Name: model.Name, Endpoint: model.Endpoint, Protocols: model.Protocols, Compatibility: model.Compatibility}, TeamMemberLabels: append([]string(nil), item.TeamMemberLabels...)}
+	if item.TeamMemberID != "" {
+		response.TeamMemberId = &item.TeamMemberID
+	}
+	if item.TeamMemberName != "" {
+		response.TeamMemberName = &item.TeamMemberName
+	}
 	if item.Expert != nil {
 		response.Expert = &workspacev1.ExpertSnapshot{Id: item.Expert.ID, Name: item.Expert.Name, ExecutionInstruction: item.Expert.ExecutionInstruction, Version: item.Expert.Version}
 	}

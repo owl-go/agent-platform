@@ -40,7 +40,7 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
 				return domain.ErrInvalid
 			}
 		}
@@ -54,7 +54,7 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 				return domain.ErrInvalid
 			}
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
 				return domain.ErrInvalid
 			}
 		}
@@ -133,7 +133,7 @@ func (repository *Repository) SetSessionExpertSelection(ctx context.Context, own
 		}
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
 				return fmt.Errorf("%w: selected Expert is unavailable", domain.ErrInvalid)
 			}
 		}
@@ -147,7 +147,7 @@ func (repository *Repository) SetSessionExpertSelection(ctx context.Context, own
 				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
 			}
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
 				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
 			}
 		}
@@ -238,7 +238,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			}
 			snapshot = &selected
 		}
-		if (session.ExpertID != nil || session.ExpertTeamID != nil) && len(session.ExpertSnapshot) == 0 {
+		if len(session.ExpertSnapshot) == 0 {
 			if _, err := loadSessionSnapshot(tx, session, *snapshot); err != nil {
 				return err
 			}
@@ -405,7 +405,7 @@ func messageDomain(row messageRecord) domain.Message {
 }
 
 func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord) (domain.ResponseSnapshot, error) {
-	if (session.ExpertID != nil || session.ExpertTeamID != nil) && len(session.ExpertSnapshot) > 0 && string(session.ExpertSnapshot) != "null" {
+	if len(session.ExpertSnapshot) > 0 && string(session.ExpertSnapshot) != "null" {
 		var frozen domain.ExecutionSnapshot
 		if err := json.Unmarshal(session.ExpertSnapshot, &frozen); err != nil {
 			return domain.ResponseSnapshot{}, fmt.Errorf("decode frozen Session execution plan: %w", err)

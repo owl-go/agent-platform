@@ -615,15 +615,14 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 	if input == nil {
 		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Expert input is required", workspacedomain.ErrInvalid)
 	}
-	runtime, err := workspacedomain.ParseRuntime(input.RuntimeEngine)
-	if err != nil {
-		return workspacedomain.ExpertInput{}, err
-	}
-	return workspacedomain.ExpertInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelId, RuntimeEngine: runtime, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
+	return workspacedomain.ExpertInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, Cautions: input.Cautions, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
 }
 
 func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
-	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExecutionInstruction: item.ExecutionInstruction, ProviderModelId: item.ProviderModelID, ProviderModelName: status.ModelName, RuntimeEngine: string(item.RuntimeEngine), ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus}
+	if item.TagProjectionError != "" {
+		response.TagProjectionError = &item.TagProjectionError
+	}
 	if status.Reason != "" {
 		response.AvailabilityReason = &status.Reason
 	}
@@ -634,7 +633,11 @@ func expertTeamInput(input *workspacev1.ExpertTeamInput) (workspacedomain.Expert
 	if input == nil {
 		return workspacedomain.ExpertTeamInput{}, fmt.Errorf("%w: Expert Team input is required", workspacedomain.ErrInvalid)
 	}
-	return workspacedomain.ExpertTeamInput{Name: input.Name, CapabilityIntroduction: input.CapabilityIntroduction, ExpertiseTags: append([]string(nil), input.ExpertiseTags...), ExpertIDs: append([]string(nil), input.ExpertIds...)}, nil
+	members := make([]workspacedomain.ExpertTeamMemberInput, 0, len(input.Members))
+	for _, member := range input.Members {
+		members = append(members, workspacedomain.ExpertTeamMemberInput{ID: member.Id, Name: member.Name, ExpertID: member.ExpertId, Labels: append([]string(nil), member.Labels...)})
+	}
+	return workspacedomain.ExpertTeamInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, Members: members}, nil
 }
 
 func expertTeamResponse(item workspacedomain.ExpertTeam, availability map[string]expertAvailabilityStatus) *workspacev1.ExpertTeam {
@@ -645,13 +648,25 @@ func expertTeamResponse(item workspacedomain.ExpertTeam, availability map[string
 		available = available && status.Available
 		experts = append(experts, expertResponse(expert, status))
 	}
-	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: available, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	members := make([]*workspacev1.ExpertTeamMember, 0, len(item.Members))
+	if len(item.Members) > 0 {
+		available = len(item.Members) >= 2
+	}
+	for _, member := range item.Members {
+		status := availability[member.Expert.ID]
+		available = available && status.Available
+		members = append(members, &workspacev1.ExpertTeamMember{Id: member.ID, Name: member.Name, Expert: expertResponse(member.Expert, status), Labels: member.Labels, Position: int32(member.Position)})
+	}
+	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, Members: members, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: available, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 }
 
 func (service *Service) teamExpertAvailability(ctx context.Context, teams []workspacedomain.ExpertTeam) (map[string]expertAvailabilityStatus, error) {
 	var experts []workspacedomain.Expert
 	for _, team := range teams {
 		experts = append(experts, team.Experts...)
+		for _, member := range team.Members {
+			experts = append(experts, member.Expert)
+		}
 	}
 	return service.expertAvailability(ctx, experts)
 }
@@ -665,21 +680,36 @@ type expertAvailabilityStatus struct {
 }
 
 func (service *Service) expertAvailability(ctx context.Context, experts []workspacedomain.Expert) (map[string]expertAvailabilityStatus, error) {
-	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
-	if err != nil {
-		return nil, err
-	}
 	models := make(map[string]workspacedomain.ProviderModel)
-	for _, connection := range connections {
-		for _, model := range connection.Models {
-			models[model.ID] = model
+	needsLegacyCatalog := false
+	for _, expert := range experts {
+		if strings.TrimSpace(expert.CoreCapability) == "" && expert.Available() {
+			needsLegacyCatalog = true
+			break
+		}
+	}
+	if needsLegacyCatalog {
+		connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, connection := range connections {
+			for _, model := range connection.Models {
+				models[model.ID] = model
+			}
 		}
 	}
 	result := make(map[string]expertAvailabilityStatus, len(experts))
 	for _, expert := range experts {
 		status := expertAvailabilityStatus{Complete: expert.Available(), Compatibility: "unavailable"}
 		if !status.Complete {
-			status.Reason = "Expert execution configuration is incomplete"
+			status.Reason = "Expert guidance is incomplete"
+			result[expert.ID] = status
+			continue
+		}
+		if strings.TrimSpace(expert.CoreCapability) != "" {
+			status.Available = true
+			status.Compatibility = "verified"
 			result[expert.ID] = status
 			continue
 		}

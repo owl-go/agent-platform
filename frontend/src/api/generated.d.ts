@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/v1/admin/connectors/cli": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateCLIConnectorDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/cli/{definition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteCLIConnectorDefinition"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateCLIConnectorDefinition"];
+        trace?: never;
+    };
     "/api/v1/admin/model-credit-rates": {
         parameters: {
             query?: never;
@@ -148,6 +180,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/command-approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCommandApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/command-approvals/{approval_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DecideCommandApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/cli": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCLIConnectorDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/cli/enablements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCLIConnectorEnablements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/cli/{definition_id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_EnableCLIConnector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListMCPServers"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateMCPServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/mcp/{mcp_server_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteMCPServer"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateMCPServer"];
+        trace?: never;
+    };
+    "/api/v1/connectors/mcp/{mcp_server_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_TestMCPServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credits/balance": {
         parameters: {
             query?: never;
@@ -258,86 +418,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateExpert"];
-        trace?: never;
-    };
-    "/api/v1/extensions/mcp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentWorkspaceService_ListMCPServers"];
-        put?: never;
-        post: operations["AgentWorkspaceService_CreateMCPServer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/extensions/mcp/{mcp_server_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["AgentWorkspaceService_DeleteMCPServer"];
-        options?: never;
-        head?: never;
-        patch: operations["AgentWorkspaceService_UpdateMCPServer"];
-        trace?: never;
-    };
-    "/api/v1/extensions/mcp/{mcp_server_id}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AgentWorkspaceService_TestMCPServer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/extensions/skills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentWorkspaceService_ListSkills"];
-        put?: never;
-        post: operations["AgentWorkspaceService_CreateSkill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/extensions/skills/{skill_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["AgentWorkspaceService_DeleteSkill"];
-        options?: never;
-        head?: never;
-        patch: operations["AgentWorkspaceService_UpdateSkill"];
         trace?: never;
     };
     "/api/v1/me": {
@@ -578,6 +658,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateSettings"];
+        trace?: never;
+    };
+    "/api/v1/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSkills"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/skills/{skill_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteSkill"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateSkill"];
         trace?: never;
     };
     "/api/v1/workflows": {
@@ -869,6 +981,13 @@ export interface components {
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
         };
+        AgentWorkspaceServiceDecideCommandApprovalBody: {
+            decision?: string;
+            identity?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceEnableCLIConnectorBody: Record<string, never>;
         AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceRefreshProviderModelsBody: Record<string, never>;
@@ -900,6 +1019,11 @@ export interface components {
             expected_version?: number;
         };
         AgentWorkspaceServiceTestMCPServerBody: Record<string, never>;
+        AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody: {
+            definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
         AgentWorkspaceServiceUpdateExpertBody: {
             expert?: components["schemas"]["v1ExpertInput"];
             /** Format: int64 */
@@ -992,6 +1116,69 @@ export interface components {
             size?: number;
             sha256?: string;
             image?: boolean;
+        };
+        v1CLICapability: {
+            id?: string;
+            argv_prefix?: string[];
+            risk?: string;
+            identities?: string[];
+            scopes?: string[];
+            egress_hosts?: string[];
+            /** Format: int32 */
+            timeout_seconds?: number;
+        };
+        v1CLIConnectorDefinition: {
+            id?: string;
+            name?: string;
+            npm_package?: string;
+            npm_version?: string;
+            npm_integrity?: string;
+            executable?: string;
+            authentication_driver?: string;
+            capabilities?: components["schemas"]["v1CLICapability"][];
+            state?: string;
+            failure_reason?: string;
+            bundle_sha256?: string;
+            mutable?: boolean;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1CLIConnectorDefinitionInput: {
+            name?: string;
+            npm_package?: string;
+            npm_version?: string;
+            npm_integrity?: string;
+            executable?: string;
+            authentication_driver?: string;
+            capabilities?: components["schemas"]["v1CLICapability"][];
+        };
+        v1CLIConnectorEnablement: {
+            id?: string;
+            definition_id?: string;
+            state?: string;
+            action_url?: string;
+            /** Format: date-time */
+            action_expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1CommandApproval: {
+            id?: string;
+            execution_kind?: string;
+            execution_id?: string;
+            connector_name?: string;
+            operation?: string;
+            target?: string;
+            redacted_arguments?: string;
+            state?: string;
+            identity?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1CreateCLIConnectorDefinitionRequest: {
+            definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
         };
         v1CreateExpertRequest: {
             expert?: components["schemas"]["v1ExpertInput"];
@@ -1142,11 +1329,13 @@ export interface components {
             provider_model?: components["schemas"]["v1ProviderModelSnapshot"];
             mcp_servers?: components["schemas"]["v1MCPServerSnapshot"][];
             skills?: components["schemas"]["v1SkillSnapshot"][];
+            team_member_id?: string;
+            team_member_name?: string;
+            team_member_labels?: string[];
         };
         v1Expert: {
             id?: string;
             name?: string;
-            capability_introduction?: string;
             mcp_server_ids?: string[];
             skill_ids?: string[];
             /** Format: date-time */
@@ -1155,25 +1344,32 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
-            execution_instruction?: string;
             expertise_tags?: string[];
             available?: boolean;
-            provider_model_id?: string;
-            runtime_engine?: string;
             complete?: boolean;
             availability_reason?: string;
             compatibility?: string;
-            provider_model_name?: string;
+            icon?: string;
+            icon_background?: string;
+            introduction?: string;
+            core_capability?: string;
+            operating_procedure?: string;
+            output_standard?: string;
+            cautions?: string;
+            tag_projection_status?: string;
+            tag_projection_error?: string;
         };
         v1ExpertInput: {
             name?: string;
-            capability_introduction?: string;
             mcp_server_ids?: string[];
             skill_ids?: string[];
-            execution_instruction?: string;
-            expertise_tags?: string[];
-            provider_model_id?: string;
-            runtime_engine?: string;
+            icon?: string;
+            icon_background?: string;
+            introduction?: string;
+            core_capability?: string;
+            operating_procedure?: string;
+            output_standard?: string;
+            cautions?: string;
         };
         v1ExpertSnapshot: {
             id?: string;
@@ -1181,6 +1377,13 @@ export interface components {
             execution_instruction?: string;
             /** Format: int64 */
             version?: number;
+            icon?: string;
+            icon_background?: string;
+            introduction?: string;
+            core_capability?: string;
+            operating_procedure?: string;
+            output_standard?: string;
+            cautions?: string;
         };
         v1ExpertStage: {
             expert_id?: string;
@@ -1212,12 +1415,33 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            icon?: string;
+            icon_background?: string;
+            introduction?: string;
+            core_capability?: string;
+            members?: components["schemas"]["v1ExpertTeamMember"][];
         };
         v1ExpertTeamInput: {
             name?: string;
-            capability_introduction?: string;
-            expertise_tags?: string[];
-            expert_ids?: string[];
+            icon?: string;
+            icon_background?: string;
+            introduction?: string;
+            core_capability?: string;
+            members?: components["schemas"]["v1ExpertTeamMemberInput"][];
+        };
+        v1ExpertTeamMember: {
+            id?: string;
+            name?: string;
+            expert?: components["schemas"]["v1Expert"];
+            labels?: string[];
+            /** Format: int32 */
+            position?: number;
+        };
+        v1ExpertTeamMemberInput: {
+            id?: string;
+            name?: string;
+            expert_id?: string;
+            labels?: string[];
         };
         v1GitConfigEntry: {
             key?: string;
@@ -1237,6 +1461,15 @@ export interface components {
         };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
+        };
+        v1ListCLIConnectorDefinitionsResponse: {
+            items?: components["schemas"]["v1CLIConnectorDefinition"][];
+        };
+        v1ListCLIConnectorEnablementsResponse: {
+            items?: components["schemas"]["v1CLIConnectorEnablement"][];
+        };
+        v1ListCommandApprovalsResponse: {
+            items?: components["schemas"]["v1CommandApproval"][];
         };
         v1ListCreditLedgerResponse: {
             items?: components["schemas"]["v1CreditLedgerEntry"][];
@@ -1664,6 +1897,105 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AgentWorkspaceService_CreateCLIConnectorDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateCLIConnectorDefinitionRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorDefinition"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteCLIConnectorDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateCLIConnectorDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorDefinition"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListModelCreditRates: {
         parameters: {
             query?: never;
@@ -2015,6 +2347,326 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ResetUserPasswordResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCommandApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCommandApprovalsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DecideCommandApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDecideCommandApprovalBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CommandApproval"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCLIConnectorDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCLIConnectorDefinitionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCLIConnectorEnablements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCLIConnectorEnablementsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_EnableCLIConnector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceEnableCLIConnectorBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorEnablement"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListMCPServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListMCPServersResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateMCPServerRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateMCPServerBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_TestMCPServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mcp_server_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceTestMCPServerBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MCPServer"];
                 };
             };
             /** @description An unexpected error response. */
@@ -2427,297 +3079,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Expert"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_ListMCPServers: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListMCPServersResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_CreateMCPServer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1CreateMCPServerRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_DeleteMCPServer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mcp_server_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1DeleteResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_UpdateMCPServer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mcp_server_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateMCPServerBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_TestMCPServer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mcp_server_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceTestMCPServerBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1MCPServer"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_ListSkills: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ListSkillsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_CreateSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["v1CreateSkillRequest"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Skill"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_DeleteSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1DeleteResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_UpdateSkill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateSkillBody"];
-            };
-        };
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1Skill"];
                 };
             };
             /** @description An unexpected error response. */
@@ -3437,6 +3798,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1PersonalSettings"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSkillsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Skill"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateSkillBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Skill"];
                 };
             };
             /** @description An unexpected error response. */

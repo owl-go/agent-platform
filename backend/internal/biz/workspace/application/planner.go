@@ -48,14 +48,23 @@ func PlanExecution(common domain.ExecutionSnapshot, selection ExecutionSelection
 			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team execution requires two to ten Stages", domain.ErrInvalid)
 		}
 		seen := make(map[string]struct{}, len(selection.Team))
+		sharedRuntime := selection.Team[0].RuntimeEngine
+		sharedModel := selection.Team[0].ProviderModel.ID
 		for _, stage := range selection.Team {
 			if stage.Expert == nil {
 				return domain.ExecutionSnapshot{}, fmt.Errorf("%w: every Expert Team Stage requires an Expert snapshot", domain.ErrInvalid)
 			}
-			if _, duplicate := seen[stage.Expert.ID]; duplicate {
-				return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team Stages must contain distinct Experts", domain.ErrInvalid)
+			identity := stage.TeamMemberID
+			if identity == "" {
+				identity = stage.Expert.ID
 			}
-			seen[stage.Expert.ID] = struct{}{}
+			if _, duplicate := seen[identity]; duplicate {
+				return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team Stages must contain distinct Member identities", domain.ErrInvalid)
+			}
+			seen[identity] = struct{}{}
+			if stage.RuntimeEngine != sharedRuntime || stage.ProviderModel.ID != sharedModel {
+				return domain.ExecutionSnapshot{}, fmt.Errorf("%w: every Expert Team Stage must share one execution configuration", domain.ErrInvalid)
+			}
 		}
 		stages = append([]domain.ExecutionStageSnapshot(nil), selection.Team...)
 	}

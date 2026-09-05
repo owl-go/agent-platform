@@ -29,14 +29,17 @@ type ExecutionSnapshot struct {
 
 // ExecutionStageSnapshot is the complete immutable identity of one model invocation.
 type ExecutionStageSnapshot struct {
-	Position      int                   `json:"position"`
-	Expert        *ExpertSnapshot       `json:"expert,omitempty"`
-	RuntimeEngine RuntimeEngine         `json:"runtime_engine"`
-	ProviderModel ProviderModelSnapshot `json:"provider_model"`
-	ModelProtocol string                `json:"model_protocol,omitempty"`
-	CreditRate    *CreditRateSnapshot   `json:"credit_rate,omitempty"`
-	MCPServers    []MCPServerSnapshot   `json:"mcp_servers"`
-	Skills        []SkillSnapshot       `json:"skills"`
+	Position         int                   `json:"position"`
+	Expert           *ExpertSnapshot       `json:"expert,omitempty"`
+	RuntimeEngine    RuntimeEngine         `json:"runtime_engine"`
+	ProviderModel    ProviderModelSnapshot `json:"provider_model"`
+	ModelProtocol    string                `json:"model_protocol,omitempty"`
+	CreditRate       *CreditRateSnapshot   `json:"credit_rate,omitempty"`
+	MCPServers       []MCPServerSnapshot   `json:"mcp_servers"`
+	Skills           []SkillSnapshot       `json:"skills"`
+	TeamMemberID     string                `json:"team_member_id,omitempty"`
+	TeamMemberName   string                `json:"team_member_name,omitempty"`
+	TeamMemberLabels []string              `json:"team_member_labels,omitempty"`
 }
 
 type CreditRateSnapshot struct {
@@ -137,6 +140,13 @@ type ProviderModelSnapshot struct {
 type ExpertSnapshot struct {
 	ID                     string   `json:"id"`
 	Name                   string   `json:"name"`
+	Icon                   string   `json:"icon,omitempty"`
+	IconBackground         string   `json:"icon_background,omitempty"`
+	Introduction           string   `json:"introduction,omitempty"`
+	CoreCapability         string   `json:"core_capability,omitempty"`
+	OperatingProcedure     string   `json:"operating_procedure,omitempty"`
+	OutputStandard         string   `json:"output_standard,omitempty"`
+	Cautions               string   `json:"cautions,omitempty"`
 	CapabilityIntroduction string   `json:"capability_introduction"`
 	ExecutionInstruction   string   `json:"execution_instruction"`
 	ExpertiseTags          []string `json:"expertise_tags"`
@@ -154,6 +164,9 @@ type ExpertTeamSnapshot struct {
 type ExpertMemberSnapshot struct {
 	ExpertSnapshot
 	Position   int                 `json:"position"`
+	MemberID   string              `json:"member_id,omitempty"`
+	MemberName string              `json:"member_name,omitempty"`
+	Labels     []string            `json:"labels,omitempty"`
 	MCPServers []MCPServerSnapshot `json:"mcp_servers"`
 	Skills     []SkillSnapshot     `json:"skills"`
 }

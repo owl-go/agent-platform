@@ -212,6 +212,31 @@ func TestBuildInstructionUsesExecutionInstructionNotCapabilityIntroduction(t *te
 	}
 }
 
+func TestBuildInstructionUsesOnlyVisibleStructuredExpertGuidanceInOrder(t *testing.T) {
+	expert := &domain.ExpertSnapshot{
+		Name:               "Architect",
+		Introduction:       "Display-only introduction",
+		CoreCapability:     "Design service boundaries.",
+		OperatingProcedure: "Inspect evidence before deciding.",
+		OutputStandard:     "Return a decision and verification plan.",
+		Cautions:           "Do not claim unverified capabilities.",
+		ExpertiseTags:      []string{"display-only-tag"},
+	}
+	got := buildInstruction(application.ExecutionJob{Instruction: "Current task", Snapshot: domain.ExecutionSnapshot{Expert: expert}}, nil)
+	want := []string{"Core Capability:\nDesign service boundaries.", "Operating Procedure:\nInspect evidence before deciding.", "Output Standard:\nReturn a decision and verification plan.", "Cautions:\nDo not claim unverified capabilities."}
+	position := -1
+	for _, section := range want {
+		next := strings.Index(got, section)
+		if next <= position {
+			t.Fatalf("structured guidance is missing or out of order: %q", got)
+		}
+		position = next
+	}
+	if strings.Contains(got, expert.Introduction) || strings.Contains(got, expert.ExpertiseTags[0]) {
+		t.Fatalf("display-only Expert metadata entered instruction: %q", got)
+	}
+}
+
 func TestTeamMemberJobPassesOnlyPriorFinalResultsAndOwnExtensions(t *testing.T) {
 	base := application.ExecutionJob{Instruction: "Solve the task", CheckpointRef: "native-session", Snapshot: domain.ExecutionSnapshot{ExpertTeam: &domain.ExpertTeamSnapshot{ID: "team-1"}}}
 	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: "expert-2", Name: "Builder", ExecutionInstruction: "Implement it."}, Position: 2, MCPServers: []domain.MCPServerSnapshot{{ID: "mcp-2"}}, Skills: []domain.SkillSnapshot{{ID: "skill-2"}}}

@@ -485,6 +485,13 @@ type Workflow struct {
 
 type ExpertInput struct {
 	Name                   string
+	Icon                   string
+	IconBackground         string
+	Introduction           string
+	CoreCapability         string
+	OperatingProcedure     string
+	OutputStandard         string
+	Cautions               string
 	CapabilityIntroduction string
 	ExecutionInstruction   string
 	ProviderModelID        string
@@ -498,17 +505,41 @@ func (input ExpertInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert name must contain 1-100 characters", ErrInvalid)
 	}
-	if introduction := strings.TrimSpace(input.CapabilityIntroduction); len(introduction) < 1 || len(introduction) > 2_000 {
-		return fmt.Errorf("%w: Capability Introduction must contain 1-2000 characters", ErrInvalid)
+	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || strings.TrimSpace(input.OperatingProcedure) != "" || strings.TrimSpace(input.OutputStandard) != "" || strings.TrimSpace(input.Cautions) != ""
+	if structured {
+		for _, field := range []struct {
+			name  string
+			value string
+			max   int
+		}{
+			{name: "Introduction", value: input.Introduction, max: 2_000},
+			{name: "Core Capability", value: input.CoreCapability, max: 20_000},
+			{name: "Operating Procedure", value: input.OperatingProcedure, max: 20_000},
+			{name: "Output Standard", value: input.OutputStandard, max: 20_000},
+		} {
+			length := len(strings.TrimSpace(field.value))
+			if length < 1 || length > field.max {
+				return fmt.Errorf("%w: %s must contain 1-%d characters", ErrInvalid, field.name, field.max)
+			}
+		}
+		if len(strings.TrimSpace(input.Cautions)) > 20_000 {
+			return fmt.Errorf("%w: Cautions must contain at most 20000 characters", ErrInvalid)
+		}
+	} else {
+		if introduction := strings.TrimSpace(input.CapabilityIntroduction); len(introduction) < 1 || len(introduction) > 2_000 {
+			return fmt.Errorf("%w: Capability Introduction must contain 1-2000 characters", ErrInvalid)
+		}
+		if instruction := strings.TrimSpace(input.ExecutionInstruction); len(instruction) < 1 || len(instruction) > 20_000 {
+			return fmt.Errorf("%w: Execution Instruction must contain 1-20000 characters", ErrInvalid)
+		}
 	}
-	if instruction := strings.TrimSpace(input.ExecutionInstruction); len(instruction) < 1 || len(instruction) > 20_000 {
-		return fmt.Errorf("%w: Execution Instruction must contain 1-20000 characters", ErrInvalid)
-	}
-	if strings.TrimSpace(input.ProviderModelID) == "" {
-		return fmt.Errorf("%w: Expert Provider Model is required", ErrInvalid)
-	}
-	if _, err := ParseRuntime(string(input.RuntimeEngine)); err != nil {
-		return fmt.Errorf("%w: Expert Runtime Engine is required", ErrInvalid)
+	if !structured {
+		if strings.TrimSpace(input.ProviderModelID) == "" {
+			return fmt.Errorf("%w: Expert Provider Model is required", ErrInvalid)
+		}
+		if _, err := ParseRuntime(string(input.RuntimeEngine)); err != nil {
+			return fmt.Errorf("%w: Expert Runtime Engine is required", ErrInvalid)
+		}
 	}
 	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
 		return err
@@ -523,6 +554,13 @@ type Expert struct {
 	ID                     string
 	OwnerID                string
 	Name                   string
+	Icon                   string
+	IconBackground         string
+	Introduction           string
+	CoreCapability         string
+	OperatingProcedure     string
+	OutputStandard         string
+	Cautions               string
 	CapabilityIntroduction string
 	ExecutionInstruction   string
 	ProviderModelID        string
@@ -533,9 +571,14 @@ type Expert struct {
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 	Version                int64
+	TagProjectionStatus    string
+	TagProjectionError     string
 }
 
 func (expert Expert) Available() bool {
+	if strings.TrimSpace(expert.Introduction) != "" || strings.TrimSpace(expert.CoreCapability) != "" || strings.TrimSpace(expert.OperatingProcedure) != "" || strings.TrimSpace(expert.OutputStandard) != "" {
+		return strings.TrimSpace(expert.Introduction) != "" && strings.TrimSpace(expert.CoreCapability) != "" && strings.TrimSpace(expert.OperatingProcedure) != "" && strings.TrimSpace(expert.OutputStandard) != ""
+	}
 	if strings.TrimSpace(expert.ExecutionInstruction) == "" || strings.TrimSpace(expert.ProviderModelID) == "" {
 		return false
 	}
@@ -564,17 +607,75 @@ func ValidateExpertiseTags(tags []string) error {
 
 type ExpertTeamInput struct {
 	Name                   string
+	Icon                   string
+	IconBackground         string
+	Introduction           string
+	CoreCapability         string
+	Members                []ExpertTeamMemberInput
 	CapabilityIntroduction string
 	ExpertiseTags          []string
 	ExpertIDs              []string
 }
 
+type ExpertTeamMemberInput struct {
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	ExpertID string   `json:"expert_id"`
+	Labels   []string `json:"labels"`
+}
+
+type ExpertTeamMember struct {
+	ID       string
+	Name     string
+	Expert   Expert
+	Labels   []string
+	Position int
+}
+
+var teamMemberID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+
 func (input ExpertTeamInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert Team name must contain 1-100 characters", ErrInvalid)
 	}
-	if introduction := strings.TrimSpace(input.CapabilityIntroduction); len(introduction) < 1 || len(introduction) > 2_000 {
+	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || len(input.Members) > 0
+	introduction := input.CapabilityIntroduction
+	if structured {
+		introduction = input.Introduction
+	}
+	if introduction := strings.TrimSpace(introduction); len(introduction) < 1 || len(introduction) > 2_000 {
 		return fmt.Errorf("%w: Capability Introduction must contain 1-2000 characters", ErrInvalid)
+	}
+	if structured {
+		if capability := strings.TrimSpace(input.CoreCapability); len(capability) < 1 || len(capability) > 20_000 {
+			return fmt.Errorf("%w: Expert Team Core Capability must contain 1-20000 characters", ErrInvalid)
+		}
+		if len(input.Members) < 2 || len(input.Members) > 10 {
+			return fmt.Errorf("%w: Expert Team must contain 2-10 Members", ErrInvalid)
+		}
+		ids, names := map[string]struct{}{}, map[string]struct{}{}
+		for _, member := range input.Members {
+			id, name, expertID := strings.TrimSpace(member.ID), strings.TrimSpace(member.Name), strings.TrimSpace(member.ExpertID)
+			if !teamMemberID.MatchString(id) || expertID == "" || len([]rune(name)) < 1 || len([]rune(name)) > 100 {
+				return fmt.Errorf("%w: Team Member ID, name, and Expert are required", ErrInvalid)
+			}
+			if _, exists := ids[id]; exists {
+				return fmt.Errorf("%w: duplicate Team Member ID", ErrInvalid)
+			}
+			if _, exists := names[strings.ToLower(name)]; exists {
+				return fmt.Errorf("%w: duplicate Team Member name", ErrInvalid)
+			}
+			ids[id], names[strings.ToLower(name)] = struct{}{}, struct{}{}
+			if len(member.Labels) > 5 {
+				return fmt.Errorf("%w: at most five Member Labels are allowed", ErrInvalid)
+			}
+			for _, label := range member.Labels {
+				if length := len([]rune(strings.TrimSpace(label))); length < 1 || length > 20 {
+					return fmt.Errorf("%w: Member Labels must contain 1-20 characters", ErrInvalid)
+				}
+			}
+		}
+		return nil
 	}
 	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
 		return err
@@ -599,6 +700,11 @@ type ExpertTeam struct {
 	ID                     string
 	OwnerID                string
 	Name                   string
+	Icon                   string
+	IconBackground         string
+	Introduction           string
+	CoreCapability         string
+	Members                []ExpertTeamMember
 	CapabilityIntroduction string
 	ExpertiseTags          []string
 	Experts                []Expert
@@ -608,6 +714,17 @@ type ExpertTeam struct {
 }
 
 func (team ExpertTeam) Available() bool {
+	if len(team.Members) > 0 {
+		if len(team.Members) < 2 || len(team.Members) > 10 {
+			return false
+		}
+		for _, member := range team.Members {
+			if !member.Expert.Available() {
+				return false
+			}
+		}
+		return true
+	}
 	if len(team.Experts) < 2 || len(team.Experts) > 10 {
 		return false
 	}

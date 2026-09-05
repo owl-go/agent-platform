@@ -95,19 +95,29 @@ type workflowRecord struct {
 func (workflowRecord) TableName() string { return "workflows" }
 
 type expertRecord struct {
-	ID                     string    `gorm:"column:id"`
-	OwnerID                string    `gorm:"column:owner_user_id"`
-	Name                   string    `gorm:"column:name"`
-	CapabilityIntroduction string    `gorm:"column:capability_introduction"`
-	ExecutionInstruction   string    `gorm:"column:execution_instruction"`
-	ProviderModelID        *string   `gorm:"column:provider_model_id"`
-	RuntimeEngine          *string   `gorm:"column:runtime_engine"`
-	ExpertiseTags          []byte    `gorm:"column:expertise_tags;type:jsonb"`
-	MCPServerIDs           []byte    `gorm:"column:mcp_server_ids;type:jsonb"`
-	SkillIDs               []byte    `gorm:"column:skill_ids;type:jsonb"`
-	CreatedAt              time.Time `gorm:"column:created_at"`
-	UpdatedAt              time.Time `gorm:"column:updated_at"`
-	Version                int64     `gorm:"column:version"`
+	ID                       string     `gorm:"column:id"`
+	OwnerID                  string     `gorm:"column:owner_user_id"`
+	Name                     string     `gorm:"column:name"`
+	Icon                     string     `gorm:"column:icon"`
+	IconBackground           string     `gorm:"column:icon_background"`
+	Introduction             string     `gorm:"column:introduction"`
+	CoreCapability           string     `gorm:"column:core_capability"`
+	OperatingProcedure       string     `gorm:"column:operating_procedure"`
+	OutputStandard           string     `gorm:"column:output_standard"`
+	Cautions                 string     `gorm:"column:cautions"`
+	CapabilityIntroduction   string     `gorm:"column:capability_introduction"`
+	ExecutionInstruction     string     `gorm:"column:execution_instruction"`
+	ProviderModelID          *string    `gorm:"column:provider_model_id"`
+	RuntimeEngine            *string    `gorm:"column:runtime_engine"`
+	ExpertiseTags            []byte     `gorm:"column:expertise_tags;type:jsonb"`
+	MCPServerIDs             []byte     `gorm:"column:mcp_server_ids;type:jsonb"`
+	SkillIDs                 []byte     `gorm:"column:skill_ids;type:jsonb"`
+	CreatedAt                time.Time  `gorm:"column:created_at"`
+	UpdatedAt                time.Time  `gorm:"column:updated_at"`
+	Version                  int64      `gorm:"column:version"`
+	TagProjectionStatus      string     `gorm:"column:tag_projection_status"`
+	TagProjectionError       *string    `gorm:"column:tag_projection_error"`
+	TagProjectionRequestedAt *time.Time `gorm:"column:tag_projection_requested_at"`
 }
 
 func (expertRecord) TableName() string { return "experts" }
@@ -116,6 +126,11 @@ type expertTeamRecord struct {
 	ID                     string    `gorm:"column:id"`
 	OwnerID                string    `gorm:"column:owner_user_id"`
 	Name                   string    `gorm:"column:name"`
+	Icon                   string    `gorm:"column:icon"`
+	IconBackground         string    `gorm:"column:icon_background"`
+	Introduction           string    `gorm:"column:introduction"`
+	CoreCapability         string    `gorm:"column:core_capability"`
+	Members                []byte    `gorm:"column:members;type:jsonb"`
 	CapabilityIntroduction string    `gorm:"column:capability_introduction"`
 	ExpertiseTags          []byte    `gorm:"column:expertise_tags;type:jsonb"`
 	ExpertIDs              []byte    `gorm:"column:expert_ids;type:jsonb"`
@@ -125,6 +140,63 @@ type expertTeamRecord struct {
 }
 
 func (expertTeamRecord) TableName() string { return "expert_teams" }
+
+type cliConnectorDefinitionRecord struct {
+	ID                   string    `gorm:"column:id"`
+	Name                 string    `gorm:"column:name"`
+	NPMPackage           string    `gorm:"column:npm_package"`
+	NPMVersion           string    `gorm:"column:npm_version"`
+	NPMIntegrity         string    `gorm:"column:npm_integrity"`
+	Executable           string    `gorm:"column:executable"`
+	AuthenticationDriver string    `gorm:"column:authentication_driver"`
+	Capabilities         []byte    `gorm:"column:capabilities;type:jsonb"`
+	State                string    `gorm:"column:state"`
+	FailureReason        *string   `gorm:"column:failure_reason"`
+	BundleSHA256         *string   `gorm:"column:bundle_sha256"`
+	CreatedByUserID      string    `gorm:"column:created_by_user_id"`
+	CreatedAt            time.Time `gorm:"column:created_at"`
+	UpdatedAt            time.Time `gorm:"column:updated_at"`
+	Version              int64     `gorm:"column:version"`
+}
+
+func (cliConnectorDefinitionRecord) TableName() string { return "cli_connector_definitions" }
+
+type cliConnectorEnablementRecord struct {
+	ID              string     `gorm:"column:id"`
+	OwnerID         string     `gorm:"column:owner_user_id"`
+	DefinitionID    string     `gorm:"column:definition_id"`
+	State           string     `gorm:"column:state"`
+	ActionURL       *string    `gorm:"column:action_url"`
+	ActionExpiresAt *time.Time `gorm:"column:action_expires_at"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at"`
+	Version         int64      `gorm:"column:version"`
+}
+
+func (cliConnectorEnablementRecord) TableName() string { return "cli_connector_enablements" }
+
+type cliCommandApprovalRecord struct {
+	ID                string     `gorm:"column:id"`
+	OwnerID           string     `gorm:"column:owner_user_id"`
+	ExecutionKind     string     `gorm:"column:execution_kind"`
+	ExecutionID       string     `gorm:"column:execution_id"`
+	StageID           string     `gorm:"column:stage_id"`
+	ConnectorName     string     `gorm:"column:connector_name"`
+	Operation         string     `gorm:"column:operation"`
+	Target            string     `gorm:"column:target"`
+	RedactedArguments string     `gorm:"column:redacted_arguments"`
+	CommandDigest     string     `gorm:"column:command_digest"`
+	NonceHash         string     `gorm:"column:nonce_hash"`
+	Identity          *string    `gorm:"column:identity"`
+	State             string     `gorm:"column:state"`
+	ExpiresAt         time.Time  `gorm:"column:expires_at"`
+	DecidedAt         *time.Time `gorm:"column:decided_at"`
+	ConsumedAt        *time.Time `gorm:"column:consumed_at"`
+	CreatedAt         time.Time  `gorm:"column:created_at"`
+	Version           int64      `gorm:"column:version"`
+}
+
+func (cliCommandApprovalRecord) TableName() string { return "cli_command_approvals" }
 
 type settingsRecord struct {
 	UserID                  string `gorm:"column:user_id"`

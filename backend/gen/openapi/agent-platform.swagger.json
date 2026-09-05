@@ -19,6 +19,104 @@
     "application/json"
   ],
   "paths": {
+    "/api/v1/admin/connectors/cli": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorDefinition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateCLIConnectorDefinitionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/cli/{definition_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorDefinition"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/model-credit-rates": {
       "get": {
         "operationId": "AgentWorkspaceService_ListModelCreditRates",
@@ -374,6 +472,304 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceResetUserPasswordBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/command-approvals": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCommandApprovals",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCommandApprovalsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/command-approvals/{approval_id}/decision": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DecideCommandApproval",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CommandApproval"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDecideCommandApprovalBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/cli": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCLIConnectorDefinitions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCLIConnectorDefinitionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/cli/enablements": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCLIConnectorEnablements",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCLIConnectorEnablementsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/cli/{definition_id}/enable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_EnableCLIConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorEnablement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceEnableCLIConnectorBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/mcp": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListMCPServers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMCPServersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateMCPServerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/mcp/{mcp_server_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPServerBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/mcp/{mcp_server_id}/test": {
+      "post": {
+        "operationId": "AgentWorkspaceService_TestMCPServer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MCPServer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "mcp_server_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceTestMCPServerBody"
             }
           }
         ],
@@ -757,280 +1153,6 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceUpdateExpertBody"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/extensions/mcp": {
-      "get": {
-        "operationId": "AgentWorkspaceService_ListMCPServers",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListMCPServersResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
-      "post": {
-        "operationId": "AgentWorkspaceService_CreateMCPServer",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MCPServer"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateMCPServerRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/extensions/mcp/{mcp_server_id}": {
-      "delete": {
-        "operationId": "AgentWorkspaceService_DeleteMCPServer",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "mcp_server_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
-      "patch": {
-        "operationId": "AgentWorkspaceService_UpdateMCPServer",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MCPServer"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "mcp_server_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentWorkspaceServiceUpdateMCPServerBody"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/extensions/mcp/{mcp_server_id}/test": {
-      "post": {
-        "operationId": "AgentWorkspaceService_TestMCPServer",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1MCPServer"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "mcp_server_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentWorkspaceServiceTestMCPServerBody"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/extensions/skills": {
-      "get": {
-        "operationId": "AgentWorkspaceService_ListSkills",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSkillsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
-      "post": {
-        "operationId": "AgentWorkspaceService_CreateSkill",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Skill"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateSkillRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/extensions/skills/{skill_id}": {
-      "delete": {
-        "operationId": "AgentWorkspaceService_DeleteSkill",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "skill_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      },
-      "patch": {
-        "operationId": "AgentWorkspaceService_UpdateSkill",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Skill"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "skill_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/AgentWorkspaceServiceUpdateSkillBody"
             }
           }
         ],
@@ -1743,6 +1865,124 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1UpdateSettingsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/skills": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSkills",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSkillsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSkillRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/skills/{skill_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateSkill",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Skill"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateSkillBody"
             }
           }
         ],
@@ -2556,6 +2796,24 @@
         }
       }
     },
+    "AgentWorkspaceServiceDecideCommandApprovalBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceEnableCLIConnectorBody": {
+      "type": "object"
+    },
     "AgentWorkspaceServiceExchangeWorkflowCredentialBody": {
       "type": "object"
     },
@@ -2640,6 +2898,18 @@
     },
     "AgentWorkspaceServiceTestMCPServerBody": {
       "type": "object"
+    },
+    "AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/definitions/v1CLIConnectorDefinitionInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "AgentWorkspaceServiceUpdateExpertBody": {
       "type": "object",
@@ -2854,6 +3124,197 @@
         },
         "image": {
           "type": "boolean"
+        }
+      }
+    },
+    "v1CLICapability": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "argv_prefix": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk": {
+          "type": "string"
+        },
+        "identities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "egress_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1CLIConnectorDefinition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "npm_package": {
+          "type": "string"
+        },
+        "npm_version": {
+          "type": "string"
+        },
+        "npm_integrity": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "string"
+        },
+        "authentication_driver": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLICapability"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "failure_reason": {
+          "type": "string"
+        },
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "mutable": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CLIConnectorDefinitionInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "npm_package": {
+          "type": "string"
+        },
+        "npm_version": {
+          "type": "string"
+        },
+        "npm_integrity": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "string"
+        },
+        "authentication_driver": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLICapability"
+          }
+        }
+      }
+    },
+    "v1CLIConnectorEnablement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "definition_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "action_url": {
+          "type": "string"
+        },
+        "action_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CommandApproval": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "execution_kind": {
+          "type": "string"
+        },
+        "execution_id": {
+          "type": "string"
+        },
+        "connector_name": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "redacted_arguments": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CreateCLIConnectorDefinitionRequest": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/definitions/v1CLIConnectorDefinitionInput"
         }
       }
     },
@@ -3245,6 +3706,18 @@
             "type": "object",
             "$ref": "#/definitions/v1SkillSnapshot"
           }
+        },
+        "team_member_id": {
+          "type": "string"
+        },
+        "team_member_name": {
+          "type": "string"
+        },
+        "team_member_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -3255,9 +3728,6 @@
           "type": "string"
         },
         "name": {
-          "type": "string"
-        },
-        "capability_introduction": {
           "type": "string"
         },
         "mcp_server_ids": {
@@ -3284,9 +3754,6 @@
           "type": "string",
           "format": "int64"
         },
-        "execution_instruction": {
-          "type": "string"
-        },
         "expertise_tags": {
           "type": "array",
           "items": {
@@ -3295,12 +3762,6 @@
         },
         "available": {
           "type": "boolean"
-        },
-        "provider_model_id": {
-          "type": "string"
-        },
-        "runtime_engine": {
-          "type": "string"
         },
         "complete": {
           "type": "boolean"
@@ -3311,7 +3772,31 @@
         "compatibility": {
           "type": "string"
         },
-        "provider_model_name": {
+        "icon": {
+          "type": "string"
+        },
+        "icon_background": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "core_capability": {
+          "type": "string"
+        },
+        "operating_procedure": {
+          "type": "string"
+        },
+        "output_standard": {
+          "type": "string"
+        },
+        "cautions": {
+          "type": "string"
+        },
+        "tag_projection_status": {
+          "type": "string"
+        },
+        "tag_projection_error": {
           "type": "string"
         }
       }
@@ -3320,9 +3805,6 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
-        },
-        "capability_introduction": {
           "type": "string"
         },
         "mcp_server_ids": {
@@ -3337,19 +3819,25 @@
             "type": "string"
           }
         },
-        "execution_instruction": {
+        "icon": {
           "type": "string"
         },
-        "expertise_tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "provider_model_id": {
+        "icon_background": {
           "type": "string"
         },
-        "runtime_engine": {
+        "introduction": {
+          "type": "string"
+        },
+        "core_capability": {
+          "type": "string"
+        },
+        "operating_procedure": {
+          "type": "string"
+        },
+        "output_standard": {
+          "type": "string"
+        },
+        "cautions": {
           "type": "string"
         }
       }
@@ -3369,6 +3857,27 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "icon_background": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "core_capability": {
+          "type": "string"
+        },
+        "operating_procedure": {
+          "type": "string"
+        },
+        "output_standard": {
+          "type": "string"
+        },
+        "cautions": {
+          "type": "string"
         }
       }
     },
@@ -3455,6 +3964,25 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "icon_background": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "core_capability": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertTeamMember"
+          }
         }
       }
     },
@@ -3464,16 +3992,64 @@
         "name": {
           "type": "string"
         },
-        "capability_introduction": {
+        "icon": {
           "type": "string"
         },
-        "expertise_tags": {
+        "icon_background": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "core_capability": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertTeamMemberInput"
+          }
+        }
+      }
+    },
+    "v1ExpertTeamMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "expert": {
+          "$ref": "#/definitions/v1Expert"
+        },
+        "labels": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "expert_ids": {
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ExpertTeamMemberInput": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "expert_id": {
+          "type": "string"
+        },
+        "labels": {
           "type": "array",
           "items": {
             "type": "string"
@@ -3538,6 +4114,42 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Artifact"
+          }
+        }
+      }
+    },
+    "v1ListCLIConnectorDefinitionsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLIConnectorDefinition"
+          }
+        }
+      }
+    },
+    "v1ListCLIConnectorEnablementsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLIConnectorEnablement"
+          }
+        }
+      }
+    },
+    "v1ListCommandApprovalsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CommandApproval"
           }
         }
       }

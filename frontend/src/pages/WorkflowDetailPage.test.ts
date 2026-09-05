@@ -232,7 +232,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.get(".settings-section").text()).toContain("待完善专家");
-    expect(wrapper.get(".settings-section").text()).toContain("—");
+    expect(wrapper.get(".settings-section").text()).not.toContain("Codex");
     wrapper.unmount();
   });
 

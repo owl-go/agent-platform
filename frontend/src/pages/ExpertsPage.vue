@@ -3,7 +3,7 @@ import { computed, inject, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { Search, Users, UserRound } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Expert, type ExpertTeam, type ModelProviderConnection } from "../api/client";
+import { platformApiKey, type Expert, type ExpertTeam } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 
 const api = inject(platformApiKey)!;
@@ -12,7 +12,6 @@ const router = useRouter();
 const { t } = useI18n();
 const experts = ref<Expert[]>([]);
 const teams = ref<ExpertTeam[]>([]);
-const connections = ref<ModelProviderConnection[]>([]);
 const query = ref("");
 const tag = ref("");
 const error = ref("");
@@ -26,20 +25,15 @@ watch(activeTab, () => { query.value = ""; tag.value = ""; });
 
 async function refresh() {
   try {
-    [experts.value, teams.value, connections.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listModelProviderConnections()]);
+    [experts.value, teams.value] = await Promise.all([api.listExperts(), api.listExpertTeams()]);
   } catch {
     error.value = t("experts.loadFailed");
   }
 }
 
-function executionProfile(expert: Expert): string {
-  const model = connections.value.flatMap((connection) => connection.models).find((item) => item.id === expert.provider_model_id);
-  return `${expert.provider_model_name || model?.display_name || t("experts.modelUnavailable")} · ${runtimeEngineDisplayName(expert.runtime_engine)}`;
-}
-
-function filter<T extends { name: string; capability_introduction: string; expertise_tags: string[] }>(items: T[]): T[] {
+function filter<T extends { name: string; introduction?: string; capability_introduction?: string; expertise_tags: string[] }>(items: T[]): T[] {
   const needle = query.value.trim().toLocaleLowerCase();
-  return items.filter((item) => (!needle || `${item.name} ${item.capability_introduction}`.toLocaleLowerCase().includes(needle)) && (!tag.value || item.expertise_tags.includes(tag.value)));
+  return items.filter((item) => (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)) && (!tag.value || item.expertise_tags.includes(tag.value)));
 }
 
 function selectTab(tab: string | number) {
@@ -73,9 +67,9 @@ function selectTab(tab: string | number) {
           <div class="expert-card-layout">
             <span class="catalog-avatar"><UserRound :size="22" /></span>
             <div class="expert-card-copy">
-              <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.compatibility === 'incompatible'" type="danger" effect="light" round size="small">{{ t('experts.incompatible') }}</el-tag><el-tag v-else-if="!expert.available" type="danger" effect="light" round size="small">{{ t('settings.unavailable') }}</el-tag><el-tag v-else-if="expert.compatibility === 'unverified'" type="warning" effect="light" round size="small">{{ t('settings.unverified') }}</el-tag></div>
-              <p>{{ expert.capability_introduction }}</p>
-              <small class="expert-execution-profile">{{ executionProfile(expert) }}</small>
+              <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
+              <p>{{ expert.introduction }}</p>
+              <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length }) }}</small>
               <div v-if="expert.expertise_tags.length" class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div>
             </div>
           </div>
@@ -91,9 +85,9 @@ function selectTab(tab: string | number) {
             <span class="catalog-avatar team"><Users :size="22" /></span>
             <div class="expert-card-copy">
               <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
-              <p>{{ team.capability_introduction }}</p>
-              <ol class="member-preview"><li v-for="member in team.experts" :key="member.id"><span>{{ member.name }}</span><small>{{ executionProfile(member) }} · {{ member.compatibility === 'incompatible' ? t('experts.incompatible') : member.compatibility === 'unverified' ? t('settings.unverified') : t('settings.verified') }}</small></li></ol>
-              <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.experts.length }) }}</strong></div>
+              <p>{{ team.introduction }}</p>
+              <ol class="member-preview"><li v-for="member in (team.members.length ? team.members : team.experts.map((expert) => ({ id: expert.id, name: expert.name, expert })))" :key="member.id"><span>{{ member.name }}</span><small>{{ member.expert.introduction }}</small></li></ol>
+              <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
             </div>
           </div>
         </el-card>

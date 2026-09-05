@@ -116,7 +116,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			if executionStage.Expert == nil {
 				return result, fmt.Errorf("team Execution Stage %d has no Expert", executionStage.Position)
 			}
-			team.Members = append(team.Members, workspacedomain.ExpertMemberSnapshot{ExpertSnapshot: *executionStage.Expert, Position: executionStage.Position, MCPServers: executionStage.MCPServers, Skills: executionStage.Skills})
+			team.Members = append(team.Members, workspacedomain.ExpertMemberSnapshot{ExpertSnapshot: *executionStage.Expert, Position: executionStage.Position, MemberID: executionStage.TeamMemberID, MemberName: executionStage.TeamMemberName, Labels: executionStage.TeamMemberLabels, MCPServers: executionStage.MCPServers, Skills: executionStage.Skills})
 		}
 		job.Snapshot.ExpertTeam = team
 	}
@@ -342,7 +342,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(err)
 		}
 		var creditAdmission creditsdomain.Admission
-		if executor.credits != nil {
+		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
 			protocol := executionStage.ModelProtocol
 			if protocol == "" {
 				protocol, err = workspacedomain.ModelProtocolForRuntime(executionStage.RuntimeEngine, executionStage.ProviderModel.Protocols)
@@ -371,7 +371,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		runtimeFinishedAt = time.Now()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
-		if executor.credits != nil {
+		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
 			usage := creditsdomain.Usage{InputTokens: runtimeResult.Usage.InputTokens, OutputTokens: runtimeResult.Usage.OutputTokens, Known: runtimeResult.Usage.Reported}
 			consumption, calculateErr := creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
 			hasMeasuredUsage := usage.Known && calculateErr == nil
@@ -586,6 +586,9 @@ func (executor *Executor) containerConfig(job application.ExecutionJob, runtime 
 }
 
 func recordExpertStage(ctx context.Context, progress application.ProgressRecorder, job application.ExecutionJob, stage workspacedomain.ExpertStage) error {
+	if job.Kind == application.JobExpertTagProjection {
+		return nil
+	}
 	if progress == nil {
 		return fmt.Errorf("Runtime progress recorder is required")
 	}
@@ -644,11 +647,17 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 			conversationID = job.WorkflowID
 		}
 		scope = "workflow-conversation:" + job.OwnerID + ":" + conversationID
+	case application.JobExpertTagProjection:
+		scope = "expert-tag-projection:" + job.OwnerID + ":" + job.ExpertID
 	default:
 		return "", warmSlot{}, fmt.Errorf("job kind %q cannot use a warm Runtime container", job.Kind)
 	}
 	if job.Snapshot.Expert != nil {
-		scope += fmt.Sprintf(":expert:%s:%d", job.Snapshot.Expert.ID, job.Snapshot.Expert.Version)
+		identity := job.Snapshot.Expert.ID
+		if job.StageIdentity != "" {
+			identity = job.StageIdentity
+		}
+		scope += fmt.Sprintf(":expert:%s:%d", identity, job.Snapshot.Expert.Version)
 	}
 	name, err := containerprocess.WarmContainerName(scope, string(job.Snapshot.RuntimeEngine), runtime.ImageDigest)
 	if err != nil {
@@ -674,7 +683,11 @@ func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob,
 	case application.JobSession:
 		hiddenRoot = filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-session-state")
 		if job.Snapshot.Expert != nil {
-			persistent, err = workspacefs.NativeExpertSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+			identity := job.Snapshot.Expert.ID
+			if job.StageIdentity != "" {
+				identity = job.StageIdentity
+			}
+			persistent, err = workspacefs.NativeExpertSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, identity, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
 		} else {
 			persistent, err = workspacefs.NativeSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, string(job.Snapshot.RuntimeEngine))
 		}
@@ -685,7 +698,11 @@ func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob,
 		}
 		hiddenRoot = filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-run-conversation-state")
 		if job.Snapshot.Expert != nil {
-			persistent, err = workspacefs.NativeExpertRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+			identity := job.Snapshot.Expert.ID
+			if job.StageIdentity != "" {
+				identity = job.StageIdentity
+			}
+			persistent, err = workspacefs.NativeExpertRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, identity, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
 		} else {
 			persistent, err = workspacefs.NativeRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, string(job.Snapshot.RuntimeEngine))
 		}
@@ -1060,7 +1077,7 @@ func (executor *Executor) stageWorkspaceAt(job application.ExecutionJob, tempora
 		_ = os.RemoveAll(temporary)
 		return "", "", nil, err
 	}
-	if job.Kind == application.JobSession {
+	if job.Kind == application.JobSession || job.Kind == application.JobExpertTagProjection {
 		return temporary, "", nil, nil
 	}
 	persistent = filepath.Join(root, filepath.FromSlash(job.Snapshot.WorkspacePath))
@@ -1193,8 +1210,24 @@ func workspaceManifest(root string) (map[string]string, error) {
 func buildInstruction(job application.ExecutionJob, attachments []agentruntime.Attachment) string {
 	var sections []string
 	if job.Snapshot.Expert != nil {
-		if instruction := strings.TrimSpace(job.Snapshot.Expert.ExecutionInstruction); instruction != "" {
-			sections = append(sections, "Expert Execution Instruction (follow for this execution):\n"+instruction)
+		expert := job.Snapshot.Expert
+		for _, guidance := range []struct {
+			heading string
+			value   string
+		}{
+			{heading: "Core Capability", value: expert.CoreCapability},
+			{heading: "Operating Procedure", value: expert.OperatingProcedure},
+			{heading: "Output Standard", value: expert.OutputStandard},
+			{heading: "Cautions", value: expert.Cautions},
+		} {
+			if value := strings.TrimSpace(guidance.value); value != "" {
+				sections = append(sections, guidance.heading+":\n"+value)
+			}
+		}
+		if len(sections) == 0 {
+			if instruction := strings.TrimSpace(expert.ExecutionInstruction); instruction != "" {
+				sections = append(sections, "Expert Execution Instruction (follow for this execution):\n"+instruction)
+			}
 		}
 	}
 	preferences := personalityGuidance(job.Snapshot.Personality)
@@ -1227,17 +1260,25 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 
 func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertMemberSnapshot, completed []workspacedomain.ExpertStage) application.ExecutionJob {
 	job := base
+	job.StageIdentity = member.MemberID
 	job.CheckpointRef = ""
 	job.Snapshot.ExpertTeam = nil
 	job.Snapshot.Expert = &member.ExpertSnapshot
 	job.Snapshot.MCPServers = append([]workspacedomain.MCPServerSnapshot(nil), member.MCPServers...)
 	job.Snapshot.Skills = append([]workspacedomain.SkillSnapshot(nil), member.Skills...)
+	if member.MemberName != "" {
+		role := "Team member role: " + member.MemberName
+		if len(member.Labels) > 0 {
+			role += "\nMember labels: " + strings.Join(member.Labels, ", ")
+		}
+		job.Instruction = role + "\n\n" + job.Instruction
+	}
 	if len(completed) > 0 {
 		var prior []string
 		for _, stage := range completed {
 			prior = append(prior, stage.ExpertName+":\n"+stage.FinalText)
 		}
-		job.Instruction = base.Instruction + "\n\nFinal results from preceding Experts (use as collaboration context; do not repeat blindly):\n\n" + strings.Join(prior, "\n\n")
+		job.Instruction += "\n\nFinal results from preceding Experts (use as collaboration context; do not repeat blindly):\n\n" + strings.Join(prior, "\n\n")
 	}
 	return job
 }

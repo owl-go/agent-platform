@@ -11,9 +11,10 @@ import (
 type JobKind string
 
 const (
-	JobWorkflow JobKind = "workflow"
-	JobSession  JobKind = "session"
-	JobMCPTest  JobKind = "mcp_test"
+	JobWorkflow            JobKind = "workflow"
+	JobSession             JobKind = "session"
+	JobMCPTest             JobKind = "mcp_test"
+	JobExpertTagProjection JobKind = "expert_tag_projection"
 )
 
 type ExecutionJob struct {
@@ -26,6 +27,8 @@ type ExecutionJob struct {
 	SessionID           string
 	AssistantMessageID  int64
 	MCPServerID         string
+	ExpertID            string
+	StageIdentity       string
 	MCPServer           domain.MCPServerSnapshot
 	Instruction         string
 	Attachments         []domain.Attachment
@@ -89,6 +92,7 @@ type WorkerRepository interface {
 	FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error
 	FinishCancelled(context.Context, ExecutionJob, ExecutionResult) error
 	FinishMCPTest(context.Context, ExecutionJob, string) error
+	FinishExpertTagProjection(context.Context, ExecutionJob, ExecutionResult, string) error
 	RecordProgress(context.Context, ExecutionJob, ExecutionEvent) error
 	CancellationRequested(context.Context, ExecutionJob) (bool, error)
 }
@@ -127,6 +131,14 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 			message = executeErr.Error()
 		}
 		return true, worker.repository.FinishMCPTest(context.WithoutCancel(ctx), *job, message)
+	}
+	if job.Kind == JobExpertTagProjection {
+		result, executeErr := worker.executor.Execute(ctx, *job, worker.repository)
+		message := ""
+		if executeErr != nil {
+			message = executeErr.Error()
+		}
+		return true, worker.repository.FinishExpertTagProjection(context.WithoutCancel(ctx), *job, result, message)
 	}
 	executionCtx, cancel := context.WithCancel(ctx)
 	monitorDone := make(chan struct{})

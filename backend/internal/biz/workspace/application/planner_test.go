@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"testing"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -33,6 +34,27 @@ func TestPlanExecutionBuildsAnonymousExpertAndTeamPlans(t *testing.T) {
 				t.Fatalf("plan = %#v", plan)
 			}
 		})
+	}
+}
+
+func TestPlanExecutionRequiresOneSharedTeamExecutionConfiguration(t *testing.T) {
+	selection := ExecutionSelection{Team: []domain.ExecutionStageSnapshot{
+		{Position: 1, Expert: &domain.ExpertSnapshot{ID: "expert-a"}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{ID: "model-a"}},
+		{Position: 2, Expert: &domain.ExpertSnapshot{ID: "expert-b"}, RuntimeEngine: domain.RuntimeClaude, ProviderModel: domain.ProviderModelSnapshot{ID: "model-b"}},
+	}}
+	if _, err := PlanExecution(domain.ExecutionSnapshot{}, selection); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("mixed team execution configuration error = %v, want ErrInvalid", err)
+	}
+}
+
+func TestPlanExecutionAllowsSameExpertForDistinctStableMembers(t *testing.T) {
+	model := domain.ProviderModelSnapshot{ID: "model-1"}
+	stages := []domain.ExecutionStageSnapshot{
+		{Position: 1, TeamMemberID: "builder", Expert: &domain.ExpertSnapshot{ID: "expert-1"}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: model},
+		{Position: 2, TeamMemberID: "reviewer", Expert: &domain.ExpertSnapshot{ID: "expert-1"}, RuntimeEngine: domain.RuntimeCodex, ProviderModel: model},
+	}
+	if _, err := PlanExecution(domain.ExecutionSnapshot{}, ExecutionSelection{Team: stages}); err != nil {
+		t.Fatalf("plan distinct roles with same Expert: %v", err)
 	}
 }
 

@@ -34,6 +34,9 @@ func (repository *cancellationRepository) FinishCancelled(context.Context, Execu
 }
 
 func (*cancellationRepository) FinishMCPTest(context.Context, ExecutionJob, string) error { return nil }
+func (*cancellationRepository) FinishExpertTagProjection(context.Context, ExecutionJob, ExecutionResult, string) error {
+	return nil
+}
 
 func (*cancellationRepository) RecordProgress(context.Context, ExecutionJob, ExecutionEvent) error {
 	return nil

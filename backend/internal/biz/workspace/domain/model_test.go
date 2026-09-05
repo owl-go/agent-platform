@@ -43,6 +43,42 @@ func TestExpertInputRequiresIntroductionInstructionAndValidTags(t *testing.T) {
 	}
 }
 
+func TestExpertInputAcceptsCompleteStructuredGuidance(t *testing.T) {
+	valid := ExpertInput{
+		Name:               "Architecture Expert",
+		Icon:               "compass",
+		IconBackground:     "sand",
+		Introduction:       "Helps teams make durable architecture decisions.",
+		CoreCapability:     "Designs maintainable service boundaries.",
+		OperatingProcedure: "Inspect constraints, compare options, then recommend a path.",
+		OutputStandard:     "Return a decision, rationale, risks, and verification plan.",
+		Cautions:           "Do not assume planned capabilities are implemented.",
+		ProviderModelID:    "model-1",
+		RuntimeEngine:      RuntimeCodex,
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid structured Expert input rejected: %v", err)
+	}
+
+	for _, test := range []struct {
+		name   string
+		mutate func(*ExpertInput)
+	}{
+		{name: "missing introduction", mutate: func(input *ExpertInput) { input.Introduction = " " }},
+		{name: "missing core capability", mutate: func(input *ExpertInput) { input.CoreCapability = " " }},
+		{name: "missing operating procedure", mutate: func(input *ExpertInput) { input.OperatingProcedure = " " }},
+		{name: "missing output standard", mutate: func(input *ExpertInput) { input.OutputStandard = " " }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := valid
+			test.mutate(&input)
+			if err := input.Validate(); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("Validate() error = %v, want ErrInvalid", err)
+			}
+		})
+	}
+}
+
 func TestMigratedExpertWithoutExecutionConfigurationIsIncomplete(t *testing.T) {
 	for _, expert := range []Expert{
 		{Name: "No instruction", CapabilityIntroduction: "Old description", ProviderModelID: "model-1", RuntimeEngine: RuntimeCodex},
@@ -66,6 +102,19 @@ func TestExpertTeamInputRequiresDistinctOrderedMembers(t *testing.T) {
 		if err := input.Validate(); !errors.Is(err, ErrInvalid) {
 			t.Fatalf("members %#v error = %v, want ErrInvalid", members, err)
 		}
+	}
+}
+
+func TestExpertTeamInputAcceptsStableRolesUsingTheSameExpert(t *testing.T) {
+	input := ExpertTeamInput{
+		Name: "Review loop", Introduction: "A delivery review team", CoreCapability: "Build and independently review changes",
+		Members: []ExpertTeamMemberInput{
+			{ID: "member-build", Name: "Builder", ExpertID: "expert-a", Labels: []string{"implementation"}},
+			{ID: "member-review", Name: "Reviewer", ExpertID: "expert-a", Labels: []string{"independent review"}},
+		},
+	}
+	if err := input.Validate(); err != nil {
+		t.Fatalf("expected stable roles using the same Expert to be valid: %v", err)
 	}
 }
 

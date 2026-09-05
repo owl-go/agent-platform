@@ -50,7 +50,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     await flushPromises();
 
-    await wrapper.findAll(".subtabs button")[1]!.trigger("click");
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.get(".compact-action").trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
     await form.findAll("input")[0]!.setValue(saved.name);
