@@ -860,6 +860,7 @@ export interface components {
             password?: string;
             ssh_private_key?: string;
             config?: components["schemas"]["v1GitConfigEntry"][];
+            ssh_config?: string;
         };
         AgentWorkspaceServiceContinueRunConversationBody: {
             content?: string;
@@ -1229,6 +1230,7 @@ export interface components {
             credential_configured?: boolean;
             username?: string;
             config?: components["schemas"]["v1GitConfigEntry"][];
+            ssh_config?: string;
         };
         v1HealthResponse: {
             status?: string;

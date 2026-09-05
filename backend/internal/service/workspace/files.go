@@ -88,7 +88,7 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 		config = append(config, workspacedomain.GitConfigEntry{Key: entry.Key, Value: entry.Value})
 	}
 	username := optionalString(request.GetUsername())
-	source := workspacedomain.GitSource{URL: request.Url, Branch: request.Branch, Authentication: request.Authentication, Username: username, Config: config, CredentialConfigured: request.Authentication != "none"}
+	source := workspacedomain.GitSource{URL: request.Url, Branch: request.Branch, Authentication: request.Authentication, Username: username, Config: config, SSHConfig: request.SshConfig, CredentialConfigured: request.Authentication != "none"}
 	if err := workspacedomain.ValidateGitSource(source); err != nil {
 		return nil, publicError(err)
 	}
@@ -114,7 +114,7 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 			return nil, publicError(err)
 		}
 	}
-	err = service.files.Clone(ctx, workflow.WorkspacePath, workspacefs.GitCloneOptions{RepositoryURL: request.Url, Branch: request.Branch, Username: request.GetUsername(), Password: password, PrivateKey: privateKey, Config: config})
+	err = service.files.Clone(ctx, workflow.WorkspacePath, workspacefs.GitCloneOptions{RepositoryURL: request.Url, Branch: request.Branch, Username: request.GetUsername(), Password: password, PrivateKey: privateKey, Config: config, SSHConfig: request.SshConfig})
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
 	}

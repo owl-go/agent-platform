@@ -156,7 +156,7 @@ message Workflow { string id = 1; string name = 2; string goal = 3; optional str
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }
-message GitSource { string url = 1; string branch = 2; string authentication = 3; bool credential_configured = 4; optional string username = 5; repeated GitConfigEntry config = 6; }
+message GitSource { string url = 1; string branch = 2; string authentication = 3; bool credential_configured = 4; optional string username = 5; repeated GitConfigEntry config = 6; string ssh_config = 7; }
 message GenerateWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowCredential { string api_key = 1; string api_secret = 2; google.protobuf.Timestamp created_at = 3; }
 message ExchangeWorkflowCredentialRequest { string workflow_id = 1; }
@@ -182,7 +182,7 @@ message ListWorkspaceEntriesRequest { string workflow_id = 1; optional string pa
 message ListWorkspaceEntriesResponse { repeated WorkspaceEntry items = 1; int64 used_bytes = 2; int64 limit_bytes = 3; }
 message GetWorkspaceFileRequest { string workflow_id = 1; string path = 2; }
 message WorkspaceFile { string path = 1; bytes content = 2; string content_type = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
-message ConfigureWorkflowGitSourceRequest { string workflow_id = 1; string url = 2; string branch = 3; string authentication = 4; optional string username = 5; optional string password = 6; optional string ssh_private_key = 7; repeated GitConfigEntry config = 8; }
+message ConfigureWorkflowGitSourceRequest { string workflow_id = 1; string url = 2; string branch = 3; string authentication = 4; optional string username = 5; optional string password = 6; optional string ssh_private_key = 7; repeated GitConfigEntry config = 8; string ssh_config = 9; }
 message WorkspaceEntry { string path = 1; string name = 2; bool directory = 3; int64 size = 4; google.protobuf.Timestamp modified_at = 5; }
 
 message ListExpertsRequest {}

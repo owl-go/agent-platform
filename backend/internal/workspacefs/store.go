@@ -200,21 +200,26 @@ type GitCloneOptions struct {
 	Password      []byte
 	PrivateKey    []byte
 	Config        []domain.GitConfigEntry
+	SSHConfig     string
 }
 
 func (store *Store) Clone(ctx context.Context, workspacePath string, options GitCloneOptions) error {
 	if err := domain.ValidateGitConfig(options.Config); err != nil {
 		return err
 	}
-	var keyPath *string
+	if err := domain.ValidateSSHConfig(options.SSHConfig); err != nil {
+		return err
+	}
+	var sshHome, sshConfigPath, keyPath string
 	var askPassPath string
 	if len(options.PrivateKey) > 0 {
-		path, cleanup, err := store.writeSSHKey(options.PrivateKey)
+		var cleanup func()
+		var err error
+		sshHome, sshConfigPath, keyPath, cleanup, err = store.writeSSHFiles(options.PrivateKey, options.SSHConfig)
 		if err != nil {
 			return err
 		}
 		defer cleanup()
-		keyPath = &path
 	}
 	if len(options.Password) > 0 {
 		path, cleanup, err := writeAskPass()
@@ -224,41 +229,45 @@ func (store *Store) Clone(ctx context.Context, workspacePath string, options Git
 		defer cleanup()
 		askPassPath = path
 	}
-	return store.clone(ctx, workspacePath, options, keyPath, askPassPath)
+	return store.clone(ctx, workspacePath, options, sshHome, sshConfigPath, keyPath, askPassPath)
 }
 
-func (store *Store) writeSSHKey(privateKey []byte) (string, func(), error) {
+func (store *Store) writeSSHFiles(privateKey []byte, config string) (string, string, string, func(), error) {
 	if len(privateKey) == 0 || len(privateKey) > 64*1024 {
-		return "", func() {}, fmt.Errorf("private SSH key must contain 1-65536 bytes")
+		return "", "", "", func() {}, fmt.Errorf("private SSH key must contain 1-65536 bytes")
 	}
 	if !filepath.IsAbs(store.knownHosts) {
-		return "", func() {}, fmt.Errorf("known_hosts must be configured as an absolute path")
+		return "", "", "", func() {}, fmt.Errorf("known_hosts must be configured as an absolute path")
 	}
 	knownHosts, err := os.Stat(store.knownHosts)
 	if err != nil || !knownHosts.Mode().IsRegular() || knownHosts.Size() == 0 {
-		return "", func() {}, fmt.Errorf("configured known_hosts is unavailable")
+		return "", "", "", func() {}, fmt.Errorf("configured known_hosts is unavailable")
 	}
-	keyFile, err := os.CreateTemp("", "agent-workspace-git-key-*")
+	identity, err := domain.SSHConfigIdentityFile(config)
 	if err != nil {
-		return "", func() {}, err
+		return "", "", "", func() {}, err
 	}
-	keyPath := keyFile.Name()
-	cleanup := func() { _ = os.Remove(keyPath) }
-	if err := keyFile.Chmod(0o600); err != nil {
-		_ = keyFile.Close()
+	home, err := os.MkdirTemp("", "agent-workspace-git-ssh-*")
+	if err != nil {
+		return "", "", "", func() {}, err
+	}
+	cleanup := func() { _ = os.RemoveAll(home) }
+	sshDirectory := filepath.Join(home, ".ssh")
+	if err := os.Mkdir(sshDirectory, 0o700); err != nil {
 		cleanup()
-		return "", func() {}, err
+		return "", "", "", func() {}, err
 	}
-	if _, err := keyFile.Write(privateKey); err != nil {
-		_ = keyFile.Close()
+	configPath := filepath.Join(sshDirectory, "config")
+	if err := os.WriteFile(configPath, []byte(config), 0o600); err != nil {
 		cleanup()
-		return "", func() {}, err
+		return "", "", "", func() {}, err
 	}
-	if err := keyFile.Close(); err != nil {
+	keyPath := filepath.Join(sshDirectory, identity)
+	if err := os.WriteFile(keyPath, privateKey, 0o600); err != nil {
 		cleanup()
-		return "", func() {}, err
+		return "", "", "", func() {}, err
 	}
-	return keyPath, cleanup, nil
+	return home, configPath, keyPath, cleanup, nil
 }
 
 func writeAskPass() (string, func(), error) {
@@ -286,7 +295,7 @@ func writeAskPass() (string, func(), error) {
 	return path, cleanup, nil
 }
 
-func (store *Store) clone(ctx context.Context, workspacePath string, options GitCloneOptions, keyPath *string, askPassPath string) error {
+func (store *Store) clone(ctx context.Context, workspacePath string, options GitCloneOptions, sshHome, sshConfigPath, keyPath, askPassPath string) error {
 	root := store.workspaceRoot(workspacePath)
 	if err := store.validateRoot(root); err != nil {
 		return err
@@ -311,10 +320,17 @@ func (store *Store) clone(ctx context.Context, workspacePath string, options Git
 	if askPassPath != "" {
 		command.Env = append(command.Env, "GIT_ASKPASS="+askPassPath, "AGENT_GIT_USERNAME="+options.Username, "AGENT_GIT_PASSWORD="+string(options.Password))
 	}
-	if keyPath != nil {
-		command.Env = append(command.Env,
-			"GIT_SSH_COMMAND=ssh -F /dev/null -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="+store.knownHosts+" -i "+*keyPath,
-		)
+	if keyPath != "" {
+		sshCommand := strings.Join([]string{
+			"ssh", "-F", shellQuote(sshConfigPath),
+			"-o", shellQuote("BatchMode=yes"),
+			"-o", shellQuote("IdentitiesOnly=yes"),
+			"-o", shellQuote("StrictHostKeyChecking=yes"),
+			"-o", shellQuote("UserKnownHostsFile=" + store.knownHosts),
+			"-i", shellQuote(keyPath),
+		}, " ")
+		command.Env = replaceEnvironment(command.Env, "HOME", sshHome)
+		command.Env = replaceEnvironment(command.Env, "GIT_SSH_COMMAND", sshCommand)
 	}
 	output, err := command.CombinedOutput()
 	if err != nil {
@@ -337,6 +353,21 @@ func (store *Store) clone(ctx context.Context, workspacePath string, options Git
 		}
 	}
 	return nil
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}
+
+func replaceEnvironment(environment []string, name, value string) []string {
+	prefix := name + "="
+	filtered := make([]string, 0, len(environment)+1)
+	for _, entry := range environment {
+		if !strings.HasPrefix(entry, prefix) {
+			filtered = append(filtered, entry)
+		}
+	}
+	return append(filtered, prefix+value)
 }
 
 func (store *Store) resolve(workspacePath, relative string, allowRoot bool) (string, error) {

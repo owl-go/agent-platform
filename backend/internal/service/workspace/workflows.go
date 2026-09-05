@@ -376,7 +376,7 @@ func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
 		for _, entry := range item.GitSource.Config {
 			config = append(config, &workspacev1.GitConfigEntry{Key: entry.Key, Value: entry.Value})
 		}
-		response.GitSource = &workspacev1.GitSource{Url: item.GitSource.URL, Branch: item.GitSource.Branch, Authentication: item.GitSource.Authentication, Username: item.GitSource.Username, Config: config, CredentialConfigured: item.GitSource.CredentialConfigured}
+		response.GitSource = &workspacev1.GitSource{Url: item.GitSource.URL, Branch: item.GitSource.Branch, Authentication: item.GitSource.Authentication, Username: item.GitSource.Username, Config: config, SshConfig: item.GitSource.SSHConfig, CredentialConfigured: item.GitSource.CredentialConfigured}
 	}
 	return response
 }

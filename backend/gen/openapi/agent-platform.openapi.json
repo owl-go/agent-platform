@@ -3312,6 +3312,9 @@
             "items": {
               "$ref": "#/components/schemas/v1GitConfigEntry"
             }
+          },
+          "ssh_config": {
+            "type": "string"
           }
         }
       },
@@ -4291,6 +4294,9 @@
             "items": {
               "$ref": "#/components/schemas/v1GitConfigEntry"
             }
+          },
+          "ssh_config": {
+            "type": "string"
           }
         }
       },

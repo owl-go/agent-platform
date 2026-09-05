@@ -236,6 +236,25 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("submits a Workflow-scoped SSH config for private Git clone", async () => {
+    const configureWorkflowGitSource = vi.fn(async () => workflow);
+    const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
+    await wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="https://git.example.com"]').setValue("agent-platform:/srv/git/project.git");
+    await wrapper.get<HTMLTextAreaElement>('textarea[name="ssh-config"]').setValue("Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n");
+    await wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').setValue("private-key");
+    await wrapper.get(".git-settings .button.primary").trigger("click");
+    await flushPromises();
+
+    expect(configureWorkflowGitSource).toHaveBeenCalledWith(workflow.id, expect.objectContaining({
+      ssh_config: expect.stringContaining("Host agent-platform"),
+    }));
+    wrapper.unmount();
+  });
+
   it("continues a Run Conversation from the composer", async () => {
     const followUp: Run = {
       ...run,

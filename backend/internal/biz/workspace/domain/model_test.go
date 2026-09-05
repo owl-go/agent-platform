@@ -235,6 +235,7 @@ func TestGitSourceAuthenticationAndConfigValidation(t *testing.T) {
 		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none"},
 		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "basic", Username: &username, CredentialConfigured: true},
 		{URL: "git@git.example.test:team/project.git", Branch: "main", Authentication: "ssh", CredentialConfigured: true, Config: []GitConfigEntry{{Key: "user.name", Value: "Agent"}}},
+		{URL: "agent-platform:/srv/git/project.git", Branch: "main", Authentication: "ssh", CredentialConfigured: true, SSHConfig: "Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n  IdentitiesOnly yes\n  ServerAliveInterval 60\n  ServerAliveCountMax 3\n"},
 	}
 	for _, source := range valid {
 		if err := ValidateGitSource(source); err != nil {
@@ -246,6 +247,9 @@ func TestGitSourceAuthenticationAndConfigValidation(t *testing.T) {
 		{URL: "https://user:secret@git.example.test/team/project.git", Branch: "main", Authentication: "none"},
 		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none", Config: []GitConfigEntry{{Key: "credential.helper", Value: "store"}}},
 		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none", Config: []GitConfigEntry{{Key: "core.sshCommand", Value: "sh -c anything"}}},
+		{URL: "git@git.example.test:team/project.git", Branch: "main", Authentication: "ssh", CredentialConfigured: true, SSHConfig: "Host *\n  ProxyCommand sh -c anything\n"},
+		{URL: "different-host:/srv/git/project.git", Branch: "main", Authentication: "ssh", CredentialConfigured: true, SSHConfig: "Host agent-platform\n  HostName 47.237.108.63\n"},
+		{URL: "https://git.example.test/team/project.git", Branch: "main", Authentication: "none", SSHConfig: "Host git.example.test\n"},
 	} {
 		if err := ValidateGitSource(source); err == nil {
 			t.Fatalf("unsafe Git source accepted: %#v", source)

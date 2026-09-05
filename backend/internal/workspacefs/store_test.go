@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -49,5 +50,40 @@ func TestStoreUploadAndOpen(t *testing.T) {
 	defer file.Close()
 	if info.Size() != 4 {
 		t.Fatalf("size = %d", info.Size())
+	}
+}
+
+func TestWriteSSHFilesMaterializesWorkflowConfigAndConfiguredIdentity(t *testing.T) {
+	root := t.TempDir()
+	knownHosts := filepath.Join(root, "known_hosts")
+	if err := os.WriteFile(knownHosts, []byte("git.example.test ssh-ed25519 AAAA\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := New(filepath.Join(root, "workspaces"), knownHosts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sshConfig := "Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n  IdentitiesOnly yes\n"
+	home, configPath, keyPath, cleanup, err := store.writeSSHFiles([]byte("private-key"), sshConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	if configPath != filepath.Join(home, ".ssh", "config") || keyPath != filepath.Join(home, ".ssh", "xinjiapo.pem") {
+		t.Fatalf("SSH paths = %q, %q under %q", configPath, keyPath, home)
+	}
+	config, err := os.ReadFile(configPath)
+	if err != nil || string(config) != sshConfig {
+		t.Fatalf("SSH config = %q, %v", config, err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil || string(key) != "private-key" {
+		t.Fatalf("SSH key = %q, %v", key, err)
+	}
+	if info, err := os.Stat(configPath); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("SSH config mode = %v, %v", info, err)
+	}
+	if !strings.HasSuffix(keyPath, filepath.Join(".ssh", "xinjiapo.pem")) {
+		t.Fatalf("identity path = %q", keyPath)
 	}
 }

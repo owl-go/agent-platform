@@ -49,7 +49,7 @@ Credits 契约允许 User 读取自己的余额和 Credit Ledger、兑换 Redemp
 
 ## Secret
 
-Model Provider API Key、Workflow Secret 环境变量、MCP Secret、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。执行时 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
+Model Provider API Key、Workflow Secret 环境变量、MCP Secret、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。Workflow SSH config 不是 Secret，但只接受无命令执行能力的连接字段；Git Clone 时与私钥一起物化到隔离的临时 HOME，私钥文件名匹配受限的 `IdentityFile`，并继续使用管理员固定的 `known_hosts`。执行时其他 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
 
 ## 数据库
 

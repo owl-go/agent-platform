@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -276,6 +277,7 @@ type GitSource struct {
 	Authentication       string
 	Username             *string
 	Config               []GitConfigEntry
+	SSHConfig            string
 	CredentialConfigured bool
 }
 
@@ -295,10 +297,16 @@ func ValidateGitSource(source GitSource) error {
 		return fmt.Errorf("%w: Git authentication must be none, basic, or ssh", ErrInvalid)
 	}
 	if source.Authentication == "ssh" {
-		if !strings.HasPrefix(source.URL, "ssh://") && !regexp.MustCompile(`^[^@\s]+@[^:\s]+:.+$`).MatchString(source.URL) {
+		if !validSSHRepositoryURL(source.URL, source.SSHConfig) {
 			return fmt.Errorf("%w: private Git source requires an SSH URL", ErrInvalid)
 		}
+		if err := ValidateSSHConfig(source.SSHConfig); err != nil {
+			return err
+		}
 	} else {
+		if strings.TrimSpace(source.SSHConfig) != "" {
+			return fmt.Errorf("%w: SSH config requires SSH authentication", ErrInvalid)
+		}
 		parsed, err := url.Parse(source.URL)
 		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
 			return fmt.Errorf("%w: Git source requires an HTTPS URL without embedded credentials", ErrInvalid)
@@ -308,6 +316,107 @@ func ValidateGitSource(source GitSource) error {
 		}
 	}
 	return ValidateGitConfig(source.Config)
+}
+
+func validSSHRepositoryURL(value, config string) bool {
+	value = strings.TrimSpace(value)
+	if strings.HasPrefix(value, "ssh://") {
+		parsed, err := url.Parse(value)
+		return err == nil && parsed.Scheme == "ssh" && parsed.Host != "" && parsed.Path != ""
+	}
+	match := regexp.MustCompile(`^(?:([^@\s/:]+)@)?([^:\s/]+):(.+)$`).FindStringSubmatch(value)
+	return match != nil && strings.TrimSpace(match[3]) != "" && (match[1] != "" || strings.EqualFold(match[2], sshConfigHost(config)))
+}
+
+func sshConfigHost(config string) string {
+	for _, raw := range strings.Split(config, "\n") {
+		key, value, ok := sshConfigDirective(strings.TrimSpace(strings.TrimSuffix(raw, "\r")))
+		if ok && key == "host" {
+			return value
+		}
+	}
+	return ""
+}
+
+func ValidateSSHConfig(config string) error {
+	_, err := SSHConfigIdentityFile(config)
+	return err
+}
+
+func SSHConfigIdentityFile(config string) (string, error) {
+	if len(config) > 16*1024 || strings.ContainsRune(config, '\x00') {
+		return "", fmt.Errorf("%w: SSH config must contain at most 16384 bytes", ErrInvalid)
+	}
+	identity := "id_workflow"
+	seen := make(map[string]bool)
+	hasHost := false
+	for number, raw := range strings.Split(config, "\n") {
+		line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := sshConfigDirective(line)
+		if !ok || seen[key] {
+			return "", fmt.Errorf("%w: invalid or repeated SSH config directive on line %d", ErrInvalid, number+1)
+		}
+		seen[key] = true
+		switch key {
+		case "host":
+			hasHost = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$`).MatchString(value)
+			if !hasHost {
+				return "", fmt.Errorf("%w: SSH Host must be one exact alias", ErrInvalid)
+			}
+		case "hostname":
+			if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$`).MatchString(value) {
+				return "", fmt.Errorf("%w: invalid SSH HostName", ErrInvalid)
+			}
+		case "user":
+			if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`).MatchString(value) {
+				return "", fmt.Errorf("%w: invalid SSH User", ErrInvalid)
+			}
+		case "port":
+			port, err := strconv.Atoi(value)
+			if err != nil || port < 1 || port > 65535 {
+				return "", fmt.Errorf("%w: invalid SSH Port", ErrInvalid)
+			}
+		case "identityfile":
+			match := regexp.MustCompile(`^~/.ssh/([A-Za-z0-9][A-Za-z0-9._-]{0,127})$`).FindStringSubmatch(value)
+			if match == nil {
+				return "", fmt.Errorf("%w: SSH IdentityFile must be a file under ~/.ssh", ErrInvalid)
+			}
+			identity = match[1]
+		case "identitiesonly":
+			if !strings.EqualFold(value, "yes") {
+				return "", fmt.Errorf("%w: SSH IdentitiesOnly must be yes", ErrInvalid)
+			}
+		case "serveraliveinterval":
+			seconds, err := strconv.Atoi(value)
+			if err != nil || seconds < 0 || seconds > 3600 {
+				return "", fmt.Errorf("%w: invalid SSH ServerAliveInterval", ErrInvalid)
+			}
+		case "serveralivecountmax":
+			count, err := strconv.Atoi(value)
+			if err != nil || count < 0 || count > 100 {
+				return "", fmt.Errorf("%w: invalid SSH ServerAliveCountMax", ErrInvalid)
+			}
+		default:
+			return "", fmt.Errorf("%w: unsupported SSH config directive %q", ErrInvalid, key)
+		}
+	}
+	if strings.TrimSpace(config) != "" && !hasHost {
+		return "", fmt.Errorf("%w: SSH config requires one Host directive", ErrInvalid)
+	}
+	return identity, nil
+}
+
+func sshConfigDirective(line string) (string, string, bool) {
+	separator := strings.IndexAny(line, " \t=")
+	if separator <= 0 {
+		return "", "", false
+	}
+	key := strings.ToLower(strings.TrimSpace(line[:separator]))
+	value := strings.TrimSpace(strings.TrimLeft(line[separator:], " \t="))
+	return key, value, value != ""
 }
 
 func ValidateGitConfig(config []GitConfigEntry) error {

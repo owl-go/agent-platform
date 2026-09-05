@@ -4136,6 +4136,7 @@ type GitSource struct {
 	CredentialConfigured bool                   `protobuf:"varint,4,opt,name=credential_configured,json=credentialConfigured,proto3" json:"credential_configured,omitempty"`
 	Username             *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
 	Config               []*GitConfigEntry      `protobuf:"bytes,6,rep,name=config,proto3" json:"config,omitempty"`
+	SshConfig            string                 `protobuf:"bytes,7,opt,name=ssh_config,json=sshConfig,proto3" json:"ssh_config,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -4210,6 +4211,13 @@ func (x *GitSource) GetConfig() []*GitConfigEntry {
 		return x.Config
 	}
 	return nil
+}
+
+func (x *GitSource) GetSshConfig() string {
+	if x != nil {
+		return x.SshConfig
+	}
+	return ""
 }
 
 type GenerateWorkflowCredentialRequest struct {
@@ -5606,6 +5614,7 @@ type ConfigureWorkflowGitSourceRequest struct {
 	Password       *string                `protobuf:"bytes,6,opt,name=password,proto3,oneof" json:"password,omitempty"`
 	SshPrivateKey  *string                `protobuf:"bytes,7,opt,name=ssh_private_key,json=sshPrivateKey,proto3,oneof" json:"ssh_private_key,omitempty"`
 	Config         []*GitConfigEntry      `protobuf:"bytes,8,rep,name=config,proto3" json:"config,omitempty"`
+	SshConfig      string                 `protobuf:"bytes,9,opt,name=ssh_config,json=sshConfig,proto3" json:"ssh_config,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -5694,6 +5703,13 @@ func (x *ConfigureWorkflowGitSourceRequest) GetConfig() []*GitConfigEntry {
 		return x.Config
 	}
 	return nil
+}
+
+func (x *ConfigureWorkflowGitSourceRequest) GetSshConfig() string {
+	if x != nil {
+		return x.SshConfig
+	}
+	return ""
 }
 
 type WorkspaceEntry struct {
@@ -9827,14 +9843,16 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\btimezone\x18\x06 \x01(\tR\btimezone\"8\n" +
 	"\x0eGitConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\xf6\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x95\x02\n" +
 	"\tGitSource\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12&\n" +
 	"\x0eauthentication\x18\x03 \x01(\tR\x0eauthentication\x123\n" +
 	"\x15credential_configured\x18\x04 \x01(\bR\x14credentialConfigured\x12\x1f\n" +
 	"\busername\x18\x05 \x01(\tH\x00R\busername\x88\x01\x01\x124\n" +
-	"\x06config\x18\x06 \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06configB\v\n" +
+	"\x06config\x18\x06 \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06config\x12\x1d\n" +
+	"\n" +
+	"ssh_config\x18\a \x01(\tR\tsshConfigB\v\n" +
 	"\t_username\"D\n" +
 	"!GenerateWorkflowCredentialRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
@@ -9981,7 +9999,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x12\n" +
 	"\x04size\x18\x04 \x01(\x03R\x04size\x12;\n" +
 	"\vmodified_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"modifiedAt\"\xe9\x02\n" +
+	"modifiedAt\"\x88\x03\n" +
 	"!ConfigureWorkflowGitSourceRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x10\n" +
@@ -9991,7 +10009,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\busername\x18\x05 \x01(\tH\x00R\busername\x88\x01\x01\x12\x1f\n" +
 	"\bpassword\x18\x06 \x01(\tH\x01R\bpassword\x88\x01\x01\x12+\n" +
 	"\x0fssh_private_key\x18\a \x01(\tH\x02R\rsshPrivateKey\x88\x01\x01\x124\n" +
-	"\x06config\x18\b \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06configB\v\n" +
+	"\x06config\x18\b \x03(\v2\x1c.workspace.v1.GitConfigEntryR\x06config\x12\x1d\n" +
+	"\n" +
+	"ssh_config\x18\t \x01(\tR\tsshConfigB\v\n" +
 	"\t_usernameB\v\n" +
 	"\t_passwordB\x12\n" +
 	"\x10_ssh_private_key\"\xa7\x01\n" +

@@ -2528,6 +2528,9 @@
             "type": "object",
             "$ref": "#/definitions/v1GitConfigEntry"
           }
+        },
+        "ssh_config": {
+          "type": "string"
         }
       }
     },
@@ -3513,6 +3516,9 @@
             "type": "object",
             "$ref": "#/definitions/v1GitConfigEntry"
           }
+        },
+        "ssh_config": {
+          "type": "string"
         }
       }
     },
