@@ -38,6 +38,19 @@ func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
 	}
 }
 
+func TestSessionExecutionActivityKeepsRedactedCommandButNotToolOutput(t *testing.T) {
+	activity, err := sessionExecutionActivity(application.ExecutionEvent{Type: "command.completed", Payload: []byte(`{"command":"git status --short","result":"large private output","exit_code":0}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activity == nil || activity.Type != "command.completed" || activity.Detail != "git status --short" {
+		t.Fatalf("activity = %#v", activity)
+	}
+	if strings.Contains(activity.Detail, "private output") {
+		t.Fatal("tool output leaked into the user-visible activity")
+	}
+}
+
 func TestCloseRunningExpertStagesPreservesTerminalStages(t *testing.T) {
 	started := time.Now().UTC().Add(-time.Second)
 	encoded, err := json.Marshal([]domain.ExpertStage{
@@ -104,6 +117,15 @@ func TestSessionInstructionUsesOnlyCurrentMessageWhenNativeResumeIsActive(t *tes
 	got := sessionInstruction("old summary", recent, "new question", true)
 	if got != "Current user message:\nnew question" {
 		t.Fatalf("instruction = %q", got)
+	}
+}
+
+func TestSessionMessagePairInitializesRuntimeActivities(t *testing.T) {
+	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`))
+	for _, message := range []messageRecord{user, assistant} {
+		if string(message.RuntimeActivities) != "[]" {
+			t.Fatalf("%s runtime activities = %q, want []", message.Role, message.RuntimeActivities)
+		}
 	}
 }
 

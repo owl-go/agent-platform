@@ -247,12 +247,10 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		if err != nil {
 			return err
 		}
-		emptyStages := []byte("[]")
-		user = messageRecord{SessionID: sessionID, Role: "user", State: "completed", Content: content, Attachments: encodedAttachments, ExpertStages: emptyStages}
+		user, assistant = sessionMessagePairRecords(sessionID, content, encodedAttachments, encodedSnapshot)
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
-		assistant = messageRecord{SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing", ResponseSnapshot: encodedSnapshot, Attachments: emptyStages, ExpertStages: emptyStages}
 		if err := tx.Create(&assistant).Error; err != nil {
 			return err
 		}
@@ -270,6 +268,19 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		return domain.Message{}, domain.Message{}, fmt.Errorf("append Session message: %w", err)
 	}
 	return messageDomain(user), messageDomain(assistant), nil
+}
+
+func sessionMessagePairRecords(sessionID, content string, attachments, responseSnapshot []byte) (messageRecord, messageRecord) {
+	emptyJSONList := []byte("[]")
+	user := messageRecord{
+		SessionID: sessionID, Role: "user", State: "completed", Content: content,
+		Attachments: attachments, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList,
+	}
+	assistant := messageRecord{
+		SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing",
+		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList,
+	}
+	return user, assistant
 }
 
 func sessionTitle(content string) string {
@@ -386,6 +397,9 @@ func messageDomain(row messageRecord) domain.Message {
 		if err := json.Unmarshal(row.CreditConsumption, value.CreditConsumption); err != nil {
 			value.CreditConsumption = nil
 		}
+	}
+	if len(row.RuntimeActivities) > 0 && string(row.RuntimeActivities) != "null" {
+		_ = json.Unmarshal(row.RuntimeActivities, &value.Activities)
 	}
 	return value
 }

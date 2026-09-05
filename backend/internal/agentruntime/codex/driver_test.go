@@ -93,6 +93,7 @@ func TestParserReadsThreadItemsAndUsage(t *testing.T) {
 		`{"type":"thread.started","thread_id":"thread-1"}`,
 		`{"type":"item.started","item":{"id":"item-1","type":"command_execution","command":"go test ./..."}}`,
 		`{"type":"item.completed","item":{"id":"item-1","type":"command_execution","command":"go test ./...","exit_code":0}}`,
+		`{"type":"item.completed","item":{"id":"reason-1","type":"reasoning","text":"Inspect the failing package first."}}`,
 		`{"type":"item.completed","item":{"id":"item-2","type":"agent_message","text":"done"}}`,
 		`{"type":"turn.completed","usage":{"input_tokens":14,"output_tokens":8}}`,
 	}
@@ -106,7 +107,7 @@ func TestParserReadsThreadItemsAndUsage(t *testing.T) {
 			kinds = append(kinds, event.Kind)
 		}
 	}
-	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted, agentruntime.EventMessageDelta, agentruntime.EventMessageCompleted}
+	wantKinds := []agentruntime.EventKind{agentruntime.EventCommandRequested, agentruntime.EventCommandCompleted, agentruntime.EventReasoningSummary, agentruntime.EventMessageDelta, agentruntime.EventMessageCompleted}
 	if !slices.Equal(kinds, wantKinds) {
 		t.Fatalf("event kinds = %v, want %v", kinds, wantKinds)
 	}

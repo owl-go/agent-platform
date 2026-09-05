@@ -104,7 +104,8 @@ fi
 git -C "$repo_root" diff --check
 
 stage "Read public Web configuration"
-public_config="$({ ssh "$deploy_host" bash -s -- "$remote_env_file" <<'REMOTE_PUBLIC_CONFIG'
+read_public_config() {
+  ssh "$deploy_host" bash -s -- "$remote_env_file" 2>/dev/null <<'REMOTE_PUBLIC_CONFIG'
 set -euo pipefail
 env_file=$1
 test -r "$env_file"
@@ -118,7 +119,10 @@ for name in PUBLIC_HOST VITE_OIDC_AUTHORITY VITE_OIDC_CLIENT_ID VITE_OIDC_REDIRE
   printf '%s\n' "$value"
 done
 REMOTE_PUBLIC_CONFIG
-} 2>/dev/null)" || fail "could not read public OIDC values from the remote env file"
+}
+if ! public_config="$(read_public_config)"; then
+  fail "could not read public OIDC values from the remote env file"
+fi
 public_values=()
 while IFS= read -r value; do
   public_values[${#public_values[@]}]="$value"
@@ -258,6 +262,16 @@ mv -Tf "$next_source" "$deploy_root/src"
 cd "$release_dir"
 compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" stop worker
+# Warm containers are disposable definitions tied to the previous release's
+# mount/config schema. Purge only explicitly managed warm caches at cutover.
+while IFS= read -r warm_container; do
+  [[ -z "$warm_container" ]] && continue
+  [[ "$warm_container" =~ ^agent-runtime-warm-[a-f0-9]{32}$ ]] || exit 1
+  docker rm --force "$warm_container" >/dev/null
+done < <(docker ps --all \
+  --filter "label=agent-platform.managed=true" \
+  --filter "label=agent-platform.warm=true" \
+  --format '{{.Names}}')
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --no-deps --force-recreate api
 wait_healthy "$api_container"
 

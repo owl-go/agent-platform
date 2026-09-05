@@ -12,13 +12,14 @@ Runtime JSONL 的单个结构化事件允许增长到本次执行的总输出上
 
 - Event 的 Run ID 必须与请求一致；Sequence 从 1 严格递增。
 - stdout/stderr、结构化 delta、错误与终态在持久化前经过同一组 Secret 精确值脱敏。
+- Runtime 可发布 `reasoning.summary` 作为面向 User 的公开推理摘要；它不是原始 chain-of-thought。Session 只持久化经过脱敏和长度限制的活动摘要、命令及状态，不持久化工具输出作为活动明细。
 - Event Sink 写入失败立即停止 Runtime，避免执行继续而审计记录丢失。
 - 取消通过 Context 传播并终止完整进程组或 Container。
 - 最终结果只有在 Runtime 成功、Workspace 安全检查和 Artifact 保存全部成功后才提交。
 
 Session 连续性优先使用平台保存的最近消息与有界 Rolling Summary。只有某 Runtime 配置 `native_resume: true` 且该镜像通过验证时，才把原生 Checkpoint 作为优化；切换 Runtime 时自动放弃原生 Checkpoint。Expert Team 为每个冻结成员维护独立的临时 Checkpoint 状态，只有整轮成功才共同晋升，任一成员失败或取消都丢弃本轮全部临时状态。
 
-Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 Run，Worker 将同一 Conversation 的既有 User/Assistant 轮次和当前输入通过公共 Instruction seam 交给 Runtime；不依赖 Runtime 原生 Resume，也不会重开或改写已经终态的 Run。
+Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 Run，Worker 将同一 Conversation 的既有 User/Assistant 轮次和当前输入通过公共 Instruction seam 交给 Runtime；原生 Resume 只作为优化。Codex 的匿名 Workflow Conversation 与 Expert Conversation 都按 Conversation 隔离并持久化脱敏后的 `sessions/`；如果 Worker 或容器重建后只有数据库 Checkpoint 而本地原生状态缺失，Worker 在执行前放弃该 Checkpoint，并依靠完整公共 Instruction 启动新原生会话。该恢复不会重开或改写已经终态的 Run。
 
 当前部署固定的 Codex CLI `0.147.0` 已验证 `thread_id` 的保存与 `codex exec resume <thread_id>` 续接，允许开启 `native_resume`。每个 Run 只把用户与 Session 双重隔离的临时副本挂载到容器 `$CODEX_HOME`，成功后仅将经过精确 Secret 脱敏的 `sessions/` 原子写回；插件缓存、日志、认证文件和 MCP 配置均不持久化。MCP 配置从单 Run Credential 目录建立临时符号链接。API 删除 Session 时同步清理状态目录。其他 Runtime 保持关闭，直到各自固定镜像完成同等黑盒验证。
 

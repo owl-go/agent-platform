@@ -123,6 +123,10 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 		}
 	case "item.completed":
 		switch envelope.Item.Type {
+		case "reasoning":
+			if envelope.Item.Text != "" {
+				return []cliadapter.ParsedEvent{{Kind: agentruntime.EventReasoningSummary, Payload: map[string]string{"summary": envelope.Item.Text}}}, nil
+			}
 		case "command_execution":
 			return []cliadapter.ParsedEvent{{
 				Kind:    agentruntime.EventCommandCompleted,

@@ -62,6 +62,13 @@ type Message struct {
 	Attachments       []Attachment
 	ExpertStages      []ExpertStage
 	CreditConsumption *CreditConsumption
+	Activities        []ExecutionActivity
+}
+
+// ExecutionActivity is a redacted, user-visible summary rather than raw Runtime output.
+type ExecutionActivity struct {
+	Type   string `json:"type"`
+	Detail string `json:"detail"`
 }
 
 // Attachment is an immutable reference to a user upload frozen onto one turn.

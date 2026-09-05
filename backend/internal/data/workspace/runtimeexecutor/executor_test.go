@@ -425,6 +425,75 @@ func TestExecuteDoesNotChargeWhenRuntimeFailsBeforeModelInvocation(t *testing.T)
 	}
 }
 
+func TestExecuteDoesNotChargeWhenRuntimeFailsWithoutResponseOrUsage(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Timezone = "UTC"
+	job.Snapshot.ExpertTeam = nil
+	job.Snapshot.ProviderModel.ID = "model-1"
+	job.Snapshot.ProviderModel.ProviderType = "openai"
+	job.Snapshot.ProviderModel.Protocols = []string{"openai_responses"}
+	repository := &fallbackCreditRepository{}
+	creditService, err := creditsapplication.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.EnableCredits(creditService); err != nil {
+		t.Fatal(err)
+	}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(context.Context, agentruntime.ExecuteRequest, agentruntime.EventSink) (agentruntime.Result, error) {
+			return agentruntime.Result{ModelInvocationStarted: true}, errors.New("runtime exited without a response")
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err == nil {
+		t.Fatal("expected Runtime failure")
+	}
+	if len(result.CreditSettlements) != 0 || result.CreditConsumption != nil {
+		t.Fatalf("response-less failure was charged: %#v", result)
+	}
+	if !repository.aborted {
+		t.Fatal("response-less failure did not release its Credit admission")
+	}
+}
+
+func TestExecuteChargesMeasuredUsageWhenRuntimeFailsAfterUsageReport(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Timezone = "UTC"
+	job.Snapshot.ExpertTeam = nil
+	job.Snapshot.ProviderModel.ID = "model-1"
+	job.Snapshot.ProviderModel.ProviderType = "openai"
+	job.Snapshot.ProviderModel.Protocols = []string{"openai_responses"}
+	repository := &fallbackCreditRepository{}
+	creditService, err := creditsapplication.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.EnableCredits(creditService); err != nil {
+		t.Fatal(err)
+	}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			publishRuntimeFailure(t, events, request.RunID, "failed after usage")
+			return agentruntime.Result{Usage: agentruntime.Usage{InputTokens: 10_000, Reported: true}}, errors.New("failed after usage")
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err == nil {
+		t.Fatal("expected Runtime failure")
+	}
+	if len(result.CreditSettlements) != 1 || !result.CreditSettlements[0].UsageKnown || result.CreditSettlements[0].Estimated {
+		t.Fatalf("measured failure settlement = %#v", result.CreditSettlements)
+	}
+	if repository.aborted {
+		t.Fatal("measured failure usage was released instead of settled")
+	}
+}
+
 func TestExecuteTeamStagesAndReusesIndependentNativeState(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
 	job.Kind, job.SessionID = application.JobSession, "session-1"
@@ -804,6 +873,69 @@ func TestPrepareRuntimeScratchCreatesAnInitiallyMissingDirectory(t *testing.T) {
 	}
 	if !attachmentInfo.IsDir() || attachmentInfo.Mode().Perm() != 0o750 {
 		t.Fatalf("Runtime attachment directory = mode %o, directory=%t", attachmentInfo.Mode().Perm(), attachmentInfo.IsDir())
+	}
+}
+
+func TestAnonymousWorkflowConversationRestoresNativeState(t *testing.T) {
+	root := t.TempDir()
+	persistent, err := workspacefs.NativeRunConversationStatePath(root, "owner-1", "conversation-1", "codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(persistent, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(persistent, "rollout.jsonl"), []byte("saved session"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{config: platformconfig.Config{
+		Workspace: platformconfig.WorkspaceConfig{Root: root},
+		Worker:    platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()},
+	}}
+	job := application.ExecutionJob{
+		Kind: application.JobWorkflow, OwnerID: "owner-1", WorkflowID: "workflow-1", ConversationID: "conversation-1",
+		Snapshot: domain.ExecutionSnapshot{RuntimeEngine: domain.RuntimeCodex},
+	}
+	temporary := filepath.Join(root, ".runtime-containers", "slot", "native-state")
+	staged, gotPersistent, err := executor.nativeStateDirectoriesAt(job, platformconfig.RuntimeEngineConfig{NativeResume: true}, temporary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if staged != temporary || gotPersistent != persistent {
+		t.Fatalf("native state directories = %q, %q; want %q, %q", staged, gotPersistent, temporary, persistent)
+	}
+	contents, err := os.ReadFile(filepath.Join(staged, "sessions", "rollout.jsonl"))
+	if err != nil || string(contents) != "saved session" {
+		t.Fatalf("restored native state = %q, %v", contents, err)
+	}
+}
+
+func TestResolveRuntimeCheckpointFallsBackWhenWorkflowNativeStateIsMissing(t *testing.T) {
+	nativeState := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(nativeState, "sessions"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	checkpoint, err := resolveRuntimeCheckpoint(application.JobWorkflow, "thread-1", nativeState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checkpoint != "" {
+		t.Fatalf("checkpoint = %q, want a fresh Workflow invocation", checkpoint)
+	}
+
+	rollout := filepath.Join(nativeState, "sessions", "2026", "09", "rollout.jsonl")
+	if err := os.MkdirAll(filepath.Dir(rollout), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(rollout, []byte("saved session"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	checkpoint, err = resolveRuntimeCheckpoint(application.JobWorkflow, "thread-1", nativeState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checkpoint != "thread-1" {
+		t.Fatalf("checkpoint = %q, want persisted checkpoint", checkpoint)
 	}
 }
 

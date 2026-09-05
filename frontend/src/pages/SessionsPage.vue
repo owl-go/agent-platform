@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Paperclip, Pencil, Square, Trash2, X } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Attachment, type Expert, type ExpertTeam, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Attachment, type ExecutionActivity, type Expert, type ExpertTeam, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
@@ -274,6 +274,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.elapsed_ms = snapshot.elapsed_ms;
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
+  message.activities = snapshot.activities ?? message.activities;
   if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
@@ -379,6 +380,14 @@ function responseIdentity(message: SessionMessage) {
 }
 function visibleStages(message: SessionMessage) {
 	return message.expert_stages ?? [];
+}
+function activityLabel(activity: ExecutionActivity) {
+  if (activity.type === "runtime.started") return t("sessions.progress.preparing");
+  if (activity.type === "reasoning.summary") return t("workflows.reasoningSummary");
+  if (activity.type === "command.requested") return t("sessions.progress.using_tool");
+  if (activity.type === "command.completed") return t("workflows.toolCompleted");
+  if (activity.type === "file.changed") return t("workflows.updatingFiles");
+  return t("sessions.progress.working");
 }
 function stageStateLabel(state: string) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
@@ -491,6 +500,10 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
             <div class="message-content">
               <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
+              <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
+                <div class="runtime-activity-current"><span class="activity-pulse" :class="{ active: message.state === 'queued' || message.state === 'generating' }"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
+                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
+              </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' }" v-html="renderMarkdown(message.content)"></div>
               <p v-else-if="message.content">{{ message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
               <div v-if="message.attachments?.length" class="turn-attachments"><button v-for="attachment in message.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name" @error="clearAttachmentURL(attachment.id)"><span v-else class="attachment-file-mark">{{ attachment.image ? 'IMG' : 'FILE' }}</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div>

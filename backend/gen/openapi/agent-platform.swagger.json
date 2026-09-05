@@ -3202,6 +3202,17 @@
         }
       }
     },
+    "v1ExecutionActivity": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
     "v1ExecutionStageSnapshot": {
       "type": "object",
       "properties": {
@@ -4477,6 +4488,13 @@
         },
         "credit_consumption": {
           "$ref": "#/definitions/v1CreditConsumption"
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExecutionActivity"
+          }
         }
       }
     },

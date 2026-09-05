@@ -93,8 +93,8 @@ type Result struct {
 	DiffArtifact  string
 	CheckpointRef string
 	Usage         Usage
-	// ModelInvocationStarted distinguishes process start/runtime work from
-	// validation, configuration, and process-start failures.
+	// ModelInvocationStarted reports only that the local Runtime process started.
+	// It is not evidence of Provider usage and must not drive Credit settlement.
 	ModelInvocationStarted bool
 }
 
@@ -120,6 +120,7 @@ const (
 	EventRuntimeStarted    EventKind = "runtime.started"
 	EventMessageDelta      EventKind = "message.delta"
 	EventMessageCompleted  EventKind = "message.completed"
+	EventReasoningSummary  EventKind = "reasoning.summary"
 	EventCommandRequested  EventKind = "command.requested"
 	EventCommandCompleted  EventKind = "command.completed"
 	EventFileChanged       EventKind = "file.changed"

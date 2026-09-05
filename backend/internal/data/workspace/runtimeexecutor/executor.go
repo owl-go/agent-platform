@@ -322,6 +322,12 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		if !stageRuntimeConfig.NativeResume {
 			checkpoint = ""
 		}
+		checkpoint, err = resolveRuntimeCheckpoint(job.Kind, checkpoint, stageNativeState)
+		if err != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(err)
+		}
 		if runtimeStartedAt.IsZero() {
 			runtimeStartedAt = time.Now()
 		}
@@ -365,22 +371,28 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		runtimeFinishedAt = time.Now()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
-		invocationStarted := executeErr == nil || runtimeResult.ModelInvocationStarted
-		if executor.credits != nil && invocationStarted {
+		if executor.credits != nil {
 			usage := creditsdomain.Usage{InputTokens: runtimeResult.Usage.InputTokens, OutputTokens: runtimeResult.Usage.OutputTokens, Known: runtimeResult.Usage.Reported}
 			consumption, calculateErr := creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
-			if calculateErr != nil {
-				// Invalid or overflowing Runtime counters are untrusted Usage, so charge
-				// the frozen fallback rather than leaking the per-User execution lease.
+			hasMeasuredUsage := usage.Known && calculateErr == nil
+			hasCompletedResponse := executeErr == nil && strings.TrimSpace(runtimeResult.FinalMessage) != ""
+			settleCredits := hasMeasuredUsage || hasCompletedResponse
+			if !settleCredits {
+				abortCtx, abortCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+				settlementErr = executor.credits.Abort(abortCtx, creditAdmission)
+				abortCancel()
+			} else if calculateErr != nil {
+				// A completed response with invalid Runtime counters uses the frozen
+				// fallback; a response-less failure is released above without charge.
 				usage = creditsdomain.Usage{}
 				consumption, settlementErr = creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
 			}
-			if settlementErr != nil {
+			if settleCredits && settlementErr != nil {
 				abortCtx, abortCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 				settlementErr = errors.Join(calculateErr, settlementErr, executor.credits.Abort(abortCtx, creditAdmission))
 				abortCancel()
 			}
-			if settlementErr == nil {
+			if settleCredits && settlementErr == nil {
 				settlement := application.CreditSettlement{
 					UserID: creditAdmission.UserID, ExecutionID: creditAdmission.ExecutionID, Source: creditAdmission.Source,
 					Timezone: creditAdmission.Timezone, CreditDay: creditAdmission.CreditDay, StagePosition: creditAdmission.StagePosition,
@@ -396,7 +408,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 					intermediateSettlement = &settlement
 				}
 			}
-			if settlementErr == nil {
+			if settleCredits && settlementErr == nil {
 				creditStage := workspacedomain.CreditStageConsumption{
 					StagePosition: executionStage.Position, ProviderModel: executionStage.ProviderModel.ModelID,
 					RuntimeEngine: string(executionStage.RuntimeEngine), InputTokens: usage.InputTokens,
@@ -412,10 +424,6 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				result.CreditConsumption.TotalHundredths += creditStage.AmountHundredths
 				stage.CreditConsumption = &creditStage
 			}
-		} else if executor.credits != nil {
-			abortCtx, abortCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-			settlementErr = executor.credits.Abort(abortCtx, creditAdmission)
-			abortCancel()
 		}
 		releaseErr := releaseWarmLease(ctx, lease)
 		credentialCleanupErr := environment.Cleanup()
@@ -671,15 +679,16 @@ func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob,
 			persistent, err = workspacefs.NativeSessionStatePath(executor.config.Workspace.Root, job.OwnerID, job.SessionID, string(job.Snapshot.RuntimeEngine))
 		}
 	case application.JobWorkflow:
-		if job.Snapshot.Expert == nil {
-			return "", "", nil
-		}
 		conversationID := job.ConversationID
 		if conversationID == "" {
 			conversationID = job.WorkflowID
 		}
 		hiddenRoot = filepath.Join(filepath.Clean(executor.config.Workspace.Root), ".native-run-conversation-state")
-		persistent, err = workspacefs.NativeExpertRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+		if job.Snapshot.Expert != nil {
+			persistent, err = workspacefs.NativeExpertRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, job.Snapshot.Expert.ID, job.Snapshot.Expert.Version, string(job.Snapshot.RuntimeEngine))
+		} else {
+			persistent, err = workspacefs.NativeRunConversationStatePath(executor.config.Workspace.Root, job.OwnerID, conversationID, string(job.Snapshot.RuntimeEngine))
+		}
 	default:
 		return "", "", nil
 	}
@@ -724,6 +733,31 @@ func (executor *Executor) nativeStateDirectoriesAt(job application.ExecutionJob,
 		return "", "", err
 	}
 	return temporary, persistent, nil
+}
+
+func resolveRuntimeCheckpoint(kind application.JobKind, checkpoint, nativeState string) (string, error) {
+	if kind != application.JobWorkflow || checkpoint == "" || nativeState == "" {
+		return checkpoint, nil
+	}
+	foundSession := errors.New("native session state found")
+	err := filepath.WalkDir(filepath.Join(nativeState, "sessions"), func(_ string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.Type().IsRegular() {
+			return foundSession
+		}
+		return nil
+	})
+	if errors.Is(err, foundSession) {
+		return checkpoint, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("inspect native Runtime state: %w", err)
+	}
+	// Workflow instructions already contain prior turns, so a missing local
+	// native session can safely start fresh after a Worker/container restart.
+	return "", nil
 }
 
 type nativeStatePromotion struct {

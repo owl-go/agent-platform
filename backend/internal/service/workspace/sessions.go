@@ -210,6 +210,9 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
 	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	for _, activity := range item.Activities {
+		response.Activities = append(response.Activities, &workspacev1.ExecutionActivity{Type: activity.Type, Detail: activity.Detail})
+	}
 	return response
 }
 

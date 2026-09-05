@@ -85,6 +85,7 @@ func knownEventKind(kind EventKind) bool {
 	case EventRuntimeStarted,
 		EventMessageDelta,
 		EventMessageCompleted,
+		EventReasoningSummary,
 		EventCommandRequested,
 		EventCommandCompleted,
 		EventFileChanged,

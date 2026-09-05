@@ -1129,6 +1129,10 @@ export interface components {
             secret?: boolean;
             configured?: boolean;
         };
+        v1ExecutionActivity: {
+            type?: string;
+            detail?: string;
+        };
         v1ExecutionStageSnapshot: {
             /** Format: int32 */
             position?: number;
@@ -1547,6 +1551,7 @@ export interface components {
             attachments?: components["schemas"]["v1Attachment"][];
             expert_stages?: components["schemas"]["v1ExpertStage"][];
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
+            activities?: components["schemas"]["v1ExecutionActivity"][];
         };
         v1Skill: {
             id?: string;

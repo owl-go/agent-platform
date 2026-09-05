@@ -12,9 +12,10 @@ func TestSnapshotOfProjectsSafeProgress(t *testing.T) {
 		Content:       "partial",
 		ProgressStage: "responding",
 		ElapsedMS:     450,
+		Activities:    []domain.ExecutionActivity{{Type: "command.requested", Detail: "git status --short"}},
 	})
 
-	if snapshot.State != "generating" || snapshot.Content != "partial" || snapshot.ProgressStage != "responding" || snapshot.ElapsedMS != 450 {
+	if snapshot.State != "generating" || snapshot.Content != "partial" || snapshot.ProgressStage != "responding" || snapshot.ElapsedMS != 450 || len(snapshot.Activities) != 1 {
 		t.Fatalf("unexpected snapshot: %+v", snapshot)
 	}
 }

@@ -11,13 +11,14 @@ import (
 )
 
 type sessionMessageSnapshot struct {
-	State             string                    `json:"state"`
-	Content           string                    `json:"content"`
-	Error             string                    `json:"error,omitempty"`
-	ProgressStage     string                    `json:"progress_stage,omitempty"`
-	ElapsedMS         int64                     `json:"elapsed_ms"`
-	ExpertStages      []domain.ExpertStage      `json:"expert_stages,omitempty"`
-	CreditConsumption *domain.CreditConsumption `json:"credit_consumption,omitempty"`
+	State             string                     `json:"state"`
+	Content           string                     `json:"content"`
+	Error             string                     `json:"error,omitempty"`
+	ProgressStage     string                     `json:"progress_stage,omitempty"`
+	ElapsedMS         int64                      `json:"elapsed_ms"`
+	ExpertStages      []domain.ExpertStage       `json:"expert_stages,omitempty"`
+	CreditConsumption *domain.CreditConsumption  `json:"credit_consumption,omitempty"`
+	Activities        []domain.ExecutionActivity `json:"activities,omitempty"`
 }
 
 func (service *Service) streamSessionMessage(writer http.ResponseWriter, request *http.Request) {
@@ -88,7 +89,7 @@ func (service *Service) streamSessionMessage(writer http.ResponseWriter, request
 }
 
 func snapshotOf(message domain.Message) sessionMessageSnapshot {
-	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption}
+	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption, Activities: message.Activities}
 }
 
 func terminalMessageState(state string) bool {

@@ -333,3 +333,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
   .credit-grid { grid-template-columns: 1fr; }
   .admin-credit-grid { grid-template-columns: 1fr; }
 }
+
+.runtime-activity-current { min-width: 0; }
+.runtime-activity-current small { min-width: 0; overflow-wrap: anywhere; }
+.activity-pulse { flex: none; }
+.runtime-activity li div { min-width: 0; }
+.runtime-activity li strong { flex: none; }
+.runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }

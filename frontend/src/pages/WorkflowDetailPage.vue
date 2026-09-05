@@ -21,6 +21,7 @@ const runComposerClearance = ref(154);
 const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const pendingAttachments = ref<File[]>([]); const attachmentURLs = ref<Record<string, string>>({});
 const copiedStageKey = ref("");
+const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const gitForm = ref<GitSourceInput>({ url: "", branch: "main", authentication: "none", config: [] });
 const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
@@ -28,7 +29,12 @@ const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
 const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running"));
-const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => total + item.elapsed_ms, 0));
+const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => {
+  const stored = Number.isFinite(item.elapsed_ms) ? Math.max(0, item.elapsed_ms) : 0;
+  if (item.state !== "queued" && item.state !== "running") return total + stored;
+  const started = Date.parse(item.started_at || item.queued_at);
+  return total + (Number.isFinite(started) ? Math.max(stored, nowMS.value - started) : stored);
+}, 0));
 const currentExpertStage = computed(() => [...runEvents.value].reverse().find((event) => event.type === "expert.stage.updated")?.payload);
 const runtimeActivities = computed(() => {
   const activities: Array<{ sequence: number; label: string; detail: string }> = [];
@@ -54,7 +60,7 @@ onMounted(async () => {
   if (typeof ResizeObserver !== "undefined") runComposerObserver = new ResizeObserver(measureRunComposer);
   window.addEventListener("resize", measureRunComposer);
   await refresh();
-  runTimer = setInterval(() => void refreshRuns(), 1500);
+  runTimer = setInterval(() => { nowMS.value = Date.now(); void refreshRuns(); }, 1500);
 });
 watch(runComposerLayer, (current, previous) => {
   if (previous) runComposerObserver?.unobserve(previous);
@@ -194,12 +200,18 @@ function runInputText(item: Run, index: number) { const input = item.text_input 
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
 function runtimeActivity(event: RunEvent) {
 	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "" };
-	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), detail: typeof event.payload.tool === "string" ? event.payload.tool : t("workflows.command") };
-	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), detail: typeof event.payload.tool === "string" ? event.payload.tool : t("workflows.command") };
+	if (event.type === "reasoning.summary") return { label: t("workflows.reasoningSummary"), detail: typeof event.payload.summary === "string" ? event.payload.summary : "" };
+	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), detail: runtimeCommandDetail(event) };
+	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), detail: runtimeCommandDetail(event) };
 	if (event.type === "file.changed") return { label: t("workflows.updatingFiles"), detail: "" };
 	if (event.type === "message.delta") return { label: t("workflows.streamingAnswer"), detail: "" };
 	if (event.type === "message.completed") return { label: t("workflows.answerReady"), detail: "" };
 	return undefined;
+}
+function runtimeCommandDetail(event: RunEvent) {
+	if (typeof event.payload.command === "string") return event.payload.command;
+	if (typeof event.payload.tool === "string") return event.payload.tool;
+	return t("workflows.command");
 }
 function visibleStages(item: Run) { return item.expert_stages ?? []; }
 async function scrollConversationToEnd(behavior: ScrollBehavior = "smooth") { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior }); }

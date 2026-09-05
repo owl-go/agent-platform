@@ -63,6 +63,7 @@ type messageRecord struct {
 	Attachments       []byte     `gorm:"column:attachments;type:jsonb"`
 	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
+	RuntimeActivities []byte     `gorm:"column:runtime_activities;type:jsonb"`
 }
 
 func (messageRecord) TableName() string { return "session_messages" }

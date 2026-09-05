@@ -134,6 +134,14 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.elapsed_ms).toBe(0);
   });
 
+  it("normalizes a non-numeric Run duration to zero", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "run-1", workflow_id: "workflow-1", workflow_name: "Build", trigger: "manual", state: "running", queued_at: "2026-08-25T00:00:00Z", elapsed_ms: "invalid" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const result = await createPlatformApi(() => "token").listRuns("workflow-1");
+
+    expect(result[0]?.elapsed_ms).toBe(0);
+  });
+
   it("submits a follow-up to the selected Run Conversation", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({ id: "run-2", conversation_id: "run-1", turn_number: 2, workflow_id: "workflow-1", workflow_name: "Build", trigger: "manual", state: "queued", text_input: "继续分析", queued_at: "2026-08-25T00:01:00Z" }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);

@@ -114,3 +114,10 @@ make web-build
 - `make sandbox-conformance` 和 `make production-conformance` 只在满足规格的 Linux + `runsc` Worker 上执行；执行前先跑 `make production-conformance-preflight`。
 
 完成时检查 `git diff`，确保只包含任务内改动、相关测试与必要的权威文档更新；报告已运行命令、未运行的环境门禁和仍然缺失的证据。
+
+## 提交与推送
+
+- 完成用户要求的代码或文档改动并通过适用门禁后，自动创建 Git Commit 并推送当前分支，不等待用户再次提醒。
+- 提交前检查 `git status` 和 `git diff`，只暂存本任务及当前连续工作中已经验证的改动；排除用户的无关改动、临时目录、凭证和禁止提交的生成产物。
+- 使用准确概括改动的 Conventional Commit message，不修改或合并既有 Commit。
+- 推送因鉴权、远端更新或分支保护失败时保留本地 Commit，不重写历史，并向用户报告具体阻塞与安全的后续操作。

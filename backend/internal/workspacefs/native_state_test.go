@@ -51,6 +51,18 @@ func TestNativeExpertRunConversationStatePathIncludesFrozenIdentity(t *testing.T
 	}
 }
 
+func TestNativeRunConversationStatePathUsesRuntimeIdentity(t *testing.T) {
+	root := t.TempDir()
+	path, err := NativeRunConversationStatePath(root, "owner-1", "conversation-1", "codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, ".native-run-conversation-state", "owner-1", "conversation-1", "codex")
+	if path != want {
+		t.Fatalf("path = %q, want %q", path, want)
+	}
+}
+
 func TestNativeSessionStateRejectsPathTraversal(t *testing.T) {
 	for _, value := range []string{"", ".", "..", "../other", "owner/session"} {
 		if _, err := NativeSessionStatePath(t.TempDir(), value, "session-1", "codex"); err == nil {

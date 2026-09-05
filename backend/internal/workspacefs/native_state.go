@@ -38,6 +38,10 @@ func NativeExpertRunConversationStatePath(root, ownerID, conversationID, expertI
 	return nativeConversationStatePath(root, ".native-run-conversation-state", ownerID, conversationID, identity)
 }
 
+func NativeRunConversationStatePath(root, ownerID, conversationID, runtime string) (string, error) {
+	return nativeConversationStatePath(root, ".native-run-conversation-state", ownerID, conversationID, runtime)
+}
+
 func RemoveNativeSessionState(root, ownerID, sessionID string) error {
 	path, err := NativeSessionStatePath(root, ownerID, sessionID, "runtime")
 	if err != nil {

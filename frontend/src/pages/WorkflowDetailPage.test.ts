@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type Artifact, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import WorkflowDetailPage from "./WorkflowDetailPage.vue";
@@ -148,6 +148,32 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("shows a finite live accumulated duration while the latest turn is running", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-02T07:15:03Z"));
+    const completedTurn: Run = { ...run, elapsed_ms: Number.NaN };
+    const activeTurn: Run = {
+      ...run,
+      id: "run-2",
+      turn_number: 2,
+      state: "running",
+      queued_at: "2026-09-02T07:13:02Z",
+      started_at: "2026-09-02T07:13:03Z",
+      ended_at: undefined,
+      elapsed_ms: 0,
+    };
+    const wrapper = await mountPage(apiStub({ listRunTurns: vi.fn(async () => [completedTurn, activeTurn]) }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    const header = wrapper.get(".run-conversation-head").text();
+    expect(header).toContain("2分钟");
+    expect(header).not.toContain("NaN");
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
   it("shows only files as artifacts and ignores legacy final-result records", async () => {
     const legacyResult: Artifact = { id: "result-1", run_id: run.id, kind: "result", name: "Final result", path: "", size: 0, text_preview: "done", expired: false, created_at: run.ended_at! };
     const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 12, sha256: "abc", expired: false, created_at: run.ended_at! };
@@ -188,6 +214,25 @@ describe("WorkflowDetailPage", () => {
     const sections = wrapper.findAll(".settings-section");
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.every((section) => section.attributes("open") !== undefined)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("keeps Workflow settings usable when a migrated Expert has no Runtime Engine", async () => {
+    const incompleteExpert = {
+      id: "expert-incomplete",
+      name: "待完善专家",
+      provider_model_name: "",
+      available: false,
+      compatibility: "unavailable",
+      runtime_engine: undefined,
+    } as unknown as Expert;
+    const wrapper = await mountPage(apiStub({ listExperts: vi.fn(async () => [incompleteExpert]) }));
+
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get(".settings-section").text()).toContain("待完善专家");
+    expect(wrapper.get(".settings-section").text()).toContain("—");
     wrapper.unmount();
   });
 

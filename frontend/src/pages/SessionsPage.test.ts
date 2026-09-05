@@ -361,6 +361,32 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("shows an expandable activity timeline with the concrete Codex command", async () => {
+    const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, pending]);
+    api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, onSnapshot, signal) => {
+      onSnapshot({
+        state: "generating",
+        content: "",
+        progress_stage: "using_tool",
+        elapsed_ms: 500,
+        activities: [
+          { type: "reasoning.summary", detail: "先检查仓库状态" },
+          { type: "command.requested", detail: "git status --short" },
+        ],
+      });
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+    });
+
+    const wrapper = await mountPageWithAPI(api);
+    await flushPromises();
+
+    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity").text()).toContain("先检查仓库状态");
+    expect(wrapper.get(".runtime-activity").text()).toContain("git status --short");
+    wrapper.unmount();
+  });
+
   it("reconciles a completed message after the event stream closes without a terminal snapshot", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const completed: SessionMessage = { ...pending, state: "completed", content: "图片内容已识别", progress_stage: undefined, elapsed_ms: 1200 };

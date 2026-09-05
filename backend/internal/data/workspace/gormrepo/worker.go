@@ -856,7 +856,7 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 	if job.Kind == application.JobSession {
 		updates := map[string]any{}
 		switch event.Type {
-		case "runtime.started", "command.completed":
+		case "runtime.started", "reasoning.summary", "command.completed":
 			updates["progress_stage"] = "thinking"
 		case "command.requested":
 			updates["progress_stage"] = "using_tool"
@@ -888,6 +888,17 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 		default:
 			return nil
 		}
+		activity, err := sessionExecutionActivity(event)
+		if err != nil {
+			return err
+		}
+		if activity != nil {
+			encoded, marshalErr := json.Marshal([]domain.ExecutionActivity{*activity})
+			if marshalErr != nil {
+				return fmt.Errorf("encode Session execution activity: %w", marshalErr)
+			}
+			updates["runtime_activities"] = gorm.Expr("CASE WHEN jsonb_array_length(runtime_activities) >= 32 THEN (runtime_activities - 0) || ?::jsonb ELSE runtime_activities || ?::jsonb END", string(encoded), string(encoded))
+		}
 		result := repository.db.WithContext(ctx).Model(&messageRecord{}).
 			Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).
 			Updates(updates)
@@ -916,6 +927,39 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 		}
 		return tx.Table("run_events").Create(map[string]any{"run_id": job.ID, "sequence": sequence + 1, "event_type": event.Type, "payload": event.Payload, "occurred_at": time.Now().UTC()}).Error
 	})
+}
+
+func sessionExecutionActivity(event application.ExecutionEvent) (*domain.ExecutionActivity, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return nil, fmt.Errorf("decode Session execution activity: %w", err)
+	}
+	detail := ""
+	switch event.Type {
+	case "runtime.started":
+		detail, _ = payload["runtime"].(string)
+	case "reasoning.summary":
+		detail, _ = payload["summary"].(string)
+	case "command.requested", "command.completed":
+		detail, _ = payload["command"].(string)
+		if detail == "" {
+			detail, _ = payload["tool"].(string)
+			if input, ok := payload["input"]; ok {
+				if encoded, err := json.Marshal(input); err == nil && string(encoded) != "null" && string(encoded) != "{}" {
+					detail += " " + string(encoded)
+				}
+			}
+		}
+	case "file.changed":
+	default:
+		return nil, nil
+	}
+	detail = strings.TrimSpace(detail)
+	runes := []rune(detail)
+	if len(runes) > 4_000 {
+		detail = string(runes[:4_000]) + "..."
+	}
+	return &domain.ExecutionActivity{Type: event.Type, Detail: detail}, nil
 }
 
 func (repository *Repository) RecordStageSettlement(ctx context.Context, job application.ExecutionJob, stage domain.ExpertStage, settlement application.CreditSettlement) error {

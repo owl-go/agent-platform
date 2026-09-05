@@ -13,8 +13,9 @@ export interface ExecutionStageSnapshot { position: number; expert?: { id: strin
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
+export interface ExecutionActivity { type: string; detail: string }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[] }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[] }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
@@ -44,7 +45,8 @@ export interface Skill { id: string; name: string; source: "git" | "upload"; git
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
-export function runtimeEngineDisplayName(runtime: RuntimeEngine): string {
+export function runtimeEngineDisplayName(runtime?: RuntimeEngine | string | null): string {
+  if (!runtime) return "—";
   if (runtime === "claude") return "Claude Code";
   if (runtime === "openclaw") return "OpenClaw";
   if (runtime === "pi") return "PI Agent";
@@ -393,5 +395,6 @@ function timestampString(value: unknown): unknown {
 }
 
 function normalizeRun(item: Run & { elapsed_ms?: number | string }): Run {
-  return { ...item, attachments: item.attachments ?? [], expert_stages: item.expert_stages ?? [], elapsed_ms: Number(item.elapsed_ms ?? 0) };
+  const elapsed = Number(item.elapsed_ms ?? 0);
+  return { ...item, attachments: item.attachments ?? [], expert_stages: item.expert_stages ?? [], elapsed_ms: Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : 0 };
 }
