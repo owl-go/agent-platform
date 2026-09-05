@@ -4350,6 +4350,36 @@
           }
         }
       },
+      "v1CLIConnectorSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "executable": {
+            "type": "string"
+          },
+          "authentication_driver": {
+            "type": "string"
+          },
+          "bundle_sha256": {
+            "type": "string"
+          },
+          "runtime_digests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1CommandApproval": {
         "type": "object",
         "properties": {
@@ -4795,6 +4825,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "cli_connectors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CLIConnectorSnapshot"
+            }
           }
         }
       },
@@ -4875,6 +4911,12 @@
           },
           "tag_projection_error": {
             "type": "string"
+          },
+          "cli_connector_definition_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -4916,6 +4958,12 @@
           },
           "cautions": {
             "type": "string"
+          },
+          "cli_connector_definition_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

@@ -10,7 +10,7 @@ import ExpertsPage from "./ExpertsPage.vue";
 const expert: Expert = {
   id: "expert-1", name: "架构专家", icon: "sparkles", icon_background: "sage", introduction: "负责系统架构与边界设计", core_capability: "架构设计", operating_procedure: "审查需求", output_standard: "给出方案", cautions: "",
   complete: true, compatibility: "verified",
-  expertise_tags: ["架构", "Go"], mcp_server_ids: [], skill_ids: [], available: true,
+  expertise_tags: ["架构", "Go"], mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true,
   created_at: "2026-09-02T00:00:00Z", updated_at: "2026-09-02T00:00:00Z", version: 1,
 };
 const team: ExpertTeam = {

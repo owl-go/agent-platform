@@ -18,7 +18,7 @@ const skills = ref<Skill[]>([]);
 const saving = ref(false);
 const confirmDelete = ref(false);
 const toast = ref<{ kind: "success" | "error"; message: string }>();
-const form = ref<ExpertInput>({ name: "", icon: "sparkles", icon_background: "sage", introduction: "", core_capability: "", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [] });
+const form = ref<ExpertInput>({ name: "", icon: "sparkles", icon_background: "sage", introduction: "", core_capability: "", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
 const isNew = route.params.expertId === "new";
 
 onMounted(async () => {
@@ -28,7 +28,7 @@ onMounted(async () => {
     skills.value = skillItems;
     if (!isNew) {
       expert.value = await api.getExpert(String(route.params.expertId));
-      form.value = { name: expert.value.name, icon: expert.value.icon || "sparkles", icon_background: expert.value.icon_background || "sage", introduction: expert.value.introduction, core_capability: expert.value.core_capability, operating_procedure: expert.value.operating_procedure, output_standard: expert.value.output_standard, cautions: expert.value.cautions || "", mcp_server_ids: [...expert.value.mcp_server_ids], skill_ids: [...expert.value.skill_ids] };
+      form.value = { name: expert.value.name, icon: expert.value.icon || "sparkles", icon_background: expert.value.icon_background || "sage", introduction: expert.value.introduction, core_capability: expert.value.core_capability, operating_procedure: expert.value.operating_procedure, output_standard: expert.value.output_standard, cautions: expert.value.cautions || "", mcp_server_ids: [...expert.value.mcp_server_ids], skill_ids: [...expert.value.skill_ids], cli_connector_definition_ids: [...expert.value.cli_connector_definition_ids] };
     }
   } catch {
     toast.value = { kind: "error", message: t("experts.loadExpertFailed") };
@@ -82,7 +82,7 @@ function syncExtensions(value: { mcp: MCPServer[]; skills: Skill[] }) {
         <label class="full">{{ t('experts.outputStandard') }}<el-input v-model="form.output_standard" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
         <label class="full">{{ t('experts.cautions') }}<el-input v-model="form.cautions" type="textarea" :rows="3" maxlength="20000" show-word-limit /></label>
       </div></section>
-      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExtensionManager selectable :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @resources="syncExtensions" @error="toast = { kind: 'error', message: t('experts.extensionFailed') }" /></section>
+      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExtensionManager selectable :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" @resources="syncExtensions" @error="toast = { kind: 'error', message: t('experts.extensionFailed') }" /></section>
     </form>
   </section>
 

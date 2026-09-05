@@ -678,11 +678,11 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 	if input == nil {
 		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Expert input is required", workspacedomain.ErrInvalid)
 	}
-	return workspacedomain.ExpertInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, Cautions: input.Cautions, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...)}, nil
+	return workspacedomain.ExpertInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, Cautions: input.Cautions, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...), CLIConnectorDefinitionIDs: append([]string(nil), input.CliConnectorDefinitionIds...)}, nil
 }
 
 func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
-	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus}
+	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus}
 	if item.TagProjectionError != "" {
 		response.TagProjectionError = &item.TagProjectionError
 	}

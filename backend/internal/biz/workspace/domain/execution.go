@@ -22,6 +22,7 @@ type ExecutionSnapshot struct {
 	EnvironmentSecretCiphertext []byte                   `json:"environment_secret_ciphertext,omitempty"`
 	MCPServers                  []MCPServerSnapshot      `json:"mcp_servers"`
 	Skills                      []SkillSnapshot          `json:"skills"`
+	CLIConnectors               []CLIConnectorSnapshot   `json:"cli_connectors"`
 	GitSource                   *GitSource               `json:"git_source,omitempty"`
 	GitSecretCiphertext         []byte                   `json:"git_secret_ciphertext,omitempty"`
 	WorkspacePath               string                   `json:"workspace_path"`
@@ -29,17 +30,18 @@ type ExecutionSnapshot struct {
 
 // ExecutionStageSnapshot is the complete immutable identity of one model invocation.
 type ExecutionStageSnapshot struct {
-	Position         int                   `json:"position"`
-	Expert           *ExpertSnapshot       `json:"expert,omitempty"`
-	RuntimeEngine    RuntimeEngine         `json:"runtime_engine"`
-	ProviderModel    ProviderModelSnapshot `json:"provider_model"`
-	ModelProtocol    string                `json:"model_protocol,omitempty"`
-	CreditRate       *CreditRateSnapshot   `json:"credit_rate,omitempty"`
-	MCPServers       []MCPServerSnapshot   `json:"mcp_servers"`
-	Skills           []SkillSnapshot       `json:"skills"`
-	TeamMemberID     string                `json:"team_member_id,omitempty"`
-	TeamMemberName   string                `json:"team_member_name,omitempty"`
-	TeamMemberLabels []string              `json:"team_member_labels,omitempty"`
+	Position         int                    `json:"position"`
+	Expert           *ExpertSnapshot        `json:"expert,omitempty"`
+	RuntimeEngine    RuntimeEngine          `json:"runtime_engine"`
+	ProviderModel    ProviderModelSnapshot  `json:"provider_model"`
+	ModelProtocol    string                 `json:"model_protocol,omitempty"`
+	CreditRate       *CreditRateSnapshot    `json:"credit_rate,omitempty"`
+	MCPServers       []MCPServerSnapshot    `json:"mcp_servers"`
+	Skills           []SkillSnapshot        `json:"skills"`
+	CLIConnectors    []CLIConnectorSnapshot `json:"cli_connectors"`
+	TeamMemberID     string                 `json:"team_member_id,omitempty"`
+	TeamMemberName   string                 `json:"team_member_name,omitempty"`
+	TeamMemberLabels []string               `json:"team_member_labels,omitempty"`
 }
 
 type CreditRateSnapshot struct {
@@ -103,22 +105,22 @@ func (snapshot ExecutionSnapshot) OrderedStages() ([]ExecutionStageSnapshot, err
 	if snapshot.SchemaVersion != 0 || snapshot.RuntimeEngine == "" || snapshot.ProviderModel.ID == "" && snapshot.ProviderModel.ModelID == "" {
 		return nil, fmt.Errorf("%w: incomplete legacy Execution Snapshot", ErrInvalid)
 	}
-	stageFor := func(position int, expert *ExpertSnapshot, servers []MCPServerSnapshot, skills []SkillSnapshot) ExecutionStageSnapshot {
-		return ExecutionStageSnapshot{Position: position, Expert: expert, RuntimeEngine: snapshot.RuntimeEngine, ProviderModel: snapshot.ProviderModel, MCPServers: servers, Skills: skills}
+	stageFor := func(position int, expert *ExpertSnapshot, servers []MCPServerSnapshot, skills []SkillSnapshot, connectors []CLIConnectorSnapshot) ExecutionStageSnapshot {
+		return ExecutionStageSnapshot{Position: position, Expert: expert, RuntimeEngine: snapshot.RuntimeEngine, ProviderModel: snapshot.ProviderModel, MCPServers: servers, Skills: skills, CLIConnectors: connectors}
 	}
 	if snapshot.ExpertTeam != nil {
 		stages := make([]ExecutionStageSnapshot, 0, len(snapshot.ExpertTeam.Members))
 		for index := range snapshot.ExpertTeam.Members {
 			member := &snapshot.ExpertTeam.Members[index]
 			expert := member.ExpertSnapshot
-			stages = append(stages, stageFor(index+1, &expert, member.MCPServers, member.Skills))
+			stages = append(stages, stageFor(index+1, &expert, member.MCPServers, member.Skills, member.CLIConnectors))
 		}
 		return stages, nil
 	}
 	if snapshot.Expert != nil {
-		return []ExecutionStageSnapshot{stageFor(1, snapshot.Expert, snapshot.MCPServers, snapshot.Skills)}, nil
+		return []ExecutionStageSnapshot{stageFor(1, snapshot.Expert, snapshot.MCPServers, snapshot.Skills, snapshot.CLIConnectors)}, nil
 	}
-	return []ExecutionStageSnapshot{stageFor(1, nil, snapshot.MCPServers, snapshot.Skills)}, nil
+	return []ExecutionStageSnapshot{stageFor(1, nil, snapshot.MCPServers, snapshot.Skills, snapshot.CLIConnectors)}, nil
 }
 
 type ProviderModelSnapshot struct {
@@ -163,12 +165,13 @@ type ExpertTeamSnapshot struct {
 
 type ExpertMemberSnapshot struct {
 	ExpertSnapshot
-	Position   int                 `json:"position"`
-	MemberID   string              `json:"member_id,omitempty"`
-	MemberName string              `json:"member_name,omitempty"`
-	Labels     []string            `json:"labels,omitempty"`
-	MCPServers []MCPServerSnapshot `json:"mcp_servers"`
-	Skills     []SkillSnapshot     `json:"skills"`
+	Position      int                    `json:"position"`
+	MemberID      string                 `json:"member_id,omitempty"`
+	MemberName    string                 `json:"member_name,omitempty"`
+	Labels        []string               `json:"labels,omitempty"`
+	MCPServers    []MCPServerSnapshot    `json:"mcp_servers"`
+	Skills        []SkillSnapshot        `json:"skills"`
+	CLIConnectors []CLIConnectorSnapshot `json:"cli_connectors"`
 }
 
 type MCPServerSnapshot struct {
@@ -184,4 +187,17 @@ type SkillSnapshot struct {
 	Name      string `json:"name"`
 	ObjectKey string `json:"object_key"`
 	SHA256    string `json:"sha256"`
+}
+
+// CLIConnectorSnapshot freezes the exact verified artifact and policy used by a Run.
+type CLIConnectorSnapshot struct {
+	ID                   string          `json:"id"`
+	Name                 string          `json:"name"`
+	Executable           string          `json:"executable"`
+	AuthenticationDriver string          `json:"authentication_driver"`
+	BundleObjectKey      string          `json:"bundle_object_key"`
+	BundleSHA256         string          `json:"bundle_sha256"`
+	RuntimeDigests       []string        `json:"runtime_digests"`
+	Capabilities         json.RawMessage `json:"capabilities"`
+	Version              int64           `json:"version"`
 }

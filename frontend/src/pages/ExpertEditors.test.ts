@@ -11,7 +11,7 @@ import ExpertTeamEditorPage from "./ExpertTeamEditorPage.vue";
 const experts: Expert[] = ["架构师", "开发工程师", "测试工程师"].map((name, index) => ({
   id: `expert-${index + 1}`, name, icon: "sparkles", icon_background: "sage", introduction: `${name}简介`, core_capability: `${name}能力`, operating_procedure: `${name}工作流程`, output_standard: `${name}输出规范`, cautions: "",
   complete: true, compatibility: "verified",
-  expertise_tags: [], mcp_server_ids: [], skill_ids: [], available: true,
+  expertise_tags: [], mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true,
   created_at: "2026-09-03T00:00:00Z", updated_at: "2026-09-03T00:00:00Z", version: 1,
 }));
 

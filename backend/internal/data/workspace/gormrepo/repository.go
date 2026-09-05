@@ -95,29 +95,30 @@ type workflowRecord struct {
 func (workflowRecord) TableName() string { return "workflows" }
 
 type expertRecord struct {
-	ID                       string     `gorm:"column:id"`
-	OwnerID                  string     `gorm:"column:owner_user_id"`
-	Name                     string     `gorm:"column:name"`
-	Icon                     string     `gorm:"column:icon"`
-	IconBackground           string     `gorm:"column:icon_background"`
-	Introduction             string     `gorm:"column:introduction"`
-	CoreCapability           string     `gorm:"column:core_capability"`
-	OperatingProcedure       string     `gorm:"column:operating_procedure"`
-	OutputStandard           string     `gorm:"column:output_standard"`
-	Cautions                 string     `gorm:"column:cautions"`
-	CapabilityIntroduction   string     `gorm:"column:capability_introduction"`
-	ExecutionInstruction     string     `gorm:"column:execution_instruction"`
-	ProviderModelID          *string    `gorm:"column:provider_model_id"`
-	RuntimeEngine            *string    `gorm:"column:runtime_engine"`
-	ExpertiseTags            []byte     `gorm:"column:expertise_tags;type:jsonb"`
-	MCPServerIDs             []byte     `gorm:"column:mcp_server_ids;type:jsonb"`
-	SkillIDs                 []byte     `gorm:"column:skill_ids;type:jsonb"`
-	CreatedAt                time.Time  `gorm:"column:created_at"`
-	UpdatedAt                time.Time  `gorm:"column:updated_at"`
-	Version                  int64      `gorm:"column:version"`
-	TagProjectionStatus      string     `gorm:"column:tag_projection_status"`
-	TagProjectionError       *string    `gorm:"column:tag_projection_error"`
-	TagProjectionRequestedAt *time.Time `gorm:"column:tag_projection_requested_at"`
+	ID                        string     `gorm:"column:id"`
+	OwnerID                   string     `gorm:"column:owner_user_id"`
+	Name                      string     `gorm:"column:name"`
+	Icon                      string     `gorm:"column:icon"`
+	IconBackground            string     `gorm:"column:icon_background"`
+	Introduction              string     `gorm:"column:introduction"`
+	CoreCapability            string     `gorm:"column:core_capability"`
+	OperatingProcedure        string     `gorm:"column:operating_procedure"`
+	OutputStandard            string     `gorm:"column:output_standard"`
+	Cautions                  string     `gorm:"column:cautions"`
+	CapabilityIntroduction    string     `gorm:"column:capability_introduction"`
+	ExecutionInstruction      string     `gorm:"column:execution_instruction"`
+	ProviderModelID           *string    `gorm:"column:provider_model_id"`
+	RuntimeEngine             *string    `gorm:"column:runtime_engine"`
+	ExpertiseTags             []byte     `gorm:"column:expertise_tags;type:jsonb"`
+	MCPServerIDs              []byte     `gorm:"column:mcp_server_ids;type:jsonb"`
+	SkillIDs                  []byte     `gorm:"column:skill_ids;type:jsonb"`
+	CLIConnectorDefinitionIDs []byte     `gorm:"column:cli_connector_definition_ids;type:jsonb"`
+	CreatedAt                 time.Time  `gorm:"column:created_at"`
+	UpdatedAt                 time.Time  `gorm:"column:updated_at"`
+	Version                   int64      `gorm:"column:version"`
+	TagProjectionStatus       string     `gorm:"column:tag_projection_status"`
+	TagProjectionError        *string    `gorm:"column:tag_projection_error"`
+	TagProjectionRequestedAt  *time.Time `gorm:"column:tag_projection_requested_at"`
 }
 
 func (expertRecord) TableName() string { return "experts" }

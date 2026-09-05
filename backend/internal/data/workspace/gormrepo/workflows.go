@@ -439,7 +439,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		}
 	}
 	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
-		stage, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, 1)
+		stage, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, nil, 1)
 		if err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
@@ -502,10 +502,10 @@ func loadExpertExecutionStage(tx *gorm.DB, ownerID string, expert expertRecord, 
 		return domain.ExecutionStageSnapshot{}, err
 	}
 	expertSnapshot := member.ExpertSnapshot
-	return loadExecutionStage(tx, ownerID, providerModelID, runtime, &expertSnapshot, member.MCPServers, member.Skills, position)
+	return loadExecutionStage(tx, ownerID, providerModelID, runtime, &expertSnapshot, member.MCPServers, member.Skills, member.CLIConnectors, position)
 }
 
-func loadExecutionStage(tx *gorm.DB, ownerID, providerModelID string, runtime domain.RuntimeEngine, expert *domain.ExpertSnapshot, servers []domain.MCPServerSnapshot, skills []domain.SkillSnapshot, position int) (domain.ExecutionStageSnapshot, error) {
+func loadExecutionStage(tx *gorm.DB, ownerID, providerModelID string, runtime domain.RuntimeEngine, expert *domain.ExpertSnapshot, servers []domain.MCPServerSnapshot, skills []domain.SkillSnapshot, connectors []domain.CLIConnectorSnapshot, position int) (domain.ExecutionStageSnapshot, error) {
 	if providerModelID == "" {
 		return domain.ExecutionStageSnapshot{}, fmt.Errorf("%w: choose a default Provider Model for %s", domain.ErrInvalid, runtime)
 	}
@@ -544,7 +544,7 @@ func loadExecutionStage(tx *gorm.DB, ownerID, providerModelID string, runtime do
 	if err != nil {
 		return domain.ExecutionStageSnapshot{}, err
 	}
-	return domain.ExecutionStageSnapshot{Position: position, Expert: expert, RuntimeEngine: runtime, ProviderModel: provider, ModelProtocol: protocol, CreditRate: &rate, MCPServers: servers, Skills: skills}, nil
+	return domain.ExecutionStageSnapshot{Position: position, Expert: expert, RuntimeEngine: runtime, ProviderModel: provider, ModelProtocol: protocol, CreditRate: &rate, MCPServers: servers, Skills: skills, CLIConnectors: connectors}, nil
 }
 
 func loadCreditRateSnapshot(tx *gorm.DB, providerType, protocol, modelID string) (domain.CreditRateSnapshot, error) {
@@ -569,7 +569,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	if !structured && strings.TrimSpace(expert.ExecutionInstruction) == "" {
 		return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert guidance is incomplete", domain.ErrInvalid)
 	}
-	var tags, mcpIDs, skillIDs []string
+	var tags, mcpIDs, skillIDs, cliConnectorIDs []string
 	if err := json.Unmarshal(expert.ExpertiseTags, &tags); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
@@ -578,6 +578,9 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		return domain.ExpertMemberSnapshot{}, err
 	}
 	if err := json.Unmarshal(expert.SkillIDs, &skillIDs); err != nil {
+		return domain.ExpertMemberSnapshot{}, err
+	}
+	if err := json.Unmarshal(expert.CLIConnectorDefinitionIDs, &cliConnectorIDs); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
 	for _, id := range mcpIDs {
@@ -593,6 +596,24 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert Skill is unavailable", domain.ErrInvalid)
 		}
 		member.Skills = append(member.Skills, domain.SkillSnapshot{ID: row.ID, Name: row.Name, ObjectKey: row.ObjectKey, SHA256: row.SHA256})
+	}
+	for _, id := range cliConnectorIDs {
+		var row cliConnectorDefinitionRecord
+		query := tx.Table("cli_connector_definitions AS definition").Select("definition.*").Joins("JOIN cli_connector_enablements AS enablement ON enablement.definition_id = definition.id").Where("definition.id = ? AND definition.state = 'available' AND enablement.owner_user_id = ? AND enablement.state = 'enabled'", id, ownerID).Take(&row)
+		if query.Error != nil {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector is unavailable", domain.ErrInvalid)
+		}
+		if row.BundleObjectKey == nil || row.BundleSHA256 == nil || *row.BundleObjectKey == "" || *row.BundleSHA256 == "" {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no verified bundle", domain.ErrInvalid)
+		}
+		var runtimeDigests []string
+		if err := tx.Table("cli_connector_conformance").Where("definition_id = ? AND bundle_sha256 = ? AND passed = ?", row.ID, *row.BundleSHA256, true).Order("runtime_repo_digest").Pluck("runtime_repo_digest", &runtimeDigests).Error; err != nil {
+			return domain.ExpertMemberSnapshot{}, err
+		}
+		if len(runtimeDigests) == 0 {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no passing Runtime conformance", domain.ErrInvalid)
+		}
+		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
 	}
 	return member, nil
 }

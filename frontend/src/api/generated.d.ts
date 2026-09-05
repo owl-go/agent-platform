@@ -1245,6 +1245,16 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1CLIConnectorSnapshot: {
+            id?: string;
+            name?: string;
+            executable?: string;
+            authentication_driver?: string;
+            bundle_sha256?: string;
+            runtime_digests?: string[];
+            /** Format: int64 */
+            version?: number;
+        };
         v1CommandApproval: {
             id?: string;
             execution_kind?: string;
@@ -1415,6 +1425,7 @@ export interface components {
             team_member_id?: string;
             team_member_name?: string;
             team_member_labels?: string[];
+            cli_connectors?: components["schemas"]["v1CLIConnectorSnapshot"][];
         };
         v1Expert: {
             id?: string;
@@ -1441,6 +1452,7 @@ export interface components {
             cautions?: string;
             tag_projection_status?: string;
             tag_projection_error?: string;
+            cli_connector_definition_ids?: string[];
         };
         v1ExpertInput: {
             name?: string;
@@ -1453,6 +1465,7 @@ export interface components {
             operating_procedure?: string;
             output_standard?: string;
             cautions?: string;
+            cli_connector_definition_ids?: string[];
         };
         v1ExpertSnapshot: {
             id?: string;

@@ -14,7 +14,7 @@ function mountManager(api: PlatformApi, administrator = false) {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
   return mount(ExtensionManager, {
     attachTo: document.body,
-    props: { selectable: true, mcpServerIds: [], skillIds: [] },
+    props: { selectable: true, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
     global: {
       plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
       provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
@@ -103,5 +103,17 @@ describe("ExtensionManager", () => {
     expect(document.body.textContent).toContain("能力策略");
     expect(document.body.textContent).toContain("风险等级");
     administrator.unmount();
+  });
+
+  it("selects only an enabled CLI Connector for the current Expert", async () => {
+    const definition = { id: "cli-1", name: "No-auth CLI", npm_package: "example-cli", npm_version: "1.0.0", npm_integrity: "sha512-test", executable: "example", authentication_driver: "none", capabilities: [], state: "available", mutable: false, version: 1 } as const;
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 }]) } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    await wrapper.get('input[type="checkbox"]').setValue(true);
+
+    expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[definition.id]]);
+    wrapper.unmount();
   });
 });

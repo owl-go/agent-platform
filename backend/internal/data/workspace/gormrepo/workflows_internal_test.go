@@ -25,6 +25,18 @@ func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
 	}
 }
 
+func TestNewCLIConnectorEnablementOnlyWaitsForAuthentication(t *testing.T) {
+	expiry := time.Now().UTC().Add(time.Hour)
+	withoutAuthentication := newCLIConnectorEnablement("owner-1", "connector-1", "none", "https://example.test/action", expiry)
+	if withoutAuthentication.State != "enabled" || withoutAuthentication.ActionURL != nil || withoutAuthentication.ActionExpiresAt != nil {
+		t.Fatalf("no-auth enablement = %#v", withoutAuthentication)
+	}
+	feishu := newCLIConnectorEnablement("owner-1", "connector-2", "feishu", "https://example.test/action", expiry)
+	if feishu.State != "waiting_for_user" || feishu.ActionURL == nil || *feishu.ActionURL != "https://example.test/action" || feishu.ActionExpiresAt == nil || !feishu.ActionExpiresAt.Equal(expiry) {
+		t.Fatalf("Feishu enablement = %#v", feishu)
+	}
+}
+
 func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
 	job := application.ExecutionJob{ID: "run-1", OwnerID: "owner-1", WorkflowID: "workflow-1"}
 	if records := fileArtifactRecords(job, nil, time.Now()); len(records) != 0 {

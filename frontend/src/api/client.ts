@@ -9,7 +9,7 @@ export interface RedemptionCodeBatch { id: string; count: number; value_hundredt
 export interface RedemptionCodeStatus { id: string; batch_id: string; identifier: string; state: "available" | "redeemed" | "void" | "expired"; value_hundredths: number; expires_at?: string; redeemed_at?: string; voided_at?: string; created_at: string }
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
-export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus } }
+export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; cli_connectors?: Array<{ id: string; name: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
@@ -28,7 +28,7 @@ export interface RunEvent { sequence: number; type: string; payload: Record<stri
 export interface Artifact { id: string; run_id: string; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
-export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[] }
+export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[]; cli_connector_definition_ids: string[] }
 export interface Expert extends ExpertInput { id: string; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
 export interface ExpertTeamMemberInput { id: string; name: string; expert_id: string; labels: string[] }
 export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert; position: number }
@@ -383,7 +383,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
 }
 
 function normalizeExpert(expert: Expert): Expert {
-  return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [] };
+  return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [], cli_connector_definition_ids: expert.cli_connector_definition_ids ?? [] };
 }
 
 function normalizeExpertTeam(team: ExpertTeam): ExpertTeam {

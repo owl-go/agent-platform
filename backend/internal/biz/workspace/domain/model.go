@@ -495,21 +495,22 @@ type Workflow struct {
 }
 
 type ExpertInput struct {
-	Name                   string
-	Icon                   string
-	IconBackground         string
-	Introduction           string
-	CoreCapability         string
-	OperatingProcedure     string
-	OutputStandard         string
-	Cautions               string
-	CapabilityIntroduction string
-	ExecutionInstruction   string
-	ProviderModelID        string
-	RuntimeEngine          RuntimeEngine
-	ExpertiseTags          []string
-	MCPServerIDs           []string
-	SkillIDs               []string
+	Name                      string
+	Icon                      string
+	IconBackground            string
+	Introduction              string
+	CoreCapability            string
+	OperatingProcedure        string
+	OutputStandard            string
+	Cautions                  string
+	CapabilityIntroduction    string
+	ExecutionInstruction      string
+	ProviderModelID           string
+	RuntimeEngine             RuntimeEngine
+	ExpertiseTags             []string
+	MCPServerIDs              []string
+	SkillIDs                  []string
+	CLIConnectorDefinitionIDs []string
 }
 
 func (input ExpertInput) Validate() error {
@@ -555,35 +556,36 @@ func (input ExpertInput) Validate() error {
 	if err := ValidateExpertiseTags(input.ExpertiseTags); err != nil {
 		return err
 	}
-	if len(input.MCPServerIDs) > 50 || len(input.SkillIDs) > 50 {
+	if len(input.MCPServerIDs) > 50 || len(input.SkillIDs) > 50 || len(input.CLIConnectorDefinitionIDs) > 50 {
 		return fmt.Errorf("%w: Expert configuration exceeds limits", ErrInvalid)
 	}
 	return nil
 }
 
 type Expert struct {
-	ID                     string
-	OwnerID                string
-	Name                   string
-	Icon                   string
-	IconBackground         string
-	Introduction           string
-	CoreCapability         string
-	OperatingProcedure     string
-	OutputStandard         string
-	Cautions               string
-	CapabilityIntroduction string
-	ExecutionInstruction   string
-	ProviderModelID        string
-	RuntimeEngine          RuntimeEngine
-	ExpertiseTags          []string
-	MCPServerIDs           []string
-	SkillIDs               []string
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	Version                int64
-	TagProjectionStatus    string
-	TagProjectionError     string
+	ID                        string
+	OwnerID                   string
+	Name                      string
+	Icon                      string
+	IconBackground            string
+	Introduction              string
+	CoreCapability            string
+	OperatingProcedure        string
+	OutputStandard            string
+	Cautions                  string
+	CapabilityIntroduction    string
+	ExecutionInstruction      string
+	ProviderModelID           string
+	RuntimeEngine             RuntimeEngine
+	ExpertiseTags             []string
+	MCPServerIDs              []string
+	SkillIDs                  []string
+	CLIConnectorDefinitionIDs []string
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	Version                   int64
+	TagProjectionStatus       string
+	TagProjectionError        string
 }
 
 func (expert Expert) Available() bool {

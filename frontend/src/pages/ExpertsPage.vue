@@ -69,7 +69,7 @@ function selectTab(tab: string | number) {
             <div class="expert-card-copy">
               <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
               <p>{{ expert.introduction }}</p>
-              <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length }) }}</small>
+              <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) }) }}</small>
               <div v-if="expert.expertise_tags.length" class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div>
             </div>
           </div>

@@ -141,7 +141,7 @@ describe("SessionsPage conversation layout", () => {
     const expert: Expert = {
       id: "expert-1", name: "架构专家", icon: "sparkles", icon_background: "sage", introduction: "负责架构设计", core_capability: "架构设计", operating_procedure: "分析约束", output_standard: "给出架构建议", cautions: "",
       complete: true, compatibility: "verified",
-      expertise_tags: [], mcp_server_ids: [], skill_ids: [], available: true,
+      expertise_tags: [], mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true,
       created_at: session.created_at, updated_at: session.updated_at, version: 1,
     };
     const api = apiStub([]);

@@ -69,6 +69,7 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
+	cliConnectors, _ := marshal(input.CLIConnectorDefinitionIDs)
 	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
 	var providerModelID *string
 	if value := strings.TrimSpace(input.ProviderModelID); value != "" {
@@ -92,7 +93,7 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	if strings.TrimSpace(input.CoreCapability) != "" {
 		projectionStatus, projectionRequestedAt, tags = "queued", &now, []byte("[]")
 	}
-	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, TagProjectionStatus: projectionStatus, TagProjectionRequestedAt: projectionRequestedAt, Version: 1}
+	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, CLIConnectorDefinitionIDs: cliConnectors, TagProjectionStatus: projectionStatus, TagProjectionRequestedAt: projectionRequestedAt, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
@@ -110,6 +111,7 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
+	cliConnectors, _ := marshal(input.CLIConnectorDefinitionIDs)
 	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var current expertRecord
@@ -119,7 +121,7 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
-		updates := map[string]any{"name": strings.TrimSpace(input.Name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+		updates := map[string]any{"name": strings.TrimSpace(input.Name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "cli_connector_definition_ids": cliConnectors, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 		if strings.TrimSpace(input.CoreCapability) != "" {
 			updates["expertise_tags"] = current.ExpertiseTags
 		}
@@ -175,6 +177,9 @@ func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertIn
 	if err := validateUniqueUUIDs(input.SkillIDs); err != nil {
 		return err
 	}
+	if err := validateUniqueUUIDs(input.CLIConnectorDefinitionIDs); err != nil {
+		return err
+	}
 	if len(input.MCPServerIDs) > 0 {
 		var count int64
 		if err := tx.Model(&mcpRecord{}).
@@ -193,6 +198,15 @@ func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertIn
 		}
 		if count != int64(len(input.SkillIDs)) {
 			return fmt.Errorf("%w: every Skill must belong to the User", domain.ErrInvalid)
+		}
+	}
+	if len(input.CLIConnectorDefinitionIDs) > 0 {
+		var count int64
+		if err := tx.Table("cli_connector_enablements AS enablement").Joins("JOIN cli_connector_definitions AS definition ON definition.id = enablement.definition_id AND definition.state = 'available'").Where("enablement.owner_user_id = ? AND enablement.definition_id IN ? AND enablement.state = 'enabled'", ownerID, input.CLIConnectorDefinitionIDs).Count(&count).Error; err != nil {
+			return err
+		}
+		if count != int64(len(input.CLIConnectorDefinitionIDs)) {
+			return fmt.Errorf("%w: every CLI Connector must be available and enabled by the User", domain.ErrInvalid)
 		}
 	}
 	return nil
@@ -271,6 +285,9 @@ func expertDomain(row expertRecord) (domain.Expert, error) {
 	}
 	if err := json.Unmarshal(row.SkillIDs, &item.SkillIDs); err != nil {
 		return domain.Expert{}, fmt.Errorf("decode Expert Skills: %w", err)
+	}
+	if err := json.Unmarshal(row.CLIConnectorDefinitionIDs, &item.CLIConnectorDefinitionIDs); err != nil {
+		return domain.Expert{}, fmt.Errorf("decode Expert CLI Connectors: %w", err)
 	}
 	return item, nil
 }

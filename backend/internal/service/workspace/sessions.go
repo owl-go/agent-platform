@@ -234,6 +234,9 @@ func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot)
 	for _, skill := range item.Skills {
 		response.Skills = append(response.Skills, &workspacev1.SkillSnapshot{Id: skill.ID, Name: skill.Name, ObjectKey: skill.ObjectKey, Sha256: skill.SHA256})
 	}
+	for _, connector := range item.CLIConnectors {
+		response.CliConnectors = append(response.CliConnectors, &workspacev1.CLIConnectorSnapshot{Id: connector.ID, Name: connector.Name, Executable: connector.Executable, AuthenticationDriver: connector.AuthenticationDriver, BundleSha256: connector.BundleSHA256, RuntimeDigests: connector.RuntimeDigests, Version: connector.Version})
+	}
 	return response
 }
 

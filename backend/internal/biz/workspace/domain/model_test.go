@@ -223,7 +223,7 @@ func TestExecutionSnapshotMapsLegacyTeamWithoutMutableExpertData(t *testing.T) {
 		RuntimeEngine: RuntimeCodex,
 		ProviderModel: ProviderModelSnapshot{ID: "legacy-model"},
 		ExpertTeam: &ExpertTeamSnapshot{Members: []ExpertMemberSnapshot{
-			{ExpertSnapshot: ExpertSnapshot{ID: "expert-1", Name: "Architect"}, Position: 1},
+			{ExpertSnapshot: ExpertSnapshot{ID: "expert-1", Name: "Architect"}, Position: 1, CLIConnectors: []CLIConnectorSnapshot{{ID: "connector-1", BundleSHA256: strings.Repeat("a", 64)}}},
 			{ExpertSnapshot: ExpertSnapshot{ID: "expert-2", Name: "Builder"}, Position: 2},
 		}},
 	}
@@ -232,7 +232,7 @@ func TestExecutionSnapshotMapsLegacyTeamWithoutMutableExpertData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stages) != 2 || stages[0].ProviderModel.ID != "legacy-model" || stages[1].RuntimeEngine != RuntimeCodex || stages[1].Expert == nil || stages[1].Expert.ID != "expert-2" {
+	if len(stages) != 2 || stages[0].ProviderModel.ID != "legacy-model" || len(stages[0].CLIConnectors) != 1 || stages[0].CLIConnectors[0].ID != "connector-1" || stages[1].RuntimeEngine != RuntimeCodex || stages[1].Expert == nil || stages[1].Expert.ID != "expert-2" {
 		t.Fatalf("legacy stages = %#v", stages)
 	}
 }

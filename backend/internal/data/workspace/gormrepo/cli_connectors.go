@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -133,15 +134,15 @@ func (repository *Repository) DisableCLIConnectorDefinition(ctx context.Context,
 }
 
 func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, definitionID, actionURL string, expiry time.Time) (cliconnector.Enablement, error) {
-	row := cliConnectorEnablementRecord{ID: uuid.NewString(), OwnerID: ownerID, DefinitionID: definitionID, State: "waiting_for_user", ActionURL: &actionURL, ActionExpiresAt: &expiry, Version: 1}
+	var row cliConnectorEnablementRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var count int64
-		if err := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND state = 'available'", definitionID).Count(&count).Error; err != nil {
+		var definition cliConnectorDefinitionRecord
+		if err := tx.Where("id = ? AND state = 'available'", definitionID).Take(&definition).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: CLI Connector is unavailable", domain.ErrInvalid)
+		} else if err != nil {
 			return err
 		}
-		if count != 1 {
-			return fmt.Errorf("%w: CLI Connector is unavailable", domain.ErrInvalid)
-		}
+		row = newCLIConnectorEnablement(ownerID, definitionID, definition.AuthenticationDriver, actionURL, expiry)
 		if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "owner_user_id"}, {Name: "definition_id"}}, DoNothing: true}).Create(&row).Error; err != nil {
 			return err
 		}
@@ -151,6 +152,16 @@ func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, d
 		return cliconnector.Enablement{}, err
 	}
 	return cliEnablementDomain(row), nil
+}
+
+func newCLIConnectorEnablement(ownerID, definitionID, authenticationDriver, actionURL string, expiry time.Time) cliConnectorEnablementRecord {
+	row := cliConnectorEnablementRecord{ID: uuid.NewString(), OwnerID: ownerID, DefinitionID: definitionID, State: "enabled", Version: 1}
+	if authenticationDriver != "none" {
+		row.State = "waiting_for_user"
+		row.ActionURL = &actionURL
+		row.ActionExpiresAt = &expiry
+	}
+	return row
 }
 
 func (repository *Repository) ListCLIConnectorEnablements(ctx context.Context, ownerID string) ([]cliconnector.Enablement, error) {

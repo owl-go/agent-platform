@@ -501,6 +501,16 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 				return fmt.Errorf("%w: queued Provider Model for Stage %d is incompatible", domain.ErrInvalid, stage.Position)
 			}
 		}
+		for _, connector := range stage.CLIConnectors {
+			var count int64
+			query := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND state = 'available' AND bundle_sha256 = ?", connector.ID, connector.BundleSHA256).Count(&count)
+			if query.Error != nil {
+				return query.Error
+			}
+			if count != 1 {
+				return fmt.Errorf("%w: queued CLI Connector for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+			}
+		}
 	}
 	return nil
 }
@@ -545,7 +555,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 		if err := json.Unmarshal(stored, &frozen); err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
-		current.Expert, current.ExpertTeam, current.MCPServers, current.Skills = frozen.Expert, frozen.ExpertTeam, frozen.MCPServers, frozen.Skills
+		current.Expert, current.ExpertTeam, current.MCPServers, current.Skills, current.CLIConnectors = frozen.Expert, frozen.ExpertTeam, frozen.MCPServers, frozen.Skills, frozen.CLIConnectors
 	} else if session.ExpertID != nil {
 		var expert expertRecord
 		if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, *session.ExpertID).Take(&expert).Error; err != nil {
@@ -555,7 +565,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 		if err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
-		current.Expert, current.MCPServers, current.Skills = &member.ExpertSnapshot, member.MCPServers, member.Skills
+		current.Expert, current.MCPServers, current.Skills, current.CLIConnectors = &member.ExpertSnapshot, member.MCPServers, member.Skills, member.CLIConnectors
 	} else if session.ExpertTeamID != nil {
 		var team expertTeamRecord
 		if err := tx.Where("owner_user_id = ? AND id = ?", session.OwnerID, *session.ExpertTeamID).Take(&team).Error; err != nil {
