@@ -71,6 +71,17 @@ func TestMaterializeCLIConnectorsVerifiesRuntimeAndProtectsBundle(t *testing.T) 
 	}
 }
 
+func TestModelRuntimeConfigDoesNotExposeCLIConnectorBundle(t *testing.T) {
+	executor := &Executor{config: platformconfig.Config{
+		Sandbox: platformconfig.SandboxConfig{Runtime: "runsc", EgressNetwork: "public", ResolverConfig: "/etc/resolv.conf"},
+		Worker:  platformconfig.WorkerConfig{SandboxUID: 65532, SandboxGID: 65532},
+	}}
+	config := executor.containerConfig(application.ExecutionJob{ID: "run-1", Snapshot: domain.ExecutionSnapshot{RuntimeEngine: domain.RuntimeClaude}}, platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@sha256:" + strings.Repeat("a", 64)}, "agent-runtime-warm-test", warmSlot{scratch: "/runtime/scratch"}, "/workspace", "", "/credentials")
+	if config.ConnectorDirectory != "" {
+		t.Fatalf("model Runtime received CLI Connector directory %q", config.ConnectorDirectory)
+	}
+}
+
 func runtimeConnectorBundle(t *testing.T, name, content string) []byte {
 	t.Helper()
 	var output bytes.Buffer

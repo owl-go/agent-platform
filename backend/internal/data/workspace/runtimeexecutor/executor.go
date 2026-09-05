@@ -277,7 +277,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				teamNativeRoots = append(teamNativeRoots, stageNativeState)
 			}
 		}
-		connectorDirectory, connectorErr := executor.materializeCLIConnectors(executionCtx, memberJob, stageSlot.scratch, stageRuntimeConfig.ImageDigest)
+		_, connectorErr := executor.materializeCLIConnectors(executionCtx, memberJob, stageSlot.scratch, stageRuntimeConfig.ImageDigest)
 		if connectorErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(connectorErr)
@@ -299,7 +299,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory(), connectorDirectory)
+		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory())
 		runProcess, startErr := lease.Start(executionCtx, containerConfig)
 		if startErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -585,11 +585,11 @@ func (executor *Executor) memberEnvironment(ctx context.Context, job application
 	return variables, files, redactValues, nil
 }
 
-func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory, connectorDirectory string) containerprocess.Config {
+func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory string) containerprocess.Config {
 	return containerprocess.Config{
 		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
 		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
-		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), ConnectorDirectory: connectorDirectory, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
+		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
 		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,

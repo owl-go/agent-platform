@@ -1,6 +1,6 @@
 # Sandbox Runner
 
-状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与只读挂载、公共 broker 协议、Runtime 客户端、受 Egress Gate 保护的 Sandbox 命令进程及 broker socket 容器契约已实现；细粒度 Egress 控制器、Runtime 绑定与 User Action Wait 尚未接入
+状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、受 Egress Gate 保护的命令进程、broker socket 容器契约及细粒度 Egress 控制器已实现；模型 Runtime 不挂载 CLI bundle，专用 Connector Container 绑定与 User Action Wait 尚未接入
 
 Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 与 CLI Connector bundle Mount 只读、Workspace 是唯一可写业务挂载、附件在 Workspace 文件访问边界内使用独立只读挂载、Egress 使用明确网络。Connector bundle 的 SHA-256 与该 Runtime RepoDigest 的可用性组合必须匹配冻结快照。
 
@@ -13,3 +13,5 @@ Workspace Run 在临时副本工作；仅成功执行才安全合并到 Workflow
 模型、MCP、Workflow 环境与 Git SSH Secret 只存在于单次任务的 Credential 目录，权限为 0700/0600；每次 Container 停止后立即幂等清理，不等待 Warm Container 到期。Secret 不进入镜像层、Docker 参数、对象 Key、日志或结果。
 
 生产可访问公网，但容器仍通过受管 public-egress Network 和固定 Resolver。Runtime 默认不能回连 Worker；若同机模型网关必须经平台 TLS 入口访问，只能通过 `AGENT_ALLOWED_HOST_HTTPS_IPS` 显式允许公开 IPv4 的 TCP 443，其他 Worker 端口继续拒绝。MCP 测试也在相同隔离边界中执行；CLI Connector 的 Egress 是其结构化 capability policy 与网络策略的交集。不允许 API 进程直接运行用户配置的包或 CLI bundle。
+
+CLI capability Egress Gate 必须先确认 Connector Container 位于显式配置的私有 IPv4 子网，再将每个审核域名解析为公网 IPv4；任何私网、回环、链路本地、保留或 IPv6 结果均拒绝整次命令。命令期间临时 `DOCKER-USER` chain 只允许访问固定 Resolver 的 TCP/UDP 53 与解析结果的 TCP 443，其余流量拒绝；完成、失败或取消均在独立清理 deadline 内移除 jump 和 chain。策略安装前不得启动 CLI。模型 Runtime 不挂载 bundle；broker 后续只把 bundle 挂入使用相同固定镜像 Digest 的专用 Connector Container。
