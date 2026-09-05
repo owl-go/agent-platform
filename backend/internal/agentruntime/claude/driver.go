@@ -144,7 +144,10 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 			if diagnostic == "" {
 				diagnostic = envelope.Subtype
 			}
-			p.result.Error = fmt.Errorf("Claude Code reported %s: %s", envelope.Subtype, diagnostic)
+			p.result.Error = &agentruntime.Error{
+				Code: agentruntime.ErrorModelFailed, Message: "Claude Code model request failed",
+				Cause: fmt.Errorf("%s", diagnostic),
+			}
 		} else {
 			p.result.FinalMessage = envelope.Result
 		}

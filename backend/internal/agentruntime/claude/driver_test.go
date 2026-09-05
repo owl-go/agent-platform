@@ -95,6 +95,9 @@ func TestParserReportsClaudeCodeErrorResult(t *testing.T) {
 	if result.Error == nil || !strings.Contains(result.Error.Error(), "API Error: upstream request failed") {
 		t.Fatalf("error = %v, want Claude Code diagnostic", result.Error)
 	}
+	if got := agentruntime.ErrorCodeOf(result.Error); got != agentruntime.ErrorModelFailed {
+		t.Fatalf("error code = %q, want %q", got, agentruntime.ErrorModelFailed)
+	}
 	if result.FinalMessage != "" {
 		t.Fatalf("final message = %q, want empty error result", result.FinalMessage)
 	}

@@ -4,7 +4,7 @@ import type { CreditConsumption } from "../api/client";
 
 defineProps<{ value?: CreditConsumption }>();
 const { t } = useI18n();
-const credits = (hundredths: number) => (Number(hundredths) / 100).toFixed(2);
+const credits = (hundredths?: number) => (Number(hundredths ?? 0) / 100).toFixed(2);
 </script>
 
 <template>

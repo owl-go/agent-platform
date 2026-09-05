@@ -415,6 +415,24 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("does not present an old runtime activity as current after failure", async () => {
+    const failed: SessionMessage = {
+      id: 2,
+      role: "assistant",
+      state: "failed",
+      content: "",
+      error: "command failed",
+      elapsed_ms: 189_000,
+      created_at: "2026-08-25T12:00:01Z",
+      activities: [{ type: "runtime.started", detail: "claude" }],
+    };
+    const wrapper = await mountPage([messages[0]!, failed]);
+
+    expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
+    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    wrapper.unmount();
+  });
+
   it("reconciles a completed message after the event stream closes without a terminal snapshot", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const completed: SessionMessage = { ...pending, state: "completed", content: "图片内容已识别", progress_stage: undefined, elapsed_ms: 1200 };

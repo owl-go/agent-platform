@@ -16,4 +16,14 @@ describe("CreditConsumption", () => {
     expect(wrapper.text()).not.toContain("token");
     expect(wrapper.text()).not.toContain("gpt-5");
   });
+
+  it("treats an omitted protobuf zero total as zero Credits", () => {
+    const wrapper = mount(CreditConsumption, {
+      props: { value: { total_hundredths: undefined as unknown as number, stages: [] } },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+
+    expect(wrapper.text()).toBe("共消耗 ✧ 0.00");
+    expect(wrapper.text()).not.toContain("NaN");
+  });
 });
