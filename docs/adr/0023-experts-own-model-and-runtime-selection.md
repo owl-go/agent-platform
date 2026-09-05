@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0026
 ---
 
 # Experts own Provider Model and Runtime Engine selection

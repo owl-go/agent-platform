@@ -1,6 +1,6 @@
 # Runtime Images
 
-状态：构建定义已实现，部署前必须重新构建并记录 RepoDigest
+状态：Runtime 构建定义已实现；CLI Connector bundle 为已接受但尚未实现的目标修订；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |
 |---|---|---:|
@@ -12,8 +12,10 @@
 
 五个 Dockerfile 位于 `deploy/runtimes/<runtime>/Dockerfile`。每个镜像只安装一种 Runtime Engine，并共同提供 Git、`npx`、`uvx` 与 MCP 运行依赖；进程固定以 UID/GID 65532 运行。生产配置只能引用 Registry `repository@sha256:<digest>`，不能使用 Tag 或本地 Image ID。
 
-公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型/扩展环境变量，并复制 Runtime 配置到 HOME。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
+公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型与 Connector 环境变量，并复制 Runtime 配置到 HOME。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
+
+Third-party CLI 不烘焙进 Runtime 镜像，也不在 User Run 中动态安装。管理员发布的固定版本 npm 包由隔离 Builder 生成不可变 bundle；Sandbox 只读挂载后由公共 CLI Connector Wrapper 调用。一个 Connector 组合只有在 exact bundle SHA-256 与 Runtime RepoDigest 的联合 Conformance 通过后才可标记 available。
 
 Codex 调用会把本次 Run Scratch 中已校验的 `image/*` 只读附件逐个传给 `codex exec --image`；文件名和用户文本仍分别通过受控参数与 stdin 传递。其他 Runtime 当前仅通过公共 Instruction 中的只读路径读取附件，不声明图片输入已经通过固定镜像 Conformance。
 
-镜像变更至少执行：独立构建、CLI `--version`、非 root/只读 Rootfs、五 Runtime 最小真实模型调用、适用 Runtime 的 MCP 配置加载、取消、输出脱敏和 Workspace 写入 smoke。某镜像没有这些证据时，对应 `available` 必须为 `false`。
+镜像变更至少执行：独立构建、CLI `--version`、非 root/只读 Rootfs、五 Runtime 最小真实模型调用、适用 Runtime 的 MCP 配置加载、声明兼容的 CLI Connector bundle、取消、输出脱敏和 Workspace 写入 smoke。某镜像没有这些证据时，对应 `available` 必须为 `false`。

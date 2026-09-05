@@ -1,6 +1,6 @@
 # Agent Workspace
 
-A personal AI workspace for private conversations, reusable Workflows, Experts, Expert Teams, Extensions, and managed execution.
+A personal AI workspace for private conversations, reusable Workflows, Experts, Expert Teams, Skills, Connectors, and managed execution.
 
 ## People And Ownership
 
@@ -9,7 +9,7 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Experts, Extensions, Personal Settings, Credit Balance, and Credit Ledger, and selects from the platform-wide Model Catalog.
+An authenticated person who exclusively owns their Sessions, Workflows, Experts, Skills, MCP Connectors, Personal Settings, Credit Balance, and Credit Ledger, and selects from the platform-wide Model Catalog and available CLI Connectors.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
@@ -61,7 +61,7 @@ _Avoid_: Token Usage, Provider cost, Session total
 ## Conversations
 
 **Session**:
-A private, continuing text conversation owned by one User. It may use one Expert or Expert Team snapshot chosen before the first message. Without an Expert, each Response resolves the current Personal Settings defaults; the Session has no Provider Model or Runtime Engine selection.
+A private, continuing text conversation owned by one User. It may use one Expert or Expert Team snapshot chosen before the first message and freezes its Personal Settings execution configuration when the first message starts.
 _Avoid_: Workflow Run, Coding Task, runtime process
 
 **Response Snapshot**:
@@ -91,7 +91,7 @@ The immutable copy of a Workflow's goal, ordered Execution Stage Snapshots, envi
 _Avoid_: Published Workflow, Workflow release
 
 **Execution Stage Snapshot**:
-The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert identity, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, Execution Instruction, and Extensions. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
+The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert and Team Member identities, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, structured Expert guidance, Skills, and Connectors. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
 _Avoid_: Expert Stage result, mutable Expert, team Runtime Engine
 
 **Workflow API Credential**:
@@ -109,6 +109,10 @@ _Avoid_: Session, one Runtime process, Run Event stream
 **Run**:
 One immutable execution turn inside a Run Conversation, with fixed input, one terminal result, and the Run Conversation's frozen Workflow Snapshot. The first Run records the trigger; each follow-up creates another Run instead of reopening a terminal Run.
 _Avoid_: Workflow, Run Conversation, Session response, Worker process
+
+**User Action Wait**:
+A non-terminal execution state in which a Session response or Run is paused until the User completes Connector authorization or approves a high-risk Connector command before a fixed deadline. No protected action executes without the required confirmation.
+_Avoid_: queued execution, indefinite pause, automatic approval
 
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
@@ -128,64 +132,108 @@ _Avoid_: Repository Binding, Source Control Provider, Review Branch
 An immutable file added or changed by one successful Run and shown separately from the mutable Workspace. A Run's final text or JSON remains part of its Run Conversation and is not an Artifact.
 _Avoid_: Run result, Workspace file, Run Event, temporary output
 
-## Experts And Extensions
+## Experts, Skills, And Connectors
 
 **Expert**:
-A reusable specialist profile with a display name, display-only Capability Introduction, visible Execution Instruction, required Provider Model and Runtime Engine, Expertise Tags, and selected MCP Servers and Skills. Its Provider Model and Runtime Engine govern every new execution of that Expert, whether selected alone or included in an Expert Team.
+A reusable specialist profile with an Icon, display name, display-only Introduction, visible structured guidance, and selected Skills and Connectors. Its Core Capability, Operating Procedure, Output Standard, and Cautions form its injected guidance; it does not select a Provider Model or Runtime Engine.
 _Avoid_: Persona, Workflow
 
-**Capability Introduction**:
-The display-only explanation of an Expert or Expert Team's abilities. It is never injected into model instructions.
-_Avoid_: Execution instruction, hidden prompt
+**Profile Icon**:
+A preset symbol and background color that visually identify an Expert or Expert Team. It always has a default and is not a User-uploaded image.
+_Avoid_: Avatar file, Artifact, attachment
 
-**Execution Instruction**:
-The visible, User-authored instruction that defines how an Expert performs work and is injected whenever that Expert executes.
-_Avoid_: Capability Introduction, hidden prompt, Personality
+**Introduction**:
+The display-only summary of an Expert or Expert Team. It is never injected into model instructions.
+_Avoid_: Core Capability, hidden prompt
 
-**Expertise Tag**:
-A short User-authored label describing an Expert or Expert Team's area of strength. Each profile may have up to ten tags, each no longer than twenty characters.
-_Avoid_: Category, managed taxonomy
+**Core Capability**:
+The visible explanation of the work an Expert is qualified to perform, or the combined abilities of an Expert Team. An Expert's Core Capability contributes to its injected guidance; an Expert Team's Core Capability is display-only.
+_Avoid_: Introduction, Expertise Tag
+
+**Operating Procedure**:
+The visible, User-authored steps an Expert follows when performing work. The product interface labels it `工作流程`, while the domain name distinguishes it from the executable Workflow aggregate.
+_Avoid_: Workflow, hidden prompt
+
+**Output Standard**:
+The visible, User-authored requirements for the form and quality of an Expert's result.
+_Avoid_: Artifact format, hidden prompt
+
+**Cautions**:
+Optional visible, User-authored constraints and pitfalls an Expert must consider while working.
+_Avoid_: platform policy, hidden prompt
+
+**Derived Expertise Tag**:
+A rebuildable, system-derived label projected from an Expert's Core Capability for discovery and display. It is not User-authored guidance.
+_Avoid_: User-authored tag, Core Capability, managed taxonomy
 
 **Expert Team**:
-A reusable named profile with a Capability Introduction, Expertise Tags, and an ordered list of two to ten distinct Experts, selectable anywhere a single Expert can be selected. Its configuration is snapshotted when a Session begins or Run Conversation starts.
+A reusable named profile with an Icon, Introduction, display-only Core Capability, and an ordered list of Team Members. The same Expert may fill more than one distinctly named Team Member role, and the configuration is snapshotted when a Session or Run Conversation starts.
 _Avoid_: User team, organization, visual workflow
 
+**Team Member**:
+A stably identified, named role in one Expert Team that references an Expert and has role-specific labels. Its member name, labels, and order may change without replacing its identity; the same Expert may be referenced by multiple Team Members with isolated execution contexts.
+_Avoid_: Expert, User, organization member
+
+**Member Label**:
+A User-authored label describing one Team Member's responsibility within an Expert Team. It is distinct from the referenced Expert's Derived Expertise Tags.
+_Avoid_: Derived Expertise Tag, Expert capability
+
 **Subagent**:
-A platform-managed execution of one Expert in its own isolated execution context inside an Expert Team. It uses that Expert's Runtime Engine; Runtime-specific native subagent support is not required for this behavior.
+A platform-managed execution of one Team Member in its own isolated execution context inside an Expert Team. It uses the execution configuration frozen for the Session or Run Conversation; Runtime-specific native subagent support is not required for this behavior.
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
-A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes in member order using its Expert's Provider Model and Runtime Engine. A team may mix Provider Models and Runtime Engines; the final member produces the official response and retry restarts the whole collaboration.
+A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes in Team Member order using the shared frozen execution configuration. The final member produces the official response and retry restarts the whole collaboration.
 _Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
 
 **Expert Snapshot**:
-The immutable Expert or Expert Team definition used by one Session or Run Conversation, including each Expert's Provider Model and Runtime Engine, member order, Execution Instructions, and exact Extension revisions. Deleting or editing the source profile does not change this snapshot.
-_Avoid_: Current Expert, mutable team, Provider Model snapshot
+The immutable Expert or Expert Team definition used by one Session or Run Conversation, including visible profile content, structured Expert guidance, Team Member roles, member order, and exact Skill and Connector revisions. Deleting or editing the source profile does not change this snapshot.
+_Avoid_: Current Expert, mutable team, execution configuration snapshot
 
 **Incomplete Expert**:
-A migrated Expert missing an Execution Instruction, Provider Model, or Runtime Engine. It remains editable and visible but cannot be selected for new execution until completed.
-_Avoid_: Disabled Expert, deleted Expert
+A migrated or partially edited Expert missing required Introduction, Core Capability, Operating Procedure, or Output Standard content. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
+_Avoid_: unavailable execution configuration, deleted Expert
 
-**Unavailable Expert**:
-An otherwise complete Expert whose selected Provider Model, Model Provider Connection, Runtime Engine, or compatibility is not currently usable. It remains visible and editable but cannot be selected for new execution and never falls back to another model or engine.
-_Avoid_: Incomplete Expert, Disabled Expert, deleted Expert
+**Connector**:
+A selectable integration through which an Expert accesses an external capability. A User creates and exclusively owns each MCP Connector, while an Administrator creates each platform-wide Third-party CLI Connector; User-specific CLI authorization remains private to that User.
+_Avoid_: Extension, Skill, Runtime Engine
 
-**Extension**:
-A User-owned MCP Server or Skill that can be selected by an Expert.
-_Avoid_: Runtime Engine, Expert, plugin marketplace
+**CLI Connector Definition**:
+An Administrator-owned, platform-wide definition of one Third-party CLI's package, executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
+_Avoid_: CLI authorization, MCP Connector, arbitrary package command
 
-**MCP Server**:
-An Extension reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
+**CLI Connector Authorization**:
+A User-private account authorization under one enabled CLI Connector. It records the authorized external identity and protected, versioned credentials without exposing them to the Administrator or an Expert Snapshot.
+_Avoid_: CLI Connector Definition, Connector Enablement, shared platform credential
+
+**CLI Connector Enablement**:
+A User's activation of one available CLI Connector Definition before selecting or using it. It is distinct from each external account authorization under that Connector.
+_Avoid_: CLI Connector Authorization, Expert selection, Run
+
+**Connector Command Approval**:
+A time-bounded User decision required before one high-risk CLI Connector command executes. Approval is specific to the displayed Connector, identity, operation, and target; expiry or rejection prevents that command from running.
+_Avoid_: Connector authorization, permanent permission, implicit consent
+
+**MCP Connector**:
+A User-owned Connector reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
 _Avoid_: API Endpoint, Skill, Third-party CLI
 
+**Third-party CLI**:
+An Administrator-created Connector installed from a fixed-version package, such as an npm package distributed through `npx`, and exposed as a direct command inside an isolated Runtime environment without using the MCP protocol. Availability is restricted to Runtime image Digests with the required conformance evidence.
+_Avoid_: MCP Connector, arbitrary host command, Runtime Engine
+
+**Feishu CLI Application**:
+The single Feishu developer application created for one User when that User enables the Feishu CLI Connector. Its App ID and App Secret are shared by that User's Feishu CLI authorizations, while account tokens remain isolated per authorization.
+_Avoid_: CLI Connector Definition, one application per Expert, platform-wide Feishu application
+
 **Skill**:
-A versioned Extension package containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
-_Avoid_: Prompt, MCP Server, Runtime Engine
+A versioned capability package containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
+_Avoid_: Connector, Prompt, Runtime Engine
 
 ## Personal Configuration
 
 **Personal Settings**:
-A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone. Its default Provider Model and Runtime Engine apply only to execution without an Expert.
+A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone. Its default Provider Model and Runtime Engine supply every new Session or Run Conversation's execution configuration, whether or not an Expert or Expert Team is selected.
 _Avoid_: Organization policy, Expert configuration, Workflow settings
 
 **Personality**:
@@ -213,7 +261,7 @@ The selected Claude Code, Codex, Hermes, OpenClaw, or PI Agent engine that gener
 _Avoid_: Provider Model, Expert, sandbox, Worker
 
 **Runtime Engine Setting**:
-A User's preference for one Runtime Engine, including that engine's default Provider Model. It supplies the execution configuration when no Expert is selected; Sessions and Workflows do not override it.
+A User's preference for one Runtime Engine, including that engine's default Provider Model. It supplies the execution configuration frozen when a Session or Run Conversation starts; Experts and Workflows do not override it.
 _Avoid_: global default model, Personality model, fixed Session model
 
 **Runtime Adapter**:

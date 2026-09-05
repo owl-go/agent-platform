@@ -1,10 +1,10 @@
 # Agent Workspace Product Requirements
 
-Status: accepted for implementation on 2026-08-25; Expert Team amendment accepted on 2026-09-02; Expert-owned execution and Credits amendments accepted on 2026-09-04.
+Status: accepted for implementation on 2026-08-25; Expert Team amendment accepted on 2026-09-02; Credits amendment accepted on 2026-09-04; Expert, Skill, and Connector simplification accepted on 2026-09-05.
 
 ## 1. Product Outcome
 
-Agent Workspace is a personal AI workspace centered on four user-visible areas: Sessions, Workflows, Experts, and Settings. It replaces the previous Coding Agent control-plane product rather than adding another layer on top of Agent Studio, Coding Tasks, Releases, and Operations.
+Agent Workspace is a personal AI workspace centered on Sessions, Workflows, Experts, Skills and Connectors, and Settings. It replaces the previous Coding Agent control-plane product rather than adding another layer on top of Agent Studio, Coding Tasks, Releases, and Operations.
 
 The primary experience is intentionally lightweight: a ChatGPT-like left navigation and object list with one focused content surface. Advanced configuration remains collapsed until requested. The product name shown in the UI is `Agent Workspace`; the repository and deployment identifiers may remain `agent-platform`.
 
@@ -70,9 +70,10 @@ The main navigation contains exactly:
 1. Sessions
 2. Workflows
 3. Experts
-4. Settings
+4. Skills & Connectors
+5. Settings
 
-Login opens Sessions. A User without a usable platform Model Provider Connection, Provider Model, or personal Runtime Engine default sees setup guidance: an Administrator must configure the platform Model Catalog, then the User selects a default Provider Model for a Runtime Engine before starting a Session or Workflow. Expert and Extension setup is optional and never blocks first use.
+The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs. The Skills & Connectors entry (Chinese: `技能·连接器`, not Capability) contains `Skills` and `Connectors` tabs. Login opens Sessions. A User without a usable platform Model Provider Connection, Provider Model, or personal Runtime Engine default sees setup guidance: an Administrator must configure the platform Model Catalog, then the User selects a default Provider Model for a Runtime Engine before starting a Session or Workflow. Expert, Skill, and Connector setup is optional and never blocks first use.
 
 ## 4. Sessions
 
@@ -80,7 +81,7 @@ Login opens Sessions. A User without a usable platform Model Provider Connection
 
 - A User can create, rename, archive, cancel archive, and permanently delete a Session.
 - New Session creation succeeds immediately without an Expert. Before the first message, the composer offers a grouped `No Expert / Expert / Expert Team` selector without reopening a creation modal.
-- A Session can use no specialist profile, one Expert, or one Expert Team. The choice becomes fixed after the first message as an Expert Snapshot containing the visible metadata and each Expert's Provider Model, Runtime Engine, Execution Instruction, ordered position, and exact MCP and Skill revisions.
+- A Session can use no specialist profile, one Expert, or one Expert Team. The choice becomes fixed after the first message as an Expert Snapshot containing visible profile metadata, structured Expert guidance, stable Team Member identities and order, and exact Skill and Connector revisions.
 - The title is derived locally from the first User message and remains editable; title generation does not invoke a model.
 - Archived Sessions are hidden from the active list and read-only until archive is cancelled.
 - Deleting a Session requires confirmation, cancels active generation, and permanently deletes messages and Session execution data.
@@ -88,13 +89,13 @@ Login opens Sessions. A User without a usable platform Model Provider Connection
 
 ### 4.2 Conversation Execution
 
-- The Session composer has no Provider Model or Runtime Engine selector. Without an Expert, every sent message resolves the current Personal Settings default Runtime Engine and that engine's default Provider Model; with an Expert or Expert Team, it uses the Provider Model and Runtime Engine frozen in the Session's Expert Snapshot.
-- Each User message freezes a Response Snapshot containing one ordered Execution Stage Snapshot per actual Provider Model invocation. Every stage records its optional Expert identity, Model Provider Connection version, Model API Protocol, Endpoint, Provider Model, Runtime Engine, Execution Instruction, and exact Extensions; API Keys remain protected versioned credentials and never enter ordinary message data.
-- A settings change affects the next message of a no-Expert Session but never changes a queued or active response. Editing an Expert affects only Sessions started afterward; regeneration always reuses the original Response Snapshot.
-- A Session may keep each isolated Runtime container definition warm for 30 minutes after a response finishes. Warm reuse is scoped by Session, frozen Expert identity, and Runtime Engine, so team members never share execution context even when they use the same engine.
+- The Session composer has no Provider Model or Runtime Engine selector. The first message resolves and freezes the current Personal Settings default Runtime Engine and that engine's default Provider Model for the Session, regardless of whether an Expert or Expert Team is selected.
+- Each User message freezes a Response Snapshot containing one ordered Execution Stage Snapshot per actual Provider Model invocation. Every stage records its optional Expert and Team Member identities, Model Provider Connection version, Model API Protocol, Endpoint, the Session's frozen Provider Model and Runtime Engine, structured Expert guidance, and exact Skills and Connectors; API Keys and Connector credentials remain protected versioned references and never enter ordinary message data.
+- A Personal Settings change affects only Sessions started afterward and never changes an existing Session. Editing an Expert affects only Sessions started afterward; regeneration always reuses the original Response Snapshot.
+- A Session may keep each isolated Runtime container definition warm for 30 minutes after a response finishes. Warm reuse is scoped by Session, frozen Team Member identity when present, Expert identity, and Runtime Engine, so team members never share execution context even when they reference the same Expert.
 - The UI streams the response and shows generating, failed, cancelled, retry, and elapsed-time states. While a response is generating, the send control becomes a stop control that requests backend cancellation and stops the active Runtime execution. It does not expose Attempt, Lease, Runtime Event, or a separate Run record.
 - While generating and after completion, the UI may show an expandable, persisted execution activity summary such as preparing the Runtime, public reasoning summaries, redacted tool commands, file updates, and composing the answer. It never exposes raw model chain-of-thought, private reasoning, raw Runtime events, or tool output.
-- A single selected Expert executes directly using its visible Execution Instruction and snapshotted MCP Servers and Skills. An Expert Team uses the fixed sequential execution contract in Section 8.2.
+- A single selected Expert executes directly using its four visible guidance fields and snapshotted Skills and Connectors. An Expert Team uses the fixed sequential execution contract in Section 8.2.
 - Ordinary Runtime text remains a message; only files explicitly uploaded by a User or actually generated by a Runtime are presented as files.
 - The platform maintains a Rolling Summary and recent-message window after every successful response.
 
@@ -102,10 +103,8 @@ Login opens Sessions. A User without a usable platform Model Provider Connection
 
 - Claude Code and Codex may use native Session Resume only for Runtime images whose `native_resume` conformance evidence has passed.
 - Hermes, OpenClaw, and PI Agent use the Rolling Summary and recent messages for every response until their native Resume capability is independently verified.
-- For a no-Expert Session, a Personal Settings change that changes the Runtime Engine starts a new Native Session using the Rolling Summary.
 - Runtime identity comparison deliberately uses only the Runtime Engine name. A CLI, Adapter, or image upgrade does not proactively invalidate the Native Session; a safe classified Resume failure may cause fallback.
-- For a no-Expert Session, a Personal Settings change that changes only the Provider Model may continue native Resume and passes the new model configuration to that Runtime. A Runtime rejection fails that response without losing platform history.
-- Existing Sessions retain their initial Expert Snapshot. Later Expert, Expert Team, or Extension edits and deletion affect new Sessions and new Run Conversations, not an existing conversation's ability to continue.
+- Existing Sessions retain their initial execution configuration and Expert Snapshot. Later Personal Settings, Expert, Expert Team, Skill, or Connector edits and deletion affect new Sessions and new Run Conversations, not an existing conversation's ability to continue, except that current Connector authorization and enablement are revalidated before each external command.
 - Each Expert Team member owns independent staged Native Session state. The platform promotes all member states only after the entire turn succeeds and discards every staged state on failure or cancellation; retry restarts the full frozen member order from the preceding successful turn.
 - Automatic fallback is allowed when the platform can prove before execution that the local native state for a checkpoint is absent, or when the Runtime reports that the checkpoint is invalid before any action executes. All other Resume failures are shown to the User and may be retried manually.
 - Native Resume is an optimization. Platform messages and the Rolling Summary remain the correctness boundary.
@@ -117,9 +116,9 @@ Login opens Sessions. A User without a usable platform Model Provider Connection
 - A Workflow is a single executable definition, not a visual DAG. It may invoke one fixed-order Expert Team but does not support arbitrary multi-agent graphs.
 - A User can create, edit, run, and delete a Workflow.
 - Required fields are name and goal. One Expert or Expert Team is optional.
-- A Workflow has no Provider Model or Runtime Engine override. Without an Expert it resolves Personal Settings defaults when a new Run Conversation starts; with an Expert or Expert Team it uses each frozen Expert's required Provider Model and Runtime Engine.
+- A Workflow has no Provider Model or Runtime Engine override. Every new Run Conversation resolves and freezes the current Personal Settings default Runtime Engine and that engine's default Provider Model; the same configuration applies to no Expert, one Expert, or every Team Member.
 - The first Run in a Run Conversation freezes a Workflow Snapshot containing the goal, ordered Execution Stage Snapshots, environment, and other execution inputs. Follow-up Runs reuse that frozen snapshot and add one immutable turn input; API Keys are held only through protected versioned credential references.
-- A Workflow keeps each isolated Runtime container definition warm for 30 minutes after a Run finishes so frequent serialized Runs do not recreate containers. Warm reuse is scoped by Run Conversation, frozen Expert identity, and Runtime Engine; containers stop between Runs and are destroyed after 30 minutes without use.
+- A Workflow keeps each isolated Runtime container definition warm for 30 minutes after a Run finishes so frequent serialized Runs do not recreate containers. Warm reuse is scoped by Run Conversation, frozen Team Member identity when present, Expert identity, and Runtime Engine; containers stop between Runs and are destroyed after 30 minutes without use.
 - Editing a Workflow affects future Run Conversations only; follow-up Runs reuse their initiating snapshot. There is no Draft, Release, publish, approval, or visible version flow.
 - Only one Run may modify a Workflow at a time. Additional manual, scheduled, and API requests enter the queue.
 
@@ -135,7 +134,7 @@ The Workflow detail page contains four tabs in this order:
 Settings contains five collapsed sections:
 
 - Basic: name, goal, optional Expert or Expert Team
-- Execution: read-only resolved Expert execution summary when applicable, plus environment variables
+- Execution: read-only Personal Settings execution summary, plus environment variables
 - Schedule: hourly, daily, or weekly trigger with time and optional time-zone override
 - API Credential: generate or regenerate API Key/API Secret and show the JWT exchange and Bearer invocation examples
 - Git Source: URL, branch, public HTTPS/account-password/private-key authentication, safe local Git config, and optional Workflow-scoped SSH config
@@ -146,7 +145,7 @@ Settings contains five collapsed sections:
 - API Runs accept optional text or JSON input.
 - Scheduled Runs execute only the fixed Workflow goal and do not have a separate default input.
 - Run trigger types shown to Users are manual, scheduled, and API.
-- An unavailable selected Expert or Expert Team prevents manual and API requests before a Run is created. A Scheduled Trigger instead creates an explicit failed, uncharged Run identifying the unavailable dependency; a queued Run revalidates its frozen first stage before model invocation and fails uncharged if that dependency became unavailable.
+- An incomplete selected Expert, invalid Expert Team, unavailable Skill or Connector revision, or unavailable Personal Settings execution configuration prevents manual and API requests before a Run is created. A Scheduled Trigger instead creates an explicit failed, uncharged Run identifying the unavailable dependency; a queued Run revalidates its frozen first stage before model invocation and fails uncharged if that dependency became unavailable.
 
 ### 5.4 Environment
 
@@ -221,55 +220,62 @@ Run metadata and final text/JSON results are retained without a time limit in th
 - Run metadata, final results, and unexpired Artifacts remain available through the Workflows list's `Deleted Records` filter.
 - A Deleted Workflow Record is read-only, cannot be restored, and cannot be run again.
 
-## 8. Experts And Extensions
+## 8. Experts, Skills, And Connectors
+
+The detailed accepted behavior and implementation/test seams are defined in `docs/product/expert-skill-connector-simplification.md`.
 
 ### 8.1 Experts
 
-- An Expert contains a unique-per-User name, required display-only Capability Introduction, required visible Execution Instruction, required Provider Model, required Runtime Engine, zero to ten Expertise Tags, selected MCP Servers, and selected Skills. Tags are free-form, case-insensitively unique within the Expert, and limited to twenty characters each.
-- Capability Introduction replaces the former description and is never injected into model input. Execution Instruction is the only Expert role definition injected into model input; the product does not create a hidden instruction from the Expert name or Capability Introduction.
-- Expert create and edit use a dedicated page with Provider Model and Runtime Engine selectors and the same MCP, Skills, and Third-party CLI extension manager as Settings. The selected pair must not be incompatible; unverified pairs remain selectable with a persistent warning. Users may manage MCP Servers and Skills without leaving the page; newly installed Skills are selected for that Expert, while MCP Servers become selectable only after a successful test. The Third-party CLI tab remains the same non-actionable Coming Soon placeholder defined below.
-- A single Expert executes directly rather than through a coordinator or extra synthesis call. It receives the current task, bounded conversation context, attachments, Personal Settings, its Execution Instruction, its Provider Model and Runtime Engine, and only its own snapshotted MCP Servers and Skills.
-- A Session or Workflow may run without an Expert or Expert Team.
-- Editing or deleting an Expert affects only future selection. Existing Session and Run Conversation Expert Snapshots continue normally. Deleting an Expert removes it from mutable Expert Teams; a team left with fewer than two members remains editable but cannot be selected or run.
-- Expert names are unique among a User's Experts but do not conflict with Expert Team names.
-- A migrated Expert missing an Execution Instruction, Provider Model, or Runtime Engine is an Incomplete Expert. A complete Expert whose model, connection, engine, or compatibility becomes unusable is an Unavailable Expert. Both remain visible and editable but cannot be selected for new execution, and neither ever falls back to another execution configuration.
+- An Expert contains a preset Profile Icon, a unique-per-User name, required display-only Introduction, required Core Capability, required Operating Procedure, required Output Standard, optional Cautions, Derived Expertise Tags, and selected Skills and Connectors. It contains no Provider Model or Runtime Engine setting.
+- The interface labels Operating Procedure as `工作流程`; domain and API contracts use `operating_procedure` so it is not confused with the executable Workflow aggregate.
+- Core Capability, Operating Procedure, Output Standard, and Cautions are assembled under fixed visible headings as the complete injected Expert guidance. Introduction and Derived Expertise Tags are never injected.
+- Up to five Derived Expertise Tags are generated asynchronously from Core Capability with the User's Personal Settings default Provider Model. They are non-authoritative, consume no User Credits, and never block Expert save or execution; a failed refresh retains the previous projection.
+- Expert create and edit use a dedicated page. A User selects existing Skills and Connectors and may install or upload a Skill, or create and test an MCP Connector, inline; the resulting resource enters the global User-owned catalog and is selected automatically.
+- A single Expert executes directly rather than through a coordinator or extra synthesis call. A Session or Workflow may also run without an Expert or Expert Team.
+- Editing an Expert affects only future Session and Run Conversation snapshots. An Expert referenced by a mutable Expert Team cannot be deleted; immutable historical snapshots do not block deletion.
+- A migrated Expert missing Introduction, Core Capability, Operating Procedure, or Output Standard is an Incomplete Expert. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
 
 ### 8.2 Expert Teams
 
-- An Expert Team contains a unique-per-User name, required display-only Capability Introduction, zero to ten Expertise Tags, and an ordered list of two to ten distinct Experts. It has no team-level Execution Instruction, MCP Servers, Skills, Provider Model, or Runtime Engine setting.
-- The Experts page has `Experts` and `Expert Teams` tabs. Each tab has its own create action, name/introduction search, Expertise Tag filter, and newest-first ordering; no popularity or `Hottest` metric is introduced. Desktop uses a responsive three-column card grid and mobile uses one column. Expert cards show name, Capability Introduction summary, Provider Model, Runtime Engine, compatibility warning, availability, and tags; team cards additionally show each ordered member's model and engine plus `N Experts per turn` cost disclosure.
-- Create and edit use dedicated pages. Team members support drag reorder plus accessible move-up and move-down controls. An Expert or Expert Team selection uses grouped options; an invalid team remains visible, shows `At least two Experts required`, and is disabled in selectors.
-- Every new Session message or Run turn executes the full frozen member order. Each Subagent runs in its own process and context using its Expert's Provider Model and Runtime Engine; a team may mix both. Runtime-native subagent capability is neither required nor enabled by this design.
-- Every Subagent receives the current task, Rolling Summary and recent messages, current attachments, and the final text results of all preceding members. It receives only its own Execution Instruction, MCP Servers, and Skills. Raw reasoning, tool logs, and private Runtime events are never passed or displayed as collaboration context.
-- A Workflow Expert Team operates on one shared temporary Workspace for the whole turn, so later members see earlier file changes. The Workspace is merged only after every member succeeds; any failure or cancellation rolls back the whole turn.
-- Execution is sequential and fail-fast. The UI streams the current member result and shows progress such as `2/4 · Architecture Expert is running`. Completed intermediate results persist with Expert identity, Provider Model, Runtime Engine, order, status, elapsed time, Credit Consumption, and final text; they are collapsed by default and can be expanded and copied. The final member's result is the official Agent response and exposes that final member's execution identity in its summary.
-- Failure identifies the failing member and prevents later members from starting. Cancellation stops the current member and the remaining chain. Retry always restarts at the first member. The existing task timeout applies to the entire team, with each member using only the remaining time.
-- Workflow API status returns the overall state and official final result together with an ordered member-stage result list containing each member's Provider Model and Runtime Engine. It does not expose separate child Runs or require callers to combine results.
-- Every follow-up turn reruns the complete frozen team. Platform-owned Rolling Summary and recent messages provide correctness; independently staged per-member Native Sessions are an optimization committed only after the full turn succeeds.
-- Deleting an Expert Team clears it from mutable Workflows and unstarted Sessions, which return to no Expert. Existing Session and Run Conversation snapshots remain executable. Deletion uses the standard non-native confirmation dialog and identifies the affected team.
-- Version one intentionally excludes parallel execution, conditions, loops, dynamic routing, free-form Agent conversation, team-level Extensions, team-level Provider Model or Runtime Engine overrides, coordinator synthesis, and Runtime-native subagents.
+- An Expert Team contains a preset Profile Icon, a unique-per-User name, required display-only Introduction, required display-only Core Capability, and two to ten ordered Team Members.
+- Each Team Member has a stable internal identity, a team-unique User-authored name, an Expert reference, zero to five Member Labels of at most twenty characters, and an order. The same Expert may appear in multiple member roles, whose Native Sessions and Runtime contexts remain isolated by stable Team Member identity.
+- The Team Member name and labels are injected visibly before that member's Expert guidance. Team Introduction and team Core Capability are display-only.
+- The Experts entry has `Experts` and `Expert Teams` tabs with separate create actions. Expert cards emphasize Introduction, Derived Expertise Tags, and Skill and Connector counts; team cards show ordered member roles and `N Experts per turn`. Neither card type displays model or Runtime settings.
+- Team members support drag reorder plus accessible move-up and move-down controls. An Expert or Expert Team selection uses grouped options; a team with fewer than two valid members remains editable but is disabled in selectors.
+- Every new Session message or Run turn executes the full frozen member order sequentially and fail-fast. Every member uses the Session or Run Conversation's one frozen Personal Settings execution configuration; Runtime-native subagent capability is not required.
+- Every Subagent receives the current task, Rolling Summary and recent messages, current attachments, all preceding members' final text, its visible Team Member role context, and only its own Expert guidance, Skills, and Connectors. Raw reasoning, tool logs, and private Runtime events are not collaboration context.
+- Workflow team execution retains the shared temporary Workspace, success-only merge, final-member official response, atomic Native Session promotion, cancellation behavior, and full-team retry defined by ADR-0022 and ADR-0026.
+- Deleting an Expert Team clears it from mutable Workflows and unstarted Sessions. Existing Session and Run Conversation snapshots remain executable.
 
-### 8.3 MCP Servers
+### 8.3 Skills And MCP Connectors
 
-- Users can create, edit, test, and delete MCP Server configurations.
-- Supported transports are Streamable HTTP and stdio.
-- Streamable HTTP configuration includes name, URL, and write-only authentication values.
-- stdio configuration uses fixed-version `npx` or `uvx` packages plus structured arguments and environment; `latest` and arbitrary host commands are rejected.
-- MCP execution occurs only in the isolated Runtime environment.
-- Only a successfully tested MCP Server may be attached to an Expert.
-- Deleting an MCP Server removes it from all Experts. Historical Session and Run snapshots remain unchanged.
+- The Skills & Connectors entry has `Skills` and `Connectors` tabs. The User-visible Extension concept and resource management in Personal Settings are removed.
+- Users install private Skills from a Git URL or ZIP upload. A valid package contains `SKILL.md` and may include scripts and resources; each new Session or Run Conversation snapshot freezes the latest exact revision.
+- Users create, edit, test, and delete private MCP Connectors. Supported transports are Streamable HTTP and fixed-version `npx` or `uvx` stdio; `latest`, arbitrary host commands, and untested selection are rejected.
+- MCP and Skill execution occurs only inside the isolated Runtime environment. An npm package speaking MCP remains an MCP Connector rather than a Third-party CLI Connector.
+- Before deletion, the product shows affected mutable Experts. Confirmation transactionally detaches the Skill or MCP Connector from those Experts; historical snapshots remain unchanged.
+- New public routes are `/api/v1/skills` and `/api/v1/connectors/mcp`; deprecated `/extensions` aliases are not retained.
 
-### 8.4 Skills
+### 8.4 Third-party CLI Connectors
 
-- Users install Skills from a Git URL or ZIP upload. A valid package contains `SKILL.md` and may include scripts and resources.
-- Updating a Skill makes the newest revision available to Experts and future Runs. Each Run Snapshot records the exact SHA-256 used.
-- Skill scripts execute only inside the isolated Runtime environment.
-- Deleting a Skill removes it from all Experts. Historical Session and Run snapshots remain unchanged.
+- Only an Administrator may create or edit a platform-wide CLI Connector Definition. Ordinary Users may browse, enable, authorize, and select available Definitions but cannot create them; each enablement and authorization remains private to its User.
+- A Definition identifies an exact npm package, version, integrity, executable, supported architecture, built-in authentication driver, structured capabilities, identities, argument allowlists, risk, required scopes, Egress, recommended Skills, and supported Runtime image Digests. Arbitrary Shell install or authentication scripts are prohibited.
+- The platform builds a credential-free immutable bundle outside User Runs, verifies its integrity and SHA-256, stores it in private object storage, and mounts it read-only. A User Run never installs a package.
+- Definition lifecycle is `draft`, `building`, `testing`, `available`, `failed`, or `disabled`. Availability requires Conformance for the exact bundle digest and each claimed Runtime RepoDigest; upstream schema additions require explicit review before a new version becomes available.
+- A common CLI Connector Wrapper, rather than each Runtime Driver, enforces the frozen executable contract, arguments, identity, scopes, Egress, authorization, risk, timeout, output, Workspace, and Secret policy.
+- Recommended Skills are explicit install offers that become ordinary User-owned Skills. Enabling a Connector never injects hidden instructions.
 
-### 8.5 Third-party CLI
+### 8.5 Feishu CLI And User Action Waits
 
-- Settings shows a Third-party CLI Extension tab with a `Coming Soon` state and no create action.
-- Binary format, installation, permission, and execution semantics are intentionally undecided and out of scope.
+- The first CLI Connector uses a fixed version of the official `@larksuite/cli` package. Browsing requires no authorization; enabling idempotently creates exactly one Feishu CLI Application per Agent Workspace User, while allowing multiple isolated Feishu account authorizations under that application.
+- The platform stores the provider-returned application name and offers a Feishu developer-console link for optional manual renaming. It does not claim automatic application naming.
+- Enablement requests only a reviewed subset of officially review-free, non-business scopes needed for identity and diagnostics. Business scopes are requested only when a capability is enabled or an operation requires them.
+- User and Bot execution identities remain distinct. Operations supporting both ask the User to choose; missing User scopes start explicit OAuth, while missing Bot scopes or publication prerequisites return a direct recovery link.
+- App ID, App Secret, and Tokens are encrypted and write-only. Tokens refresh before use; failed refresh invalidates that authorization. Disconnecting an authorization or disabling a Connector blocks future commands immediately while preserving historical results.
+- Every high-risk command requires a separate, persisted, one-use approval from the authenticated owning User. The request displays Connector, identity, operation, target, and redacted arguments, and binds the decision to an immutable command digest and nonce. Administrator identity and Workflow API credentials cannot approve.
+- Only one approval is active per Execution Stage; further requests queue. A Session response or Run enters `waiting_for_user`, may be cancelled, retains its Runtime container, temporary Workspace, Workflow lock, and Credit lease, and pauses its ordinary execution timeout while the approval deadline runs.
+- The approval timeout defaults to five minutes, has a hard cap of fifteen minutes, and may be lowered by an Administrator. Scheduled and API Runs may wait for approval in the authenticated product; without User action they expire normally.
+- Rejection or expiry returns a structured CLI error to the Runtime rather than forcing the whole execution to fail. Actual model Usage remains chargeable. Definition, enablement, authorization, scopes, and policy are revalidated after approval and immediately before command execution.
 
 ## 9. Personal Settings
 
@@ -282,24 +288,25 @@ Run metadata and final text/JSON results are retained without a time limit in th
 - Built-in connections preset their supported protocols. A custom connection explicitly selects one or more of OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
 - Saving or refreshing a connection first requests the provider Endpoint's `/models` API. If that API is unsupported, fails, or returns no usable models, the platform loads its maintained default model list for that provider instead; a custom provider without maintained defaults remains available for explicit model entry.
 - Administrator provider management lists the resulting models and provides both Refresh Models and Add Model actions. A fallback catalog is not presented as a provider error, while a connection with neither discovered nor default models shows the discovery failure and still permits manual model entry through one Model field. Ordinary Users have no provider or catalog mutation controls.
-- Provider Models have one identifier used for invocation and selection. Provider-discovered display metadata may improve presentation, but the Administrator never configures a separate model name or model-type classification. Every available global model appears in every User's Personal Settings and Expert selectors, subject only to Runtime Model Compatibility derived from the connection's Model API Protocols; Sessions and Workflows have no model selector.
-- A Model Provider Connection referenced by any User's Runtime default, mutable Expert, or continuable Session or Run Conversation snapshot cannot be deleted until those references are changed or deleted.
+- Provider Models have one identifier used for invocation and selection. Provider-discovered display metadata may improve presentation, but the Administrator never configures a separate model name or model-type classification. Every available global model appears in every User's Personal Settings, subject only to Runtime Model Compatibility derived from the connection's Model API Protocols; Sessions, Workflows, Experts, and Expert Teams have no model selector.
+- A Model Provider Connection referenced by any User's Runtime default or continuable Session or Run Conversation snapshot cannot be deleted until those references are changed or deleted.
 - Runtime Settings shows only Claude Code, Codex, Hermes, OpenClaw, and PI Agent, their available state, and one default Provider Model per Runtime Engine. Creating a connection never changes these defaults automatically.
-- Runtime Model Compatibility is verified, unverified, or incompatible. Unverified combinations show a non-blocking warning and remain selectable; an incompatible pair cannot be saved on an Expert. A saved Expert whose pair later becomes incompatible is unavailable for new execution, and an incompatible historical invocation fails explicitly without replacement.
+- Runtime Model Compatibility is verified, unverified, or incompatible. Unverified combinations show a non-blocking warning and remain selectable in Personal Settings; an incompatible pair cannot be saved as a Runtime default. An incompatible historical invocation fails explicitly without replacement.
 - Personality controls communication style only and does not select a model.
 - Historical Agent responses show the final execution stage's identity and expose every stage's Expert, connection, model identifier, and Runtime metadata on demand. Regeneration reuses the original ordered Response Snapshot.
 - An unavailable selected Runtime fails explicitly and is never silently replaced.
 - Personal Settings also stores language and time zone.
 
-Settings presents Extensions as three tabs: MCP, Skills, and the Third-party CLI placeholder.
+Personal Settings does not manage Skills or Connectors.
 
 ## 10. Security And Isolation
 
-- User-owned resource queries and mutations enforce the authenticated User owner at the server and return non-enumerating not-found behavior across owners. Model Catalog reads are global to authenticated Users, while every Model Provider Connection and Provider Model mutation requires the Administrator.
+- User-owned resource queries and mutations enforce the authenticated User owner at the server and return non-enumerating not-found behavior across owners. Model Catalog and available CLI Connector Definition reads are global to authenticated Users, while their mutations require the Administrator.
 - Login uses OIDC Authorization Code with PKCE. Workflow API credentials cannot authenticate ordinary product APIs.
 - Secrets are never placed in URLs, command arguments, browser storage, logs, events, results, or Artifacts.
 - External processes receive executable and argument arrays, never concatenated shell commands.
-- Runtime, MCP, and Skill code executes non-root in the isolated container path and cannot execute on the host.
+- Runtime, MCP, Skill, and CLI Connector code executes non-root in the isolated container path and cannot execute on the host. CLI Connector bundles are exact, immutable, read-only artifacts built outside User Runs.
+- A direct CLI command passes through the common Wrapper and cannot start until current Definition, capability, identity, authorization, scope, Egress, argument, risk, timeout, and approval policy all pass. One-use approvals are bound to immutable command requests and revalidated immediately before execution.
 - Workspace paths are normalized, symlinks cannot escape the root, object-store buckets remain private, and downloads use short-lived authorization.
 - Writes use idempotency and optimistic concurrency where replay or concurrent editing could duplicate or overwrite intent.
 
@@ -323,7 +330,7 @@ This product replaces rather than hides the former control-plane model. Remove t
 
 Retain only the lower-level Git Clone capability needed by Workflow Workspace initialization.
 
-The original Agent Workspace cutover reset the former control-plane database. The Expert Team and Expert-owned execution amendments use incremental migrations and preserve all current Sessions, Workflows, Runs, Experts, and Extensions. Existing Experts without an Execution Instruction, Provider Model, or Runtime Engine appear as Incomplete Experts and cannot be selected for new execution until edited. Legacy mutable Session and Workflow model or engine overrides are cleared and ignored for new execution; already-frozen snapshots keep their original shared configuration and are read through an explicit legacy schema path. The public Expert contract replaces `description` with `capability_introduction` and `execution_instruction` without a deprecated alias.
+The original Agent Workspace cutover reset the former control-plane database. Later amendments use incremental migrations and preserve all current Sessions, Workflows, Runs, Experts, Skills, MCP configurations, and immutable snapshots. Migrate old Capability Introduction to Introduction and old Execution Instruction unchanged to Operating Procedure; leave Core Capability, Output Standard, and Cautions empty, so affected Experts remain visible but incomplete until edited. Stop reading legacy Expert Provider Model, Runtime Engine, and hand-authored tags for new execution, while retaining compatibility columns and historical snapshot readers. Give existing profiles default icons and migrate each old team position to a stable Team Member whose initial name is the referenced Expert name and whose Member Labels are empty. New public Expert, Skill, and Connector contracts have no deprecated `description`, `capability_introduction`, `execution_instruction`, or `/extensions` aliases.
 
 ## 13. Acceptance Boundary
 
@@ -335,12 +342,16 @@ Completion requires real browser-to-API closure for both Administrator and ordin
 - versioned default and exact-match Model Credit Rates, one Credit per 10,000 Tokens at multiplier 1.00, separate input/output multipliers, explicit zero rates, fixed missing-Usage fallback, per-stage rate snapshots, incremental Token normalization, two-decimal rounding, and no historical recalculation
 - positive-balance admission, User-level serialized model invocation, exact-once transactional settlement for success/failure/cancellation/timeout, Expert Team stage exhaustion, retry behavior, interactive/API/Scheduled insufficient-credit paths, and `429 insufficient_credits`
 - avatar Credit Balance and redemption panel, User Credit Ledger, per-response and per-Run total `共消耗` display without Token details, and Administrator Users/Model Rates/Redemption Codes tabs without access to User-owned execution detail
-- Session create, image/file attachment upload and history, stream, retry, rename, archive, cancel archive, delete, Rolling Summary, settings-derived no-Expert execution, Expert-derived execution, and capability-gated native Resume
+- Session create, image/file attachment upload and history, stream, retry, rename, archive, cancel archive, delete, Rolling Summary, one settings-derived execution configuration with or without an Expert, and capability-gated native Resume
 - Workflow CRUD, manual/scheduled/API Run, follow-up image/file attachments, queueing, cancellation, rerun, record detail, and deleted-record access
 - read-only Workspace browse/preview/download, Git Settings Clone authentication/config validation, quotas, success merge, and failure rollback
 - Artifact creation, preview/download, expiry, and post-Workflow deletion access
-- Expert and Expert Team CRUD, required model and engine selection, responsive cards, search/tag filters, ordered member editing, incomplete and unavailable states, grouped selection, snapshot behavior, and deletion semantics
-- real two-member mixed-model and mixed-engine sequential execution, preceding-result and attachment handoff, streaming member progress, persisted stage execution identities and results, final-member response, fail-fast behavior, cancellation, whole-team retry, atomic Native Session promotion, shared temporary Workspace success merge, and failure rollback
+- Expert and Expert Team CRUD, preset icons, visible structured guidance, derived tags, responsive cards, search/tag filters, stable ordered Team Member editing, repeated Expert roles, incomplete states, grouped selection, snapshot behavior, and deletion conflicts
+- real two-member shared-model and shared-engine sequential execution, isolated member contexts, visible member role injection, preceding-result and attachment handoff, streaming member progress, persisted stage identities and results, final-member response, fail-fast behavior, cancellation, whole-team retry, atomic Native Session promotion, shared temporary Workspace success merge, and failure rollback
+- Skill and MCP Connector catalogs, Git/ZIP Skill installation, isolated MCP testing, inline creation from Expert editing, exact revision snapshots, affected-Expert deletion confirmation, owner isolation, and new non-Extension routes
+- Administrator-only CLI Connector Definition creation, exact npm bundle build and integrity, reviewed capability schema, lifecycle and availability, User-private enablement and authorization, Wrapper enforcement, and exact bundle/Runtime Digest Conformance
+- Feishu one-application-per-User idempotent enablement, multiple account authorizations, User/Bot identity, least-privilege scope recovery, encrypted credentials, token refresh and revocation, actual provider application name, and developer-console link
+- high-risk one-use approvals, owning-User authority, immutable command binding, multiple serialized approvals, `waiting_for_user`, rejection, expiry, cancellation, resume, revalidation, Scheduled/API waiting, timeout pause, resource retention, Credit settlement, event ordering, and restart reconciliation
 - Personal Settings, Administrator-managed global Model Provider Connections and catalogs, User-specific per-Runtime default model selections, no Session or Workflow execution override, Runtime compatibility warnings, Personality, language, and time zone
 - Secret canary absence from browser, API, SSE, logs, Workspace persistence, and Artifacts
 - Chinese/English, keyboard navigation, mobile layout, empty state, offline state, and explicit errors

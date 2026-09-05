@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Agent Workspace 当前实现
+状态：当前架构加已接受但尚未实现的 Expert、Skill 与 Connector 目标修订
 
 ## 结构
 
@@ -9,7 +9,7 @@
 当前实现分为三个限界上下文：
 
 - Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
-- Workspace：Session、Workflow、Run Conversation、Run、Expert、平台级 Model Provider Connection 与 Provider Model、MCP Server、Skill 与 Personal Settings。
+- Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、User-owned MCP Connector、Administrator-owned CLI Connector Definition、User-private CLI Enablement/Authorization/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 
 Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。三个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
@@ -18,14 +18,15 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 
 ## 所有权
 
-Session、Workflow、Expert、Extension 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection 与 Provider Model 构成平台级 Model Catalog，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局 Provider Model 的个人默认选择。管理员可以查看账号级余额、今日用量、每日额度、兑换和人工调整记录，但不能借助管理权限读取其他 User 的会话、工作流、扩展或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
+Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement 和 Authorization。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整和聚合 Connector 健康，但不能借助管理权限读取其他 User 的会话、工作流、Connector 凭证/内容或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
 ## 事务与并发
 
 - Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
-- Run Conversation 的首个 Run 创建时冻结 Workflow 与有序 Execution Stage Snapshots；每个 Stage 独立包含可选 Expert、Provider Model、Model Provider Connection 版本、Model API Protocol、Endpoint、Runtime 与扩展配置，环境变量和共享 Workspace 配置保留在公共快照层。后续追问创建新的不可变 Run 并复用该快照和 Workspace。一个 Run Conversation 同时只有一个 Run 可执行，同一 Workflow 的所有 Run 仍串行执行。API Key 通过各 Stage 的版本化凭证引用在 Worker 领取时加载，不进入普通 Snapshot JSON。
-- Worker 按 Session 或 Run Conversation、冻结 Expert 身份和 Runtime Engine 维护隔离的 Warm Runtime Container 租约。租约不共享执行上下文、User 或资源边界；团队成员只按顺序挂载同一轮的 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
-- Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。
+- Session 首次发送消息、Run Conversation 首个 Run 创建时从 Personal Settings 解析并冻结一个 Provider Model 与 Runtime Engine。Snapshot 的每个 Stage 共用该配置，同时独立包含可选 Expert/Team Member 身份、四段结构化 guidance、Model Provider Connection 版本、Model API Protocol、Endpoint，以及 exact Skill/Connector revisions；环境变量和共享 Workspace 配置保留在公共快照层。后续消息或 Run 复用该对话快照。API Key 与 Connector Secret 通过版本化凭证引用在 Worker 领取或命令启动前加载，不进入普通 Snapshot JSON。
+- Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）和 Runtime Engine 维护隔离的 Warm Runtime Container 租约。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
+- CLI Connector bundle 在无 User 凭证的 Builder 中生成并通过 Object Storage 发布；Definition 状态与 exact bundle/Runtime Digest Conformance 控制 availability。公共 Wrapper 是所有 Runtime 的唯一 direct CLI 入口，负责 argv 与权限策略。`waiting_for_user`、一次性 Approval、nonce consumption 和执行前重校验由 Workspace Application 协调并持久化；每个 Stage 同时只有一个 active Approval。
+- Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
 - Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
 - 每个 User 的积分模型调用串行。调用开始前事务性物化当日额度并检查正余额；每个 Execution Stage 冻结 Model Credit Rate 修订，完成后以本次输入和输出 Token 增量结算。Stage 终态、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交；单 Stage 或团队最后一个 Stage 同事务提交 Assistant Message 或 Run 终态，结算后的负余额会阻止下一次调用。
 - 跨零点调用归属开始时的 Credit Day。次日额度通过首次余额读取或执行准入惰性物化，不依赖零点批处理；Personal Settings 时区变更只能从下一个 Credit Day 生效。
@@ -49,10 +50,12 @@ Credits 契约允许 User 读取自己的余额和 Credit Ledger、兑换 Redemp
 
 ## Secret
 
-Model Provider API Key、Workflow Secret 环境变量、MCP Secret、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured`，不返回明文。Workflow SSH config 不是 Secret，但只接受无命令执行能力的连接字段；Git Clone 时与私钥一起物化到隔离的临时 HOME，私钥文件名匹配受限的 `IdentityFile`，并继续使用管理员固定的 `known_hosts`。执行时其他 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
+Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/App Secret/Token、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured` 或外部身份元数据，不返回明文，Administrator 也无权读取 User Connector Secret。Workflow SSH config 不是 Secret，但只接受无命令执行能力的连接字段；Git Clone 时与私钥一起物化到隔离的临时 HOME，私钥文件名匹配受限的 `IdentityFile`，并继续使用管理员固定的 `known_hosts`。执行时其他 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 或 Wrapper 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
 
 ## 数据库
 
 当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构，后续 Migration 删除模型类型字段，`000014_global_model_catalog.sql` 再把已有连接与模型目录提升为全局可读资源并保留原凭证加密作用域。Provider Model 优先来自供应商 `/models`，失败或不支持时使用平台维护的厂商默认列表，Administrator 也可显式补充。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
+
+Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。历史 Snapshot JSON 不回写。
