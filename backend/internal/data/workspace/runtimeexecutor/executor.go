@@ -31,6 +31,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
@@ -47,6 +48,7 @@ type Executor struct {
 	box          *secretcrypto.Box
 	materializer credentials.Materializer
 	objects      objectstore.Provider
+	connectors   *cliconnector.ArtifactStore
 	warm         *containerprocess.WarmManager
 	checkout     func(context.Context, string) (runtimeLease, error)
 	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -78,8 +80,12 @@ func New(config platformconfig.Config, box *secretcrypto.Box, objects objectstor
 		return nil, err
 	}
 	owner := &credentials.Owner{UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID}
+	connectors, err := cliconnector.NewArtifactStore(objects)
+	if err != nil {
+		return nil, err
+	}
 	return &Executor{
-		config: config, box: box, objects: objects, warm: warm,
+		config: config, box: box, objects: objects, connectors: connectors, warm: warm,
 		materializer: credentials.Materializer{Root: config.Worker.CredentialTempRoot, Owner: owner},
 		checkout:     func(ctx context.Context, name string) (runtimeLease, error) { return warm.Checkout(ctx, name) },
 		newAdapter:   runtimeAdapter, executionTTL: 2 * time.Hour,
@@ -109,14 +115,14 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	}
 	firstStage := executionStages[0]
 	job.Snapshot.RuntimeEngine, job.Snapshot.ProviderModel = firstStage.RuntimeEngine, firstStage.ProviderModel
-	job.Snapshot.Expert, job.Snapshot.MCPServers, job.Snapshot.Skills = firstStage.Expert, firstStage.MCPServers, firstStage.Skills
+	job.Snapshot.Expert, job.Snapshot.MCPServers, job.Snapshot.Skills, job.Snapshot.CLIConnectors = firstStage.Expert, firstStage.MCPServers, firstStage.Skills, firstStage.CLIConnectors
 	if len(executionStages) > 1 {
 		team := &workspacedomain.ExpertTeamSnapshot{Members: make([]workspacedomain.ExpertMemberSnapshot, 0, len(executionStages))}
 		for _, executionStage := range executionStages {
 			if executionStage.Expert == nil {
 				return result, fmt.Errorf("team Execution Stage %d has no Expert", executionStage.Position)
 			}
-			team.Members = append(team.Members, workspacedomain.ExpertMemberSnapshot{ExpertSnapshot: *executionStage.Expert, Position: executionStage.Position, MemberID: executionStage.TeamMemberID, MemberName: executionStage.TeamMemberName, Labels: executionStage.TeamMemberLabels, MCPServers: executionStage.MCPServers, Skills: executionStage.Skills})
+			team.Members = append(team.Members, workspacedomain.ExpertMemberSnapshot{ExpertSnapshot: *executionStage.Expert, Position: executionStage.Position, MemberID: executionStage.TeamMemberID, MemberName: executionStage.TeamMemberName, Labels: executionStage.TeamMemberLabels, MCPServers: executionStage.MCPServers, Skills: executionStage.Skills, CLIConnectors: executionStage.CLIConnectors})
 		}
 		job.Snapshot.ExpertTeam = team
 	}
@@ -201,7 +207,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			memberJob = teamMemberJob(job, member, result.ExpertStages)
 		}
 		memberJob.Snapshot.RuntimeEngine, memberJob.Snapshot.ProviderModel = executionStage.RuntimeEngine, executionStage.ProviderModel
-		memberJob.Snapshot.Expert, memberJob.Snapshot.MCPServers, memberJob.Snapshot.Skills = executionStage.Expert, executionStage.MCPServers, executionStage.Skills
+		memberJob.Snapshot.Expert, memberJob.Snapshot.MCPServers, memberJob.Snapshot.Skills, memberJob.Snapshot.CLIConnectors = executionStage.Expert, executionStage.MCPServers, executionStage.Skills, executionStage.CLIConnectors
 		stageRuntimeConfig, available := executor.config.Worker.Runtimes[string(executionStage.RuntimeEngine)]
 		if !available || !stageRuntimeConfig.Available {
 			return result, fmt.Errorf("Runtime %s is unavailable", executionStage.RuntimeEngine)
@@ -271,6 +277,11 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				teamNativeRoots = append(teamNativeRoots, stageNativeState)
 			}
 		}
+		connectorDirectory, connectorErr := executor.materializeCLIConnectors(executionCtx, memberJob, stageSlot.scratch, stageRuntimeConfig.ImageDigest)
+		if connectorErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			return result, failStage(connectorErr)
+		}
 		variables, environmentFiles, redactValues, prepareErr := executor.memberEnvironment(executionCtx, memberJob)
 		if prepareErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -288,7 +299,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory())
+		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory(), connectorDirectory)
 		runProcess, startErr := lease.Start(executionCtx, containerConfig)
 		if startErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -574,11 +585,11 @@ func (executor *Executor) memberEnvironment(ctx context.Context, job application
 	return variables, files, redactValues, nil
 }
 
-func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory string) containerprocess.Config {
+func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory, connectorDirectory string) containerprocess.Config {
 	return containerprocess.Config{
 		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
 		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
-		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
+		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), ConnectorDirectory: connectorDirectory, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
 		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
@@ -614,6 +625,64 @@ func prepareRuntimeScratch(path string, uid, gid int) error {
 		return fmt.Errorf("create Runtime attachment directory: %w", err)
 	}
 	return prepareSandboxDirectory(attachments, uid, gid)
+}
+
+func (executor *Executor) materializeCLIConnectors(ctx context.Context, job application.ExecutionJob, scratch, runtimeImage string) (directory string, returnErr error) {
+	if len(job.Snapshot.CLIConnectors) == 0 {
+		return "", nil
+	}
+	_, runtimeDigest, ok := strings.Cut(runtimeImage, "@")
+	if !ok || runtimeDigest == "" {
+		return "", fmt.Errorf("Runtime image has no pinned digest")
+	}
+	directory = filepath.Join(filepath.Clean(scratch), "connectors")
+	if err := os.Mkdir(directory, 0o755); err != nil {
+		return "", fmt.Errorf("create CLI Connector staging directory: %w", err)
+	}
+	defer func() {
+		if returnErr != nil {
+			returnErr = errors.Join(returnErr, os.RemoveAll(directory))
+		}
+	}()
+	seen := make(map[string]struct{}, len(job.Snapshot.CLIConnectors))
+	for _, connector := range job.Snapshot.CLIConnectors {
+		if connector.ID == "" || filepath.Base(connector.ID) != connector.ID || strings.ContainsAny(connector.ID, "\\,\x00") || connector.Executable == "" || filepath.Base(connector.Executable) != connector.Executable || strings.ContainsAny(connector.Executable, "\\,\x00") {
+			return "", fmt.Errorf("invalid frozen CLI Connector reference")
+		}
+		if _, duplicate := seen[connector.ID]; duplicate {
+			return "", fmt.Errorf("duplicate frozen CLI Connector %q", connector.ID)
+		}
+		seen[connector.ID] = struct{}{}
+		compatible := false
+		for _, digest := range connector.RuntimeDigests {
+			compatible = compatible || digest == runtimeDigest
+		}
+		if !compatible {
+			return "", fmt.Errorf("CLI Connector %q is not verified for Runtime %s", connector.Name, runtimeDigest)
+		}
+		destination := filepath.Join(directory, connector.ID)
+		if err := executor.connectors.MaterializeVerified(ctx, connector.BundleObjectKey, connector.BundleSHA256, destination); err != nil {
+			return "", fmt.Errorf("materialize CLI Connector %q: %w", connector.Name, err)
+		}
+		executable := filepath.Join(destination, "node_modules", ".bin", connector.Executable)
+		resolvedRoot, err := filepath.EvalSymlinks(destination)
+		if err != nil {
+			return "", fmt.Errorf("resolve CLI Connector %q root: %w", connector.Name, err)
+		}
+		resolved, err := filepath.EvalSymlinks(executable)
+		if err != nil {
+			return "", fmt.Errorf("resolve CLI Connector %q executable: %w", connector.Name, err)
+		}
+		relative, err := filepath.Rel(resolvedRoot, resolved)
+		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			return "", fmt.Errorf("CLI Connector %q executable escapes its bundle", connector.Name)
+		}
+		info, err := os.Stat(resolved)
+		if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+			return "", fmt.Errorf("CLI Connector %q executable is unavailable", connector.Name)
+		}
+	}
+	return directory, nil
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
@@ -1266,6 +1335,7 @@ func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertM
 	job.Snapshot.Expert = &member.ExpertSnapshot
 	job.Snapshot.MCPServers = append([]workspacedomain.MCPServerSnapshot(nil), member.MCPServers...)
 	job.Snapshot.Skills = append([]workspacedomain.SkillSnapshot(nil), member.Skills...)
+	job.Snapshot.CLIConnectors = append([]workspacedomain.CLIConnectorSnapshot(nil), member.CLIConnectors...)
 	if member.MemberName != "" {
 		role := "Team member role: " + member.MemberName
 		if len(member.Labels) > 0 {

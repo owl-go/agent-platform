@@ -1,6 +1,6 @@
 # Runtime Images
 
-状态：Runtime 与隔离 CLI Builder 构建定义已实现；CLI bundle 的 Runtime 挂载尚未接入 User Run；部署前必须重新构建并记录 RepoDigest
+状态：Runtime、隔离 CLI Builder 和 User Run 的已校验只读 bundle 挂载已实现；公共 Wrapper broker 尚未接入；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |
 |---|---|---:|

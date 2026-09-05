@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -90,6 +92,57 @@ func (store *ArtifactStore) GetVerified(ctx context.Context, key, digest string)
 		return nil, objectstore.ErrChecksumMismatch
 	}
 	return bundle, nil
+}
+
+// MaterializeVerified extracts a frozen bundle into a protected staging directory.
+// The caller must mount it read-only and must not expose its binaries directly.
+func (store *ArtifactStore) MaterializeVerified(ctx context.Context, key, digest, destination string) (returnErr error) {
+	if !filepath.IsAbs(destination) {
+		return errors.New("CLI bundle destination must be absolute")
+	}
+	if _, err := os.Lstat(destination); err == nil {
+		return errors.New("CLI bundle destination already exists")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect CLI bundle destination: %w", err)
+	}
+	bundle, err := store.GetVerified(ctx, key, digest)
+	if err != nil {
+		return err
+	}
+	if err := os.Mkdir(destination, 0o755); err != nil {
+		return fmt.Errorf("create CLI bundle destination: %w", err)
+	}
+	defer func() {
+		if returnErr != nil {
+			returnErr = errors.Join(returnErr, os.RemoveAll(destination))
+		}
+	}()
+	if err := extractBundle(bundle, destination); err != nil {
+		return err
+	}
+	if err := protectBundle(destination); err != nil {
+		return fmt.Errorf("protect CLI bundle: %w", err)
+	}
+	return nil
+}
+
+func protectBundle(root string) error {
+	return filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if entry.IsDir() {
+			return os.Chmod(path, 0o755)
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		return os.Chmod(path, 0o444|info.Mode().Perm()&0o111)
+	})
 }
 
 func validateBundleReference(key, digest string) error {

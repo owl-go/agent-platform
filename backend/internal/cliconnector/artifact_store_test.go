@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"agent-platform/backend/internal/objectstore"
@@ -30,6 +32,34 @@ func TestArtifactStoreRoundTripsVerifiedBundle(t *testing.T) {
 	// Repeating the same content-addressed write is safe for Worker retries.
 	if err := store.PutImmutable(context.Background(), key, bundle, expected); err != nil {
 		t.Fatalf("idempotent put: %v", err)
+	}
+}
+
+func TestArtifactStoreMaterializesVerifiedReadOnlyBundle(t *testing.T) {
+	store, err := NewArtifactStore(memory.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle := testBundle(t, map[string]string{"node_modules/.bin/tool": "#!/usr/bin/env node\n"})
+	sum := sha256.Sum256(bundle)
+	digest := hex.EncodeToString(sum[:])
+	key := "cli-connectors/definition-1/v1/" + digest + ".tgz"
+	if err := store.PutImmutable(context.Background(), key, bundle, digest); err != nil {
+		t.Fatal(err)
+	}
+	destination := filepath.Join(t.TempDir(), "connector")
+	if err := store.MaterializeVerified(context.Background(), key, digest, destination); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(filepath.Join(destination, "node_modules", ".bin", "tool"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0o222 != 0 || info.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("materialized CLI mode = %o", info.Mode().Perm())
+	}
+	if err := store.MaterializeVerified(context.Background(), key, digest, destination); err == nil {
+		t.Fatal("expected an existing destination to be rejected")
 	}
 }
 

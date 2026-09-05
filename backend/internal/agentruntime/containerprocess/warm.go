@@ -218,6 +218,9 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 	if config.AttachmentDirectory != "" {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.AttachmentDirectory+",dst="+RuntimeAttachmentDirectory(config.ContainerWorkspace)+",readonly=true")
 	}
+	if config.ConnectorDirectory != "" {
+		arguments = append(arguments, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+RuntimeCLIConnectorDirectory()+",readonly=true")
+	}
 	if config.Egress == sandbox.EgressPublic {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
@@ -239,7 +242,7 @@ func warmFingerprint(name string, config Config) string {
 	value := strings.Join([]string{
 		name, config.Image, config.RuntimeCommand, config.Runtime,
 		config.WorkspaceDirectory, config.ContainerWorkspace, config.CredentialDirectory,
-		config.NativeStateDirectory, config.ScratchDirectory, config.AttachmentDirectory, config.PublicEgressNetwork,
+		config.NativeStateDirectory, config.ScratchDirectory, config.AttachmentDirectory, config.ConnectorDirectory, config.PublicEgressNetwork,
 		config.ResolverConfigFile, string(config.Egress),
 		strconv.FormatFloat(config.Limits.CPUs, 'f', -1, 64), strconv.FormatInt(config.Limits.MemoryBytes, 10),
 		strconv.FormatInt(config.Limits.PIDs, 10), strconv.FormatInt(config.Limits.TempBytes, 10),

@@ -46,6 +46,7 @@ type Config struct {
 	NativeStateDirectory string
 	ScratchDirectory     string
 	AttachmentDirectory  string
+	ConnectorDirectory   string
 	PublicEgressNetwork  string
 	ResolverConfigFile   string
 	Egress               sandbox.EgressMode
@@ -221,6 +222,14 @@ func validateConfig(config Config) error {
 			return fmt.Errorf("Runtime attachment directory must be the attachments child of Runtime scratch")
 		}
 	}
+	if config.ConnectorDirectory != "" {
+		if !filepath.IsAbs(config.ConnectorDirectory) || strings.Contains(config.ConnectorDirectory, ",") {
+			return fmt.Errorf("CLI Connector directory must be an absolute path without commas")
+		}
+		if config.ScratchDirectory == "" || filepath.Clean(config.ConnectorDirectory) != filepath.Join(filepath.Clean(config.ScratchDirectory), "connectors") {
+			return fmt.Errorf("CLI Connector directory must be the connectors child of Runtime scratch")
+		}
+	}
 	if config.NativeStateDirectory != "" && config.RuntimeCommand != "codex" {
 		return fmt.Errorf("native Runtime state directory is only supported for Codex")
 	}
@@ -300,6 +309,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	if config.AttachmentDirectory != "" {
 		args = append(args, "--mount", "type=bind,src="+config.AttachmentDirectory+",dst="+RuntimeAttachmentDirectory(config.ContainerWorkspace)+",readonly=true")
 	}
+	if config.ConnectorDirectory != "" {
+		args = append(args, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+RuntimeCLIConnectorDirectory()+",readonly=true")
+	}
 	if config.Egress == sandbox.EgressPublic {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
@@ -337,6 +349,12 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 // RuntimeAttachmentDirectory is the read-only attachment mount inside the Workspace boundary.
 func RuntimeAttachmentDirectory(containerWorkspace string) string {
 	return filepath.Join(containerWorkspace, ".agent-platform-attachments")
+}
+
+// RuntimeCLIConnectorDirectory is intentionally outside PATH; only the common
+// CLI Connector broker may resolve executables beneath this mount.
+func RuntimeCLIConnectorDirectory() string {
+	return "/opt/agent-platform/connectors"
 }
 
 func prepareAdapterScratch(config Config, command []string) ([]string, error) {

@@ -244,6 +244,7 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 	}
 	config.ScratchDirectory = "/workspaces/runtime-scratch"
 	config.AttachmentDirectory = "/workspaces/runtime-scratch/attachments"
+	config.ConnectorDirectory = "/workspaces/runtime-scratch/connectors"
 	runner, err := New(config)
 	if err != nil {
 		t.Fatal(err)
@@ -265,19 +266,25 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 	if !containsPair(captured.Command, "--mount", wantAttachmentMount) {
 		t.Fatalf("attachment mount %q missing from %#v", wantAttachmentMount, captured.Command)
 	}
+	wantConnectorMount := "type=bind,src=/workspaces/runtime-scratch/connectors,dst=/opt/agent-platform/connectors,readonly=true"
+	if !containsPair(captured.Command, "--mount", wantConnectorMount) {
+		t.Fatalf("CLI Connector mount %q missing from %#v", wantConnectorMount, captured.Command)
+	}
 }
 
 func TestNewRejectsUnsafeConfiguration(t *testing.T) {
 	tests := map[string]Config{
-		"tagged image":               {Image: "runtime:latest"},
-		"wrong runtime":              {Image: digestImage(), Runtime: "runc"},
-		"root user":                  {Image: digestImage(), UID: 0, GID: 0},
-		"relative credential":        {Image: digestImage(), CredentialDirectory: "credentials"},
-		"relative native state":      {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "state"},
-		"relative attachment":        {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "attachments"},
-		"attachment outside scratch": {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "/other/attachments"},
-		"native state for non Codex": {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "/state"},
-		"relative resolver":          {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
+		"tagged image":                  {Image: "runtime:latest"},
+		"wrong runtime":                 {Image: digestImage(), Runtime: "runc"},
+		"root user":                     {Image: digestImage(), UID: 0, GID: 0},
+		"relative credential":           {Image: digestImage(), CredentialDirectory: "credentials"},
+		"relative native state":         {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "state"},
+		"relative attachment":           {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "attachments"},
+		"attachment outside scratch":    {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "/other/attachments"},
+		"relative CLI Connector":        {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", ConnectorDirectory: "connectors"},
+		"CLI Connector outside scratch": {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", ConnectorDirectory: "/other/connectors"},
+		"native state for non Codex":    {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "/state"},
+		"relative resolver":             {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
 	}
 	for name, config := range tests {
 		t.Run(name, func(t *testing.T) {

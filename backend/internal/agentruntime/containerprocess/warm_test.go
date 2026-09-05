@@ -109,6 +109,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	config.ContainerWorkspace = "/workspace"
 	config.ScratchDirectory = "/workspaces/scratch"
 	config.AttachmentDirectory = "/workspaces/scratch/attachments"
+	config.ConnectorDirectory = "/workspaces/scratch/connectors"
 
 	for _, command := range [][]string{{"claude", "--version"}, {"claude", "execute"}} {
 		lease, err := manager.Checkout(context.Background(), name)
@@ -132,6 +133,10 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	wantAttachmentMount := "type=bind,src=/workspaces/scratch/attachments,dst=/workspace/.agent-platform-attachments,readonly=true"
 	if !containsPair(createArguments, "--mount", wantAttachmentMount) {
 		t.Fatalf("attachment mount %q missing from %#v", wantAttachmentMount, createArguments)
+	}
+	wantConnectorMount := "type=bind,src=/workspaces/scratch/connectors,dst=/opt/agent-platform/connectors,readonly=true"
+	if !containsPair(createArguments, "--mount", wantConnectorMount) {
+		t.Fatalf("CLI Connector mount %q missing from %#v", wantConnectorMount, createArguments)
 	}
 	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", name, "/usr/local/bin/runtime-entrypoint", "claude"}
 	for _, command := range commands {

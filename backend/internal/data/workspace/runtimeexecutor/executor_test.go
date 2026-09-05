@@ -1,7 +1,9 @@
 package runtimeexecutor
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -23,6 +25,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/objectstore/memory"
@@ -30,6 +33,63 @@ import (
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/workspacefs"
 )
+
+func TestMaterializeCLIConnectorsVerifiesRuntimeAndProtectsBundle(t *testing.T) {
+	provider := memory.New()
+	store, err := cliconnector.NewArtifactStore(provider)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle := runtimeConnectorBundle(t, "node_modules/.bin/tool", "#!/usr/bin/env node\n")
+	sum := sha256.Sum256(bundle)
+	digest := hex.EncodeToString(sum[:])
+	key := "cli-connectors/connector-1/v1/" + digest + ".tgz"
+	if err := store.PutImmutable(context.Background(), key, bundle, digest); err != nil {
+		t.Fatal(err)
+	}
+	runtimeDigest := "sha256:" + strings.Repeat("a", 64)
+	executor := &Executor{connectors: store}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "connector-1", Name: "Tool", Executable: "tool", BundleObjectKey: key, BundleSHA256: digest, RuntimeDigests: []string{runtimeDigest}}}}}
+	directory, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if directory == "" {
+		t.Fatal("CLI Connector directory is empty")
+	}
+	executable := filepath.Join(directory, "connector-1", "node_modules", ".bin", "tool")
+	info, err := os.Stat(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0o222 != 0 {
+		t.Fatalf("CLI Connector executable %q is writable: %o", executable, info.Mode().Perm())
+	}
+	job.Snapshot.CLIConnectors[0].RuntimeDigests = []string{"sha256:" + strings.Repeat("b", 64)}
+	if _, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest); err == nil {
+		t.Fatal("expected an unverified Runtime digest to be rejected")
+	}
+}
+
+func runtimeConnectorBundle(t *testing.T, name, content string) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	compressed := gzip.NewWriter(&output)
+	archive := tar.NewWriter(compressed)
+	if err := archive.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := archive.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	if err := archive.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := compressed.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return output.Bytes()
+}
 
 func TestMaterializeAttachmentsVerifiesAndProtectsCopies(t *testing.T) {
 	provider := memory.New()
@@ -239,13 +299,13 @@ func TestBuildInstructionUsesOnlyVisibleStructuredExpertGuidanceInOrder(t *testi
 
 func TestTeamMemberJobPassesOnlyPriorFinalResultsAndOwnExtensions(t *testing.T) {
 	base := application.ExecutionJob{Instruction: "Solve the task", CheckpointRef: "native-session", Snapshot: domain.ExecutionSnapshot{ExpertTeam: &domain.ExpertTeamSnapshot{ID: "team-1"}}}
-	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: "expert-2", Name: "Builder", ExecutionInstruction: "Implement it."}, Position: 2, MCPServers: []domain.MCPServerSnapshot{{ID: "mcp-2"}}, Skills: []domain.SkillSnapshot{{ID: "skill-2"}}}
+	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: "expert-2", Name: "Builder", ExecutionInstruction: "Implement it."}, Position: 2, MCPServers: []domain.MCPServerSnapshot{{ID: "mcp-2"}}, Skills: []domain.SkillSnapshot{{ID: "skill-2"}}, CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "cli-2"}}}
 	got := teamMemberJob(base, member, []domain.ExpertStage{{ExpertName: "Architect", FinalText: "Use a hexagonal boundary."}})
 	if got.CheckpointRef != "" || got.Snapshot.Expert == nil || got.Snapshot.Expert.ID != "expert-2" {
 		t.Fatalf("team member execution identity = %#v", got)
 	}
-	if len(got.Snapshot.MCPServers) != 1 || got.Snapshot.MCPServers[0].ID != "mcp-2" || len(got.Snapshot.Skills) != 1 || got.Snapshot.Skills[0].ID != "skill-2" {
-		t.Fatalf("team member extensions = %#v / %#v", got.Snapshot.MCPServers, got.Snapshot.Skills)
+	if len(got.Snapshot.MCPServers) != 1 || got.Snapshot.MCPServers[0].ID != "mcp-2" || len(got.Snapshot.Skills) != 1 || got.Snapshot.Skills[0].ID != "skill-2" || len(got.Snapshot.CLIConnectors) != 1 || got.Snapshot.CLIConnectors[0].ID != "cli-2" {
+		t.Fatalf("team member extensions = %#v / %#v / %#v", got.Snapshot.MCPServers, got.Snapshot.Skills, got.Snapshot.CLIConnectors)
 	}
 	if !strings.Contains(got.Instruction, "Architect:\nUse a hexagonal boundary.") {
 		t.Fatalf("team member instruction = %q", got.Instruction)
