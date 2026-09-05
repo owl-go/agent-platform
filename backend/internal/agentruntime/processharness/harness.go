@@ -62,6 +62,7 @@ type OutputSink interface {
 }
 
 type Result struct {
+	Started     bool
 	ExitCode    int
 	StdoutBytes int64
 	StderrBytes int64
@@ -132,7 +133,7 @@ func Run(ctx context.Context, spec Spec, sink OutputSink) (Result, error) {
 		runErr = limit.violation()
 	}
 
-	result := Result{ExitCode: exitCode(processErr)}
+	result := Result{Started: true, ExitCode: exitCode(processErr)}
 	stdoutInfo, stdoutStatErr := stdout.Stat()
 	stderrInfo, stderrStatErr := stderr.Stat()
 	if stdoutStatErr != nil || stderrStatErr != nil {

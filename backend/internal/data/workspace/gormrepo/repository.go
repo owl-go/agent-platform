@@ -6,19 +6,25 @@ import (
 	"fmt"
 	"time"
 
+	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
-	creditrepo "agent-platform/backend/internal/data/credits/gormrepo"
 
 	"gorm.io/gorm"
 )
 
 type Repository struct {
 	db      *gorm.DB
-	credits *creditrepo.Repository
+	credits creditTransactionSettler
 }
 
-func New(db *gorm.DB) *Repository { return &Repository{db: db, credits: creditrepo.New(db)} }
+type creditTransactionSettler interface {
+	SettleTx(*gorm.DB, creditsdomain.Settlement) (creditsdomain.Consumption, error)
+}
+
+func New(db *gorm.DB, credits creditTransactionSettler) *Repository {
+	return &Repository{db: db, credits: credits}
+}
 
 var _ application.Repository = (*Repository)(nil)
 

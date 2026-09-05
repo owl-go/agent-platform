@@ -20,9 +20,11 @@ type Repository interface {
 	Balance(context.Context, string, string, time.Time) (domain.Balance, error)
 	Ledger(context.Context, string, string, int) (domain.LedgerPage, error)
 	ConfigureDailyAllocation(context.Context, string, domain.Amount, string, time.Time) (domain.Balance, error)
-	Adjust(context.Context, string, domain.Amount, string, string, time.Time) (domain.Balance, error)
+	Adjust(context.Context, string, string, string, domain.Amount, string, string, time.Time) (domain.Balance, error)
 	CreateRedemptionBatch(context.Context, string, domain.Amount, *time.Time, []RedemptionSecret, time.Time) (domain.RedemptionBatch, error)
 	Redeem(context.Context, string, string, [32]byte, string, time.Time) (domain.Balance, error)
+	ListRedemptionCodes(context.Context, string, int, time.Time) (domain.RedemptionCodePage, error)
+	VoidRedemptionCode(context.Context, string, time.Time) (domain.RedemptionCodeStatus, error)
 	ListRates(context.Context) ([]domain.RateRevision, error)
 	CreateRateRevision(context.Context, string, domain.ModelCreditRate, string, time.Time) (domain.ModelCreditRate, error)
 }
@@ -132,7 +134,7 @@ func (service *Service) RequirePositiveBalance(ctx context.Context, userID, time
 		return err
 	}
 	if balance.Total <= 0 {
-		return domain.ErrInsufficientCredits
+		return &domain.InsufficientCreditsError{Balance: balance.Total, NextAllocationAt: balance.NextAllocationAt}
 	}
 	return nil
 }
@@ -151,12 +153,12 @@ func (service *Service) ConfigureDailyAllocation(ctx context.Context, userID, ti
 	return service.repository.ConfigureDailyAllocation(ctx, userID, amount, timezone, service.now().UTC())
 }
 
-func (service *Service) Adjust(ctx context.Context, userID, timezone string, amount domain.Amount, reason string) (domain.Balance, error) {
+func (service *Service) Adjust(ctx context.Context, userID, administratorID, requestID, timezone string, amount domain.Amount, reason string) (domain.Balance, error) {
 	reason = strings.TrimSpace(reason)
-	if amount == 0 || reason == "" {
-		return domain.Balance{}, fmt.Errorf("%w: non-zero Credit Adjustment and reason are required", domain.ErrInvalid)
+	if amount == 0 || reason == "" || strings.TrimSpace(administratorID) == "" || strings.TrimSpace(requestID) == "" {
+		return domain.Balance{}, fmt.Errorf("%w: non-zero Credit Adjustment, reason, Administrator, and request ID are required", domain.ErrInvalid)
 	}
-	return service.repository.Adjust(ctx, userID, amount, reason, timezone, service.now().UTC())
+	return service.repository.Adjust(ctx, userID, administratorID, requestID, amount, reason, timezone, service.now().UTC())
 }
 
 func (service *Service) CreateRedemptionBatch(ctx context.Context, administratorID string, count int, value domain.Amount, expiresAt *time.Time) (domain.RedemptionBatch, error) {
@@ -184,6 +186,20 @@ func (service *Service) Redeem(ctx context.Context, userID, timezone, plaintext 
 	verifier := sha256.Sum256([]byte(plaintext))
 	identifier := base64.RawURLEncoding.EncodeToString(verifier[:9])
 	return service.repository.Redeem(ctx, userID, identifier, verifier, timezone, service.now().UTC())
+}
+
+func (service *Service) ListRedemptionCodes(ctx context.Context, cursor string, limit int) (domain.RedemptionCodePage, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	return service.repository.ListRedemptionCodes(ctx, cursor, limit, service.now().UTC())
+}
+
+func (service *Service) VoidRedemptionCode(ctx context.Context, codeID string) (domain.RedemptionCodeStatus, error) {
+	if strings.TrimSpace(codeID) == "" {
+		return domain.RedemptionCodeStatus{}, fmt.Errorf("%w: Redemption Code ID is required", domain.ErrInvalid)
+	}
+	return service.repository.VoidRedemptionCode(ctx, codeID, service.now().UTC())
 }
 
 func (service *Service) ListRates(ctx context.Context) ([]domain.RateRevision, error) {

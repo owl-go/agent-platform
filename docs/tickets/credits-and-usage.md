@@ -42,8 +42,8 @@ Users see their total balance in the avatar menu, can redeem a code, inspect the
 20. As a User, I want every terminal Assistant response to show its total Credit Consumption, so that I can relate usage to a response.
 21. As a User, I want every terminal Workflow Run turn to show its total Credit Consumption, so that Workflow execution is as transparent as Session execution.
 22. As a User, I want an Expert Team's displayed total to include every member invocation, so that multi-stage work does not hide consumption.
-23. As a User, I want to expand a consumption summary to see input Tokens, output Tokens, frozen multipliers, and final Credits, so that I can verify the calculation.
-24. As a User, I want a fallback charge to be labeled as estimated without fabricated Token values, so that missing Usage is not presented as precise measurement.
+23. As a User, I want each terminal response to show only its total Credit Consumption, so that the conversation stays compact and does not expose Token accounting detail.
+24. As a User, I want fallback accounting to remain an internal settlement detail, so that an estimated charge is not presented as precise Token measurement in the conversation.
 25. As a User, I want one Credit at multiplier 1.00 to represent 10,000 Tokens, so that the consumption scale is stable and understandable.
 26. As a User, I want input and output Tokens to have independent multipliers, so that Model Credit Rates can reflect their different usage profiles.
 27. As a User, I want each invocation rounded to two decimal places with a minimum non-zero charge of 0.01 Credits, so that small real usage remains visible and deterministic.
@@ -129,7 +129,7 @@ Users see their total balance in the avatar menu, can redeem a code, inspect the
 - Administrator APIs provide User allocation update, reasoned adjustment, Model Credit Rate listing and revision, Redemption Code batch creation, safe code status listing, and voiding.
 - Current User, Session Message, Run, and Expert Stage API representations gain the Credit fields needed by their respective interfaces. Terminal SSE snapshots include final Credit Consumption only after settlement commits.
 - The avatar menu gains a compact Credit Balance row. Activating it opens the Credit panel containing balance breakdown, next allocation time, redemption form, and paginated Credit Ledger.
-- Terminal Session and Run messages show a collapsed localized consumption summary. Expanded details show per-stage input Tokens, output Tokens, frozen multipliers, final Credits, and an estimated marker for fallback.
+- Terminal Session and Run messages show a compact localized total Credit Consumption only. Per-stage Tokens, multipliers, rate revisions, and fallback details remain outside the conversation interface.
 - User Management retains its existing entry from the avatar menu and gains Users, Model Rates, and Redemption Codes tabs. It does not add a fifth primary navigation item.
 - All new visible text, errors, amounts, dates, and accessibility labels are localized in Chinese and English. Desktop and mobile preserve the same information order and core actions.
 - Credit Ledger, Redemption Code records, Credit Adjustments, and Model Credit Rate revisions are retained for the life of the User and cannot be deleted in the first version.
@@ -154,7 +154,7 @@ Users see their total balance in the avatar menu, can redeem a code, inspect the
 - Persistence integration tests use real PostgreSQL to exercise row locking, unique daily allocation, unique redemption, unique Stage settlement, concurrent admission, transaction rollback, and immutable history constraints.
 - Migration tests verify additive schema application on the current baseline and initialization of existing Users without modifying historical migrations.
 - Frontend Vitest tests extend the existing App, API client, Sessions, Workflow detail, and User Management test patterns. They assert observable text, state, actions, API requests, accessibility roles, and responsive information order.
-- Frontend tests cover the compact avatar balance row, Credit panel breakdown, redemption success and generic failure, ledger pagination, terminal consumption summary, expanded details, fallback estimate label, Administrator tabs, rate revision forms, batch generation, and reasoned adjustments.
+- Frontend tests cover the compact avatar balance row, Credit panel breakdown, redemption success and generic failure, ledger pagination, terminal total-consumption summary, Administrator tabs, rate revision forms, batch generation, safe code status, voiding, and reasoned adjustments.
 - Frontend tests cover negative, zero, and positive balances; disabled submission; queued work that later fails admission; failed and cancelled charged stages; and totals with two decimal places.
 - Security tests use canary Redemption Codes and existing secret-scanning patterns to verify that plaintext codes do not enter logs, later API reads, SSE, persisted ordinary DTOs, Workspace files, Artifacts, or error messages.
 - The browser-to-API acceptance flow is the required feature evidence. Unit and component tests alone do not satisfy the product acceptance boundary.

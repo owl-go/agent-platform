@@ -61,6 +61,7 @@ const OperationAgentWorkspaceServiceListMCPServers = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
+const OperationAgentWorkspaceServiceListRedemptionCodes = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
 const OperationAgentWorkspaceServiceListRunTurns = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
 const OperationAgentWorkspaceServiceListRuns = "/workspace.v1.AgentWorkspaceService/ListRuns"
 const OperationAgentWorkspaceServiceListRuntimeEngines = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
@@ -89,6 +90,7 @@ const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceUpdateSettings = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
 const OperationAgentWorkspaceServiceUpdateSkill = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
 const OperationAgentWorkspaceServiceUpdateWorkflow = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
+const OperationAgentWorkspaceServiceVoidRedemptionCode = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
 
 type AgentWorkspaceServiceHTTPServer interface {
 	AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error)
@@ -135,6 +137,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
+	ListRedemptionCodes(context.Context, *ListRedemptionCodesRequest) (*ListRedemptionCodesResponse, error)
 	ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
@@ -163,6 +166,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
+	VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error)
 }
 
 func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceServiceHTTPServer) {
@@ -180,6 +184,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/admin/model-credit-rates", _AgentWorkspaceService_ListModelCreditRates0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/model-credit-rates", _AgentWorkspaceService_CreateModelCreditRate0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/redemption-code-batches", _AgentWorkspaceService_CreateRedemptionCodeBatch0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/redemption-codes", _AgentWorkspaceService_ListRedemptionCodes0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/redemption-codes/{code_id}/void", _AgentWorkspaceService_VoidRedemptionCode0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions", _AgentWorkspaceService_ListSessions0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions", _AgentWorkspaceService_CreateSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_GetSession0_HTTP_Handler(srv))
@@ -496,6 +502,47 @@ func _AgentWorkspaceService_CreateRedemptionCodeBatch0_HTTP_Handler(srv AgentWor
 			return err
 		}
 		reply := out.(*RedemptionCodeBatch)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListRedemptionCodes0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListRedemptionCodesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListRedemptionCodes)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListRedemptionCodes(ctx, req.(*ListRedemptionCodesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListRedemptionCodesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_VoidRedemptionCode0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in VoidRedemptionCodeRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceVoidRedemptionCode)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.VoidRedemptionCode(ctx, req.(*VoidRedemptionCodeRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*RedemptionCodeStatus)
 		return ctx.Result(200, reply)
 	}
 }
@@ -1789,6 +1836,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
+	ListRedemptionCodes(ctx context.Context, req *ListRedemptionCodesRequest, opts ...http.CallOption) (rsp *ListRedemptionCodesResponse, err error)
 	ListRunTurns(ctx context.Context, req *ListRunTurnsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuns(ctx context.Context, req *ListRunsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuntimeEngines(ctx context.Context, req *ListRuntimeEnginesRequest, opts ...http.CallOption) (rsp *ListRuntimeEnginesResponse, err error)
@@ -1817,6 +1865,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	UpdateSkill(ctx context.Context, req *UpdateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	UpdateWorkflow(ctx context.Context, req *UpdateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	VoidRedemptionCode(ctx context.Context, req *VoidRedemptionCodeRequest, opts ...http.CallOption) (rsp *RedemptionCodeStatus, err error)
 }
 
 type AgentWorkspaceServiceHTTPClientImpl struct {
@@ -2550,6 +2599,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListModelProviderPresets(ctx conte
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListRedemptionCodes(ctx context.Context, in *ListRedemptionCodesRequest, opts ...http.CallOption) (*ListRedemptionCodesResponse, error) {
+	var out ListRedemptionCodesResponse
+	pattern := "/api/v1/admin/redemption-codes"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListRedemptionCodes),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListRunTurns(ctx context.Context, in *ListRunTurnsRequest, opts ...http.CallOption) (*ListRunsResponse, error) {
 	var out ListRunsResponse
 	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns"
@@ -3011,6 +3076,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateWorkflow(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) VoidRedemptionCode(ctx context.Context, in *VoidRedemptionCodeRequest, opts ...http.CallOption) (*RedemptionCodeStatus, error) {
+	var out RedemptionCodeStatus
+	pattern := "/api/v1/admin/redemption-codes/{code_id}/void"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceVoidRedemptionCode),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

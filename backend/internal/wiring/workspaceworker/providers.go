@@ -37,14 +37,15 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	credits, err := creditsapplication.New(creditsrepo.New(database.ORM()), nil)
+	creditsRepository := creditsrepo.New(database.ORM())
+	credits, err := creditsapplication.New(creditsRepository, nil)
 	if err != nil {
 		return nil, err
 	}
 	if err := executor.EnableCredits(credits); err != nil {
 		return nil, err
 	}
-	return workspaceapplication.NewWorker(workspacerepo.New(database.ORM()), executor)
+	return workspaceapplication.NewWorker(workspacerepo.New(database.ORM(), creditsRepository), executor)
 }
 
 func NewServers(database *gormdb.Database, worker *workspaceapplication.Worker, warm *containerprocess.WarmManager, config platformconfig.Config) ([]transport.Server, error) {

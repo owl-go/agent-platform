@@ -53,8 +53,18 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if balance.Total != 60_000 || balance.DailyRemaining != 60_000 {
 		t.Fatalf("initial balance = %+v", balance)
 	}
-	if _, err := service.Adjust(ctx, userID, "Asia/Shanghai", -59_999, "test debt boundary"); err != nil {
+	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_999, "test debt boundary"); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_999, "test debt boundary"); err != nil {
+		t.Fatal(err)
+	}
+	var adjustmentCount int64
+	if err := database.ORM().Table("credit_ledger").Where("user_id = ? AND source = ? AND actor_user_id = ?", userID, "adjustment:debt-boundary", userID).Count(&adjustmentCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if adjustmentCount != 1 {
+		t.Fatalf("idempotent audited adjustments = %d, want 1", adjustmentCount)
 	}
 	admission, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "session-message-1", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"})
 	if err != nil {
@@ -82,12 +92,23 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 		t.Fatalf("second admission error = %v", err)
 	}
 
-	batch, err := service.CreateRedemptionBatch(ctx, userID, 1, 2_000, nil)
+	batch, err := service.CreateRedemptionBatch(ctx, userID, 2, 2_000, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(batch.Codes) != 1 || batch.Codes[0].Plaintext == "" {
+	if len(batch.Codes) != 2 || batch.Codes[0].Plaintext == "" {
 		t.Fatalf("batch = %+v", batch)
+	}
+	voided, err := service.VoidRedemptionCode(ctx, batch.Codes[1].ID)
+	if err != nil || voided.State != "void" || voided.Identifier == "" {
+		t.Fatalf("voided code = %+v, %v", voided, err)
+	}
+	if _, err := service.Redeem(ctx, userID, "Asia/Shanghai", batch.Codes[1].Plaintext); !errors.Is(err, domain.ErrCodeUnavailable) {
+		t.Fatalf("voided redemption error = %v", err)
+	}
+	codePage, err := service.ListRedemptionCodes(ctx, "", 1)
+	if err != nil || len(codePage.Items) != 1 || codePage.NextCursor == "" {
+		t.Fatalf("redemption code page = %+v, %v", codePage, err)
 	}
 	balance, err = service.Redeem(ctx, userID, "Asia/Shanghai", batch.Codes[0].Plaintext)
 	if err != nil {
@@ -98,6 +119,23 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	}
 	if _, err := service.Redeem(ctx, userID, "Asia/Shanghai", batch.Codes[0].Plaintext); !errors.Is(err, domain.ErrCodeUnavailable) {
 		t.Fatalf("repeated redemption error = %v", err)
+	}
+	staleAdmission, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "crashed-worker", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.ORM().Exec("UPDATE credit_execution_leases SET acquired_at = ? WHERE user_id = ?", now.Add(-2*time.Minute), userID).Error; err != nil {
+		t.Fatal(err)
+	}
+	recoveredAdmission, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "recovered-worker", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"})
+	if err != nil {
+		t.Fatalf("take over stale execution lease: %v", err)
+	}
+	if recoveredAdmission.Source == staleAdmission.Source {
+		t.Fatalf("stale lease was not replaced: %+v", recoveredAdmission)
+	}
+	if err := service.Abort(ctx, recoveredAdmission); err != nil {
+		t.Fatal(err)
 	}
 	atomicAdmission, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "atomic-terminal", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"})
 	if err != nil {

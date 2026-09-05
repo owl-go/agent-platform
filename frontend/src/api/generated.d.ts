@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/redemption-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListRedemptionCodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/redemption-codes/{code_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_VoidRedemptionCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -812,6 +844,7 @@ export interface components {
             /** Format: int64 */
             amount_hundredths?: number;
             reason?: string;
+            request_id?: string;
         };
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
@@ -906,6 +939,7 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceVoidRedemptionCodeBody: Record<string, never>;
         protobufAny: {
             "@type"?: string;
         } & {
@@ -1220,6 +1254,10 @@ export interface components {
         v1ListModelProviderPresetsResponse: {
             items?: components["schemas"]["v1ModelProviderPreset"][];
         };
+        v1ListRedemptionCodesResponse: {
+            items?: components["schemas"]["v1RedemptionCodeStatus"][];
+            next_cursor?: string;
+        };
         v1ListRunsResponse: {
             items?: components["schemas"]["v1Run"][];
         };
@@ -1386,6 +1424,22 @@ export interface components {
             /** Format: date-time */
             created_at?: string;
             codes?: components["schemas"]["v1RedemptionCode"][];
+        };
+        v1RedemptionCodeStatus: {
+            id?: string;
+            batch_id?: string;
+            identifier?: string;
+            state?: string;
+            /** Format: int64 */
+            value_hundredths?: number;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            redeemed_at?: string;
+            /** Format: date-time */
+            voided_at?: string;
+            /** Format: date-time */
+            created_at?: string;
         };
         v1ResetUserPasswordResponse: {
             temporary_password?: string;
@@ -1685,6 +1739,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1RedemptionCodeBatch"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListRedemptionCodes: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListRedemptionCodesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_VoidRedemptionCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceVoidRedemptionCodeBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1RedemptionCodeStatus"];
                 };
             };
             /** @description An unexpected error response. */

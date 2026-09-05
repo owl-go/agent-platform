@@ -38,11 +38,12 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	service2, err := agentworkspace.NewCreditsService(database)
+	repository := agentworkspace.NewCreditsRepository(database)
+	service2, err := agentworkspace.NewCreditsService(repository)
 	if err != nil {
 		return nil, err
 	}
-	service3, err := agentworkspace.NewWorkspaceService(database)
+	service3, err := agentworkspace.NewWorkspaceService(database, repository)
 	if err != nil {
 		return nil, err
 	}

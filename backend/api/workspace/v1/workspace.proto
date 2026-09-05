@@ -22,6 +22,8 @@ service AgentWorkspaceService {
   rpc ListModelCreditRates(ListModelCreditRatesRequest) returns (ListModelCreditRatesResponse) { option (google.api.http) = {get: "/api/v1/admin/model-credit-rates"}; }
   rpc CreateModelCreditRate(CreateModelCreditRateRequest) returns (ModelCreditRate) { option (google.api.http) = {post: "/api/v1/admin/model-credit-rates" body: "*"}; }
   rpc CreateRedemptionCodeBatch(CreateRedemptionCodeBatchRequest) returns (RedemptionCodeBatch) { option (google.api.http) = {post: "/api/v1/admin/redemption-code-batches" body: "*"}; }
+  rpc ListRedemptionCodes(ListRedemptionCodesRequest) returns (ListRedemptionCodesResponse) { option (google.api.http) = {get: "/api/v1/admin/redemption-codes"}; }
+  rpc VoidRedemptionCode(VoidRedemptionCodeRequest) returns (RedemptionCodeStatus) { option (google.api.http) = {post: "/api/v1/admin/redemption-codes/{code_id}/void" body: "*"}; }
 
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) { option (google.api.http) = {get: "/api/v1/sessions"}; }
   rpc CreateSession(CreateSessionRequest) returns (Session) { option (google.api.http) = {post: "/api/v1/sessions" body: "*"}; }
@@ -107,7 +109,7 @@ message ListCreditLedgerResponse { repeated CreditLedgerEntry items = 1; optiona
 message CreditLedgerEntry { string id = 1; string type = 2; int64 amount_hundredths = 3; int64 resulting_balance_hundredths = 4; string credit_day = 5; optional string reason = 6; google.protobuf.Timestamp created_at = 7; }
 message RedeemCreditCodeRequest { string code = 1; }
 message ConfigureUserDailyCreditsRequest { string user_id = 1; int64 allocation_hundredths = 2; }
-message AdjustUserCreditsRequest { string user_id = 1; int64 amount_hundredths = 2; string reason = 3; }
+message AdjustUserCreditsRequest { string user_id = 1; int64 amount_hundredths = 2; string reason = 3; string request_id = 4; }
 message ListModelCreditRatesRequest {}
 message ListModelCreditRatesResponse { repeated ModelCreditRate items = 1; }
 message ModelCreditRate { string revision_id = 1; optional string provider_type = 2; optional string api_protocol = 3; optional string provider_model_id = 4; int64 input_multiplier_micros = 5; int64 output_multiplier_micros = 6; int64 fallback_hundredths = 7; google.protobuf.Timestamp created_at = 8; optional google.protobuf.Timestamp superseded_at = 9; }
@@ -115,6 +117,10 @@ message CreateModelCreditRateRequest { optional string provider_type = 1; option
 message CreateRedemptionCodeBatchRequest { int32 count = 1; int64 value_hundredths = 2; optional google.protobuf.Timestamp expires_at = 3; }
 message RedemptionCodeBatch { string id = 1; int32 count = 2; int64 value_hundredths = 3; optional google.protobuf.Timestamp expires_at = 4; google.protobuf.Timestamp created_at = 5; repeated RedemptionCode codes = 6; }
 message RedemptionCode { string id = 1; string identifier = 2; string plaintext = 3; string state = 4; }
+message ListRedemptionCodesRequest { optional string cursor = 1; optional int32 limit = 2; }
+message ListRedemptionCodesResponse { repeated RedemptionCodeStatus items = 1; optional string next_cursor = 2; }
+message VoidRedemptionCodeRequest { string code_id = 1; }
+message RedemptionCodeStatus { string id = 1; string batch_id = 2; string identifier = 3; string state = 4; int64 value_hundredths = 5; optional google.protobuf.Timestamp expires_at = 6; optional google.protobuf.Timestamp redeemed_at = 7; optional google.protobuf.Timestamp voided_at = 8; google.protobuf.Timestamp created_at = 9; }
 
 message ListSessionsRequest { bool archived = 1; }
 message ListSessionsResponse { repeated Session items = 1; }

@@ -93,6 +93,9 @@ type Result struct {
 	DiffArtifact  string
 	CheckpointRef string
 	Usage         Usage
+	// ModelInvocationStarted distinguishes process start/runtime work from
+	// validation, configuration, and process-start failures.
+	ModelInvocationStarted bool
 }
 
 type Usage struct {

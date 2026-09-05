@@ -154,10 +154,11 @@ func (a *Adapter) Execute(ctx context.Context, request agentruntime.ExecuteReque
 		processErr = errors.Join(processErr, parsed.Error)
 	}
 	result := agentruntime.Result{
-		FinalMessage:  parsed.FinalMessage,
-		ExitCode:      processResult.ExitCode,
-		CheckpointRef: parsed.CheckpointRef,
-		Usage:         parsed.Usage,
+		FinalMessage:           parsed.FinalMessage,
+		ExitCode:               processResult.ExitCode,
+		CheckpointRef:          parsed.CheckpointRef,
+		Usage:                  parsed.Usage,
+		ModelInvocationStarted: processResult.Started,
 	}
 	if parsed.FinalMessage != "" && processErr == nil && !emitter.published(agentruntime.EventMessageCompleted) {
 		if err := emitter.publish(ctx, agentruntime.EventMessageCompleted, map[string]string{"message": parsed.FinalMessage}); err != nil {

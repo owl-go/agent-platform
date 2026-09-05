@@ -15,6 +15,14 @@ var (
 	ErrConflict            = errors.New("Credits state conflicts with current state")
 )
 
+type InsufficientCreditsError struct {
+	Balance          Amount
+	NextAllocationAt time.Time
+}
+
+func (err *InsufficientCreditsError) Error() string { return ErrInsufficientCredits.Error() }
+func (err *InsufficientCreditsError) Unwrap() error { return ErrInsufficientCredits }
+
 // Amount stores hundredths of a Credit.
 type Amount int64
 
@@ -136,6 +144,18 @@ type RedemptionCode struct {
 	Plaintext  string
 	State      string
 	RedeemedAt *time.Time
+}
+
+type RedemptionCodeStatus struct {
+	ID, BatchID, Identifier, State  string
+	Value                           Amount
+	ExpiresAt, RedeemedAt, VoidedAt *time.Time
+	CreatedAt                       time.Time
+}
+
+type RedemptionCodePage struct {
+	Items      []RedemptionCodeStatus
+	NextCursor string
 }
 
 func CalculateConsumption(usage Usage, rate ModelCreditRate) (Consumption, error) {

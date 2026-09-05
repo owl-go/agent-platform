@@ -9,6 +9,7 @@ const api = inject(platformApiKey)!;
 const { t } = useI18n();
 const balance = ref<CreditBalance>();
 const ledger = ref<CreditLedgerEntry[]>([]);
+const nextCursor = ref("");
 const code = ref("");
 const loading = ref(false);
 const error = ref("");
@@ -21,6 +22,18 @@ async function load() {
     const [nextBalance, page] = await Promise.all([api.getCreditBalance(), api.listCreditLedger()]);
     balance.value = nextBalance;
     ledger.value = page.items ?? [];
+    nextCursor.value = page.next_cursor ?? "";
+  } catch { error.value = t("errors.generic"); }
+  finally { loading.value = false; }
+}
+
+async function loadMore() {
+  if (!nextCursor.value || loading.value) return;
+  loading.value = true;
+  try {
+    const page = await api.listCreditLedger(nextCursor.value);
+    ledger.value.push(...(page.items ?? []));
+    nextCursor.value = page.next_cursor ?? "";
   } catch { error.value = t("errors.generic"); }
   finally { loading.value = false; }
 }
@@ -59,6 +72,7 @@ defineExpose({ load });
       <div class="credit-ledger">
         <article v-for="entry in ledger" :key="entry.id"><span><strong>{{ t(`credits.entry.${entry.type}`) }}</strong><small>{{ new Date(entry.created_at).toLocaleString() }}<template v-if="entry.reason"> · {{ entry.reason }}</template></small></span><b :class="{ negative: Number(entry.amount_hundredths) < 0 }">{{ Number(entry.amount_hundredths) > 0 ? '+' : '' }}{{ credits(entry.amount_hundredths) }}</b></article>
       </div>
+      <el-button v-if="nextCursor" :loading="loading" @click="loadMore">{{ t('common.loadMore') }}</el-button>
     </template>
   </el-drawer>
 </template>

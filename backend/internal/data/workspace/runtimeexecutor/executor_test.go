@@ -391,6 +391,40 @@ func TestExecuteTreatsInvalidRuntimeUsageAsFrozenFallback(t *testing.T) {
 	}
 }
 
+func TestExecuteDoesNotChargeWhenRuntimeFailsBeforeModelInvocation(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Timezone = "UTC"
+	job.Snapshot.ExpertTeam = nil
+	job.Snapshot.ProviderModel.ID = "model-1"
+	job.Snapshot.ProviderModel.ProviderType = "openai"
+	job.Snapshot.ProviderModel.Protocols = []string{"openai_responses"}
+	repository := &fallbackCreditRepository{}
+	creditService, err := creditsapplication.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.EnableCredits(creditService); err != nil {
+		t.Fatal(err)
+	}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(context.Context, agentruntime.ExecuteRequest, agentruntime.EventSink) (agentruntime.Result, error) {
+			return agentruntime.Result{}, errors.New("process did not start")
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err == nil {
+		t.Fatal("expected pre-invocation Runtime failure")
+	}
+	if len(result.CreditSettlements) != 0 || result.CreditConsumption != nil {
+		t.Fatalf("pre-invocation failure was charged: %#v", result)
+	}
+	if !repository.aborted {
+		t.Fatal("pre-invocation failure did not release its Credit admission")
+	}
+}
+
 func TestExecuteTeamStagesAndReusesIndependentNativeState(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
 	job.Kind, job.SessionID = application.JobSession, "session-1"

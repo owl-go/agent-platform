@@ -365,7 +365,8 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		runtimeFinishedAt = time.Now()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
-		if executor.credits != nil {
+		invocationStarted := executeErr == nil || runtimeResult.ModelInvocationStarted
+		if executor.credits != nil && invocationStarted {
 			usage := creditsdomain.Usage{InputTokens: runtimeResult.Usage.InputTokens, OutputTokens: runtimeResult.Usage.OutputTokens, Known: runtimeResult.Usage.Reported}
 			consumption, calculateErr := creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
 			if calculateErr != nil {
@@ -411,6 +412,10 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				result.CreditConsumption.TotalHundredths += creditStage.AmountHundredths
 				stage.CreditConsumption = &creditStage
 			}
+		} else if executor.credits != nil {
+			abortCtx, abortCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+			settlementErr = executor.credits.Abort(abortCtx, creditAdmission)
+			abortCancel()
 		}
 		releaseErr := releaseWarmLease(ctx, lease)
 		credentialCleanupErr := environment.Cleanup()

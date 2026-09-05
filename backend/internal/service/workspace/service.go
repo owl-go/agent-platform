@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
@@ -129,7 +130,15 @@ func publicError(err error) error {
 	case errors.Is(err, workspacedomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, creditsdomain.ErrInsufficientCredits):
-		return kratoserrors.New(http.StatusTooManyRequests, "insufficient_credits", "Credit Balance is not positive")
+		public := kratoserrors.New(http.StatusTooManyRequests, "insufficient_credits", "Credit Balance is not positive")
+		var insufficient *creditsdomain.InsufficientCreditsError
+		if errors.As(err, &insufficient) {
+			public = public.WithMetadata(map[string]string{
+				"balance_hundredths": fmt.Sprintf("%d", insufficient.Balance),
+				"next_allocation_at": insufficient.NextAllocationAt.UTC().Format(time.RFC3339Nano),
+			})
+		}
+		return public
 	case errors.Is(err, creditsdomain.ErrCodeUnavailable):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "redemption_code_unavailable", "Redemption Code is unavailable")
 	case errors.Is(err, creditsdomain.ErrConflict):

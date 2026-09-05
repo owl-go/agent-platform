@@ -6,6 +6,7 @@ export interface CreditConsumption { total_hundredths: number; stages: CreditSta
 export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
 export interface ModelCreditRate { revision_id: string; provider_type?: string; api_protocol?: string; provider_model_id?: string; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; created_at: string; superseded_at?: string }
 export interface RedemptionCodeBatch { id: string; count: number; value_hundredths: number; expires_at?: string; created_at: string; codes: Array<{ id: string; identifier: string; plaintext: string; state: string }> }
+export interface RedemptionCodeStatus { id: string; batch_id: string; identifier: string; state: "available" | "redeemed" | "void" | "expired"; value_hundredths: number; expires_at?: string; redeemed_at?: string; voided_at?: string; created_at: string }
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus } }
@@ -64,10 +65,12 @@ export interface PlatformApi {
   listCreditLedger(cursor?: string, signal?: AbortSignal): Promise<{ items: CreditLedgerEntry[]; next_cursor?: string }>;
   redeemCreditCode(code: string, signal?: AbortSignal): Promise<CreditBalance>;
   configureUserDailyCredits(userID: string, allocationHundredths: number, signal?: AbortSignal): Promise<CreditBalance>;
-  adjustUserCredits(userID: string, amountHundredths: number, reason: string, signal?: AbortSignal): Promise<CreditBalance>;
+  adjustUserCredits(userID: string, amountHundredths: number, reason: string, requestID: string, signal?: AbortSignal): Promise<CreditBalance>;
   listModelCreditRates(signal?: AbortSignal): Promise<ModelCreditRate[]>;
   createModelCreditRate(rate: Omit<ModelCreditRate, "revision_id" | "created_at" | "superseded_at"> & { expected_revision_id?: string }, signal?: AbortSignal): Promise<ModelCreditRate>;
   createRedemptionCodeBatch(count: number, valueHundredths: number, expiresAt?: string, signal?: AbortSignal): Promise<RedemptionCodeBatch>;
+  listRedemptionCodes(cursor?: string, signal?: AbortSignal): Promise<{ items: RedemptionCodeStatus[]; next_cursor?: string }>;
+  voidRedemptionCode(codeID: string, signal?: AbortSignal): Promise<RedemptionCodeStatus>;
   listSessions(archived?: boolean, signal?: AbortSignal): Promise<Session[]>;
   createSession(selection?: { expert_id?: string; expert_team_id?: string }, signal?: AbortSignal): Promise<Session>;
   renameSession(id: string, title: string, version: number, signal?: AbortSignal): Promise<Session>;
@@ -169,10 +172,12 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     listCreditLedger(cursor = "", signal) { return call(`/api/v1/credits/ledger?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
     redeemCreditCode(code, signal) { return call("/api/v1/credits/redemptions", json("POST", { code }, signal)); },
     configureUserDailyCredits(userID, allocationHundredths, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/daily-credits`, json("PATCH", { allocation_hundredths: allocationHundredths }, signal)); },
-    adjustUserCredits(userID, amountHundredths, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/credit-adjustments`, json("POST", { amount_hundredths: amountHundredths, reason }, signal)); },
+    adjustUserCredits(userID, amountHundredths, reason, requestID, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/credit-adjustments`, json("POST", { amount_hundredths: amountHundredths, reason, request_id: requestID }, signal)); },
     async listModelCreditRates(signal) { return (await call<{ items: ModelCreditRate[] }>("/api/v1/admin/model-credit-rates", { signal })).items ?? []; },
     createModelCreditRate(rate, signal) { return call("/api/v1/admin/model-credit-rates", json("POST", rate, signal)); },
     createRedemptionCodeBatch(count, valueHundredths, expiresAt, signal) { return call("/api/v1/admin/redemption-code-batches", json("POST", { count, value_hundredths: valueHundredths, ...(expiresAt ? { expires_at: expiresAt } : {}) }, signal)); },
+    listRedemptionCodes(cursor = "", signal) { return call(`/api/v1/admin/redemption-codes?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
+    voidRedemptionCode(codeID, signal) { return call(`/api/v1/admin/redemption-codes/${encodeURIComponent(codeID)}/void`, json("POST", {}, signal)); },
     async listSessions(archived = false, signal) { return (await call<{ items: Session[] }>(`/api/v1/sessions?archived=${archived}`, { signal })).items ?? []; },
     createSession(selection = {}, signal) { return call("/api/v1/sessions", json("POST", selection, signal)); },
     renameSession(id, title, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}`, json("PATCH", { title, expected_version: version }, signal)); },

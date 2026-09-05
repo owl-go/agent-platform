@@ -100,7 +100,7 @@ func (repository *recordingRepository) ConfigureDailyAllocation(context.Context,
 	return domain.Balance{}, nil
 }
 
-func (repository *recordingRepository) Adjust(context.Context, string, domain.Amount, string, string, time.Time) (domain.Balance, error) {
+func (repository *recordingRepository) Adjust(context.Context, string, string, string, domain.Amount, string, string, time.Time) (domain.Balance, error) {
 	return domain.Balance{}, nil
 }
 
@@ -110,6 +110,14 @@ func (repository *recordingRepository) CreateRedemptionBatch(context.Context, st
 
 func (repository *recordingRepository) Redeem(context.Context, string, string, [32]byte, string, time.Time) (domain.Balance, error) {
 	return domain.Balance{}, nil
+}
+
+func (repository *recordingRepository) ListRedemptionCodes(context.Context, string, int, time.Time) (domain.RedemptionCodePage, error) {
+	return domain.RedemptionCodePage{}, nil
+}
+
+func (repository *recordingRepository) VoidRedemptionCode(context.Context, string, time.Time) (domain.RedemptionCodeStatus, error) {
+	return domain.RedemptionCodeStatus{}, nil
 }
 
 func (repository *recordingRepository) ListRates(context.Context) ([]domain.RateRevision, error) {

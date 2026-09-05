@@ -82,6 +82,7 @@ type ledgerRecord struct {
 	CreditDay        time.Time     `gorm:"column:credit_day;type:date"`
 	Source           *string       `gorm:"column:source"`
 	Reason           *string       `gorm:"column:reason"`
+	ActorUserID      *string       `gorm:"column:actor_user_id"`
 	Detail           []byte        `gorm:"column:detail;type:jsonb"`
 	CreatedAt        time.Time     `gorm:"column:created_at"`
 }
@@ -134,7 +135,11 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 }
 
 func acquireLease(tx *gorm.DB, userID, source string, now time.Time) error {
-	result := tx.Exec("INSERT INTO credit_execution_leases (user_id, source, acquired_at) VALUES (?, ?, ?) ON CONFLICT (user_id) DO NOTHING", userID, source, now)
+	result := tx.Exec(`
+		INSERT INTO credit_execution_leases (user_id, source, acquired_at) VALUES (?, ?, ?)
+		ON CONFLICT (user_id) DO UPDATE
+		SET source = EXCLUDED.source, acquired_at = EXCLUDED.acquired_at
+		WHERE credit_execution_leases.acquired_at < EXCLUDED.acquired_at - INTERVAL '1 minute'`, userID, source, now)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -224,13 +229,6 @@ func (repository *Repository) Balance(ctx context.Context, userID, timezone stri
 func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTimezone string, now time.Time) (accountRecord, error) {
 	if requestedTimezone == "" {
 		requestedTimezone = "Asia/Shanghai"
-		var configured string
-		if err := tx.Table("personal_settings").Select("timezone").Where("user_id = ?", userID).Scan(&configured).Error; err != nil {
-			return accountRecord{}, err
-		}
-		if configured != "" {
-			requestedTimezone = configured
-		}
 	}
 	location, err := time.LoadLocation(requestedTimezone)
 	if err != nil {
@@ -337,16 +335,25 @@ func (repository *Repository) ConfigureDailyAllocation(ctx context.Context, user
 	return balance, err
 }
 
-func (repository *Repository) Adjust(ctx context.Context, userID string, amount domain.Amount, reason, timezone string, now time.Time) (domain.Balance, error) {
+func (repository *Repository) Adjust(ctx context.Context, userID, administratorID, requestID string, amount domain.Amount, reason, timezone string, now time.Time) (domain.Balance, error) {
 	var balance domain.Balance
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		account, err := repository.ensureAccountTx(tx, userID, timezone, now)
 		if err != nil {
 			return err
 		}
+		source := "adjustment:" + requestID
+		var existing int64
+		if err := tx.Model(&ledgerRecord{}).Where("user_id = ? AND source = ?", userID, source).Count(&existing).Error; err != nil {
+			return err
+		}
+		if existing > 0 {
+			balance, err = toBalance(account, now)
+			return err
+		}
 		account.Persistent += amount
 		account.UpdatedAt, account.Version = now, account.Version+1
-		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "adjustment", Amount: amount, PersistentDelta: amount, ResultingBalance: account.DailyRemaining + account.Persistent, CreditDay: account.CreditDay, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "adjustment", Amount: amount, PersistentDelta: amount, ResultingBalance: account.DailyRemaining + account.Persistent, CreditDay: account.CreditDay, Source: &source, Reason: &reason, ActorUserID: &administratorID, Detail: []byte(`{}`), CreatedAt: now}
 		if err := tx.Create(&entry).Error; err != nil {
 			return err
 		}
@@ -441,6 +448,78 @@ func (repository *Repository) Redeem(ctx context.Context, userID, identifier str
 		return domain.Balance{}, domain.ErrCodeUnavailable
 	}
 	return balance, err
+}
+
+type codeStatusRecord struct {
+	ID, BatchID, Identifier         string
+	Value                           domain.Amount
+	ExpiresAt, VoidedAt, RedeemedAt *time.Time
+	CreatedAt                       time.Time
+}
+
+func (repository *Repository) ListRedemptionCodes(ctx context.Context, cursor string, limit int, now time.Time) (domain.RedemptionCodePage, error) {
+	query := repository.db.WithContext(ctx).Table("redemption_codes code").
+		Select("code.id, code.batch_id, code.code_identifier AS identifier, batch.value_hundredths AS value, batch.expires_at, code.voided_at, code.redeemed_at, code.created_at").
+		Joins("JOIN redemption_code_batches batch ON batch.id = code.batch_id").
+		Order("code.created_at DESC, code.id DESC").Limit(limit + 1)
+	if cursor != "" {
+		var anchor codeRecord
+		if err := repository.db.WithContext(ctx).Select("id", "created_at").Where("id = ?", cursor).Take(&anchor).Error; err != nil {
+			return domain.RedemptionCodePage{}, err
+		}
+		query = query.Where("(code.created_at, code.id) < (?, ?)", anchor.CreatedAt, anchor.ID)
+	}
+	var rows []codeStatusRecord
+	if err := query.Scan(&rows).Error; err != nil {
+		return domain.RedemptionCodePage{}, err
+	}
+	page := domain.RedemptionCodePage{Items: make([]domain.RedemptionCodeStatus, 0, min(limit, len(rows)))}
+	if len(rows) > limit {
+		page.NextCursor = rows[limit-1].ID
+		rows = rows[:limit]
+	}
+	for _, row := range rows {
+		page.Items = append(page.Items, toRedemptionCodeStatus(row, now))
+	}
+	return page, nil
+}
+
+func (repository *Repository) VoidRedemptionCode(ctx context.Context, codeID string, now time.Time) (domain.RedemptionCodeStatus, error) {
+	var status domain.RedemptionCodeStatus
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var code codeRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", codeID).Take(&code).Error; err != nil {
+			return domain.ErrCodeUnavailable
+		}
+		if code.RedeemedAt != nil {
+			return domain.ErrCodeUnavailable
+		}
+		if code.VoidedAt == nil {
+			code.VoidedAt = &now
+			if err := tx.Save(&code).Error; err != nil {
+				return err
+			}
+		}
+		var row codeStatusRecord
+		if err := tx.Table("redemption_codes code").Select("code.id, code.batch_id, code.code_identifier AS identifier, batch.value_hundredths AS value, batch.expires_at, code.voided_at, code.redeemed_at, code.created_at").Joins("JOIN redemption_code_batches batch ON batch.id = code.batch_id").Where("code.id = ?", codeID).Take(&row).Error; err != nil {
+			return err
+		}
+		status = toRedemptionCodeStatus(row, now)
+		return nil
+	})
+	return status, err
+}
+
+func toRedemptionCodeStatus(row codeStatusRecord, now time.Time) domain.RedemptionCodeStatus {
+	state := "available"
+	if row.VoidedAt != nil {
+		state = "void"
+	} else if row.RedeemedAt != nil {
+		state = "redeemed"
+	} else if row.ExpiresAt != nil && !now.Before(*row.ExpiresAt) {
+		state = "expired"
+	}
+	return domain.RedemptionCodeStatus{ID: row.ID, BatchID: row.BatchID, Identifier: row.Identifier, State: state, Value: row.Value, ExpiresAt: row.ExpiresAt, RedeemedAt: row.RedeemedAt, VoidedAt: row.VoidedAt, CreatedAt: row.CreatedAt}
 }
 
 func (repository *Repository) ListRates(ctx context.Context) ([]domain.RateRevision, error) {

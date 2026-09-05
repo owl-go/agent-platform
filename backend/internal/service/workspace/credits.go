@@ -71,7 +71,7 @@ func (service *Service) ConfigureUserDailyCredits(ctx context.Context, request *
 	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	balance, err := service.credits.ConfigureDailyAllocation(ctx, request.UserId, "", creditsdomain.Amount(request.AllocationHundredths))
+	balance, err := service.credits.ConfigureDailyAllocation(ctx, request.UserId, service.userTimezone(ctx, request.UserId), creditsdomain.Amount(request.AllocationHundredths))
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -79,10 +79,11 @@ func (service *Service) ConfigureUserDailyCredits(ctx context.Context, request *
 }
 
 func (service *Service) AdjustUserCredits(ctx context.Context, request *workspacev1.AdjustUserCreditsRequest) (*workspacev1.CreditBalance, error) {
-	if _, err := service.administrator(ctx); err != nil {
+	administrator, err := service.administrator(ctx)
+	if err != nil {
 		return nil, err
 	}
-	balance, err := service.credits.Adjust(ctx, request.UserId, "", creditsdomain.Amount(request.AmountHundredths), request.Reason)
+	balance, err := service.credits.Adjust(ctx, request.UserId, administrator.UserID, request.RequestId, service.userTimezone(ctx, request.UserId), creditsdomain.Amount(request.AmountHundredths), request.Reason)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -142,6 +143,50 @@ func (service *Service) CreateRedemptionCodeBatch(ctx context.Context, request *
 		response.Codes = append(response.Codes, &workspacev1.RedemptionCode{Id: code.ID, Identifier: code.Identifier, Plaintext: code.Plaintext, State: code.State})
 	}
 	return response, nil
+}
+
+func (service *Service) ListRedemptionCodes(ctx context.Context, request *workspacev1.ListRedemptionCodesRequest) (*workspacev1.ListRedemptionCodesResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	cursor, limit := valueOrEmpty(request.Cursor), 50
+	if request.Limit != nil {
+		limit = int(*request.Limit)
+	}
+	page, err := service.credits.ListRedemptionCodes(ctx, cursor, limit)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := &workspacev1.ListRedemptionCodesResponse{NextCursor: optionalString(page.NextCursor)}
+	for _, item := range page.Items {
+		response.Items = append(response.Items, redemptionCodeStatusResponse(item))
+	}
+	return response, nil
+}
+
+func (service *Service) VoidRedemptionCode(ctx context.Context, request *workspacev1.VoidRedemptionCodeRequest) (*workspacev1.RedemptionCodeStatus, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	status, err := service.credits.VoidRedemptionCode(ctx, request.CodeId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return redemptionCodeStatusResponse(status), nil
+}
+
+func redemptionCodeStatusResponse(status creditsdomain.RedemptionCodeStatus) *workspacev1.RedemptionCodeStatus {
+	response := &workspacev1.RedemptionCodeStatus{Id: status.ID, BatchId: status.BatchID, Identifier: status.Identifier, State: status.State, ValueHundredths: int64(status.Value), CreatedAt: timestamppb.New(status.CreatedAt)}
+	if status.ExpiresAt != nil {
+		response.ExpiresAt = timestamppb.New(*status.ExpiresAt)
+	}
+	if status.RedeemedAt != nil {
+		response.RedeemedAt = timestamppb.New(*status.RedeemedAt)
+	}
+	if status.VoidedAt != nil {
+		response.VoidedAt = timestamppb.New(*status.VoidedAt)
+	}
+	return response
 }
 
 func (service *Service) administrator(ctx context.Context) (accountdomain.Principal, error) {

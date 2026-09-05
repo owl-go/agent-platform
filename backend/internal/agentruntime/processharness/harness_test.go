@@ -27,6 +27,9 @@ func TestRunCapturesStdoutAndStderr(t *testing.T) {
 	if result.ExitCode != 0 {
 		t.Fatalf("exit code: got %d, want 0", result.ExitCode)
 	}
+	if !result.Started {
+		t.Fatal("successful process did not report that it started")
+	}
 	if got := sink.text(processharness.StreamStdout); got != "hello stdout\n" {
 		t.Fatalf("stdout: got %q", got)
 	}

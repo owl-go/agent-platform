@@ -1001,6 +1001,13 @@ func (repository *Repository) CancellationRequested(ctx context.Context, job app
 	if job.Kind == application.JobMCPTest {
 		return false, nil
 	}
+	// The cancellation monitor doubles as the Credit execution-lease heartbeat.
+	// A crashed Worker stops refreshing it, allowing a later admission to recover.
+	if err := repository.db.WithContext(ctx).Table("credit_execution_leases").
+		Where("user_id = ? AND source LIKE ?", job.OwnerID, job.ID+":%").
+		Update("acquired_at", time.Now().UTC()).Error; err != nil {
+		return false, err
+	}
 	var count int64
 	if job.Kind == application.JobSession {
 		err := repository.db.WithContext(ctx).Table("session_messages message").

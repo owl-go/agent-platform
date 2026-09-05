@@ -15,7 +15,7 @@ async function toggle(item: UserAccount) { try { await api.setUserEnabled(item.i
 async function reset() { if (!pendingReset.value) return; try { revealed.value = (await api.resetUserPassword(pendingReset.value.id)).temporary_password; pendingReset.value = undefined; } catch { error.value = t("errors.generic"); } }
 async function copy() { await navigator.clipboard.writeText(revealed.value); }
 function editCredits(item: UserAccount) { creditUser.value = item; creditForm.value = { daily: Number(item.credit_balance?.daily_allocation_hundredths ?? 60_000) / 100, adjustment: 0, reason: "" }; }
-async function saveCredits() { if (!creditUser.value) return; try { await api.configureUserDailyCredits(creditUser.value.id, Math.round(creditForm.value.daily * 100)); if (creditForm.value.adjustment !== 0) await api.adjustUserCredits(creditUser.value.id, Math.round(creditForm.value.adjustment * 100), creditForm.value.reason); creditUser.value = undefined; await refresh(); } catch { error.value = t("errors.validation"); } }
+async function saveCredits() { if (!creditUser.value) return; try { await api.configureUserDailyCredits(creditUser.value.id, Math.round(creditForm.value.daily * 100)); if (creditForm.value.adjustment !== 0) await api.adjustUserCredits(creditUser.value.id, Math.round(creditForm.value.adjustment * 100), creditForm.value.reason, crypto.randomUUID()); creditUser.value = undefined; await refresh(); } catch { error.value = t("errors.validation"); } }
 </script>
 <template>
   <section class="page-surface">

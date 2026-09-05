@@ -121,6 +121,105 @@
         ]
       }
     },
+    "/api/v1/admin/redemption-codes": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListRedemptionCodes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListRedemptionCodesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/redemption-codes/{code_id}/void": {
+      "post": {
+        "operationId": "AgentWorkspaceService_VoidRedemptionCode",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1RedemptionCodeStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "code_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceVoidRedemptionCodeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "operationId": "AgentWorkspaceService_ListUsers",
@@ -3166,6 +3265,9 @@
           },
           "reason": {
             "type": "string"
+          },
+          "request_id": {
+            "type": "string"
           }
         }
       },
@@ -3419,6 +3521,9 @@
             "format": "int64"
           }
         }
+      },
+      "AgentWorkspaceServiceVoidRedemptionCodeBody": {
+        "type": "object"
       },
       "protobufAny": {
         "type": "object",
@@ -4277,6 +4382,20 @@
           }
         }
       },
+      "v1ListRedemptionCodesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1RedemptionCodeStatus"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
       "v1ListRunsResponse": {
         "type": "object",
         "properties": {
@@ -4774,6 +4893,43 @@
             "items": {
               "$ref": "#/components/schemas/v1RedemptionCode"
             }
+          }
+        }
+      },
+      "v1RedemptionCodeStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "value_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "redeemed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "voided_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

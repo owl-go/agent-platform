@@ -211,4 +211,19 @@ describe("Agent Workspace API client", () => {
       "/api/v1/sessions/session-1/messages?after=200&limit=200",
     ]);
   });
+
+  it("uses safe administrator Redemption Code status endpoints", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(String(input).endsWith("/void") ? { id: "code-1", state: "void" } : { items: [{ id: "code-1", identifier: "safe-id", state: "available" }], next_cursor: "code-1" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+
+    const page = await api.listRedemptionCodes("cursor-1");
+    await api.voidRedemptionCode("code-1");
+
+    expect(page.items[0]?.identifier).toBe("safe-id");
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
+      "/api/v1/admin/redemption-codes?limit=50&cursor=cursor-1",
+      "/api/v1/admin/redemption-codes/code-1/void",
+    ]);
+  });
 });

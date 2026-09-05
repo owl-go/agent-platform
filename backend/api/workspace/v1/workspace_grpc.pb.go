@@ -32,6 +32,8 @@ const (
 	AgentWorkspaceService_ListModelCreditRates_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 	AgentWorkspaceService_CreateModelCreditRate_FullMethodName         = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
 	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName     = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
+	AgentWorkspaceService_ListRedemptionCodes_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
+	AgentWorkspaceService_VoidRedemptionCode_FullMethodName            = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
 	AgentWorkspaceService_ListSessions_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessions"
 	AgentWorkspaceService_CreateSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateSession"
 	AgentWorkspaceService_GetSession_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -110,6 +112,8 @@ type AgentWorkspaceServiceClient interface {
 	ListModelCreditRates(ctx context.Context, in *ListModelCreditRatesRequest, opts ...grpc.CallOption) (*ListModelCreditRatesResponse, error)
 	CreateModelCreditRate(ctx context.Context, in *CreateModelCreditRateRequest, opts ...grpc.CallOption) (*ModelCreditRate, error)
 	CreateRedemptionCodeBatch(ctx context.Context, in *CreateRedemptionCodeBatchRequest, opts ...grpc.CallOption) (*RedemptionCodeBatch, error)
+	ListRedemptionCodes(ctx context.Context, in *ListRedemptionCodesRequest, opts ...grpc.CallOption) (*ListRedemptionCodesResponse, error)
+	VoidRedemptionCode(ctx context.Context, in *VoidRedemptionCodeRequest, opts ...grpc.CallOption) (*RedemptionCodeStatus, error)
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
@@ -303,6 +307,26 @@ func (c *agentWorkspaceServiceClient) CreateRedemptionCodeBatch(ctx context.Cont
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RedemptionCodeBatch)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListRedemptionCodes(ctx context.Context, in *ListRedemptionCodesRequest, opts ...grpc.CallOption) (*ListRedemptionCodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRedemptionCodesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListRedemptionCodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) VoidRedemptionCode(ctx context.Context, in *VoidRedemptionCodeRequest, opts ...grpc.CallOption) (*RedemptionCodeStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedemptionCodeStatus)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_VoidRedemptionCode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -916,6 +940,8 @@ type AgentWorkspaceServiceServer interface {
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
 	CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error)
+	ListRedemptionCodes(context.Context, *ListRedemptionCodesRequest) (*ListRedemptionCodesResponse, error)
+	VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	CreateSession(context.Context, *CreateSessionRequest) (*Session, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -1023,6 +1049,12 @@ func (UnimplementedAgentWorkspaceServiceServer) CreateModelCreditRate(context.Co
 }
 func (UnimplementedAgentWorkspaceServiceServer) CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateRedemptionCodeBatch not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListRedemptionCodes(context.Context, *ListRedemptionCodesRequest) (*ListRedemptionCodesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRedemptionCodes not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method VoidRedemptionCode not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
@@ -1452,6 +1484,42 @@ func _AgentWorkspaceService_CreateRedemptionCodeBatch_Handler(srv interface{}, c
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).CreateRedemptionCodeBatch(ctx, req.(*CreateRedemptionCodeBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListRedemptionCodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRedemptionCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListRedemptionCodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListRedemptionCodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListRedemptionCodes(ctx, req.(*ListRedemptionCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_VoidRedemptionCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoidRedemptionCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).VoidRedemptionCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_VoidRedemptionCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).VoidRedemptionCode(ctx, req.(*VoidRedemptionCodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2576,6 +2644,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateRedemptionCodeBatch",
 			Handler:    _AgentWorkspaceService_CreateRedemptionCodeBatch_Handler,
+		},
+		{
+			MethodName: "ListRedemptionCodes",
+			Handler:    _AgentWorkspaceService_ListRedemptionCodes_Handler,
+		},
+		{
+			MethodName: "VoidRedemptionCode",
+			Handler:    _AgentWorkspaceService_VoidRedemptionCode_Handler,
 		},
 		{
 			MethodName: "ListSessions",

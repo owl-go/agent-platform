@@ -32,6 +32,7 @@ var ProviderSet = wire.NewSet(
 	NewIdentityProvider,
 	NewAccountService,
 	NewWorkspaceService,
+	NewCreditsRepository,
 	NewCreditsService,
 	NewSecretBox,
 	NewWorkspaceFiles,
@@ -66,12 +67,16 @@ func NewAccountService(ctx context.Context, config platformconfig.Config, databa
 	return service, err
 }
 
-func NewWorkspaceService(database *gormdb.Database) (*workspaceapplication.Service, error) {
-	return workspaceapplication.New(workspacerepo.New(database.ORM()), modeldiscovery.New(nil))
+func NewCreditsRepository(database *gormdb.Database) *creditsrepo.Repository {
+	return creditsrepo.New(database.ORM())
 }
 
-func NewCreditsService(database *gormdb.Database) (*creditsapplication.Service, error) {
-	return creditsapplication.New(creditsrepo.New(database.ORM()), nil)
+func NewWorkspaceService(database *gormdb.Database, credits *creditsrepo.Repository) (*workspaceapplication.Service, error) {
+	return workspaceapplication.New(workspacerepo.New(database.ORM(), credits), modeldiscovery.New(nil))
+}
+
+func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {
+	return creditsapplication.New(credits, nil)
 }
 
 func NewSecretBox(config platformconfig.Config) (*secretcrypto.Box, error) {
