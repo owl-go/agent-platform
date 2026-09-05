@@ -27,7 +27,7 @@ func TestIPTablesEgressGateLimitsCommandToResolvedHTTPSAndCleansUp(t *testing.T)
 			if command == "docker" {
 				return []byte("172.30.0.8\n"), nil
 			}
-			if reflect.DeepEqual(arguments, []string{"-I", "DOCKER-USER", "1", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"}) {
+			if reflect.DeepEqual(arguments, []string{"--wait", "5", "-I", "DOCKER-USER", "1", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"}) {
 				policyInstalled = true
 			}
 			return nil, nil
@@ -50,16 +50,16 @@ func TestIPTablesEgressGateLimitsCommandToResolvedHTTPSAndCleansUp(t *testing.T)
 
 	want := [][]string{
 		{"docker", "inspect", "--format", `{{with index .NetworkSettings.Networks "agent-public-egress"}}{{.IPAddress}}{{end}}`, "agent-runtime-1"},
-		{"iptables", "-N", "AGENT-CLI-abcdef123456"},
-		{"iptables", "-A", "AGENT-CLI-abcdef123456", "-d", "1.1.1.1/32", "-p", "udp", "--dport", "53", "-j", "RETURN"},
-		{"iptables", "-A", "AGENT-CLI-abcdef123456", "-d", "1.1.1.1/32", "-p", "tcp", "--dport", "53", "-j", "RETURN"},
-		{"iptables", "-A", "AGENT-CLI-abcdef123456", "-d", "93.184.216.34/32", "-p", "tcp", "--dport", "443", "-j", "RETURN"},
-		{"iptables", "-A", "AGENT-CLI-abcdef123456", "-d", "203.0.114.20/32", "-p", "tcp", "--dport", "443", "-j", "RETURN"},
-		{"iptables", "-A", "AGENT-CLI-abcdef123456", "-j", "REJECT"},
-		{"iptables", "-I", "DOCKER-USER", "1", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"},
-		{"iptables", "-D", "DOCKER-USER", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"},
-		{"iptables", "-F", "AGENT-CLI-abcdef123456"},
-		{"iptables", "-X", "AGENT-CLI-abcdef123456"},
+		{"iptables", "--wait", "5", "-N", "AGENT-CLI-abcdef123456"},
+		{"iptables", "--wait", "5", "-A", "AGENT-CLI-abcdef123456", "-d", "1.1.1.1/32", "-p", "udp", "--dport", "53", "-j", "RETURN"},
+		{"iptables", "--wait", "5", "-A", "AGENT-CLI-abcdef123456", "-d", "1.1.1.1/32", "-p", "tcp", "--dport", "53", "-j", "RETURN"},
+		{"iptables", "--wait", "5", "-A", "AGENT-CLI-abcdef123456", "-d", "93.184.216.34/32", "-p", "tcp", "--dport", "443", "-j", "RETURN"},
+		{"iptables", "--wait", "5", "-A", "AGENT-CLI-abcdef123456", "-d", "203.0.114.20/32", "-p", "tcp", "--dport", "443", "-j", "RETURN"},
+		{"iptables", "--wait", "5", "-A", "AGENT-CLI-abcdef123456", "-j", "REJECT"},
+		{"iptables", "--wait", "5", "-I", "DOCKER-USER", "1", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"},
+		{"iptables", "--wait", "5", "-D", "DOCKER-USER", "-s", "172.30.0.8/32", "-j", "AGENT-CLI-abcdef123456"},
+		{"iptables", "--wait", "5", "-F", "AGENT-CLI-abcdef123456"},
+		{"iptables", "--wait", "5", "-X", "AGENT-CLI-abcdef123456"},
 	}
 	if !reflect.DeepEqual(commands, want) {
 		t.Fatalf("commands = %#v, want %#v", commands, want)
@@ -126,8 +126,8 @@ func TestIPTablesEgressGateCleansRulesWhenCommandFails(t *testing.T) {
 			if command == "docker" {
 				return []byte("172.30.0.8"), nil
 			}
-			if len(arguments) > 0 && (arguments[0] == "-D" || arguments[0] == "-F" || arguments[0] == "-X") {
-				cleanup = append(cleanup, arguments[0])
+			if len(arguments) > 2 && (arguments[2] == "-D" || arguments[2] == "-F" || arguments[2] == "-X") {
+				cleanup = append(cleanup, arguments[2])
 			}
 			return nil, nil
 		},
@@ -154,7 +154,7 @@ func TestIPTablesEgressGateDoesNotRemoveChainItFailedToCreate(t *testing.T) {
 			if command == "docker" {
 				return []byte("172.30.0.8"), nil
 			}
-			if reflect.DeepEqual(arguments, []string{"-N", "AGENT-CLI-0123456789ab"}) {
+			if reflect.DeepEqual(arguments, []string{"--wait", "5", "-N", "AGENT-CLI-0123456789ab"}) {
 				return nil, errors.New("chain already exists")
 			}
 			cleanupCalls++
@@ -185,7 +185,7 @@ func TestIPTablesEgressGatePreservesPolicyWhenContainerMayStillBeActive(t *testi
 			if command == "docker" {
 				return []byte("172.30.0.8"), nil
 			}
-			if len(arguments) > 0 && (arguments[0] == "-D" || arguments[0] == "-F" || arguments[0] == "-X") {
+			if len(arguments) > 2 && (arguments[2] == "-D" || arguments[2] == "-F" || arguments[2] == "-X") {
 				cleanupCalls++
 			}
 			return nil, nil
@@ -210,5 +210,11 @@ func TestPublicIPv4RejectsNonPublicRanges(t *testing.T) {
 	}
 	if !isPublicIPv4(netip.MustParseAddr("93.184.216.34")) {
 		t.Fatal("public IPv4 address was rejected")
+	}
+}
+
+func TestPublicDNSResolverRejectsPrivateServers(t *testing.T) {
+	if _, err := NewPublicDNSResolver([]string{"127.0.0.1"}); err == nil {
+		t.Fatal("private DNS resolver was accepted")
 	}
 }

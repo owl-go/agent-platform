@@ -10,7 +10,7 @@ For an already provisioned Worker, run the complete guarded deployment from the 
 make deploy
 ```
 
-`scripts/deploy-platform.sh` runs the backend and frontend gates, reads only the public Web/OIDC values from the remote env file, creates and verifies business-database, identity-database, and configuration backups, uploads an immutable source release, prebuilds API and Worker images, stops the old Worker, starts the new API to apply append-only migrations, verifies the latest migration ledger entry, starts the new Worker, atomically deploys the Web release, and checks public Health, Readiness, OIDC, HTTPS redirect, container health, release identity, and error logs.
+`scripts/deploy-platform.sh` runs the backend and frontend gates, reads only the public Web/OIDC values from the remote env file, creates and verifies business-database, identity-database, and configuration backups, uploads an immutable source release, prebuilds API, Worker, and Egress Controller images, stops the old Worker, starts the new API to apply append-only migrations, verifies the latest migration ledger entry, starts the Egress Controller and new Worker, atomically deploys the Web release, and checks public Health, Readiness, OIDC, HTTPS redirect, container health, release identity, and error logs.
 
 The defaults match the production layout:
 
@@ -39,6 +39,8 @@ install -d -o 65532 -g 65532 -m 0700 "${WORKSPACE_ROOT}"
 
 The execution overlay gives the Worker only `CHOWN`, `DAC_OVERRIDE`, and `FOWNER` in addition to its Docker socket. Staging switches directories to Runtime UID `65532` before the Worker finishes writing them; `FOWNER` is required to normalize the modes of files created by that Runtime UID before merging a successful Workspace. Runtime containers remain non-root and drop every capability.
 `CREDENTIAL_TEMP_ROOT` is mounted at the identical absolute path inside the Worker because the host Docker daemon, not the Worker container, resolves Runtime bind-mount sources.
+
+The same overlay starts a dedicated `egress-controller` in the host Network Namespace with only `NET_ADMIN` added. Worker receives its Unix Socket through a read-only named volume and never receives host-network capability. `AGENT_EGRESS_NETWORK`, `AGENT_EGRESS_SUBNET`, and `AGENT_DNS_SERVERS` must match the YAML `sandbox` values and the host `configure-public-egress.sh` configuration exactly; the controller rejects every CLI lease when they drift.
 
 `worker.runtime_idle_timeout` defaults to the deployed value `30m`. Session and Workflow Runtime containers are stopped after each execution, retain their immutable Docker definition for this idle window, and are then removed by the Worker reaper. Per-execution credential directories are removed immediately after stop and are never retained for the idle window.
 

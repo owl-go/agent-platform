@@ -1,8 +1,41 @@
 services:
+  egress-controller:
+    build:
+      context: ../..
+      dockerfile: deploy/sandbox/Dockerfile.egress-controller
+    restart: unless-stopped
+    network_mode: host
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      AGENT_EGRESS_CONTROLLER_SOCKET: /run/agent-platform/egress-controller.sock
+      AGENT_EGRESS_NETWORK: ${AGENT_EGRESS_NETWORK:-agent-public-egress}
+      AGENT_EGRESS_SUBNET: ${AGENT_EGRESS_SUBNET:-172.30.0.0/24}
+      AGENT_DNS_SERVERS: ${AGENT_DNS_SERVERS:-223.5.5.5 1.1.1.1}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - egress-control:/run/agent-platform
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /run/agent-platform/egress-controller.sock"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+
   worker:
     user: "0:0"
+    depends_on:
+      egress-controller:
+        condition: service_healthy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - egress-control:/run/agent-platform:ro
       # Host Docker resolves bind sources outside this container, so paths must match.
       - ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}:${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
       - ${SANDBOX_RESOLVER_FILE:?SANDBOX_RESOLVER_FILE is required}:/etc/agent-platform/sandbox-resolv.conf:ro
@@ -12,3 +45,6 @@ services:
       - DAC_OVERRIDE
       # Runtime-owned files must be normalized before they replace the persistent Workspace.
       - FOWNER
+
+volumes:
+  egress-control:

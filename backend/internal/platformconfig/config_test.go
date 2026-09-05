@@ -173,6 +173,11 @@ func TestWorkerExecutionConfigurationIsFailClosed(t *testing.T) {
 	if err := config.ValidateWorker(); err == nil {
 		t.Fatal("ValidateWorker accepted a private Resolver address")
 	}
+	config.Sandbox.ResolverAddresses = []string{"1.1.1.1"}
+	config.Sandbox.EgressControllerSocket = "/run/agent-platform/other.sock"
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted a non-reserved Egress controller socket")
+	}
 }
 
 func TestCLIBuilderConfigurationRequiresPinnedIsolatedInputs(t *testing.T) {
@@ -255,6 +260,7 @@ sandbox:
   runtime: runsc
   egress_network: agent-public-egress
   egress_subnet: 172.30.0.0/24
+  egress_controller_socket: /run/agent-platform/egress-controller.sock
   resolver_config: /etc/agent-platform/sandbox-resolv.conf
   resolver_addresses: [223.5.5.5, 1.1.1.1]
 `) + "\n"

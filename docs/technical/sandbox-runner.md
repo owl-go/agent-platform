@@ -1,6 +1,6 @@
 # Sandbox Runner
 
-状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、专用短生命周期 Connector Container、只读 broker socket 挂载、Runtime/broker 绑定及细粒度 Egress 控制器已实现；模型 Runtime 不挂载 CLI bundle，Worker 的宿主网络控制器装配与 User Action Wait 尚未接入
+状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定及窄协议宿主 Egress Controller 已实现；模型 Runtime 不挂载 CLI bundle，Linux + gVisor 端到端证据与 User Action Wait 尚未完成
 
 Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 与 CLI Connector bundle Mount 只读、Workspace 是唯一可写业务挂载、附件在 Workspace 文件访问边界内使用独立只读挂载、Egress 使用明确网络。Connector bundle 的 SHA-256 与该 Runtime RepoDigest 的可用性组合必须匹配冻结快照。
 
@@ -16,6 +16,6 @@ Workspace Run 在临时副本工作；仅成功执行才安全合并到 Workflow
 
 CLI capability Egress Gate 必须先确认 Connector Container 位于显式配置的私有 IPv4 子网，再将每个审核域名解析为公网 IPv4；任何私网、回环、链路本地、保留或 IPv6 结果均拒绝整次命令。命令期间临时 `DOCKER-USER` chain 只允许访问固定 Resolver 的 TCP/UDP 53 与解析结果的 TCP 443，其余流量拒绝；完成、失败或取消均在独立清理 deadline 内移除 jump 和 chain。策略安装前不得启动 CLI。
 
-Worker 配置必须显式给出 `sandbox.egress_subnet` 和 `sandbox.resolver_addresses`，并与 `configure-public-egress.sh` 创建的网络及 Resolver 文件一致；缺失、私网 Resolver 或配置漂移均拒绝 CLI Connector 执行。容器化 Worker 不能直接修改宿主网络命名空间，因此部署还必须提供受限的宿主网络控制器，不能仅在 Worker Container 内运行 `iptables`。
+Worker 配置必须显式给出 `sandbox.egress_subnet`、`sandbox.resolver_addresses` 和 `sandbox.egress_controller_socket`，并与 `configure-public-egress.sh` 创建的网络及 Resolver 文件一致；缺失、私网 Resolver 或配置漂移均拒绝 CLI Connector 执行。容器化 Worker 不直接修改宿主网络命名空间：专用 Egress Controller 以宿主 Network Namespace、`NET_ADMIN`、只读 Rootfs 和 Unix Socket 运行。Worker 只能通过 acquire/release 协议提交 Container 名称和审核域名，不能提交原始 `iptables` 参数；连接中断按 Container 可能仍活跃处理并保留限制性规则。
 
 每条 CLI 命令使用一个专用 Connector Container：先以 `--network none` 创建，再连接受管 Egress Network，安装 capability policy 后才允许启动。Container 使用与当前 Stage 相同的固定 Runtime 镜像 RepoDigest 和 `runsc`，只读 Rootfs、移除全部 Capability、启用 `no-new-privileges` 和资源限制；仅挂载当前 Connector bundle（只读）、Workspace（可写）及固定 Resolver。模型 Runtime 不挂载 bundle。命令结束、失败或超时后必须在 Egress Gate 撤销规则前强制删除 Connector Container；无法证明 Container 已停止时保留限制性规则并返回失败，不能退化为放开网络。bundle、凭证值和 Egress host 均由 broker 的冻结服务端配置决定。

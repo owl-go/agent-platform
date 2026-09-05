@@ -205,7 +205,8 @@ func (gate *IPTablesEgressGate) removePolicy(ctx context.Context, chain string, 
 }
 
 func (gate *IPTablesEgressGate) command(ctx context.Context, arguments ...string) error {
-	output, err := gate.run(ctx, gate.iptablesCommand, arguments...)
+	commandArguments := append([]string{"--wait", "5"}, arguments...)
+	output, err := gate.run(ctx, gate.iptablesCommand, commandArguments...)
 	if err != nil {
 		return fmt.Errorf("apply CLI Egress policy: %w: %s", err, strings.TrimSpace(string(output)))
 	}
@@ -222,6 +223,35 @@ func resolveHostIPv4(ctx context.Context, host string) ([]netip.Addr, error) {
 		return nil, err
 	}
 	return values, nil
+}
+
+func NewPublicDNSResolver(values []string) (HostResolver, error) {
+	addresses := make([]netip.Addr, 0, len(values))
+	for _, value := range values {
+		address, err := netip.ParseAddr(value)
+		if err != nil || !isPublicIPv4(address) {
+			return nil, errors.New("CLI Egress DNS resolvers must be public IPv4 addresses")
+		}
+		addresses = append(addresses, address)
+	}
+	if len(addresses) == 0 {
+		return nil, errors.New("CLI Egress requires at least one DNS resolver")
+	}
+	return func(ctx context.Context, host string) ([]netip.Addr, error) {
+		var result error
+		for _, address := range addresses {
+			resolverAddress := net.JoinHostPort(address.String(), "53")
+			resolver := &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, network, resolverAddress)
+			}}
+			resolved, err := resolver.LookupNetIP(ctx, "ip4", host)
+			if err == nil && len(resolved) > 0 {
+				return resolved, nil
+			}
+			result = errors.Join(result, err)
+		}
+		return nil, result
+	}, nil
 }
 
 func randomEgressChainName() (string, error) {

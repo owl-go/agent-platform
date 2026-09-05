@@ -41,6 +41,16 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
+	egress, err := cliconnector.NewUnixEgressGate(cliconnector.UnixEgressConfig{
+		SocketPath: config.Sandbox.EgressControllerSocket, EgressNetwork: config.Sandbox.EgressNetwork,
+		NetworkCIDR: config.Sandbox.EgressSubnet, ResolverAddresses: config.Sandbox.ResolverAddresses,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := executor.EnableCLIConnectors(egress); err != nil {
+		return nil, err
+	}
 	creditsRepository := creditsrepo.New(database.ORM())
 	credits, err := creditsapplication.New(creditsRepository, nil)
 	if err != nil {

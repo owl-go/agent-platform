@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+
+FROM public.ecr.aws/docker/library/golang:1.25-bookworm AS build
+
+WORKDIR /src
+COPY backend/go.mod backend/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY backend .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/egress-controller ./cmd/egress-controller
+
+FROM public.ecr.aws/docker/library/alpine:3.23
+
+RUN apk add --no-cache ca-certificates docker-cli iptables
+COPY --from=build /out/egress-controller /usr/local/bin/egress-controller
+
+USER 0:0
+ENTRYPOINT ["/usr/local/bin/egress-controller"]

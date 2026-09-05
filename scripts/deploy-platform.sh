@@ -14,6 +14,7 @@ business_database_container="${BUSINESS_DATABASE_CONTAINER:-agent-platform-postg
 identity_database_container="${IDENTITY_DATABASE_CONTAINER:-agent-platform-identity-db-1}"
 api_container="${API_CONTAINER:-agent-platform-api-1}"
 worker_container="${WORKER_CONTAINER:-agent-platform-worker-1}"
+egress_controller_container="${EGRESS_CONTROLLER_CONTAINER:-agent-platform-egress-controller-1}"
 skip_gates="${SKIP_DEPLOY_GATES:-0}"
 
 usage() {
@@ -72,6 +73,7 @@ done
 [[ "$identity_database_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "IDENTITY_DATABASE_CONTAINER contains unsupported characters"
 [[ "$api_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "API_CONTAINER contains unsupported characters"
 [[ "$worker_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "WORKER_CONTAINER contains unsupported characters"
+[[ "$egress_controller_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "EGRESS_CONTROLLER_CONTAINER contains unsupported characters"
 [[ "$skip_gates" == "0" || "$skip_gates" == "1" ]] || fail "SKIP_DEPLOY_GATES must be 0 or 1"
 validate_remote_path "$deploy_root" PLATFORM_DEPLOY_ROOT
 validate_remote_path "$remote_env_file" PLATFORM_ENV_FILE
@@ -203,7 +205,7 @@ rsync --archive --checksum \
   --exclude='coverage/' \
   "$repo_root/" "$deploy_host:$release_dir/"
 
-stage "Build API and Worker images"
+stage "Build service images"
 ssh "$deploy_host" bash -s -- "$release_dir" "$remote_env_file" "$remote_config_file" <<'REMOTE_BUILD'
 set -euo pipefail
 release_dir=$1
@@ -214,11 +216,11 @@ test -s backend/go.mod
 test -s frontend/package.json
 compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" config --quiet
-PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" build api worker
+PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" build api worker egress-controller
 REMOTE_BUILD
 
 stage "Activate source, migrate, and replace services"
-if ! ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" "$latest_migration" "$business_database_container" "$api_container" "$worker_container" <<'REMOTE_CUTOVER'
+if ! ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" "$latest_migration" "$business_database_container" "$api_container" "$worker_container" "$egress_controller_container" <<'REMOTE_CUTOVER'
 set -euo pipefail
 deploy_root=$1
 release_dir=$2
@@ -229,6 +231,7 @@ latest_migration=$6
 business_database_container=$7
 api_container=$8
 worker_container=$9
+egress_controller_container=${10}
 
 wait_healthy() {
   container=$1
@@ -278,6 +281,8 @@ wait_healthy "$api_container"
 migration_count=$(docker exec "$business_database_container" sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"' sh "SELECT count(*) FROM schema_migrations WHERE name = '$latest_migration'")
 test "$migration_count" = 1
 
+PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --no-deps --force-recreate egress-controller
+wait_healthy "$egress_controller_container"
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --no-deps --force-recreate worker
 wait_healthy "$worker_container"
 REMOTE_CUTOVER
@@ -299,7 +304,7 @@ VITE_OIDC_POST_LOGOUT_REDIRECT_URI="$oidc_post_logout_redirect_uri" \
 "$repo_root/scripts/deploy-web.sh"
 
 stage "Verify deployed release"
-ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$web_release_root" "$release_id" "$public_origin" "$api_container" "$worker_container" <<'REMOTE_VERIFY'
+ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$web_release_root" "$release_id" "$public_origin" "$api_container" "$worker_container" "$egress_controller_container" <<'REMOTE_VERIFY'
 set -euo pipefail
 deploy_root=$1
 release_dir=$2
@@ -308,12 +313,15 @@ release_id=$4
 public_origin=$5
 api_container=$6
 worker_container=$7
+egress_controller_container=$8
 test "$(readlink -f "$deploy_root/src")" = "$release_dir"
 test "$(readlink -f "$web_release_root/current")" = "$web_release_root/releases/$release_id"
 test "$(docker inspect --format '{{.State.Health.Status}}' "$api_container")" = healthy
 test "$(docker inspect --format '{{.State.Health.Status}}' "$worker_container")" = healthy
+test "$(docker inspect --format '{{.State.Health.Status}}' "$egress_controller_container")" = healthy
 test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$api_container")" = "$release_dir/deploy/platform"
 test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$worker_container")" = "$release_dir/deploy/platform"
+test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$egress_controller_container")" = "$release_dir/deploy/platform"
 curl --fail --silent --show-error "$public_origin/" >/dev/null
 test "$(curl --fail --silent --show-error -o /dev/null -w '%{http_code}' "$public_origin/api/healthz")" = 200
 test "$(curl --fail --silent --show-error -o /dev/null -w '%{http_code}' "$public_origin/api/readyz")" = 200
@@ -321,10 +329,13 @@ test "$(curl --fail --silent --show-error -o /dev/null -w '%{http_code}' "$publi
 test "$(curl --silent --show-error --head -o /dev/null -w '%{http_code}' "${public_origin/https:/http:}/")" = 308
 api_errors=$(docker logs "$api_container" 2>&1 | grep -Eic 'panic|fatal|level=error|"level":"error"' || true)
 worker_errors=$(docker logs "$worker_container" 2>&1 | grep -Eic 'panic|fatal|level=error|"level":"error"' || true)
+egress_controller_errors=$(docker logs "$egress_controller_container" 2>&1 | grep -Eic 'panic|fatal|level=error|"level":"error"' || true)
 test "$api_errors" = 0
 test "$worker_errors" = 0
+test "$egress_controller_errors" = 0
 printf 'api_image=%s\n' "$(docker inspect --format '{{.Image}}' "$api_container")"
 printf 'worker_image=%s\n' "$(docker inspect --format '{{.Image}}' "$worker_container")"
+printf 'egress_controller_image=%s\n' "$(docker inspect --format '{{.Image}}' "$egress_controller_container")"
 REMOTE_VERIFY
 
 printf '\nDeployment complete\n'

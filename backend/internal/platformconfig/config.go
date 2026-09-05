@@ -124,11 +124,12 @@ type ObjectStoreConfig struct {
 }
 
 type SandboxConfig struct {
-	Runtime           string   `yaml:"runtime"`
-	EgressNetwork     string   `yaml:"egress_network"`
-	EgressSubnet      string   `yaml:"egress_subnet"`
-	ResolverConfig    string   `yaml:"resolver_config"`
-	ResolverAddresses []string `yaml:"resolver_addresses"`
+	Runtime                string   `yaml:"runtime"`
+	EgressNetwork          string   `yaml:"egress_network"`
+	EgressSubnet           string   `yaml:"egress_subnet"`
+	EgressControllerSocket string   `yaml:"egress_controller_socket"`
+	ResolverConfig         string   `yaml:"resolver_config"`
+	ResolverAddresses      []string `yaml:"resolver_addresses"`
 }
 
 type Duration time.Duration
@@ -343,6 +344,9 @@ func (config Config) ValidateWorker() error {
 	egressSubnet, err := netip.ParsePrefix(config.Sandbox.EgressSubnet)
 	if err != nil || !egressSubnet.Addr().Is4() || !egressSubnet.Addr().IsPrivate() || egressSubnet.Bits() < 16 || egressSubnet.Bits() > 30 {
 		return fmt.Errorf("sandbox.egress_subnet must be an explicit private IPv4 subnet between /16 and /30")
+	}
+	if !filepath.IsAbs(config.Sandbox.EgressControllerSocket) || filepath.Base(config.Sandbox.EgressControllerSocket) != "egress-controller.sock" {
+		return fmt.Errorf("sandbox.egress_controller_socket must be an absolute reserved socket path")
 	}
 	if !filepath.IsAbs(config.Sandbox.ResolverConfig) {
 		return fmt.Errorf("sandbox.resolver_config must be an absolute path")
