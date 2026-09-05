@@ -2,6 +2,7 @@
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { platformApiKey, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
 
@@ -9,13 +10,14 @@ const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30
 
 afterEach(() => { document.body.innerHTML = ""; });
 
-function mountManager(api: PlatformApi) {
+function mountManager(api: PlatformApi, administrator = false) {
+  const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
   return mount(ExtensionManager, {
     attachTo: document.body,
     props: { selectable: true, mcpServerIds: [], skillIds: [] },
     global: {
       plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-      provide: { [platformApiKey as symbol]: api },
+      provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
     },
   });
 }
@@ -78,5 +80,24 @@ describe("ExtensionManager", () => {
 
     expect(document.body.textContent).toContain("审查专家");
     wrapper.unmount();
+  });
+
+  it("lets only an Administrator create definitions while Users can enable available CLI Connectors", async () => {
+    const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
+    const enableCLIConnector = vi.fn(async () => ({ id: "enable-1", definition_id: definition.id, state: "waiting_for_user" as const, action_url: "https://open.feishu.cn/page/cli", version: 1 }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), listExperts: vi.fn(async () => []), enableCLIConnector } as unknown as PlatformApi;
+    const user = mountManager(api);
+    await flushPromises();
+    expect(user.text()).not.toContain("CLI 连接器定义");
+    await user.findAll(".resource-list article button").at(-1)!.trigger("click");
+    await flushPromises();
+    expect(enableCLIConnector).toHaveBeenCalledWith(definition.id);
+    expect(user.text()).toContain("继续完成授权");
+    user.unmount();
+
+    const administrator = mountManager(api, true);
+    await flushPromises();
+    expect(administrator.text()).toContain("CLI 连接器定义");
+    administrator.unmount();
   });
 });
