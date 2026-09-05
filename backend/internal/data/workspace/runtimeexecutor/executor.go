@@ -49,6 +49,7 @@ type Executor struct {
 	materializer credentials.Materializer
 	objects      objectstore.Provider
 	connectors   *cliconnector.ArtifactStore
+	cliEgress    cliconnector.EgressGate
 	warm         *containerprocess.WarmManager
 	checkout     func(context.Context, string) (runtimeLease, error)
 	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -61,6 +62,14 @@ func (executor *Executor) EnableCredits(service *creditsapplication.Service) err
 		return fmt.Errorf("Credits service is required")
 	}
 	executor.credits = service
+	return nil
+}
+
+func (executor *Executor) EnableCLIConnectors(gate cliconnector.EgressGate) error {
+	if gate == nil {
+		return fmt.Errorf("CLI Connector Egress Gate is required")
+	}
+	executor.cliEgress = gate
 	return nil
 }
 
@@ -277,7 +286,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				teamNativeRoots = append(teamNativeRoots, stageNativeState)
 			}
 		}
-		_, connectorErr := executor.materializeCLIConnectors(executionCtx, memberJob, stageSlot.scratch, stageRuntimeConfig.ImageDigest)
+		connectorDirectory, connectorErr := executor.materializeCLIConnectors(executionCtx, memberJob, stageSlot.scratch, stageRuntimeConfig.ImageDigest)
 		if connectorErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(connectorErr)
@@ -299,7 +308,22 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory())
+		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch)
+		if brokerErr != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(brokerErr)
+		}
+		brokerClosed := false
+		closeBroker := func() error {
+			if brokerServer == nil || brokerClosed {
+				return nil
+			}
+			brokerClosed = true
+			return brokerServer.Close()
+		}
+		defer func() { returnErr = errors.Join(returnErr, closeBroker()) }()
+		containerConfig := executor.containerConfig(memberJob, stageRuntimeConfig, stageContainerName, stageSlot, workspace, stageNativeState, environment.Directory(), brokerSocket)
 		runProcess, startErr := lease.Start(executionCtx, containerConfig)
 		if startErr != nil {
 			_ = releaseWarmLease(ctx, lease)
@@ -380,6 +404,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		}
 		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
 		runtimeFinishedAt = time.Now()
+		brokerCloseErr := closeBroker()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
 		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
@@ -441,8 +466,8 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		if index == 0 {
 			setupLease = nil
 		}
-		if executeErr != nil || settlementErr != nil {
-			return result, failStage(errors.Join(executeErr, settlementErr, releaseErr, credentialCleanupErr))
+		if executeErr != nil || settlementErr != nil || brokerCloseErr != nil {
+			return result, failStage(errors.Join(executeErr, settlementErr, brokerCloseErr, releaseErr, credentialCleanupErr))
 		}
 		if releaseErr != nil || credentialCleanupErr != nil {
 			return result, failStage(errors.Join(releaseErr, credentialCleanupErr))
@@ -585,11 +610,11 @@ func (executor *Executor) memberEnvironment(ctx context.Context, job application
 	return variables, files, redactValues, nil
 }
 
-func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory string) containerprocess.Config {
+func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory, brokerSocket string) containerprocess.Config {
 	return containerprocess.Config{
 		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
 		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
-		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
+		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), CLIBrokerSocket: brokerSocket, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
 		Limits: sandbox.Limits{CPUs: 2, MemoryBytes: 4 << 30, PIDs: 512, TempBytes: 2 << 30},
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
@@ -683,6 +708,54 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 		}
 	}
 	return directory, nil
+}
+
+func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string) (*cliconnector.UnixBrokerServer, string, error) {
+	if len(job.Snapshot.CLIConnectors) == 0 {
+		return nil, "", nil
+	}
+	if executor.cliEgress == nil {
+		return nil, "", fmt.Errorf("CLI Connector execution is unavailable on this Worker")
+	}
+	_, runtimeDigest, ok := strings.Cut(runtime.ImageDigest, "@")
+	if !ok || runtimeDigest == "" {
+		return nil, "", fmt.Errorf("Runtime image has no pinned digest")
+	}
+	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
+	for _, snapshot := range job.Snapshot.CLIConnectors {
+		var capabilities []cliconnector.Capability
+		if err := json.Unmarshal(snapshot.Capabilities, &capabilities); err != nil {
+			return nil, "", fmt.Errorf("decode frozen CLI Connector %q capabilities: %w", snapshot.Name, err)
+		}
+		definitions = append(definitions, cliconnector.Definition{
+			ID: snapshot.ID, Name: snapshot.Name, Executable: snapshot.Executable,
+			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable,
+			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: append([]string(nil), snapshot.RuntimeDigests...),
+			Capabilities: capabilities, VersionNumber: snapshot.Version,
+		})
+	}
+	process, err := cliconnector.NewDockerContainerProcess(cliconnector.DockerContainerProcessConfig{
+		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
+		BundleDirectory: bundleDirectory, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
+		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, EgressNetwork: executor.config.Sandbox.EgressNetwork,
+		Limits: sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 256 << 20},
+		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID, Egress: executor.cliEgress,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
+		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	socket := filepath.Join(filepath.Clean(scratch), "broker", "cli-broker.sock")
+	server, err := cliconnector.StartUnixBroker(ctx, broker, socket, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID)
+	if err != nil {
+		return nil, "", err
+	}
+	return server, socket, nil
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
@@ -1315,6 +1388,25 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			names = append(names, skill.Name+"@"+skill.SHA256[:12]+" (/run/agent-credentials/skills/"+skill.ID+")")
 		}
 		sections = append(sections, "Available isolated Skills: "+strings.Join(names, ", "))
+	}
+	if len(job.Snapshot.CLIConnectors) > 0 {
+		commands := make([]string, 0)
+		for _, connector := range job.Snapshot.CLIConnectors {
+			var capabilities []cliconnector.Capability
+			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
+				continue
+			}
+			for _, capability := range capabilities {
+				identities := make([]string, 0, len(capability.Identities))
+				for _, identity := range capability.Identities {
+					identities = append(identities, string(identity))
+				}
+				commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity <%s> [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, strings.Join(identities, "|"), strings.Join(capability.ArgvPrefix, " ")))
+			}
+		}
+		if len(commands) > 0 {
+			sections = append(sections, "Available isolated CLI Connectors (use only these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
+		}
 	}
 	if len(attachments) > 0 {
 		attachmentPaths := make([]string, 0, len(attachments))

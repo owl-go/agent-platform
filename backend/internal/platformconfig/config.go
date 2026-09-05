@@ -3,6 +3,7 @@ package platformconfig
 import (
 	"fmt"
 	"io"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -123,9 +124,11 @@ type ObjectStoreConfig struct {
 }
 
 type SandboxConfig struct {
-	Runtime        string `yaml:"runtime"`
-	EgressNetwork  string `yaml:"egress_network"`
-	ResolverConfig string `yaml:"resolver_config"`
+	Runtime           string   `yaml:"runtime"`
+	EgressNetwork     string   `yaml:"egress_network"`
+	EgressSubnet      string   `yaml:"egress_subnet"`
+	ResolverConfig    string   `yaml:"resolver_config"`
+	ResolverAddresses []string `yaml:"resolver_addresses"`
 }
 
 type Duration time.Duration
@@ -337,8 +340,21 @@ func (config Config) ValidateWorker() error {
 	if config.Sandbox.EgressNetwork == "" {
 		return fmt.Errorf("sandbox.egress_network is required")
 	}
+	egressSubnet, err := netip.ParsePrefix(config.Sandbox.EgressSubnet)
+	if err != nil || !egressSubnet.Addr().Is4() || !egressSubnet.Addr().IsPrivate() || egressSubnet.Bits() < 16 || egressSubnet.Bits() > 30 {
+		return fmt.Errorf("sandbox.egress_subnet must be an explicit private IPv4 subnet between /16 and /30")
+	}
 	if !filepath.IsAbs(config.Sandbox.ResolverConfig) {
 		return fmt.Errorf("sandbox.resolver_config must be an absolute path")
+	}
+	if len(config.Sandbox.ResolverAddresses) == 0 {
+		return fmt.Errorf("sandbox.resolver_addresses requires at least one public IPv4 address")
+	}
+	for _, value := range config.Sandbox.ResolverAddresses {
+		address, parseErr := netip.ParseAddr(value)
+		if parseErr != nil || !publicResolverIPv4(address) {
+			return fmt.Errorf("sandbox.resolver_addresses must contain only public IPv4 addresses")
+		}
 	}
 	if strings.TrimSpace(config.Worker.ManagementAddress) == "" {
 		return fmt.Errorf("worker.management_address is required")
@@ -386,6 +402,24 @@ func (config Config) ValidateWorker() error {
 		}
 	}
 	return nil
+}
+
+func publicResolverIPv4(address netip.Addr) bool {
+	if !address.IsValid() || !address.Is4() || !address.IsGlobalUnicast() || address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() {
+		return false
+	}
+	for _, prefix := range []netip.Prefix{
+		netip.MustParsePrefix("0.0.0.0/8"), netip.MustParsePrefix("100.64.0.0/10"),
+		netip.MustParsePrefix("192.0.0.0/24"), netip.MustParsePrefix("192.0.2.0/24"),
+		netip.MustParsePrefix("198.18.0.0/15"), netip.MustParsePrefix("198.51.100.0/24"),
+		netip.MustParsePrefix("203.0.113.0/24"), netip.MustParsePrefix("224.0.0.0/4"),
+		netip.MustParsePrefix("240.0.0.0/4"),
+	} {
+		if prefix.Contains(address) {
+			return false
+		}
+	}
+	return true
 }
 
 func (config Config) validateShared() error {

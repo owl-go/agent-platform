@@ -134,20 +134,74 @@ func (broker *Broker) Serve(ctx context.Context, listener net.Listener) error {
 	if listener == nil {
 		return errors.New("CLI broker listener is required")
 	}
+	connections := newBrokerConnections()
 	go func() {
 		<-ctx.Done()
 		_ = listener.Close()
+		connections.closeAll()
 	}()
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			if ctx.Err() != nil {
+				connections.wait()
 				return nil
 			}
+			connections.closeAll()
+			connections.wait()
 			return fmt.Errorf("accept CLI broker connection: %w", err)
 		}
-		go broker.serveConnection(ctx, connection)
+		if !connections.add(connection) {
+			continue
+		}
+		go func() {
+			defer connections.done(connection)
+			broker.serveConnection(ctx, connection)
+		}()
 	}
+}
+
+type brokerConnections struct {
+	mu      sync.Mutex
+	active  map[net.Conn]struct{}
+	closing bool
+	wg      sync.WaitGroup
+}
+
+func newBrokerConnections() *brokerConnections {
+	return &brokerConnections{active: make(map[net.Conn]struct{})}
+}
+
+func (connections *brokerConnections) add(connection net.Conn) bool {
+	connections.mu.Lock()
+	defer connections.mu.Unlock()
+	if connections.closing {
+		_ = connection.Close()
+		return false
+	}
+	connections.active[connection] = struct{}{}
+	connections.wg.Add(1)
+	return true
+}
+
+func (connections *brokerConnections) done(connection net.Conn) {
+	connections.mu.Lock()
+	delete(connections.active, connection)
+	connections.mu.Unlock()
+	connections.wg.Done()
+}
+
+func (connections *brokerConnections) closeAll() {
+	connections.mu.Lock()
+	connections.closing = true
+	for connection := range connections.active {
+		_ = connection.Close()
+	}
+	connections.mu.Unlock()
+}
+
+func (connections *brokerConnections) wait() {
+	connections.wg.Wait()
 }
 
 func (broker *Broker) serveConnection(ctx context.Context, connection net.Conn) {

@@ -326,7 +326,7 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	}
 	if config.CLIBrokerSocket != "" {
 		brokerDirectory := filepath.Dir(config.CLIBrokerSocket)
-		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=false")
+		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=true")
 		args = append(args, "--env", "AGENT_PLATFORM_CLI_SOCKET="+config.CLIBrokerSocket)
 	}
 	if config.Egress == sandbox.EgressPublic {

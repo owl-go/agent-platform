@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -225,6 +226,10 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 	if config.ConnectorDirectory != "" {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+config.ConnectorDirectory+",readonly=true")
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+RuntimeCLIConnectorDirectory()+",readonly=true")
+	}
+	if config.CLIBrokerSocket != "" {
+		brokerDirectory := filepath.Dir(config.CLIBrokerSocket)
+		arguments = append(arguments, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=true")
 	}
 	if config.Egress == sandbox.EgressPublic {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")

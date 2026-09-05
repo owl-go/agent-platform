@@ -72,4 +72,6 @@ object_store:
 sandbox:
   runtime: runsc
   egress_network: agent-public-egress
+  egress_subnet: 172.30.0.0/24
   resolver_config: /etc/agent-platform/sandbox-resolv.conf
+  resolver_addresses: [223.5.5.5, 1.1.1.1]

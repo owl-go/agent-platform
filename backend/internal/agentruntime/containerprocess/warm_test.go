@@ -142,6 +142,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	for _, protectedMount := range []string{
 		"type=bind,src=/workspaces/scratch/attachments,dst=/workspaces/scratch/attachments,readonly=true",
 		"type=bind,src=/workspaces/scratch/connectors,dst=/workspaces/scratch/connectors,readonly=true",
+		"type=bind,src=/workspaces/scratch/broker,dst=/workspaces/scratch/broker,readonly=true",
 	} {
 		if !containsPair(createArguments, "--mount", protectedMount) {
 			t.Fatalf("nested read-only mount %q missing from %#v", protectedMount, createArguments)

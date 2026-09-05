@@ -163,6 +163,16 @@ func TestWorkerExecutionConfigurationIsFailClosed(t *testing.T) {
 	if err := config.ValidateWorker(); err == nil {
 		t.Fatal("ValidateWorker accepted a zero warm Runtime idle timeout")
 	}
+	config.Worker.RuntimeIdleTimeout = Duration(time.Hour)
+	config.Sandbox.EgressSubnet = ""
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted a missing Egress subnet")
+	}
+	config.Sandbox.EgressSubnet = "172.30.0.0/24"
+	config.Sandbox.ResolverAddresses = []string{"127.0.0.1"}
+	if err := config.ValidateWorker(); err == nil {
+		t.Fatal("ValidateWorker accepted a private Resolver address")
+	}
 }
 
 func TestCLIBuilderConfigurationRequiresPinnedIsolatedInputs(t *testing.T) {
@@ -244,7 +254,9 @@ object_store:
 sandbox:
   runtime: runsc
   egress_network: agent-public-egress
+  egress_subnet: 172.30.0.0/24
   resolver_config: /etc/agent-platform/sandbox-resolv.conf
+  resolver_addresses: [223.5.5.5, 1.1.1.1]
 `) + "\n"
 }
 

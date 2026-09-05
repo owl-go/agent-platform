@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -76,9 +77,52 @@ func TestModelRuntimeConfigDoesNotExposeCLIConnectorBundle(t *testing.T) {
 		Sandbox: platformconfig.SandboxConfig{Runtime: "runsc", EgressNetwork: "public", ResolverConfig: "/etc/resolv.conf"},
 		Worker:  platformconfig.WorkerConfig{SandboxUID: 65532, SandboxGID: 65532},
 	}}
-	config := executor.containerConfig(application.ExecutionJob{ID: "run-1", Snapshot: domain.ExecutionSnapshot{RuntimeEngine: domain.RuntimeClaude}}, platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@sha256:" + strings.Repeat("a", 64)}, "agent-runtime-warm-test", warmSlot{scratch: "/runtime/scratch"}, "/workspace", "", "/credentials")
+	config := executor.containerConfig(application.ExecutionJob{ID: "run-1", Snapshot: domain.ExecutionSnapshot{RuntimeEngine: domain.RuntimeClaude}}, platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@sha256:" + strings.Repeat("a", 64)}, "agent-runtime-warm-test", warmSlot{scratch: "/runtime/scratch"}, "/workspace", "", "/credentials", "")
 	if config.ConnectorDirectory != "" {
 		t.Fatalf("model Runtime received CLI Connector directory %q", config.ConnectorDirectory)
+	}
+}
+
+type passthroughCLIEgress struct{}
+
+func (passthroughCLIEgress) Execute(ctx context.Context, _ string, _ []string, run func(context.Context) (cliconnector.Result, error)) (cliconnector.Result, error) {
+	return run(ctx)
+}
+
+func TestStartCLIConnectorBrokerExposesOnlyProtectedSocketToModelRuntime(t *testing.T) {
+	root, err := os.MkdirTemp("/tmp", "runtime-cli-broker-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	capabilities, err := json.Marshal([]cliconnector.Capability{{
+		ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: cliconnector.RiskLow,
+		Identities: []cliconnector.Identity{cliconnector.IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtimeDigest := "sha256:" + strings.Repeat("a", 64)
+	executor := &Executor{cliEgress: passthroughCLIEgress{}, config: platformconfig.Config{
+		Sandbox: platformconfig.SandboxConfig{Runtime: "runsc", EgressNetwork: "public", ResolverConfig: "/etc/resolv.conf"},
+		Worker:  platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()},
+	}}
+	job := application.ExecutionJob{ID: "run-1", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{
+		ID: "connector-1", Name: "Tool", Executable: "tool", AuthenticationDriver: "none",
+		BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{runtimeDigest}, Capabilities: capabilities, Version: 1,
+	}}}}
+	runtime := platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@" + runtimeDigest}
+	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	if socket != filepath.Join(root, "broker", "cli-broker.sock") {
+		t.Fatalf("broker socket = %q", socket)
+	}
+	config := executor.containerConfig(job, runtime, "agent-runtime-warm-test", warmSlot{scratch: root}, filepath.Join(root, "workspace"), "", filepath.Join(root, "credentials"), socket)
+	if config.CLIBrokerSocket != socket || config.ConnectorDirectory != "" {
+		t.Fatalf("model Runtime broker=%q connector directory=%q", config.CLIBrokerSocket, config.ConnectorDirectory)
 	}
 }
 
@@ -280,6 +324,19 @@ func TestBuildInstructionUsesExecutionInstructionNotCapabilityIntroduction(t *te
 	}
 	if strings.Contains(got, "Public marketing copy") {
 		t.Fatalf("instruction contains display-only Capability Introduction: %q", got)
+	}
+}
+
+func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
+	capabilities, err := json.Marshal([]cliconnector.Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Instruction: "Check identity", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "connector-1", Name: "Feishu CLI", Capabilities: capabilities}}}}
+	got := buildInstruction(job, nil)
+	want := "agent-cli --connector connector-1 --capability identity --identity <user> [--target <target>] -- auth status"
+	if !strings.Contains(got, want) || strings.Contains(got, "/opt/agent-platform/connector") {
+		t.Fatalf("CLI Connector instruction = %q", got)
 	}
 }
 
