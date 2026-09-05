@@ -21,6 +21,11 @@ check_version() {
     --entrypoint sh "${registry}/${runtime}:${version}" -ceu '
       test "$(id -u)" = "65532"
       test -w /workspace
+      test -x /usr/local/bin/agent-cli
+      if agent-cli --connector test --capability test --identity user -- test >/dev/null 2>&1; then
+        echo "agent-cli must fail closed without a broker socket" >&2
+        exit 1
+      fi
       touch /workspace/runtime-write-probe
     '
 }

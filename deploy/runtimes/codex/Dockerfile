@@ -13,6 +13,7 @@ RUN apt-get -o Acquire::Retries=5 update \
     && install -d -m 0750 -o 65532 -g 65532 /workspace
 
 COPY --chmod=0755 deploy/runtimes/common/runtime-entrypoint.sh /usr/local/bin/runtime-entrypoint
+COPY --chmod=0755 deploy/runtimes/common/agent-cli.mjs /usr/local/bin/agent-cli
 
 ENV CODEX_DISABLE_UPDATE_CHECK=1 \
     CODEX_HOME=/tmp/runtime-home/.codex \

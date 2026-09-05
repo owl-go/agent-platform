@@ -84,17 +84,11 @@ func (definition Definition) Validate() error {
 	if strings.TrimSpace(definition.Name) == "" || !npmPackage.MatchString(definition.Package) || !exactVersion.MatchString(definition.Version) {
 		return errors.New("CLI Connector requires a name, valid npm package, and exact version")
 	}
-	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
-		return errors.New("CLI executable must be selected from package bin metadata")
-	}
-	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" {
-		return errors.New("unsupported built-in authentication driver")
+	if err := validateExecutionPolicy(definition); err != nil {
+		return err
 	}
 	if definition.Integrity == "" {
 		return errors.New("npm integrity is required")
-	}
-	if len(definition.Capabilities) == 0 {
-		return errors.New("at least one reviewed CLI capability is required")
 	}
 	if len(definition.SupportedArchitectures) == 0 {
 		return errors.New("at least one supported CLI architecture is required")
@@ -103,6 +97,19 @@ func (definition Definition) Validate() error {
 		if architecture != "linux-amd64" && architecture != "linux-arm64" {
 			return errors.New("unsupported CLI architecture")
 		}
+	}
+	return nil
+}
+
+func validateExecutionPolicy(definition Definition) error {
+	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
+		return errors.New("CLI executable must be selected from package bin metadata")
+	}
+	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" {
+		return errors.New("unsupported built-in authentication driver")
+	}
+	if len(definition.Capabilities) == 0 {
+		return errors.New("at least one reviewed CLI capability is required")
 	}
 	seen := map[string]struct{}{}
 	for _, capability := range definition.Capabilities {
