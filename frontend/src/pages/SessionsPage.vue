@@ -399,8 +399,8 @@ function responseIdentity(message: SessionMessage) {
 function visibleStages(message: SessionMessage) {
 	return message.expert_stages ?? [];
 }
-function activityLabel(activity: ExecutionActivity) {
-  if (activity.type === "runtime.started") return t("sessions.progress.preparing");
+function activityLabel(activity: ExecutionActivity, historical = false) {
+  if (activity.type === "runtime.started") return historical ? t("workflows.runtimePrepared") : t("sessions.progress.preparing");
   if (activity.type === "reasoning.summary") return t("workflows.reasoningSummary");
   if (activity.type === "command.requested") return t("sessions.progress.using_tool");
   if (activity.type === "command.completed") return t("workflows.toolCompleted");
@@ -520,7 +520,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
               <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
                 <div v-if="message.state === 'queued' || message.state === 'generating'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
-                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
+                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>

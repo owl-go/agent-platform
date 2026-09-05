@@ -378,6 +378,8 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity details").text()).not.toContain("正在准备运行环境");
     const initiallyVisible = wrapper.get(".run-conversation .message.assistant .markdown-body").text();
     expect(initiallyVisible.length).toBeGreaterThan(0);
     expect(initiallyVisible.length).toBeLessThan(response.length);

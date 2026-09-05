@@ -430,6 +430,8 @@ describe("SessionsPage conversation layout", () => {
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
     expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
     wrapper.unmount();
   });
 
