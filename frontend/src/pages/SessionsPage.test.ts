@@ -128,7 +128,10 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
     expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
     await disclosureLinks[1]!.trigger("click");
-    expect(wrapper.get(".message.assistant .artifact-changes").text()).toContain("generated report");
+    expect(wrapper.find(".message.assistant .generated-artifact").exists()).toBe(false);
+    expect(wrapper.get(".message.assistant .artifact-changes").text()).toContain("report.md");
+    expect(wrapper.get(".message.assistant .artifact-changes").text()).not.toContain("generated report");
+    await disclosureLinks[0]!.trigger("click");
     await wrapper.get(".message.assistant .generated-artifact").trigger("click");
     await flushPromises();
 

@@ -209,7 +209,10 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
     expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
     await disclosureLinks[1]!.trigger("click");
-    expect(wrapper.get(".artifact-changes").text()).toContain("workflow report");
+    expect(wrapper.find(".generated-artifact").exists()).toBe(false);
+    expect(wrapper.get(".artifact-changes").text()).toContain("report.md");
+    expect(wrapper.get(".artifact-changes").text()).not.toContain("workflow report");
+    await disclosureLinks[0]!.trigger("click");
     await wrapper.get(".generated-artifact").trigger("click");
     await flushPromises();
 

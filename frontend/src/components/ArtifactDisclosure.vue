@@ -16,15 +16,25 @@ function formatFileSize(size: number) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+function toggleArtifacts() {
+  showArtifacts.value = !showArtifacts.value;
+  if (showArtifacts.value) showChanges.value = false;
+}
+
+function toggleChanges() {
+  showChanges.value = !showChanges.value;
+  if (showChanges.value) showArtifacts.value = false;
+}
 </script>
 
 <template>
   <div v-if="files.length" class="artifact-disclosure">
     <div class="artifact-disclosure-links">
-      <button type="button" :aria-expanded="showArtifacts" @click="showArtifacts = !showArtifacts">
+      <button type="button" :aria-expanded="showArtifacts" @click="toggleArtifacts">
         {{ t('artifactDisclosure.viewAllArtifacts', { count: files.length }) }}<ChevronRight aria-hidden="true" />
       </button>
-      <button type="button" :aria-expanded="showChanges" @click="showChanges = !showChanges">
+      <button type="button" :aria-expanded="showChanges" @click="toggleChanges">
         {{ t('artifactDisclosure.viewAllChanges', { count: files.length }) }}<ChevronRight aria-hidden="true" />
       </button>
     </div>
@@ -38,7 +48,6 @@ function formatFileSize(size: number) {
     <div v-if="showChanges" class="artifact-changes">
       <article v-for="artifact in files" :key="artifact.id">
         <header><span class="generated-artifact-icon" aria-hidden="true"><FileText /></span><span><strong>{{ artifact.name }}</strong><small>{{ formatFileSize(artifact.size) }}</small></span></header>
-        <pre v-if="artifact.text_preview">{{ artifact.text_preview }}</pre>
       </article>
     </div>
   </div>
