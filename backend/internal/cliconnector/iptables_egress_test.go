@@ -173,6 +173,35 @@ func TestIPTablesEgressGateDoesNotRemoveChainItFailedToCreate(t *testing.T) {
 	}
 }
 
+func TestIPTablesEgressGatePreservesPolicyWhenContainerMayStillBeActive(t *testing.T) {
+	var cleanupCalls int
+	gate, err := NewIPTablesEgressGate(IPTablesEgressConfig{
+		EgressNetwork: "public", NetworkCIDR: "172.30.0.0/24", ResolverAddresses: []string{"1.1.1.1"},
+		Resolve: func(context.Context, string) ([]netip.Addr, error) {
+			return []netip.Addr{netip.MustParseAddr("93.184.216.34")}, nil
+		},
+		ChainName: func() (string, error) { return "AGENT-CLI-0123456789ab", nil },
+		Run: func(_ context.Context, command string, arguments ...string) ([]byte, error) {
+			if command == "docker" {
+				return []byte("172.30.0.8"), nil
+			}
+			if len(arguments) > 0 && (arguments[0] == "-D" || arguments[0] == "-F" || arguments[0] == "-X") {
+				cleanupCalls++
+			}
+			return nil, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = gate.Execute(context.Background(), "runtime-1", []string{"example.com"}, func(context.Context) (Result, error) {
+		return Result{}, ErrEgressSubjectActive
+	})
+	if !errors.Is(err, ErrEgressSubjectActive) || cleanupCalls != 0 {
+		t.Fatalf("err=%v cleanup calls=%d", err, cleanupCalls)
+	}
+}
+
 func TestPublicIPv4RejectsNonPublicRanges(t *testing.T) {
 	for _, value := range []string{"0.0.0.1", "10.0.0.1", "100.64.0.1", "127.0.0.1", "169.254.1.1", "172.16.0.1", "192.0.2.1", "192.168.1.1", "198.18.0.1", "198.51.100.1", "203.0.113.1", "224.0.0.1", "240.0.0.1", "::1"} {
 		if isPublicIPv4(netip.MustParseAddr(value)) {

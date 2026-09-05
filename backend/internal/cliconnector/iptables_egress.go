@@ -18,6 +18,10 @@ import (
 
 const cliEgressChainPrefix = "AGENT-CLI-"
 
+// ErrEgressSubjectActive keeps the restrictive policy installed when the
+// caller cannot prove that the container was stopped or removed.
+var ErrEgressSubjectActive = errors.New("CLI Egress subject may still be active")
+
 var dockerNetworkName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 type EgressCommandRunner func(context.Context, string, ...string) ([]byte, error)
@@ -109,7 +113,7 @@ func (gate *IPTablesEgressGate) Execute(ctx context.Context, container string, h
 
 	created := false
 	defer func() {
-		if !created {
+		if !created || errors.Is(returnErr, ErrEgressSubjectActive) {
 			return
 		}
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
