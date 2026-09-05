@@ -2,6 +2,7 @@ package claude
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -81,5 +82,31 @@ func TestParserDoesNotReportOmittedUsage(t *testing.T) {
 	}
 	if parser.Result().Usage.Reported {
 		t.Fatal("omitted usage was reported as measured zero")
+	}
+}
+
+func TestParserReportsClaudeCodeErrorResult(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	fixture := `{"type":"result","subtype":"error_during_execution","is_error":true,"result":"API Error: upstream request failed","session_id":"session-1"}`
+	if _, err := parser.Parse(processharness.StreamStdout, []byte(fixture)); err != nil {
+		t.Fatal(err)
+	}
+	result := parser.Result()
+	if result.Error == nil || !strings.Contains(result.Error.Error(), "API Error: upstream request failed") {
+		t.Fatalf("error = %v, want Claude Code diagnostic", result.Error)
+	}
+	if result.FinalMessage != "" {
+		t.Fatalf("final message = %q, want empty error result", result.FinalMessage)
+	}
+}
+
+func TestParserReportsStderrWhenClaudeCodeReturnsNoResult(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	if _, err := parser.Parse(processharness.StreamStderr, []byte("connection reset by peer")); err != nil {
+		t.Fatal(err)
+	}
+	result := parser.Result()
+	if result.Error == nil || !strings.Contains(result.Error.Error(), "connection reset by peer") {
+		t.Fatalf("error = %v, want stderr diagnostic", result.Error)
 	}
 }

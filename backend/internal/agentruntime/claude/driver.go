@@ -72,16 +72,30 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 func (Driver) NewParser(string) cliadapter.Parser { return &parser{} }
 
 type parser struct {
+	stderr []string
 	result cliadapter.ParsedResult
 }
 
 func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.ParsedEvent, error) {
-	if stream == processharness.StreamStderr || len(strings.TrimSpace(string(line))) == 0 {
+	if stream == processharness.StreamStderr {
+		if value := strings.TrimSpace(string(line)); value != "" {
+			if len(value) > 4096 {
+				value = value[len(value)-4096:]
+			}
+			p.stderr = append(p.stderr, value)
+			if len(p.stderr) > 16 {
+				p.stderr = p.stderr[len(p.stderr)-16:]
+			}
+		}
+		return nil, nil
+	}
+	if len(strings.TrimSpace(string(line))) == 0 {
 		return nil, nil
 	}
 	var envelope struct {
 		Type      string `json:"type"`
 		Subtype   string `json:"subtype"`
+		IsError   bool   `json:"is_error"`
 		Result    string `json:"result"`
 		SessionID string `json:"session_id"`
 		Event     struct {
@@ -124,8 +138,16 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 		}
 		return events, nil
 	case "result":
-		p.result.FinalMessage = envelope.Result
 		p.result.CheckpointRef = envelope.SessionID
+		if envelope.IsError || strings.HasPrefix(envelope.Subtype, "error") {
+			diagnostic := strings.TrimSpace(envelope.Result)
+			if diagnostic == "" {
+				diagnostic = envelope.Subtype
+			}
+			p.result.Error = fmt.Errorf("Claude Code reported %s: %s", envelope.Subtype, diagnostic)
+		} else {
+			p.result.FinalMessage = envelope.Result
+		}
 		if envelope.Usage.InputTokens != nil && envelope.Usage.OutputTokens != nil {
 			p.result.Usage = agentruntime.Usage{
 				InputTokens: *envelope.Usage.InputTokens, OutputTokens: *envelope.Usage.OutputTokens,
@@ -136,4 +158,9 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 	return nil, nil
 }
 
-func (p *parser) Result() cliadapter.ParsedResult { return p.result }
+func (p *parser) Result() cliadapter.ParsedResult {
+	if p.result.Error == nil && p.result.FinalMessage == "" && len(p.stderr) > 0 {
+		p.result.Error = fmt.Errorf("Claude Code diagnostic: %s", strings.Join(p.stderr, "\n"))
+	}
+	return p.result
+}
