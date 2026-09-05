@@ -243,7 +243,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.vm.$nextTick();
 
     await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
-    await wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="https://git.example.com"]').setValue("agent-platform:/srv/git/project.git");
+    await wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]').setValue("agent-platform:/srv/git/project.git");
     await wrapper.get<HTMLTextAreaElement>('textarea[name="ssh-config"]').setValue("Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n");
     await wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').setValue("private-key");
     await wrapper.get(".git-settings .button.primary").trigger("click");
@@ -252,6 +252,19 @@ describe("WorkflowDetailPage", () => {
     expect(configureWorkflowGitSource).toHaveBeenCalledWith(workflow.id, expect.objectContaining({
       ssh_config: expect.stringContaining("Host agent-platform"),
     }));
+    wrapper.unmount();
+  });
+
+  it("accepts SCP-style SSH repository addresses in native form validation", async () => {
+    const wrapper = await mountPage();
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const input = wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]');
+    await input.setValue("git@github.com:owl-go/agent-platform.git");
+
+    expect(input.element.type).toBe("text");
+    expect(input.element.validity.typeMismatch).toBe(false);
     wrapper.unmount();
   });
 
