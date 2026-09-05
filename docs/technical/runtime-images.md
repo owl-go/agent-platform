@@ -1,6 +1,6 @@
 # Runtime Images
 
-状态：Runtime、隔离 CLI Builder、User Run 的已校验只读 bundle 挂载，以及公共 broker 协议与 Runtime 客户端已实现；Sandbox 命令进程、细粒度 Egress 和 User Action Wait 尚未接入；部署前必须重新构建并记录 RepoDigest
+状态：Runtime、隔离 CLI Builder、User Run 的已校验只读 bundle 挂载，以及公共 broker 协议与 Runtime 客户端已实现；受 Egress Gate 保护的 Sandbox 命令进程和 broker socket 容器契约已实现，细粒度 Egress 控制器、Runtime 绑定与 User Action Wait 尚未接入；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |
 |---|---|---:|

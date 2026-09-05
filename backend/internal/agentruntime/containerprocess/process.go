@@ -47,6 +47,7 @@ type Config struct {
 	ScratchDirectory     string
 	AttachmentDirectory  string
 	ConnectorDirectory   string
+	CLIBrokerSocket      string
 	PublicEgressNetwork  string
 	ResolverConfigFile   string
 	Egress               sandbox.EgressMode
@@ -230,6 +231,14 @@ func validateConfig(config Config) error {
 			return fmt.Errorf("CLI Connector directory must be the connectors child of Runtime scratch")
 		}
 	}
+	if config.CLIBrokerSocket != "" {
+		if !filepath.IsAbs(config.CLIBrokerSocket) || strings.Contains(config.CLIBrokerSocket, ",") {
+			return fmt.Errorf("CLI broker socket must be an absolute path without commas")
+		}
+		if config.ScratchDirectory == "" || filepath.Clean(config.CLIBrokerSocket) != filepath.Join(filepath.Clean(config.ScratchDirectory), "broker", "cli-broker.sock") {
+			return fmt.Errorf("CLI broker socket must be the reserved socket in Runtime scratch")
+		}
+	}
 	if config.NativeStateDirectory != "" && config.RuntimeCommand != "codex" {
 		return fmt.Errorf("native Runtime state directory is only supported for Codex")
 	}
@@ -267,6 +276,9 @@ func validateProcessSpec(config Config, spec processharness.Spec) error {
 		name, _, _ := strings.Cut(entry, "=")
 		if !identifierPattern.MatchString(name) {
 			return fmt.Errorf("invalid non-secret environment variable")
+		}
+		if name == "AGENT_PLATFORM_CLI_SOCKET" {
+			return fmt.Errorf("CLI broker socket is a reserved platform variable")
 		}
 		if _, duplicate := seenEnvironment[name]; duplicate {
 			return fmt.Errorf("duplicate non-secret environment variable %s", name)
@@ -311,6 +323,11 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	}
 	if config.ConnectorDirectory != "" {
 		args = append(args, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+RuntimeCLIConnectorDirectory()+",readonly=true")
+	}
+	if config.CLIBrokerSocket != "" {
+		brokerDirectory := filepath.Dir(config.CLIBrokerSocket)
+		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=false")
+		args = append(args, "--env", "AGENT_PLATFORM_CLI_SOCKET="+config.CLIBrokerSocket)
 	}
 	if config.Egress == sandbox.EgressPublic {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")

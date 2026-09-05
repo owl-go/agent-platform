@@ -245,6 +245,7 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 	config.ScratchDirectory = "/workspaces/runtime-scratch"
 	config.AttachmentDirectory = "/workspaces/runtime-scratch/attachments"
 	config.ConnectorDirectory = "/workspaces/runtime-scratch/connectors"
+	config.CLIBrokerSocket = "/workspaces/runtime-scratch/broker/cli-broker.sock"
 	runner, err := New(config)
 	if err != nil {
 		t.Fatal(err)
@@ -270,6 +271,10 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 	if !containsPair(captured.Command, "--mount", wantConnectorMount) {
 		t.Fatalf("CLI Connector mount %q missing from %#v", wantConnectorMount, captured.Command)
 	}
+	wantBrokerMount := "type=bind,src=/workspaces/runtime-scratch/broker,dst=/workspaces/runtime-scratch/broker,readonly=false"
+	if !containsPair(captured.Command, "--mount", wantBrokerMount) || !containsPair(captured.Command, "--env", "AGENT_PLATFORM_CLI_SOCKET=/workspaces/runtime-scratch/broker/cli-broker.sock") {
+		t.Fatalf("CLI broker socket mount or environment missing from %#v", captured.Command)
+	}
 }
 
 func TestNewRejectsUnsafeConfiguration(t *testing.T) {
@@ -283,6 +288,8 @@ func TestNewRejectsUnsafeConfiguration(t *testing.T) {
 		"attachment outside scratch":    {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", AttachmentDirectory: "/other/attachments"},
 		"relative CLI Connector":        {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", ConnectorDirectory: "connectors"},
 		"CLI Connector outside scratch": {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", ConnectorDirectory: "/other/connectors"},
+		"relative CLI broker socket":    {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", CLIBrokerSocket: "cli-broker.sock"},
+		"CLI broker outside scratch":    {Image: digestImage(), CredentialDirectory: "/credentials", ScratchDirectory: "/scratch", CLIBrokerSocket: "/other/broker/cli-broker.sock"},
 		"native state for non Codex":    {Image: digestImage(), CredentialDirectory: "/credentials", NativeStateDirectory: "/state"},
 		"relative resolver":             {Image: digestImage(), Egress: sandbox.EgressPublic, PublicEgressNetwork: "public", ResolverConfigFile: "resolv.conf"},
 	}
@@ -307,6 +314,7 @@ func TestRunRejectsCommandOrWorkspaceDrift(t *testing.T) {
 		{Command: []string{"claude", "--version"}, Dir: "relative"},
 		{Command: []string{"claude", "--version"}, Dir: "/other"},
 		{Command: []string{"claude", "--version"}, Dir: "/workspace", Env: []string{"BAD-NAME=value"}},
+		{Command: []string{"claude", "--version"}, Dir: "/workspace", Env: []string{"AGENT_PLATFORM_CLI_SOCKET=/forged"}},
 	} {
 		if _, err := runner(context.Background(), spec, discardSink{}); err == nil {
 			t.Fatalf("expected drift rejection for %+v", spec)

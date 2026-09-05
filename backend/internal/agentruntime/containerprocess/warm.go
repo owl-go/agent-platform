@@ -181,6 +181,9 @@ func warmRunProcess(manager *WarmManager, config Config, name string) cliadapter
 
 func warmExecCommand(dockerCommand string, config Config, spec processharness.Spec, name string) []string {
 	arguments := []string{dockerCommand, "exec", "--interactive", "--workdir", config.ContainerWorkspace}
+	if config.CLIBrokerSocket != "" {
+		arguments = append(arguments, "--env", "AGENT_PLATFORM_CLI_SOCKET="+config.CLIBrokerSocket)
+	}
 	for _, entry := range spec.Env {
 		variable, _, _ := strings.Cut(entry, "=")
 		arguments = append(arguments, "--env", variable)
@@ -216,9 +219,11 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ScratchDirectory+",dst="+config.ScratchDirectory+",readonly=false")
 	}
 	if config.AttachmentDirectory != "" {
+		arguments = append(arguments, "--mount", "type=bind,src="+config.AttachmentDirectory+",dst="+config.AttachmentDirectory+",readonly=true")
 		arguments = append(arguments, "--mount", "type=bind,src="+config.AttachmentDirectory+",dst="+RuntimeAttachmentDirectory(config.ContainerWorkspace)+",readonly=true")
 	}
 	if config.ConnectorDirectory != "" {
+		arguments = append(arguments, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+config.ConnectorDirectory+",readonly=true")
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ConnectorDirectory+",dst="+RuntimeCLIConnectorDirectory()+",readonly=true")
 	}
 	if config.Egress == sandbox.EgressPublic {
@@ -242,7 +247,7 @@ func warmFingerprint(name string, config Config) string {
 	value := strings.Join([]string{
 		name, config.Image, config.RuntimeCommand, config.Runtime,
 		config.WorkspaceDirectory, config.ContainerWorkspace, config.CredentialDirectory,
-		config.NativeStateDirectory, config.ScratchDirectory, config.AttachmentDirectory, config.ConnectorDirectory, config.PublicEgressNetwork,
+		config.NativeStateDirectory, config.ScratchDirectory, config.AttachmentDirectory, config.ConnectorDirectory, config.CLIBrokerSocket, config.PublicEgressNetwork,
 		config.ResolverConfigFile, string(config.Egress),
 		strconv.FormatFloat(config.Limits.CPUs, 'f', -1, 64), strconv.FormatInt(config.Limits.MemoryBytes, 10),
 		strconv.FormatInt(config.Limits.PIDs, 10), strconv.FormatInt(config.Limits.TempBytes, 10),

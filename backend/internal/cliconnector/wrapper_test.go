@@ -9,27 +9,31 @@ import (
 
 type recordingProcess struct {
 	starts     int
+	connector  string
 	executable string
 	args       []string
+	egress     []string
 }
 
-func (process *recordingProcess) Run(_ context.Context, executable string, args []string, _ map[string]string) (Result, error) {
+func (process *recordingProcess) Run(_ context.Context, request ProcessRequest) (Result, error) {
 	process.starts++
-	process.executable = executable
-	process.args = append([]string(nil), args...)
+	process.connector = request.ConnectorID
+	process.executable = request.Executable
+	process.args = append([]string(nil), request.Arguments...)
+	process.egress = append([]string(nil), request.EgressHosts...)
 	return Result{Stdout: []byte("ok")}, nil
 }
 
 func TestWrapperStartsOnlyAnExactLowRiskCapability(t *testing.T) {
 	process := &recordingProcess{}
 	wrapper := Wrapper{Process: process, Now: func() time.Time { return time.Unix(100, 0) }}
-	definition := Definition{State: StateAvailable, Executable: "lark", BundleSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "whoami", ArgvPrefix: []string{"user", "whoami"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Timeout: time.Minute}}}
+	definition := Definition{ID: "connector-1", State: StateAvailable, Executable: "lark", BundleSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "whoami", ArgvPrefix: []string{"user", "whoami"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}}
 	result, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "whoami", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"user", "whoami"}})
 	if err != nil || string(result.Stdout) != "ok" || process.starts != 1 {
 		t.Fatalf("result=%q starts=%d err=%v", result.Stdout, process.starts, err)
 	}
-	if process.executable != "lark" {
-		t.Fatalf("executable = %q", process.executable)
+	if process.connector != "connector-1" || process.executable != "lark" || len(process.egress) != 1 || process.egress[0] != "open.feishu.cn" {
+		t.Fatalf("process request = connector %q executable %q egress %#v", process.connector, process.executable, process.egress)
 	}
 }
 

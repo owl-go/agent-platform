@@ -110,6 +110,7 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	config.ScratchDirectory = "/workspaces/scratch"
 	config.AttachmentDirectory = "/workspaces/scratch/attachments"
 	config.ConnectorDirectory = "/workspaces/scratch/connectors"
+	config.CLIBrokerSocket = "/workspaces/scratch/broker/cli-broker.sock"
 
 	for _, command := range [][]string{{"claude", "--version"}, {"claude", "execute"}} {
 		lease, err := manager.Checkout(context.Background(), name)
@@ -138,7 +139,15 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 	if !containsPair(createArguments, "--mount", wantConnectorMount) {
 		t.Fatalf("CLI Connector mount %q missing from %#v", wantConnectorMount, createArguments)
 	}
-	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", name, "/usr/local/bin/runtime-entrypoint", "claude"}
+	for _, protectedMount := range []string{
+		"type=bind,src=/workspaces/scratch/attachments,dst=/workspaces/scratch/attachments,readonly=true",
+		"type=bind,src=/workspaces/scratch/connectors,dst=/workspaces/scratch/connectors,readonly=true",
+	} {
+		if !containsPair(createArguments, "--mount", protectedMount) {
+			t.Fatalf("nested read-only mount %q missing from %#v", protectedMount, createArguments)
+		}
+	}
+	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", "--env", "AGENT_PLATFORM_CLI_SOCKET=/workspaces/scratch/broker/cli-broker.sock", name, "/usr/local/bin/runtime-entrypoint", "claude"}
 	for _, command := range commands {
 		if len(command) < len(wantPrefix) || !reflect.DeepEqual(command[:len(wantPrefix)], wantPrefix) {
 			t.Fatalf("warm exec command = %#v", command)

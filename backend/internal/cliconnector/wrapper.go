@@ -166,8 +166,17 @@ type Result struct {
 	Stdout, Stderr []byte
 	ExitCode       int
 }
+
+type ProcessRequest struct {
+	ConnectorID string
+	Executable  string
+	Arguments   []string
+	Environment map[string]string
+	EgressHosts []string
+}
+
 type Process interface {
-	Run(context.Context, string, []string, map[string]string) (Result, error)
+	Run(context.Context, ProcessRequest) (Result, error)
 }
 type Wrapper struct {
 	Process         Process
@@ -219,7 +228,13 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 	}
 	execution, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	return wrapper.Process.Run(execution, definition.Executable, append([]string(nil), request.Argv...), cloneEnvironment(request.Environment))
+	return wrapper.Process.Run(execution, ProcessRequest{
+		ConnectorID: definition.ID,
+		Executable:  definition.Executable,
+		Arguments:   append([]string(nil), request.Argv...),
+		Environment: cloneEnvironment(request.Environment),
+		EgressHosts: append([]string(nil), capability.EgressHosts...),
+	})
 }
 
 func CommandDigest(definition Definition, request Request) string {
