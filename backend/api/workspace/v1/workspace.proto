@@ -36,7 +36,6 @@ service AgentWorkspaceService {
   rpc SendSessionMessage(SendSessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages" body: "*"}; }
   rpc RetrySessionMessage(RetrySessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/retry" body: "*"}; }
   rpc CancelSessionMessage(CancelSessionMessageRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation" body: "*"}; }
-  rpc GetSessionArtifactDownload(GetSessionArtifactDownloadRequest) returns (ArtifactDownload) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download"}; }
 
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
@@ -53,7 +52,6 @@ service AgentWorkspaceService {
   rpc CancelRun(CancelRunRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation" body: "*"}; }
   rpc RerunWorkflow(RerunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun" body: "*"}; }
   rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts"}; }
-  rpc GetArtifactDownload(GetArtifactDownloadRequest) returns (ArtifactDownload) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download"}; }
 
   rpc ListWorkspaceEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace"}; }
   rpc GetWorkspaceFile(GetWorkspaceFileRequest) returns (WorkspaceFile) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace/file"}; }

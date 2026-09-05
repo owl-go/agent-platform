@@ -628,22 +628,6 @@ export interface paths {
         patch: operations["AgentWorkspaceService_SetSessionArchived"];
         trace?: never;
     };
-    "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentWorkspaceService_GetSessionArtifactDownload"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/sessions/{session_id}/expert-selection": {
         parameters: {
             query?: never;
@@ -844,22 +828,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["AgentWorkspaceService_ListArtifacts"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["AgentWorkspaceService_GetArtifactDownload"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1198,11 +1166,6 @@ export interface components {
             expires_at?: string;
             /** Format: int64 */
             message_id?: number;
-        };
-        v1ArtifactDownload: {
-            url?: string;
-            /** Format: date-time */
-            expires_at?: string;
         };
         v1Attachment: {
             id?: string;
@@ -3764,38 +3727,6 @@ export interface operations {
             };
         };
     };
-    AgentWorkspaceService_GetSessionArtifactDownload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-                artifact_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ArtifactDownload"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
     AgentWorkspaceService_SetSessionExpertSelection: {
         parameters: {
             query?: never;
@@ -4444,38 +4375,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListArtifactsResponse"];
-                };
-            };
-            /** @description An unexpected error response. */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["rpcStatus"];
-                };
-            };
-        };
-    };
-    AgentWorkspaceService_GetArtifactDownload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workflow_id: string;
-                artifact_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description A successful response. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["v1ArtifactDownload"];
                 };
             };
             /** @description An unexpected error response. */

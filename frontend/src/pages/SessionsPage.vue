@@ -9,6 +9,7 @@ import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
+import { displayArtifactNames } from "../artifactDisplay";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -217,8 +218,10 @@ async function openAttachment(attachment: Attachment) {
 async function downloadSessionArtifact(artifact: Artifact) {
   if (!selected.value || artifact.expired) return;
   try {
-    const download = await api.getSessionArtifactDownload(selected.value.id, artifact.id);
-    triggerBrowserDownload(download.url, artifact.name);
+    const blob = await api.getSessionArtifactDownload(selected.value.id, artifact.id);
+    const url = URL.createObjectURL(blob);
+    triggerBrowserDownload(url, artifact.name);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   } catch { error.value = t("errors.generic"); }
 }
 function triggerBrowserDownload(url: string, name: string) {
@@ -523,7 +526,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
                 <div class="runtime-activity-current"><span class="activity-pulse" :class="{ active: message.state === 'queued' || message.state === 'generating' }"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
                 <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
               </div>
-              <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' }" v-html="renderMarkdown(message.content)"></div>
+              <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
               <div v-if="message.role === 'assistant' && message.artifacts?.length" class="generated-artifacts"><button v-for="artifact in message.artifacts" :key="artifact.id" type="button" class="generated-artifact" :disabled="artifact.expired" @click="downloadSessionArtifact(artifact)"><span class="generated-artifact-icon" aria-hidden="true"><FileText /></span><span><strong>{{ artifact.name }}</strong><small>{{ artifact.expired ? t('workflows.expired') : formatFileSize(artifact.size) }}</small></span><Download aria-hidden="true" /></button></div>
               <div v-if="message.attachments?.length" class="turn-attachments"><button v-for="attachment in message.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name" @error="clearAttachmentURL(attachment.id)"><span v-else class="attachment-file-mark">{{ attachment.image ? 'IMG' : 'FILE' }}</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div>

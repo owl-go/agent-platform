@@ -12386,7 +12386,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
-	"artifactId2\xcf_\n" +
+	"artifactId2\xeb\\\n" +
 	"\x15AgentWorkspaceService\x12d\n" +
 	"\x0eGetCurrentUser\x12#.workspace.v1.GetCurrentUserRequest\x1a\x19.workspace.v1.CurrentUser\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
 	"/api/v1/me\x12i\n" +
@@ -12416,8 +12416,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13ListSessionMessages\x12(.workspace.v1.ListSessionMessagesRequest\x1a).workspace.v1.ListSessionMessagesResponse\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/sessions/{session_id}/messages\x12\x9a\x01\n" +
 	"\x12SendSessionMessage\x12'.workspace.v1.SendSessionMessageRequest\x1a(.workspace.v1.SendSessionMessageResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/api/v1/sessions/{session_id}/messages\x12\xaf\x01\n" +
 	"\x13RetrySessionMessage\x12(.workspace.v1.RetrySessionMessageRequest\x1a(.workspace.v1.SendSessionMessageResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/sessions/{session_id}/messages/{message_id}/retry\x12\xac\x01\n" +
-	"\x14CancelSessionMessage\x12).workspace.v1.CancelSessionMessageRequest\x1a\x1c.workspace.v1.SessionMessage\"K\x82\xd3\xe4\x93\x02E:\x01*\"@/api/v1/sessions/{session_id}/messages/{message_id}/cancellation\x12\xb5\x01\n" +
-	"\x1aGetSessionArtifactDownload\x12/.workspace.v1.GetSessionArtifactDownloadRequest\x1a\x1e.workspace.v1.ArtifactDownload\"F\x82\xd3\xe4\x93\x02@\x12>/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download\x12s\n" +
+	"\x14CancelSessionMessage\x12).workspace.v1.CancelSessionMessageRequest\x1a\x1c.workspace.v1.SessionMessage\"K\x82\xd3\xe4\x93\x02E:\x01*\"@/api/v1/sessions/{session_id}/messages/{message_id}/cancellation\x12s\n" +
 	"\rListWorkflows\x12\".workspace.v1.ListWorkflowsRequest\x1a#.workspace.v1.ListWorkflowsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/workflows\x12k\n" +
 	"\x0eCreateWorkflow\x12#.workspace.v1.CreateWorkflowRequest\x1a\x16.workspace.v1.Workflow\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/workflows\x12p\n" +
 	"\vGetWorkflow\x12 .workspace.v1.GetWorkflowRequest\x1a\x16.workspace.v1.Workflow\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/workflows/{workflow_id}\x12y\n" +
@@ -12432,8 +12431,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x17ContinueRunConversation\x12,.workspace.v1.ContinueRunConversationRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/turns\x12\x85\x01\n" +
 	"\tCancelRun\x12\x1e.workspace.v1.CancelRunRequest\x1a\x11.workspace.v1.Run\"E\x82\xd3\xe4\x93\x02?:\x01*\":/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation\x12\x86\x01\n" +
 	"\rRerunWorkflow\x12\".workspace.v1.RerunWorkflowRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun\x12\x8b\x01\n" +
-	"\rListArtifacts\x12\".workspace.v1.ListArtifactsRequest\x1a#.workspace.v1.ListArtifactsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/artifacts\x12\xa9\x01\n" +
-	"\x13GetArtifactDownload\x12(.workspace.v1.GetArtifactDownloadRequest\x1a\x1e.workspace.v1.ArtifactDownload\"H\x82\xd3\xe4\x93\x02B\x12@/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download\x12\xa0\x01\n" +
+	"\rListArtifacts\x12\".workspace.v1.ListArtifactsRequest\x1a#.workspace.v1.ListArtifactsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/artifacts\x12\xa0\x01\n" +
 	"\x14ListWorkspaceEntries\x12).workspace.v1.ListWorkspaceEntriesRequest\x1a*.workspace.v1.ListWorkspaceEntriesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/workspace\x12\x8e\x01\n" +
 	"\x10GetWorkspaceFile\x12%.workspace.v1.GetWorkspaceFileRequest\x1a\x1b.workspace.v1.WorkspaceFile\"6\x82\xd3\xe4\x93\x020\x12./api/v1/workflows/{workflow_id}/workspace/file\x12\x9c\x01\n" +
 	"\x1aConfigureWorkflowGitSource\x12/.workspace.v1.ConfigureWorkflowGitSourceRequest\x1a\x16.workspace.v1.Workflow\"5\x82\xd3\xe4\x93\x02/:\x01*\x1a*/api/v1/workflows/{workflow_id}/git-source\x12k\n" +
@@ -12808,154 +12806,150 @@ var file_workspace_v1_workspace_proto_depIdxs = []int32{
 	40,  // 140: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
 	42,  // 141: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
 	43,  // 142: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
-	167, // 143: workspace.v1.AgentWorkspaceService.GetSessionArtifactDownload:input_type -> workspace.v1.GetSessionArtifactDownloadRequest
-	52,  // 144: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
-	54,  // 145: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
-	55,  // 146: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
-	56,  // 147: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
-	57,  // 148: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
-	64,  // 149: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
-	66,  // 150: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
-	68,  // 151: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
-	69,  // 152: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
-	71,  // 153: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
-	72,  // 154: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
-	73,  // 155: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
-	74,  // 156: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
-	75,  // 157: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
-	77,  // 158: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
-	79,  // 159: workspace.v1.AgentWorkspaceService.GetArtifactDownload:input_type -> workspace.v1.GetArtifactDownloadRequest
-	82,  // 160: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
-	84,  // 161: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
-	86,  // 162: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
-	88,  // 163: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
-	90,  // 164: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
-	91,  // 165: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
-	92,  // 166: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
-	93,  // 167: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
-	96,  // 168: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
-	98,  // 169: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
-	99,  // 170: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
-	100, // 171: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
-	101, // 172: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
-	109, // 173: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
-	110, // 174: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
-	113, // 175: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
-	116, // 176: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
-	119, // 177: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
-	121, // 178: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
-	122, // 179: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
-	123, // 180: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
-	124, // 181: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
-	125, // 182: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	129, // 183: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
-	131, // 184: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
-	132, // 185: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
-	133, // 186: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
-	134, // 187: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:input_type -> workspace.v1.GetMCPConnectorDeletionImpactRequest
-	135, // 188: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
-	138, // 189: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
-	140, // 190: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
-	141, // 191: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
-	142, // 192: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:input_type -> workspace.v1.GetSkillDeletionImpactRequest
-	143, // 193: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
-	150, // 194: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
-	152, // 195: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
-	153, // 196: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
-	154, // 197: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:input_type -> workspace.v1.PublishCLIConnectorDefinitionRequest
-	155, // 198: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:input_type -> workspace.v1.DisableCLIConnectorDefinitionRequest
-	156, // 199: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
-	158, // 200: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
-	161, // 201: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
-	163, // 202: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
-	1,   // 203: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
-	3,   // 204: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
-	5,   // 205: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
-	9,   // 206: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
-	8,   // 207: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
-	11,  // 208: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
-	13,  // 209: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
-	11,  // 210: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
-	11,  // 211: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
-	11,  // 212: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
-	19,  // 213: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
-	20,  // 214: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
-	23,  // 215: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
-	26,  // 216: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
-	28,  // 217: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
-	30,  // 218: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
-	37,  // 219: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
-	37,  // 220: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
-	37,  // 221: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
-	37,  // 222: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
-	37,  // 223: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
-	164, // 224: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
-	39,  // 225: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
-	41,  // 226: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	41,  // 227: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	44,  // 228: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
-	80,  // 229: workspace.v1.AgentWorkspaceService.GetSessionArtifactDownload:output_type -> workspace.v1.ArtifactDownload
-	53,  // 230: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
-	59,  // 231: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
-	59,  // 232: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
-	59,  // 233: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
-	164, // 234: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
-	65,  // 235: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	67,  // 236: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
-	76,  // 237: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
-	70,  // 238: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
-	76,  // 239: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
-	70,  // 240: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
-	76,  // 241: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
-	76,  // 242: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
-	76,  // 243: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
-	78,  // 244: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
-	80,  // 245: workspace.v1.AgentWorkspaceService.GetArtifactDownload:output_type -> workspace.v1.ArtifactDownload
-	83,  // 246: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
-	85,  // 247: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
-	59,  // 248: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
-	89,  // 249: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
-	95,  // 250: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
-	95,  // 251: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
-	95,  // 252: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
-	164, // 253: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
-	97,  // 254: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
-	105, // 255: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
-	105, // 256: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	105, // 257: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	164, // 258: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
-	111, // 259: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
-	111, // 260: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
-	114, // 261: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
-	117, // 262: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
-	120, // 263: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
-	126, // 264: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	126, // 265: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	164, // 266: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
-	126, // 267: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
-	127, // 268: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	130, // 269: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
-	137, // 270: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
-	137, // 271: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
-	137, // 272: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
-	146, // 273: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
-	164, // 274: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
-	139, // 275: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
-	144, // 276: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
-	144, // 277: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
-	146, // 278: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
-	164, // 279: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
-	151, // 280: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
-	149, // 281: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	149, // 282: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	149, // 283: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	149, // 284: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	157, // 285: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
-	159, // 286: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
-	162, // 287: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
-	160, // 288: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
-	203, // [203:289] is the sub-list for method output_type
-	117, // [117:203] is the sub-list for method input_type
+	52,  // 143: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
+	54,  // 144: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
+	55,  // 145: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
+	56,  // 146: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
+	57,  // 147: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
+	64,  // 148: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
+	66,  // 149: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
+	68,  // 150: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
+	69,  // 151: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
+	71,  // 152: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
+	72,  // 153: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
+	73,  // 154: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
+	74,  // 155: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
+	75,  // 156: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
+	77,  // 157: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
+	82,  // 158: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
+	84,  // 159: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
+	86,  // 160: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
+	88,  // 161: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
+	90,  // 162: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
+	91,  // 163: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
+	92,  // 164: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
+	93,  // 165: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
+	96,  // 166: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
+	98,  // 167: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
+	99,  // 168: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
+	100, // 169: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
+	101, // 170: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
+	109, // 171: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
+	110, // 172: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
+	113, // 173: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
+	116, // 174: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
+	119, // 175: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
+	121, // 176: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
+	122, // 177: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
+	123, // 178: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
+	124, // 179: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
+	125, // 180: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
+	129, // 181: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
+	131, // 182: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
+	132, // 183: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
+	133, // 184: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
+	134, // 185: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:input_type -> workspace.v1.GetMCPConnectorDeletionImpactRequest
+	135, // 186: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
+	138, // 187: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
+	140, // 188: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
+	141, // 189: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
+	142, // 190: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:input_type -> workspace.v1.GetSkillDeletionImpactRequest
+	143, // 191: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
+	150, // 192: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
+	152, // 193: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
+	153, // 194: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
+	154, // 195: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:input_type -> workspace.v1.PublishCLIConnectorDefinitionRequest
+	155, // 196: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:input_type -> workspace.v1.DisableCLIConnectorDefinitionRequest
+	156, // 197: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
+	158, // 198: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
+	161, // 199: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
+	163, // 200: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
+	1,   // 201: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
+	3,   // 202: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
+	5,   // 203: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
+	9,   // 204: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
+	8,   // 205: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
+	11,  // 206: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
+	13,  // 207: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
+	11,  // 208: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
+	11,  // 209: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
+	11,  // 210: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
+	19,  // 211: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
+	20,  // 212: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
+	23,  // 213: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
+	26,  // 214: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
+	28,  // 215: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
+	30,  // 216: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
+	37,  // 217: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
+	37,  // 218: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
+	37,  // 219: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
+	37,  // 220: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
+	37,  // 221: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
+	164, // 222: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
+	39,  // 223: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
+	41,  // 224: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	41,  // 225: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	44,  // 226: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
+	53,  // 227: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
+	59,  // 228: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
+	59,  // 229: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
+	59,  // 230: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
+	164, // 231: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
+	65,  // 232: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	67,  // 233: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
+	76,  // 234: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
+	70,  // 235: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
+	76,  // 236: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
+	70,  // 237: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
+	76,  // 238: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
+	76,  // 239: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
+	76,  // 240: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
+	78,  // 241: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
+	83,  // 242: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
+	85,  // 243: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
+	59,  // 244: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
+	89,  // 245: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
+	95,  // 246: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
+	95,  // 247: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
+	95,  // 248: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
+	164, // 249: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
+	97,  // 250: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
+	105, // 251: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
+	105, // 252: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	105, // 253: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	164, // 254: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
+	111, // 255: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
+	111, // 256: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
+	114, // 257: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
+	117, // 258: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
+	120, // 259: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
+	126, // 260: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	126, // 261: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	164, // 262: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
+	126, // 263: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
+	127, // 264: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
+	130, // 265: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
+	137, // 266: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
+	137, // 267: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
+	137, // 268: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
+	146, // 269: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	164, // 270: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
+	139, // 271: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
+	144, // 272: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
+	144, // 273: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
+	146, // 274: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	164, // 275: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
+	151, // 276: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
+	149, // 277: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	149, // 278: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	149, // 279: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	149, // 280: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	157, // 281: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
+	159, // 282: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
+	162, // 283: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
+	160, // 284: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
+	201, // [201:285] is the sub-list for method output_type
+	117, // [117:201] is the sub-list for method input_type
 	117, // [117:117] is the sub-list for extension type_name
 	117, // [117:117] is the sub-list for extension extendee
 	0,   // [0:117] is the sub-list for field type_name

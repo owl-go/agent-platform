@@ -114,17 +114,20 @@ describe("SessionsPage conversation layout", () => {
 
   it("shows a generated file under the Agent response and downloads it", async () => {
     const artifact: Artifact = { id: "artifact-1", message_id: 2, run_id: "", kind: "file", name: "report.md", path: "report.md", size: 1536, expired: false, created_at: messages[1]!.created_at };
-    const api = apiStub([{ ...messages[1]!, artifacts: [artifact] }]);
-    api.getSessionArtifactDownload = vi.fn(async () => ({ url: "https://objects.example.test/signed", expires_at: "2026-08-25T12:06:00Z" }));
+    const api = apiStub([{ ...messages[1]!, content: "已生成 `/workspace/report.md`", artifacts: [artifact] }]);
+    api.getSessionArtifactDownload = vi.fn(async () => new Blob(["generated report"], { type: "application/octet-stream" }));
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     const wrapper = await mountPageWithAPI(api);
 
     expect(wrapper.get(".message.assistant .generated-artifact").text()).toContain("report.md");
     expect(wrapper.get(".message.assistant .generated-artifact").text()).toContain("1.5 KB");
+    expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
+    expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
     await wrapper.get(".message.assistant .generated-artifact").trigger("click");
     await flushPromises();
 
     expect(api.getSessionArtifactDownload).toHaveBeenCalledWith(session.id, artifact.id);
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(click).toHaveBeenCalledOnce();
     wrapper.unmount();
   });

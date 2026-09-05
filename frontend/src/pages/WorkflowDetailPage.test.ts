@@ -194,17 +194,21 @@ describe("WorkflowDetailPage", () => {
 
   it("downloads a Run Artifact from its conversation card", async () => {
     const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 1536, sha256: "abc", expired: false, created_at: run.ended_at! };
-    const getArtifactDownload = vi.fn(async () => ({ url: "https://objects.example.test/signed", expires_at: "2026-08-29T02:23:33Z" }));
+    const artifactRun = { ...run, final_text: "已生成 `/workspace/report.md`" };
+    const getArtifactDownload = vi.fn(async () => new Blob(["workflow report"], { type: "application/octet-stream" }));
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    const wrapper = await mountPage(apiStub({ listArtifacts: vi.fn(async () => [generatedFile]), getArtifactDownload }));
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [artifactRun]), listRunTurns: vi.fn(async () => [artifactRun]), listArtifacts: vi.fn(async () => [generatedFile]), getArtifactDownload }));
 
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
     expect(wrapper.get(".generated-artifact").text()).toContain("1.5 KB");
+    expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
+    expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
     await wrapper.get(".generated-artifact").trigger("click");
     await flushPromises();
 
     expect(getArtifactDownload).toHaveBeenCalledWith(workflow.id, generatedFile.id);
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(click).toHaveBeenCalledOnce();
     wrapper.unmount();
   });

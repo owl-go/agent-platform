@@ -1697,42 +1697,6 @@
         ]
       }
     },
-    "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download": {
-      "get": {
-        "operationId": "AgentWorkspaceService_GetSessionArtifactDownload",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ArtifactDownload"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "artifact_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
     "/api/v1/sessions/{session_id}/expert-selection": {
       "patch": {
         "operationId": "AgentWorkspaceService_SetSessionExpertSelection",
@@ -2397,42 +2361,6 @@
         "parameters": [
           {
             "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "AgentWorkspaceService"
-        ]
-      }
-    },
-    "/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download": {
-      "get": {
-        "operationId": "AgentWorkspaceService_GetArtifactDownload",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ArtifactDownload"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "artifact_id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3281,18 +3209,6 @@
         "message_id": {
           "type": "string",
           "format": "int64"
-        }
-      }
-    },
-    "v1ArtifactDownload": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "type": "string"
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time"
         }
       }
     },

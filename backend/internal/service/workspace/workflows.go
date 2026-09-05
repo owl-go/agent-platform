@@ -307,22 +307,6 @@ func (service *Service) ListArtifacts(ctx context.Context, request *workspacev1.
 	return &workspacev1.ListArtifactsResponse{Items: response}, nil
 }
 
-func (service *Service) GetArtifactDownload(ctx context.Context, request *workspacev1.GetArtifactDownloadRequest) (*workspacev1.ArtifactDownload, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
-		return nil, err
-	}
-	item, err := service.workspace.Repository().GetArtifact(ctx, owner, request.WorkflowId, request.ArtifactId)
-	if err != nil || item.Kind != "file" || item.ObjectKey == "" || item.ExpiresAt == nil || item.ExpiresAt.Before(time.Now()) {
-		return nil, publicError(workspacedomain.ErrNotFound)
-	}
-	signed, err := service.objects.PresignGet(ctx, item.ObjectKey, 5*time.Minute)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	return &workspacev1.ArtifactDownload{Url: signed.URL, ExpiresAt: timestamppb.New(signed.ExpiresAt)}, nil
-}
-
 func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspacedomain.WorkflowInput, map[string]string, error) {
 	if input == nil {
 		return workspacedomain.WorkflowInput{}, nil, fmt.Errorf("%w: Workflow input is required", workspacedomain.ErrInvalid)

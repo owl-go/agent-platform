@@ -94,7 +94,7 @@ export interface PlatformApi {
   sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
-  getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }>;
+  getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
   createWorkflow(workflow: WorkflowInput, signal?: AbortSignal): Promise<Workflow>;
   getWorkflow(id: string, signal?: AbortSignal): Promise<Workflow>;
@@ -110,7 +110,7 @@ export interface PlatformApi {
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listArtifacts(id: string, signal?: AbortSignal): Promise<Artifact[]>;
-  getArtifactDownload(workflowID: string, artifactID: string, signal?: AbortSignal): Promise<{ url: string; expires_at: string }>;
+  getArtifactDownload(workflowID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkspace(id: string, path?: string, signal?: AbortSignal): Promise<{ items: WorkspaceEntry[]; used_bytes: number; limit_bytes: number }>;
   getWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<WorkspaceFile>;
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
@@ -261,7 +261,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     sendSessionMessage(id, content, attachmentIDs = [], signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
-    getSessionArtifactDownload(sessionID, artifactID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, { signal }); },
+    getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
     createWorkflow(workflow, signal) { return call("/api/v1/workflows", json("POST", { workflow }, signal)); },
     getWorkflow(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}`, { signal }); },
@@ -305,7 +305,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const result = await call<{ items?: Array<Omit<Artifact, "size"> & { size?: number | string }> }>(`/api/v1/workflows/${encodeURIComponent(id)}/artifacts`, { signal });
       return (result.items ?? []).filter((item) => item.kind === "file").map((item) => ({ ...item, size: Number(item.size ?? 0) }));
     },
-    getArtifactDownload(workflowID, artifactID, signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/artifacts/${encodeURIComponent(artifactID)}/download`, { signal }); },
+    getArtifactDownload(workflowID, artifactID, signal) { return download(`/api/v1/workflows/${encodeURIComponent(workflowID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkspace(id, path = "", signal) {
       const result = await call<{ items?: WorkspaceEntry[]; used_bytes?: number | string; limit_bytes?: number | string; usedBytes?: number | string; limitBytes?: number | string }>(`/api/v1/workflows/${encodeURIComponent(id)}/workspace?path=${encodeURIComponent(path)}`, { signal });
       return {

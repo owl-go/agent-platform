@@ -187,22 +187,6 @@ func (service *Service) CancelSessionMessage(ctx context.Context, request *works
 	return messageResponse(message), nil
 }
 
-func (service *Service) GetSessionArtifactDownload(ctx context.Context, request *workspacev1.GetSessionArtifactDownloadRequest) (*workspacev1.ArtifactDownload, error) {
-	owner, err := service.owner(ctx)
-	if err != nil {
-		return nil, err
-	}
-	item, err := service.workspace.Repository().GetSessionArtifact(ctx, owner, request.SessionId, request.ArtifactId)
-	if err != nil || item.ObjectKey == "" || item.ExpiresAt == nil || item.ExpiresAt.Before(time.Now()) {
-		return nil, publicError(workspacedomain.ErrNotFound)
-	}
-	signed, err := service.objects.PresignGet(ctx, item.ObjectKey, 5*time.Minute)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	return &workspacev1.ArtifactDownload{Url: signed.URL, ExpiresAt: timestamppb.New(signed.ExpiresAt)}, nil
-}
-
 func sessionResponse(item workspacedomain.Session) *workspacev1.Session {
 	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	return response

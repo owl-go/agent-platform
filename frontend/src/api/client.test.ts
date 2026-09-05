@@ -105,9 +105,9 @@ describe("Agent Workspace API client", () => {
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
-  it("loads Session Artifact metadata and requests a scoped download URL", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => String(input).endsWith("/download")
-      ? new Response(JSON.stringify({ url: "https://objects.example.test/signed", expires_at: "2026-08-25T00:05:00Z" }), { status: 200, headers: { "Content-Type": "application/json" } })
+  it("loads Session Artifact metadata and downloads authenticated content", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => String(input).endsWith("/download")
+      ? new Response("generated report", { status: 200, headers: { "Content-Type": "application/octet-stream" } })
       : new Response(JSON.stringify({ items: [{ id: 2, role: "assistant", state: "completed", content: "done", elapsed_ms: 1, created_at: "2026-08-25T00:00:00Z", artifacts: [{ id: "artifact-1", message_id: "2", kind: "file", name: "report.md", path: "report.md", size: "1536", expired: false, created_at: "2026-08-25T00:00:00Z" }] }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
     const api = createPlatformApi(() => "token");
@@ -116,8 +116,22 @@ describe("Agent Workspace API client", () => {
     const download = await api.getSessionArtifactDownload("session-1", "artifact-1");
 
     expect(messages[0]?.artifacts?.[0]?.size).toBe(1536);
-    expect(download.url).toBe("https://objects.example.test/signed");
+    expect(download).toBeInstanceOf(Blob);
+    expect(download.size).toBeGreaterThan(0);
     expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/sessions/session-1/artifacts/artifact-1/download");
+    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
+  });
+
+  it("downloads Workflow Artifact content through the authenticated API", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("workflow report", { status: 200, headers: { "Content-Type": "application/octet-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const download = await createPlatformApi(() => "token").getArtifactDownload("workflow-1", "artifact-1");
+
+    expect(download).toBeInstanceOf(Blob);
+    expect(download.size).toBeGreaterThan(0);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/artifacts/artifact-1/download");
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
   it("normalizes Workspace byte counters from protobuf JSON", async () => {
