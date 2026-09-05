@@ -399,6 +399,28 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("reconciles an asynchronously accepted cancellation until it becomes terminal", async () => {
+    const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "thinking", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
+    const cancelled: SessionMessage = { ...pending, state: "cancelled", progress_stage: undefined, elapsed_ms: 500 };
+    const api = apiStub([messages[0]!, pending]);
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce([messages[0]!, pending])
+      .mockResolvedValueOnce([messages[0]!, cancelled]);
+    api.streamSessionMessage = vi.fn((_sessionID, _messageID, _onSnapshot, signal) => new Promise<void>((resolve) => {
+      signal?.addEventListener("abort", () => resolve(), { once: true });
+    }));
+    api.cancelSessionMessage = vi.fn(async () => ({ ...pending }));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get('button[aria-label="中止生成"]').trigger("click");
+    await flushPromises();
+
+    expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain("已中止生成");
+    expect(wrapper.find(".composer .stop-generation").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("reveals a completed response progressively instead of replacing the whole message", async () => {
     vi.useFakeTimers();
     const response = "这是一个会被逐步展示的完整回答，不会在一个渲染帧里全部出现。";
