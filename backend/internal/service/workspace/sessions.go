@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
@@ -186,6 +187,22 @@ func (service *Service) CancelSessionMessage(ctx context.Context, request *works
 	return messageResponse(message), nil
 }
 
+func (service *Service) GetSessionArtifactDownload(ctx context.Context, request *workspacev1.GetSessionArtifactDownloadRequest) (*workspacev1.ArtifactDownload, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	item, err := service.workspace.Repository().GetSessionArtifact(ctx, owner, request.SessionId, request.ArtifactId)
+	if err != nil || item.ObjectKey == "" || item.ExpiresAt == nil || item.ExpiresAt.Before(time.Now()) {
+		return nil, publicError(workspacedomain.ErrNotFound)
+	}
+	signed, err := service.objects.PresignGet(ctx, item.ObjectKey, 5*time.Minute)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.ArtifactDownload{Url: signed.URL, ExpiresAt: timestamppb.New(signed.ExpiresAt)}, nil
+}
+
 func sessionResponse(item workspacedomain.Session) *workspacev1.Session {
 	response := &workspacev1.Session{Id: item.ID, Title: item.Title, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, Archived: item.ArchivedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	return response
@@ -212,6 +229,20 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
 	for _, activity := range item.Activities {
 		response.Activities = append(response.Activities, &workspacev1.ExecutionActivity{Type: activity.Type, Detail: activity.Detail})
+	}
+	for _, artifact := range item.Artifacts {
+		response.Artifacts = append(response.Artifacts, artifactResponse(artifact))
+	}
+	return response
+}
+
+func artifactResponse(item workspacedomain.Artifact) *workspacev1.Artifact {
+	response := &workspacev1.Artifact{Id: item.ID, RunId: item.RunID, MessageId: item.MessageID, Kind: item.Kind, Name: item.Name, Path: item.Path, Size: item.Size, Sha256: item.SHA256, Expired: item.ExpiresAt != nil && item.ExpiresAt.Before(time.Now()), CreatedAt: timestamppb.New(item.CreatedAt)}
+	if item.TextPreview != "" {
+		response.TextPreview = &item.TextPreview
+	}
+	if item.ExpiresAt != nil {
+		response.ExpiresAt = timestamppb.New(*item.ExpiresAt)
 	}
 	return response
 }

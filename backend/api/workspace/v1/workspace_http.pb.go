@@ -55,6 +55,7 @@ const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
+const OperationAgentWorkspaceServiceGetSessionArtifactDownload = "/workspace.v1.AgentWorkspaceService/GetSessionArtifactDownload"
 const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceService/GetSettings"
 const OperationAgentWorkspaceServiceGetSkillDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
@@ -142,6 +143,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
+	GetSessionArtifactDownload(context.Context, *GetSessionArtifactDownloadRequest) (*ArtifactDownload, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
 	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
@@ -219,6 +221,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages", _AgentWorkspaceService_SendSessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/retry", _AgentWorkspaceService_RetrySessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation", _AgentWorkspaceService_CancelSessionMessage0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download", _AgentWorkspaceService_GetSessionArtifactDownload0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows", _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows", _AgentWorkspaceService_CreateWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_GetWorkflow0_HTTP_Handler(srv))
@@ -812,6 +815,28 @@ func _AgentWorkspaceService_CancelSessionMessage0_HTTP_Handler(srv AgentWorkspac
 			return err
 		}
 		reply := out.(*SessionMessage)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetSessionArtifactDownload0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetSessionArtifactDownloadRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetSessionArtifactDownload)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetSessionArtifactDownload(ctx, req.(*GetSessionArtifactDownloadRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ArtifactDownload)
 		return ctx.Result(200, reply)
 	}
 }
@@ -2093,6 +2118,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
+	GetSessionArtifactDownload(ctx context.Context, req *GetSessionArtifactDownloadRequest, opts ...http.CallOption) (rsp *ArtifactDownload, err error)
 	GetSettings(ctx context.Context, req *GetSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	GetSkillDeletionImpact(ctx context.Context, req *GetSkillDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
@@ -2772,6 +2798,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetSession(ctx context.Context, in
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetSession),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetSessionArtifactDownload(ctx context.Context, in *GetSessionArtifactDownloadRequest, opts ...http.CallOption) (*ArtifactDownload, error) {
+	var out ArtifactDownload
+	pattern := "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetSessionArtifactDownload),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

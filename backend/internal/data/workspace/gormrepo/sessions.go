@@ -196,6 +196,9 @@ func (repository *Repository) ListMessages(ctx context.Context, ownerID, session
 	for _, row := range rows {
 		items = append(items, messageDomain(row))
 	}
+	if err := repository.loadSessionArtifacts(ctx, ownerID, sessionID, items); err != nil {
+		return nil, err
+	}
 	return items, nil
 }
 
@@ -208,7 +211,52 @@ func (repository *Repository) GetMessage(ctx context.Context, ownerID, sessionID
 	if err != nil {
 		return domain.Message{}, mapNotFound(err)
 	}
-	return messageDomain(row), nil
+	item := messageDomain(row)
+	items := []domain.Message{item}
+	if err := repository.loadSessionArtifacts(ctx, ownerID, sessionID, items); err != nil {
+		return domain.Message{}, err
+	}
+	return items[0], nil
+}
+
+func (repository *Repository) loadSessionArtifacts(ctx context.Context, ownerID, sessionID string, messages []domain.Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	messageIndexes := make(map[int64]int, len(messages))
+	messageIDs := make([]int64, 0, len(messages))
+	for index := range messages {
+		messageIndexes[messages[index].ID] = index
+		messageIDs = append(messageIDs, messages[index].ID)
+	}
+	var rows []sessionArtifactRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND session_id = ? AND message_id IN ?", ownerID, sessionID, messageIDs).Order("created_at, id").Find(&rows).Error; err != nil {
+		return fmt.Errorf("list Session Artifacts: %w", err)
+	}
+	for _, row := range rows {
+		index, ok := messageIndexes[row.MessageID]
+		if !ok {
+			continue
+		}
+		messages[index].Artifacts = append(messages[index].Artifacts, sessionArtifactDomain(row))
+	}
+	return nil
+}
+
+func (repository *Repository) GetSessionArtifact(ctx context.Context, ownerID, sessionID, artifactID string) (domain.Artifact, error) {
+	var row sessionArtifactRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND session_id = ? AND id = ?", ownerID, sessionID, artifactID).Take(&row).Error; err != nil {
+		return domain.Artifact{}, mapNotFound(err)
+	}
+	return sessionArtifactDomain(row), nil
+}
+
+func sessionArtifactDomain(row sessionArtifactRecord) domain.Artifact {
+	item := domain.Artifact{ID: row.ID, MessageID: row.MessageID, Kind: "file", Name: row.Name, Path: row.Path, ObjectKey: row.ObjectKey, Size: row.Size, SHA256: row.SHA256, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt}
+	if len(row.TextResult) > 0 {
+		_ = json.Unmarshal(row.TextResult, &item.TextPreview)
+	}
+	return item
 }
 
 func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {

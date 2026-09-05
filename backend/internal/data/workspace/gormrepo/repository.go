@@ -68,6 +68,23 @@ type messageRecord struct {
 
 func (messageRecord) TableName() string { return "session_messages" }
 
+type sessionArtifactRecord struct {
+	ID         string     `gorm:"column:id"`
+	OwnerID    string     `gorm:"column:owner_user_id"`
+	SessionID  string     `gorm:"column:session_id"`
+	MessageID  int64      `gorm:"column:message_id"`
+	Name       string     `gorm:"column:name"`
+	Path       string     `gorm:"column:path"`
+	ObjectKey  string     `gorm:"column:object_key"`
+	TextResult []byte     `gorm:"column:text_result;type:jsonb"`
+	Size       int64      `gorm:"column:size_bytes"`
+	SHA256     string     `gorm:"column:sha256"`
+	CreatedAt  time.Time  `gorm:"column:created_at"`
+	ExpiresAt  *time.Time `gorm:"column:expires_at"`
+}
+
+func (sessionArtifactRecord) TableName() string { return "session_artifacts" }
+
 type workflowRecord struct {
 	ID                string     `gorm:"column:id"`
 	OwnerID           string     `gorm:"column:owner_user_id"`

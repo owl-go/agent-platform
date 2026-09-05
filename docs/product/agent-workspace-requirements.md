@@ -194,8 +194,10 @@ Settings contains five collapsed sections:
 ### 7.1 Artifacts
 
 - A successful Run persists its final text or JSON in the Run Conversation and captures files added or changed by that Run as Artifacts.
+- A successful Session response also captures files generated in that turn as Artifacts and shows them directly beneath the Agent response.
 - Only actual generated or changed files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
 - Artifacts are grouped by Run time and can be previewed or downloaded.
+- Session and Run Conversation Artifact cards show the file name and size; selecting a non-expired card starts a browser download instead of exposing a Runtime Workspace path.
 - Failed and cancelled Runs do not create file Artifacts; their temporary Workspace changes are discarded.
 - Artifact files expire after 90 days. The UI preserves metadata and reports that the file has expired.
 

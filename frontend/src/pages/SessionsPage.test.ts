@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import SessionsPage from "./SessionsPage.vue";
@@ -108,6 +108,23 @@ describe("SessionsPage conversation layout", () => {
     await flushPromises();
 
     expect(api.getAttachmentDownload).toHaveBeenCalledWith("attachment-2");
+    expect(click).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it("shows a generated file under the Agent response and downloads it", async () => {
+    const artifact: Artifact = { id: "artifact-1", message_id: 2, run_id: "", kind: "file", name: "report.md", path: "report.md", size: 1536, expired: false, created_at: messages[1]!.created_at };
+    const api = apiStub([{ ...messages[1]!, artifacts: [artifact] }]);
+    api.getSessionArtifactDownload = vi.fn(async () => ({ url: "https://objects.example.test/signed", expires_at: "2026-08-25T12:06:00Z" }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const wrapper = await mountPageWithAPI(api);
+
+    expect(wrapper.get(".message.assistant .generated-artifact").text()).toContain("report.md");
+    expect(wrapper.get(".message.assistant .generated-artifact").text()).toContain("1.5 KB");
+    await wrapper.get(".message.assistant .generated-artifact").trigger("click");
+    await flushPromises();
+
+    expect(api.getSessionArtifactDownload).toHaveBeenCalledWith(session.id, artifact.id);
     expect(click).toHaveBeenCalledOnce();
     wrapper.unmount();
   });

@@ -50,6 +50,15 @@ func TestFileArtifactRecordsDoNotTurnFinalTextIntoAFile(t *testing.T) {
 	}
 }
 
+func TestSessionArtifactRecordsBelongToAssistantMessage(t *testing.T) {
+	job := application.ExecutionJob{OwnerID: "owner-1", SessionID: "session-1", AssistantMessageID: 42}
+	expiresAt := time.Now().Add(90 * 24 * time.Hour)
+	records := sessionArtifactRecords(job, []application.ExecutionArtifact{{Name: "report.md", Path: "report.md", ObjectKey: "artifacts/session/report", TextPreview: "done", Size: 4, SHA256: strings.Repeat("a", 64), ExpiresAt: expiresAt}}, time.Now())
+	if len(records) != 1 || records[0].SessionID != "session-1" || records[0].MessageID != 42 || records[0].ObjectKey != "artifacts/session/report" || string(records[0].TextResult) != `"done"` {
+		t.Fatalf("Session Artifact records = %#v", records)
+	}
+}
+
 func TestSessionExecutionActivityKeepsRedactedCommandButNotToolOutput(t *testing.T) {
 	activity, err := sessionExecutionActivity(application.ExecutionEvent{Type: "command.completed", Payload: []byte(`{"command":"git status --short","result":"large private output","exit_code":0}`)})
 	if err != nil {

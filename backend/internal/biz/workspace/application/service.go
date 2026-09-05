@@ -23,6 +23,7 @@ type Repository interface {
 	CreateMessagePair(context.Context, string, string, string, []domain.Attachment) (domain.Message, domain.Message, error)
 	RetryMessage(context.Context, string, string, int64) (domain.Message, domain.Message, error)
 	CancelMessage(context.Context, string, string, int64) (domain.Message, error)
+	GetSessionArtifact(context.Context, string, string, string) (domain.Artifact, error)
 
 	ListWorkflows(context.Context, string, bool) ([]domain.Workflow, error)
 	CreateWorkflow(context.Context, string, domain.WorkflowInput, []byte) (domain.Workflow, error)

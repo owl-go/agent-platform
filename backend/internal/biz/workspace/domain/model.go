@@ -64,6 +64,7 @@ type Message struct {
 	ExpertStages      []ExpertStage
 	CreditConsumption *CreditConsumption
 	Activities        []ExecutionActivity
+	Artifacts         []Artifact
 }
 
 // ExecutionActivity is a redacted, user-visible summary rather than raw Runtime output.
@@ -186,6 +187,7 @@ type ResourceDeletionImpact struct {
 type Artifact struct {
 	ID          string
 	RunID       string
+	MessageID   int64
 	Kind        string
 	Name        string
 	Path        string

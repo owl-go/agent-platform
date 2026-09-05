@@ -302,14 +302,7 @@ func (service *Service) ListArtifacts(ctx context.Context, request *workspacev1.
 	}
 	response := make([]*workspacev1.Artifact, 0, len(items))
 	for _, item := range items {
-		value := &workspacev1.Artifact{Id: item.ID, RunId: item.RunID, Kind: item.Kind, Name: item.Name, Path: item.Path, Size: item.Size, Sha256: item.SHA256, Expired: item.ExpiresAt != nil && item.ExpiresAt.Before(time.Now()), CreatedAt: timestamppb.New(item.CreatedAt)}
-		if item.TextPreview != "" {
-			value.TextPreview = &item.TextPreview
-		}
-		if item.ExpiresAt != nil {
-			value.ExpiresAt = timestamppb.New(*item.ExpiresAt)
-		}
-		response = append(response, value)
+		response = append(response, artifactResponse(item))
 	}
 	return &workspacev1.ListArtifactsResponse{Items: response}, nil
 }

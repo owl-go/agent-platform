@@ -516,7 +516,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		teamNativeRoots = append(teamNativeRoots, nativeState)
 	}
 	var artifacts []application.ExecutionArtifact
-	if persistent != "" {
+	if persistent != "" || job.Kind == application.JobSession {
 		used, err := executionWorkspaceSize(workspace)
 		if err != nil {
 			return result, err
@@ -1278,7 +1278,11 @@ func (executor *Executor) persistChangedFiles(ctx context.Context, job applicati
 		}
 		digest = hex.EncodeToString(hasher.Sum(nil))
 		objectPathDigest := sha256.Sum256([]byte(relative))
-		objectKey := "artifacts/" + job.OwnerID + "/" + job.WorkflowID + "/" + job.ID + "/" + hex.EncodeToString(objectPathDigest[:])
+		executionScope := job.WorkflowID
+		if job.Kind == application.JobSession {
+			executionScope = "sessions/" + job.SessionID
+		}
+		objectKey := "artifacts/" + job.OwnerID + "/" + executionScope + "/" + job.ID + "/" + hex.EncodeToString(objectPathDigest[:])
 		artifactFile, err := os.Open(path)
 		if err != nil {
 			return nil, err

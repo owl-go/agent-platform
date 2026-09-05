@@ -781,6 +781,37 @@ func TestExecuteExpertTeamUsesOneOverallTimeout(t *testing.T) {
 	}
 }
 
+func TestSessionExecutionCapturesGeneratedFilesAsArtifacts(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Kind = application.JobSession
+	job.WorkflowID = ""
+	job.SessionID = "33333333-3333-4333-8333-333333333333"
+	job.AssistantMessageID = 42
+	job.Snapshot.ExpertTeam = nil
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			if err := os.WriteFile(filepath.Join(request.WorkspacePath, "report.md"), []byte("generated report"), 0o600); err != nil {
+				return agentruntime.Result{}, err
+			}
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done"}, nil
+		}}, nil
+	}
+
+	result, err := executor.Execute(context.Background(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Artifacts) != 1 || result.Artifacts[0].Name != "report.md" || result.Artifacts[0].TextPreview != "generated report" {
+		t.Fatalf("Session Artifacts = %#v", result.Artifacts)
+	}
+	wantPrefix := "artifacts/owner-1/sessions/33333333-3333-4333-8333-333333333333/"
+	if !strings.HasPrefix(result.Artifacts[0].ObjectKey, wantPrefix) {
+		t.Fatalf("Session Artifact Object Key = %q, want prefix %q", result.Artifacts[0].ObjectKey, wantPrefix)
+	}
+}
+
 func newTeamTestExecutor(t *testing.T) (*Executor, application.ExecutionJob, string) {
 	t.Helper()
 	root, credentialsRoot := t.TempDir(), t.TempDir()

@@ -45,6 +45,7 @@ const (
 	AgentWorkspaceService_SendSessionMessage_FullMethodName            = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 	AgentWorkspaceService_RetrySessionMessage_FullMethodName           = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 	AgentWorkspaceService_CancelSessionMessage_FullMethodName          = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+	AgentWorkspaceService_GetSessionArtifactDownload_FullMethodName    = "/workspace.v1.AgentWorkspaceService/GetSessionArtifactDownload"
 	AgentWorkspaceService_ListWorkflows_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 	AgentWorkspaceService_CreateWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 	AgentWorkspaceService_GetWorkflow_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
@@ -136,6 +137,7 @@ type AgentWorkspaceServiceClient interface {
 	SendSessionMessage(ctx context.Context, in *SendSessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(ctx context.Context, in *RetrySessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(ctx context.Context, in *CancelSessionMessageRequest, opts ...grpc.CallOption) (*SessionMessage, error)
+	GetSessionArtifactDownload(ctx context.Context, in *GetSessionArtifactDownloadRequest, opts ...grpc.CallOption) (*ArtifactDownload, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
@@ -459,6 +461,16 @@ func (c *agentWorkspaceServiceClient) CancelSessionMessage(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SessionMessage)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_CancelSessionMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetSessionArtifactDownload(ctx context.Context, in *GetSessionArtifactDownloadRequest, opts ...grpc.CallOption) (*ArtifactDownload, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ArtifactDownload)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetSessionArtifactDownload_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1085,6 +1097,7 @@ type AgentWorkspaceServiceServer interface {
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	GetSessionArtifactDownload(context.Context, *GetSessionArtifactDownloadRequest) (*ArtifactDownload, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
@@ -1231,6 +1244,9 @@ func (UnimplementedAgentWorkspaceServiceServer) RetrySessionMessage(context.Cont
 }
 func (UnimplementedAgentWorkspaceServiceServer) CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelSessionMessage not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetSessionArtifactDownload(context.Context, *GetSessionArtifactDownloadRequest) (*ArtifactDownload, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSessionArtifactDownload not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkflows not implemented")
@@ -1894,6 +1910,24 @@ func _AgentWorkspaceService_CancelSessionMessage_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).CancelSessionMessage(ctx, req.(*CancelSessionMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetSessionArtifactDownload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionArtifactDownloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetSessionArtifactDownload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetSessionArtifactDownload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetSessionArtifactDownload(ctx, req.(*GetSessionArtifactDownloadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3070,6 +3104,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelSessionMessage",
 			Handler:    _AgentWorkspaceService_CancelSessionMessage_Handler,
+		},
+		{
+			MethodName: "GetSessionArtifactDownload",
+			Handler:    _AgentWorkspaceService_GetSessionArtifactDownload_Handler,
 		},
 		{
 			MethodName: "ListWorkflows",

@@ -2,7 +2,7 @@
 
 状态：MinIO 与阿里云 OSS 双 Provider；CLI Connector bundle 的不可变写入与下载后二次校验已实现，生产 Digest 证据待补
 
-Artifact、Skill 包、CLI Connector bundle 与消息附件只通过 `internal/objectstore.Provider` 访问对象存储。业务表仅保存经过路径校验的逻辑 Object Key，不保存 Provider URL、Endpoint 或签名参数。
+Artifact、Skill 包、CLI Connector bundle 与消息附件只通过 `internal/objectstore.Provider` 访问对象存储。Workflow Run 与 Session response 生成的 Artifact 都保存为不可变对象；业务表仅保存经过路径校验的逻辑 Object Key，不保存 Provider URL、Endpoint 或签名参数。
 
 生产支持 `minio` 与 `aliyun_oss`，`memory` 仅用于单元测试。Provider 选择集中在 `providerfactory`。写入必须校验精确 Size 与小写 SHA-256，Bucket 保持私有；下载前重新执行 User/Workflow 授权，并签发短期 URL。
 

@@ -628,6 +628,22 @@ export interface paths {
         patch: operations["AgentWorkspaceService_SetSessionArchived"];
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetSessionArtifactDownload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/expert-selection": {
         parameters: {
             query?: never;
@@ -1180,6 +1196,8 @@ export interface components {
             created_at?: string;
             /** Format: date-time */
             expires_at?: string;
+            /** Format: int64 */
+            message_id?: number;
         };
         v1ArtifactDownload: {
             url?: string;
@@ -1887,6 +1905,7 @@ export interface components {
             expert_stages?: components["schemas"]["v1ExpertStage"][];
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
             activities?: components["schemas"]["v1ExecutionActivity"][];
+            artifacts?: components["schemas"]["v1Artifact"][];
         };
         v1Skill: {
             id?: string;
@@ -3732,6 +3751,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Session"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetSessionArtifactDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ArtifactDownload"];
                 };
             };
             /** @description An unexpected error response. */

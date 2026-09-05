@@ -649,6 +649,11 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 				}
 				return finishCancelledSessionMessage(tx, job, result, now)
 			}
+			for _, artifact := range sessionArtifactRecords(job, result.Artifacts, now) {
+				if err := tx.Create(&artifact).Error; err != nil {
+					return fmt.Errorf("save Session Artifact: %w", err)
+				}
+			}
 			summary, through, err := advanceRollingSummary(tx, job.SessionID, job.AssistantMessageID)
 			if err != nil {
 				return err
@@ -731,6 +736,23 @@ func fileArtifactRecords(job application.ExecutionJob, artifacts []application.E
 		expiresAt := artifact.ExpiresAt
 		sha := artifact.SHA256
 		records = append(records, artifactRecord{ID: uuid.NewString(), OwnerID: job.OwnerID, WorkflowID: &job.WorkflowID, RunID: job.ID, Kind: "file", Name: artifact.Name, Path: artifact.Path, ObjectKey: &objectKey, TextResult: preview, Size: artifact.Size, SHA256: &sha, CreatedAt: createdAt, ExpiresAt: &expiresAt})
+	}
+	return records
+}
+
+func sessionArtifactRecords(job application.ExecutionJob, artifacts []application.ExecutionArtifact, createdAt time.Time) []sessionArtifactRecord {
+	records := make([]sessionArtifactRecord, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		var preview []byte
+		if artifact.TextPreview != "" {
+			preview, _ = marshal(artifact.TextPreview)
+		}
+		expiresAt := artifact.ExpiresAt
+		records = append(records, sessionArtifactRecord{
+			ID: uuid.NewString(), OwnerID: job.OwnerID, SessionID: job.SessionID, MessageID: job.AssistantMessageID,
+			Name: artifact.Name, Path: artifact.Path, ObjectKey: artifact.ObjectKey, TextResult: preview,
+			Size: artifact.Size, SHA256: artifact.SHA256, CreatedAt: createdAt, ExpiresAt: &expiresAt,
+		})
 	}
 	return records
 }
