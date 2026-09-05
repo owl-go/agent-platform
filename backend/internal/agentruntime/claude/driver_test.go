@@ -30,6 +30,24 @@ func TestDriverBuildsHeadlessSandboxInvocation(t *testing.T) {
 	}
 }
 
+func TestDriverBuildsZhipuClaudeCodeEnvironment(t *testing.T) {
+	driver := Driver{}
+	invocation, err := driver.Build(agentruntime.ExecuteRequest{
+		Model:         "glm-5.3",
+		ModelProvider: "zhipu",
+	}, t.TempDir())
+	if err != nil {
+		t.Fatalf("build invocation: %v", err)
+	}
+	want := []string{
+		"API_TIMEOUT_MS=3000000",
+		"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
+	}
+	if !slices.Equal(invocation.Env, want) {
+		t.Fatalf("environment = %v, want %v", invocation.Env, want)
+	}
+}
+
 func TestParserReadsStreamingTextResultUsageAndSession(t *testing.T) {
 	parser := Driver{}.NewParser(t.TempDir())
 	fixtures := []string{

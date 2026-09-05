@@ -243,6 +243,35 @@ func TestEnvironmentUsesDeepSeekAnthropicEndpointWithoutChangingOpenAIEndpoint(t
 	}
 }
 
+func TestEnvironmentUsesZhipuClaudeCodeAuthToken(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, err := box.Encrypt([]byte("zhipu-key"), "model-provider:administrator-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{box: box}
+	job := application.ExecutionJob{OwnerID: "ordinary-user-1", Snapshot: domain.ExecutionSnapshot{ProviderModel: domain.ProviderModelSnapshot{
+		ProviderType: "zhipu", Endpoint: "https://open.bigmodel.cn/api/anthropic", APIKeyCiphertext: ciphertext, CredentialOwnerID: "administrator-1",
+	}}}
+
+	variables, err := executor.environment(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := variables["ANTHROPIC_AUTH_TOKEN"]; got != "zhipu-key" {
+		t.Fatalf("ANTHROPIC_AUTH_TOKEN = %q, want Zhipu API key", got)
+	}
+	if _, exists := variables["ANTHROPIC_API_KEY"]; exists {
+		t.Fatal("ANTHROPIC_API_KEY must be omitted for Zhipu Claude Code")
+	}
+	if got := variables["ANTHROPIC_BASE_URL"]; got != "https://open.bigmodel.cn/api/anthropic" {
+		t.Fatalf("ANTHROPIC_BASE_URL = %q, want configured Zhipu Anthropic endpoint", got)
+	}
+}
+
 func TestAnthropicBaseURLOnlyDerivesDeepSeekRouteOnce(t *testing.T) {
 	tests := []struct {
 		name         string

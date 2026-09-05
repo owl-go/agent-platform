@@ -1124,7 +1124,11 @@ func (executor *Executor) environment(job application.ExecutionJob) (map[string]
 			return nil, fmt.Errorf("decode Workflow secret environment: %w", err)
 		}
 	}
-	variables["ANTHROPIC_API_KEY"] = string(secret)
+	if job.Snapshot.ProviderModel.ProviderType == "zhipu" {
+		variables["ANTHROPIC_AUTH_TOKEN"] = string(secret)
+	} else {
+		variables["ANTHROPIC_API_KEY"] = string(secret)
+	}
 	variables["ANTHROPIC_BASE_URL"] = anthropicBaseURL(job.Snapshot.ProviderModel.ProviderType, job.Snapshot.ProviderModel.Endpoint)
 	variables["OPENAI_API_KEY"] = string(secret)
 	variables["OPENAI_BASE_URL"] = job.Snapshot.ProviderModel.Endpoint

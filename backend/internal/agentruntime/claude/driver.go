@@ -59,7 +59,14 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 	if request.MCPConfigPath != "" {
 		args = append(args, "--mcp-config", request.MCPConfigPath)
 	}
-	return cliadapter.Invocation{Args: args, Stdin: strings.NewReader(request.Instruction)}, nil
+	var environment []string
+	if request.ModelProvider == "zhipu" {
+		environment = []string{
+			"API_TIMEOUT_MS=3000000",
+			"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
+		}
+	}
+	return cliadapter.Invocation{Args: args, Env: environment, Stdin: strings.NewReader(request.Instruction)}, nil
 }
 
 func (Driver) NewParser(string) cliadapter.Parser { return &parser{} }
