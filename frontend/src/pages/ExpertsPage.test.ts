@@ -34,6 +34,8 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-card").text()).toContain("负责系统架构与边界设计");
     expect(wrapper.get(".expert-card").text()).toContain("架构");
     expect(wrapper.get(".expert-card").text()).toContain("GPT 5 · Codex");
+    expect(wrapper.find(".expert-card > .el-card__body").exists()).toBe(true);
+    expect(wrapper.get(".tag-row .el-tag").classes()).toContain("is-round");
     expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
   });
 
