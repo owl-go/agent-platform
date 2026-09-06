@@ -150,8 +150,13 @@ func claimExpertTagProjection(tx *gorm.DB) (*application.ExecutionJob, error) {
 	}
 	fake := workflowRecord{OwnerID: row.OwnerID, Name: "Expert tag projection", Goal: "", WorkspacePath: "tag-projections/" + row.OwnerID + "/" + row.ID}
 	snapshot, err := loadExecutionSnapshot(tx, fake)
+	if err == nil {
+		err = hydrateStageCredentials(tx, &snapshot)
+	}
 	if err != nil {
-		_ = tx.Model(&expertRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"tag_projection_status": "failed", "tag_projection_error": err.Error()}).Error
+		if updateErr := tx.Model(&expertRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"tag_projection_status": "failed", "tag_projection_error": err.Error()}).Error; updateErr != nil {
+			return nil, updateErr
+		}
 		return nil, nil
 	}
 	return &application.ExecutionJob{Kind: application.JobExpertTagProjection, ID: "expert-tags-" + row.ID, OwnerID: row.OwnerID, ExpertID: row.ID, Instruction: "Generate up to five concise discovery tags for this Expert's core capability. Return only a JSON array of strings, each at most 20 characters.\n\nCore capability:\n" + row.CoreCapability, Snapshot: snapshot}, nil

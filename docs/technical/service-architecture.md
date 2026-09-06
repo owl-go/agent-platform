@@ -54,6 +54,8 @@ Credits 契约允许 User 读取自己的余额和 Credit Ledger、兑换 Redemp
 
 Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/App Secret/Token、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured` 或外部身份元数据，不返回明文，Administrator 也无权读取 User Connector Secret。Workflow SSH config 不是 Secret，但只接受无命令执行能力的连接字段；Git Clone 时与私钥一起物化到隔离的临时 HOME，私钥文件名匹配受限的 `IdentityFile`，并继续使用管理员固定的 `known_hosts`。执行时其他 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 或 Wrapper 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
 
+Derived Expertise Tag 后台任务与 Session、Run 共用执行阶段的版本化 Model Provider 凭证加载逻辑：Worker 领取任务时按 Connection ID 和 Version 读取密文及凭证归属，再交给 Runtime Executor 解密，不将凭证写入普通 Snapshot。凭证不可用时将标签任务标为失败并保留旧标签，不向 Runtime 提交缺失凭证的任务。
+
 ## 数据库
 
 当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构，后续 Migration 删除模型类型字段，`000014_global_model_catalog.sql` 再把已有连接与模型目录提升为全局可读资源并保留原凭证加密作用域。Provider Model 优先来自供应商 `/models`，失败或不支持时使用平台维护的厂商默认列表，Administrator 也可显式补充。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。
