@@ -51,3 +51,16 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-team-card").text()).toContain("2 位专家 / 每轮");
   });
 });
+
+for (const [path, field, id] of [["/experts", "expert_id", "expert-1"], ["/experts?tab=teams", "expert_team_id", "team-1"]]) {
+  it(`summons from ${path} without also opening card details`, async () => {
+    const router = createAppRouter(createMemoryHistory()); await router.push(path!);
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });
+    await flushPromises();
+    await wrapper.get(".catalog-launch").trigger("keydown", { key: "Enter" });
+    await wrapper.get(".catalog-launch").trigger("click"); await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/sessions"); expect(router.currentRoute.value.query[field!]).toBe(id); expect(router.currentRoute.value.query.new).toBeTruthy();
+    expect(wrapper.findComponent({ name: "CatalogDetails" }).props("expert")).toBeUndefined();
+    expect(wrapper.findComponent({ name: "CatalogDetails" }).props("team")).toBeUndefined(); wrapper.unmount();
+  });
+}

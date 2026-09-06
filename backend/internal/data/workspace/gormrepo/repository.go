@@ -29,6 +29,7 @@ func New(db *gorm.DB, credits creditTransactionSettler) *Repository {
 var _ application.Repository = (*Repository)(nil)
 
 type sessionRecord struct {
+	SelectionID      *string    `gorm:"column:selection_id"`
 	ID               string     `gorm:"column:id"`
 	OwnerID          string     `gorm:"column:owner_user_id"`
 	Title            string     `gorm:"column:title"`
@@ -365,6 +366,7 @@ type skillRecord struct {
 func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
+	SelectionID       *string    `gorm:"column:selection_id"`
 	ID                string     `gorm:"column:id"`
 	ConversationID    string     `gorm:"column:conversation_id"`
 	TurnNumber        int        `gorm:"column:turn_number"`

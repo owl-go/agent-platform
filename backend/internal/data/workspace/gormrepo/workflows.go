@@ -369,6 +369,10 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 }
 
 func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment) (domain.Run, error) {
+	return repository.ContinueSelectedRunConversation(ctx, ownerID, workflowID, runID, content, attachments, "")
+}
+
+func (repository *Repository) ContinueSelectedRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID string) (domain.Run, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Run{}, fmt.Errorf("%w: follow-up must contain text or an attachment", domain.ErrInvalid)
@@ -384,7 +388,7 @@ func (repository *Repository) ContinueRunConversation(ctx context.Context, owner
 			return mapNotFound(err)
 		}
 		var active int64
-		if err := tx.Model(&runRecord{}).Where("conversation_id = ? AND state IN ('queued','running')", root.ID).Count(&active).Error; err != nil {
+		if err := tx.Model(&runRecord{}).Where("conversation_id = ? AND state IN ('queued','running','waiting_for_user')", root.ID).Count(&active).Error; err != nil {
 			return err
 		}
 		if active > 0 {
@@ -399,6 +403,47 @@ func (repository *Repository) ContinueRunConversation(ctx context.Context, owner
 			return err
 		}
 		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, WorkflowSnapshot: append([]byte(nil), root.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+		if selectionID == "" && root.SelectionID != nil {
+			selectionID = *root.SelectionID
+		}
+		if selectionID != "" {
+			scope := domain.ConversationScope{WorkflowID: workflowID, RunID: runID}
+			selected, err := readConversationSelection(tx, ownerID, scope, selectionID)
+			if err != nil {
+				return err
+			}
+			var plan domain.ExecutionSnapshot
+			if err := json.Unmarshal(root.WorkflowSnapshot, &plan); err != nil {
+				return err
+			}
+			stages, err := plan.OrderedStages()
+			if err != nil {
+				return err
+			}
+			if len(stages) == 0 {
+				return domain.ErrInvalid
+			}
+			plan.SchemaVersion = 2
+			plan.Stages = selected.Apply(stages[0])
+			plan.TeamProfile = nil
+			if selected.ExpertTeamID != "" {
+				plan.TeamProfile = &domain.ExpertTeamProfileSnapshot{ID: selected.ExpertTeamID, Name: selected.Name, Icon: selected.Icon, IconBackground: selected.IconBackground}
+			}
+			plan.RuntimeEngine = ""
+			plan.ProviderModel = domain.ProviderModelSnapshot{}
+			plan.Expert = nil
+			plan.ExpertTeam = nil
+			plan.Skills = nil
+			plan.MCPServers = nil
+			plan.CLIConnectors = nil
+			created.WorkflowSnapshot, err = marshal(plan)
+			if err != nil {
+				return err
+			}
+			if err := retainConversationSelection(tx, ownerID, scope, selected); err != nil {
+				return err
+			}
+		}
 		return tx.Create(&created).Error
 	})
 	if err != nil {
@@ -462,6 +507,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	}
 	var expertIDs []string
 	var members []domain.ExpertTeamMemberInput
+	snapshot.TeamProfile = &domain.ExpertTeamProfileSnapshot{ID: team.ID, Name: team.Name, Icon: team.Icon, IconBackground: team.IconBackground}
 	if len(team.Members) > 0 && string(team.Members) != "null" {
 		_ = json.Unmarshal(team.Members, &members)
 	}

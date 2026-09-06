@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
+import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import SessionsPage from "./SessionsPage.vue";
 
@@ -22,6 +23,7 @@ const messages: SessionMessage[] = [
 
 function apiStub(sessionMessages: SessionMessage[] = messages, stream?: (snapshot: (value: SessionMessageSnapshot) => void) => Promise<void>): PlatformApi {
   return {
+    ...conversationApiStub(),
     listSessions: vi.fn(async (archived = false) => archived ? [] : [session]),
     listSessionMessages: vi.fn(async () => sessionMessages),
     streamSessionMessage: vi.fn(async (_sessionID, _messageID, onSnapshot) => stream?.(onSnapshot)),
@@ -177,7 +179,9 @@ describe("SessionsPage conversation layout", () => {
     api.listExperts = vi.fn(async () => [expert]);
     const wrapper = await mountPageWithAPI(api);
 
-    expect(wrapper.get(".specialist-selector").text()).toContain(expert.name);
+    await wrapper.get('.composer-plus').trigger('click');
+    await wrapper.findAll('.composer-menu button').find((button) => button.text() === '专家')!.trigger('click');
+    expect(wrapper.get(".composer-options").text()).toContain(expert.name);
     wrapper.unmount();
   });
 
@@ -336,11 +340,12 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
 
     expect(wrapper.find('.composer-model-control').exists()).toBe(false);
-    await wrapper.get<HTMLTextAreaElement>(".composer textarea").setValue("使用选中模型");
-    await wrapper.get(".composer > button:last-child").trigger("click");
+    wrapper.get('.composer-editor').element.textContent = '使用选中模型';
+    await wrapper.get('.composer-editor').trigger('input');
+    await wrapper.get('.composer-toolbar button[aria-label="发送"]').trigger('click');
     await flushPromises();
 
-    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", []);
+    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "使用选中模型", [], undefined, { selection_id: "selection-1", file_references: [] });
     releaseStream();
     await flushPromises();
     wrapper.unmount();

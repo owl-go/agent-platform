@@ -19,7 +19,7 @@ const saving = ref(false);
 const confirmDelete = ref(false);
 const toast = ref<{ kind: "success" | "error"; message: string }>();
 const form = ref<ExpertInput>({ name: "", icon: "sparkles", icon_background: "sage", introduction: "", core_capability: "", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
-const isNew = route.params.expertId === "new";
+const isNew = route.name === "expert-new" || route.params.expertId === "new";
 
 onMounted(async () => {
   try {

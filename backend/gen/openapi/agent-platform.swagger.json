@@ -1064,6 +1064,126 @@
         ]
       }
     },
+    "/api/v1/conversation-files": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConversationFiles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConversationFilesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workspace_path",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/conversation-selection": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetConversationSelection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConversationSelection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_ResolveConversationSelection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConversationSelection"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ResolveConversationSelectionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/credits/balance": {
       "get": {
         "operationId": "AgentWorkspaceService_GetCreditBalance",
@@ -2313,6 +2433,36 @@
         ]
       }
     },
+    "/api/v1/skills/{skill_id}/document": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetSkillDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SkillDocument"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows": {
       "get": {
         "operationId": "AgentWorkspaceService_ListWorkflows",
@@ -3091,6 +3241,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "selection_id": {
+          "type": "string"
+        },
+        "file_references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FileReference"
+          }
         }
       }
     },
@@ -3186,6 +3346,16 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "selection_id": {
+          "type": "string"
+        },
+        "file_references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FileReference"
           }
         }
       }
@@ -3845,6 +4015,108 @@
         "version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1ConversationFile": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ConversationSelection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "expert_id": {
+          "type": "string"
+        },
+        "expert_team_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "icon_background": {
+          "type": "string"
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "mcp_servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "cli_connectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "inherited_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "inherited_mcp_servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "inherited_cli_connectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SelectedResource"
+          }
+        },
+        "disabled_connectors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "member_count": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -4614,6 +4886,20 @@
         }
       }
     },
+    "v1FileReference": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
     "v1GitConfigEntry": {
       "type": "object",
       "properties": {
@@ -4731,6 +5017,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1CommandApproval"
+          }
+        }
+      }
+    },
+    "v1ListConversationFilesResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConversationFile"
           }
         }
       }
@@ -5396,6 +5694,62 @@
         }
       }
     },
+    "v1ResolveConversationSelectionRequest": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "workflow_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "previous_id": {
+          "type": "string"
+        },
+        "change_expert": {
+          "type": "boolean"
+        },
+        "expert_id": {
+          "type": "string"
+        },
+        "expert_team_id": {
+          "type": "string"
+        },
+        "skill_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mcp_server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cli_connector_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disabled_connectors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "refresh_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "v1ResourceDeletionImpact": {
       "type": "object",
       "properties": {
@@ -5610,6 +5964,20 @@
         }
       }
     },
+    "v1SelectedResource": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        }
+      }
+    },
     "v1SendSessionMessageResponse": {
       "type": "object",
       "properties": {
@@ -5751,6 +6119,17 @@
         "version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1SkillDocument": {
+      "type": "object",
+      "properties": {
+        "skill": {
+          "$ref": "#/definitions/v1Skill"
+        },
+        "content": {
+          "type": "string"
         }
       }
     },

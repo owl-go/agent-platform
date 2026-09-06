@@ -2,6 +2,8 @@
 
 Status: accepted for implementation
 
+For direct composer Skill/Connector selection, mid-conversation specialist changes, and catalog details/launch actions, see `docs/product/conversation-resource-selection.md` and ADR-0027. Their confirmed decisions supersede this document's Expert-only resource selection and conversation-wide specialist/resource freezing assumptions within that scope.
+
 ## Problem Statement
 
 Users currently have to configure a Provider Model, Runtime Engine, one broad Execution Instruction, hand-authored tags, MCP Servers, and Skills inside every Expert. Skills and MCP Servers are also buried under Personal Settings as Extensions. This makes a reusable specialist profile responsible for execution infrastructure, discovery metadata, and integrations at the same time, and makes Expert Teams inherit unnecessary model and Runtime complexity.

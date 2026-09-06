@@ -8,28 +8,40 @@ import (
 // ExecutionSnapshot freezes every mutable selection required by a Workflow Run.
 // Secret fields remain encrypted at rest and are decrypted only by the Worker.
 type ExecutionSnapshot struct {
-	SchemaVersion               int                      `json:"schema_version,omitempty"`
-	Stages                      []ExecutionStageSnapshot `json:"stages,omitempty"`
-	WorkflowName                string                   `json:"workflow_name"`
-	Goal                        string                   `json:"goal"`
-	RuntimeEngine               RuntimeEngine            `json:"runtime_engine"`
-	ProviderModel               ProviderModelSnapshot    `json:"provider_model"`
-	Personality                 string                   `json:"personality"`
-	PersonalityInstructions     string                   `json:"personality_instructions"`
-	Expert                      *ExpertSnapshot          `json:"expert,omitempty"`
-	ExpertTeam                  *ExpertTeamSnapshot      `json:"expert_team,omitempty"`
-	Environment                 []EnvironmentVariable    `json:"environment"`
-	EnvironmentSecretCiphertext []byte                   `json:"environment_secret_ciphertext,omitempty"`
-	MCPServers                  []MCPServerSnapshot      `json:"mcp_servers"`
-	Skills                      []SkillSnapshot          `json:"skills"`
-	CLIConnectors               []CLIConnectorSnapshot   `json:"cli_connectors"`
-	GitSource                   *GitSource               `json:"git_source,omitempty"`
-	GitSecretCiphertext         []byte                   `json:"git_secret_ciphertext,omitempty"`
-	WorkspacePath               string                   `json:"workspace_path"`
+	TeamProfile                 *ExpertTeamProfileSnapshot `json:"team_profile,omitempty"`
+	SelectionKey                string                     `json:"selection_key,omitempty"`
+	SchemaVersion               int                        `json:"schema_version,omitempty"`
+	Stages                      []ExecutionStageSnapshot   `json:"stages,omitempty"`
+	WorkflowName                string                     `json:"workflow_name"`
+	Goal                        string                     `json:"goal"`
+	RuntimeEngine               RuntimeEngine              `json:"runtime_engine"`
+	ProviderModel               ProviderModelSnapshot      `json:"provider_model"`
+	Personality                 string                     `json:"personality"`
+	PersonalityInstructions     string                     `json:"personality_instructions"`
+	Expert                      *ExpertSnapshot            `json:"expert,omitempty"`
+	ExpertTeam                  *ExpertTeamSnapshot        `json:"expert_team,omitempty"`
+	Environment                 []EnvironmentVariable      `json:"environment"`
+	EnvironmentSecretCiphertext []byte                     `json:"environment_secret_ciphertext,omitempty"`
+	MCPServers                  []MCPServerSnapshot        `json:"mcp_servers"`
+	Skills                      []SkillSnapshot            `json:"skills"`
+	CLIConnectors               []CLIConnectorSnapshot     `json:"cli_connectors"`
+	GitSource                   *GitSource                 `json:"git_source,omitempty"`
+	GitSecretCiphertext         []byte                     `json:"git_secret_ciphertext,omitempty"`
+	WorkspacePath               string                     `json:"workspace_path"`
+}
+
+// ExpertTeamProfileSnapshot preserves the catalog identity independently of
+// the ordered member instructions used by the Runtime.
+type ExpertTeamProfileSnapshot struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Icon           string `json:"icon"`
+	IconBackground string `json:"icon_background"`
 }
 
 // ExecutionStageSnapshot is the complete immutable identity of one model invocation.
 type ExecutionStageSnapshot struct {
+	SelectionKey     string                 `json:"selection_key,omitempty"`
 	Position         int                    `json:"position"`
 	Expert           *ExpertSnapshot        `json:"expert,omitempty"`
 	RuntimeEngine    RuntimeEngine          `json:"runtime_engine"`

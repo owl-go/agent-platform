@@ -54,7 +54,7 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 				return domain.ErrInvalid
 			}
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(uniqueStrings(ids))) {
 				return domain.ErrInvalid
 			}
 		}
@@ -124,34 +124,29 @@ func (repository *Repository) SetSessionExpertSelection(ctx context.Context, own
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND archived_at IS NULL AND version = ?", ownerID, sessionID, expectedVersion).Take(&session).Error; err != nil {
 			return mapNotFound(err)
 		}
-		var messageCount int64
-		if err := tx.Model(&messageRecord{}).Where("session_id = ?", sessionID).Count(&messageCount).Error; err != nil {
-			return err
-		}
-		if messageCount != 0 {
-			return fmt.Errorf("%w: Expert selection is frozen after the first message", domain.ErrConflict)
-		}
-		if expertID != nil {
-			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
-				return fmt.Errorf("%w: selected Expert is unavailable", domain.ErrInvalid)
+		scope := domain.ConversationScope{SessionID: sessionID}
+		var selection domain.ConversationSelection
+		if session.SelectionID != nil {
+			var err error
+			selection, err = readConversationSelection(tx, ownerID, scope, *session.SelectionID)
+			if err != nil {
+				return err
 			}
+		}
+		selection.ExpertID, selection.ExpertTeamID = "", ""
+		if expertID != nil {
+			selection.ExpertID = *expertID
 		}
 		if expertTeamID != nil {
-			var team expertTeamRecord
-			if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *expertTeamID).Take(&team).Error; err != nil {
-				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
-			}
-			var ids []string
-			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil || len(ids) < 2 {
-				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
-			}
-			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(ids)) {
-				return fmt.Errorf("%w: selected Expert Team is unavailable", domain.ErrInvalid)
-			}
+			selection.ExpertTeamID = *expertTeamID
 		}
-		result := tx.Model(&sessionRecord{}).Where("id = ? AND version = ?", sessionID, expectedVersion).Updates(map[string]any{"expert_id": expertID, "expert_team_id": expertTeamID, "expert_snapshot": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if err := loadConversationSpecialist(tx, ownerID, &selection); err != nil {
+			return err
+		}
+		if err := saveConversationSelection(tx, ownerID, scope, &selection, true); err != nil {
+			return err
+		}
+		result := tx.Model(&sessionRecord{}).Where("id = ? AND version = ?", sessionID, expectedVersion).Updates(map[string]any{"expert_id": expertID, "expert_team_id": expertTeamID, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -260,10 +255,14 @@ func sessionArtifactDomain(row sessionArtifactRecord) domain.Artifact {
 }
 
 func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {
-	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil)
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, "")
 }
 
-func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot) (domain.Message, domain.Message, error) {
+func (repository *Repository) CreateSelectedMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, selectionID string) (domain.Message, domain.Message, error) {
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, selectionID)
+}
+
+func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot, selectionID string) (domain.Message, domain.Message, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain text or an attachment", domain.ErrInvalid)
@@ -279,12 +278,32 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			return mapNotFound(err)
 		}
 		snapshot := frozen
+		var selection *domain.ConversationSelection
 		if snapshot == nil {
-			selected, err := responseSnapshotOnTx(tx, session)
+			if selectionID == "" && session.SelectionID != nil {
+				selectionID = *session.SelectionID
+			}
+			configuration := session
+			if selectionID != "" && len(configuration.ExpertSnapshot) == 0 {
+				configuration.ExpertID = nil
+				configuration.ExpertTeamID = nil
+			}
+			selected, err := responseSnapshotOnTx(tx, configuration)
 			if err != nil {
 				return err
 			}
 			snapshot = &selected
+			if selectionID != "" {
+				resolved, err := readConversationSelection(tx, ownerID, domain.ConversationScope{SessionID: sessionID}, selectionID)
+				if err != nil {
+					return err
+				}
+				if len(snapshot.Stages) == 0 {
+					return fmt.Errorf("%w: missing frozen execution configuration", domain.ErrInvalid)
+				}
+				snapshot.Stages = resolved.Apply(snapshot.Stages[0])
+				selection = &resolved
+			}
 		}
 		if len(session.ExpertSnapshot) == 0 {
 			if _, err := loadSessionSnapshot(tx, session, *snapshot); err != nil {
@@ -301,6 +320,11 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		}
 		if err := tx.Create(&assistant).Error; err != nil {
 			return err
+		}
+		if selection != nil {
+			if err := retainConversationSelection(tx, ownerID, domain.ConversationScope{SessionID: sessionID}, *selection); err != nil {
+				return err
+			}
 		}
 		updates := map[string]any{"updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 		if session.Title == "New session" {
@@ -363,7 +387,7 @@ func (repository *Repository) RetryMessage(ctx context.Context, ownerID, session
 	if len(original.Attachments) > 0 {
 		_ = json.Unmarshal(original.Attachments, &attachments)
 	}
-	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, attachments, &snapshot)
+	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, attachments, &snapshot, "")
 }
 
 func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {

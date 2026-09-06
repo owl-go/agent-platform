@@ -99,6 +99,25 @@ Object.assign(en.experts, { iconTeam: "Team", iconSparkles: "Sparkles", iconComp
 Object.assign(zh.experts, { deleteExpertHint: "被专家团引用的专家不允许删除；请先移除对应成员。历史快照不会改变。" });
 Object.assign(en.experts, { deleteExpertHint: "An Expert referenced by an Expert Team cannot be deleted; remove those members first. Historical snapshots stay unchanged." });
 
+Object.assign(zh, { composer: {
+  add: "添加到对话", skills: "技能", connectors: "连接器", send: "发送", search: "搜索", empty: "没有匹配的技能",
+  placeholder: "输入消息，/ 选择技能，{'@'} 引用对话文件", removeToken: "移除 {name}", useSkill: "去使用", summon: "召唤",
+  manageSkills: "管理技能", manageConnectors: "管理连接器", moreExperts: "召唤更多专家", localFiles: "从本地添加文件", localSkill: "本地上传的技能",
+  parentFolder: "返回上一级文件夹", conversationFiles: "对话文件", fileUnavailable: "文件已过期或不可用", resourceUnavailable: "资源不可用", version: "版本 {version}",
+  connectorUnavailable: "请先完成测试或启用", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", filesFailed: "无法读取对话文件，请重试。",
+  sendFailed: "发送未完成，草稿已保留，请检查资源或文件后重试。", reselectFiles: "这些文件尚未上传，请重新选择：{names}",
+} });
+Object.assign(en, { composer: {
+  add: "Add to conversation", skills: "Skills", connectors: "Connectors", send: "Send", search: "Search", empty: "No matching Skills",
+  placeholder: "Write a message, / to select Skills, {'@'} to reference conversation files", removeToken: "Remove {name}", useSkill: "Use Skill", summon: "Summon",
+  manageSkills: "Manage Skills", manageConnectors: "Manage Connectors", moreExperts: "Discover more Experts", localFiles: "Add local files", localSkill: "Uploaded Skill",
+  parentFolder: "Parent folder", conversationFiles: "Conversation files", fileUnavailable: "File expired or unavailable", resourceUnavailable: "Resource unavailable", version: "Version {version}",
+  connectorUnavailable: "Test or enable this Connector first", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", filesFailed: "Could not load conversation files. Please retry.",
+  sendFailed: "The message was not sent. Your draft is preserved; check its resources and files, then retry.", reselectFiles: "These files were not uploaded. Select them again: {names}",
+} });
+Object.assign(zh.sessions, { welcome: "从一个问题开始，随时添加专家、技能或连接器。" });
+Object.assign(en.sessions, { welcome: "Start with a question and add an Expert, Skill, or Connector whenever you need one." });
+
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";

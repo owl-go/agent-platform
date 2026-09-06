@@ -4,6 +4,8 @@ status: accepted
 
 # Separate Expert guidance from execution configuration and Connectors
 
+ADR-0027 supersedes the conversation-wide specialist/resource freezing and Expert-only resource selection portions of this decision for Session messages and Workflow Run Conversation follow-ups. Frozen Personal Settings execution configuration, sequential team execution, and Connector authorization enforcement remain accepted.
+
 Experts describe reusable specialist guidance through Core Capability, Operating Procedure, Output Standard, and optional Cautions; they no longer own a Provider Model or Runtime Engine. Personal Settings supplies one execution configuration that is frozen when a Session or Run Conversation starts and shared by an anonymous stage, a single Expert, or every ordered Team Member. This supersedes ADR-0023, restores ADR-0022's shared execution configuration, and supersedes ADR-0025's mutable-Expert connection reference, while retaining sequential fail-fast team execution, isolated member context, final-member response, and success-only Workspace merge.
 
 Skills and Connectors are independent catalog resources selected by Experts. A User owns private Skills and MCP Connectors, while an Administrator owns platform-wide CLI Connector Definitions and Users privately own their enablements, external account authorizations, and approvals. Runtime execution may use only frozen, verified Connector revisions; CLI bundles are built outside User Runs and every direct command passes through one platform Wrapper that enforces structured capability, identity, argument, Egress, authorization, approval, timeout, and Secret boundaries.

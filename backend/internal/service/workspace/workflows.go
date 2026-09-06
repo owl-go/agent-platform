@@ -253,14 +253,30 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 	if err := service.credits.RequirePositiveBalance(ctx, owner, service.userTimezone(ctx, owner)); err != nil {
 		return nil, publicError(err)
 	}
-	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
+	attachments, cleanup, err := service.resolveMessageAttachments(ctx, owner, workspacedomain.ConversationScope{WorkflowID: request.WorkflowId, RunID: request.RunId}, request.AttachmentIds, request.FileReferences)
+	accepted := false
+	defer func() {
+		if !accepted {
+			cleanup()
+		}
+	}()
 	if err != nil {
 		return nil, publicError(err)
 	}
-	item, err := service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments)
+	var item workspacedomain.Run
+	if request.SelectionId != "" {
+		repository, portErr := service.conversationRepository()
+		if portErr != nil {
+			return nil, publicError(portErr)
+		}
+		item, err = repository.ContinueSelectedRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments, request.SelectionId)
+	} else {
+		item, err = service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments)
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
+	accepted = true
 	return runResponse(item), nil
 }
 

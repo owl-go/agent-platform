@@ -12,6 +12,13 @@ export interface Session { id: string; title: string; expert_id?: string; expert
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; cli_connectors?: Array<{ id: string; name: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
+export interface ConversationScope { session_id?: string; workflow_id?: string; run_id?: string }
+export interface SelectedResource { id: string; name: string; revision: string }
+export interface ConversationSelection { id: string; expert_id: string; expert_team_id: string; name: string; icon: string; icon_background: string; member_count: number; skills: SelectedResource[]; mcp_servers: SelectedResource[]; cli_connectors: SelectedResource[]; inherited_skills: SelectedResource[]; inherited_mcp_servers: SelectedResource[]; inherited_cli_connectors: SelectedResource[]; disabled_connectors: string[] }
+export interface SelectionInput { previous_id?: string; change_expert?: boolean; expert_id?: string; expert_team_id?: string; skill_ids: string[]; mcp_server_ids: string[]; cli_connector_ids: string[]; disabled_connectors: string[]; refresh_ids?: string[] }
+export interface FileReference { kind: "attachment" | "artifact" | "workspace"; id: string; path: string }
+export interface ConversationFile { kind: FileReference["kind"] | "directory"; id: string; path: string; name: string; size: number; available: boolean; unavailable_reason: string }
+export interface ConversationInput { selection_id?: string; file_references?: FileReference[] }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
 export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; artifacts?: Artifact[] }
@@ -75,6 +82,10 @@ export class ApiError extends Error {
 }
 
 export interface PlatformApi {
+  getConversationSelection(scope: ConversationScope, signal?: AbortSignal): Promise<ConversationSelection>;
+  resolveConversationSelection(scope: ConversationScope, input: SelectionInput, signal?: AbortSignal): Promise<ConversationSelection>;
+  listConversationFiles(scope: ConversationScope, workspacePath?: string, signal?: AbortSignal): Promise<ConversationFile[]>;
+  getSkillDocument(id: string, signal?: AbortSignal): Promise<{ skill: Skill; content: string }>;
   getCreditBalance(signal?: AbortSignal): Promise<CreditBalance>;
   listCreditLedger(cursor?: string, signal?: AbortSignal): Promise<{ items: CreditLedgerEntry[]; next_cursor?: string }>;
   redeemCreditCode(code: string, signal?: AbortSignal): Promise<CreditBalance>;
@@ -95,7 +106,7 @@ export interface PlatformApi {
   streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
   uploadAttachment(file: File, signal?: AbortSignal): Promise<Attachment>;
   getAttachmentDownload(id: string, signal?: AbortSignal): Promise<Blob>;
-  sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
+  sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
@@ -109,7 +120,7 @@ export interface PlatformApi {
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
-  continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal): Promise<Run>;
+  continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<Run>;
   streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<void>;
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
@@ -200,6 +211,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
   };
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
+    async getConversationSelection(scope, signal) { return normalizeSelection(await call(`/api/v1/conversation-selection?${scopeQuery(scope)}`, { signal })); },
+    async resolveConversationSelection(scope, input, signal) { return normalizeSelection(await call("/api/v1/conversation-selection", json("POST", { ...scope, ...input }, signal))); },
+    async listConversationFiles(scope, workspacePath = "", signal) { const result = await call<{ items?: ConversationFile[] }>(`/api/v1/conversation-files?${scopeQuery(scope)}&workspace_path=${encodeURIComponent(workspacePath)}`, { signal }); return (result.items ?? []).map((item) => ({ ...item, size: Number(item.size), id: item.id ?? "", path: item.path ?? "" })); },
+    getSkillDocument(id, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}/document`, { signal }); },
     getCreditBalance(signal) { return call("/api/v1/credits/balance", { signal }); },
     listCreditLedger(cursor = "", signal) { return call(`/api/v1/credits/ledger?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
     redeemCreditCode(code, signal) { return call("/api/v1/credits/redemptions", json("POST", { code }, signal)); },
@@ -268,7 +283,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       return response.json() as Promise<Attachment>;
     },
     getAttachmentDownload(id, signal) { return download(`/api/v1/attachments/${encodeURIComponent(id)}/download`, signal); },
-    sendSessionMessage(id, content, attachmentIDs = [], signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs }, signal)); },
+    sendSessionMessage(id, content, attachmentIDs = [], signal, input) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
@@ -282,7 +297,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listRuns(id, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, { signal })).items ?? []).map(normalizeRun); },
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
-    async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs }, signal))); },
+    async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal, input) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal))); },
     async streamRunEvents(workflowID, runID, onEvent, signal) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
@@ -402,6 +417,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
 
 function normalizeExpert(expert: Expert): Expert {
   return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [], cli_connector_definition_ids: expert.cli_connector_definition_ids ?? [] };
+}
+
+function scopeQuery(scope: ConversationScope): string { return new URLSearchParams(Object.entries(scope).filter((entry): entry is [string, string] => Boolean(entry[1]))).toString(); }
+function normalizeSelection(item: ConversationSelection): ConversationSelection {
+  return { ...item, skills: item.skills ?? [], mcp_servers: item.mcp_servers ?? [], cli_connectors: item.cli_connectors ?? [], inherited_skills: item.inherited_skills ?? [], inherited_mcp_servers: item.inherited_mcp_servers ?? [], inherited_cli_connectors: item.inherited_cli_connectors ?? [], disabled_connectors: item.disabled_connectors ?? [] };
 }
 
 function normalizeExpertTeam(team: ExpertTeam): ExpertTeam {

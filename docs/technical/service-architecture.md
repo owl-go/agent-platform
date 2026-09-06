@@ -23,8 +23,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 ## 事务与并发
 
 - Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
-- Session 首次发送消息、Run Conversation 首个 Run 创建时从 Personal Settings 解析并冻结一个 Provider Model 与 Runtime Engine。Snapshot 的每个 Stage 共用该配置，同时独立包含可选 Expert/Team Member 身份、四段结构化 guidance、Model Provider Connection 版本、Model API Protocol、Endpoint，以及 exact Skill/Connector revisions；环境变量和共享 Workspace 配置保留在公共快照层。后续消息或 Run 复用该对话快照。API Key 与 Connector Secret 通过版本化凭证引用在 Worker 领取或命令启动前加载，不进入普通 Snapshot JSON。
-- Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）和 Runtime Engine 维护隔离的 Warm Runtime Container 租约。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
+- Session 首次发送消息、Run Conversation 首个 Run 创建时从 Personal Settings 解析并冻结一个 Provider Model 与 Runtime Engine。Snapshot 的每个 Stage 共用该配置，同时独立包含可选 Expert/Team Member 身份、四段结构化 guidance、Model Provider Connection 版本、Model API Protocol、Endpoint，以及 exact Skill/Connector revisions；环境变量和共享 Workspace 配置保留在公共快照层。后续消息或 Run 复用冻结的执行配置；每轮按 owning User 与 Session / Run Conversation 隔离的不可变 Conversation Selection 合并专家默认和显式资源，在该轮 Response Snapshot / Run Snapshot 中保留实际执行计划。成功提交在同一事务内清空 retained selection 的显式 Skills，保留专家与 Connector 选择。API Key 与 Connector Secret 通过版本化凭证引用在 Worker 领取或命令启动前加载，不进入普通 Snapshot JSON。
+- Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）、Runtime Engine 和实际资源集合摘要维护隔离的 Warm Runtime Container 租约。动态资源选择的轮次关闭 Native Resume，始终使用平台消息与摘要续接，避免旧上下文保留已移除的指导与工具。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
 - CLI Connector bundle 在无 User 凭证的 Builder 中生成并通过 Object Storage 发布；Definition 状态与 exact bundle/Runtime Digest Conformance 控制 availability。公共 Wrapper 是所有 Runtime 的唯一 direct CLI 入口，负责 argv 与权限策略。`waiting_for_user`、一次性 Approval、nonce consumption 和执行前重校验由 Workspace Application 协调并持久化；每个 Stage 同时只有一个 active Approval。
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
 - Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
@@ -40,6 +40,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 Credits 契约允许 User 读取自己的余额和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前余额与下一次每日额度时间，不返回其他 User 或内部费率数据。
 
 工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
+
+`GET/POST /api/v1/conversation-selection` 读取或解析 owning User 的不可变选择修订。客户端仅持有 opaque ID 与展示元数据，不提交执行配置或读取 Secret。`GET /api/v1/conversation-files` 汇总当前对话附件与 Artifact，并为 Workflow 提供标明来源的 Workspace 文件；发送接口接收 `selection_id` 和 `file_references`。引用在提交前经 scope、路径、大小和 SHA-256 校验后复制为普通不可变附件；失败提交清理新副本，成功提交使用既有附件物化与只读挂载路径。`GET /api/v1/skills/{skill_id}/document` 在拥有者校验后读取已安装包中的 `SKILL.md`，前端安全渲染。
 
 两个流式端点有意使用手写 Handler：
 
@@ -59,3 +61,5 @@ Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
 
 Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。启用飞书 CLI Connector 时，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Feishu Application 并销毁临时设备码。历史 Snapshot JSON 不回写。
+
+Conversation Selection 使用追加式 Migration `000027_conversation_selections.sql`，按 owner 与 Session / 根 Run 约束修订；删除所属对话时数据库级联删除修订。本地 PostgreSQL 17 临时数据库已验证完整迁移链与会话/工作流选择事务，生产迁移及 Linux + runsc 证据须单独取得。

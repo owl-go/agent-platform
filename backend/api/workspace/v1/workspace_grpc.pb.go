@@ -19,6 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AgentWorkspaceService_GetConversationSelection_FullMethodName            = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
+	AgentWorkspaceService_ResolveConversationSelection_FullMethodName        = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
+	AgentWorkspaceService_ListConversationFiles_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
+	AgentWorkspaceService_GetSkillDocument_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
 	AgentWorkspaceService_GetCurrentUser_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 	AgentWorkspaceService_ListUsers_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/ListUsers"
 	AgentWorkspaceService_CreateUser_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/CreateUser"
@@ -115,6 +119,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentWorkspaceServiceClient interface {
+	GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
+	ResolveConversationSelection(ctx context.Context, in *ResolveConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
+	ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...grpc.CallOption) (*ListConversationFilesResponse, error)
+	GetSkillDocument(ctx context.Context, in *GetSkillDocumentRequest, opts ...grpc.CallOption) (*SkillDocument, error)
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*CurrentUser, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
@@ -213,6 +221,46 @@ type agentWorkspaceServiceClient struct {
 
 func NewAgentWorkspaceServiceClient(cc grpc.ClientConnInterface) AgentWorkspaceServiceClient {
 	return &agentWorkspaceServiceClient{cc}
+}
+
+func (c *agentWorkspaceServiceClient) GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConversationSelection)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetConversationSelection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ResolveConversationSelection(ctx context.Context, in *ResolveConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConversationSelection)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ResolveConversationSelection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...grpc.CallOption) (*ListConversationFilesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConversationFilesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConversationFiles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetSkillDocument(ctx context.Context, in *GetSkillDocumentRequest, opts ...grpc.CallOption) (*SkillDocument, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SkillDocument)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetSkillDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentWorkspaceServiceClient) GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*CurrentUser, error) {
@@ -1119,6 +1167,10 @@ func (c *agentWorkspaceServiceClient) DisconnectCLIConnectorAuthorization(ctx co
 // All implementations must embed UnimplementedAgentWorkspaceServiceServer
 // for forward compatibility.
 type AgentWorkspaceServiceServer interface {
+	GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error)
+	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
+	ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error)
+	GetSkillDocument(context.Context, *GetSkillDocumentRequest) (*SkillDocument, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
@@ -1219,6 +1271,18 @@ type AgentWorkspaceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAgentWorkspaceServiceServer struct{}
 
+func (UnimplementedAgentWorkspaceServiceServer) GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConversationSelection not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveConversationSelection not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConversationFiles not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetSkillDocument(context.Context, *GetSkillDocumentRequest) (*SkillDocument, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSkillDocument not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCurrentUser not implemented")
 }
@@ -1508,6 +1572,78 @@ func RegisterAgentWorkspaceServiceServer(s grpc.ServiceRegistrar, srv AgentWorks
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AgentWorkspaceService_ServiceDesc, srv)
+}
+
+func _AgentWorkspaceService_GetConversationSelection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConversationSelectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetConversationSelection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetConversationSelection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetConversationSelection(ctx, req.(*GetConversationSelectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ResolveConversationSelection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveConversationSelectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ResolveConversationSelection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ResolveConversationSelection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ResolveConversationSelection(ctx, req.(*ResolveConversationSelectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListConversationFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConversationFilesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConversationFiles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConversationFiles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConversationFiles(ctx, req.(*ListConversationFilesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetSkillDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetSkillDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetSkillDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetSkillDocument(ctx, req.(*GetSkillDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AgentWorkspaceService_GetCurrentUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -3137,6 +3273,22 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "workspace.v1.AgentWorkspaceService",
 	HandlerType: (*AgentWorkspaceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetConversationSelection",
+			Handler:    _AgentWorkspaceService_GetConversationSelection_Handler,
+		},
+		{
+			MethodName: "ResolveConversationSelection",
+			Handler:    _AgentWorkspaceService_ResolveConversationSelection_Handler,
+		},
+		{
+			MethodName: "ListConversationFiles",
+			Handler:    _AgentWorkspaceService_ListConversationFiles_Handler,
+		},
+		{
+			MethodName: "GetSkillDocument",
+			Handler:    _AgentWorkspaceService_GetSkillDocument_Handler,
+		},
 		{
 			MethodName: "GetCurrentUser",
 			Handler:    _AgentWorkspaceService_GetCurrentUser_Handler,

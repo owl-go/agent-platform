@@ -9,6 +9,10 @@ import "google/protobuf/timestamp.proto";
 option go_package = "agent-platform/backend/api/workspace/v1;workspacev1";
 
 service AgentWorkspaceService {
+  rpc GetConversationSelection(GetConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {get: "/api/v1/conversation-selection"}; }
+  rpc ResolveConversationSelection(ResolveConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {post: "/api/v1/conversation-selection" body: "*"}; }
+  rpc ListConversationFiles(ListConversationFilesRequest) returns (ListConversationFilesResponse) { option (google.api.http) = {get: "/api/v1/conversation-files"}; }
+  rpc GetSkillDocument(GetSkillDocumentRequest) returns (SkillDocument) { option (google.api.http) = {get: "/api/v1/skills/{skill_id}/document"}; }
   rpc GetCurrentUser(GetCurrentUserRequest) returns (CurrentUser) { option (google.api.http) = {get: "/api/v1/me"}; }
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) { option (google.api.http) = {get: "/api/v1/admin/users"}; }
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
@@ -149,7 +153,7 @@ message DeleteSessionRequest { string session_id = 1; }
 message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; reserved 8; reserved "current_provider_model_id"; optional string expert_team_id = 9; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
-message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
@@ -184,7 +188,7 @@ message ListRunsRequest { string workflow_id = 1; }
 message ListRunsResponse { repeated Run items = 1; }
 message GetRunRequest { string workflow_id = 1; string run_id = 2; }
 message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
-message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; }
+message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
 message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; }
@@ -300,3 +304,14 @@ message Attachment { string id = 1; string name = 2; string content_type = 3; in
 message ExecutionActivity { string type = 1; string detail = 2; }
 message GetSessionArtifactDownloadRequest { string session_id = 1; string artifact_id = 2; }
 message CompleteCLIConnectorEnablementRequest { string enablement_id = 1; }
+
+message GetConversationSelectionRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; }
+message ResolveConversationSelectionRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; string previous_id = 4; bool change_expert = 5; string expert_id = 6; string expert_team_id = 7; repeated string skill_ids = 8; repeated string mcp_server_ids = 9; repeated string cli_connector_ids = 10; repeated string disabled_connectors = 11; repeated string refresh_ids = 12; }
+message ConversationSelection { string id = 1; string expert_id = 2; string expert_team_id = 3; string name = 4; string icon = 5; string icon_background = 6; repeated SelectedResource skills = 7; repeated SelectedResource mcp_servers = 8; repeated SelectedResource cli_connectors = 9; repeated SelectedResource inherited_skills = 10; repeated SelectedResource inherited_mcp_servers = 11; repeated SelectedResource inherited_cli_connectors = 12; repeated string disabled_connectors = 13; int32 member_count = 14; }
+message SelectedResource { string id = 1; string name = 2; string revision = 3; }
+message ListConversationFilesRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; string workspace_path = 4; }
+message ListConversationFilesResponse { repeated ConversationFile items = 1; }
+message ConversationFile { string kind = 1; string id = 2; string name = 3; string path = 4; int64 size = 5; bool available = 6; string unavailable_reason = 7; }
+message FileReference { string kind = 1; string id = 2; string path = 3; }
+message GetSkillDocumentRequest { string skill_id = 1; }
+message SkillDocument { Skill skill = 1; string content = 2; }

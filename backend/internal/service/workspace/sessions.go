@@ -146,17 +146,35 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if err := service.validateExecutionRuntimes(ctx, owner, session.ExpertID, session.ExpertTeamID); err != nil {
-		return nil, publicError(err)
+	if request.SelectionId == "" {
+		if err := service.validateExecutionRuntimes(ctx, owner, session.ExpertID, session.ExpertTeamID); err != nil {
+			return nil, publicError(err)
+		}
 	}
-	attachments, err := service.resolveAttachments(ctx, owner, request.AttachmentIds)
+	attachments, cleanup, err := service.resolveMessageAttachments(ctx, owner, workspacedomain.ConversationScope{SessionID: request.SessionId}, request.AttachmentIds, request.FileReferences)
+	accepted := false
+	defer func() {
+		if !accepted {
+			cleanup()
+		}
+	}()
 	if err != nil {
 		return nil, publicError(err)
 	}
-	user, assistant, err := service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, attachments)
+	var user, assistant workspacedomain.Message
+	if request.SelectionId != "" {
+		repository, portErr := service.conversationRepository()
+		if portErr != nil {
+			return nil, publicError(portErr)
+		}
+		user, assistant, err = repository.CreateSelectedMessagePair(ctx, owner, request.SessionId, request.Content, attachments, request.SelectionId)
+	} else {
+		user, assistant, err = service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, attachments)
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
+	accepted = true
 	return &workspacev1.SendSessionMessageResponse{UserMessage: messageResponse(user), AssistantMessage: messageResponse(assistant)}, nil
 }
 

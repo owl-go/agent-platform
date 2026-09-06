@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ArrowUp, FileText, Folder, Paperclip, X } from "@lucide/vue";
+import { ArrowUp, FileText, Folder } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
@@ -11,6 +11,8 @@ import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
+import ConversationComposer from "../components/ConversationComposer.vue";
+import type { ComposerSubmission } from "../conversationDraft";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
 const api = inject(platformApiKey)!;
@@ -20,8 +22,8 @@ const origin = window.location.origin;
 const runConversationElement = ref<HTMLElement>();
 const runComposerLayer = ref<HTMLElement>();
 const runComposerClearance = ref(154);
-const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const followUpInput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
-const pendingAttachments = ref<File[]>([]); const attachmentURLs = ref<Record<string, string>>({});
+const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const attachmentURLs = ref<Record<string, string>>({});
 const copiedStageKey = ref("");
 const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
@@ -30,7 +32,7 @@ const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] })
 const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
-const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running"));
+const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"));
 const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => {
   const stored = Number.isFinite(item.elapsed_ms) ? Math.max(0, item.elapsed_ms) : 0;
   if (item.state !== "queued" && item.state !== "running") return total + stored;
@@ -170,34 +172,27 @@ function stopRunReveal() {
 async function waitForRunReveal(runID: string) {
 	while (streamingRunID.value === runID && (revealTimer || revealedRunOutput.value.length < revealTarget.length)) await new Promise((resolve) => setTimeout(resolve, 25));
 }
-async function sendFollowUp() {
-	if (!selectedRun.value || (!followUpInput.value.trim() && pendingAttachments.value.length === 0) || activeConversationRun.value || sendingFollowUp.value) return;
-	sendingFollowUp.value = true;
-	try {
-		const uploaded = await Promise.all(pendingAttachments.value.map((file) => api.uploadAttachment(file)));
-		const created = await api.continueRunConversation(workflowID.value, selectedRun.value.id, followUpInput.value.trim(), uploaded.map((item) => item.id));
-		followUpInput.value = "";
-		pendingAttachments.value = [];
-		conversationRuns.value.push(created);
-		void hydrateAttachmentURLs(created.attachments ?? []);
-		await scrollConversationToEnd();
-		void streamConversationTurn(created);
-	} catch { error.value = t("errors.generic"); } finally { sendingFollowUp.value = false; }
+async function sendFollowUp(message: ComposerSubmission) {
+  if (!selectedRun.value || activeConversationRun.value || sendingFollowUp.value) throw new Error("conversation_not_ready");
+  const rootID = selectedRun.value.id;
+  sendingFollowUp.value = true;
+  try {
+    const created = await api.continueRunConversation(workflowID.value, rootID, message.content, message.attachmentIDs, undefined, message.input);
+    if (selectedRun.value?.id !== rootID) return;
+    conversationRuns.value.push(created);
+    void hydrateAttachmentURLs(created.attachments ?? []);
+    await scrollConversationToEnd();
+    void streamConversationTurn(created);
+  } finally { sendingFollowUp.value = false; }
 }
-function chooseConversationAttachments(event: Event) {
-	const input = event.target as HTMLInputElement; const files = [...(input.files ?? [])];
-	if (files.some((file) => file.size > 100 * 1024 * 1024) || pendingAttachments.value.length + files.length > 10) error.value = t("sessions.attachmentLimits");
-	else pendingAttachments.value.push(...files);
-	input.value = "";
-}
-function removeConversationAttachment(index: number) { pendingAttachments.value.splice(index, 1); }
+
 async function hydrateAttachmentURLs(attachments: Attachment[]) { await Promise.all(attachments.filter((item) => item.image && !attachmentURLs.value[item.id]).map(async (item) => { try { attachmentURLs.value[item.id] = URL.createObjectURL(await api.getAttachmentDownload(item.id)); } catch { /* Keep the file card usable. */ } })); }
 function clearAttachmentURLs() { for (const url of Object.values(attachmentURLs.value)) URL.revokeObjectURL(url); attachmentURLs.value = {}; }
 function clearAttachmentURL(id: string) { const url = attachmentURLs.value[id]; if (!url) return; URL.revokeObjectURL(url); delete attachmentURLs.value[id]; }
 async function openTurnAttachment(attachment: Attachment) { try { const url = URL.createObjectURL(await api.getAttachmentDownload(attachment.id)); const anchor = document.createElement("a"); anchor.href = url; anchor.download = attachment.name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("errors.generic"); } }
 async function copyStage(runID: string, position: number, value: string) { try { await navigator.clipboard.writeText(value); copiedStageKey.value = `${runID}:${position}`; window.setTimeout(() => { copiedStageKey.value = ""; }, 1600); } catch { error.value = t("errors.copy"); } }
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); clearAttachmentURLs(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; followUpInput.value = ""; pendingAttachments.value = []; }
+function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); clearAttachmentURLs(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
@@ -245,7 +240,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
           <article class="message assistant"><div class="message-content"><div v-if="turn.id === eventRunID && runtimeActivities.length" class="runtime-activity" aria-live="polite"><div v-if="turn.id === streamingRunID" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ runtimeActivities.at(-1)?.label }}</strong><small v-if="runtimeActivities.at(-1)?.detail">{{ runtimeActivities.at(-1)?.detail }}</small></div><details v-if="runtimeActivities.length > 1 || turn.id !== streamingRunID"><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="activity in runtimeActivities" :key="activity.sequence"><span></span><div><strong>{{ activity.historyLabel }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(displayArtifactNames(runOutput(turn), runArtifacts(turn)))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running' || turn.state === 'waiting_for_user'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ turn.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small v-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small><small v-else>{{ t('sessions.progress.thinking') }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(stage.final_text)"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><CreditConsumption :value="turn.credit_consumption" /><ArtifactDisclosure v-if="runArtifacts(turn).length" :artifacts="runArtifacts(turn)" @download="openArtifact" /><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
         </template>
       </div>
-      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><form class="composer run-composer" @submit.prevent="sendFollowUp"><div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removeConversationAttachment(index)"><X /></button></span></div><textarea v-model="followUpInput" rows="2" :placeholder="t('workflows.followUpPlaceholder')" :disabled="Boolean(activeConversationRun)" @keydown.enter.exact.prevent="sendFollowUp"></textarea><label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="Boolean(activeConversationRun) || sendingFollowUp" @change="chooseConversationAttachments"></label><el-button v-if="activeConversationRun" type="danger" class="run-stop" :aria-label="t('sessions.stopGeneration')" @click="cancelConversationRun">■</el-button><el-button v-else native-type="submit" type="primary" :loading="sendingFollowUp" :disabled="!followUpInput.trim() && pendingAttachments.length === 0" :aria-label="t('common.send')">↑</el-button></form></div>
+      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
       <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h1>{{ workflow.name }}</h1><p>{{ workflow.goal }}</p></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>

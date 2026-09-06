@@ -5,6 +5,8 @@ import { Search, Users, UserRound } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type ExpertTeam } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
+import CatalogDetails from "../components/CatalogDetails.vue";
+import ProfileIcon from "../components/ProfileIcon.vue";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -15,6 +17,9 @@ const teams = ref<ExpertTeam[]>([]);
 const query = ref("");
 const tag = ref("");
 const error = ref("");
+const detailExpert = ref<Expert>();
+const detailTeam = ref<ExpertTeam>();
+function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
 const visibleExperts = computed(() => filter(experts.value));
@@ -62,10 +67,10 @@ function selectTab(tab: string | number) {
     <ToastMessage v-if="error" kind="error" :title="t('experts.operationFailed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
 
     <div v-if="activeTab === 'experts'" class="expert-grid catalog-grid">
-      <RouterLink v-for="expert in visibleExperts" :key="expert.id" class="expert-card-link" :to="`/experts/${expert.id}`">
-        <el-card class="expert-card" shadow="hover">
+      <article v-for="expert in visibleExperts" :key="expert.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="expert.name" @click="detailExpert = expert" @keydown.enter.self="detailExpert = expert" @keydown.space.self.prevent="detailExpert = expert">
+        <el-card class="expert-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!expert.available" @click.stop="summon('expert_id', expert.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
-            <span class="catalog-avatar"><UserRound :size="22" /></span>
+            <ProfileIcon :icon="expert.icon" :background="expert.icon_background" />
             <div class="expert-card-copy">
               <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
               <p>{{ expert.introduction }}</p>
@@ -74,15 +79,15 @@ function selectTab(tab: string | number) {
             </div>
           </div>
         </el-card>
-      </RouterLink>
+      </article>
       <el-empty v-if="!visibleExperts.length" class="catalog-empty" :description="t('experts.noExperts')" />
     </div>
 
     <div v-else class="expert-grid catalog-grid">
-      <RouterLink v-for="team in visibleTeams" :key="team.id" class="expert-card-link" :to="`/expert-teams/${team.id}`">
-        <el-card class="expert-card expert-team-card" shadow="hover">
+      <article v-for="team in visibleTeams" :key="team.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="team.name" @click="detailTeam = team" @keydown.enter.self="detailTeam = team" @keydown.space.self.prevent="detailTeam = team">
+        <el-card class="expert-card expert-team-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!team.available" @click.stop="summon('expert_team_id', team.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
-            <span class="catalog-avatar team"><Users :size="22" /></span>
+            <ProfileIcon :icon="team.icon" :background="team.icon_background" team />
             <div class="expert-card-copy">
               <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
               <p>{{ team.introduction }}</p>
@@ -91,8 +96,9 @@ function selectTab(tab: string | number) {
             </div>
           </div>
         </el-card>
-      </RouterLink>
+      </article>
       <el-empty v-if="!visibleTeams.length" class="catalog-empty" :description="t('experts.noTeams')" />
     </div>
   </section>
+  <CatalogDetails :expert="detailExpert" :team="detailTeam" @close="detailExpert = undefined; detailTeam = undefined" />
 </template>

@@ -145,6 +145,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		return result, err
 	}
 	firstStage := executionStages[0]
+	job.Snapshot.SelectionKey = firstStage.SelectionKey
 	job.Snapshot.RuntimeEngine, job.Snapshot.ProviderModel = firstStage.RuntimeEngine, firstStage.ProviderModel
 	job.Snapshot.Expert, job.Snapshot.MCPServers, job.Snapshot.Skills, job.Snapshot.CLIConnectors = firstStage.Expert, firstStage.MCPServers, firstStage.Skills, firstStage.CLIConnectors
 	if len(executionStages) > 1 {
@@ -158,6 +159,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		job.Snapshot.ExpertTeam = team
 	}
 	runtimeConfig, ok := executor.config.Worker.Runtimes[string(job.Snapshot.RuntimeEngine)]
+	if job.Snapshot.SelectionKey != "" {
+		runtimeConfig.NativeResume = false
+	}
 	if !ok || !runtimeConfig.Available {
 		return result, fmt.Errorf("Runtime %s is unavailable", job.Snapshot.RuntimeEngine)
 	}
@@ -238,8 +242,14 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			memberJob = teamMemberJob(job, member, result.ExpertStages)
 		}
 		memberJob.Snapshot.RuntimeEngine, memberJob.Snapshot.ProviderModel = executionStage.RuntimeEngine, executionStage.ProviderModel
+		memberJob.Snapshot.SelectionKey = executionStage.SelectionKey
 		memberJob.Snapshot.Expert, memberJob.Snapshot.MCPServers, memberJob.Snapshot.Skills, memberJob.Snapshot.CLIConnectors = executionStage.Expert, executionStage.MCPServers, executionStage.Skills, executionStage.CLIConnectors
 		stageRuntimeConfig, available := executor.config.Worker.Runtimes[string(executionStage.RuntimeEngine)]
+		// Explicit resource selection uses platform history until Resume with
+		// changing resources has its own conformance evidence.
+		if executionStage.SelectionKey != "" {
+			stageRuntimeConfig.NativeResume = false
+		}
 		if !available || !stageRuntimeConfig.Available {
 			return result, fmt.Errorf("Runtime %s is unavailable", executionStage.RuntimeEngine)
 		}
@@ -873,6 +883,9 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 			identity = job.StageIdentity
 		}
 		scope += fmt.Sprintf(":expert:%s:%d", identity, job.Snapshot.Expert.Version)
+	}
+	if job.Snapshot.SelectionKey != "" {
+		scope += ":selection:" + job.Snapshot.SelectionKey
 	}
 	name, err := containerprocess.WarmContainerName(scope, string(job.Snapshot.RuntimeEngine), runtime.ImageDigest)
 	if err != nil {

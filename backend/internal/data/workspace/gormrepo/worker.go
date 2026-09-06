@@ -272,7 +272,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := json.Unmarshal(row.WorkflowSnapshot, &snapshot); err != nil {
 		return nil, fmt.Errorf("decode claimed Workflow snapshot: %w", err)
 	}
-	if err := validateQueuedSnapshotAvailability(tx, snapshot); err != nil {
+	if err := validateQueuedSnapshotAvailability(tx, snapshot, row.OwnerID); err != nil {
 		now, message := time.Now().UTC(), err.Error()
 		if updateErr := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "ended_at": now, "version": gorm.Expr("version + 1")}).Error; updateErr != nil {
 			return nil, updateErr
@@ -421,7 +421,7 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := validateQueuedSnapshotAvailability(tx, snapshot); err != nil {
+	if err := validateQueuedSnapshotAvailability(tx, snapshot, session.OwnerID); err != nil {
 		now, message := time.Now().UTC(), err.Error()
 		if updateErr := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "failed", "error": message, "progress_stage": "", "completed_at": now}).Error; updateErr != nil {
 			return nil, updateErr
@@ -434,14 +434,15 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(stages) == 1 && session.RuntimeEngine != nil && *session.RuntimeEngine == string(stages[0].RuntimeEngine) {
+	// Dynamic selections use platform history, since native state can retain removed tools.
+	if stages[0].SelectionKey == "" && len(stages) == 1 && session.RuntimeEngine != nil && *session.RuntimeEngine == string(stages[0].RuntimeEngine) {
 		var checkpointRow struct {
 			NativeCheckpoint string `gorm:"column:native_checkpoint"`
 		}
 		if err := tx.Table("sessions").Select("native_checkpoint").Where("id = ?", session.ID).Take(&checkpointRow).Error; err == nil {
 			checkpoint = checkpointRow.NativeCheckpoint
 		}
-	} else if len(stages) > 1 && session.NativeCheckpoint != "" {
+	} else if stages[0].SelectionKey == "" && len(stages) > 1 && session.NativeCheckpoint != "" {
 		if err := json.Unmarshal([]byte(session.NativeCheckpoint), &stageCheckpoints); err != nil {
 			return nil, fmt.Errorf("decode team native checkpoints: %w", err)
 		}
@@ -459,7 +460,7 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, Attachments: attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
 }
 
-func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSnapshot) error {
+func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSnapshot, ownerID string) error {
 	stages, err := snapshot.OrderedStages()
 	if err != nil {
 		return err
@@ -501,9 +502,18 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 				return fmt.Errorf("%w: queued Provider Model for Stage %d is incompatible", domain.ErrInvalid, stage.Position)
 			}
 		}
+		for _, server := range stage.MCPServers {
+			var count int64
+			if err := tx.Model(&mcpRecord{}).Where("id = ? AND tested_at IS NOT NULL AND test_error IS NULL", server.ID).Count(&count).Error; err != nil {
+				return err
+			}
+			if count != 1 {
+				return fmt.Errorf("%w: queued MCP Server for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+			}
+		}
 		for _, connector := range stage.CLIConnectors {
 			var count int64
-			query := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND state = 'available' AND bundle_sha256 = ?", connector.ID, connector.BundleSHA256).Count(&count)
+			query := tx.Table("cli_connector_definitions definition").Joins("JOIN cli_connector_enablements enablement ON enablement.definition_id = definition.id").Where("definition.id = ? AND definition.state = 'available' AND enablement.owner_user_id = ? AND enablement.state = 'enabled'", connector.ID, ownerID).Count(&count)
 			if query.Error != nil {
 				return query.Error
 			}
@@ -524,7 +534,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 				return domain.ExecutionSnapshot{}, fmt.Errorf("decode frozen Session execution plan: %w", err)
 			}
 		} else {
-			fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, Goal: "", ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
+			fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, Goal: "", WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
 			var err error
 			current, err = loadExecutionSnapshot(tx, fake)
 			if err != nil {
@@ -539,6 +549,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 				return domain.ExecutionSnapshot{}, err
 			}
 		}
+		current.Stages = append([]domain.ExecutionStageSnapshot(nil), response.Stages...)
 		if err := hydrateStageCredentials(tx, &current); err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}

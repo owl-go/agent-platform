@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Archive, ArchiveRestore, Paperclip, Pencil, Square, Trash2, X } from "@lucide/vue";
+import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type ExecutionActivity, type Expert, type ExpertTeam, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
+import ConversationComposer from "../components/ConversationComposer.vue";
+import type { ComposerSubmission } from "../conversationDraft";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { displayArtifactNames } from "../artifactDisplay";
@@ -18,8 +20,7 @@ const router = useRouter();
 const { t, locale } = useI18n();
 const sessions = ref<Session[]>([]);
 const archived = ref<Session[]>([]);
-const experts = ref<Expert[]>([]);
-const expertTeams = ref<ExpertTeam[]>([]);
+const specialistName = ref("");
 const connections = ref<ModelProviderConnection[]>([]);
 const runtimes = ref<RuntimeEngineStatus[]>([]);
 const settings = ref<PersonalSettings>();
@@ -33,8 +34,7 @@ const editingTitle = ref("");
 const pendingDelete = ref<Session>();
 const deleting = ref(false);
 const deleteDialog = ref<HTMLElement>();
-const draft = ref("");
-const pendingAttachments = ref<File[]>([]);
+const launchSkill = ref<{ sessionID: string; skillID: string }>();
 const attachmentURLs = ref<Record<string, string>>({});
 const loading = ref(true);
 const sending = ref(false);
@@ -47,15 +47,8 @@ const composerLayer = ref<HTMLElement>();
 const composerClearance = ref(154);
 const showJumpToLatest = ref(false);
 const keepAtLatest = ref(true);
-const selectedExpert = computed(() => experts.value.find((item) => item.id === selected.value?.expert_id));
-const selectedExpertTeam = computed(() => expertTeams.value.find((item) => item.id === selected.value?.expert_team_id));
-const selectableExperts = computed(() => experts.value.filter((item) => item.available));
-const selectableExpertTeams = computed(() => expertTeams.value.filter((item) => item.available));
-const hasSelectableSpecialist = computed(() => selectableExperts.value.length > 0 || selectableExpertTeams.value.length > 0);
-const specialistValue = computed(() => selected.value?.expert_team_id ? `team:${selected.value.expert_team_id}` : selected.value?.expert_id ? `expert:${selected.value.expert_id}` : "none");
-function teamSelectionLabel(team: ExpertTeam): string { const compatibility = team.experts.some((item) => item.compatibility === "incompatible") ? t("experts.incompatible") : team.experts.some((item) => item.compatibility === "unverified") ? t("settings.unverified") : t("settings.verified"); return `${team.name} · ${compatibility}`; }
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
-const setupRequired = computed(() => selectedExpert.value ? !selectedExpert.value.available : selectedExpertTeam.value ? !selectedExpertTeam.value.available : selectableModels.value.length === 0 || !settings.value?.runtime_model_defaults.some((item) => item.runtime_engine === settings.value?.default_runtime_engine) || !runtimes.value.some((item) => item.name === settings.value?.default_runtime_engine && item.available));
+const setupRequired = computed(() => messages.value.length > 0 ? false : selectableModels.value.length === 0 || !settings.value?.runtime_model_defaults.some((item) => item.runtime_engine === settings.value?.default_runtime_engine) || !runtimes.value.some((item) => item.name === settings.value?.default_runtime_engine && item.available));
 const activeAssistant = computed(() => {
   for (let index = messages.value.length - 1; index >= 0; index--) {
     const message = messages.value[index];
@@ -126,7 +119,7 @@ function scrollToLatest(behavior: ScrollBehavior = "smooth") {
 async function refresh() {
   loading.value = true; error.value = "";
   try {
-    [sessions.value, archived.value, experts.value, expertTeams.value, connections.value, runtimes.value, settings.value] = await Promise.all([api.listSessions(false), api.listSessions(true), api.listExperts(), api.listExpertTeams(), api.listModelProviderConnections(), api.listRuntimeEngines(), api.getSettings()]);
+    [sessions.value, archived.value, connections.value, runtimes.value, settings.value] = await Promise.all([api.listSessions(false), api.listSessions(true), api.listModelProviderConnections(), api.listRuntimeEngines(), api.getSettings()]);
     if (!selected.value && sessions.value[0]) await open(sessions.value[0]);
   } catch { error.value = t("errors.generic"); }
   finally { loading.value = false; }
@@ -138,7 +131,7 @@ async function open(item: Session) {
   clearAttachmentURLs();
   cancellingMessageID.value = undefined;
   keepAtLatest.value = true; showJumpToLatest.value = false;
-  selected.value = item; messages.value = []; loadingMessages.value = true;
+  selected.value = item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
   try {
     const loadedMessages = await api.listSessionMessages(item.id);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
@@ -157,7 +150,11 @@ async function create() {
   if (creating.value) return;
   creating.value = true;
   try {
-    const item = await api.createSession();
+    const expertID = typeof route.query.expert_id === "string" ? route.query.expert_id : undefined;
+    const teamID = typeof route.query.expert_team_id === "string" ? route.query.expert_team_id : undefined;
+    const skillID = typeof route.query.skill_id === "string" ? route.query.skill_id : undefined;
+    const item = expertID || teamID ? await api.createSession({ expert_id: expertID, expert_team_id: teamID }) : await api.createSession();
+    launchSkill.value = skillID ? { sessionID: item.id, skillID } : undefined;
     sessions.value.unshift(item);
     await router.replace({ path: "/sessions" }); await open(item);
   } catch {
@@ -167,30 +164,18 @@ async function create() {
     creating.value = false;
   }
 }
-async function send() {
-  if (!selected.value || (!draft.value.trim() && pendingAttachments.value.length === 0) || setupRequired.value || sending.value || activeAssistant.value) return;
-  const content = draft.value.trim(); draft.value = ""; sending.value = true;
+async function send(message: ComposerSubmission) {
+  if (!selected.value || setupRequired.value || sending.value || activeAssistant.value) throw new Error("conversation_not_ready");
+  const sessionID = selected.value.id, generation = pollGeneration;
+  sending.value = true;
   try {
-    const uploaded = await Promise.all(pendingAttachments.value.map((file) => api.uploadAttachment(file)));
-    const pair = await api.sendSessionMessage(selected.value.id, content, uploaded.map((item) => item.id));
+    const pair = await api.sendSessionMessage(sessionID, message.content, message.attachmentIDs, undefined, message.input);
+    if (selected.value?.id !== sessionID || generation !== pollGeneration) return;
     messages.value.push(pair.user_message, pair.assistant_message);
-    pendingAttachments.value = [];
     void hydrateAttachmentURLs(pair.user_message.attachments ?? []);
-    void streamAssistant(selected.value.id, pair.assistant_message.id, pollGeneration);
-  } catch { draft.value = content; error.value = t("errors.generic"); }
-  finally { sending.value = false; }
+    void streamAssistant(sessionID, pair.assistant_message.id, generation);
+  } finally { sending.value = false; }
 }
-function chooseAttachments(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const selectedFiles = [...(input.files ?? [])];
-  if (selectedFiles.some((file) => file.size > 100 * 1024 * 1024) || pendingAttachments.value.length + selectedFiles.length > 10) {
-    error.value = t("sessions.attachmentLimits");
-  } else {
-    pendingAttachments.value.push(...selectedFiles);
-  }
-  input.value = "";
-}
-function removePendingAttachment(index: number) { pendingAttachments.value.splice(index, 1); }
 async function hydrateAttachmentURLs(attachments: Attachment[]) {
   await Promise.all(attachments.filter((item) => item.image && !attachmentURLs.value[item.id]).map(async (item) => {
     try { attachmentURLs.value[item.id] = URL.createObjectURL(await api.getAttachmentDownload(item.id)); } catch { /* The download action reports failures on demand. */ }
@@ -303,18 +288,6 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   revealTarget = snapshot.content;
   terminalSnapshot = snapshot.state === "completed" || snapshot.state === "failed" || snapshot.state === "cancelled" ? snapshot : undefined;
   revealNextChunk();
-}
-async function changeSpecialist(event: Event) {
-  if (!selected.value || messages.value.length > 0) return;
-  const value = (event.target as HTMLSelectElement).value;
-  const selection = value.startsWith("expert:") ? { expert_id: value.slice(7) } : value.startsWith("team:") ? { expert_team_id: value.slice(5) } : {};
-  try {
-    selected.value = await api.setSessionExpertSelection(selected.value.id, selection, selected.value.version);
-    const index = sessions.value.findIndex((item) => item.id === selected.value?.id);
-    if (index >= 0) sessions.value[index] = selected.value;
-  } catch {
-    error.value = t("errors.validation");
-  }
 }
 async function cancelGeneration() {
   const sessionID = selected.value?.id;
@@ -474,7 +447,6 @@ async function confirmRemove() {
   } catch { error.value = t("errors.generic"); }
   finally { deleting.value = false; }
 }
-function keyboard(event: KeyboardEvent) { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); if (!activeAssistant.value) void send(); } }
 onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); clearAttachmentURLs(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
 </script>
 
@@ -510,7 +482,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
-        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="selectedExpertTeam || selectedExpert">{{ selectedExpertTeam?.name ?? selectedExpert?.name }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
+        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ t('sessions.welcome') }}</p></div>
@@ -541,14 +513,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <footer class="composer">
-            <div v-if="pendingAttachments.length" class="pending-attachments"><span v-for="(file, index) in pendingAttachments" :key="`${file.name}-${index}`">{{ file.name }}<button type="button" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="removePendingAttachment(index)"><X /></button></span></div>
-            <textarea v-model="draft" :placeholder="t('sessions.placeholder')" :disabled="selected.archived || sending" @keydown="keyboard"></textarea>
-            <select v-if="messages.length === 0 && hasSelectableSpecialist" class="specialist-selector" :value="specialistValue" :aria-label="t('sessions.chooseExpert')" :disabled="selected.archived || sending" @change="changeSpecialist"><option value="none">{{ t('sessions.noExpert') }}</option><optgroup v-if="selectableExperts.length" :label="t('experts.title')"><option v-for="item in selectableExperts" :key="item.id" :value="`expert:${item.id}`">{{ item.name }}</option></optgroup><optgroup v-if="selectableExpertTeams.length" :label="t('experts.teams')"><option v-for="item in selectableExpertTeams" :key="item.id" :value="`team:${item.id}`">{{ teamSelectionLabel(item) }}</option></optgroup></select>
-            <label class="attachment-picker" :title="t('sessions.addAttachment')"><Paperclip aria-hidden="true"/><input type="file" multiple :disabled="selected.archived || sending || Boolean(activeAssistant)" @change="chooseAttachments"></label>
-            <el-button v-if="activeAssistant" class="stop-generation" :class="{ stopping: cancellingMessageID === activeAssistant.id }" :loading="cancellingMessageID === activeAssistant.id" :aria-label="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" :title="cancellingMessageID === activeAssistant.id ? t('sessions.stopping') : t('sessions.stopGeneration')" @click="cancelGeneration"><Square aria-hidden="true" /></el-button>
-            <el-button v-else type="primary" :disabled="(!draft.trim() && pendingAttachments.length === 0) || setupRequired || sending || selected.archived" @click="send">↑</el-button>
-          </footer>
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>

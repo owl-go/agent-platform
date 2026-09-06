@@ -77,21 +77,24 @@ The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs
 
 ## 4. Sessions
 
+The detailed conversation specialist/resource selection rules and accepted revision precedence are recorded in `docs/product/conversation-resource-selection.md`. These are product targets, not implementation acceptance evidence. Personal Settings execution freezing and initial Workflow trigger behavior remain unchanged.
+
 ### 4.1 Lifecycle
 
 - A User can create, rename, archive, cancel archive, and permanently delete a Session.
-- New Session creation succeeds immediately without an Expert. Before the first message, the composer offers a grouped `No Expert / Expert / Expert Team` selector without reopening a creation modal.
-- A Session can use no specialist profile, one Expert, or one Expert Team. The choice becomes fixed after the first message as an Expert Snapshot containing visible profile metadata, structured Expert guidance, stable Team Member identities and order, and exact Skill and Connector revisions.
+- New Session creation succeeds immediately without an Expert. The composer offers a grouped `No Expert / Expert / Expert Team` selector through its `+` menu, including after the first message, without reopening a creation modal.
+- Each Session response can use no specialist profile, one Expert, or one Expert Team. The selection persists until changed, while every accepted message preserves its actual Expert Snapshot containing visible profile metadata, structured Expert guidance, stable Team Member identities and order, and exact Skill and Connector revisions. Selection changes affect subsequent messages only.
+- The composer supports direct Skill and Connector selection with or without an Expert. Explicit Skills apply to one message; the selected specialist and Connectors remain for subsequent messages. Expert-derived defaults, explicit overrides, revision retention, and Conversation Draft recovery follow `docs/product/conversation-resource-selection.md`.
 - The title is derived locally from the first User message and remains editable; title generation does not invoke a model.
 - Archived Sessions are hidden from the active list and read-only until archive is cancelled.
 - Deleting a Session requires confirmation, cancels active generation, and permanently deletes messages and Session execution data.
-- A Session message may contain text, up to ten images/files, or both. Each attachment is at most 100 MiB. Sessions do not own a persistent Workspace; the Runtime receives checksum-verified, read-only copies for that turn.
+- A Session message may contain text, up to ten distinct new attachments and referenced files in total, or both. Each file is at most 100 MiB. File References preserve content accepted with the message. Sessions do not own a persistent Workspace; the Runtime receives checksum-verified, read-only copies for that turn.
 
 ### 4.2 Conversation Execution
 
 - The Session composer has no Provider Model or Runtime Engine selector. The first message resolves and freezes the current Personal Settings default Runtime Engine and that engine's default Provider Model for the Session, regardless of whether an Expert or Expert Team is selected.
 - Each User message freezes a Response Snapshot containing one ordered Execution Stage Snapshot per actual Provider Model invocation. Every stage records its optional Expert and Team Member identities, Model Provider Connection version, Model API Protocol, Endpoint, the Session's frozen Provider Model and Runtime Engine, structured Expert guidance, and exact Skills and Connectors; API Keys and Connector credentials remain protected versioned references and never enter ordinary message data.
-- A Personal Settings change affects only Sessions started afterward and never changes an existing Session. Editing an Expert affects only Sessions started afterward; regeneration always reuses the original Response Snapshot.
+- A Personal Settings change affects only Sessions started afterward and never changes an existing Session. Editing an Expert or resource does not change a retained selection; explicit reselection adopts its latest available revision. Regeneration always reuses the original Response Snapshot.
 - A Session may keep each isolated Runtime container definition warm for 30 minutes after a response finishes. Warm reuse is scoped by Session, frozen Team Member identity when present, Expert identity, and Runtime Engine, so team members never share execution context even when they reference the same Expert.
 - The UI streams the response and shows generating, failed, cancelled, retry, and elapsed-time states. While a response is generating, the send control becomes a stop control that requests backend cancellation and stops the active Runtime execution. It does not expose Attempt, Lease, Runtime Event, or a separate Run record.
 - While generating and after completion, the UI may show an expandable, persisted execution activity summary such as preparing the Runtime, public reasoning summaries, redacted tool commands, file updates, and composing the answer. It never exposes raw model chain-of-thought, private reasoning, raw Runtime events, or tool output.
@@ -104,7 +107,8 @@ The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs
 - Claude Code and Codex may use native Session Resume only for Runtime images whose `native_resume` conformance evidence has passed.
 - Hermes, OpenClaw, and PI Agent use the Rolling Summary and recent messages for every response until their native Resume capability is independently verified.
 - Runtime identity comparison deliberately uses only the Runtime Engine name. A CLI, Adapter, or image upgrade does not proactively invalidate the Native Session; a safe classified Resume failure may cause fallback.
-- Existing Sessions retain their initial execution configuration and Expert Snapshot. Later Personal Settings, Expert, Expert Team, Skill, or Connector edits and deletion affect new Sessions and new Run Conversations, not an existing conversation's ability to continue, except that current Connector authorization and enablement are revalidated before each external command.
+- Existing Sessions retain their initial execution configuration, exact retained resource revisions, and immutable historical Response Snapshots. Catalog edits and deletion do not rewrite those snapshots; explicit selection changes resolve the next message's resources. Current Connector authorization and enablement are revalidated before each external command.
+- Switching specialists or changing resources must not leave removed resources executable through native Resume or warm-container reuse. Platform-owned history preserves conversational continuity when the new selection cannot safely reuse a preceding execution context.
 - Each Expert Team member owns independent staged Native Session state. The platform promotes all member states only after the entire turn succeeds and discards every staged state on failure or cancellation; retry restarts the full frozen member order from the preceding successful turn.
 - Automatic fallback is allowed when the platform can prove before execution that the local native state for a checkpoint is absent, or when the Runtime reports that the checkpoint is invalid before any action executes. All other Resume failures are shown to the User and may be retried manually.
 - Native Resume is an optimization. Platform messages and the Rolling Summary remain the correctness boundary.
@@ -117,7 +121,7 @@ The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs
 - A User can create, edit, run, and delete a Workflow.
 - Required fields are name and goal. One Expert or Expert Team is optional.
 - A Workflow has no Provider Model or Runtime Engine override. Every new Run Conversation resolves and freezes the current Personal Settings default Runtime Engine and that engine's default Provider Model; the same configuration applies to no Expert, one Expert, or every Team Member.
-- The first Run in a Run Conversation freezes a Workflow Snapshot containing the goal, ordered Execution Stage Snapshots, environment, and other execution inputs. Follow-up Runs reuse that frozen snapshot and add one immutable turn input; API Keys are held only through protected versioned credential references.
+- The first Run in a Run Conversation freezes a Workflow Snapshot containing the goal, initial ordered Execution Stage Snapshots, environment, and other execution inputs. Each Run preserves a Response Snapshot for its actual specialist and resource selections. Follow-ups retain the initiating goal, environment, and execution configuration while adding immutable turn input and applying selections from that Run Conversation's composer; API Keys are held only through protected versioned credential references.
 - A Workflow keeps each isolated Runtime container definition warm for 30 minutes after a Run finishes so frequent serialized Runs do not recreate containers. Warm reuse is scoped by Run Conversation, frozen Team Member identity when present, Expert identity, and Runtime Engine; containers stop between Runs and are destroyed after 30 minutes without use.
 - Editing a Workflow affects future Run Conversations only; follow-up Runs reuse their initiating snapshot. There is no Draft, Release, publish, approval, or visible version flow.
 - Only one Run may modify a Workflow at a time. Additional manual, scheduled, and API requests enter the queue.
@@ -142,6 +146,7 @@ Settings contains five collapsed sections:
 ### 5.3 Triggers And Input
 
 - Manual Runs launched from the Workflow interface execute the fixed Workflow goal directly; the detail header does not expose a separate input or input-type control. After creation, the interface immediately opens that Run Conversation and streams the active Run instead of requiring another click in Run History.
+- The existing Run Conversation follow-up composer supports the same `+`, Skill tokens, File References, and retained specialist/Connector selections as Sessions. It additionally offers the Workflow's Workspace files in the file picker. These controls do not extend to goal editing or initial trigger input and do not update the Workflow definition.
 - API Runs accept optional text or JSON input.
 - Scheduled Runs execute only the fixed Workflow goal and do not have a separate default input.
 - Run trigger types shown to Users are manual, scheduled, and API.
@@ -224,7 +229,7 @@ Run metadata and final text/JSON results are retained without a time limit in th
 
 ## 8. Experts, Skills, And Connectors
 
-The detailed accepted behavior and implementation/test seams are defined in `docs/product/expert-skill-connector-simplification.md`.
+The detailed profile and management behavior and implementation/test seams are defined in `docs/product/expert-skill-connector-simplification.md`. Catalog details, launch actions, and conversation resource selection are defined in `docs/product/conversation-resource-selection.md`.
 
 ### 8.1 Experts
 
@@ -234,7 +239,7 @@ The detailed accepted behavior and implementation/test seams are defined in `doc
 - Up to five Derived Expertise Tags are generated asynchronously from Core Capability with the User's Personal Settings default Provider Model. They are non-authoritative, consume no User Credits, and never block Expert save or execution; a failed refresh retains the previous projection.
 - Expert create and edit use a dedicated page. A User selects existing Skills and Connectors and may install or upload a Skill, or create and test an MCP Connector, inline; the resulting resource enters the global User-owned catalog and is selected automatically.
 - A single Expert executes directly rather than through a coordinator or extra synthesis call. A Session or Workflow may also run without an Expert or Expert Team.
-- Editing an Expert affects only future Session and Run Conversation snapshots. An Expert referenced by a mutable Expert Team cannot be deleted; immutable historical snapshots do not block deletion.
+- Editing an Expert affects new selections, not retained selections or historical execution snapshots. An Expert referenced by a mutable Expert Team cannot be deleted; immutable historical snapshots do not block deletion.
 - A migrated Expert missing Introduction, Core Capability, Operating Procedure, or Output Standard is an Incomplete Expert. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
 
 ### 8.2 Expert Teams
@@ -244,15 +249,15 @@ The detailed accepted behavior and implementation/test seams are defined in `doc
 - The Team Member name and labels are injected visibly before that member's Expert guidance. Team Introduction and team Core Capability are display-only.
 - The Experts entry has `Experts` and `Expert Teams` tabs with separate create actions. Expert cards emphasize Introduction, Derived Expertise Tags, and Skill and Connector counts; team cards show ordered member roles and `N Experts per turn`. Neither card type displays model or Runtime settings.
 - Team members support drag reorder plus accessible move-up and move-down controls. An Expert or Expert Team selection uses grouped options; a team with fewer than two valid members remains editable but is disabled in selectors.
-- Every new Session message or Run turn executes the full frozen member order sequentially and fail-fast. Every member uses the Session or Run Conversation's one frozen Personal Settings execution configuration; Runtime-native subagent capability is not required.
-- Every Subagent receives the current task, Rolling Summary and recent messages, current attachments, all preceding members' final text, its visible Team Member role context, and only its own Expert guidance, Skills, and Connectors. Raw reasoning, tool logs, and private Runtime events are not collaboration context.
+- Each Session response or Run selecting a team executes that turn's full frozen member order sequentially and fail-fast. Every member uses the Session or Run Conversation's one frozen Personal Settings execution configuration; Runtime-native subagent capability is not required.
+- Every Subagent receives the current task, Rolling Summary and recent messages, current attachments and File References, all preceding members' final text, its visible Team Member role context, and its own Expert guidance and default resources. Explicit composer Skill and Connector additions reach every member; explicit Connector exclusions also apply. Another member's default resources are not implicitly shared. Raw reasoning, tool logs, and private Runtime events are not collaboration context.
 - Workflow team execution retains the shared temporary Workspace, success-only merge, final-member official response, atomic Native Session promotion, cancellation behavior, and full-team retry defined by ADR-0022 and ADR-0026.
 - Deleting an Expert Team clears it from mutable Workflows and unstarted Sessions. Existing Session and Run Conversation snapshots remain executable.
 
 ### 8.3 Skills And MCP Connectors
 
 - The Skills & Connectors entry has `Skills` and `Connectors` tabs. The User-visible Extension concept and resource management in Personal Settings are removed.
-- Users install private Skills from a Git URL or ZIP upload. A valid package contains `SKILL.md` and may include scripts and resources; each new Session or Run Conversation snapshot freezes the latest exact revision.
+- Users install private Skills from a Git URL or ZIP upload. A valid package contains `SKILL.md` and may include scripts and resources. New selections resolve the latest available exact revision; retained selections and historical Response Snapshots keep their frozen revisions. Catalog details display the installed `SKILL.md` content, and the catalog launch action opens a new Session with the Skill selected.
 - ZIP uploads accept `SKILL.md` at the archive root or inside one enclosing top-level Skill folder. Installation removes that enclosing folder and macOS archive metadata (`__MACOSX`, `.DS_Store`, and `._*` files) before freezing the package; ambiguous folders, unsafe paths, and symbolic links are rejected.
 - Users create, edit, test, and delete private MCP Connectors. Supported transports are Streamable HTTP and fixed-version `npx` or `uvx` stdio; `latest`, arbitrary host commands, and untested selection are rejected.
 - MCP and Skill execution occurs only inside the isolated Runtime environment. An npm package speaking MCP remains an MCP Connector rather than a Third-party CLI Connector.

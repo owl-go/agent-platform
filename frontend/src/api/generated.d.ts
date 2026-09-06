@@ -436,6 +436,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversation-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConversationFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversation-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetConversationSelection"];
+        put?: never;
+        post: operations["AgentWorkspaceService_ResolveConversationSelection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credits/balance": {
         parameters: {
             query?: never;
@@ -836,6 +868,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/skills/{skill_id}/document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetSkillDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows": {
         parameters: {
             query?: never;
@@ -1111,6 +1159,8 @@ export interface components {
         AgentWorkspaceServiceContinueRunConversationBody: {
             content?: string;
             attachment_ids?: string[];
+            selection_id?: string;
+            file_references?: components["schemas"]["v1FileReference"][];
         };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
@@ -1147,6 +1197,8 @@ export interface components {
         AgentWorkspaceServiceSendSessionMessageBody: {
             content?: string;
             attachment_ids?: string[];
+            selection_id?: string;
+            file_references?: components["schemas"]["v1FileReference"][];
         };
         AgentWorkspaceServiceSetSessionArchivedBody: {
             archived?: boolean;
@@ -1388,6 +1440,33 @@ export interface components {
             expires_at?: string;
             /** Format: int64 */
             version?: number;
+        };
+        v1ConversationFile: {
+            kind?: string;
+            id?: string;
+            name?: string;
+            path?: string;
+            /** Format: int64 */
+            size?: number;
+            available?: boolean;
+            unavailable_reason?: string;
+        };
+        v1ConversationSelection: {
+            id?: string;
+            expert_id?: string;
+            expert_team_id?: string;
+            name?: string;
+            icon?: string;
+            icon_background?: string;
+            skills?: components["schemas"]["v1SelectedResource"][];
+            mcp_servers?: components["schemas"]["v1SelectedResource"][];
+            cli_connectors?: components["schemas"]["v1SelectedResource"][];
+            inherited_skills?: components["schemas"]["v1SelectedResource"][];
+            inherited_mcp_servers?: components["schemas"]["v1SelectedResource"][];
+            inherited_cli_connectors?: components["schemas"]["v1SelectedResource"][];
+            disabled_connectors?: string[];
+            /** Format: int32 */
+            member_count?: number;
         };
         v1CreateCLIConnectorDefinitionRequest: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
@@ -1658,6 +1737,11 @@ export interface components {
             expert_id?: string;
             labels?: string[];
         };
+        v1FileReference: {
+            kind?: string;
+            id?: string;
+            path?: string;
+        };
         v1GitConfigEntry: {
             key?: string;
             value?: string;
@@ -1691,6 +1775,9 @@ export interface components {
         };
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
+        };
+        v1ListConversationFilesResponse: {
+            items?: components["schemas"]["v1ConversationFile"][];
         };
         v1ListCreditLedgerResponse: {
             items?: components["schemas"]["v1CreditLedgerEntry"][];
@@ -1904,6 +1991,20 @@ export interface components {
         v1ResetUserPasswordResponse: {
             temporary_password?: string;
         };
+        v1ResolveConversationSelectionRequest: {
+            session_id?: string;
+            workflow_id?: string;
+            run_id?: string;
+            previous_id?: string;
+            change_expert?: boolean;
+            expert_id?: string;
+            expert_team_id?: string;
+            skill_ids?: string[];
+            mcp_server_ids?: string[];
+            cli_connector_ids?: string[];
+            disabled_connectors?: string[];
+            refresh_ids?: string[];
+        };
         v1ResourceDeletionImpact: {
             affected_experts?: components["schemas"]["v1AffectedExpert"][];
             confirmation_token?: string;
@@ -1978,6 +2079,11 @@ export interface components {
             weekday?: number;
             timezone?: string;
         };
+        v1SelectedResource: {
+            id?: string;
+            name?: string;
+            revision?: string;
+        };
         v1SendSessionMessageResponse: {
             user_message?: components["schemas"]["v1SessionMessage"];
             assistant_message?: components["schemas"]["v1SessionMessage"];
@@ -2027,6 +2133,10 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+        };
+        v1SkillDocument: {
+            skill?: components["schemas"]["v1Skill"];
+            content?: string;
         };
         v1SkillSnapshot: {
             id?: string;
@@ -3165,6 +3275,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1MCPConnector"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListConversationFiles: {
+        parameters: {
+            query?: {
+                session_id?: string;
+                workflow_id?: string;
+                run_id?: string;
+                workspace_path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConversationFilesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetConversationSelection: {
+        parameters: {
+            query?: {
+                session_id?: string;
+                workflow_id?: string;
+                run_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConversationSelection"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ResolveConversationSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1ResolveConversationSelectionRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConversationSelection"];
                 };
             };
             /** @description An unexpected error response. */
@@ -4457,6 +4667,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ResourceDeletionImpact"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetSkillDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SkillDocument"];
                 };
             };
             /** @description An unexpected error response. */

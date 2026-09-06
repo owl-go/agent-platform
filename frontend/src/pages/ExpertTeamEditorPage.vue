@@ -19,7 +19,7 @@ const saving = ref(false);
 const confirmDelete = ref(false);
 const toast = ref<{ kind: "success" | "error"; message: string }>();
 const form = ref<ExpertTeamInput>({ name: "", icon: "users", icon_background: "sage", introduction: "", core_capability: "", members: [] });
-const isNew = route.params.teamId === "new";
+const isNew = route.name === "expert-team-new" || route.params.teamId === "new";
 const members = computed(() => form.value.members.map((member) => ({ ...member, expert: experts.value.find((item) => item.id === member.expert_id) })));
 const candidates = computed(() => experts.value.filter((item) => item.available));
 

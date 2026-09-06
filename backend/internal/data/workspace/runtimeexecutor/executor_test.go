@@ -1284,4 +1284,20 @@ func TestWarmSlotIsStablePerResourceAndRuntime(t *testing.T) {
 	if !strings.Contains(slot.workspace, strings.TrimPrefix(first, "agent-runtime-warm-")) || !strings.HasPrefix(slot.credentials, "/credentials/") {
 		t.Fatalf("warm slot paths = %+v", slot)
 	}
+	for _, kind := range []application.JobKind{application.JobSession, application.JobWorkflow} {
+		job := application.ExecutionJob{Kind: kind, OwnerID: "owner-1", SessionID: "session-1", WorkflowID: "workflow-1", ConversationID: "conversation-1", Snapshot: domain.ExecutionSnapshot{RuntimeEngine: domain.RuntimeCodex, SelectionKey: "with-skill"}}
+		before, _, err := executor.warmSlot(job, runtime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		job.Snapshot.SelectionKey = "without-skill"
+		after, _, err := executor.warmSlot(job, runtime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if before == after {
+			t.Fatal("removed resources reused warm Runtime state")
+		}
+	}
+
 }

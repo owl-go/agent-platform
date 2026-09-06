@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
+import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import WorkflowDetailPage from "./WorkflowDetailPage.vue";
 
@@ -37,6 +38,7 @@ const run: Run = {
 
 function apiStub(overrides: Partial<PlatformApi> = {}): PlatformApi {
   return {
+    ...conversationApiStub(),
     getWorkflow: vi.fn(async () => workflow),
     listExperts: vi.fn(async () => []),
     listExpertTeams: vi.fn(async () => []),
@@ -319,11 +321,12 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    await wrapper.get(".run-composer textarea").setValue("继续给出修复建议");
-    await wrapper.get(".run-composer").trigger("submit");
+    wrapper.get('.composer-editor').element.textContent = '继续给出修复建议';
+    await wrapper.get('.composer-editor').trigger('input');
+    await wrapper.get('.composer-toolbar button[aria-label="发送"]').trigger('click');
     await flushPromises();
 
-    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, run.id, "继续给出修复建议", []);
+    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, run.id, "继续给出修复建议", [], undefined, { selection_id: "selection-1", file_references: [] });
     expect(wrapper.findAll(".run-conversation .message.user")).toHaveLength(2);
     wrapper.unmount();
   });
@@ -333,7 +336,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    expect(wrapper.find(".run-page > .composer-layer > .run-composer.composer").exists()).toBe(true);
+    expect(wrapper.find(".run-page > .composer-layer > .resource-composer.composer").exists()).toBe(true);
     wrapper.unmount();
   });
 
