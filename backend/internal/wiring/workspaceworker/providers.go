@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -77,7 +78,8 @@ func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Pr
 	buildEnvironment, err := cliconnector.NewDockerBuildEnvironment(cliconnector.DockerBuildConfig{
 		DockerCommand: "docker", Runtime: config.Sandbox.Runtime, ImageDigest: config.Worker.CLIBuilder.ImageDigest,
 		EgressNetwork: config.Worker.CLIBuilder.EgressNetwork, ResolverConfig: config.Sandbox.ResolverConfig,
-		UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID, Timeout: config.Worker.CLIBuilder.Timeout.Value(),
+		TempRoot: filepath.Join(config.Worker.CredentialTempRoot, "cli-build"),
+		UID:      config.Worker.SandboxUID, GID: config.Worker.SandboxGID, Timeout: config.Worker.CLIBuilder.Timeout.Value(),
 	}, nil)
 	if err != nil {
 		return nil, err

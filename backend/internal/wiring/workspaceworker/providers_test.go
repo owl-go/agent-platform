@@ -12,7 +12,7 @@ import (
 func TestNewCLIConnectorBuilderUsesAvailablePinnedRuntimes(t *testing.T) {
 	config := platformconfig.Config{
 		Worker: platformconfig.WorkerConfig{
-			SandboxUID: 65532, SandboxGID: 65532,
+			SandboxUID: 65532, SandboxGID: 65532, CredentialTempRoot: "/tmp/agent-credentials",
 			CLIBuilder: platformconfig.CLIBuilderConfig{Enabled: true, ImageDigest: "registry.example/builder@sha256:" + strings.Repeat("a", 64), EgressNetwork: "agent-npm-egress", Timeout: platformconfig.Duration(10 * time.Minute)},
 			Runtimes: map[string]platformconfig.RuntimeEngineConfig{
 				"codex":  {Available: true, ImageDigest: "registry.example/codex@sha256:" + strings.Repeat("b", 64), CLIVersion: "test"},

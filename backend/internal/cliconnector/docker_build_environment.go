@@ -16,6 +16,7 @@ import (
 
 type DockerBuildConfig struct {
 	DockerCommand, Runtime, ImageDigest, EgressNetwork, ResolverConfig string
+	TempRoot                                                           string
 	UID, GID                                                           int
 	Timeout                                                            time.Duration
 }
@@ -30,7 +31,7 @@ type DockerBuildEnvironment struct {
 var imageRepoDigest = regexp.MustCompile(`^[^\s@]+@sha256:[0-9a-f]{64}$`)
 
 func NewDockerBuildEnvironment(config DockerBuildConfig, run DockerCommand) (*DockerBuildEnvironment, error) {
-	if config.DockerCommand == "" || config.Runtime != "runsc" || !imageRepoDigest.MatchString(config.ImageDigest) || config.EgressNetwork == "" || !filepath.IsAbs(config.ResolverConfig) || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 30*time.Minute {
+	if config.DockerCommand == "" || config.Runtime != "runsc" || !imageRepoDigest.MatchString(config.ImageDigest) || config.EgressNetwork == "" || !filepath.IsAbs(config.ResolverConfig) || !filepath.IsAbs(config.TempRoot) || filepath.Clean(config.TempRoot) == string(filepath.Separator) || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 30*time.Minute {
 		return nil, errors.New("invalid isolated CLI Builder configuration")
 	}
 	if run == nil {
@@ -46,7 +47,10 @@ func NewDockerBuildEnvironment(config DockerBuildConfig, run DockerCommand) (*Do
 }
 
 func (environment *DockerBuildEnvironment) Build(ctx context.Context, request PackageBuildRequest) (PackageArtifact, error) {
-	output, err := os.MkdirTemp("", "agent-cli-build-*")
+	if err := os.MkdirAll(environment.config.TempRoot, 0o700); err != nil {
+		return PackageArtifact{}, fmt.Errorf("create CLI build temp root: %w", err)
+	}
+	output, err := os.MkdirTemp(environment.config.TempRoot, "agent-cli-build-*")
 	if err != nil {
 		return PackageArtifact{}, err
 	}

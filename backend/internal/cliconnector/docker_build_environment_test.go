@@ -10,6 +10,7 @@ import (
 )
 
 func TestDockerBuildEnvironmentAppliesIsolatedPolicy(t *testing.T) {
+	tempRoot := t.TempDir()
 	var arguments []string
 	run := func(_ context.Context, _ string, args ...string) error {
 		arguments = slices.Clone(args)
@@ -26,7 +27,7 @@ func TestDockerBuildEnvironmentAppliesIsolatedPolicy(t *testing.T) {
 		}
 		return os.WriteFile(host+"/bins.json", []byte(`{"tool":"bin/tool.js"}`), 0600)
 	}
-	config := DockerBuildConfig{DockerCommand: "docker", Runtime: "runsc", ImageDigest: "registry.example/cli-builder@sha256:" + strings.Repeat("a", 64), EgressNetwork: "npm-egress", ResolverConfig: "/etc/resolv.conf", UID: os.Getuid(), GID: os.Getgid(), Timeout: time.Minute}
+	config := DockerBuildConfig{DockerCommand: "docker", Runtime: "runsc", ImageDigest: "registry.example/cli-builder@sha256:" + strings.Repeat("a", 64), EgressNetwork: "npm-egress", ResolverConfig: "/etc/resolv.conf", TempRoot: tempRoot, UID: os.Getuid(), GID: os.Getgid(), Timeout: time.Minute}
 	environment, err := NewDockerBuildEnvironment(config, run)
 	if err != nil {
 		t.Fatal(err)
@@ -45,6 +46,10 @@ func TestDockerBuildEnvironmentAppliesIsolatedPolicy(t *testing.T) {
 	}
 	if slices.Contains(arguments, "/var/run/docker.sock") {
 		t.Fatalf("Docker socket mounted: %v", arguments)
+	}
+	mount := arguments[slices.Index(arguments, "--mount")+1]
+	if !strings.Contains(mount, "src="+tempRoot+string(os.PathSeparator)) {
+		t.Fatalf("build output is not under the host-visible temp root: %s", mount)
 	}
 }
 
