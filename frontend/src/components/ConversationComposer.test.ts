@@ -24,6 +24,23 @@ async function setup(options: { fail?: boolean; initial?: boolean; session?: str
 afterEach(() => { localStorage.clear(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe("ConversationComposer", () => {
+ it("replaces action icons with a single loading icon while sending or stopping", async () => {
+  const { wrapper, submit } = await setup({ initial: true });
+  let finish: (() => void) | undefined;
+  submit.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  const send = wrapper.get('[aria-label="发送"]');
+  expect(send.findAll("svg")).toHaveLength(1);
+  await send.trigger("click"); await flushPromises();
+  expect(send.find(".is-loading").exists()).toBe(true); expect(send.findAll("svg")).toHaveLength(1);
+  finish?.(); await flushPromises();
+  await wrapper.setProps({ active: true });
+  const stop = wrapper.get('[aria-label="中止生成"]');
+  expect(stop.findAll("svg")).toHaveLength(1);
+  await stop.trigger("click"); expect(wrapper.emitted("stop")).toHaveLength(1);
+  await wrapper.setProps({ stopping: true });
+  expect(stop.find(".is-loading").exists()).toBe(true); expect(stop.findAll("svg")).toHaveLength(1);
+  wrapper.unmount();
+ });
  it("preselects a launched Skill without sending and clears only one-turn input on accepted send", async () => {
   const { wrapper, submit } = await setup({ initial: true });
   expect(wrapper.get(".composer-token").text()).toContain(skill.name); expect(submit).not.toHaveBeenCalled();

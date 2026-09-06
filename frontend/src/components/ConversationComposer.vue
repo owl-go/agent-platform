@@ -233,8 +233,8 @@ onBeforeUnmount(() => { disposed = true; persist(); document.removeEventListener
         <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
       </el-popover>
       <span class="composer-spacer"></span>
-      <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><Square :size="17" /></el-button>
-      <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><ArrowUp :size="19" /></el-button>
+      <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
+      <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
     </div>
     <input ref="fileInput" class="composer-file-input" type="file" multiple :disabled="locked" @change="chooseLocal">
     <section v-if="menu" class="composer-menu" :aria-label="t('composer.add')">
