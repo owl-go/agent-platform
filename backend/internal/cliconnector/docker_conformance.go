@@ -19,6 +19,7 @@ import (
 type DockerConformanceConfig struct {
 	DockerCommand string
 	Runtime       string
+	TempRoot      string
 	RuntimeImages map[string]string
 	UID, GID      int
 	Timeout       time.Duration
@@ -30,7 +31,7 @@ type DockerConformance struct {
 }
 
 func NewDockerConformance(config DockerConformanceConfig, run DockerCommand) (*DockerConformance, error) {
-	if config.DockerCommand == "" || config.Runtime != "runsc" || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 5*time.Minute || len(config.RuntimeImages) == 0 {
+	if config.DockerCommand == "" || config.Runtime != "runsc" || !filepath.IsAbs(config.TempRoot) || filepath.Clean(config.TempRoot) == string(filepath.Separator) || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 5*time.Minute || len(config.RuntimeImages) == 0 {
 		return nil, errors.New("invalid CLI Runtime Conformance configuration")
 	}
 	for digest, image := range config.RuntimeImages {
@@ -55,7 +56,10 @@ func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtime
 	if !ok {
 		return errors.New("Runtime Digest is not configured for CLI Conformance")
 	}
-	root, err := os.MkdirTemp("", "agent-cli-conformance-*")
+	if err := os.MkdirAll(suite.config.TempRoot, 0o700); err != nil {
+		return fmt.Errorf("create CLI Conformance temp root: %w", err)
+	}
+	root, err := os.MkdirTemp(suite.config.TempRoot, "agent-cli-conformance-*")
 	if err != nil {
 		return err
 	}

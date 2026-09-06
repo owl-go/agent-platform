@@ -13,6 +13,7 @@ import (
 )
 
 func TestDockerConformanceRunsPinnedRuntimeWithoutNetwork(t *testing.T) {
+	tempRoot := t.TempDir()
 	digest := "sha256:" + strings.Repeat("a", 64)
 	image := "registry.example/codex@" + digest
 	uid, gid := os.Getuid(), os.Getgid()
@@ -20,7 +21,7 @@ func TestDockerConformanceRunsPinnedRuntimeWithoutNetwork(t *testing.T) {
 		uid, gid = 65532, 65532
 	}
 	var arguments []string
-	suite, err := NewDockerConformance(DockerConformanceConfig{DockerCommand: "docker", Runtime: "runsc", RuntimeImages: map[string]string{digest: image}, UID: uid, GID: gid, Timeout: time.Minute}, func(_ context.Context, _ string, args ...string) error {
+	suite, err := NewDockerConformance(DockerConformanceConfig{DockerCommand: "docker", Runtime: "runsc", TempRoot: tempRoot, RuntimeImages: map[string]string{digest: image}, UID: uid, GID: gid, Timeout: time.Minute}, func(_ context.Context, _ string, args ...string) error {
 		arguments = slices.Clone(args)
 		return nil
 	})
@@ -34,6 +35,10 @@ func TestDockerConformanceRunsPinnedRuntimeWithoutNetwork(t *testing.T) {
 		if !slices.Contains(arguments, required) {
 			t.Fatalf("missing %q in %v", required, arguments)
 		}
+	}
+	mount := arguments[slices.Index(arguments, "--mount")+1]
+	if !strings.Contains(mount, "src="+tempRoot+string(os.PathSeparator)) {
+		t.Fatalf("conformance bundle is not under the host-visible temp root: %s", mount)
 	}
 }
 

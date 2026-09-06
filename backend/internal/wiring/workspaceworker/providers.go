@@ -107,7 +107,7 @@ func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Pr
 	if conformanceTimeout > 5*time.Minute {
 		conformanceTimeout = 5 * time.Minute
 	}
-	conformance, err := cliconnector.NewDockerConformance(cliconnector.DockerConformanceConfig{DockerCommand: "docker", Runtime: config.Sandbox.Runtime, RuntimeImages: runtimeImages, UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID, Timeout: conformanceTimeout}, nil)
+	conformance, err := cliconnector.NewDockerConformance(cliconnector.DockerConformanceConfig{DockerCommand: "docker", Runtime: config.Sandbox.Runtime, TempRoot: filepath.Join(config.Worker.CredentialTempRoot, "cli-conformance"), RuntimeImages: runtimeImages, UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID, Timeout: conformanceTimeout}, nil)
 	if err != nil {
 		return nil, err
 	}
