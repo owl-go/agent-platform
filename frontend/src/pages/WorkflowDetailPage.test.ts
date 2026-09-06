@@ -363,6 +363,48 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("replaces a saved SSH key input with a write-only status and only opens an empty replacement input", async () => {
+    const saved: Workflow = { ...workflow, git_source: { url: "git@git.example.com:team/project.git", branch: "main", authentication: "ssh", config: [], credential_configured: true } };
+    const configureWorkflowGitSource = vi.fn(async () => saved);
+    const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
+    await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
+    await wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').setValue("synthetic-private-key");
+    await wrapper.get(".git-settings .button.primary").trigger("click"); await flushPromises();
+
+    expect(wrapper.find('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').exists()).toBe(false);
+    expect(wrapper.get(".git-credential-status").text()).toContain("已保存");
+    expect(wrapper.html()).not.toContain("synthetic-private-key");
+    await wrapper.get(".git-credential-status button").trigger("click");
+    expect(wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').element.value).toBe("");
+    wrapper.unmount();
+
+    const reopened = await mountPage(apiStub({ getWorkflow: vi.fn(async () => saved) }));
+    await reopened.findAll(".tabs button")[3]!.trigger("click");
+    expect(reopened.find('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').exists()).toBe(false);
+    expect(reopened.get(".git-credential-status").text()).toContain("已保存");
+    reopened.unmount();
+  });
+
+  it.each(["ssh", "basic"] as const)("keeps only an explicitly entered %s replacement after failure and clears it when authentication changes", async (authentication) => {
+    const saved: Workflow = { ...workflow, git_source: { url: "https://git.example.com/team/project.git", branch: "main", authentication, config: [], credential_configured: true } };
+    const wrapper = await mountPage(apiStub({ getWorkflow: vi.fn(async () => saved), configureWorkflowGitSource: vi.fn(async () => { throw new ApiError("validation", 422, "git_authentication_failed"); }) }));
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
+    const selector = authentication === "ssh" ? 'textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]' : 'input[type="password"]';
+    expect(wrapper.find(selector).exists()).toBe(false);
+    await wrapper.get(".git-credential-status button").trigger("click");
+    await wrapper.get(selector).setValue("new-credential-not-saved");
+    await wrapper.get(".git-settings .button.primary").trigger("click"); await flushPromises();
+    expect(wrapper.get<HTMLTextAreaElement | HTMLInputElement>(selector).element.value).toBe("new-credential-not-saved");
+    expect(wrapper.get(".git-settings").text()).toContain("尚未保存");
+    await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("none");
+    await wrapper.get<HTMLSelectElement>('.git-settings select').setValue(authentication);
+    expect(wrapper.find(selector).exists()).toBe(false);
+    await wrapper.get(".git-credential-status button").trigger("click");
+    expect(wrapper.get<HTMLTextAreaElement | HTMLInputElement>(selector).element.value).toBe("");
+    wrapper.unmount();
+  });
+
   it("accepts SCP-style SSH repository addresses in native form validation", async () => {
     const wrapper = await mountPage();
     await wrapper.findAll(".tabs button").at(3)!.trigger("click");
