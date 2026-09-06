@@ -1,6 +1,6 @@
 # Runtime Adapter
 
-状态：当前 Runtime 契约；Expert 与 Connector 简化为已接受但尚未实现的目标修订
+状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker 与存活 Worker 内 User Action Wait 已实现；CLI 等待期间普通执行 deadline 暂停、Worker 重启恢复和 Linux + gVisor 端到端证据尚未完成
 
 Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Code、Codex、Hermes、OpenClaw 与 PI Agent 的命令参数、版本探测和输出解析保留在各自 Driver，共享的进程、容器和事件行为位于 `cliadapter`、`processharness` 与 `containerprocess`。
 
