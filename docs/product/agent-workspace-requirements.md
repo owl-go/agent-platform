@@ -253,6 +253,7 @@ The detailed accepted behavior and implementation/test seams are defined in `doc
 
 - The Skills & Connectors entry has `Skills` and `Connectors` tabs. The User-visible Extension concept and resource management in Personal Settings are removed.
 - Users install private Skills from a Git URL or ZIP upload. A valid package contains `SKILL.md` and may include scripts and resources; each new Session or Run Conversation snapshot freezes the latest exact revision.
+- ZIP uploads accept `SKILL.md` at the archive root or inside one enclosing top-level Skill folder. Installation removes that enclosing folder and macOS archive metadata (`__MACOSX`, `.DS_Store`, and `._*` files) before freezing the package; ambiguous folders, unsafe paths, and symbolic links are rejected.
 - Users create, edit, test, and delete private MCP Connectors. Supported transports are Streamable HTTP and fixed-version `npx` or `uvx` stdio; `latest`, arbitrary host commands, and untested selection are rejected.
 - MCP and Skill execution occurs only inside the isolated Runtime environment. An npm package speaking MCP remains an MCP Connector rather than a Third-party CLI Connector.
 - Before deletion, the product shows affected mutable Experts. Confirmation transactionally detaches the Skill or MCP Connector from those Experts; historical snapshots remain unchanged.

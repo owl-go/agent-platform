@@ -36,10 +36,11 @@ func (store *Store) InstallUpload(ctx context.Context, ownerID string, archive [
 	if len(archive) == 0 || len(archive) > maxArchiveSize {
 		return "", "", fmt.Errorf("Skill archive must contain 1-50 MiB")
 	}
-	if err := validateArchive(archive); err != nil {
+	normalized, err := normalizeArchive(ctx, archive)
+	if err != nil {
 		return "", "", err
 	}
-	return store.put(ctx, ownerID, archive)
+	return store.put(ctx, ownerID, normalized)
 }
 
 func (store *Store) InstallGit(ctx context.Context, ownerID, repositoryURL, ref string) (objectKey, digest, resolvedRef string, err error) {
@@ -87,27 +88,6 @@ func (store *Store) put(ctx context.Context, ownerID string, archive []byte) (st
 		return "", "", fmt.Errorf("store Skill archive: %w", err)
 	}
 	return key, digest, nil
-}
-
-func validateArchive(archive []byte) error {
-	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
-	if err != nil {
-		return fmt.Errorf("Skill archive is not a valid ZIP: %w", err)
-	}
-	found := false
-	for _, file := range reader.File {
-		name := filepath.ToSlash(filepath.Clean(file.Name))
-		if name == ".." || strings.HasPrefix(name, "../") || strings.HasPrefix(name, "/") {
-			return fmt.Errorf("Skill archive contains an unsafe path")
-		}
-		if name == "SKILL.md" {
-			found = true
-		}
-	}
-	if !found {
-		return fmt.Errorf("Skill archive root must contain SKILL.md")
-	}
-	return nil
 }
 
 func zipDirectory(root string) ([]byte, error) {

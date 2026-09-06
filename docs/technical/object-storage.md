@@ -10,6 +10,8 @@ Artifact、Skill 包、CLI Connector bundle 与消息附件只通过 `internal/o
 
 Skill 安装会把 Git 精确 Commit 或 ZIP 内容规范化，验证根目录存在 `SKILL.md`，再保存不可变对象和 SHA-256。Run Snapshot 冻结 Skill 的 Object Key 与 Digest，后续更新不改变已排队 Run。
 
+ZIP 上传支持根目录直接包含 `SKILL.md`，或由一个顶层 Skill 目录包裹全部有效文件。上传时移除这层目录及 macOS 元数据（`__MACOSX`、`.DS_Store`、`._*`），按路径排序重建 ZIP，确保 Runtime 读取的包根目录包含普通文件 `SKILL.md`。多个候选 Skill 目录、Skill 目录之外的文件、路径穿越、重复或冲突路径、符号链接和特殊文件均拒绝；读取内容时校验 ZIP 完整性，压缩包、解压文件总量和规范化后 ZIP 均不得超过 50 MiB。Size 与 SHA-256 根据规范化后的实际对象字节计算。
+
 CLI Connector bundle 由隔离且无 User 凭证的 Builder 从 Administrator 指定的 exact npm package、version 和 integrity 生成，保存不可变 Object Key、npm integrity 与最终小写 SHA-256。Run Snapshot 只冻结 Definition、bundle Digest、能力策略和 Authorization identity；App Secret 与 Token 不进入 Snapshot。Worker 下载后重新校验 Digest，并只读挂载 bundle，永不向 Runtime 暴露对象存储 URL 或签名参数。
 
 Provider 行为变化先进入共享 Conformance，再分别验证 MinIO 与阿里云 OSS。缺少远端凭据导致的 Skip 不能记作通过。
