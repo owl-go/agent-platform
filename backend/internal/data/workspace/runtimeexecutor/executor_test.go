@@ -1141,7 +1141,7 @@ func TestPreparePersistentWorkspaceTreeMakesMergedFilesReadableByThePlatformUser
 		t.Fatal(err)
 	}
 
-	for path, want := range map[string]os.FileMode{directory: 0o750, file: 0o600} {
+	for path, want := range map[string]os.FileMode{root: 0o700, directory: 0o700, file: 0o600} {
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatal(err)

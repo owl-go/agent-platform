@@ -1091,17 +1091,18 @@ func prepareOwnedTree(root string, uid, gid int, label string) error {
 		if entry.Type()&os.ModeSymlink != 0 {
 			return fmt.Errorf("%s contains a symbolic link", label)
 		}
-		if path == root {
-			return nil
-		}
 		mode := os.FileMode(0o600)
 		if entry.IsDir() {
-			mode = 0o750
-		}
-		if err := os.Chmod(path, mode); err != nil {
+			mode = 0o700
+		} else if info, err := entry.Info(); err != nil {
 			return err
+		} else if info.Mode().Perm()&0o111 != 0 {
+			mode = 0o700
 		}
 		if err := os.Chown(path, uid, gid); err != nil {
+			return err
+		}
+		if err := os.Chmod(path, mode); err != nil {
 			return err
 		}
 		return nil
@@ -1337,6 +1338,10 @@ func (executor *Executor) stageWorkspaceAt(job application.ExecutionJob, tempora
 	if err := copyTree(persistent, temporary); err != nil {
 		_ = os.RemoveAll(temporary)
 		return "", "", nil, err
+	}
+	if err := preparePersistentWorkspaceTree(temporary, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
+		_ = os.RemoveAll(temporary)
+		return "", "", nil, fmt.Errorf("assign staged Workflow Workspace to Runtime user: %w", err)
 	}
 	return temporary, persistent, baseline, nil
 }
@@ -1689,11 +1694,19 @@ func copyTree(source, target string) error {
 		if !entry.Type().IsRegular() {
 			return fmt.Errorf("Workspace contains unsupported file type")
 		}
+		mode := os.FileMode(0o600)
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if info.Mode().Perm()&0o111 != 0 {
+			mode = 0o700
+		}
 		input, err := os.Open(path)
 		if err != nil {
 			return err
 		}
-		output, err := os.OpenFile(destination, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+		output, err := os.OpenFile(destination, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
 		if err != nil {
 			_ = input.Close()
 			return err
@@ -1701,7 +1714,8 @@ func copyTree(source, target string) error {
 		_, copyErr := io.Copy(output, input)
 		inputCloseErr := input.Close()
 		closeErr := output.Close()
-		return errors.Join(copyErr, inputCloseErr, closeErr)
+		chmodErr := os.Chmod(destination, mode)
+		return errors.Join(copyErr, inputCloseErr, closeErr, chmodErr)
 	})
 }
 
