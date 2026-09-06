@@ -14,7 +14,7 @@ async function refresh() { loading.value = true; try { [workflows.value, deleted
 async function create() { try { const item = await api.createWorkflow(form.value); showCreate.value = false; form.value = { name: "", goal: "", environment: [] }; await router.push(`/workflows/${item.id}`); } catch { error.value = t("errors.validation"); } }
 async function run(item: Workflow) { try { await api.runWorkflow(item.id); await router.push(`/workflows/${item.id}?tab=history`); } catch { error.value = t("errors.generic"); } }
 function setSpecialist(value: string) { form.value.expert_id = value.startsWith("expert:") ? value.slice(7) : undefined; form.value.expert_team_id = value.startsWith("team:") ? value.slice(5) : undefined; }
-function specialistName(workflow: Workflow) { return workflow.expert_team_id ? expertTeams.value.find((team) => team.id === workflow.expert_team_id)?.name : workflow.expert_id ? experts.value.find((expert) => expert.id === workflow.expert_id)?.name : t('sessions.noExpert'); }
+function specialistName(workflow: Workflow) { return workflow.expert_team_id ? expertTeams.value.find((team) => team.id === workflow.expert_team_id)?.name : workflow.expert_id ? experts.value.find((expert) => expert.id === workflow.expert_id)?.name : undefined; }
 function teamSelectionLabel(team: ExpertTeam): string { const compatibility = team.experts.some((item) => item.compatibility === "incompatible") ? t("experts.incompatible") : team.experts.some((item) => item.compatibility === "unverified") ? t("settings.unverified") : t("settings.verified"); return `${team.name} · ${compatibility}`; }
 </script>
 
@@ -27,7 +27,7 @@ function teamSelectionLabel(team: ExpertTeam): string { const compatibility = te
     <div v-else class="workflow-grid">
       <el-card v-for="workflow in workflows" :key="workflow.id" class="workflow-card" shadow="hover">
         <div class="workflow-card-top"><span class="status-dot"></span></div><h2>{{ workflow.name }}</h2><p>{{ workflow.goal }}</p>
-        <div class="workflow-meta"><el-tag size="small" type="info" effect="plain">{{ specialistName(workflow) }}</el-tag></div>
+        <div v-if="specialistName(workflow)" class="workflow-meta"><el-tag size="small" type="info" effect="plain">{{ specialistName(workflow) }}</el-tag></div>
         <footer><el-button @click="router.push(`/workflows/${workflow.id}`)">{{ t('workflows.open') }} →</el-button><el-button type="primary" circle :aria-label="t('workflows.runNow')" @click="run(workflow)">▶</el-button></footer>
       </el-card>
     </div>
