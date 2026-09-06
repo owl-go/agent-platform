@@ -241,9 +241,9 @@ async function fileToBase64(file: File): Promise<string> {
       <div v-if="canManageCLI && cliHealth.length" class="connector-health-grid">
         <article v-for="item in cliHealth" :key="item.definition_id" class="el-card">
           <strong>{{ item.definition_name }}</strong>
-          <span>{{ t('resources.health.enabled', { count: item.enabled_count }) }}</span>
-          <span>{{ t('resources.health.waiting', { count: item.waiting_for_user_count }) }}</span>
-          <span :class="{ attention: Number(item.attention_authorization_count) > 0 }">{{ t('resources.health.authorization', { active: item.active_authorization_count, attention: item.attention_authorization_count }) }}</span>
+          <span>{{ t('resources.health.enabled', { count: item.enabled_count ?? 0 }) }}</span>
+          <span>{{ t('resources.health.waiting', { count: item.waiting_for_user_count ?? 0 }) }}</span>
+          <span :class="{ attention: Number(item.attention_authorization_count ?? 0) > 0 }">{{ t('resources.health.authorization', { active: item.active_authorization_count ?? 0, attention: item.attention_authorization_count ?? 0 }) }}</span>
         </article>
       </div>
       <div class="resource-list">

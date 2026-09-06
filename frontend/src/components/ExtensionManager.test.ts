@@ -127,12 +127,13 @@ describe("ExtensionManager", () => {
       listSkills: vi.fn(async () => []),
       listCLIConnectorDefinitions: vi.fn(async () => [definition]),
       listCLIConnectorEnablements: vi.fn(async () => []),
-      listCLIConnectorHealth: vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, waiting_for_user_count: 1, active_authorization_count: 2, attention_authorization_count: 1 }]),
+      listCLIConnectorHealth: vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, active_authorization_count: 2, attention_authorization_count: 1 }]),
       updateCLIConnectorDefinition,
     } as unknown as PlatformApi;
     const wrapper = mountManager(api, true);
     await flushPromises();
     expect(wrapper.text()).toContain("3 个用户已启用");
+    expect(wrapper.text()).toContain("0 个等待用户操作");
     expect(wrapper.text()).toContain("2 个有效授权 · 1 个需处理");
 
     await wrapper.get('button[aria-label="编辑"]').trigger("click");
