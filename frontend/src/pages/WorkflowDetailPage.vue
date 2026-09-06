@@ -55,8 +55,13 @@ const runtimeActivities = computed(() => {
 watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
+  if (!loading.value && (value === "history" || value === "artifacts")) void refreshRuns(value === "artifacts");
 });
 let runTimer: ReturnType<typeof setInterval> | undefined;
+let disposed = false;
+let refreshingRuns = false;
+let lastRunRefresh = 0;
+let artifactsRefreshRequested = false;
 let eventController: AbortController | undefined;
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 let revealTarget = "";
@@ -64,8 +69,16 @@ let runComposerObserver: ResizeObserver | undefined;
 onMounted(async () => {
   if (typeof ResizeObserver !== "undefined") runComposerObserver = new ResizeObserver(measureRunComposer);
   window.addEventListener("resize", measureRunComposer);
+  document.addEventListener("visibilitychange", resumeRunPolling);
   await refresh();
-  runTimer = setInterval(() => { nowMS.value = Date.now(); void refreshRuns(); }, 1500);
+  if (disposed) return;
+  lastRunRefresh = Date.now();
+  runTimer = setInterval(() => {
+    if (!canRefreshRuns()) return;
+    nowMS.value = Date.now();
+    const active = Boolean(activeConversationRun.value) || runs.value.some(isActiveRun);
+    if (Date.now() - lastRunRefresh >= (active ? 1500 : 30_000)) void refreshRuns();
+  }, 1500);
 });
 watch(runComposerLayer, (current, previous) => {
   if (previous) runComposerObserver?.unobserve(previous);
@@ -73,12 +86,14 @@ watch(runComposerLayer, (current, previous) => {
   void nextTick(measureRunComposer);
 });
 onBeforeUnmount(() => {
+  disposed = true;
   if (runTimer) clearInterval(runTimer);
   eventController?.abort();
   stopRunReveal();
   clearAttachmentURLs();
   runComposerObserver?.disconnect();
   window.removeEventListener("resize", measureRunComposer);
+  document.removeEventListener("visibilitychange", resumeRunPolling);
 });
 function measureRunComposer() {
   const height = runComposerLayer.value?.getBoundingClientRect().height ?? 0;
@@ -87,7 +102,37 @@ function measureRunComposer() {
   void scrollConversationToEnd("auto");
 }
 async function refresh() { loading.value = true; error.value = ""; try { workflow.value = await api.getWorkflow(workflowID.value); settingsForm.value = { name: workflow.value.name, goal: workflow.value.goal, expert_id: workflow.value.expert_id, expert_team_id: workflow.value.expert_team_id, environment: workflow.value.environment ?? [], schedule: workflow.value.schedule }; const source = workflow.value.git_source; gitForm.value = source ? { url: source.url, branch: source.branch, authentication: source.authentication || "none", username: source.username, ssh_config: source.ssh_config ?? "", config: source.config ?? [] } : { url: "", branch: "main", authentication: "none", ssh_config: "", config: [] }; [experts.value, expertTeams.value, runs.value, artifacts.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listRuns(workflowID.value), api.listArtifacts(workflowID.value)]); if (!workflow.value.deleted) await loadDirectory(""); else if (tab.value === "workspace" || tab.value === "settings") tab.value = "history"; } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
-async function refreshRuns() { try { runs.value = await api.listRuns(workflowID.value); if (selectedRun.value) { selectedRun.value = runs.value.find((item) => item.id === selectedRun.value?.id) ?? selectedRun.value; conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value.id); } if (!runs.value.some((item) => item.state === "queued" || item.state === "running")) artifacts.value = await api.listArtifacts(workflowID.value); } catch { /* Keep the last usable projection during a transient poll failure. */ } }
+function isActiveRun(item: Run) { return item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"; }
+function canRefreshRuns() { return !disposed && !loading.value && document.visibilityState !== "hidden" && (Boolean(selectedRun.value) || tab.value === "history" || tab.value === "artifacts"); }
+function resumeRunPolling() { if (canRefreshRuns()) void refreshRuns(tab.value === "artifacts"); }
+function runRevision(items: Run[]) { return JSON.stringify(items.map((item) => [item.id, item.turn_number, item.state, item.ended_at])); }
+async function refreshRuns(refreshArtifacts = false) {
+  if (!canRefreshRuns()) return;
+  artifactsRefreshRequested ||= refreshArtifacts;
+  if (refreshingRuns) return;
+  refreshingRuns = true;
+  const id = workflowID.value;
+  const selectedID = selectedRun.value?.id;
+  try {
+    const latest = await api.listRuns(id);
+    if (!canRefreshRuns() || id !== workflowID.value) return;
+    artifactsRefreshRequested ||= runRevision(latest) !== runRevision(runs.value);
+    runs.value = latest;
+    if (selectedID && selectedRun.value?.id === selectedID) {
+      selectedRun.value = latest.find((item) => item.id === selectedID) ?? selectedRun.value;
+      const turns = await api.listRunTurns(id, selectedID);
+      if (!canRefreshRuns() || selectedRun.value?.id !== selectedID) return;
+      conversationRuns.value = turns;
+    }
+    if (artifactsRefreshRequested && canRefreshRuns()) {
+      const latestArtifacts = await api.listArtifacts(id);
+      if (!canRefreshRuns() || id !== workflowID.value) return;
+      artifacts.value = latestArtifacts;
+      artifactsRefreshRequested = false;
+    }
+  } catch { /* Keep the last usable projection during a transient poll failure. */ }
+  finally { refreshingRuns = false; lastRunRefresh = Date.now(); }
+}
 async function runNow() { running.value = true; try { const created = await api.runWorkflow(workflowID.value); tab.value = "history"; runs.value = [created, ...runs.value.filter((item) => item.id !== created.id)]; await openRun(created); } catch { error.value = t("errors.generic"); } finally { running.value = false; } }
 async function loadDirectory(path: string) { const result = await api.listWorkspace(workflowID.value, path); entries.value = result.items ?? []; workspacePath.value = path; }
 async function openEntry(entry: WorkspaceEntry) { if (entry.directory) { await loadDirectory(entry.path); return; } if (entry.size > 1024 * 1024) { await downloadEntry(entry); return; } const file = await api.getWorkspaceFile(workflowID.value, entry.path); if (!file.content_type.startsWith("text/") && !file.content_type.includes("json") && !file.content_type.includes("xml")) { await downloadEntry(entry); return; } preview.value = { path: file.path, content: decodeBase64(file.content) }; }
@@ -144,6 +189,7 @@ async function streamConversationTurn(item: Run) {
 		else if (completed.final_json) setRunRevealTarget(`\`\`\`json\n${JSON.stringify(completed.final_json, null, 2)}\n\`\`\``);
 		await waitForRunReveal(item.id);
 		conversationRuns.value = conversationRuns.value.map((turn) => turn.id === completed.id ? completed : turn);
+		void refreshRuns(true);
 		window.dispatchEvent(new Event("credits-updated"));
 	} catch (streamError) {
 		if (!(streamError instanceof DOMException && streamError.name === "AbortError")) error.value = t("errors.generic");

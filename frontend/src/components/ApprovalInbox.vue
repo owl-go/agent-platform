@@ -8,10 +8,33 @@ const { t } = useI18n();
 const approvals = ref<CommandApproval[]>([]);
 const identities = ref<Record<string, "user" | "bot">>({});
 let poll: number | undefined;
-async function refresh() { try { approvals.value = await api.listCommandApprovals(); for (const item of approvals.value) identities.value[item.id] = item.identity ?? identities.value[item.id] ?? "user"; } catch { /* The page shell owns global connectivity feedback. */ } }
-async function decide(item: CommandApproval, decision: "approved" | "rejected") { await api.decideCommandApproval(item.id, decision, decision === "approved" ? (identities.value[item.id] ?? "user") : undefined, item.version); await refresh(); }
-onMounted(() => { void refresh(); poll = window.setInterval(refresh, 5000); });
-onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
+let disposed = false;
+let refreshing = false;
+let refreshRequested = false;
+function visible() { return !disposed && document.visibilityState !== "hidden"; }
+function clearPoll() { if (poll !== undefined) window.clearTimeout(poll); poll = undefined; }
+async function refresh(immediate = false) {
+  if (!visible()) return;
+  if (refreshing) { refreshRequested ||= immediate; return; }
+  clearPoll(); refreshRequested = false; refreshing = true;
+  try {
+    const latest = await api.listCommandApprovals();
+    if (disposed) return;
+    approvals.value = latest;
+    for (const item of latest) identities.value[item.id] = item.identity ?? identities.value[item.id] ?? "user";
+  } catch { /* The page shell owns global connectivity feedback. */ }
+  finally {
+    refreshing = false;
+    if (visible()) {
+      if (refreshRequested) { refreshRequested = false; void refresh(); }
+      else poll = window.setTimeout(() => { void refresh(); }, approvals.value.length ? 5000 : 30_000);
+    }
+  }
+}
+function onVisibilityChange() { clearPoll(); if (visible()) void refresh(true); }
+async function decide(item: CommandApproval, decision: "approved" | "rejected") { await api.decideCommandApproval(item.id, decision, decision === "approved" ? (identities.value[item.id] ?? "user") : undefined, item.version); await refresh(true); }
+onMounted(() => { document.addEventListener("visibilitychange", onVisibilityChange); void refresh(); });
+onBeforeUnmount(() => { disposed = true; clearPoll(); document.removeEventListener("visibilitychange", onVisibilityChange); });
 </script>
 
 <template>

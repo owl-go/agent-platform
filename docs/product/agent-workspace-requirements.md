@@ -136,6 +136,8 @@ The Workflow detail page contains four tabs in this order:
 3. Run History
 4. Settings
 
+Run polling is limited to visible Run Conversations, Run History, and Artifacts. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle history checks every 30 seconds for scheduled or API Runs. Artifacts refresh on execution changes or when opening their tab, rather than on every idle poll. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
+
 Settings contains five collapsed sections:
 
 - Basic: name, goal, optional Expert or Expert Team
@@ -285,6 +287,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - User and Bot execution identities remain distinct. Operations supporting both ask the User to choose; missing User scopes start explicit OAuth, while missing Bot scopes or publication prerequisites return a direct recovery link.
 - App ID, App Secret, and Tokens are encrypted and write-only. Tokens refresh before use; failed refresh invalidates that authorization. Disconnecting an authorization or disabling a Connector blocks future commands immediately while preserving historical results.
 - Every high-risk command requires a separate, persisted, one-use approval from the authenticated owning User. The request displays Connector, identity, operation, target, and redacted arguments, and binds the decision to an immutable command digest and nonce. Administrator identity and Workflow API credentials cannot approve.
+- The global approval inbox checks immediately on entry and browser-tab return, every 30 seconds when empty, and every 5 seconds while approvals are pending. Hidden tabs pause polling; a slow request completes before the next one starts. This global check remains available from Settings so background executions can request approval.
 - Only one approval is active per Execution Stage; further requests queue. A Session response or Run enters `waiting_for_user`, may be cancelled, retains its Runtime container, temporary Workspace, Workflow lock, and Credit lease, and pauses its ordinary execution timeout while the approval deadline runs.
 - The approval timeout defaults to five minutes, has a hard cap of fifteen minutes, and may be lowered by an Administrator. Scheduled and API Runs may wait for approval in the authenticated product; without User action they expire normally.
 - Rejection or expiry returns a structured CLI error to the Runtime rather than forcing the whole execution to fail. Actual model Usage remains chargeable. Definition, enablement, authorization, scopes, and policy are revalidated after approval and immediately before command execution.

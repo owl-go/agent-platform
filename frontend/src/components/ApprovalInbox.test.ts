@@ -1,13 +1,53 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { platformApiKey, type CommandApproval, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
 import ApprovalInbox from "./ApprovalInbox.vue";
 
-afterEach(() => { vi.useRealTimers(); });
+beforeEach(() => { vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible"); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("ApprovalInbox", () => {
+  it("checks idle approvals less frequently and pauses while the tab is hidden", async () => {
+    vi.useFakeTimers();
+    const api = { listCommandApprovals: vi.fn(async () => []) } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(3);
+  });
+
+  it("checks pending approvals quickly without overlapping slow requests or restarting after unmount", async () => {
+    vi.useFakeTimers();
+    const approval = { id: "approval-pending", identity: "user", connector_name: "Connector", operation: "send", target: "target", expires_at: "2026-09-06T12:00:00Z" } as CommandApproval;
+    let finish: ((items: CommandApproval[]) => void) | undefined;
+    const api = { listCommandApprovals: vi.fn<PlatformApi["listCommandApprovals"]>()
+      .mockResolvedValueOnce([approval])
+      .mockImplementationOnce(() => new Promise<CommandApproval[]>((resolve) => { finish = resolve; })) } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+    wrapper.unmount(); finish?.([]); await flushPromises();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+  });
   it("shows redacted command details and submits one-use identity consent", async () => {
     vi.useFakeTimers();
     const approval: CommandApproval = { id: "approval-1", execution_kind: "run", execution_id: "run-1", connector_name: "Feishu CLI", operation: "send message", target: "chat-1", redacted_arguments: "--content [REDACTED]", state: "pending", expires_at: "2026-09-05T12:00:00Z", version: 4 };

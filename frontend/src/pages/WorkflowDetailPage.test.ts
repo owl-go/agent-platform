@@ -71,13 +71,68 @@ async function mountPage(api = apiStub()) {
 
 describe("WorkflowDetailPage", () => {
   beforeEach(() => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:workflow-attachment") });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
   afterEach(() => {
+    vi.useRealTimers();
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
+  });
+
+  it("pauses polling in Settings and refreshes when returning to Run History", async () => {
+    vi.useFakeTimers();
+    const api = apiStub();
+    const wrapper = await mountPage(api);
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
+    vi.mocked(api.listRuns).mockClear(); vi.mocked(api.listArtifacts).mockClear();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listRuns).not.toHaveBeenCalled();
+    expect(api.listArtifacts).not.toHaveBeenCalled();
+    await wrapper.findAll(".tabs button")[2]!.trigger("click");
+    await flushPromises();
+    expect(api.listRuns).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(api.listRuns).toHaveBeenCalledOnce();
+    expect(api.listArtifacts).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it("serializes active Run polling and refreshes artifacts once when a Run completes", async () => {
+    vi.useFakeTimers();
+    let finish: ((items: Run[]) => void) | undefined;
+    const api = apiStub({ listRuns: vi.fn<PlatformApi["listRuns"]>()
+      .mockResolvedValueOnce([{ ...run, state: "running", ended_at: undefined }])
+      .mockImplementationOnce(() => new Promise<Run[]>((resolve) => { finish = resolve; }))
+      .mockResolvedValue([run]) });
+    const wrapper = await mountPage(api);
+    await vi.advanceTimersByTimeAsync(6_000);
+    expect(api.listRuns).toHaveBeenCalledTimes(2);
+    expect(api.listArtifacts).toHaveBeenCalledOnce();
+    finish?.([run]); await flushPromises();
+    expect(api.listArtifacts).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(api.listRuns).toHaveBeenCalledTimes(3);
+    expect(api.listArtifacts).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it("pauses hidden-tab polling and refreshes immediately on return", async () => {
+    vi.useFakeTimers();
+    const api = apiStub({ listRuns: vi.fn(async () => [{ ...run, state: "running" as const }]) });
+    const wrapper = await mountPage(api);
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listRuns).toHaveBeenCalledOnce();
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange")); await flushPromises();
+    expect(api.listRuns).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.listRuns).toHaveBeenCalledTimes(2);
   });
 
   it("does not repeat the active tab label as a section title", async () => {
