@@ -10,7 +10,7 @@ export default defineConfig({
       "/api": {
         target: process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8080",
         changeOrigin: false,
-        rewrite: (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => path.replace(/^\/api\/(healthz|readyz)(?=\?|$)/, "/$1"),
       },
     },
   },
