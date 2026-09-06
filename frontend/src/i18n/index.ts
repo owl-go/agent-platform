@@ -36,6 +36,21 @@ Object.assign(zh.common, { loadMore: "加载更多" });
 Object.assign(zh, { credits: { title: "积分", balance: "积分余额", consumed: "共消耗 ✧ {value}", dailyRemaining: "今日剩余", persistent: "兑换积分", todayConsumed: "今日消耗", nextReset: "下次发放", codePlaceholder: "输入兑换码", redeem: "兑换", codeUnavailable: "兑换码不可用", ledger: "积分明细", entry: { daily_allocation: "每日积分", daily_expiry: "每日积分过期", consumption: "模型消耗", redemption: "兑换", adjustment: "管理员调整" } } });
 Object.assign(zh.users, { tabs: { users: "用户", rates: "模型倍率", codes: "兑换码" }, dailyLimit: "每日积分", credits: "积分设置", creditSettings: "用户积分", adjustment: "积分调整", adjustmentReason: "调整原因", rateEditor: "模型倍率设置", rateHistory: "倍率版本记录", providerType: "供应商类型", protocol: "API 协议", modelId: "模型 ID（全部留空表示平台默认）", inputMultiplier: "输入倍率", outputMultiplier: "输出倍率", fallback: "缺失 Usage 回退积分", platformDefault: "平台默认", createCodes: "生成兑换码", codeCount: "数量（1–100）", codeValue: "每个兑换积分", expiry: "过期时间（可选）", generateCodes: "生成", copyCodesNow: "兑换码仅本次显示，请立即复制", codeStatus: "兑换码状态", voidCode: "作废", codeState: { available: "可用", redeemed: "已兑换", void: "已作废", expired: "已过期" } });
 Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行", activityDetails: "查看执行过程", command: "命令", reasoningSummary: "思考过程", runtimePrepared: "运行环境已准备", toolCompleted: "工具调用完成", updatingFiles: "正在更新文件", streamingAnswer: "正在生成回答", answerReady: "回答已生成" });
+Object.assign(zh.workflows, { gitErrors: {
+  git_source_invalid: "Git 配置无效。请检查仓库地址与认证方式是否匹配、分支是否填写，以及 Git / SSH config 是否符合字段下方的说明。",
+  git_credentials_required: "请填写本次克隆使用的密码 / Token 或 SSH 私钥。已保存的凭证不会回显。",
+  git_workspace_not_empty: "工作空间已有内容，无法克隆。请先备份并清空工作空间，或新建一个空工作流后重试；现有文件未被删除。",
+  git_server_unavailable: "服务端 Git / SSH 或主机校验配置不可用，请联系管理员检查。",
+  git_ssh_host_untrusted: "SSH 主机校验失败。请联系管理员核实仓库主机指纹并更新受信任主机配置后重试。",
+  git_ssh_key_invalid: "SSH 私钥无法读取。请检查是否完整粘贴了私钥首尾标记和换行，并使用无需交互输入口令的密钥。",
+  git_authentication_failed: "Git 认证失败。请检查账号、Token 或 SSH 私钥，以及该账号对仓库的访问权限。",
+  git_branch_not_found: "仓库中找不到指定分支，请检查分支名称。",
+  git_repository_unavailable: "仓库不存在或不可访问，请检查仓库地址和访问权限。",
+  git_connection_failed: "无法连接 Git 服务器或连接超时，请检查地址、端口和网络后重试。",
+  git_repository_too_large: "克隆后的仓库超过工作空间 1 GiB 容量限制。",
+  git_clone_failed: "保存并克隆失败。请检查仓库地址、分支、认证信息和工作空间是否为空，然后重试。输入内容已保留。",
+} });
+
 Object.assign(zh.workflows, { apiTokenDescription: "先使用 API Key 与 API Secret 换取 15 分钟有效的 JWT，再通过 Bearer Header 调用工作流。", gitAuthentication: "认证方式", gitPublic: "公共 HTTPS", gitAccount: "账号密码", gitUsername: "Git 账号", gitPassword: "Git 密码 / Token", gitURLHelp: "支持 https:// 地址和 git{'@'}host:path 格式的 SSH 地址。", gitSaved: "Git 仓库已克隆并保存", cloneRepository: "保存并克隆仓库" });
 Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
 Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
@@ -65,6 +80,21 @@ Object.assign(en.common, { loadMore: "Load more" });
 Object.assign(en, { credits: { title: "Credits", balance: "Credit balance", consumed: "Used ✧ {value}", dailyRemaining: "Remaining today", persistent: "Redeemed Credits", todayConsumed: "Used today", nextReset: "Next allocation", codePlaceholder: "Enter Redemption Code", redeem: "Redeem", codeUnavailable: "Redemption Code is unavailable", ledger: "Credit ledger", entry: { daily_allocation: "Daily allocation", daily_expiry: "Daily expiry", consumption: "Model usage", redemption: "Redemption", adjustment: "Administrator adjustment" } } });
 Object.assign(en.users, { tabs: { users: "Users", rates: "Model rates", codes: "Redemption codes" }, dailyLimit: "Daily Credits", credits: "Credits", creditSettings: "User Credits", adjustment: "Credit adjustment", adjustmentReason: "Adjustment reason", rateEditor: "Model Credit Rate", rateHistory: "Rate revision history", providerType: "Provider type", protocol: "API protocol", modelId: "Model ID (leave all three blank for default)", inputMultiplier: "Input multiplier", outputMultiplier: "Output multiplier", fallback: "Missing-Usage fallback", platformDefault: "Platform default", createCodes: "Generate Redemption Codes", codeCount: "Count (1–100)", codeValue: "Credits per code", expiry: "Expiry (optional)", generateCodes: "Generate", copyCodesNow: "Codes are shown once. Copy them now.", codeStatus: "Code status", voidCode: "Void", codeState: { available: "Available", redeemed: "Redeemed", void: "Voided", expired: "Expired" } });
 Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line", activityDetails: "View execution progress", command: "Command", reasoningSummary: "Reasoning summary", runtimePrepared: "Runtime prepared", toolCompleted: "Tool call completed", updatingFiles: "Updating files", streamingAnswer: "Generating the answer", answerReady: "Answer ready" });
+Object.assign(en.workflows, { gitErrors: {
+  git_source_invalid: "Invalid Git configuration. Check that the repository URL matches the authentication method, the branch is filled in, and Git / SSH config follows the field guidance.",
+  git_credentials_required: "Enter the password / token or SSH private key for this clone attempt. Saved credentials are not displayed.",
+  git_workspace_not_empty: "The Workspace already contains files. Back them up and clear the Workspace, or create an empty Workflow before retrying. Existing files have not been deleted.",
+  git_server_unavailable: "Server Git / SSH or host verification configuration is unavailable. Contact an Administrator.",
+  git_ssh_host_untrusted: "SSH host verification failed. Ask an Administrator to verify the repository host fingerprint and update the trusted hosts configuration.",
+  git_ssh_key_invalid: "The SSH private key could not be read. Check the complete key markers and line breaks, and use a key that does not require an interactive passphrase.",
+  git_authentication_failed: "Git authentication failed. Check the account, token or SSH key and the account's repository access.",
+  git_branch_not_found: "The specified branch was not found. Check the branch name.",
+  git_repository_unavailable: "The repository does not exist or is inaccessible. Check its address and access permissions.",
+  git_connection_failed: "The Git server could not be reached or the connection timed out. Check the address, port and network, then retry.",
+  git_repository_too_large: "The cloned repository exceeds the Workspace limit of 1 GiB.",
+  git_clone_failed: "Save and clone failed. Check the repository URL, branch, credentials and that the Workspace is empty, then retry. Your input has been kept.",
+} });
+
 Object.assign(en.workflows, { apiTokenDescription: "Exchange the API Key and API Secret for a JWT valid for 15 minutes, then invoke the Workflow with a Bearer header.", gitAuthentication: "Authentication", gitPublic: "Public HTTPS", gitAccount: "Username and password", gitUsername: "Git username", gitPassword: "Git password / token", gitURLHelp: "Supports HTTPS URLs and SSH addresses in git{'@'}host:path format.", gitSaved: "Git repository cloned and saved", cloneRepository: "Save and clone repository" });
 Object.assign(en.sessions, { addAttachment: "Attach images or files", removeAttachment: "Remove attachment {name}", attachmentLimits: "Up to 10 attachments per message, 100 MB each" });
 Object.assign(en.sessions.progress, { finalizing: "Saving the session securely" });

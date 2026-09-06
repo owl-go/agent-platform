@@ -90,17 +90,17 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 	username := optionalString(request.GetUsername())
 	source := workspacedomain.GitSource{URL: request.Url, Branch: request.Branch, Authentication: request.Authentication, Username: username, Config: config, SSHConfig: request.SshConfig, CredentialConfigured: request.Authentication != "none"}
 	if err := workspacedomain.ValidateGitSource(source); err != nil {
-		return nil, publicError(err)
+		return nil, gitSourceError("git_source_invalid")
 	}
 	password := []byte(request.GetPassword())
 	privateKey := []byte(request.GetSshPrivateKey())
 	defer clear(password)
 	defer clear(privateKey)
 	if source.Authentication == "basic" && len(password) == 0 {
-		return nil, publicError(fmt.Errorf("%w: Git password is required", workspacedomain.ErrInvalid))
+		return nil, gitSourceError("git_credentials_required")
 	}
 	if source.Authentication == "ssh" && len(privateKey) == 0 {
-		return nil, publicError(fmt.Errorf("%w: private SSH key is required", workspacedomain.ErrInvalid))
+		return nil, gitSourceError("git_credentials_required")
 	}
 	secretPayload, err := json.Marshal(map[string]string{"password": string(password), "ssh_private_key": string(privateKey)})
 	if err != nil {
@@ -116,7 +116,7 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 	}
 	err = service.files.Clone(ctx, workflow.WorkspacePath, workspacefs.GitCloneOptions{RepositoryURL: request.Url, Branch: request.Branch, Username: request.GetUsername(), Password: password, PrivateKey: privateKey, Config: config, SSHConfig: request.SshConfig})
 	if err != nil {
-		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
+		return nil, gitCloneError(err)
 	}
 	updated, err := service.workspace.Repository().SetWorkflowGitSource(ctx, owner, request.WorkflowId, source, encryptedSecret)
 	if err != nil {

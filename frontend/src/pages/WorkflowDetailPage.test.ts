@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -265,6 +265,27 @@ describe("WorkflowDetailPage", () => {
 
     expect(wrapper.get(".settings-section").text()).toContain("待完善专家");
     expect(wrapper.get(".settings-section").text()).not.toContain("Codex");
+    wrapper.unmount();
+  });
+
+  it("shows clone failures beside the Git action and preserves inputs for retry", async () => {
+    const configureWorkflowGitSource = vi.fn<PlatformApi["configureWorkflowGitSource"]>()
+      .mockRejectedValueOnce(new ApiError("validation", 422, "git_workspace_not_empty"))
+      .mockResolvedValue(workflow);
+    const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    const url = wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]');
+    await url.setValue("git@git.example.com:team/project.git");
+    await wrapper.get(".git-settings .button.primary").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get('.git-settings [role="alert"]').text()).toContain("工作空间已有内容");
+    expect(url.element.value).toBe("git@git.example.com:team/project.git");
+    expect(wrapper.get(".git-settings .button.primary").attributes("disabled")).toBeUndefined();
+    await wrapper.get(".git-settings .button.primary").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".git-feedback").text()).toContain("Git 仓库已克隆并保存");
+    expect(wrapper.get(".git-feedback").text()).not.toContain("工作空间已有内容");
     wrapper.unmount();
   });
 
