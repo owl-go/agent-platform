@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：当前架构加已接受但尚未实现的 Expert、Skill 与 Connector 目标修订
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
 
 ## 结构
 
@@ -18,7 +18,7 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 
 ## 所有权
 
-Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement 和 Authorization。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整和聚合 Connector 健康，但不能借助管理权限读取其他 User 的会话、工作流、Connector 凭证/内容或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
+Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement 和 Authorization。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
 ## 事务与并发
 

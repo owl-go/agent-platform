@@ -67,6 +67,17 @@ type Definition struct {
 	CreatedByUserID        string
 }
 
+type Health struct {
+	DefinitionID                string
+	DefinitionName              string
+	DefinitionState             State
+	EnablementCount             int64
+	EnabledCount                int64
+	WaitingForUserCount         int64
+	ActiveAuthorizationCount    int64
+	AttentionAuthorizationCount int64
+}
+
 type Enablement struct {
 	ID, OwnerID, DefinitionID string
 	State                     string

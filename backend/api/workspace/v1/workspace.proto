@@ -95,6 +95,7 @@ service AgentWorkspaceService {
   rpc UpdateCLIConnectorDefinition(UpdateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {patch: "/api/v1/admin/connectors/cli/{definition_id}" body: "*"}; }
   rpc PublishCLIConnectorDefinition(PublishCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/publish" body: "*"}; }
   rpc DisableCLIConnectorDefinition(DisableCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/disable" body: "*"}; }
+  rpc ListCLIConnectorHealth(ListCLIConnectorHealthRequest) returns (ListCLIConnectorHealthResponse) { option (google.api.http) = {get: "/api/v1/admin/connectors/cli-health"}; }
   rpc EnableCLIConnector(EnableCLIConnectorRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/{definition_id}/enable" body: "*"}; }
   rpc ListCLIConnectorEnablements(ListCLIConnectorEnablementsRequest) returns (ListCLIConnectorEnablementsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements"}; }
   rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
@@ -274,6 +275,9 @@ message CreateCLIConnectorDefinitionRequest { CLIConnectorDefinitionInput defini
 message UpdateCLIConnectorDefinitionRequest { string definition_id = 1; CLIConnectorDefinitionInput definition = 2; int64 expected_version = 3; }
 message PublishCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
 message DisableCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
+message ListCLIConnectorHealthRequest {}
+message ListCLIConnectorHealthResponse { repeated CLIConnectorHealth items = 1; }
+message CLIConnectorHealth { string definition_id = 1; string definition_name = 2; string definition_state = 3; int64 enablement_count = 4; int64 enabled_count = 5; int64 waiting_for_user_count = 6; int64 active_authorization_count = 7; int64 attention_authorization_count = 8; }
 message EnableCLIConnectorRequest { string definition_id = 1; }
 message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; optional string provider_name = 7; optional string developer_console_url = 8; }
 message ListCLIConnectorEnablementsRequest {}

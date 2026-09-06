@@ -19,6 +19,7 @@ import (
 
 type cliConnectorRepository interface {
 	ListCLIConnectorDefinitions(context.Context, bool) ([]cliconnector.Definition, error)
+	ListCLIConnectorHealth(context.Context, time.Time) ([]cliconnector.Health, error)
 	CreateCLIConnectorDefinition(context.Context, string, cliconnector.Definition) (cliconnector.Definition, error)
 	UpdateCLIConnectorDefinition(context.Context, string, cliconnector.Definition, int64) (cliconnector.Definition, error)
 	PublishCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
@@ -41,6 +42,29 @@ type cliConnectorRepository interface {
 	DisconnectCLIConnectorAuthorization(context.Context, string, string, int64) (cliconnector.Authorization, error)
 	ListCommandApprovals(context.Context, string, time.Time) ([]workspacedomain.CommandApproval, error)
 	DecideCommandApproval(context.Context, string, string, workspacedomain.ApprovalState, workspacedomain.ExecutionIdentity, int64, time.Time) (workspacedomain.CommandApproval, error)
+}
+
+func (service *Service) ListCLIConnectorHealth(ctx context.Context, _ *workspacev1.ListCLIConnectorHealthRequest) (*workspacev1.ListCLIConnectorHealthResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListCLIConnectorHealth(ctx, time.Now().UTC())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := make([]*workspacev1.CLIConnectorHealth, 0, len(items))
+	for _, item := range items {
+		response = append(response, &workspacev1.CLIConnectorHealth{
+			DefinitionId: item.DefinitionID, DefinitionName: item.DefinitionName, DefinitionState: string(item.DefinitionState),
+			EnablementCount: item.EnablementCount, EnabledCount: item.EnabledCount, WaitingForUserCount: item.WaitingForUserCount,
+			ActiveAuthorizationCount: item.ActiveAuthorizationCount, AttentionAuthorizationCount: item.AttentionAuthorizationCount,
+		})
+	}
+	return &workspacev1.ListCLIConnectorHealthResponse{Items: response}, nil
 }
 
 type feishuApplicationRegistrar interface {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { platformApiKey, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
@@ -103,6 +103,47 @@ describe("ExtensionManager", () => {
     expect(document.body.textContent).toContain("能力策略");
     expect(document.body.textContent).toContain("风险等级");
     administrator.unmount();
+  });
+
+  it("lets an Administrator correct a mutable CLI Connector definition", async () => {
+    const definition = {
+      id: "cli-1",
+      name: "Example CLI",
+      npm_package: "example-cli",
+      npm_version: "1.0.0",
+      npm_integrity: "sha512-old",
+      executable: "example",
+      authentication_driver: "none" as const,
+      capabilities: [{ id: "read", argv_prefix: ["read"], risk: "low" as const, identities: ["user" as const], scopes: [], egress_hosts: ["api.example.test"], timeout_seconds: 60 }],
+      supported_architectures: ["linux-amd64" as const],
+      recommended_skill_ids: [],
+      state: "failed" as const,
+      mutable: true,
+      version: 3,
+    };
+    const updateCLIConnectorDefinition = vi.fn(async (_id: string, input: CLIConnectorDefinitionInput) => ({ ...definition, ...input, version: 4 }));
+    const api = {
+      listMCPServers: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      listCLIConnectorDefinitions: vi.fn(async () => [definition]),
+      listCLIConnectorEnablements: vi.fn(async () => []),
+      listCLIConnectorHealth: vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, waiting_for_user_count: 1, active_authorization_count: 2, attention_authorization_count: 1 }]),
+      updateCLIConnectorDefinition,
+    } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    expect(wrapper.text()).toContain("3 个用户已启用");
+    expect(wrapper.text()).toContain("2 个有效授权 · 1 个需处理");
+
+    await wrapper.get('button[aria-label="编辑"]').trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
+    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli");
+    await form.findAll("input")[2]!.setValue("1.0.1");
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, expect.objectContaining({ npm_version: "1.0.1" }), definition.version);
+    wrapper.unmount();
   });
 
   it("selects only an enabled CLI Connector for the current Expert", async () => {

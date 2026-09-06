@@ -29,3 +29,12 @@ func TestAdministratorCannotEnableCLIConnector(t *testing.T) {
 		t.Fatalf("Administrator enablement code = %d, want %d", code, http.StatusForbidden)
 	}
 }
+
+func TestUserCannotListAggregateCLIConnectorHealth(t *testing.T) {
+	service := &Service{accounts: &accountapplication.Service{}}
+	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "user-1"})
+	_, err := service.ListCLIConnectorHealth(ctx, &workspacev1.ListCLIConnectorHealthRequest{})
+	if code := kratoserrors.Code(err); code != http.StatusForbidden {
+		t.Fatalf("User aggregate health code = %d, want %d", code, http.StatusForbidden)
+	}
+}

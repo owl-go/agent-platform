@@ -66,6 +66,7 @@ const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceListCLIConnectorAuthorizations = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
 const OperationAgentWorkspaceServiceListCLIConnectorDefinitions = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
 const OperationAgentWorkspaceServiceListCLIConnectorEnablements = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
+const OperationAgentWorkspaceServiceListCLIConnectorHealth = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
 const OperationAgentWorkspaceServiceListCommandApprovals = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
 const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
@@ -157,6 +158,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCLIConnectorAuthorizations(context.Context, *ListCLIConnectorAuthorizationsRequest) (*ListCLIConnectorAuthorizationsResponse, error)
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
+	ListCLIConnectorHealth(context.Context, *ListCLIConnectorHealthRequest) (*ListCLIConnectorHealthResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
@@ -281,6 +283,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/admin/connectors/cli/{definition_id}", _AgentWorkspaceService_UpdateCLIConnectorDefinition0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/connectors/cli/{definition_id}/publish", _AgentWorkspaceService_PublishCLIConnectorDefinition0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/connectors/cli/{definition_id}/disable", _AgentWorkspaceService_DisableCLIConnectorDefinition0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/connectors/cli-health", _AgentWorkspaceService_ListCLIConnectorHealth0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/connectors/cli/{definition_id}/enable", _AgentWorkspaceService_EnableCLIConnector0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/connectors/cli/enablements", _AgentWorkspaceService_ListCLIConnectorEnablements0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/command-approvals", _AgentWorkspaceService_ListCommandApprovals0_HTTP_Handler(srv))
@@ -1962,6 +1965,25 @@ func _AgentWorkspaceService_DisableCLIConnectorDefinition0_HTTP_Handler(srv Agen
 	}
 }
 
+func _AgentWorkspaceService_ListCLIConnectorHealth0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListCLIConnectorHealthRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListCLIConnectorHealth)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListCLIConnectorHealth(ctx, req.(*ListCLIConnectorHealthRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListCLIConnectorHealthResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_EnableCLIConnector0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in EnableCLIConnectorRequest
@@ -2204,6 +2226,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCLIConnectorAuthorizations(ctx context.Context, req *ListCLIConnectorAuthorizationsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorAuthorizationsResponse, err error)
 	ListCLIConnectorDefinitions(ctx context.Context, req *ListCLIConnectorDefinitionsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorDefinitionsResponse, err error)
 	ListCLIConnectorEnablements(ctx context.Context, req *ListCLIConnectorEnablementsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorEnablementsResponse, err error)
+	ListCLIConnectorHealth(ctx context.Context, req *ListCLIConnectorHealthRequest, opts ...http.CallOption) (rsp *ListCLIConnectorHealthResponse, err error)
 	ListCommandApprovals(ctx context.Context, req *ListCommandApprovalsRequest, opts ...http.CallOption) (rsp *ListCommandApprovalsResponse, err error)
 	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
@@ -3056,6 +3079,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListCLIConnectorEnablements(ctx co
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListCLIConnectorEnablements),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListCLIConnectorHealth(ctx context.Context, in *ListCLIConnectorHealthRequest, opts ...http.CallOption) (*ListCLIConnectorHealthResponse, error) {
+	var out ListCLIConnectorHealthResponse
+	pattern := "/api/v1/admin/connectors/cli-health"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListCLIConnectorHealth),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

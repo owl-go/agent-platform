@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/connectors/cli-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCLIConnectorHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/connectors/cli/{definition_id}": {
         parameters: {
             query?: never;
@@ -1326,6 +1342,21 @@ export interface components {
             provider_name?: string;
             developer_console_url?: string;
         };
+        v1CLIConnectorHealth: {
+            definition_id?: string;
+            definition_name?: string;
+            definition_state?: string;
+            /** Format: int64 */
+            enablement_count?: number;
+            /** Format: int64 */
+            enabled_count?: number;
+            /** Format: int64 */
+            waiting_for_user_count?: number;
+            /** Format: int64 */
+            active_authorization_count?: number;
+            /** Format: int64 */
+            attention_authorization_count?: number;
+        };
         v1CLIConnectorSnapshot: {
             id?: string;
             name?: string;
@@ -1647,6 +1678,9 @@ export interface components {
         };
         v1ListCLIConnectorEnablementsResponse: {
             items?: components["schemas"]["v1CLIConnectorEnablement"][];
+        };
+        v1ListCLIConnectorHealthResponse: {
+            items?: components["schemas"]["v1CLIConnectorHealth"][];
         };
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
@@ -2102,6 +2136,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CLIConnectorDefinition"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCLIConnectorHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCLIConnectorHealthResponse"];
                 };
             };
             /** @description An unexpected error response. */

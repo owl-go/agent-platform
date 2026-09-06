@@ -48,6 +48,43 @@ func (repository *Repository) ListCLIConnectorDefinitions(ctx context.Context, i
 	return items, nil
 }
 
+func (repository *Repository) ListCLIConnectorHealth(ctx context.Context, now time.Time) ([]cliconnector.Health, error) {
+	var rows []struct {
+		DefinitionID                string `gorm:"column:definition_id"`
+		DefinitionName              string `gorm:"column:definition_name"`
+		DefinitionState             string `gorm:"column:definition_state"`
+		EnablementCount             int64  `gorm:"column:enablement_count"`
+		EnabledCount                int64  `gorm:"column:enabled_count"`
+		WaitingForUserCount         int64  `gorm:"column:waiting_for_user_count"`
+		ActiveAuthorizationCount    int64  `gorm:"column:active_authorization_count"`
+		AttentionAuthorizationCount int64  `gorm:"column:attention_authorization_count"`
+	}
+	err := repository.db.WithContext(ctx).Raw(`
+		SELECT d.id AS definition_id,
+		       d.name AS definition_name,
+		       d.state AS definition_state,
+		       (SELECT COUNT(*) FROM cli_connector_enablements e WHERE e.definition_id = d.id) AS enablement_count,
+		       (SELECT COUNT(*) FROM cli_connector_enablements e WHERE e.definition_id = d.id AND e.state = 'enabled') AS enabled_count,
+		       (SELECT COUNT(*) FROM cli_connector_enablements e WHERE e.definition_id = d.id AND e.state = 'waiting_for_user')
+		         + (SELECT COUNT(*) FROM cli_connector_authorization_attempts aa JOIN cli_connector_enablements e ON e.id = aa.enablement_id WHERE e.definition_id = d.id AND aa.expires_at > ?) AS waiting_for_user_count,
+		       (SELECT COUNT(*) FROM cli_connector_authorizations a JOIN cli_connector_enablements e ON e.id = a.enablement_id WHERE e.definition_id = d.id AND a.state = 'active' AND (a.expires_at IS NULL OR a.expires_at > ?)) AS active_authorization_count,
+		       (SELECT COUNT(*) FROM cli_connector_authorizations a JOIN cli_connector_enablements e ON e.id = a.enablement_id WHERE e.definition_id = d.id AND (a.state = 'invalid' OR (a.state = 'active' AND a.expires_at IS NOT NULL AND a.expires_at <= ?))) AS attention_authorization_count
+		FROM cli_connector_definitions d
+		ORDER BY d.name, d.id`, now, now, now).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("list CLI Connector health: %w", err)
+	}
+	items := make([]cliconnector.Health, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, cliconnector.Health{
+			DefinitionID: row.DefinitionID, DefinitionName: row.DefinitionName, DefinitionState: cliconnector.State(row.DefinitionState),
+			EnablementCount: row.EnablementCount, EnabledCount: row.EnabledCount, WaitingForUserCount: row.WaitingForUserCount,
+			ActiveAuthorizationCount: row.ActiveAuthorizationCount, AttentionAuthorizationCount: row.AttentionAuthorizationCount,
+		})
+	}
+	return items, nil
+}
+
 func (repository *Repository) CreateCLIConnectorDefinition(ctx context.Context, administratorID string, input cliconnector.Definition) (cliconnector.Definition, error) {
 	if err := input.Validate(); err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: %v", domain.ErrInvalid, err)

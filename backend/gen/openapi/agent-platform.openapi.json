@@ -53,6 +53,36 @@
         ]
       }
     },
+    "/api/v1/admin/connectors/cli-health": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCLIConnectorHealth",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListCLIConnectorHealthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/connectors/cli/{definition_id}": {
       "patch": {
         "operationId": "AgentWorkspaceService_UpdateCLIConnectorDefinition",
@@ -4637,6 +4667,40 @@
           }
         }
       },
+      "v1CLIConnectorHealth": {
+        "type": "object",
+        "properties": {
+          "definition_id": {
+            "type": "string"
+          },
+          "definition_name": {
+            "type": "string"
+          },
+          "definition_state": {
+            "type": "string"
+          },
+          "enablement_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "enabled_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "waiting_for_user_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "active_authorization_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "attention_authorization_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1CLIConnectorSnapshot": {
         "type": "object",
         "properties": {
@@ -5554,6 +5618,17 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1CLIConnectorEnablement"
+            }
+          }
+        }
+      },
+      "v1ListCLIConnectorHealthResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CLIConnectorHealth"
             }
           }
         }

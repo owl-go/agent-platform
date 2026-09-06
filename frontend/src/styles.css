@@ -354,6 +354,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cli-capabilities { display: grid; gap: 12px; margin-top: 8px; }
 .cli-capabilities article { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+.connector-health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: -6px 0 20px; }
+.connector-health-grid article { display: grid; gap: 5px; padding: 14px; }
+.connector-health-grid span { color: var(--muted); font-size: .72rem; }
+.connector-health-grid span.attention { color: var(--el-color-warning-dark-2); font-weight: 700; }
 
 @media (max-width: 720px) {
   .approval-inbox { margin: 8px 12px 0; }

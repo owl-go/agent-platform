@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIConnectorHealth, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 
@@ -31,11 +31,13 @@ const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
+const cliHealth = ref<CLIConnectorHealth[]>([]);
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
+const editingCLI = ref<CLIConnectorDefinition>();
 const showCLI = ref(false);
-const cliForm = ref<CLIConnectorDefinitionInput>({ name: t("resources.feishuCLI"), npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-QARcHz96pfEzzRZdjXene5h9fJ46lCu5q2TWx+blLyOIXEPuJwi6bT+RT9hPOsKFW+bbGYvamU8LpD6FsIa5ew==", executable: "lark-cli", authentication_driver: "feishu", supported_architectures: ["linux-amd64"], recommended_skill_ids: [], capabilities: [{ id: "identity", argv_prefix: ["auth", "status"], risk: "low", identities: ["user"], scopes: [], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] });
+const cliForm = ref<CLIConnectorDefinitionInput>(emptyCLIDraft());
 const editingMCP = ref<MCPServer>();
 const showMCP = ref(false);
 const mcpForm = ref<MCPDraft>(emptyMCPDraft());
@@ -61,14 +63,19 @@ onMounted(() => {
 onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
 
 function emptyMCPDraft(): MCPDraft { return { name: "", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
+function emptyCLIDraft(): CLIConnectorDefinitionInput { return { name: t("resources.feishuCLI"), npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-QARcHz96pfEzzRZdjXene5h9fJ46lCu5q2TWx+blLyOIXEPuJwi6bT+RT9hPOsKFW+bbGYvamU8LpD6FsIa5ew==", executable: "lark-cli", authentication_driver: "feishu", supported_architectures: ["linux-amd64"], recommended_skill_ids: [], capabilities: [{ id: "identity", argv_prefix: ["auth", "status"], risk: "low", identities: ["user"], scopes: [], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
   try {
-    [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]);
+    [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value, cliHealth.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([]), refreshCLIHealth()]);
     await refreshCLIAuthorizations();
     notifyResources();
   } catch { emit("error"); }
+}
+async function refreshCLIHealth() {
+  if (!canManageCLI.value || !api.listCLIConnectorHealth) return [];
+  try { return await api.listCLIConnectorHealth(); } catch { return []; }
 }
 async function enableCLI(item: CLIConnectorDefinition) { try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; } catch { emit("error"); } }
 async function completePendingCLIEnablements() {
@@ -114,9 +121,32 @@ function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   if (enablementFor(item.id)?.state !== "enabled") return;
   emit("update:cliConnectorDefinitionIds", checked ? [...new Set([...props.cliConnectorDefinitionIds, item.id])] : props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
 }
+function openNewCLI() { editingCLI.value = undefined; cliForm.value = emptyCLIDraft(); showCLI.value = true; }
+function openCLI(item: CLIConnectorDefinition) {
+  editingCLI.value = item;
+  cliForm.value = {
+    name: item.name,
+    npm_package: item.npm_package,
+    npm_version: item.npm_version,
+    npm_integrity: item.npm_integrity,
+    executable: item.executable,
+    authentication_driver: item.authentication_driver,
+    supported_architectures: [...item.supported_architectures],
+    recommended_skill_ids: [...item.recommended_skill_ids],
+    capabilities: item.capabilities.map((capability) => ({ ...capability, argv_prefix: [...capability.argv_prefix], identities: [...capability.identities], scopes: [...capability.scopes], egress_hosts: [...capability.egress_hosts] })),
+  };
+  showCLI.value = true;
+}
 function addCLICapability() { cliForm.value.capabilities.push({ id: "", argv_prefix: [], risk: "low", identities: ["user"], scopes: [], egress_hosts: [], timeout_seconds: 60 }); }
 function removeCLICapability(index: number) { cliForm.value.capabilities.splice(index, 1); }
-async function saveCLI() { try { await api.createCLIConnectorDefinition(cliForm.value); showCLI.value = false; cliDefinitions.value = await api.listCLIConnectorDefinitions(); } catch { emit("error"); } }
+async function saveCLI() {
+  try {
+    if (editingCLI.value) await api.updateCLIConnectorDefinition(editingCLI.value.id, cliForm.value, editingCLI.value.version);
+    else await api.createCLIConnectorDefinition(cliForm.value);
+    showCLI.value = false;
+    cliDefinitions.value = await api.listCLIConnectorDefinitions();
+  } catch { emit("error"); }
+}
 async function publishCLI(item: CLIConnectorDefinition) { try { await api.publishCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); } catch { emit("error"); } }
 async function disableCLI(item: CLIConnectorDefinition) { try { await api.disableCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); cliEnablements.value = await api.listCLIConnectorEnablements(); } catch { emit("error"); } }
 async function refreshCLI() { try { [cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]); } catch { /* Preserve the last usable projection while polling. */ } }
@@ -207,13 +237,22 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="activeTab === 'mcp'">
       <div class="section-heading"><strong>MCP</strong><el-button type="primary" class="compact-action" @click="openNewMCP">＋ MCP</el-button></div>
       <div class="resource-list"><article v-for="item in mcp" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label><span class="resource-mark">MCP</span><div><strong>{{ item.name }}</strong><p>{{ item.transport }} · {{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p></div><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag><el-button circle :aria-label="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)">↻</el-button><el-button circle :aria-label="t('common.edit')" @click="openMCP(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })">×</el-button></article></div>
-      <div class="section-heading"><strong>{{ t('resources.cli') }}</strong><el-button v-if="canManageCLI" @click="showCLI = true">＋ {{ t('resources.cliDefinition') }}</el-button></div>
+      <div class="section-heading"><strong>{{ t('resources.cli') }}</strong><el-button v-if="canManageCLI" @click="openNewCLI">＋ {{ t('resources.cliDefinition') }}</el-button></div>
+      <div v-if="canManageCLI && cliHealth.length" class="connector-health-grid">
+        <article v-for="item in cliHealth" :key="item.definition_id" class="el-card">
+          <strong>{{ item.definition_name }}</strong>
+          <span>{{ t('resources.health.enabled', { count: item.enabled_count }) }}</span>
+          <span>{{ t('resources.health.waiting', { count: item.waiting_for_user_count }) }}</span>
+          <span :class="{ attention: Number(item.attention_authorization_count) > 0 }">{{ t('resources.health.authorization', { active: item.active_authorization_count, attention: item.attention_authorization_count }) }}</span>
+        </article>
+      </div>
       <div class="resource-list">
         <article v-for="item in cliDefinitions" :key="item.id" class="el-card">
           <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
           <span class="resource-mark">CLI</span>
           <div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small></div>
           <el-tag>{{ t(`resources.state.${item.state}`) }}</el-tag>
+          <el-button v-if="canManageCLI && item.mutable" circle :aria-label="t('common.edit')" @click="openCLI(item)">✎</el-button>
           <el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button>
           <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
           <template v-if="enablementFor(item.id)?.state === 'waiting_for_user'"><a :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a></template>

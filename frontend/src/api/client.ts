@@ -48,6 +48,7 @@ export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; 
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
 export interface CLIConnectorDefinitionInput { name: string; npm_package: string; npm_version: string; npm_integrity: string; executable: string; authentication_driver: "none" | "feishu"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skill_ids: string[] }
 export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[] }
+export interface CLIConnectorHealth { definition_id: string; definition_name: string; definition_state: CLIConnectorDefinition["state"]; enablement_count: number; enabled_count: number; waiting_for_user_count: number; active_authorization_count: number; attention_authorization_count: number }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
@@ -150,6 +151,7 @@ export interface PlatformApi {
   getSkillDeletionImpact(id: string, signal?: AbortSignal): Promise<ResourceDeletionImpact>;
   deleteSkill(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
   listCLIConnectorDefinitions(signal?: AbortSignal): Promise<CLIConnectorDefinition[]>;
+  listCLIConnectorHealth(signal?: AbortSignal): Promise<CLIConnectorHealth[]>;
   createCLIConnectorDefinition(input: CLIConnectorDefinitionInput, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   updateCLIConnectorDefinition(id: string, input: CLIConnectorDefinitionInput, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   publishCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
@@ -376,6 +378,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     getSkillDeletionImpact(id, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}/deletion-impact`, { signal }); },
     deleteSkill(id, confirmationToken, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
+    async listCLIConnectorHealth(signal) { return (await call<{ items: CLIConnectorHealth[] }>("/api/v1/admin/connectors/cli-health", { signal })).items ?? []; },
     createCLIConnectorDefinition(input, signal) { return call("/api/v1/admin/connectors/cli", json("POST", { definition: input }, signal)); },
     updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },
     publishCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/publish`, json("POST", { expected_version: version }, signal)); },
