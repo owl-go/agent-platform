@@ -12,7 +12,9 @@ const spec = `${packageName}@${version}`;
 const packed = JSON.parse(execFileSync("npm", ["pack", spec, "--json", "--ignore-scripts"], { cwd: "/work", encoding: "utf8" }));
 const packageTarball = join("/work", packed[0].filename);
 copyFileSync(packageTarball, "/output/package.tgz");
-execFileSync("npm", ["install", "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund", "--prefix", "/work/bundle", spec], { stdio: "inherit" });
+// Lifecycle scripts run only in this credential-free sandbox; some CLIs use
+// them to materialize their fixed-version native executable into the bundle.
+execFileSync("npm", ["install", "--omit=dev", "--no-audit", "--no-fund", "--prefix", "/work/bundle", spec], { stdio: "inherit" });
 const packagePath = join("/work/bundle/node_modules", packageName);
 const manifest = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8"));
 const bins = typeof manifest.bin === "string" ? { [manifest.name]: manifest.bin } : manifest.bin;
