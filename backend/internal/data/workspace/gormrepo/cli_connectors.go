@@ -91,8 +91,8 @@ func (repository *Repository) CreateCLIConnectorDefinition(ctx context.Context, 
 	}
 	capabilities, _ := json.Marshal(input.Capabilities)
 	architectures, _ := json.Marshal(input.SupportedArchitectures)
-	recommendedSkills, _ := json.Marshal(input.RecommendedSkillIDs)
-	row := cliConnectorDefinitionRecord{ID: uuid.NewString(), Name: input.Name, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: recommendedSkills, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
+	recommendedSkills, _ := json.Marshal(input.RecommendedSkills)
+	row := cliConnectorDefinitionRecord{ID: uuid.NewString(), Name: input.Name, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: []byte(`[]`), RecommendedSkills: recommendedSkills, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("create CLI Connector Definition: %w", err)
 	}
@@ -105,8 +105,8 @@ func (repository *Repository) UpdateCLIConnectorDefinition(ctx context.Context, 
 	}
 	capabilities, _ := json.Marshal(input.Capabilities)
 	architectures, _ := json.Marshal(input.SupportedArchitectures)
-	recommendedSkills, _ := json.Marshal(input.RecommendedSkillIDs)
-	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed"}).Updates(map[string]any{"name": input.Name, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skill_ids": recommendedSkills, "state": "draft", "failure_reason": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	recommendedSkills, _ := json.Marshal(input.RecommendedSkills)
+	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed"}).Updates(map[string]any{"name": input.Name, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skills": recommendedSkills, "state": "draft", "failure_reason": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 	if result.Error != nil {
 		return cliconnector.Definition{}, result.Error
 	}
@@ -559,14 +559,15 @@ func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definit
 	if err := json.Unmarshal(row.Capabilities, &capabilities); err != nil {
 		return cliconnector.Definition{}, err
 	}
-	var architectures, recommendedSkills []string
+	var architectures []string
+	var recommendedSkills []cliconnector.RecommendedSkill
 	if err := json.Unmarshal(row.SupportedArchitectures, &architectures); err != nil {
 		return cliconnector.Definition{}, err
 	}
-	if err := json.Unmarshal(row.RecommendedSkillIDs, &recommendedSkills); err != nil {
+	if err := json.Unmarshal(row.RecommendedSkills, &recommendedSkills); err != nil {
 		return cliconnector.Definition{}, err
 	}
-	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
+	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkills: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
 	if row.BundleObjectKey != nil {
 		item.BundleObjectKey = *row.BundleObjectKey
 	}

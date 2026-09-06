@@ -170,6 +170,7 @@ type cliConnectorDefinitionRecord struct {
 	Capabilities           []byte    `gorm:"column:capabilities;type:jsonb"`
 	SupportedArchitectures []byte    `gorm:"column:supported_architectures;type:jsonb"`
 	RecommendedSkillIDs    []byte    `gorm:"column:recommended_skill_ids;type:jsonb"`
+	RecommendedSkills      []byte    `gorm:"column:recommended_skills;type:jsonb"`
 	State                  string    `gorm:"column:state"`
 	FailureReason          *string   `gorm:"column:failure_reason"`
 	BundleObjectKey        *string   `gorm:"column:bundle_object_key"`

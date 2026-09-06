@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIConnectorHealth, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIConnectorHealth, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 
@@ -27,6 +27,7 @@ const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
 const { t } = useI18n();
 const canManageCLI = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
+const recommendableSkills = computed(() => skills.value.filter((skill) => skill.source === "git"));
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
@@ -63,7 +64,7 @@ onMounted(() => {
 onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
 
 function emptyMCPDraft(): MCPDraft { return { name: "", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
-function emptyCLIDraft(): CLIConnectorDefinitionInput { return { name: t("resources.feishuCLI"), npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-QARcHz96pfEzzRZdjXene5h9fJ46lCu5q2TWx+blLyOIXEPuJwi6bT+RT9hPOsKFW+bbGYvamU8LpD6FsIa5ew==", executable: "lark-cli", authentication_driver: "feishu", supported_architectures: ["linux-amd64"], recommended_skill_ids: [], capabilities: [{ id: "identity", argv_prefix: ["auth", "status"], risk: "low", identities: ["user"], scopes: [], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] }; }
+function emptyCLIDraft(): CLIConnectorDefinitionInput { return { name: t("resources.feishuCLI"), npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-QARcHz96pfEzzRZdjXene5h9fJ46lCu5q2TWx+blLyOIXEPuJwi6bT+RT9hPOsKFW+bbGYvamU8LpD6FsIa5ew==", executable: "lark-cli", authentication_driver: "feishu", supported_architectures: ["linux-amd64"], recommended_skills: [], recommended_skill_ids: [], capabilities: [{ id: "identity", argv_prefix: ["auth", "status"], risk: "low", identities: ["user"], scopes: [], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
@@ -132,17 +133,30 @@ function openCLI(item: CLIConnectorDefinition) {
     executable: item.executable,
     authentication_driver: item.authentication_driver,
     supported_architectures: [...item.supported_architectures],
-    recommended_skill_ids: [...item.recommended_skill_ids],
+    recommended_skills: (item.recommended_skills ?? []).map((skill) => ({ ...skill })),
+    recommended_skill_ids: recommendableSkills.value.filter((skill) => item.recommended_skills?.some((recommended) => recommended.git_url === skill.git_url && recommended.git_ref === skill.git_ref)).map((skill) => skill.id),
     capabilities: item.capabilities.map((capability) => ({ ...capability, argv_prefix: [...capability.argv_prefix], identities: [...capability.identities], scopes: [...capability.scopes], egress_hosts: [...capability.egress_hosts] })),
   };
   showCLI.value = true;
+}
+function installedRecommendedSkill(recommendation: CLIRecommendedSkill) { return skills.value.find((skill) => skill.source === "git" && skill.git_url === recommendation.git_url && skill.git_ref === recommendation.git_ref); }
+function selectedRecommendedSkill(recommendation: CLIRecommendedSkill) { const installed = installedRecommendedSkill(recommendation); return Boolean(installed && props.skillIds.includes(installed.id)); }
+async function acceptRecommendedSkill(recommendation: CLIRecommendedSkill) {
+  try {
+    let skill = installedRecommendedSkill(recommendation);
+    if (!skill) skill = await api.createGitSkill({ name: recommendation.name, git_url: recommendation.git_url, git_ref: recommendation.git_ref });
+    if (props.selectable) emit("update:skillIds", [...new Set([...props.skillIds, skill.id])]);
+    await refresh();
+  } catch { emit("error"); }
 }
 function addCLICapability() { cliForm.value.capabilities.push({ id: "", argv_prefix: [], risk: "low", identities: ["user"], scopes: [], egress_hosts: [], timeout_seconds: 60 }); }
 function removeCLICapability(index: number) { cliForm.value.capabilities.splice(index, 1); }
 async function saveCLI() {
   try {
-    if (editingCLI.value) await api.updateCLIConnectorDefinition(editingCLI.value.id, cliForm.value, editingCLI.value.version);
-    else await api.createCLIConnectorDefinition(cliForm.value);
+    const selectedRecommendations = recommendableSkills.value.filter((skill) => cliForm.value.recommended_skill_ids.includes(skill.id)).map((skill) => ({ name: skill.name, git_url: skill.git_url!, git_ref: skill.git_ref ?? "main" }));
+    const input = { ...cliForm.value, recommended_skills: selectedRecommendations };
+    if (editingCLI.value) await api.updateCLIConnectorDefinition(editingCLI.value.id, input, editingCLI.value.version);
+    else await api.createCLIConnectorDefinition(input);
     showCLI.value = false;
     cliDefinitions.value = await api.listCLIConnectorDefinitions();
   } catch { emit("error"); }
@@ -250,7 +264,7 @@ async function fileToBase64(file: File): Promise<string> {
         <article v-for="item in cliDefinitions" :key="item.id" class="el-card">
           <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
           <span class="resource-mark">CLI</span>
-          <div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small></div>
+          <div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small><section v-if="item.recommended_skills?.length" class="recommended-skill-offers"><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section></div>
           <el-tag>{{ t(`resources.state.${item.state}`) }}</el-tag>
           <el-button v-if="canManageCLI && item.mutable" circle :aria-label="t('common.edit')" @click="openCLI(item)">✎</el-button>
           <el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button>

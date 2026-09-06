@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -60,11 +61,17 @@ type Definition struct {
 	BundleSHA256           string
 	RuntimeDigests         []string
 	SupportedArchitectures []string
-	RecommendedSkillIDs    []string
+	RecommendedSkills      []RecommendedSkill
 	Capabilities           []Capability
 	VersionNumber          int64
 	FailureReason          string
 	CreatedByUserID        string
+}
+
+type RecommendedSkill struct {
+	Name   string `json:"name"`
+	GitURL string `json:"git_url"`
+	GitRef string `json:"git_ref"`
 }
 
 type Health struct {
@@ -140,6 +147,12 @@ func (definition Definition) Validate() error {
 	for _, architecture := range definition.SupportedArchitectures {
 		if architecture != "linux-amd64" && architecture != "linux-arm64" {
 			return errors.New("unsupported CLI architecture")
+		}
+	}
+	for _, skill := range definition.RecommendedSkills {
+		parsed, err := url.Parse(skill.GitURL)
+		if strings.TrimSpace(skill.Name) == "" || strings.TrimSpace(skill.GitRef) == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return errors.New("recommended Skill requires a name, HTTPS Git URL, and Git ref")
 		}
 	}
 	return nil

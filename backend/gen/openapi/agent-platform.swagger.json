@@ -3640,6 +3640,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "recommended_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLIRecommendedSkill"
+          }
         }
       }
     },
@@ -3681,6 +3688,13 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "recommended_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLIRecommendedSkill"
           }
         }
       }
@@ -3777,6 +3791,20 @@
         "version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1CLIRecommendedSkill": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "git_url": {
+          "type": "string"
+        },
+        "git_ref": {
+          "type": "string"
         }
       }
     },

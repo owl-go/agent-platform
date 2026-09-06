@@ -84,6 +84,9 @@ func TestDefinitionRejectsIncompleteOrUnsafeCapabilityPolicy(t *testing.T) {
 		{name: "unknown identity", mutate: func(value *Definition) { value.Capabilities[0].Identities = []Identity{"administrator"} }},
 		{name: "wildcard egress", mutate: func(value *Definition) { value.Capabilities[0].EgressHosts = []string{"*.feishu.cn"} }},
 		{name: "unsafe scope", mutate: func(value *Definition) { value.Capabilities[0].Scopes = []string{"contact read\nwrite"} }},
+		{name: "non-HTTPS recommended Skill", mutate: func(value *Definition) {
+			value.RecommendedSkills = []RecommendedSkill{{Name: "Calendar", GitURL: "ssh://git@example.test/calendar.git", GitRef: "main"}}
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

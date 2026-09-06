@@ -358,6 +358,9 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .connector-health-grid article { display: grid; gap: 5px; padding: 14px; }
 .connector-health-grid span { color: var(--muted); font-size: .72rem; }
 .connector-health-grid span.attention { color: var(--el-color-warning-dark-2); font-weight: 700; }
+.recommended-skill-offers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.recommended-skill-offers > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 8px; background: #f2f5f1; }
+.recommended-skill-offers > span.warning { background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
 
 @media (max-width: 720px) {
   .approval-inbox { margin: 8px 12px 0; }

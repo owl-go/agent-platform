@@ -534,7 +534,11 @@ func cliDefinitionInput(input *workspacev1.CLIConnectorDefinitionInput) (cliconn
 		}
 		capabilities = append(capabilities, cliconnector.Capability{ID: item.Id, ArgvPrefix: append([]string(nil), item.ArgvPrefix...), Risk: cliconnector.Risk(item.Risk), Identities: identities, Scopes: append([]string(nil), item.Scopes...), EgressHosts: append([]string(nil), item.EgressHosts...), Timeout: time.Duration(item.TimeoutSeconds) * time.Second})
 	}
-	value := cliconnector.Definition{Name: input.Name, Package: input.NpmPackage, Version: input.NpmVersion, Integrity: input.NpmIntegrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: append([]string(nil), input.SupportedArchitectures...), RecommendedSkillIDs: append([]string(nil), input.RecommendedSkillIds...)}
+	recommendedSkills := make([]cliconnector.RecommendedSkill, 0, len(input.RecommendedSkills))
+	for _, skill := range input.RecommendedSkills {
+		recommendedSkills = append(recommendedSkills, cliconnector.RecommendedSkill{Name: skill.Name, GitURL: skill.GitUrl, GitRef: skill.GitRef})
+	}
+	value := cliconnector.Definition{Name: input.Name, Package: input.NpmPackage, Version: input.NpmVersion, Integrity: input.NpmIntegrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: append([]string(nil), input.SupportedArchitectures...), RecommendedSkills: recommendedSkills}
 	if err := value.Validate(); err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err)
 	}
@@ -549,7 +553,11 @@ func cliDefinitionResponse(item cliconnector.Definition, mutable bool) *workspac
 		}
 		capabilities = append(capabilities, &workspacev1.CLICapability{Id: value.ID, ArgvPrefix: value.ArgvPrefix, Risk: string(value.Risk), Identities: identities, Scopes: value.Scopes, EgressHosts: value.EgressHosts, TimeoutSeconds: int32(value.Timeout / time.Second)})
 	}
-	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, RecommendedSkillIds: item.RecommendedSkillIDs, ConformanceRuntimeDigests: item.RuntimeDigests}
+	recommendedSkills := make([]*workspacev1.CLIRecommendedSkill, 0, len(item.RecommendedSkills))
+	for _, skill := range item.RecommendedSkills {
+		recommendedSkills = append(recommendedSkills, &workspacev1.CLIRecommendedSkill{Name: skill.Name, GitUrl: skill.GitURL, GitRef: skill.GitRef})
+	}
+	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, ConformanceRuntimeDigests: item.RuntimeDigests, RecommendedSkills: recommendedSkills}
 	if item.FailureReason != "" {
 		response.FailureReason = &item.FailureReason
 	}

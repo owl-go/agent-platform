@@ -377,7 +377,7 @@ func cloneDefinition(value Definition) Definition {
 	result := value
 	result.RuntimeDigests = append([]string(nil), value.RuntimeDigests...)
 	result.SupportedArchitectures = append([]string(nil), value.SupportedArchitectures...)
-	result.RecommendedSkillIDs = append([]string(nil), value.RecommendedSkillIDs...)
+	result.RecommendedSkills = append([]RecommendedSkill(nil), value.RecommendedSkills...)
 	result.Capabilities = append([]Capability(nil), value.Capabilities...)
 	for index := range result.Capabilities {
 		result.Capabilities[index].ArgvPrefix = append([]string(nil), value.Capabilities[index].ArgvPrefix...)

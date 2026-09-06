@@ -117,6 +117,7 @@ describe("ExtensionManager", () => {
       capabilities: [{ id: "read", argv_prefix: ["read"], risk: "low" as const, identities: ["user" as const], scopes: [], egress_hosts: ["api.example.test"], timeout_seconds: 60 }],
       supported_architectures: ["linux-amd64" as const],
       recommended_skill_ids: [],
+      recommended_skills: [],
       state: "failed" as const,
       mutable: true,
       version: 3,
@@ -156,6 +157,25 @@ describe("ExtensionManager", () => {
     await wrapper.get('input[type="checkbox"]').setValue(true);
 
     expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[definition.id]]);
+    wrapper.unmount();
+  });
+
+  it("installs a recommended CLI Skill explicitly and selects it for the Expert", async () => {
+    const recommendation = { name: "Calendar Skill", git_url: "https://example.test/calendar-skill.git", git_ref: "main" };
+    const definition = { id: "cli-1", name: "Calendar CLI", npm_package: "calendar-cli", npm_version: "1.0.0", npm_integrity: "sha512-test", executable: "calendar", authentication_driver: "none", capabilities: [], supported_architectures: ["linux-amd64"], recommended_skill_ids: [], recommended_skills: [recommendation], conformance_runtime_digests: [], state: "available", mutable: false, version: 1 } as const;
+    const saved: Skill = { id: "skill-1", name: recommendation.name, source: "git", git_url: recommendation.git_url, git_ref: recommendation.git_ref, sha256: "a".repeat(64), ...timestamps };
+    const createGitSkill = vi.fn(async () => saved);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 }]), createGitSkill } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.setProps({ cliConnectorDefinitionIds: [definition.id] });
+
+    expect(wrapper.text()).toContain("建议为当前专家选择技能“Calendar Skill”");
+    await wrapper.findAll("button").find((button) => button.text().includes("安装技能"))!.trigger("click");
+    await flushPromises();
+
+    expect(createGitSkill).toHaveBeenCalledWith(recommendation);
+    expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
     wrapper.unmount();
   });
 

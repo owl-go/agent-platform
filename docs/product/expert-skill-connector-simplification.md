@@ -135,7 +135,7 @@ High-risk CLI commands require a time-bounded, one-use approval from the owning 
 - Allow multiple Feishu account authorizations under the one User application. Account Tokens are isolated; application permissions and Bot identity are shared by that User application.
 - At enablement, request only a platform-reviewed subset of officially review-free scopes required for Connector identity and diagnostics, with no business-data access. Capability use requests the smallest additional scopes.
 - Support User and Bot identities. A high-risk operation that supports both asks the User to choose during approval and verifies the corresponding scopes and application prerequisites before execution.
-- Generate recommended Skills as explicit install offers. They become ordinary User-owned Skills and are never injected merely because a CLI Connector is enabled.
+- Store recommended Skills as Administrator-authored HTTPS Git source descriptors, not User-owned Skill IDs. Render them as explicit install offers; after acceptance they become ordinary User-owned Skills and are never injected merely because a CLI Connector is enabled. An Expert that selects the Connector but not the installed Skill shows a non-blocking warning.
 - Add `waiting_for_user` as a non-terminal Session response and Run state. Persist an approval request before exposing it, then transition back to generating/running after its one-use decision.
 - Permit only the authenticated owning User to approve or reject. Administrator identity and Workflow API credentials have no approval authority.
 - Serialize high-risk approval requests per Execution Stage. Bind every decision to a nonce and a digest of Connector, identity, executable, argv, target, policy version, and expiry.

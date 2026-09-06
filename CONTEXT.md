@@ -230,6 +230,10 @@ _Avoid_: CLI Connector Definition, one application per Expert, platform-wide Fei
 A versioned capability package containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
 _Avoid_: Connector, Prompt, Runtime Engine
 
+**Recommended Skill Offer**:
+An Administrator-authored name and HTTPS Git source attached to a CLI Connector Definition. A User must explicitly install it, after which it becomes an ordinary User-owned Skill; enabling a Connector never installs or injects it implicitly.
+_Avoid_: platform-owned Skill, hidden instruction, automatic installation
+
 ## Personal Configuration
 
 **Personal Settings**:
