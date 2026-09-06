@@ -5,6 +5,7 @@
 ## 开始工作
 
 1. 先读 `CONTEXT.md`，使用其中定义的领域术语；不要为同一概念创造近义词。
+   开始新的开发任务前，先按“分支、提交与推送”更新 `main` 并创建开发分支，再修改文件。
 2. 根据“文档路由”只读取与任务相关的产品或技术规格，再查看对应接口、实现和相邻测试。
 3. 先确认当前实现阶段和验收证据。规格中的目标能力不等于仓库已经实现或通过生产验证。
 4. 在既有 seam 内完成最小改动，并同步修改测试和作为行为依据的文档。
@@ -115,9 +116,12 @@ make web-build
 
 完成时检查 `git diff`，确保只包含任务内改动、相关测试与必要的权威文档更新；报告已运行命令、未运行的环境门禁和仍然缺失的证据。
 
-## 提交与推送
+## 分支、提交与推送
 
-- 完成用户要求的代码或文档改动并通过适用门禁后，自动创建 Git Commit 并推送当前分支，不等待用户再次提醒。
+- `main` 是保护分支。每个新开发任务都从最新 `origin/main` 创建开发分支，默认使用 `codex/<task-name>`；同一任务的后续工作继续使用已有开发分支。
+- 工作区干净且可切换到 `main` 时，依次执行 `git switch main`、`git pull --ff-only origin main`、`git switch -c codex/<task-name>`。拉取失败或本地 `main` 分叉时，先解决阻塞，再开始开发，不以过期基线创建分支。
+- 工作区有未提交改动或 `main` 被其他 worktree 占用时，保留原工作区，执行 `git fetch origin main` 后，通过 `git worktree add -b codex/<task-name> <new-worktree-path> origin/main` 在独立 worktree 开发。
+- 完成用户要求的代码或文档改动并通过适用门禁后，自动创建 Git Commit 并推送当前开发分支；首次推送使用 `git push -u origin <branch>`，不等待用户再次提醒。`main` 的变更通过 Pull Request 合入，不直接向 `main` 提交或推送，也不绕过保护规则。
 - 提交前检查 `git status` 和 `git diff`，只暂存本任务及当前连续工作中已经验证的改动；排除用户的无关改动、临时目录、凭证和禁止提交的生成产物。
 - 使用准确概括改动的 Conventional Commit message，不修改或合并既有 Commit。
 - 推送因鉴权、远端更新或分支保护失败时保留本地 Commit，不重写历史，并向用户报告具体阻塞与安全的后续操作。
