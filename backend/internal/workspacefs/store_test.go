@@ -1,12 +1,75 @@
 package workspacefs
 
 import (
+	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/pem"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ssh"
 )
+
+func TestWriteSSHFilesProducesReadableKeyWithoutFinalNewline(t *testing.T) {
+	keygen, err := exec.LookPath("ssh-keygen")
+	if err != nil {
+		t.Skip("OpenSSH ssh-keygen is required to verify private-key file compatibility")
+	}
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := ssh.MarshalPrivateKey(privateKey, "synthetic-regression")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded := bytes.TrimSuffix(pem.EncodeToMemory(block), []byte("\n"))
+	original := bytes.Clone(encoded)
+	root := t.TempDir()
+	knownHosts := filepath.Join(root, "known_hosts")
+	if err := os.WriteFile(knownHosts, []byte("git.example.test ssh-ed25519 AAAA\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := New(filepath.Join(root, "workspaces"), knownHosts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _, keyPath, cleanup, err := store.writeSSHFiles(encoded, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	output, err := exec.Command(keygen, "-y", "-P", "", "-f", keyPath).Output()
+	if err != nil {
+		t.Fatalf("OpenSSH cannot read the materialized private key: %v", err)
+	}
+	publicKey, _, _, _, err := ssh.ParseAuthorizedKey(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := ssh.NewPublicKey(privateKey.Public())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(publicKey.Marshal(), expected.Marshal()) {
+		t.Fatal("materialization changed the key identity")
+	}
+	if !bytes.Equal(encoded, original) {
+		t.Fatal("materialization changed the caller's private key bytes")
+	}
+	if info, err := os.Stat(keyPath); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatal("private key permissions must remain 0600")
+	}
+	cleanup()
+	if _, err := os.Stat(home); !os.IsNotExist(err) {
+		t.Fatal("temporary SSH material was not removed")
+	}
+}
 
 func TestStoreRejectsSymlinkEscapes(t *testing.T) {
 	root := t.TempDir()
@@ -77,7 +140,7 @@ func TestWriteSSHFilesMaterializesWorkflowConfigAndConfiguredIdentity(t *testing
 		t.Fatalf("SSH config = %q, %v", config, err)
 	}
 	key, err := os.ReadFile(keyPath)
-	if err != nil || string(key) != "private-key" {
+	if err != nil || string(key) != "private-key\n" {
 		t.Fatalf("SSH key = %q, %v", key, err)
 	}
 	if info, err := os.Stat(configPath); err != nil || info.Mode().Perm() != 0o600 {

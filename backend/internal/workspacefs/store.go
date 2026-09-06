@@ -1,6 +1,7 @@
 package workspacefs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -263,6 +264,11 @@ func (store *Store) writeSSHFiles(privateKey []byte, config string) (string, str
 		return "", "", "", func() {}, err
 	}
 	keyPath := filepath.Join(sshDirectory, identity)
+	// Textarea input may omit the final newline required by OpenSSH's key reader.
+	if privateKey[len(privateKey)-1] != '\n' {
+		privateKey = append(bytes.Clone(privateKey), '\n')
+		defer clear(privateKey)
+	}
 	if err := os.WriteFile(keyPath, privateKey, 0o600); err != nil {
 		cleanup()
 		return "", "", "", func() {}, err
