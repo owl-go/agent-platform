@@ -275,14 +275,14 @@ describe("WorkflowDetailPage", () => {
     await wrapper.vm.$nextTick();
 
     await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
-    await wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]').setValue("agent-platform:/srv/git/project.git");
-    await wrapper.get<HTMLTextAreaElement>('textarea[name="ssh-config"]').setValue("Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n");
+    await wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]').setValue("git-server:/srv/git/project.git");
+    await wrapper.get<HTMLTextAreaElement>('textarea[name="ssh-config"]').setValue("Host git-server\n  HostName git.example.com\n  User git\n  IdentityFile ~/.ssh/id_ed25519\n");
     await wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').setValue("private-key");
     await wrapper.get(".git-settings .button.primary").trigger("click");
     await flushPromises();
 
     expect(configureWorkflowGitSource).toHaveBeenCalledWith(workflow.id, expect.objectContaining({
-      ssh_config: expect.stringContaining("Host agent-platform"),
+      ssh_config: expect.stringContaining("Host git-server"),
     }));
     wrapper.unmount();
   });

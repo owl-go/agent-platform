@@ -189,6 +189,7 @@ Settings contains five collapsed sections:
 - Workspace initialization by Git Clone is configured only in Workflow Git Settings, not in the Workspace browser.
 - Git supports public HTTPS, HTTPS username/password or token, and private SSH repositories. Passwords, tokens, and private keys belong only to that Workflow, are write-only, and are destroyed with the Workspace.
 - Git config is stored as an ordered key/value list and restricted to a safe allowlist; command, credential-helper, include, URL rewrite, and transport override keys are rejected.
+- Git Settings examples use generic host aliases, reserved example domains, usernames, and key filenames; they must not expose deployment IP addresses or operator-specific connection details.
 - A private SSH source may store one Workflow-scoped SSH config containing an exact `Host` alias plus allowlisted connection fields. During Clone, the API materializes it as `~/.ssh/config` inside an isolated temporary HOME and writes the private key under the configured `IdentityFile`; both are removed after the attempt. It never modifies the API host account's SSH config.
 - SSH config accepts only `Host`, `HostName`, `User`, `Port`, `IdentityFile`, `IdentitiesOnly`, `ServerAliveInterval`, and `ServerAliveCountMax`. It rejects wildcard hosts, includes, match blocks, proxy or local commands, arbitrary identity paths, and every other directive. Host verification remains pinned to the Administrator-provided `known_hosts` file.
 - Clone requires an empty Workspace.
