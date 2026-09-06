@@ -183,18 +183,35 @@ type cliConnectorDefinitionRecord struct {
 func (cliConnectorDefinitionRecord) TableName() string { return "cli_connector_definitions" }
 
 type cliConnectorEnablementRecord struct {
-	ID              string     `gorm:"column:id"`
-	OwnerID         string     `gorm:"column:owner_user_id"`
-	DefinitionID    string     `gorm:"column:definition_id"`
-	State           string     `gorm:"column:state"`
-	ActionURL       *string    `gorm:"column:action_url"`
-	ActionExpiresAt *time.Time `gorm:"column:action_expires_at"`
-	CreatedAt       time.Time  `gorm:"column:created_at"`
-	UpdatedAt       time.Time  `gorm:"column:updated_at"`
-	Version         int64      `gorm:"column:version"`
+	ID                               string     `gorm:"column:id"`
+	OwnerID                          string     `gorm:"column:owner_user_id"`
+	DefinitionID                     string     `gorm:"column:definition_id"`
+	State                            string     `gorm:"column:state"`
+	ActionURL                        *string    `gorm:"column:action_url"`
+	ActionExpiresAt                  *time.Time `gorm:"column:action_expires_at"`
+	RegistrationDeviceCodeCiphertext []byte     `gorm:"column:registration_device_code_ciphertext"`
+	CreatedAt                        time.Time  `gorm:"column:created_at"`
+	UpdatedAt                        time.Time  `gorm:"column:updated_at"`
+	Version                          int64      `gorm:"column:version"`
 }
 
 func (cliConnectorEnablementRecord) TableName() string { return "cli_connector_enablements" }
+
+type feishuCLIApplicationRecord struct {
+	ID                                  string    `gorm:"column:id"`
+	OwnerID                             string    `gorm:"column:owner_user_id"`
+	EnablementID                        string    `gorm:"column:enablement_id"`
+	ProviderApplicationIDCiphertext     []byte    `gorm:"column:provider_application_id_ciphertext"`
+	ProviderApplicationSecretCiphertext []byte    `gorm:"column:provider_application_secret_ciphertext"`
+	ProviderName                        string    `gorm:"column:provider_name"`
+	DeveloperConsoleURL                 string    `gorm:"column:developer_console_url"`
+	GrantedScopes                       []byte    `gorm:"column:granted_scopes;type:jsonb"`
+	CreatedAt                           time.Time `gorm:"column:created_at"`
+	UpdatedAt                           time.Time `gorm:"column:updated_at"`
+	Version                             int64     `gorm:"column:version"`
+}
+
+func (feishuCLIApplicationRecord) TableName() string { return "feishu_cli_applications" }
 
 type cliCommandApprovalRecord struct {
 	ID                string     `gorm:"column:id"`

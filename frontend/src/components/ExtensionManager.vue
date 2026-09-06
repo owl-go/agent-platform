@@ -42,12 +42,17 @@ const showSkill = ref(false);
 const skillForm = ref({ name: "", source: "git" as "git" | "upload", git_url: "", git_ref: "main", archive: "" });
 const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; item: Skill }) & { impact: ResourceDeletionImpact }>();
 let poll: number | undefined;
+let lastCLICompletionPoll = 0;
 
 onMounted(() => {
   void refresh();
   poll = window.setInterval(() => {
     if (mcp.value.some((item) => item.test_pending)) void refreshMCP();
     if (cliDefinitions.value.some((item) => item.state === "building" || item.state === "testing")) void refreshCLI();
+    if (cliEnablements.value.some((item) => item.state === "waiting_for_user") && Date.now() - lastCLICompletionPoll >= 5000) {
+      lastCLICompletionPoll = Date.now();
+      void completePendingCLIEnablements();
+    }
   }, 1500);
 });
 onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
@@ -59,6 +64,14 @@ async function refresh() {
   try { [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]); notifyResources(); } catch { emit("error"); }
 }
 async function enableCLI(item: CLIConnectorDefinition) { try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; } catch { emit("error"); } }
+async function completePendingCLIEnablements() {
+  const pending = cliEnablements.value.filter((item) => item.state === "waiting_for_user");
+  try {
+    const completed = await Promise.all(pending.map((item) => api.completeCLIConnectorEnablement(item.id)));
+    const replacements = new Map(completed.map((item) => [item.id, item]));
+    cliEnablements.value = cliEnablements.value.map((item) => replacements.get(item.id) ?? item);
+  } catch { /* A transient provider failure must not discard the active setup link. */ }
+}
 function enablementFor(id: string) { return cliEnablements.value.find((item) => item.definition_id === id); }
 function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   if (enablementFor(item.id)?.state !== "enabled") return;
@@ -69,7 +82,7 @@ function removeCLICapability(index: number) { cliForm.value.capabilities.splice(
 async function saveCLI() { try { await api.createCLIConnectorDefinition(cliForm.value); showCLI.value = false; cliDefinitions.value = await api.listCLIConnectorDefinitions(); } catch { emit("error"); } }
 async function publishCLI(item: CLIConnectorDefinition) { try { await api.publishCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); } catch { emit("error"); } }
 async function disableCLI(item: CLIConnectorDefinition) { try { await api.disableCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); cliEnablements.value = await api.listCLIConnectorEnablements(); } catch { emit("error"); } }
-async function refreshCLI() { try { cliDefinitions.value = await api.listCLIConnectorDefinitions(); } catch { /* Preserve the last usable projection while polling. */ } }
+async function refreshCLI() { try { [cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]); } catch { /* Preserve the last usable projection while polling. */ } }
 async function refreshMCP() { try { mcp.value = await api.listMCPServers(); notifyResources(); } catch { /* Preserve the last usable projection while polling. */ } }
 function openNewMCP() { editingMCP.value = undefined; mcpForm.value = emptyMCPDraft(); showMCP.value = true; }
 function openMCP(item: MCPServer) {

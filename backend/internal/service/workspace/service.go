@@ -17,6 +17,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
@@ -38,6 +39,7 @@ type Service struct {
 	skills    *skillstore.Store
 	objects   objectstore.Provider
 	config    platformconfig.Config
+	feishu    feishuApplicationRegistrar
 }
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
@@ -55,7 +57,7 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 	if accounts == nil || credits == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config}, nil
+	return &Service{accounts: accounts, credits: credits, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil)}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {

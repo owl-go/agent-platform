@@ -58,4 +58,4 @@ Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
 
-Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。历史 Snapshot JSON 不回写。
+Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。启用飞书 CLI Connector 时，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Feishu Application 并销毁临时设备码。历史 Snapshot JSON 不回写。

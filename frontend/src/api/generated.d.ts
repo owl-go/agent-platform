@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/cli/enablements/{enablement_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CompleteCLIConnectorEnablement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli/{definition_id}/enable": {
         parameters: {
             query?: never;
@@ -1008,6 +1024,7 @@ export interface components {
         };
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceCompleteCLIConnectorEnablementBody: Record<string, never>;
         AgentWorkspaceServiceConfigureUserDailyCreditsBody: {
             /** Format: int64 */
             allocation_hundredths?: number;
@@ -1225,6 +1242,8 @@ export interface components {
             action_expires_at?: string;
             /** Format: int64 */
             version?: number;
+            provider_name?: string;
+            developer_console_url?: string;
         };
         v1CLIConnectorSnapshot: {
             id?: string;
@@ -2590,6 +2609,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListCLIConnectorEnablementsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CompleteCLIConnectorEnablement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enablement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCompleteCLIConnectorEnablementBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorEnablement"];
                 };
             };
             /** @description An unexpected error response. */

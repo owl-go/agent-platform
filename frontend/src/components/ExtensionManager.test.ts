@@ -8,7 +8,7 @@ import ExtensionManager from "./ExtensionManager.vue";
 
 const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30T00:00:00Z", version: 1 };
 
-afterEach(() => { document.body.innerHTML = ""; });
+afterEach(() => { vi.useRealTimers(); document.body.innerHTML = ""; });
 
 function mountManager(api: PlatformApi, administrator = false) {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
@@ -114,6 +114,23 @@ describe("ExtensionManager", () => {
     await wrapper.get('input[type="checkbox"]').setValue(true);
 
     expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[definition.id]]);
+    wrapper.unmount();
+  });
+
+  it("polls an active Feishu application registration until it is enabled", async () => {
+    vi.useFakeTimers();
+    const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
+    const waiting = { id: "enable-1", definition_id: definition.id, state: "waiting_for_user" as const, action_url: "https://open.feishu.cn/page/cli", version: 1 };
+    const completeCLIConnectorEnablement = vi.fn(async () => ({ ...waiting, state: "enabled" as const, action_url: undefined, provider_name: "用户的飞书CLI", developer_console_url: "https://open.feishu.cn/app/cli-1", version: 2 }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [waiting]), completeCLIConnectorEnablement } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(6000);
+    await flushPromises();
+
+    expect(completeCLIConnectorEnablement).toHaveBeenCalledWith(waiting.id);
+    expect(wrapper.text()).toContain("已启用");
     wrapper.unmount();
   });
 });

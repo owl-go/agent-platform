@@ -99,6 +99,7 @@ service AgentWorkspaceService {
   rpc ListCLIConnectorEnablements(ListCLIConnectorEnablementsRequest) returns (ListCLIConnectorEnablementsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements"}; }
   rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
   rpc DecideCommandApproval(DecideCommandApprovalRequest) returns (CommandApproval) { option (google.api.http) = {post: "/api/v1/command-approvals/{approval_id}/decision" body: "*"}; }
+  rpc CompleteCLIConnectorEnablement(CompleteCLIConnectorEnablementRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/enablements/{enablement_id}/complete" body: "*"}; }
 }
 
 message GetCurrentUserRequest {}
@@ -270,7 +271,7 @@ message UpdateCLIConnectorDefinitionRequest { string definition_id = 1; CLIConne
 message PublishCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
 message DisableCLIConnectorDefinitionRequest { string definition_id = 1; int64 expected_version = 2; }
 message EnableCLIConnectorRequest { string definition_id = 1; }
-message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; }
+message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; optional string provider_name = 7; optional string developer_console_url = 8; }
 message ListCLIConnectorEnablementsRequest {}
 message ListCLIConnectorEnablementsResponse { repeated CLIConnectorEnablement items = 1; }
 message CommandApproval { string id = 1; string execution_kind = 2; string execution_id = 3; string connector_name = 4; string operation = 5; string target = 6; string redacted_arguments = 7; string state = 8; optional string identity = 9; google.protobuf.Timestamp expires_at = 10; int64 version = 11; }
@@ -282,3 +283,4 @@ message DeleteResponse { bool deleted = 1; }
 message Attachment { string id = 1; string name = 2; string content_type = 3; int64 size = 4; string sha256 = 5; bool image = 6; }
 message ExecutionActivity { string type = 1; string detail = 2; }
 message GetSessionArtifactDownloadRequest { string session_id = 1; string artifact_id = 2; }
+message CompleteCLIConnectorEnablementRequest { string enablement_id = 1; }

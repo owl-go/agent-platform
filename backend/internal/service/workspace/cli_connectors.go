@@ -2,14 +2,17 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
+	"agent-platform/backend/internal/feishucli"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -19,10 +22,21 @@ type cliConnectorRepository interface {
 	UpdateCLIConnectorDefinition(context.Context, string, cliconnector.Definition, int64) (cliconnector.Definition, error)
 	PublishCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
 	DisableCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
-	EnableCLIConnector(context.Context, string, string, string, time.Time) (cliconnector.Enablement, error)
+	GetAvailableCLIConnectorDefinition(context.Context, string) (cliconnector.Definition, error)
+	GetCLIConnectorEnablement(context.Context, string, string) (cliconnector.Enablement, error)
+	EnableCLIConnector(context.Context, string, string) (cliconnector.Enablement, error)
+	BeginFeishuCLIConnectorEnablement(context.Context, string, string, string, time.Time, []byte) (cliconnector.Enablement, error)
+	GetFeishuCLIConnectorRegistration(context.Context, string, string) (cliconnector.EnablementRegistration, error)
+	CompleteFeishuCLIConnectorEnablement(context.Context, string, string, []byte, []byte, string, string) (cliconnector.Enablement, error)
+	InvalidateCLIConnectorEnablement(context.Context, string, string) (cliconnector.Enablement, error)
 	ListCLIConnectorEnablements(context.Context, string) ([]cliconnector.Enablement, error)
 	ListCommandApprovals(context.Context, string, time.Time) ([]workspacedomain.CommandApproval, error)
 	DecideCommandApproval(context.Context, string, string, workspacedomain.ApprovalState, workspacedomain.ExecutionIdentity, int64, time.Time) (workspacedomain.CommandApproval, error)
+}
+
+type feishuApplicationRegistrar interface {
+	Begin(context.Context) (feishucli.Registration, error)
+	Poll(context.Context, string) (feishucli.Application, error)
 }
 
 func (service *Service) cliConnectors() (cliConnectorRepository, error) {
@@ -124,22 +138,113 @@ func (service *Service) DisableCLIConnectorDefinition(ctx context.Context, reque
 }
 
 func (service *Service) EnableCLIConnector(ctx context.Context, request *workspacev1.EnableCLIConnectorRequest) (*workspacev1.CLIConnectorEnablement, error) {
-	owner, err := service.owner(ctx)
+	principal, err := service.accounts.Current(ctx)
 	if err != nil {
-		return nil, err
+		return nil, publicError(err)
+	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
 	}
 	repository, err := service.cliConnectors()
 	if err != nil {
 		return nil, publicError(err)
 	}
-	expires := time.Now().UTC().Add(10 * time.Minute)
-	action := "https://open.feishu.cn/app?" + url.Values{"source": {"agent-workspace"}}.Encode()
-	item, err := repository.EnableCLIConnector(ctx, owner, request.DefinitionId, action, expires)
+	definition, err := repository.GetAvailableCLIConnectorDefinition(ctx, request.DefinitionId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if definition.AuthenticationDriver == "none" {
+		item, enableErr := repository.EnableCLIConnector(ctx, principal.UserID, definition.ID)
+		if enableErr != nil {
+			return nil, publicError(enableErr)
+		}
+		return cliEnablementResponse(item), nil
+	}
+	if existing, existingErr := repository.GetCLIConnectorEnablement(ctx, principal.UserID, definition.ID); existingErr == nil {
+		if existing.State == "enabled" || existing.State == "waiting_for_user" && existing.ActionExpiresAt != nil && time.Now().UTC().Before(*existing.ActionExpiresAt) {
+			return cliEnablementResponse(existing), nil
+		}
+	} else if !errors.Is(existingErr, workspacedomain.ErrNotFound) {
+		return nil, publicError(existingErr)
+	}
+	registration, err := service.feishu.Begin(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Encrypt([]byte(registration.DeviceCode), feishuRegistrationAAD(principal.UserID, definition.ID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := repository.BeginFeishuCLIConnectorEnablement(ctx, principal.UserID, definition.ID, registration.ActionURL, registration.ExpiresAt, deviceCode)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	return cliEnablementResponse(item), nil
 }
+
+func (service *Service) CompleteCLIConnectorEnablement(ctx context.Context, request *workspacev1.CompleteCLIConnectorEnablementRequest) (*workspacev1.CLIConnectorEnablement, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	registration, err := repository.GetFeishuCLIConnectorRegistration(ctx, principal.UserID, request.EnablementId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Decrypt(registration.DeviceCodeCiphertext, feishuRegistrationAAD(principal.UserID, registration.DefinitionID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	application, err := service.feishu.Poll(ctx, string(deviceCode))
+	if errors.Is(err, feishucli.ErrPending) {
+		return cliEnablementResponse(registration.Enablement), nil
+	}
+	if errors.Is(err, feishucli.ErrDenied) || errors.Is(err, feishucli.ErrExpired) {
+		item, invalidErr := repository.InvalidateCLIConnectorEnablement(ctx, principal.UserID, registration.ID)
+		if invalidErr != nil {
+			return nil, publicError(invalidErr)
+		}
+		return cliEnablementResponse(item), nil
+	}
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, err := service.box.Encrypt([]byte(application.AppID), feishuApplicationAAD(principal.UserID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appSecret, err := service.box.Encrypt([]byte(application.AppSecret), feishuApplicationAAD(principal.UserID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	userName := strings.TrimSpace(application.UserName)
+	if userName == "" {
+		userName = strings.TrimSpace(principal.DisplayName)
+	}
+	if userName == "" {
+		userName = principal.Username
+	}
+	providerName := userName + "的飞书CLI"
+	consoleURL := "https://open.feishu.cn/app/" + url.PathEscape(application.AppID)
+	item, err := repository.CompleteFeishuCLIConnectorEnablement(ctx, principal.UserID, registration.ID, appID, appSecret, providerName, consoleURL)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return cliEnablementResponse(item), nil
+}
+
+func feishuRegistrationAAD(ownerID, definitionID string) string {
+	return "feishu-cli-registration:" + ownerID + ":" + definitionID
+}
+
+func feishuApplicationAAD(ownerID string) string { return "feishu-cli-application:" + ownerID }
 
 func (service *Service) ListCLIConnectorEnablements(ctx context.Context, _ *workspacev1.ListCLIConnectorEnablementsRequest) (*workspacev1.ListCLIConnectorEnablementsResponse, error) {
 	owner, err := service.owner(ctx)
@@ -252,6 +357,12 @@ func cliEnablementResponse(item cliconnector.Enablement) *workspacev1.CLIConnect
 	}
 	if item.ActionExpiresAt != nil {
 		response.ActionExpiresAt = timestamppb.New(*item.ActionExpiresAt)
+	}
+	if item.ProviderName != "" {
+		response.ProviderName = &item.ProviderName
+	}
+	if item.DeveloperConsoleURL != "" {
+		response.DeveloperConsoleUrl = &item.DeveloperConsoleURL
 	}
 	return response
 }

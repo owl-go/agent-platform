@@ -72,7 +72,14 @@ type Enablement struct {
 	State                     string
 	ActionURL                 string
 	ActionExpiresAt           *time.Time
+	ProviderName              string
+	DeveloperConsoleURL       string
 	Version                   int64
+}
+
+type EnablementRegistration struct {
+	Enablement
+	DeviceCodeCiphertext []byte
 }
 
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)

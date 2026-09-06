@@ -19,90 +19,91 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentWorkspaceService_GetCurrentUser_FullMethodName                = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
-	AgentWorkspaceService_ListUsers_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListUsers"
-	AgentWorkspaceService_CreateUser_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateUser"
-	AgentWorkspaceService_SetUserEnabled_FullMethodName                = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
-	AgentWorkspaceService_ResetUserPassword_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
-	AgentWorkspaceService_GetCreditBalance_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
-	AgentWorkspaceService_ListCreditLedger_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
-	AgentWorkspaceService_RedeemCreditCode_FullMethodName              = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
-	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName     = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
-	AgentWorkspaceService_AdjustUserCredits_FullMethodName             = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
-	AgentWorkspaceService_ListModelCreditRates_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
-	AgentWorkspaceService_CreateModelCreditRate_FullMethodName         = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
-	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName     = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
-	AgentWorkspaceService_ListRedemptionCodes_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
-	AgentWorkspaceService_VoidRedemptionCode_FullMethodName            = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
-	AgentWorkspaceService_ListSessions_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessions"
-	AgentWorkspaceService_CreateSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateSession"
-	AgentWorkspaceService_GetSession_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSession"
-	AgentWorkspaceService_UpdateSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateSession"
-	AgentWorkspaceService_SetSessionArchived_FullMethodName            = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
-	AgentWorkspaceService_SetSessionExpertSelection_FullMethodName     = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
-	AgentWorkspaceService_DeleteSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/DeleteSession"
-	AgentWorkspaceService_ListSessionMessages_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
-	AgentWorkspaceService_SendSessionMessage_FullMethodName            = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
-	AgentWorkspaceService_RetrySessionMessage_FullMethodName           = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
-	AgentWorkspaceService_CancelSessionMessage_FullMethodName          = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
-	AgentWorkspaceService_ListWorkflows_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
-	AgentWorkspaceService_CreateWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
-	AgentWorkspaceService_GetWorkflow_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
-	AgentWorkspaceService_UpdateWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
-	AgentWorkspaceService_DeleteWorkflow_FullMethodName                = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
-	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName    = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
-	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
-	AgentWorkspaceService_RunWorkflow_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
-	AgentWorkspaceService_ListRuns_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListRuns"
-	AgentWorkspaceService_GetRun_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/GetRun"
-	AgentWorkspaceService_ListRunTurns_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
-	AgentWorkspaceService_ContinueRunConversation_FullMethodName       = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
-	AgentWorkspaceService_CancelRun_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/CancelRun"
-	AgentWorkspaceService_RerunWorkflow_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
-	AgentWorkspaceService_ListArtifacts_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
-	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
-	AgentWorkspaceService_GetWorkspaceFile_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
-	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
-	AgentWorkspaceService_ListExperts_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListExperts"
-	AgentWorkspaceService_GetExpert_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/GetExpert"
-	AgentWorkspaceService_CreateExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/CreateExpert"
-	AgentWorkspaceService_UpdateExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
-	AgentWorkspaceService_DeleteExpert_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
-	AgentWorkspaceService_ListExpertTeams_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
-	AgentWorkspaceService_GetExpertTeam_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
-	AgentWorkspaceService_CreateExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
-	AgentWorkspaceService_UpdateExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
-	AgentWorkspaceService_DeleteExpertTeam_FullMethodName              = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
-	AgentWorkspaceService_GetSettings_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/GetSettings"
-	AgentWorkspaceService_UpdateSettings_FullMethodName                = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
-	AgentWorkspaceService_ListRuntimeEngines_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
-	AgentWorkspaceService_ListModelProviderPresets_FullMethodName      = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
-	AgentWorkspaceService_ListModelProviderConnections_FullMethodName  = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
-	AgentWorkspaceService_CreateModelProviderConnection_FullMethodName = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
-	AgentWorkspaceService_UpdateModelProviderConnection_FullMethodName = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
-	AgentWorkspaceService_DeleteModelProviderConnection_FullMethodName = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
-	AgentWorkspaceService_RefreshProviderModels_FullMethodName         = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
-	AgentWorkspaceService_CreateProviderModel_FullMethodName           = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
-	AgentWorkspaceService_ListMCPConnectors_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
-	AgentWorkspaceService_CreateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
-	AgentWorkspaceService_UpdateMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
-	AgentWorkspaceService_TestMCPConnector_FullMethodName              = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
-	AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
-	AgentWorkspaceService_DeleteMCPConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
-	AgentWorkspaceService_ListSkills_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListSkills"
-	AgentWorkspaceService_CreateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateSkill"
-	AgentWorkspaceService_UpdateSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
-	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName        = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
-	AgentWorkspaceService_DeleteSkill_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
-	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
-	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
-	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
-	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
-	AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName = "/workspace.v1.AgentWorkspaceService/DisableCLIConnectorDefinition"
-	AgentWorkspaceService_EnableCLIConnector_FullMethodName            = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
-	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
-	AgentWorkspaceService_ListCommandApprovals_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
-	AgentWorkspaceService_DecideCommandApproval_FullMethodName         = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
+	AgentWorkspaceService_GetCurrentUser_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
+	AgentWorkspaceService_ListUsers_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListUsers"
+	AgentWorkspaceService_CreateUser_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/CreateUser"
+	AgentWorkspaceService_SetUserEnabled_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
+	AgentWorkspaceService_ResetUserPassword_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
+	AgentWorkspaceService_GetCreditBalance_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
+	AgentWorkspaceService_ListCreditLedger_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
+	AgentWorkspaceService_RedeemCreditCode_FullMethodName               = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
+	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName      = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
+	AgentWorkspaceService_AdjustUserCredits_FullMethodName              = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
+	AgentWorkspaceService_ListModelCreditRates_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
+	AgentWorkspaceService_CreateModelCreditRate_FullMethodName          = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
+	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName      = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
+	AgentWorkspaceService_ListRedemptionCodes_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
+	AgentWorkspaceService_VoidRedemptionCode_FullMethodName             = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
+	AgentWorkspaceService_ListSessions_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListSessions"
+	AgentWorkspaceService_CreateSession_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/CreateSession"
+	AgentWorkspaceService_GetSession_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/GetSession"
+	AgentWorkspaceService_UpdateSession_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UpdateSession"
+	AgentWorkspaceService_SetSessionArchived_FullMethodName             = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
+	AgentWorkspaceService_SetSessionExpertSelection_FullMethodName      = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
+	AgentWorkspaceService_DeleteSession_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/DeleteSession"
+	AgentWorkspaceService_ListSessionMessages_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
+	AgentWorkspaceService_SendSessionMessage_FullMethodName             = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
+	AgentWorkspaceService_RetrySessionMessage_FullMethodName            = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
+	AgentWorkspaceService_CancelSessionMessage_FullMethodName           = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+	AgentWorkspaceService_ListWorkflows_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
+	AgentWorkspaceService_CreateWorkflow_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
+	AgentWorkspaceService_GetWorkflow_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
+	AgentWorkspaceService_UpdateWorkflow_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
+	AgentWorkspaceService_DeleteWorkflow_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
+	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName     = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
+	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName     = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
+	AgentWorkspaceService_RunWorkflow_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
+	AgentWorkspaceService_ListRuns_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListRuns"
+	AgentWorkspaceService_GetRun_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/GetRun"
+	AgentWorkspaceService_ListRunTurns_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
+	AgentWorkspaceService_ContinueRunConversation_FullMethodName        = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
+	AgentWorkspaceService_CancelRun_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CancelRun"
+	AgentWorkspaceService_RerunWorkflow_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
+	AgentWorkspaceService_ListArtifacts_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
+	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
+	AgentWorkspaceService_GetWorkspaceFile_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
+	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName     = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
+	AgentWorkspaceService_ListExperts_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListExperts"
+	AgentWorkspaceService_GetExpert_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/GetExpert"
+	AgentWorkspaceService_CreateExpert_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateExpert"
+	AgentWorkspaceService_UpdateExpert_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
+	AgentWorkspaceService_DeleteExpert_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
+	AgentWorkspaceService_ListExpertTeams_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
+	AgentWorkspaceService_GetExpertTeam_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+	AgentWorkspaceService_CreateExpertTeam_FullMethodName               = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
+	AgentWorkspaceService_UpdateExpertTeam_FullMethodName               = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
+	AgentWorkspaceService_DeleteExpertTeam_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
+	AgentWorkspaceService_GetSettings_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSettings"
+	AgentWorkspaceService_UpdateSettings_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
+	AgentWorkspaceService_ListRuntimeEngines_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
+	AgentWorkspaceService_ListModelProviderPresets_FullMethodName       = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
+	AgentWorkspaceService_ListModelProviderConnections_FullMethodName   = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
+	AgentWorkspaceService_CreateModelProviderConnection_FullMethodName  = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
+	AgentWorkspaceService_UpdateModelProviderConnection_FullMethodName  = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
+	AgentWorkspaceService_DeleteModelProviderConnection_FullMethodName  = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
+	AgentWorkspaceService_RefreshProviderModels_FullMethodName          = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
+	AgentWorkspaceService_CreateProviderModel_FullMethodName            = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
+	AgentWorkspaceService_ListMCPConnectors_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
+	AgentWorkspaceService_CreateMCPConnector_FullMethodName             = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
+	AgentWorkspaceService_UpdateMCPConnector_FullMethodName             = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
+	AgentWorkspaceService_TestMCPConnector_FullMethodName               = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
+	AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName  = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
+	AgentWorkspaceService_DeleteMCPConnector_FullMethodName             = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
+	AgentWorkspaceService_ListSkills_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListSkills"
+	AgentWorkspaceService_CreateSkill_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateSkill"
+	AgentWorkspaceService_UpdateSkill_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
+	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName         = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
+	AgentWorkspaceService_DeleteSkill_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
+	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
+	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName   = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
+	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName   = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
+	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
+	AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName  = "/workspace.v1.AgentWorkspaceService/DisableCLIConnectorDefinition"
+	AgentWorkspaceService_EnableCLIConnector_FullMethodName             = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
+	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
+	AgentWorkspaceService_ListCommandApprovals_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
+	AgentWorkspaceService_DecideCommandApproval_FullMethodName          = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
+	AgentWorkspaceService_CompleteCLIConnectorEnablement_FullMethodName = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorEnablement"
 )
 
 // AgentWorkspaceServiceClient is the client API for AgentWorkspaceService service.
@@ -193,6 +194,7 @@ type AgentWorkspaceServiceClient interface {
 	ListCLIConnectorEnablements(ctx context.Context, in *ListCLIConnectorEnablementsRequest, opts ...grpc.CallOption) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(ctx context.Context, in *ListCommandApprovalsRequest, opts ...grpc.CallOption) (*ListCommandApprovalsResponse, error)
 	DecideCommandApproval(ctx context.Context, in *DecideCommandApprovalRequest, opts ...grpc.CallOption) (*CommandApproval, error)
+	CompleteCLIConnectorEnablement(ctx context.Context, in *CompleteCLIConnectorEnablementRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error)
 }
 
 type agentWorkspaceServiceClient struct {
@@ -1043,6 +1045,16 @@ func (c *agentWorkspaceServiceClient) DecideCommandApproval(ctx context.Context,
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) CompleteCLIConnectorEnablement(ctx context.Context, in *CompleteCLIConnectorEnablementRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CLIConnectorEnablement)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CompleteCLIConnectorEnablement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentWorkspaceServiceServer is the server API for AgentWorkspaceService service.
 // All implementations must embed UnimplementedAgentWorkspaceServiceServer
 // for forward compatibility.
@@ -1131,6 +1143,7 @@ type AgentWorkspaceServiceServer interface {
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
 	DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error)
+	CompleteCLIConnectorEnablement(context.Context, *CompleteCLIConnectorEnablementRequest) (*CLIConnectorEnablement, error)
 	mustEmbedUnimplementedAgentWorkspaceServiceServer()
 }
 
@@ -1392,6 +1405,9 @@ func (UnimplementedAgentWorkspaceServiceServer) ListCommandApprovals(context.Con
 }
 func (UnimplementedAgentWorkspaceServiceServer) DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecideCommandApproval not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CompleteCLIConnectorEnablement(context.Context, *CompleteCLIConnectorEnablementRequest) (*CLIConnectorEnablement, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteCLIConnectorEnablement not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) mustEmbedUnimplementedAgentWorkspaceServiceServer() {}
 func (UnimplementedAgentWorkspaceServiceServer) testEmbeddedByValue()                               {}
@@ -2926,6 +2942,24 @@ func _AgentWorkspaceService_DecideCommandApproval_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_CompleteCLIConnectorEnablement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteCLIConnectorEnablementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CompleteCLIConnectorEnablement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CompleteCLIConnectorEnablement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CompleteCLIConnectorEnablement(ctx, req.(*CompleteCLIConnectorEnablementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentWorkspaceService_ServiceDesc is the grpc.ServiceDesc for AgentWorkspaceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3268,6 +3302,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DecideCommandApproval",
 			Handler:    _AgentWorkspaceService_DecideCommandApproval_Handler,
+		},
+		{
+			MethodName: "CompleteCLIConnectorEnablement",
+			Handler:    _AgentWorkspaceService_CompleteCLIConnectorEnablement_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

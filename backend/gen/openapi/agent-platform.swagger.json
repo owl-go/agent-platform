@@ -632,6 +632,44 @@
         ]
       }
     },
+    "/api/v1/connectors/cli/enablements/{enablement_id}/complete": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CompleteCLIConnectorEnablement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorEnablement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "enablement_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCompleteCLIConnectorEnablementBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli/{definition_id}/enable": {
       "post": {
         "operationId": "AgentWorkspaceService_EnableCLIConnector",
@@ -2816,6 +2854,9 @@
     "AgentWorkspaceServiceCancelSessionMessageBody": {
       "type": "object"
     },
+    "AgentWorkspaceServiceCompleteCLIConnectorEnablementBody": {
+      "type": "object"
+    },
     "AgentWorkspaceServiceConfigureUserDailyCreditsBody": {
       "type": "object",
       "properties": {
@@ -3406,6 +3447,12 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "provider_name": {
+          "type": "string"
+        },
+        "developer_console_url": {
+          "type": "string"
         }
       }
     },

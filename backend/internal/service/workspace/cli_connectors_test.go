@@ -20,3 +20,12 @@ func TestAdministratorCannotDecideCommandApproval(t *testing.T) {
 		t.Fatalf("Administrator approval code = %d, want %d", code, http.StatusForbidden)
 	}
 }
+
+func TestAdministratorCannotEnableCLIConnector(t *testing.T) {
+	service := &Service{accounts: &accountapplication.Service{}}
+	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "administrator-1", Administrator: true})
+	_, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
+	if code := kratoserrors.Code(err); code != http.StatusForbidden {
+		t.Fatalf("Administrator enablement code = %d, want %d", code, http.StatusForbidden)
+	}
+}

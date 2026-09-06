@@ -20,6 +20,7 @@ const _ = http.SupportPackageIsVersion3
 const OperationAgentWorkspaceServiceAdjustUserCredits = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
 const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceService/CancelRun"
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+const OperationAgentWorkspaceServiceCompleteCLIConnectorEnablement = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorEnablement"
 const OperationAgentWorkspaceServiceConfigureUserDailyCredits = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
 const OperationAgentWorkspaceServiceConfigureWorkflowGitSource = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
 const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
@@ -106,6 +107,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	CompleteCLIConnectorEnablement(context.Context, *CompleteCLIConnectorEnablementRequest) (*CLIConnectorEnablement, error)
 	ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error)
 	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
@@ -275,6 +277,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/connectors/cli/enablements", _AgentWorkspaceService_ListCLIConnectorEnablements0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/command-approvals", _AgentWorkspaceService_ListCommandApprovals0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/command-approvals/{approval_id}/decision", _AgentWorkspaceService_DecideCommandApproval0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connectors/cli/enablements/{enablement_id}/complete", _AgentWorkspaceService_CompleteCLIConnectorEnablement0_HTTP_Handler(srv))
 }
 
 func _AgentWorkspaceService_GetCurrentUser0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
@@ -2029,10 +2032,33 @@ func _AgentWorkspaceService_DecideCommandApproval0_HTTP_Handler(srv AgentWorkspa
 	}
 }
 
+func _AgentWorkspaceService_CompleteCLIConnectorEnablement0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CompleteCLIConnectorEnablementRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCompleteCLIConnectorEnablement)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CompleteCLIConnectorEnablement(ctx, req.(*CompleteCLIConnectorEnablementRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CLIConnectorEnablement)
+		return ctx.Result(200, reply)
+	}
+}
+
 type AgentWorkspaceServiceHTTPClient interface {
 	AdjustUserCredits(ctx context.Context, req *AdjustUserCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
+	CompleteCLIConnectorEnablement(ctx context.Context, req *CompleteCLIConnectorEnablementRequest, opts ...http.CallOption) (rsp *CLIConnectorEnablement, err error)
 	ConfigureUserDailyCredits(ctx context.Context, req *ConfigureUserDailyCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	ConfigureWorkflowGitSource(ctx context.Context, req *ConfigureWorkflowGitSourceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
@@ -2166,6 +2192,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CancelSessionMessage(ctx context.C
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCancelSessionMessage),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CompleteCLIConnectorEnablement(ctx context.Context, in *CompleteCLIConnectorEnablementRequest, opts ...http.CallOption) (*CLIConnectorEnablement, error) {
+	var out CLIConnectorEnablement
+	pattern := "/api/v1/connectors/cli/enablements/{enablement_id}/complete"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCompleteCLIConnectorEnablement),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)

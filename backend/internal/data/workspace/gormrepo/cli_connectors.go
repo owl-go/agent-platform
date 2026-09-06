@@ -135,7 +135,27 @@ func (repository *Repository) DisableCLIConnectorDefinition(ctx context.Context,
 	return cliDefinitionDomain(row)
 }
 
-func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, definitionID, actionURL string, expiry time.Time) (cliconnector.Enablement, error) {
+func (repository *Repository) GetAvailableCLIConnectorDefinition(ctx context.Context, definitionID string) (cliconnector.Definition, error) {
+	var row cliConnectorDefinitionRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND state = ?", definitionID, cliconnector.StateAvailable).Take(&row).Error; err != nil {
+		return cliconnector.Definition{}, mapNotFound(err)
+	}
+	return cliDefinitionDomain(row)
+}
+
+func (repository *Repository) GetCLIConnectorEnablement(ctx context.Context, ownerID, definitionID string) (cliconnector.Enablement, error) {
+	var row cliConnectorEnablementRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err != nil {
+		return cliconnector.Enablement{}, mapNotFound(err)
+	}
+	item := cliEnablementDomain(row)
+	if err := repository.attachFeishuApplication(ctx, ownerID, &item); err != nil {
+		return cliconnector.Enablement{}, err
+	}
+	return item, nil
+}
+
+func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, definitionID string) (cliconnector.Enablement, error) {
 	var row cliConnectorEnablementRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var definition cliConnectorDefinitionRecord
@@ -144,13 +164,126 @@ func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, d
 		} else if err != nil {
 			return err
 		}
-		row = newCLIConnectorEnablement(ownerID, definitionID, definition.AuthenticationDriver, actionURL, expiry)
+		if definition.AuthenticationDriver != "none" {
+			return fmt.Errorf("%w: authenticated CLI Connector requires registration", domain.ErrInvalid)
+		}
+		row = newCLIConnectorEnablement(ownerID, definitionID, definition.AuthenticationDriver, "", time.Time{})
 		if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "owner_user_id"}, {Name: "definition_id"}}, DoNothing: true}).Create(&row).Error; err != nil {
 			return err
 		}
 		return tx.Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error
 	})
 	if err != nil {
+		return cliconnector.Enablement{}, err
+	}
+	return cliEnablementDomain(row), nil
+}
+
+func (repository *Repository) BeginFeishuCLIConnectorEnablement(ctx context.Context, ownerID, definitionID, actionURL string, expiry time.Time, deviceCodeCiphertext []byte) (cliconnector.Enablement, error) {
+	if ownerID == "" || actionURL == "" || !expiry.After(time.Now().UTC()) || len(deviceCodeCiphertext) == 0 {
+		return cliconnector.Enablement{}, domain.ErrInvalid
+	}
+	var row cliConnectorEnablementRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var definition cliConnectorDefinitionRecord
+		if err := tx.Where("id = ? AND state = 'available' AND authentication_driver = 'feishu'", definitionID).Take(&definition).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if err := tx.Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err == nil {
+			if row.State == "enabled" || row.State == "waiting_for_user" && row.ActionExpiresAt != nil && row.ActionExpiresAt.After(time.Now().UTC()) {
+				return nil
+			}
+			result := tx.Model(&cliConnectorEnablementRecord{}).Where("id = ? AND version = ?", row.ID, row.Version).Updates(map[string]any{
+				"state": "waiting_for_user", "action_url": actionURL, "action_expires_at": expiry,
+				"registration_device_code_ciphertext": deviceCodeCiphertext, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+			})
+			if result.Error != nil || result.RowsAffected != 1 {
+				if result.Error != nil {
+					return result.Error
+				}
+				return domain.ErrConflict
+			}
+			return tx.Where("id = ?", row.ID).Take(&row).Error
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		row = newCLIConnectorEnablement(ownerID, definitionID, "feishu", actionURL, expiry)
+		row.RegistrationDeviceCodeCiphertext = append([]byte(nil), deviceCodeCiphertext...)
+		result := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "owner_user_id"}, {Name: "definition_id"}}, DoNothing: true}).Create(&row)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return tx.Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error
+		}
+		return nil
+	})
+	if err != nil {
+		return cliconnector.Enablement{}, err
+	}
+	return cliEnablementDomain(row), nil
+}
+
+func (repository *Repository) GetFeishuCLIConnectorRegistration(ctx context.Context, ownerID, enablementID string) (cliconnector.EnablementRegistration, error) {
+	var row cliConnectorEnablementRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ? AND state = 'waiting_for_user'", enablementID, ownerID).Take(&row).Error; err != nil {
+		return cliconnector.EnablementRegistration{}, mapNotFound(err)
+	}
+	if row.ActionExpiresAt == nil || !time.Now().UTC().Before(*row.ActionExpiresAt) || len(row.RegistrationDeviceCodeCiphertext) == 0 {
+		return cliconnector.EnablementRegistration{}, domain.ErrConflict
+	}
+	return cliconnector.EnablementRegistration{Enablement: cliEnablementDomain(row), DeviceCodeCiphertext: append([]byte(nil), row.RegistrationDeviceCodeCiphertext...)}, nil
+}
+
+func (repository *Repository) CompleteFeishuCLIConnectorEnablement(ctx context.Context, ownerID, enablementID string, appIDCiphertext, appSecretCiphertext []byte, providerName, consoleURL string) (cliconnector.Enablement, error) {
+	if len(appIDCiphertext) == 0 || len(appSecretCiphertext) == 0 || providerName == "" || consoleURL == "" {
+		return cliconnector.Enablement{}, domain.ErrInvalid
+	}
+	var row cliConnectorEnablementRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ? AND state = 'waiting_for_user'", enablementID, ownerID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		application := feishuCLIApplicationRecord{
+			ID: uuid.NewString(), OwnerID: ownerID, EnablementID: enablementID,
+			ProviderApplicationIDCiphertext: append([]byte(nil), appIDCiphertext...), ProviderApplicationSecretCiphertext: append([]byte(nil), appSecretCiphertext...),
+			ProviderName: providerName, DeveloperConsoleURL: consoleURL, GrantedScopes: []byte(`[]`), Version: 1,
+		}
+		if err := tx.Create(&application).Error; err != nil {
+			return err
+		}
+		result := tx.Model(&cliConnectorEnablementRecord{}).Where("id = ? AND state = 'waiting_for_user'", row.ID).Updates(map[string]any{
+			"state": "enabled", "action_url": nil, "action_expires_at": nil, "registration_device_code_ciphertext": nil,
+			"updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+		})
+		if result.Error != nil || result.RowsAffected != 1 {
+			if result.Error != nil {
+				return result.Error
+			}
+			return domain.ErrConflict
+		}
+		return tx.Where("id = ?", row.ID).Take(&row).Error
+	})
+	if err != nil {
+		return cliconnector.Enablement{}, err
+	}
+	item := cliEnablementDomain(row)
+	item.ProviderName, item.DeveloperConsoleURL = providerName, consoleURL
+	return item, nil
+}
+
+func (repository *Repository) InvalidateCLIConnectorEnablement(ctx context.Context, ownerID, enablementID string) (cliconnector.Enablement, error) {
+	result := repository.db.WithContext(ctx).Model(&cliConnectorEnablementRecord{}).
+		Where("id = ? AND owner_user_id = ? AND state = 'waiting_for_user'", enablementID, ownerID).
+		Updates(map[string]any{"state": "invalid", "action_url": nil, "action_expires_at": nil, "registration_device_code_ciphertext": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return cliconnector.Enablement{}, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return cliconnector.Enablement{}, domain.ErrConflict
+	}
+	var row cliConnectorEnablementRecord
+	if err := repository.db.WithContext(ctx).Where("id = ?", enablementID).Take(&row).Error; err != nil {
 		return cliconnector.Enablement{}, err
 	}
 	return cliEnablementDomain(row), nil
@@ -173,9 +306,29 @@ func (repository *Repository) ListCLIConnectorEnablements(ctx context.Context, o
 	}
 	items := make([]cliconnector.Enablement, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, cliEnablementDomain(row))
+		item := cliEnablementDomain(row)
+		if err := repository.attachFeishuApplication(ctx, ownerID, &item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (repository *Repository) attachFeishuApplication(ctx context.Context, ownerID string, item *cliconnector.Enablement) error {
+	if item == nil || item.State != "enabled" {
+		return nil
+	}
+	var application feishuCLIApplicationRecord
+	err := repository.db.WithContext(ctx).Select("provider_name", "developer_console_url").Where("owner_user_id = ? AND enablement_id = ?", ownerID, item.ID).Take(&application).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	item.ProviderName, item.DeveloperConsoleURL = application.ProviderName, application.DeveloperConsoleURL
+	return nil
 }
 
 func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definition, error) {
