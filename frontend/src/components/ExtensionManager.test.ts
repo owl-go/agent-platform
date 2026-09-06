@@ -131,6 +131,8 @@ describe("ExtensionManager", () => {
 
     expect(completeCLIConnectorEnablement).toHaveBeenCalledWith(waiting.id);
     expect(wrapper.text()).toContain("已启用");
+    expect(wrapper.text()).toContain("用户的飞书CLI");
+    expect(wrapper.get('a[href="https://open.feishu.cn/app/cli-1"]').text()).toBe("开发者后台");
     wrapper.unmount();
   });
 });
