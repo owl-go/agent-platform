@@ -100,6 +100,10 @@ service AgentWorkspaceService {
   rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
   rpc DecideCommandApproval(DecideCommandApprovalRequest) returns (CommandApproval) { option (google.api.http) = {post: "/api/v1/command-approvals/{approval_id}/decision" body: "*"}; }
   rpc CompleteCLIConnectorEnablement(CompleteCLIConnectorEnablementRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/enablements/{enablement_id}/complete" body: "*"}; }
+  rpc BeginCLIConnectorAuthorization(BeginCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorizationFlow) { option (google.api.http) = {post: "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations" body: "*"}; }
+  rpc CompleteCLIConnectorAuthorization(CompleteCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorizationFlow) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete" body: "*"}; }
+  rpc ListCLIConnectorAuthorizations(ListCLIConnectorAuthorizationsRequest) returns (ListCLIConnectorAuthorizationsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations"}; }
+  rpc DisconnectCLIConnectorAuthorization(DisconnectCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect" body: "*"}; }
 }
 
 message GetCurrentUserRequest {}
@@ -274,6 +278,13 @@ message EnableCLIConnectorRequest { string definition_id = 1; }
 message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; optional string provider_name = 7; optional string developer_console_url = 8; }
 message ListCLIConnectorEnablementsRequest {}
 message ListCLIConnectorEnablementsResponse { repeated CLIConnectorEnablement items = 1; }
+message CLIConnectorAuthorization { string id = 1; string enablement_id = 2; string identity = 3; string external_identity_id = 4; string external_display_name = 5; repeated string scopes = 6; string state = 7; optional google.protobuf.Timestamp expires_at = 8; int64 version = 9; }
+message CLIConnectorAuthorizationFlow { string id = 1; string enablement_id = 2; string identity = 3; repeated string scopes = 4; string state = 5; optional string action_url = 6; optional google.protobuf.Timestamp expires_at = 7; optional CLIConnectorAuthorization authorization = 8; }
+message BeginCLIConnectorAuthorizationRequest { string enablement_id = 1; string identity = 2; repeated string scopes = 3; }
+message CompleteCLIConnectorAuthorizationRequest { string flow_id = 1; }
+message ListCLIConnectorAuthorizationsRequest { string enablement_id = 1; }
+message ListCLIConnectorAuthorizationsResponse { repeated CLIConnectorAuthorization items = 1; }
+message DisconnectCLIConnectorAuthorizationRequest { string authorization_id = 1; int64 expected_version = 2; }
 message CommandApproval { string id = 1; string execution_kind = 2; string execution_id = 3; string connector_name = 4; string operation = 5; string target = 6; string redacted_arguments = 7; string state = 8; optional string identity = 9; google.protobuf.Timestamp expires_at = 10; int64 version = 11; }
 message ListCommandApprovalsRequest {}
 message ListCommandApprovalsResponse { repeated CommandApproval items = 1; }

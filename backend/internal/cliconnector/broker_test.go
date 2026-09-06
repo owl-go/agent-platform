@@ -159,6 +159,31 @@ func TestBrokerRejectsAuthenticatedConnectorWithoutCredentialResolver(t *testing
 	}
 }
 
+func TestBrokerResolvesCredentialsForReviewedCapability(t *testing.T) {
+	process := &recordingProcess{}
+	definition := brokerDefinition(RiskLow)
+	definition.AuthenticationDriver = "feishu"
+	definition.Capabilities[0].Scopes = []string{"calendar:calendar:read"}
+	called := false
+	broker, err := NewBroker(BrokerConfig{
+		Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process},
+		ResolveEnvironment: func(_ context.Context, gotDefinition Definition, capability Capability, identity Identity) (map[string]string, error) {
+			called = true
+			if gotDefinition.ID != definition.ID || capability.ID != "identity" || len(capability.Scopes) != 1 || identity != IdentityUser {
+				t.Fatalf("resolver input = %#v %#v %q", gotDefinition, capability, identity)
+			}
+			return map[string]string{"LARKSUITE_CLI_USER_ACCESS_TOKEN": "secret"}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: IdentityUser, Arguments: []string{"auth", "status"}})
+	if response.ErrorCode != "" || !called || process.starts != 1 {
+		t.Fatalf("response=%#v called=%v starts=%d", response, called, process.starts)
+	}
+}
+
 func brokerDefinition(risk Risk) Definition {
 	return Definition{
 		ID: "connector-1", Name: "Tool", Executable: "tool", AuthenticationDriver: "none", State: StateAvailable,

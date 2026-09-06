@@ -331,6 +331,192 @@ func (repository *Repository) attachFeishuApplication(ctx context.Context, owner
 	return nil
 }
 
+func (repository *Repository) GetFeishuCLIApplicationCredentials(ctx context.Context, ownerID, enablementID string) (cliconnector.FeishuApplicationCredentials, error) {
+	var row feishuCLIApplicationRecord
+	if err := repository.db.WithContext(ctx).Select("provider_application_id_ciphertext", "provider_application_secret_ciphertext").Where("owner_user_id = ? AND enablement_id = ?", ownerID, enablementID).Take(&row).Error; err != nil {
+		return cliconnector.FeishuApplicationCredentials{}, mapNotFound(err)
+	}
+	return cliconnector.FeishuApplicationCredentials{
+		AppIDCiphertext: append([]byte(nil), row.ProviderApplicationIDCiphertext...), AppSecretCiphertext: append([]byte(nil), row.ProviderApplicationSecretCiphertext...),
+	}, nil
+}
+
+func (repository *Repository) GetCLIConnectorAuthorizationPolicy(ctx context.Context, ownerID, enablementID string) (cliconnector.Definition, error) {
+	var row cliConnectorDefinitionRecord
+	err := repository.db.WithContext(ctx).Table("cli_connector_definitions AS definitions").
+		Select("definitions.*").
+		Joins("JOIN cli_connector_enablements AS enablements ON enablements.definition_id = definitions.id").
+		Where("enablements.id = ? AND enablements.owner_user_id = ? AND enablements.state = 'enabled' AND definitions.state = 'available'", enablementID, ownerID).
+		Take(&row).Error
+	if err != nil {
+		return cliconnector.Definition{}, mapNotFound(err)
+	}
+	return cliDefinitionDomain(row)
+}
+
+func (repository *Repository) BeginCLIConnectorAuthorization(ctx context.Context, ownerID, enablementID string, identity cliconnector.Identity, scopes []string, actionURL string, expiresAt time.Time, deviceCodeCiphertext []byte) (cliconnector.AuthorizationAttempt, error) {
+	if identity != cliconnector.IdentityUser || actionURL == "" || !expiresAt.After(time.Now().UTC()) || len(deviceCodeCiphertext) == 0 {
+		return cliconnector.AuthorizationAttempt{}, domain.ErrInvalid
+	}
+	encodedScopes, _ := json.Marshal(scopes)
+	row := cliConnectorAuthorizationAttemptRecord{
+		ID: uuid.NewString(), OwnerID: ownerID, EnablementID: enablementID, Identity: string(identity), Scopes: encodedScopes,
+		DeviceCodeCiphertext: append([]byte(nil), deviceCodeCiphertext...), ActionURL: actionURL, ExpiresAt: expiresAt,
+	}
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var enablement cliConnectorEnablementRecord
+		if err := tx.Where("id = ? AND owner_user_id = ? AND state = 'enabled'", enablementID, ownerID).Take(&enablement).Error; err != nil {
+			return mapNotFound(err)
+		}
+		return tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "owner_user_id"}, {Name: "enablement_id"}, {Name: "identity"}},
+			DoUpdates: clause.Assignments(map[string]any{"scopes": encodedScopes, "device_code_ciphertext": deviceCodeCiphertext, "action_url": actionURL, "expires_at": expiresAt, "updated_at": gorm.Expr("now()")}),
+		}).Create(&row).Error
+	})
+	if err != nil {
+		return cliconnector.AuthorizationAttempt{}, err
+	}
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ?", ownerID, enablementID, identity).Take(&row).Error; err != nil {
+		return cliconnector.AuthorizationAttempt{}, err
+	}
+	return cliAuthorizationAttemptDomain(row)
+}
+
+func (repository *Repository) GetCLIConnectorAuthorizationAttempt(ctx context.Context, ownerID, attemptID string) (cliconnector.AuthorizationAttempt, error) {
+	var row cliConnectorAuthorizationAttemptRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", attemptID, ownerID).Take(&row).Error; err != nil {
+		return cliconnector.AuthorizationAttempt{}, mapNotFound(err)
+	}
+	if !time.Now().UTC().Before(row.ExpiresAt) {
+		return cliconnector.AuthorizationAttempt{}, domain.ErrConflict
+	}
+	return cliAuthorizationAttemptDomain(row)
+}
+
+func (repository *Repository) CompleteCLIConnectorAuthorization(ctx context.Context, attempt cliconnector.AuthorizationAttempt, externalID, displayName string, scopes []string, tokenCiphertext, refreshTokenCiphertext []byte, expiresAt time.Time) (cliconnector.Authorization, error) {
+	if attempt.Identity != cliconnector.IdentityUser || externalID == "" || displayName == "" || len(tokenCiphertext) == 0 || !expiresAt.After(time.Now().UTC()) {
+		return cliconnector.Authorization{}, domain.ErrInvalid
+	}
+	encodedScopes, _ := json.Marshal(scopes)
+	row := cliConnectorAuthorizationRecord{
+		ID: uuid.NewString(), OwnerID: attempt.OwnerID, EnablementID: attempt.EnablementID, Identity: string(attempt.Identity),
+		ExternalIdentityID: externalID, ExternalDisplayName: displayName, Scopes: encodedScopes, TokenCiphertext: append([]byte(nil), tokenCiphertext...),
+		RefreshTokenCiphertext: append([]byte(nil), refreshTokenCiphertext...), ExpiresAt: &expiresAt, State: "active", Version: 1,
+	}
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Where("id = ? AND owner_user_id = ?", attempt.ID, attempt.OwnerID).Delete(&cliConnectorAuthorizationAttemptRecord{})
+		if result.Error != nil || result.RowsAffected != 1 {
+			if result.Error != nil {
+				return result.Error
+			}
+			return domain.ErrConflict
+		}
+		return tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "owner_user_id"}, {Name: "enablement_id"}, {Name: "identity"}, {Name: "external_identity_id"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"external_display_name": displayName, "scopes": encodedScopes, "token_ciphertext": tokenCiphertext,
+				"refresh_token_ciphertext": refreshTokenCiphertext, "expires_at": expiresAt, "state": "active", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("cli_connector_authorizations.version + 1"),
+			}),
+		}).Create(&row).Error
+	})
+	if err != nil {
+		return cliconnector.Authorization{}, err
+	}
+	var stored cliConnectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ? AND external_identity_id = ?", attempt.OwnerID, attempt.EnablementID, attempt.Identity, externalID).Take(&stored).Error; err != nil {
+		return cliconnector.Authorization{}, err
+	}
+	return cliAuthorizationDomain(stored)
+}
+
+func (repository *Repository) DeleteCLIConnectorAuthorizationAttempt(ctx context.Context, ownerID, attemptID string) error {
+	return repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", attemptID, ownerID).Delete(&cliConnectorAuthorizationAttemptRecord{}).Error
+}
+
+func (repository *Repository) ListCLIConnectorAuthorizations(ctx context.Context, ownerID, enablementID string) ([]cliconnector.Authorization, error) {
+	var rows []cliConnectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ?", ownerID, enablementID).Order("created_at, id").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]cliconnector.Authorization, 0, len(rows))
+	for _, row := range rows {
+		item, err := cliAuthorizationDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (repository *Repository) DisconnectCLIConnectorAuthorization(ctx context.Context, ownerID, authorizationID string, expectedVersion int64) (cliconnector.Authorization, error) {
+	result := repository.db.WithContext(ctx).Model(&cliConnectorAuthorizationRecord{}).Where("id = ? AND owner_user_id = ? AND version = ? AND state <> 'disconnected'", authorizationID, ownerID, expectedVersion).Updates(map[string]any{
+		"state": "disconnected", "token_ciphertext": nil, "refresh_token_ciphertext": nil, "expires_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+	})
+	if result.Error != nil {
+		return cliconnector.Authorization{}, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return cliconnector.Authorization{}, domain.ErrConflict
+	}
+	var row cliConnectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", authorizationID, ownerID).Take(&row).Error; err != nil {
+		return cliconnector.Authorization{}, mapNotFound(err)
+	}
+	return cliAuthorizationDomain(row)
+}
+
+func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx context.Context, ownerID, definitionID string, identity cliconnector.Identity, requiredScopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
+	var enablement cliConnectorEnablementRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND definition_id = ? AND state = 'enabled'", ownerID, definitionID).Take(&enablement).Error; err != nil {
+		return cliconnector.EncryptedExecutionCredentials{}, mapNotFound(err)
+	}
+	var application feishuCLIApplicationRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ?", ownerID, enablement.ID).Take(&application).Error; err != nil {
+		return cliconnector.EncryptedExecutionCredentials{}, mapNotFound(err)
+	}
+	result := cliconnector.EncryptedExecutionCredentials{
+		AppIDCiphertext: append([]byte(nil), application.ProviderApplicationIDCiphertext...), AppSecretCiphertext: append([]byte(nil), application.ProviderApplicationSecretCiphertext...), EnablementID: enablement.ID,
+	}
+	if identity == cliconnector.IdentityBot {
+		var granted []string
+		if err := json.Unmarshal(application.GrantedScopes, &granted); err != nil || !containsAllScopes(granted, requiredScopes) {
+			return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+		}
+		return result, nil
+	}
+	if identity != cliconnector.IdentityUser {
+		return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+	}
+	var authorizations []cliConnectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = 'user' AND state = 'active' AND expires_at > ?", ownerID, enablement.ID, time.Now().UTC()).Order("updated_at DESC").Limit(2).Find(&authorizations).Error; err != nil {
+		return cliconnector.EncryptedExecutionCredentials{}, err
+	}
+	if len(authorizations) != 1 {
+		return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+	}
+	var granted []string
+	if err := json.Unmarshal(authorizations[0].Scopes, &granted); err != nil || !containsAllScopes(granted, requiredScopes) || len(authorizations[0].TokenCiphertext) == 0 {
+		return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+	}
+	result.TokenCiphertext = append([]byte(nil), authorizations[0].TokenCiphertext...)
+	result.ExternalIdentityID = authorizations[0].ExternalIdentityID
+	return result, nil
+}
+
+func containsAllScopes(granted, required []string) bool {
+	set := make(map[string]struct{}, len(granted))
+	for _, scope := range granted {
+		set[scope] = struct{}{}
+	}
+	for _, scope := range required {
+		if _, ok := set[scope]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definition, error) {
 	var capabilities []cliconnector.Capability
 	if err := json.Unmarshal(row.Capabilities, &capabilities); err != nil {
@@ -361,6 +547,29 @@ func cliEnablementDomain(row cliConnectorEnablementRecord) cliconnector.Enableme
 		item.ActionURL = *row.ActionURL
 	}
 	return item
+}
+
+func cliAuthorizationAttemptDomain(row cliConnectorAuthorizationAttemptRecord) (cliconnector.AuthorizationAttempt, error) {
+	var scopes []string
+	if err := json.Unmarshal(row.Scopes, &scopes); err != nil {
+		return cliconnector.AuthorizationAttempt{}, err
+	}
+	return cliconnector.AuthorizationAttempt{
+		ID: row.ID, OwnerID: row.OwnerID, EnablementID: row.EnablementID, Identity: cliconnector.Identity(row.Identity), Scopes: scopes,
+		ActionURL: row.ActionURL, ExpiresAt: row.ExpiresAt, DeviceCodeCiphertext: append([]byte(nil), row.DeviceCodeCiphertext...),
+	}, nil
+}
+
+func cliAuthorizationDomain(row cliConnectorAuthorizationRecord) (cliconnector.Authorization, error) {
+	var scopes []string
+	if err := json.Unmarshal(row.Scopes, &scopes); err != nil {
+		return cliconnector.Authorization{}, err
+	}
+	return cliconnector.Authorization{
+		ID: row.ID, OwnerID: row.OwnerID, EnablementID: row.EnablementID, Identity: cliconnector.Identity(row.Identity),
+		ExternalIdentityID: row.ExternalIdentityID, ExternalDisplayName: row.ExternalDisplayName, Scopes: scopes,
+		State: row.State, ExpiresAt: row.ExpiresAt, Version: row.Version,
+	}, nil
 }
 
 func (repository *Repository) ListCommandApprovals(ctx context.Context, ownerID string, now time.Time) ([]domain.CommandApproval, error) {

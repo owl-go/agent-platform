@@ -44,18 +44,23 @@ import (
 const runtimeWorkspaceDirectory = "/workspace"
 
 type Executor struct {
-	config       platformconfig.Config
-	box          *secretcrypto.Box
-	materializer credentials.Materializer
-	objects      objectstore.Provider
-	connectors   *cliconnector.ArtifactStore
-	cliEgress    cliconnector.EgressGate
-	cliApprovals cliconnector.ApprovalCoordinator
-	warm         *containerprocess.WarmManager
-	checkout     func(context.Context, string) (runtimeLease, error)
-	newAdapter   func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
-	executionTTL time.Duration
-	credits      *creditsapplication.Service
+	config         platformconfig.Config
+	box            *secretcrypto.Box
+	materializer   credentials.Materializer
+	objects        objectstore.Provider
+	connectors     *cliconnector.ArtifactStore
+	cliEgress      cliconnector.EgressGate
+	cliApprovals   cliconnector.ApprovalCoordinator
+	cliCredentials cliCredentialRepository
+	warm           *containerprocess.WarmManager
+	checkout       func(context.Context, string) (runtimeLease, error)
+	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
+	executionTTL   time.Duration
+	credits        *creditsapplication.Service
+}
+
+type cliCredentialRepository interface {
+	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
 }
 
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
@@ -79,6 +84,14 @@ func (executor *Executor) EnableCLIApprovals(coordinator cliconnector.ApprovalCo
 		return fmt.Errorf("CLI Connector Approval Coordinator is required")
 	}
 	executor.cliApprovals = coordinator
+	return nil
+}
+
+func (executor *Executor) EnableCLICredentials(repository cliCredentialRepository) error {
+	if repository == nil {
+		return fmt.Errorf("CLI Connector credential repository is required")
+	}
+	executor.cliCredentials = repository
 	return nil
 }
 
@@ -767,7 +780,8 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
 		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
-		Approval: executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
+		ResolveEnvironment: executor.cliEnvironmentResolver(job.OwnerID),
+		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
 		},
 	})
@@ -780,6 +794,41 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", err
 	}
 	return server, socket, nil
+}
+
+func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.EnvironmentResolver {
+	return func(ctx context.Context, definition cliconnector.Definition, capability cliconnector.Capability, identity cliconnector.Identity) (map[string]string, error) {
+		if definition.AuthenticationDriver == "none" {
+			return map[string]string{}, nil
+		}
+		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
+			return nil, errors.New("CLI Connector credentials are unavailable")
+		}
+		credentials, err := executor.cliCredentials.ResolveCLIConnectorExecutionCredentials(ctx, ownerID, definition.ID, identity, capability.Scopes)
+		if err != nil {
+			return nil, err
+		}
+		appID, err := executor.box.Decrypt(credentials.AppIDCiphertext, "feishu-cli-application:"+ownerID)
+		if err != nil {
+			return nil, err
+		}
+		appSecret, err := executor.box.Decrypt(credentials.AppSecretCiphertext, "feishu-cli-application:"+ownerID)
+		if err != nil {
+			return nil, err
+		}
+		environment := map[string]string{
+			"LARKSUITE_CLI_APP_ID": string(appID), "LARKSUITE_CLI_APP_SECRET": string(appSecret), "LARKSUITE_CLI_BRAND": "feishu",
+			"LARKSUITE_CLI_DEFAULT_AS": string(identity), "LARKSUITE_CLI_STRICT_MODE": string(identity), "LARKSUITE_CLI_NO_UPDATE_NOTIFIER": "1", "LARKSUITE_CLI_NO_SKILLS_NOTIFIER": "1",
+		}
+		if identity == cliconnector.IdentityUser {
+			token, decryptErr := executor.box.Decrypt(credentials.TokenCiphertext, "feishu-cli-authorization-token:"+ownerID+":"+credentials.EnablementID+":"+credentials.ExternalIdentityID)
+			if decryptErr != nil {
+				return nil, decryptErr
+			}
+			environment["LARKSUITE_CLI_USER_ACCESS_TOKEN"] = string(token)
+		}
+		return environment, nil
+	}
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {

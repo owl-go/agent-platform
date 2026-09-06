@@ -217,6 +217,43 @@ func TestEnvironmentDecryptsGlobalModelCredentialWithItsOriginalScope(t *testing
 	}
 }
 
+func TestCLIEnvironmentResolverInjectsOneRunFeishuCredentials(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerID, enablementID, externalID := "owner-1", "enablement-1", "ou_user"
+	appID, _ := box.Encrypt([]byte("cli_app"), "feishu-cli-application:"+ownerID)
+	appSecret, _ := box.Encrypt([]byte("app-secret"), "feishu-cli-application:"+ownerID)
+	token, _ := box.Encrypt([]byte("user-token"), "feishu-cli-authorization-token:"+ownerID+":"+enablementID+":"+externalID)
+	repository := &stubCLICredentialRepository{credentials: cliconnector.EncryptedExecutionCredentials{
+		AppIDCiphertext: appID, AppSecretCiphertext: appSecret, TokenCiphertext: token, EnablementID: enablementID, ExternalIdentityID: externalID,
+	}}
+	executor := &Executor{box: box, cliCredentials: repository}
+	environment, err := executor.cliEnvironmentResolver(ownerID)(context.Background(), cliconnector.Definition{ID: "connector-1", AuthenticationDriver: "feishu"}, cliconnector.Capability{ID: "calendar", Scopes: []string{"calendar:calendar:read"}}, cliconnector.IdentityUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if environment["LARKSUITE_CLI_APP_ID"] != "cli_app" || environment["LARKSUITE_CLI_APP_SECRET"] != "app-secret" || environment["LARKSUITE_CLI_USER_ACCESS_TOKEN"] != "user-token" || environment["LARKSUITE_CLI_STRICT_MODE"] != "user" {
+		t.Fatalf("CLI environment = %#v", environment)
+	}
+	if repository.ownerID != ownerID || repository.definitionID != "connector-1" || strings.Join(repository.scopes, " ") != "calendar:calendar:read" {
+		t.Fatalf("credential lookup = %#v", repository)
+	}
+}
+
+type stubCLICredentialRepository struct {
+	credentials           cliconnector.EncryptedExecutionCredentials
+	ownerID, definitionID string
+	identity              cliconnector.Identity
+	scopes                []string
+}
+
+func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
+	repository.ownerID, repository.definitionID, repository.identity, repository.scopes = ownerID, definitionID, identity, append([]string(nil), scopes...)
+	return repository.credentials, nil
+}
+
 func TestEnvironmentUsesDeepSeekAnthropicEndpointWithoutChangingOpenAIEndpoint(t *testing.T) {
 	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
 	if err != nil {

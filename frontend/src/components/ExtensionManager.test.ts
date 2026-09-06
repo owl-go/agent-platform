@@ -135,4 +135,30 @@ describe("ExtensionManager", () => {
     expect(wrapper.get('a[href="https://open.feishu.cn/app/cli-1"]').text()).toBe("开发者后台");
     wrapper.unmount();
   });
+
+  it("starts and completes Feishu account authorization", async () => {
+    vi.useFakeTimers();
+    const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [{ id: "calendar", argv_prefix: ["calendar"], risk: "low", identities: ["user" as const], scopes: ["calendar:calendar:read"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }], state: "available", mutable: false, version: 1 } as const;
+    const enablement = { id: "enable-1", definition_id: definition.id, state: "enabled" as const, provider_name: "用户的飞书CLI", version: 2 };
+    const waiting = { id: "flow-1", enablement_id: enablement.id, identity: "user" as const, scopes: ["calendar:calendar:read"], state: "waiting_for_user" as const, action_url: "https://accounts.feishu.cn/authorize" };
+    const authorization = { id: "auth-1", enablement_id: enablement.id, identity: "user" as const, external_identity_id: "ou_user", external_display_name: "吴粤威", scopes: waiting.scopes, state: "active" as const, version: 1 };
+    const beginCLIConnectorAuthorization = vi.fn(async () => waiting);
+    const completeCLIConnectorAuthorization = vi.fn(async () => ({ ...waiting, state: "completed" as const, action_url: undefined, authorization }));
+    const listCLIConnectorAuthorizations = vi.fn(async () => [] as typeof authorization[]);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [enablement]), listCLIConnectorAuthorizations, beginCLIConnectorAuthorization, completeCLIConnectorAuthorization } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    await wrapper.findAll("button").find((button) => button.text().includes("授权飞书账号"))!.trigger("click");
+    await flushPromises();
+    expect(beginCLIConnectorAuthorization).toHaveBeenCalledWith(enablement.id, "user", ["calendar:calendar:read"]);
+    expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开飞书授权");
+
+    listCLIConnectorAuthorizations.mockResolvedValueOnce([authorization]);
+    await vi.advanceTimersByTimeAsync(6000);
+    await flushPromises();
+    expect(completeCLIConnectorAuthorization).toHaveBeenCalledWith(waiting.id);
+    expect(wrapper.text()).toContain("已授权：吴粤威");
+    wrapper.unmount();
+  });
 });

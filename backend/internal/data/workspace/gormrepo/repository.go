@@ -213,6 +213,42 @@ type feishuCLIApplicationRecord struct {
 
 func (feishuCLIApplicationRecord) TableName() string { return "feishu_cli_applications" }
 
+type cliConnectorAuthorizationRecord struct {
+	ID                     string     `gorm:"column:id"`
+	OwnerID                string     `gorm:"column:owner_user_id"`
+	EnablementID           string     `gorm:"column:enablement_id"`
+	Identity               string     `gorm:"column:identity"`
+	ExternalIdentityID     string     `gorm:"column:external_identity_id"`
+	ExternalDisplayName    string     `gorm:"column:external_display_name"`
+	Scopes                 []byte     `gorm:"column:scopes;type:jsonb"`
+	TokenCiphertext        []byte     `gorm:"column:token_ciphertext"`
+	RefreshTokenCiphertext []byte     `gorm:"column:refresh_token_ciphertext"`
+	ExpiresAt              *time.Time `gorm:"column:expires_at"`
+	State                  string     `gorm:"column:state"`
+	CreatedAt              time.Time  `gorm:"column:created_at"`
+	UpdatedAt              time.Time  `gorm:"column:updated_at"`
+	Version                int64      `gorm:"column:version"`
+}
+
+func (cliConnectorAuthorizationRecord) TableName() string { return "cli_connector_authorizations" }
+
+type cliConnectorAuthorizationAttemptRecord struct {
+	ID                   string    `gorm:"column:id"`
+	OwnerID              string    `gorm:"column:owner_user_id"`
+	EnablementID         string    `gorm:"column:enablement_id"`
+	Identity             string    `gorm:"column:identity"`
+	Scopes               []byte    `gorm:"column:scopes;type:jsonb"`
+	DeviceCodeCiphertext []byte    `gorm:"column:device_code_ciphertext"`
+	ActionURL            string    `gorm:"column:action_url"`
+	ExpiresAt            time.Time `gorm:"column:expires_at"`
+	CreatedAt            time.Time `gorm:"column:created_at"`
+	UpdatedAt            time.Time `gorm:"column:updated_at"`
+}
+
+func (cliConnectorAuthorizationAttemptRecord) TableName() string {
+	return "cli_connector_authorization_attempts"
+}
+
 type cliCommandApprovalRecord struct {
 	ID                string     `gorm:"column:id"`
 	OwnerID           string     `gorm:"column:owner_user_id"`

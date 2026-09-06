@@ -610,6 +610,82 @@
         ]
       }
     },
+    "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CompleteCLIConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorAuthorizationFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisconnectCLIConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorAuthorization"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "authorization_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli/enablements": {
       "get": {
         "operationId": "AgentWorkspaceService_ListCLIConnectorEnablements",
@@ -627,6 +703,72 @@
             }
           }
         },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListCLIConnectorAuthorizations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCLIConnectorAuthorizationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "enablement_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_BeginCLIConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CLIConnectorAuthorizationFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "enablement_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceBeginCLIConnectorAuthorizationBody"
+            }
+          }
+        ],
         "tags": [
           "AgentWorkspaceService"
         ]
@@ -2848,10 +2990,27 @@
         }
       }
     },
+    "AgentWorkspaceServiceBeginCLIConnectorAuthorizationBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "AgentWorkspaceServiceCancelRunBody": {
       "type": "object"
     },
     "AgentWorkspaceServiceCancelSessionMessageBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody": {
       "type": "object"
     },
     "AgentWorkspaceServiceCompleteCLIConnectorEnablementBody": {
@@ -2937,6 +3096,15 @@
       }
     },
     "AgentWorkspaceServiceDisableCLIConnectorDefinitionBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody": {
       "type": "object",
       "properties": {
         "expected_version": {
@@ -3313,6 +3481,76 @@
         "timeout_seconds": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "v1CLIConnectorAuthorization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "enablement_id": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "external_identity_id": {
+          "type": "string"
+        },
+        "external_display_name": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CLIConnectorAuthorizationFlow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "enablement_id": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "action_url": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authorization": {
+          "$ref": "#/definitions/v1CLIConnectorAuthorization"
         }
       }
     },
@@ -4349,6 +4587,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Artifact"
+          }
+        }
+      }
+    },
+    "v1ListCLIConnectorAuthorizationsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CLIConnectorAuthorization"
           }
         }
       }

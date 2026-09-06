@@ -260,6 +260,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CompleteCLIConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisconnectCLIConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli/enablements": {
         parameters: {
             query?: never;
@@ -270,6 +302,22 @@ export interface paths {
         get: operations["AgentWorkspaceService_ListCLIConnectorEnablements"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListCLIConnectorAuthorizations"];
+        put?: never;
+        post: operations["AgentWorkspaceService_BeginCLIConnectorAuthorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1022,8 +1070,13 @@ export interface components {
             reason?: string;
             request_id?: string;
         };
+        AgentWorkspaceServiceBeginCLIConnectorAuthorizationBody: {
+            identity?: string;
+            scopes?: string[];
+        };
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody: Record<string, never>;
         AgentWorkspaceServiceCompleteCLIConnectorEnablementBody: Record<string, never>;
         AgentWorkspaceServiceConfigureUserDailyCreditsBody: {
             /** Format: int64 */
@@ -1053,6 +1106,10 @@ export interface components {
             expected_version?: number;
         };
         AgentWorkspaceServiceDisableCLIConnectorDefinitionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1202,6 +1259,30 @@ export interface components {
             egress_hosts?: string[];
             /** Format: int32 */
             timeout_seconds?: number;
+        };
+        v1CLIConnectorAuthorization: {
+            id?: string;
+            enablement_id?: string;
+            identity?: string;
+            external_identity_id?: string;
+            external_display_name?: string;
+            scopes?: string[];
+            state?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1CLIConnectorAuthorizationFlow: {
+            id?: string;
+            enablement_id?: string;
+            identity?: string;
+            scopes?: string[];
+            state?: string;
+            action_url?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            authorization?: components["schemas"]["v1CLIConnectorAuthorization"];
         };
         v1CLIConnectorDefinition: {
             id?: string;
@@ -1557,6 +1638,9 @@ export interface components {
         };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
+        };
+        v1ListCLIConnectorAuthorizationsResponse: {
+            items?: components["schemas"]["v1CLIConnectorAuthorization"][];
         };
         v1ListCLIConnectorDefinitionsResponse: {
             items?: components["schemas"]["v1CLIConnectorDefinition"][];
@@ -2593,6 +2677,76 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_CompleteCLIConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorAuthorizationFlow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisconnectCLIConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorAuthorization"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListCLIConnectorEnablements: {
         parameters: {
             query?: never;
@@ -2609,6 +2763,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListCLIConnectorEnablementsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListCLIConnectorAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enablement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListCLIConnectorAuthorizationsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_BeginCLIConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enablement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceBeginCLIConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorAuthorizationFlow"];
                 };
             };
             /** @description An unexpected error response. */

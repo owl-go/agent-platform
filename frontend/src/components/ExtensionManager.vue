@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 
@@ -32,6 +32,8 @@ const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
+const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
+const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
 const showCLI = ref(false);
 const cliForm = ref<CLIConnectorDefinitionInput>({ name: t("resources.feishuCLI"), npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-QARcHz96pfEzzRZdjXene5h9fJ46lCu5q2TWx+blLyOIXEPuJwi6bT+RT9hPOsKFW+bbGYvamU8LpD6FsIa5ew==", executable: "lark-cli", authentication_driver: "feishu", supported_architectures: ["linux-amd64"], recommended_skill_ids: [], capabilities: [{ id: "identity", argv_prefix: ["auth", "status"], risk: "low", identities: ["user"], scopes: [], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] });
 const editingMCP = ref<MCPServer>();
@@ -53,6 +55,7 @@ onMounted(() => {
       lastCLICompletionPoll = Date.now();
       void completePendingCLIEnablements();
     }
+    if (cliAuthorizationFlow.value?.state === "waiting_for_user" && Date.now() - lastCLICompletionPoll >= 5000) void completeCLIAccountAuthorization();
   }, 1500);
 });
 onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
@@ -61,7 +64,11 @@ function emptyMCPDraft(): MCPDraft { return { name: "", transport: "streamable_h
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
-  try { [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]); notifyResources(); } catch { emit("error"); }
+  try {
+    [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]);
+    await refreshCLIAuthorizations();
+    notifyResources();
+  } catch { emit("error"); }
 }
 async function enableCLI(item: CLIConnectorDefinition) { try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; } catch { emit("error"); } }
 async function completePendingCLIEnablements() {
@@ -73,6 +80,36 @@ async function completePendingCLIEnablements() {
   } catch { /* A transient provider failure must not discard the active setup link. */ }
 }
 function enablementFor(id: string) { return cliEnablements.value.find((item) => item.definition_id === id); }
+function authorizationsFor(definitionID: string) {
+  const enablement = enablementFor(definitionID);
+  return enablement ? cliAuthorizations.value[enablement.id] ?? [] : [];
+}
+function userScopes(item: CLIConnectorDefinition) {
+  return [...new Set(item.capabilities.filter((capability) => capability.identities.includes("user")).flatMap((capability) => capability.scopes))];
+}
+async function refreshCLIAuthorizations() {
+  const enabled = cliEnablements.value.filter((item) => item.state === "enabled");
+  const entries = await Promise.all(enabled.map(async (item) => [item.id, await (api.listCLIConnectorAuthorizations?.(item.id) ?? Promise.resolve([]))] as const));
+  cliAuthorizations.value = Object.fromEntries(entries);
+}
+async function authorizeCLIAccount(item: CLIConnectorDefinition) {
+  const enablement = enablementFor(item.id);
+  if (!enablement) return;
+  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch { emit("error"); }
+}
+async function completeCLIAccountAuthorization() {
+  const flow = cliAuthorizationFlow.value;
+  if (!flow || flow.state !== "waiting_for_user") return;
+  lastCLICompletionPoll = Date.now();
+  try {
+    const completed = await api.completeCLIConnectorAuthorization(flow.id);
+    cliAuthorizationFlow.value = completed;
+    if (completed.authorization) await refreshCLIAuthorizations();
+  } catch { /* Keep the current authorization link available after transient provider errors. */ }
+}
+async function disconnectCLIAccount(item: CLIConnectorAuthorization) {
+  try { await api.disconnectCLIConnectorAuthorization(item.id, item.version); await refreshCLIAuthorizations(); } catch { emit("error"); }
+}
 function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   if (enablementFor(item.id)?.state !== "enabled") return;
   emit("update:cliConnectorDefinitionIds", checked ? [...new Set([...props.cliConnectorDefinitionIds, item.id])] : props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
@@ -167,7 +204,36 @@ async function fileToBase64(file: File): Promise<string> {
 <template>
   <div class="extension-manager" :class="{ selectable }">
     <nav class="subtabs" :aria-label="t('resources.title')"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></nav>
-    <div v-if="activeTab === 'mcp'"><div class="section-heading"><strong>MCP</strong><el-button type="primary" class="compact-action" @click="openNewMCP">＋ MCP</el-button></div><div class="resource-list"><article v-for="item in mcp" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label><span class="resource-mark">MCP</span><div><strong>{{ item.name }}</strong><p>{{ item.transport }} · {{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p></div><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag><el-button circle :aria-label="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)">↻</el-button><el-button circle :aria-label="t('common.edit')" @click="openMCP(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })">×</el-button></article></div><div class="section-heading"><strong>{{ t('resources.cli') }}</strong><el-button v-if="canManageCLI" @click="showCLI = true">＋ {{ t('resources.cliDefinition') }}</el-button></div><div class="resource-list"><article v-for="item in cliDefinitions" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label><span class="resource-mark">CLI</span><div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small></div><el-tag>{{ t(`resources.state.${item.state}`) }}</el-tag><el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button><el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button><template v-if="enablementFor(item.id)?.state === 'waiting_for_user'"><a :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a></template><template v-else-if="enablementFor(item.id)?.state === 'enabled'"><el-tag type="success">{{ t('common.enabled') }}</el-tag><a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template><el-button v-else-if="item.state === 'available'" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button></article></div></div>
+    <div v-if="activeTab === 'mcp'">
+      <div class="section-heading"><strong>MCP</strong><el-button type="primary" class="compact-action" @click="openNewMCP">＋ MCP</el-button></div>
+      <div class="resource-list"><article v-for="item in mcp" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label><span class="resource-mark">MCP</span><div><strong>{{ item.name }}</strong><p>{{ item.transport }} · {{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p></div><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag><el-button circle :aria-label="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)">↻</el-button><el-button circle :aria-label="t('common.edit')" @click="openMCP(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })">×</el-button></article></div>
+      <div class="section-heading"><strong>{{ t('resources.cli') }}</strong><el-button v-if="canManageCLI" @click="showCLI = true">＋ {{ t('resources.cliDefinition') }}</el-button></div>
+      <div class="resource-list">
+        <article v-for="item in cliDefinitions" :key="item.id" class="el-card">
+          <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
+          <span class="resource-mark">CLI</span>
+          <div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small></div>
+          <el-tag>{{ t(`resources.state.${item.state}`) }}</el-tag>
+          <el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button>
+          <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
+          <template v-if="enablementFor(item.id)?.state === 'waiting_for_user'"><a :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a></template>
+          <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
+            <el-tag type="success">{{ t('common.enabled') }}</el-tag>
+            <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
+            <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id">
+              <span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span>
+              <el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button>
+            </template>
+            <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'">
+              <a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a>
+              <small>{{ t('resources.authorizationPending') }}</small>
+            </template>
+            <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
+          </template>
+          <el-button v-else-if="item.state === 'available'" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
+        </article>
+      </div>
+    </div>
     <div v-if="activeTab === 'skills'"><el-button type="primary" class="compact-action" @click="openNewSkill">＋ Skill</el-button><div class="resource-list"><article v-for="item in skills" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice"><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label><span class="resource-mark">SK</span><div><strong>{{ item.name }}</strong><p>{{ item.git_url || item.source }} · {{ item.sha256.slice(0, 12) }}</p></div><el-button circle :aria-label="t('common.edit')" @click="openSkill(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'skill', item })">×</el-button></article></div></div>
   </div>
   <Teleport to="body">

@@ -82,6 +82,32 @@ type EnablementRegistration struct {
 	DeviceCodeCiphertext []byte
 }
 
+type Authorization struct {
+	ID, OwnerID, EnablementID, ExternalIdentityID, ExternalDisplayName string
+	Identity                                                           Identity
+	Scopes                                                             []string
+	State                                                              string
+	ExpiresAt                                                          *time.Time
+	Version                                                            int64
+}
+
+type AuthorizationAttempt struct {
+	ID, OwnerID, EnablementID, ActionURL string
+	Identity                             Identity
+	Scopes                               []string
+	ExpiresAt                            time.Time
+	DeviceCodeCiphertext                 []byte
+}
+
+type FeishuApplicationCredentials struct {
+	AppIDCiphertext, AppSecretCiphertext []byte
+}
+
+type EncryptedExecutionCredentials struct {
+	AppIDCiphertext, AppSecretCiphertext, TokenCiphertext []byte
+	EnablementID, ExternalIdentityID                      string
+}
+
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)
 var npmPackage = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
 var policyToken = regexp.MustCompile(`^[A-Za-z0-9._:/-]+$`)

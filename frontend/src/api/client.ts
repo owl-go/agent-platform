@@ -49,6 +49,8 @@ export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" 
 export interface CLIConnectorDefinitionInput { name: string; npm_package: string; npm_version: string; npm_integrity: string; executable: string; authentication_driver: "none" | "feishu"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skill_ids: string[] }
 export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[] }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
+export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
+export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
 export interface CommandApproval { id: string; execution_kind: "session" | "run"; execution_id: string; connector_name: string; operation: string; target: string; redacted_arguments: string; state: "pending" | "approved" | "rejected" | "consumed" | "expired" | "closed"; identity?: "user" | "bot"; expires_at: string; version: number }
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
@@ -155,6 +157,10 @@ export interface PlatformApi {
   enableCLIConnector(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   completeCLIConnectorEnablement(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   listCLIConnectorEnablements(signal?: AbortSignal): Promise<CLIConnectorEnablement[]>;
+  beginCLIConnectorAuthorization(enablementID: string, identity: "user", scopes: string[], signal?: AbortSignal): Promise<CLIConnectorAuthorizationFlow>;
+  completeCLIConnectorAuthorization(flowID: string, signal?: AbortSignal): Promise<CLIConnectorAuthorizationFlow>;
+  listCLIConnectorAuthorizations(enablementID: string, signal?: AbortSignal): Promise<CLIConnectorAuthorization[]>;
+  disconnectCLIConnectorAuthorization(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorAuthorization>;
   listCommandApprovals(signal?: AbortSignal): Promise<CommandApproval[]>;
   decideCommandApproval(id: string, decision: "approved" | "rejected", identity: "user" | "bot" | undefined, version: number, signal?: AbortSignal): Promise<CommandApproval>;
   listUsers(signal?: AbortSignal): Promise<UserAccount[]>;
@@ -377,6 +383,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
     completeCLIConnectorEnablement(id, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(id)}/complete`, json("POST", {}, signal)); },
     async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },
+    beginCLIConnectorAuthorization(enablementID, identity, scopes, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, json("POST", { identity, scopes }, signal)); },
+    completeCLIConnectorAuthorization(flowID, signal) { return call(`/api/v1/connectors/cli/authorization-flows/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
+    async listCLIConnectorAuthorizations(enablementID, signal) { return (await call<{ items: CLIConnectorAuthorization[] }>(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, { signal })).items ?? []; },
+    disconnectCLIConnectorAuthorization(id, version, signal) { return call(`/api/v1/connectors/cli/authorizations/${encodeURIComponent(id)}/disconnect`, json("POST", { expected_version: version }, signal)); },
     async listCommandApprovals(signal) { return (await call<{ items: CommandApproval[] }>("/api/v1/command-approvals", { signal })).items ?? []; },
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },

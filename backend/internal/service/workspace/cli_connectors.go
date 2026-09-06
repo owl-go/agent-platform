@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,6 +31,14 @@ type cliConnectorRepository interface {
 	CompleteFeishuCLIConnectorEnablement(context.Context, string, string, []byte, []byte, string, string) (cliconnector.Enablement, error)
 	InvalidateCLIConnectorEnablement(context.Context, string, string) (cliconnector.Enablement, error)
 	ListCLIConnectorEnablements(context.Context, string) ([]cliconnector.Enablement, error)
+	GetFeishuCLIApplicationCredentials(context.Context, string, string) (cliconnector.FeishuApplicationCredentials, error)
+	GetCLIConnectorAuthorizationPolicy(context.Context, string, string) (cliconnector.Definition, error)
+	BeginCLIConnectorAuthorization(context.Context, string, string, cliconnector.Identity, []string, string, time.Time, []byte) (cliconnector.AuthorizationAttempt, error)
+	GetCLIConnectorAuthorizationAttempt(context.Context, string, string) (cliconnector.AuthorizationAttempt, error)
+	CompleteCLIConnectorAuthorization(context.Context, cliconnector.AuthorizationAttempt, string, string, []string, []byte, []byte, time.Time) (cliconnector.Authorization, error)
+	DeleteCLIConnectorAuthorizationAttempt(context.Context, string, string) error
+	ListCLIConnectorAuthorizations(context.Context, string, string) ([]cliconnector.Authorization, error)
+	DisconnectCLIConnectorAuthorization(context.Context, string, string, int64) (cliconnector.Authorization, error)
 	ListCommandApprovals(context.Context, string, time.Time) ([]workspacedomain.CommandApproval, error)
 	DecideCommandApproval(context.Context, string, string, workspacedomain.ApprovalState, workspacedomain.ExecutionIdentity, int64, time.Time) (workspacedomain.CommandApproval, error)
 }
@@ -37,6 +46,8 @@ type cliConnectorRepository interface {
 type feishuApplicationRegistrar interface {
 	Begin(context.Context) (feishucli.Registration, error)
 	Poll(context.Context, string) (feishucli.Application, error)
+	BeginAuthorization(context.Context, string, string, []string) (feishucli.AuthorizationRequest, error)
+	PollAuthorization(context.Context, string, string, string) (feishucli.Authorization, error)
 }
 
 func (service *Service) cliConnectors() (cliConnectorRepository, error) {
@@ -266,6 +277,179 @@ func (service *Service) ListCLIConnectorEnablements(ctx context.Context, _ *work
 	return &workspacev1.ListCLIConnectorEnablementsResponse{Items: response}, nil
 }
 
+func (service *Service) BeginCLIConnectorAuthorization(ctx context.Context, request *workspacev1.BeginCLIConnectorAuthorizationRequest) (*workspacev1.CLIConnectorAuthorizationFlow, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
+	}
+	identity := cliconnector.Identity(request.Identity)
+	if identity != cliconnector.IdentityUser {
+		return nil, publicError(fmt.Errorf("%w: interactive authorization only supports user identity", workspacedomain.ErrInvalid))
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	policy, err := repository.GetCLIConnectorAuthorizationPolicy(ctx, principal.UserID, request.EnablementId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	allowedScopes := make(map[string]struct{})
+	for _, capability := range policy.Capabilities {
+		if slices.Contains(capability.Identities, cliconnector.IdentityUser) {
+			for _, scope := range capability.Scopes {
+				allowedScopes[scope] = struct{}{}
+			}
+		}
+	}
+	for _, scope := range request.Scopes {
+		if _, allowed := allowedScopes[scope]; !allowed {
+			return nil, publicError(fmt.Errorf("%w: requested scope is outside the reviewed Connector policy", workspacedomain.ErrInvalid))
+		}
+	}
+	credentials, err := repository.GetFeishuCLIApplicationCredentials(ctx, principal.UserID, request.EnablementId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := service.decryptFeishuApplication(principal.UserID, credentials)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	flow, err := service.feishu.BeginAuthorization(ctx, appID, appSecret, request.Scopes)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Encrypt([]byte(flow.DeviceCode), feishuAuthorizationFlowAAD(principal.UserID, request.EnablementId, identity))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	attempt, err := repository.BeginCLIConnectorAuthorization(ctx, principal.UserID, request.EnablementId, identity, flow.Scopes, flow.ActionURL, flow.ExpiresAt, deviceCode)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return cliAuthorizationFlowResponse(attempt, "waiting_for_user", nil), nil
+}
+
+func (service *Service) CompleteCLIConnectorAuthorization(ctx context.Context, request *workspacev1.CompleteCLIConnectorAuthorizationRequest) (*workspacev1.CLIConnectorAuthorizationFlow, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	attempt, err := repository.GetCLIConnectorAuthorizationAttempt(ctx, principal.UserID, request.FlowId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	credentials, err := repository.GetFeishuCLIApplicationCredentials(ctx, principal.UserID, attempt.EnablementID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := service.decryptFeishuApplication(principal.UserID, credentials)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Decrypt(attempt.DeviceCodeCiphertext, feishuAuthorizationFlowAAD(principal.UserID, attempt.EnablementID, attempt.Identity))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	result, err := service.feishu.PollAuthorization(ctx, appID, appSecret, string(deviceCode))
+	if errors.Is(err, feishucli.ErrPending) {
+		return cliAuthorizationFlowResponse(attempt, "waiting_for_user", nil), nil
+	}
+	if errors.Is(err, feishucli.ErrDenied) || errors.Is(err, feishucli.ErrExpired) {
+		_ = repository.DeleteCLIConnectorAuthorizationAttempt(ctx, principal.UserID, attempt.ID)
+		return cliAuthorizationFlowResponse(attempt, "invalid", nil), nil
+	}
+	if err != nil {
+		return nil, publicError(err)
+	}
+	tokenAAD := feishuAuthorizationTokenAAD(principal.UserID, attempt.EnablementID, result.ExternalID)
+	token, err := service.box.Encrypt([]byte(result.AccessToken), tokenAAD)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var refreshToken []byte
+	if result.RefreshToken != "" {
+		refreshToken, err = service.box.Encrypt([]byte(result.RefreshToken), tokenAAD+":refresh")
+		if err != nil {
+			return nil, publicError(err)
+		}
+	}
+	authorization, err := repository.CompleteCLIConnectorAuthorization(ctx, attempt, result.ExternalID, result.DisplayName, result.Scopes, token, refreshToken, result.ExpiresAt)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return cliAuthorizationFlowResponse(attempt, "completed", &authorization), nil
+}
+
+func (service *Service) ListCLIConnectorAuthorizations(ctx context.Context, request *workspacev1.ListCLIConnectorAuthorizationsRequest) (*workspacev1.ListCLIConnectorAuthorizationsResponse, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListCLIConnectorAuthorizations(ctx, owner, request.EnablementId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := make([]*workspacev1.CLIConnectorAuthorization, 0, len(items))
+	for _, item := range items {
+		response = append(response, cliAuthorizationResponse(item))
+	}
+	return &workspacev1.ListCLIConnectorAuthorizationsResponse{Items: response}, nil
+}
+
+func (service *Service) DisconnectCLIConnectorAuthorization(ctx context.Context, request *workspacev1.DisconnectCLIConnectorAuthorizationRequest) (*workspacev1.CLIConnectorAuthorization, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if principal.Administrator {
+		return nil, publicError(accountdomain.ErrForbidden)
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := repository.DisconnectCLIConnectorAuthorization(ctx, principal.UserID, request.AuthorizationId, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return cliAuthorizationResponse(item), nil
+}
+
+func (service *Service) decryptFeishuApplication(ownerID string, credentials cliconnector.FeishuApplicationCredentials) (string, string, error) {
+	appID, err := service.box.Decrypt(credentials.AppIDCiphertext, feishuApplicationAAD(ownerID))
+	if err != nil {
+		return "", "", err
+	}
+	appSecret, err := service.box.Decrypt(credentials.AppSecretCiphertext, feishuApplicationAAD(ownerID))
+	if err != nil {
+		return "", "", err
+	}
+	return string(appID), string(appSecret), nil
+}
+
+func feishuAuthorizationFlowAAD(ownerID, enablementID string, identity cliconnector.Identity) string {
+	return "feishu-cli-authorization-flow:" + ownerID + ":" + enablementID + ":" + string(identity)
+}
+
+func feishuAuthorizationTokenAAD(ownerID, enablementID, externalID string) string {
+	return "feishu-cli-authorization-token:" + ownerID + ":" + enablementID + ":" + externalID
+}
+
 func (service *Service) ListCommandApprovals(ctx context.Context, _ *workspacev1.ListCommandApprovalsRequest) (*workspacev1.ListCommandApprovalsResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
@@ -363,6 +547,29 @@ func cliEnablementResponse(item cliconnector.Enablement) *workspacev1.CLIConnect
 	}
 	if item.DeveloperConsoleURL != "" {
 		response.DeveloperConsoleUrl = &item.DeveloperConsoleURL
+	}
+	return response
+}
+func cliAuthorizationResponse(item cliconnector.Authorization) *workspacev1.CLIConnectorAuthorization {
+	response := &workspacev1.CLIConnectorAuthorization{
+		Id: item.ID, EnablementId: item.EnablementID, Identity: string(item.Identity), ExternalIdentityId: item.ExternalIdentityID,
+		ExternalDisplayName: item.ExternalDisplayName, Scopes: item.Scopes, State: item.State, Version: item.Version,
+	}
+	if item.ExpiresAt != nil {
+		response.ExpiresAt = timestamppb.New(*item.ExpiresAt)
+	}
+	return response
+}
+func cliAuthorizationFlowResponse(item cliconnector.AuthorizationAttempt, state string, authorization *cliconnector.Authorization) *workspacev1.CLIConnectorAuthorizationFlow {
+	response := &workspacev1.CLIConnectorAuthorizationFlow{
+		Id: item.ID, EnablementId: item.EnablementID, Identity: string(item.Identity), Scopes: item.Scopes, State: state,
+	}
+	if state == "waiting_for_user" {
+		response.ActionUrl = &item.ActionURL
+		response.ExpiresAt = timestamppb.New(item.ExpiresAt)
+	}
+	if authorization != nil {
+		response.Authorization = cliAuthorizationResponse(*authorization)
 	}
 	return response
 }

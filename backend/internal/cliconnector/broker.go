@@ -40,7 +40,7 @@ type BrokerResponse struct {
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
-type EnvironmentResolver func(context.Context, Definition, Identity) (map[string]string, error)
+type EnvironmentResolver func(context.Context, Definition, Capability, Identity) (map[string]string, error)
 
 type BrokerConfig struct {
 	Definitions        []Definition
@@ -143,7 +143,7 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 		return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
 	}
 	if broker.resolveEnvironment != nil {
-		resolved, err := broker.resolveEnvironment(ctx, definition, request.Identity)
+		resolved, err := broker.resolveEnvironment(ctx, definition, *capability, request.Identity)
 		if err != nil {
 			return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
 		}
@@ -194,7 +194,7 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 			}
 		}()
 		if broker.resolveEnvironment != nil {
-			resolved, err := broker.resolveEnvironment(ctx, definition, request.Identity)
+			resolved, err := broker.resolveEnvironment(ctx, definition, *capability, request.Identity)
 			if err != nil {
 				return brokerFailure("authorization_unavailable", "CLI authorization is unavailable")
 			}
