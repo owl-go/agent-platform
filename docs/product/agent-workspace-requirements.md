@@ -83,6 +83,7 @@ The detailed conversation specialist/resource selection rules and accepted revis
 
 - A User can create, rename, archive, cancel archive, and permanently delete a Session.
 - New Session creation succeeds immediately without an Expert. The composer offers a grouped `No Expert / Expert / Expert Team` selector through its `+` menu, including after the first message, without reopening a creation modal.
+- The first Runtime invocation in a new Session is explicitly scoped to that Session and must not assume context from any other Session. Subsequent platform summaries and recent messages are always labeled and queried as history from the same Session.
 - Each Session response can use no specialist profile, one Expert, or one Expert Team. The selection persists until changed, while every accepted message preserves its actual Expert Snapshot containing visible profile metadata, structured Expert guidance, stable Team Member identities and order, and exact Skill and Connector revisions. Selection changes affect subsequent messages only.
 - The composer supports direct Skill and Connector selection with or without an Expert. Explicit Skills apply to one message; the selected specialist and Connectors remain for subsequent messages. Expert-derived defaults, explicit overrides, revision retention, and Conversation Draft recovery follow `docs/product/conversation-resource-selection.md`.
 - The title is derived locally from the first User message and remains editable; title generation does not invoke a model.

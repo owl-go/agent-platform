@@ -1275,8 +1275,15 @@ func (repository *Repository) CancellationRequested(ctx context.Context, job app
 
 func sessionInstruction(summary string, recent []messageRecord, current string, nativeResume bool) string {
 	var builder strings.Builder
+	if !nativeResume {
+		if strings.TrimSpace(summary) == "" && len(recent) == 0 {
+			builder.WriteString("This is the first message in a new Session. Do not assume context from any other Session.\n\n")
+		} else {
+			builder.WriteString("Use only context from this Session; do not assume context from any other Session.\n\n")
+		}
+	}
 	if summary = strings.TrimSpace(summary); summary != "" && !nativeResume {
-		builder.WriteString("Rolling summary from the previous conversation:\n")
+		builder.WriteString("Rolling summary from earlier messages in this Session:\n")
 		builder.WriteString(summary)
 		builder.WriteString("\n\n")
 	}

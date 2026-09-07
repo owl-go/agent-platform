@@ -13,5 +13,5 @@ export function saveConversationDraft(key: string, draft: ConversationDraft): vo
   try { localStorage.setItem(key, JSON.stringify(draft)); } catch { /* Storage can be disabled; keep the live draft editable. */ }
 }
 export function draftText(parts: DraftPart[]): string {
-  return parts.map((part) => part.kind === "text" ? part.text : part.kind === "skill" ? `[${part.name}]` : `@${part.file.name}`).join("").trim();
+  return parts.map((part) => part.kind === "text" ? part.text : part.kind === "skill" ? "" : `@${part.file.name}`).join("").trim();
 }

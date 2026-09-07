@@ -77,6 +77,29 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("shows the Skills frozen for a historical user message", async () => {
+    const snapshotMessages = [
+      { ...messages[0]!, content: "[PDF 文档处理] 生成 PDF" },
+      {
+        ...messages[1]!,
+        response_snapshot: {
+          stages: [{
+            position: 1,
+            runtime_engine: "codex",
+            provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" },
+            skills: [{ id: "skill-pdf", name: "PDF 文档处理", object_key: "skills/pdf.zip", sha256: "digest" }],
+          }],
+        },
+      },
+    ] as unknown as SessionMessage[];
+
+    const wrapper = await mountPage(snapshotMessages);
+
+    expect(wrapper.get(".message.user .message-skill-badge").text()).toContain("PDF 文档处理");
+    expect(wrapper.get(".message.user .message-content > p").text()).toBe("生成 PDF");
+    wrapper.unmount();
+  });
+
   it("omits decorative English labels from the Chinese Session view", async () => {
     const wrapper = await mountPage();
 
