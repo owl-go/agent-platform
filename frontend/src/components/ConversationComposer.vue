@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { ArrowUp, Check, ChevronLeft, ChevronRight, FilePlus2, FileText, Folder, Link, Plus, Search, Sparkles, Square, UserRound, Users, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { platformApiKey, type Attachment, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
+import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 
@@ -31,6 +31,8 @@ const query = ref("");
 const highlighted = ref(0);
 const loading = ref(true), updating = ref(false), sending = ref(false);
 const error = ref("");
+const cliAuthorizationPrompt = ref<{ definition: CLIConnectorDefinition; enablement: CLIConnectorEnablement; scopes: string[]; flow?: CLIConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
+const cliAuthorizationBusy = ref(false);
 const owner = computed(() => auth?.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser.id : "");
 const storageKey = computed(() => owner.value ? conversationDraftKey(owner.value, props.scope) : "");
 const editorLocked = computed(() => props.disabled || sending.value || loading.value);
@@ -40,6 +42,7 @@ const referencedFiles = computed(() => parts.value.flatMap((part) => part.kind =
 let caret: Range | undefined;
 let trigger: { node: Text; start: number; end: number } | undefined;
 let disposed = false;
+let cliAuthorizationPoll: ReturnType<typeof setTimeout> | undefined;
 const tokens = new WeakMap<Node, Exclude<DraftPart, { kind: "text" }>>();
 
 const matches = (name: string) => name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase());
@@ -125,7 +128,77 @@ async function toggleConnector(kind: "mcp" | "cli", id: string) {
   if (!selection.value) return;
   const key = `${kind}:${id}`, enabled = connectorEnabled(key), field = kind === "mcp" ? "mcp_server_ids" : "cli_connector_ids";
   const ids = (kind === "mcp" ? selection.value.mcp_servers : selection.value.cli_connectors).map((item) => item.id).filter((value) => value !== id);
-  await changeSelection({ [field]: enabled ? ids : [...ids, id], disabled_connectors: enabled ? [...selection.value.disabled_connectors.filter((item) => item !== key), key] : selection.value.disabled_connectors.filter((item) => item !== key), refresh_ids: enabled ? [] : [key] });
+  if (await changeSelection({ [field]: enabled ? ids : [...ids, id], disabled_connectors: enabled ? [...selection.value.disabled_connectors.filter((item) => item !== key), key] : selection.value.disabled_connectors.filter((item) => item !== key), refresh_ids: enabled ? [] : [key] })) await refreshSelectedCLIAuthorization();
+}
+
+function requiredUserScopes(item: CLIConnectorDefinition) {
+  return [...new Set((item.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
+}
+async function refreshSelectedCLIAuthorization() {
+  if (!selection.value || disposed) return;
+  const selectedIDs = [...new Set(visibleConnectors.value.filter((item) => item.kind === "cli" && connectorEnabled(item.key)).map((item) => item.id))];
+  for (const id of selectedIDs) {
+    const definition = cli.value.find((item) => item.id === id);
+    const enablement = enablements.value.find((item) => item.definition_id === id && item.state === "enabled");
+    if (!definition || definition.authentication_driver !== "feishu" || !enablement) continue;
+    const scopes = requiredUserScopes(definition);
+    if (!scopes.length) continue;
+    let authorizations: CLIConnectorAuthorization[];
+    try { authorizations = await api.listCLIConnectorAuthorizations(enablement.id); }
+    catch { continue; }
+    const authorized = authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
+    if (!authorized) {
+      const current = cliAuthorizationPrompt.value;
+      cliAuthorizationPrompt.value = current?.definition.id === id ? { ...current, definition, enablement, scopes } : { definition, enablement, scopes };
+      return;
+    }
+  }
+  cliAuthorizationPrompt.value = undefined;
+}
+function openCLIWindow(): Window | null {
+  try {
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    return popup;
+  } catch { return null; }
+}
+function closeBlankCLIWindow(popup: Window | null) {
+  try { if (popup && !popup.closed && popup.location.href === "about:blank") popup.close(); } catch { /* Keep external pages open. */ }
+}
+async function beginSelectedCLIAuthorization() {
+  const prompt = cliAuthorizationPrompt.value;
+  if (!prompt || cliAuthorizationBusy.value) return;
+  const popup = openCLIWindow();
+  cliAuthorizationBusy.value = true; prompt.failed = false;
+  try {
+    const flow = await api.beginCLIConnectorAuthorization(prompt.enablement.id, "user", prompt.scopes);
+    if (disposed) { closeBlankCLIWindow(popup); return; }
+    prompt.flow = flow;
+    if (popup && !popup.closed && flow.action_url) popup.location.href = flow.action_url;
+    scheduleCLIAuthorizationPoll();
+  } catch {
+    closeBlankCLIWindow(popup); prompt.failed = true;
+  } finally { cliAuthorizationBusy.value = false; }
+}
+function scheduleCLIAuthorizationPoll() {
+  if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll);
+  cliAuthorizationPoll = setTimeout(() => void completeSelectedCLIAuthorization(), 3000);
+}
+async function completeSelectedCLIAuthorization() {
+  const prompt = cliAuthorizationPrompt.value;
+  if (!prompt?.flow || prompt.flow.state !== "waiting_for_user" || cliAuthorizationBusy.value || disposed) return;
+  cliAuthorizationBusy.value = true;
+  try {
+    const flow = await api.completeCLIConnectorAuthorization(prompt.flow.id);
+    prompt.flow = flow;
+    if (flow.state === "completed") prompt.completed = true;
+    else if (flow.state === "invalid") prompt.failed = true;
+    else scheduleCLIAuthorizationPoll();
+  } catch { scheduleCLIAuthorizationPoll(); }
+  finally { cliAuthorizationBusy.value = false; }
+}
+function handleAuthorizationReturn() {
+  if (document.visibilityState === "visible") void completeSelectedCLIAuthorization();
 }
 async function loadFiles(path = "") {
   try { files.value = await api.listConversationFiles(props.scope, path); workspacePath.value = path; }
@@ -178,6 +251,7 @@ async function send() {
     }
     while (pending.value.length) { const file = pending.value[0]; const attachment = await api.uploadAttachment(file); uploaded.value.push(attachment); pending.value.shift(); persist(); }
     await props.submit({ content: draftText(parts.value), attachmentIDs: uploaded.value.map((item) => item.id), input: { selection_id: selection.value.id, file_references: referencedFiles.value.map((file) => ({ kind: file.kind as "attachment" | "artifact" | "workspace", id: file.id, path: file.path })) } });
+    if (cliAuthorizationPrompt.value?.completed) cliAuthorizationPrompt.value = undefined;
     parts.value = []; uploaded.value = []; missingFiles.value = []; renderEditor();
     // The accepted selection is immutable. Resolve an empty explicit Skill set
     // for the next draft without modifying the historical message.
@@ -199,12 +273,13 @@ async function initialize() {
       else if (skill) { await chooseSkill(skill); if (!error.value) emit("launchConsumed"); }
       else error.value = t("composer.selectionFailed");
     }
-    persist();
+    await refreshSelectedCLIAuthorization(); persist();
   } catch { error.value = t("composer.selectionFailed"); }
   finally { loading.value = false; }
 }
 onMounted(async () => {
   document.addEventListener("pointerdown", outside);
+  document.addEventListener("visibilitychange", handleAuthorizationReturn);
   const saved = storageKey.value ? loadConversationDraft(storageKey.value) : undefined;
   if (saved) { parts.value = saved.parts; selection.value = saved.selection; uploaded.value = saved.attachments; missingFiles.value = saved.pendingFileNames; }
   await nextTick(); renderEditor();
@@ -212,11 +287,17 @@ onMounted(async () => {
 });
 watch(selection, (value) => { if (value) emit("selectionChanged", value); });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
-onBeforeUnmount(() => { disposed = true; persist(); document.removeEventListener("pointerdown", outside); });
+onBeforeUnmount(() => { disposed = true; if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
 </script>
 
 <template>
   <footer ref="root" class="composer resource-composer" :aria-busy="sending || updating || loading">
+    <section v-if="cliAuthorizationPrompt" class="composer-authorization" role="status" aria-live="polite">
+      <div><strong>{{ cliAuthorizationPrompt.completed ? t('composer.authorizationCompleted') : t('composer.authorizationRequired', { name: cliAuthorizationPrompt.definition.name }) }}</strong><small>{{ cliAuthorizationPrompt.completed ? t('composer.authorizationContinue') : t('composer.authorizationHint') }}</small></div>
+      <el-button v-if="!cliAuthorizationPrompt.completed && !cliAuthorizationPrompt.flow?.action_url" type="primary" :loading="cliAuthorizationBusy" @click="beginSelectedCLIAuthorization">{{ t('resources.authorizeNow') }}</el-button>
+      <a v-else-if="!cliAuthorizationPrompt.completed" :href="cliAuthorizationPrompt.flow?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a>
+      <small v-if="cliAuthorizationPrompt.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
+    </section>
     <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>
     <div v-if="missingFiles.length" class="composer-notice">{{ t('composer.reselectFiles', { names: missingFiles.join(', ') }) }}<el-button text @click="missingFiles = []; persist()">{{ t('common.close') }}</el-button></div>
     <div v-if="pending.length || uploaded.length" class="pending-attachments">

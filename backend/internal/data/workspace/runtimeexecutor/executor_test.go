@@ -49,7 +49,8 @@ func TestMaterializeCLIConnectorsVerifiesRuntimeAndProtectsBundle(t *testing.T) 
 		t.Fatal(err)
 	}
 	runtimeDigest := "sha256:" + strings.Repeat("a", 64)
-	executor := &Executor{connectors: store}
+	repository := &stubCLICredentialRepository{}
+	executor := &Executor{connectors: store, cliCredentials: repository}
 	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "connector-1", Name: "Tool", Executable: "tool", BundleObjectKey: key, BundleSHA256: digest, RuntimeDigests: []string{runtimeDigest}}}}}
 	directory, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest)
 	if err != nil {
@@ -69,6 +70,13 @@ func TestMaterializeCLIConnectorsVerifiesRuntimeAndProtectsBundle(t *testing.T) 
 	job.Snapshot.CLIConnectors[0].RuntimeDigests = []string{"sha256:" + strings.Repeat("b", 64)}
 	if _, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest); err == nil {
 		t.Fatal("expected an unverified Runtime digest to be rejected")
+	}
+	repository.runtimeVerified = true
+	if _, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest); err != nil {
+		t.Fatalf("current exact-bundle conformance did not recover retained snapshot: %v", err)
+	}
+	if repository.bundleSHA256 != digest || repository.runtimeDigest != runtimeDigest {
+		t.Fatalf("conformance lookup = %#v", repository)
 	}
 }
 
@@ -108,13 +116,13 @@ func TestStartCLIConnectorBrokerExposesOnlyProtectedSocketToModelRuntime(t *test
 		t.Fatal(err)
 	}
 	runtimeDigest := "sha256:" + strings.Repeat("a", 64)
-	executor := &Executor{cliEgress: passthroughCLIEgress{}, config: platformconfig.Config{
+	executor := &Executor{cliEgress: passthroughCLIEgress{}, cliCredentials: &stubCLICredentialRepository{runtimeVerified: true}, config: platformconfig.Config{
 		Sandbox: platformconfig.SandboxConfig{Runtime: "runsc", EgressNetwork: "public", ResolverConfig: "/etc/resolv.conf"},
 		Worker:  platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()},
 	}}
 	job := application.ExecutionJob{ID: "run-1", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{
 		ID: "connector-1", Name: "Tool", Executable: "tool", AuthenticationDriver: "none",
-		BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{runtimeDigest}, Capabilities: capabilities, Version: 1,
+		BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{"sha256:" + strings.Repeat("c", 64)}, Capabilities: capabilities, Version: 1,
 	}}}}
 	runtime := platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@" + runtimeDigest}
 	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, 1, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root)
@@ -252,11 +260,19 @@ type stubCLICredentialRepository struct {
 	ownerID, definitionID string
 	identity              cliconnector.Identity
 	scopes                []string
+	runtimeVerified       bool
+	bundleSHA256          string
+	runtimeDigest         string
 }
 
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
 	repository.ownerID, repository.definitionID, repository.identity, repository.scopes = ownerID, definitionID, identity, append([]string(nil), scopes...)
 	return repository.credentials, nil
+}
+
+func (repository *stubCLICredentialRepository) HasCLIConnectorRuntimeConformance(_ context.Context, definitionID, bundleSHA256, runtimeDigest string) (bool, error) {
+	repository.definitionID, repository.bundleSHA256, repository.runtimeDigest = definitionID, bundleSHA256, runtimeDigest
+	return repository.runtimeVerified, nil
 }
 
 func TestEnvironmentUsesDeepSeekAnthropicEndpointWithoutChangingOpenAIEndpoint(t *testing.T) {

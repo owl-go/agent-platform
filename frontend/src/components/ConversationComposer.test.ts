@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type PlatformApi, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorDefinition, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
@@ -11,9 +11,16 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; owner?: string } = {}) {
- const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }] };
- const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]) } as unknown as PlatformApi;
+async function setup(options: { fail?: boolean; initial?: boolean; session?: string; owner?: string; authorization?: boolean } = {}) {
+ const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: "feishu", name: "飞书 CLI", revision: "3" }] : [] };
+ const definition = { id: "feishu", name: "飞书 CLI", state: "available", authentication_driver: "feishu", capabilities: [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] } as CLIConnectorDefinition;
+ const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]), ...(options.authorization ? {
+  listCLIConnectorDefinitions: vi.fn(async () => [definition]),
+  listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled", version: 1 }]),
+  listCLIConnectorAuthorizations: vi.fn(async () => []),
+  beginCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
+  completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
+ } : {}) } as unknown as PlatformApi;
  const submit = options.fail ? vi.fn(async () => { throw new Error("offline"); }) : vi.fn(async () => {});
  const router = createAppRouter(createMemoryHistory()); await router.push("/sessions"); await router.isReady();
  const wrapper = mount(ConversationComposer, { attachTo: document.body, props: { scope: { session_id: options.session ?? "session-1" }, submit, initialSkillId: options.initial ? "pdf" : undefined }, global: {
@@ -83,6 +90,20 @@ describe("ConversationComposer", () => {
  it("does not submit when Enter is pressed in the Expert picker", async () => {
   const { wrapper, submit } = await setup({ initial: true }); await wrapper.get(".composer-specialist").trigger("click");
   await wrapper.get(".composer-menu-search input").trigger("keydown", { key: "Enter" }); await flushPromises(); expect(submit).not.toHaveBeenCalled(); wrapper.unmount();
+ });
+ it("shows selected Feishu authorization in the conversation and keeps a direct recovery link", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true });
+  expect(wrapper.get(".composer-authorization").text()).toContain("飞书 CLI 需要飞书账号授权");
+  expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
+  await wrapper.get(".composer-authorization button").trigger("click"); await flushPromises();
+  expect(api.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(wrapper.get(".composer-authorization a").attributes("href")).toBe("https://accounts.feishu.cn/authorize");
+  vi.mocked(api.completeCLIConnectorAuthorization).mockResolvedValue({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "completed" });
+  document.dispatchEvent(new Event("visibilitychange")); await flushPromises();
+  expect(wrapper.get(".composer-authorization").text()).toContain("飞书授权已完成");
+  expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
+  wrapper.unmount();
  });
 });
 

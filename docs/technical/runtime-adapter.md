@@ -32,6 +32,8 @@ MCP Connector 配置在每次执行中生成：Claude 使用 `--mcp-config`，Co
 
 Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wrapper 根据冻结 Definition 和当前 User-private Authorization 生成真实可执行文件与参数数组，强制检查 bundle Digest、Runtime RepoDigest、能力、身份、argv、scope、Egress、Workspace、输出和超时，并在进程启动前再次检查 Definition、Enablement、Authorization 与批准状态。当前 Secret 只为这一次命令物化、加入精确值脱敏集合并幂等清理。
 
+会话快照继续冻结 Connector Definition、bundle Digest、Capabilities 和策略。若旧快照的 Runtime RepoDigest 列表早于当前镜像，Worker 只可查询与该冻结 Definition ID、bundle SHA-256 和当前 Runtime RepoDigest 完全匹配且 `passed` 的最新 Conformance 记录作为补充证据；查询失败、记录缺失或任一键不匹配都必须 fail closed。补充证据只用于当前执行内的镜像兼容判断，不修改历史快照，也不刷新其命令或权限策略。
+
 高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime 和临时 Workspace、暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
 
 PI Agent 固定使用非交互 JSONL 模式，并关闭隐式 Extension、Skill、Prompt Template 和 Context File 发现；平台冻结的 Skill 仍通过公共 Instruction seam 暴露。PI Agent 本身不内置 MCP，因此带 MCP Connector 的执行会 fail closed，直到平台提供并验证明确的 PI Extension 适配。

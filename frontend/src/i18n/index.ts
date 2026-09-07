@@ -165,6 +165,8 @@ Object.assign(zh, { composer: {
   parentFolder: "返回上一级文件夹", conversationFiles: "对话文件", fileUnavailable: "文件已过期或不可用", resourceUnavailable: "资源不可用", version: "版本 {version}",
   connectorUnavailable: "请先完成测试或启用", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", filesFailed: "无法读取对话文件，请重试。",
   sendFailed: "发送未完成，草稿已保留，请检查资源或文件后重试。", reselectFiles: "这些文件尚未上传，请重新选择：{names}",
+  authorizationRequired: "{name} 需要飞书账号授权", authorizationHint: "点击打开飞书授权；完成后回到会话并回复“已授权”即可继续。",
+  authorizationCompleted: "飞书授权已完成", authorizationContinue: "请在会话中回复“已授权”，助手会继续刚才的操作。",
 } });
 Object.assign(en, { composer: {
   add: "Add to conversation", skills: "Skills", connectors: "Connectors", send: "Send", search: "Search", empty: "No matching Skills",
@@ -173,6 +175,8 @@ Object.assign(en, { composer: {
   parentFolder: "Parent folder", conversationFiles: "Conversation files", fileUnavailable: "File expired or unavailable", resourceUnavailable: "Resource unavailable", version: "Version {version}",
   connectorUnavailable: "Test or enable this Connector first", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", filesFailed: "Could not load conversation files. Please retry.",
   sendFailed: "The message was not sent. Your draft is preserved; check its resources and files, then retry.", reselectFiles: "These files were not uploaded. Select them again: {names}",
+  authorizationRequired: "{name} needs Feishu account authorization", authorizationHint: "Open Feishu authorization, then return and reply “Authorized” to continue.",
+  authorizationCompleted: "Feishu authorization completed", authorizationContinue: "Reply “Authorized” in this conversation and the assistant will continue the previous operation.",
 } });
 Object.assign(zh.sessions, { welcome: "从一个问题开始，随时添加专家、技能或连接器。" });
 Object.assign(en.sessions, { welcome: "Start with a question and add an Expert, Skill, or Connector whenever you need one." });

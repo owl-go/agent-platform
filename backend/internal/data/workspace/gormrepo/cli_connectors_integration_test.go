@@ -80,6 +80,10 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		verified, err := repository.HasCLIConnectorRuntimeConformance(ctx, item.ID, result.BundleSHA256, result.RuntimeDigests[0])
+		if err != nil || !verified {
+			t.Fatalf("exact bundle Runtime conformance unavailable: verified=%v err=%v", verified, err)
+		}
 		if attempt == 0 {
 			item, err = repository.UpdateCLIConnectorDefinition(ctx, item.ID, input, available.VersionNumber)
 			if err != nil {
