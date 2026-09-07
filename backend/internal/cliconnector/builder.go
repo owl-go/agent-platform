@@ -166,6 +166,12 @@ func resolvePackageDefinition(definition Definition, artifact PackageArtifact) (
 		return Definition{}, errors.New("CLI package manifest differs from the requested exact package")
 	}
 	definition.Integrity = artifact.Integrity
+	if definition.Package == "@larksuite/cli" && metadata.Name == definition.Package && len(metadata.Capabilities) > 0 {
+		definition.Executable = metadata.Executable
+		definition.AuthenticationDriver = metadata.AuthenticationDriver
+		definition.Capabilities = slices.Clone(metadata.Capabilities)
+		definition.SupportedArchitectures = slices.Clone(metadata.SupportedArchitectures)
+	}
 	if definition.Executable == "" {
 		definition.Executable = metadata.Executable
 		if definition.Executable == "" && len(artifact.Bins) == 1 {
