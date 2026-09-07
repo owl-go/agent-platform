@@ -87,7 +87,7 @@ function selectTab(tab: string | number) {
           </div>
         </el-card>
       </article>
-      <el-empty v-if="!section.items.length" class="catalog-empty" :description="t('experts.noExperts')" />
+      <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('experts.noExperts') }}</p></div>
         </div>
       </section>
     </div>

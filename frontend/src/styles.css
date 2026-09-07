@@ -381,7 +381,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .connector-health-line span,.connector-account-actions span,.connector-account-actions small { color: var(--muted); font-size: .66rem; }
 .connector-health-line span.attention { color: var(--el-color-warning-dark-2); font-weight: 700; }
 .connector-account-actions a { font-size: .7rem; }
-.extension-empty { grid-column: 1/-1; min-height: 220px; }
+.extension-empty { grid-column: 1/-1; min-height: 112px; }
 .connector-kind-dialog { width: min(620px,calc(100vw - 40px)); }
 .connector-kind-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 20px 0 6px; }
 .connector-kind-options button { display: grid; gap: 8px; min-height: 128px; padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #f9faf8; color: var(--ink); text-align: left; transition: border-color .16s ease,background .16s ease,transform .16s ease; }
