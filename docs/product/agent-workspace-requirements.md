@@ -206,10 +206,11 @@ Settings contains five collapsed sections:
 
 ### 7.1 Artifacts
 
-- A successful Run persists its final text or JSON in the Run Conversation and captures files added or changed by that Run as Artifacts.
-- A successful Session response also captures files generated in that turn as Artifacts and shows them directly beneath the Agent response.
-- Only actual generated or changed files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
-- Artifacts are grouped by Run time. A terminal response with generated or changed files shows compact, mutually exclusive `View all artifacts` and `View all changes` controls; the controls expand downloadable file cards and changed-file metadata respectively, without rendering file contents in the conversation.
+- A successful Run persists its final text or JSON in the Run Conversation and captures only final deliverable files explicitly named in that response as Artifacts.
+- A successful Session response also captures only final deliverable files explicitly named in that turn's Agent response and shows them directly beneath the response.
+- Dependencies, fonts, generation scripts, caches, and other intermediate Workspace files are not Artifacts. A Workflow may retain those files in its persistent Workspace for later Runs.
+- Only actual generated or changed final files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
+- Artifacts are grouped by Run time. A terminal response with final deliverables shows compact, mutually exclusive `View all artifacts` and `View all changes` controls; the controls expand downloadable file cards and final-file metadata respectively, without rendering file contents in the conversation.
 - Session and Run Conversation final text renders references to captured Artifacts as plain file names rather than download links. Artifact cards show the file name and size; selecting a non-expired card starts a browser download instead of exposing a Runtime Workspace path.
 - Failed and cancelled Runs do not create file Artifacts; their temporary Workspace changes are discarded.
 - Artifact files expire after 90 days. The UI preserves metadata and reports that the file has expired.

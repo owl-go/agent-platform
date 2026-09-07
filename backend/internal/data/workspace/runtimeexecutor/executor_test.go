@@ -894,7 +894,7 @@ func TestExecuteExpertTeamUsesOneOverallTimeout(t *testing.T) {
 	}
 }
 
-func TestSessionExecutionCapturesGeneratedFilesAsArtifacts(t *testing.T) {
+func TestSessionExecutionCapturesOnlyFinalFilesAsArtifacts(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
 	job.Kind = application.JobSession
 	job.WorkflowID = ""
@@ -904,11 +904,26 @@ func TestSessionExecutionCapturesGeneratedFilesAsArtifacts(t *testing.T) {
 	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
 	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
 		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			if err := os.MkdirAll(filepath.Join(request.WorkspacePath, "node_modules", "example"), 0o700); err != nil {
+				return agentruntime.Result{}, err
+			}
+			if err := os.MkdirAll(filepath.Join(request.WorkspacePath, "assets"), 0o700); err != nil {
+				return agentruntime.Result{}, err
+			}
+			for name, content := range map[string]string{
+				"node_modules/example/package.json": "{}",
+				"assets/font.ttf":                   "temporary font",
+				"create_report.js":                  "generate report",
+			} {
+				if err := os.WriteFile(filepath.Join(request.WorkspacePath, filepath.FromSlash(name)), []byte(content), 0o600); err != nil {
+					return agentruntime.Result{}, err
+				}
+			}
 			if err := os.WriteFile(filepath.Join(request.WorkspacePath, "report.md"), []byte("generated report"), 0o600); err != nil {
 				return agentruntime.Result{}, err
 			}
-			publishSuccessfulRuntime(t, events, request.RunID, "done")
-			return agentruntime.Result{FinalMessage: "done"}, nil
+			publishSuccessfulRuntime(t, events, request.RunID, "Created `/workspace/report.md`.")
+			return agentruntime.Result{FinalMessage: "Created `/workspace/report.md`."}, nil
 		}}, nil
 	}
 

@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -556,7 +557,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		if used > workspacefs.WorkspaceLimit {
 			return result, fmt.Errorf("Runtime output exceeds the 1 GiB Workspace limit")
 		}
-		artifacts, err = executor.persistChangedFiles(executionCtx, job, workspace, baseline, redactor)
+		artifacts, err = executor.persistChangedFiles(executionCtx, job, workspace, baseline, finalMessage, redactor)
 		if err != nil {
 			return result, err
 		}
@@ -1346,16 +1347,22 @@ func (executor *Executor) stageWorkspaceAt(job application.ExecutionJob, tempora
 	return temporary, persistent, baseline, nil
 }
 
-func (executor *Executor) persistChangedFiles(ctx context.Context, job application.ExecutionJob, workspace string, baseline map[string]string, redactor *credentials.Redactor) ([]application.ExecutionArtifact, error) {
+func (executor *Executor) persistChangedFiles(ctx context.Context, job application.ExecutionJob, workspace string, baseline map[string]string, finalMessage string, redactor *credentials.Redactor) ([]application.ExecutionArtifact, error) {
 	manifest, err := workspaceManifest(workspace)
 	if err != nil {
 		return nil, err
 	}
-	var artifacts []application.ExecutionArtifact
+	changedPaths := make([]string, 0, len(manifest))
 	for relative, digest := range manifest {
-		if baseline[relative] == digest {
-			continue
+		if baseline[relative] != digest {
+			changedPaths = append(changedPaths, relative)
 		}
+	}
+	sort.Strings(changedPaths)
+	finalPaths := workspacedomain.FinalArtifactPaths(finalMessage, changedPaths)
+	var artifacts []application.ExecutionArtifact
+	for _, relative := range changedPaths {
+		digest := manifest[relative]
 		path := filepath.Join(workspace, filepath.FromSlash(relative))
 		input, err := os.Open(path)
 		if err != nil {
@@ -1383,6 +1390,9 @@ func (executor *Executor) persistChangedFiles(ctx context.Context, job applicati
 			return nil, err
 		}
 		digest = hex.EncodeToString(hasher.Sum(nil))
+		if _, final := finalPaths[relative]; !final {
+			continue
+		}
 		objectPathDigest := sha256.Sum256([]byte(relative))
 		executionScope := job.WorkflowID
 		if job.Kind == application.JobSession {
@@ -1525,6 +1535,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 		}
 		sections = append(sections, "Files attached to the current user message (read-only; inspect them when relevant):\n- "+strings.Join(attachmentPaths, "\n- "))
 	}
+	sections = append(sections, "Final file delivery: in the final response, name every file that should appear as a downloadable Artifact using its exact /workspace/<relative-path>. Files not named in the final response are treated as intermediate Workspace files and are not exposed as Artifacts.")
 	sections = append(sections, job.Instruction)
 	return strings.Join(sections, "\n\n")
 }
