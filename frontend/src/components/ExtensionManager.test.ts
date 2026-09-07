@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { ApiError, createPlatformApi, platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
@@ -9,21 +9,66 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 
 const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30T00:00:00Z", version: 1 };
 
-afterEach(() => { vi.useRealTimers(); document.body.innerHTML = ""; });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); document.body.innerHTML = ""; });
 
-function mountManager(api: PlatformApi, administrator = false) {
+function mountManager(api: PlatformApi, administrator = false, language = "zh-CN") {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
   return mount(ExtensionManager, {
     attachTo: document.body,
     props: { selectable: true, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
     global: {
-      plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+      plugins: [createAppI18n({ getItem: () => language }, language)],
       provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
     },
   });
 }
 
 describe("ExtensionManager", () => {
+  it.each([
+    { capabilities: undefined, scopes: [] },
+    { capabilities: [{ identities: ["user"] }], scopes: [] },
+    { capabilities: [{ identities: ["user"] }, { identities: ["user"], scopes: ["calendar:calendar:read"] }, { identities: ["user"], scopes: ["calendar:calendar:read"] }, { identities: ["bot"], scopes: ["im:message"] }, { scopes: ["im:message"] }], scopes: ["calendar:calendar:read"] },
+  ])("authorizes with valid JSON when protobuf omits empty capability fields ($capabilities)", async ({ capabilities, scopes }) => {
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities };
+    const authorizationBodies: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+      let body: unknown = { items: [] };
+      if (input === "/api/v1/connectors/cli") body = { items: [definition] };
+      if (input === "/api/v1/connectors/cli/enablements") body = { items: [{ id: "enable-1", definition_id: definition.id, state: "enabled" }] };
+      if (input.endsWith("/authorizations") && init?.method === "POST") {
+        authorizationBodies.push(JSON.parse(String(init.body)));
+        body = { id: "flow-1", enablement_id: "enable-1", state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" };
+      }
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    const wrapper = mountManager(createPlatformApi(() => "test-token"));
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "授权飞书账号")!.trigger("click");
+      await flushPromises();
+      expect(authorizationBodies).toEqual([{ identity: "user", scopes }]);
+      expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开飞书授权");
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each([
+    ["zh-CN", "授权飞书账号", "无法发起飞书账号授权", "安装包"],
+    ["en", "Authorize Feishu account", "Could not start Feishu account authorization", "package"],
+  ])("shows authorization validation failures without package installation advice (%s)", async (language, label, message, packageAdvice) => {
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [] };
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled" }]), beginCLIConnectorAuthorization: vi.fn().mockRejectedValue(new ApiError("validation", 400, "invalid_request_body")) } as unknown as PlatformApi;
+    const wrapper = mountManager(api, false, language);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === label)!.trigger("click");
+      await flushPromises();
+      const notice = document.body.querySelector('[role="alert"]')?.textContent;
+      expect(notice).toContain(message);
+      expect(notice).not.toContain(packageAdvice);
+      expect(notice).not.toContain("invalid_request_body");
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([
     [new ApiError("unavailable", 500, "request_failed"), "服务暂时不可用"],
     [new ApiError("unauthenticated", 401, "invalid_authentication"), "重新登录"],

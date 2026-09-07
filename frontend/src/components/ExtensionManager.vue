@@ -42,8 +42,8 @@ const { locale, t } = useI18n();
 const { nextZIndex } = useZIndex();
 const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
-function reportError(cause?: unknown) {
-  const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: "invalidInput", rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
+function reportError(cause?: unknown, validationKey = "invalidInput") {
+  const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
   const key = cause instanceof ApiError ? cause.status === 413 ? "uploadTooLarge" : keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
@@ -174,7 +174,8 @@ function authorizationsFor(definitionID: string) {
   return enablement ? cliAuthorizations.value[enablement.id] ?? [] : [];
 }
 function userScopes(item: CLIConnectorDefinition) {
-  return [...new Set(item.capabilities.filter((capability) => capability.identities.includes("user")).flatMap((capability) => capability.scopes))];
+  // Protobuf JSON omits empty repeated fields, including scopes on no-scope capabilities.
+  return [...new Set((item.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
 }
 async function refreshCLIAuthorizations() {
   const enabled = cliEnablements.value.filter((item) => item.state === "enabled");
@@ -185,7 +186,7 @@ async function authorizeCLIAccount(item: CLIConnectorDefinition) {
   operationError.value = undefined;
   const enablement = enablementFor(item.id);
   if (!enablement) return;
-  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch (cause) { reportError(cause); }
+  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch (cause) { reportError(cause, "authorizationInvalidInput"); }
 }
 async function completeCLIAccountAuthorization() {
   const flow = cliAuthorizationFlow.value;
