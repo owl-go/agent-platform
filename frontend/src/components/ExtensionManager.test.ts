@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, createPlatformApi, platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
@@ -9,7 +9,8 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 
 const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30T00:00:00Z", version: 1 };
 
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); document.body.innerHTML = ""; });
+beforeEach(() => { vi.spyOn(window, "open").mockReturnValue(null); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); document.body.innerHTML = ""; });
 
 function mountManager(api: PlatformApi, administrator = false, language = "zh-CN") {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
@@ -24,6 +25,157 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  function setupCLIFlow(initialState: "waiting_for_user" | "enabled" = "waiting_for_user", blocked = false) {
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", authentication_driver: "feishu", capabilities: [] };
+    const enabled = { id: "enable-1", definition_id: definition.id, state: "enabled", version: 2 };
+    const waiting = { ...enabled, state: "waiting_for_user", action_url: "https://open.feishu.cn/page/cli" };
+    const popup = { opener: {}, closed: false, location: { href: "about:blank" }, close: vi.fn() };
+    const open = vi.mocked(window.open).mockReturnValue(blocked ? null : popup as unknown as Window);
+    const beginCLIConnectorAuthorization = vi.fn(async () => ({ id: "flow-1", enablement_id: enabled.id, state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" }));
+    const enableCLIConnector = vi.fn(async () => initialState === "enabled" ? enabled : waiting);
+    const completeCLIConnectorEnablement = vi.fn(async () => enabled);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), listCLIConnectorAuthorizations: vi.fn(async () => []), enableCLIConnector, completeCLIConnectorEnablement, beginCLIConnectorAuthorization, completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: enabled.id, state: "waiting_for_user" })) } as unknown as PlatformApi;
+    return { api, popup, open, waiting, enabled, enableCLIConnector, completeCLIConnectorEnablement, beginCLIConnectorAuthorization };
+  }
+
+  it("opens Feishu on enable and reuses the tab for account authorization after registration", async () => {
+    vi.useFakeTimers();
+    const flow = setupCLIFlow();
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      expect(flow.open).toHaveBeenCalledWith("about:blank", "_blank");
+      expect(flow.open.mock.invocationCallOrder[0]).toBeLessThan(flow.enableCLIConnector.mock.invocationCallOrder[0]!);
+      expect(flow.popup.opener).toBeNull();
+      expect(flow.popup.location.href).toBe(flow.waiting.action_url);
+      expect(flow.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(6000);
+      await flushPromises();
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledExactlyOnceWith(flow.enabled.id, "user", []);
+      expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
+      expect(flow.open).toHaveBeenCalledTimes(1);
+      expect(wrapper.text()).toContain("等待你在飞书完成授权");
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledTimes(1);
+    } finally { wrapper.unmount(); }
+    expect(flow.popup.close).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("starts account authorization immediately for an existing application (popup blocked: %s)", async (blocked) => {
+    const flow = setupCLIFlow("enabled", blocked);
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledExactlyOnceWith(flow.enabled.id, "user", []);
+      expect(flow.completeCLIConnectorEnablement).not.toHaveBeenCalled();
+      expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开飞书授权");
+      if (!blocked) expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("resumes registration through the fallback link and continues to account authorization", async () => {
+    vi.useFakeTimers();
+    const flow = setupCLIFlow();
+    vi.mocked(flow.api.listCLIConnectorEnablements).mockResolvedValue([flow.waiting as Awaited<ReturnType<PlatformApi["enableCLIConnector"]>>]);
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      expect(flow.open).not.toHaveBeenCalled();
+      await wrapper.get('a[href="https://open.feishu.cn/page/cli"]').trigger("click");
+      expect(flow.popup.location.href).toBe(flow.waiting.action_url);
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledTimes(1);
+      expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("does not repeat slow registration completion requests or automatically authorize twice", async () => {
+    vi.useFakeTimers();
+    const flow = setupCLIFlow();
+    let complete!: (value: typeof flow.enabled) => void;
+    flow.completeCLIConnectorEnablement.mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(18000);
+      expect(flow.completeCLIConnectorEnablement).toHaveBeenCalledTimes(1);
+      complete(flow.enabled);
+      await flushPromises();
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledTimes(1);
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each(["enable", "authorize"])("closes the reserved blank tab when %s fails", async (step) => {
+    const flow = setupCLIFlow("enabled");
+    if (step === "enable") flow.enableCLIConnector.mockRejectedValue(new Error("failed"));
+    else flow.beginCLIConnectorAuthorization.mockRejectedValue(new Error("failed"));
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      expect(flow.popup.close).toHaveBeenCalled();
+      expect(document.body.querySelector('[role="alert"]')).not.toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
+  it("opens manual authorization during the click and prevents duplicate requests", async () => {
+    const flow = setupCLIFlow("enabled");
+    vi.mocked(flow.api.listCLIConnectorEnablements).mockResolvedValue([flow.enabled as Awaited<ReturnType<PlatformApi["enableCLIConnector"]>>]);
+    let complete!: (value: Awaited<ReturnType<typeof flow.beginCLIConnectorAuthorization>>) => void;
+    flow.beginCLIConnectorAuthorization.mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      const button = wrapper.findAll("button").find((item) => item.text() === "授权飞书账号")!;
+      await button.trigger("click");
+      await button.trigger("click");
+      expect(flow.open.mock.invocationCallOrder[0]).toBeLessThan(flow.beginCLIConnectorAuthorization.mock.invocationCallOrder[0]!);
+      expect(flow.open).toHaveBeenCalledTimes(1);
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledTimes(1);
+      complete({ id: "flow-1", enablement_id: flow.enabled.id, state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" });
+      await flushPromises();
+      expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("keeps an authorization link when the registration tab was closed", async () => {
+    vi.useFakeTimers();
+    const flow = setupCLIFlow();
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      flow.popup.closed = true;
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledTimes(1);
+      expect(flow.open).toHaveBeenCalledTimes(1);
+      expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开飞书授权");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("enables a no-auth Connector without opening Feishu or starting authorization", async () => {
+    const flow = setupCLIFlow("enabled");
+    const definition = (await flow.api.listCLIConnectorDefinitions())[0]!;
+    vi.mocked(flow.api.listCLIConnectorDefinitions).mockResolvedValue([{ ...definition, name: "No-auth CLI", authentication_driver: "none" }]);
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      expect(wrapper.text()).toContain("已启用");
+      expect(flow.open).not.toHaveBeenCalled();
+      expect(flow.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([
     { capabilities: undefined, scopes: [] },
     { capabilities: [{ identities: ["user"] }], scopes: [] },
