@@ -93,6 +93,34 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 	}
 }
 
+func TestBeginCLIConnectorAuthorizationReusesPendingAttempt(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner, definition, enablement := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO cli_connector_definitions(id,owner_user_id,name,description,installation_type,npm_package,npm_version,state,authentication_driver) VALUES(?,?,?,'Test','npm','@larksuite/cli','1.0.93','available','feishu')", definition, owner, "Feishu CLI").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO cli_connector_enablements(id,owner_user_id,definition_id,state) VALUES(?,?,?,'enabled')", enablement, owner, definition).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := repository.BeginCLIConnectorAuthorization(ctx, owner, enablement, cliconnector.IdentityUser, []string{"im:chat:read"}, "https://accounts.feishu.cn/first", time.Now().Add(5*time.Minute), []byte("first-device"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := repository.BeginCLIConnectorAuthorization(ctx, owner, enablement, cliconnector.IdentityUser, []string{"im:message"}, "https://accounts.feishu.cn/second", time.Now().Add(10*time.Minute), []byte("second-device"))
+	if err != nil {
+		t.Fatalf("retry pending authorization: %v", err)
+	}
+	if second.ID != first.ID || second.ActionURL != "https://accounts.feishu.cn/second" || len(second.Scopes) != 1 || second.Scopes[0] != "im:message" {
+		t.Fatalf("reused authorization attempt = %#v, first = %#v", second, first)
+	}
+}
+
 func TestCLIConnectorDeletionRevokesAccessAndPreservesHistory(t *testing.T) {
 	db := conversationTestDatabase(t)
 	repository := New(db, nil)

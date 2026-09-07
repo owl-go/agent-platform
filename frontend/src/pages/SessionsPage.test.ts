@@ -6,6 +6,7 @@ import { platformApiKey, type Artifact, type Expert, type ModelProviderConnectio
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
+import ConversationComposer from "../components/ConversationComposer.vue";
 import SessionsPage from "./SessionsPage.vue";
 
 const session: Session = {
@@ -440,6 +441,20 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
     expect(wrapper.get(".runtime-activity").text()).toContain("先检查仓库状态");
     expect(wrapper.get(".runtime-activity").text()).toContain("git status --short");
+    wrapper.unmount();
+  });
+
+  it("passes an attempted user CLI operation to the conversation composer", async () => {
+    const attempted: SessionMessage = {
+      ...messages[1]!,
+      state: "failed",
+      content: "",
+      error: "authorization unavailable",
+      activities: [{ type: "command.requested", detail: "/bin/sh -lc 'agent-cli --connector feishu --capability im_messages_send --identity user -- im +messages-send'" }],
+    };
+    const wrapper = await mountPage([messages[0]!, attempted]);
+
+    expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "feishu", capabilityID: "im_messages_send" });
     wrapper.unmount();
   });
 

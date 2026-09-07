@@ -6,10 +6,11 @@ import { useRouter } from "vue-router";
 import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
+import type { CLIAuthorizationRequest } from "../cliAuthorization";
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; authorizationRequest?: CLIAuthorizationRequest; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -128,32 +129,38 @@ async function toggleConnector(kind: "mcp" | "cli", id: string) {
   if (!selection.value) return;
   const key = `${kind}:${id}`, enabled = connectorEnabled(key), field = kind === "mcp" ? "mcp_server_ids" : "cli_connector_ids";
   const ids = (kind === "mcp" ? selection.value.mcp_servers : selection.value.cli_connectors).map((item) => item.id).filter((value) => value !== id);
-  if (await changeSelection({ [field]: enabled ? ids : [...ids, id], disabled_connectors: enabled ? [...selection.value.disabled_connectors.filter((item) => item !== key), key] : selection.value.disabled_connectors.filter((item) => item !== key), refresh_ids: enabled ? [] : [key] })) await refreshSelectedCLIAuthorization();
+  if (await changeSelection({ [field]: enabled ? ids : [...ids, id], disabled_connectors: enabled ? [...selection.value.disabled_connectors.filter((item) => item !== key), key] : selection.value.disabled_connectors.filter((item) => item !== key), refresh_ids: enabled ? [] : [key] })) await refreshRequestedCLIAuthorization();
 }
 
-function requiredUserScopes(item: CLIConnectorDefinition) {
-  return [...new Set((item.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
-}
-async function refreshSelectedCLIAuthorization() {
-  if (!selection.value || disposed) return;
-  const selectedIDs = [...new Set(visibleConnectors.value.filter((item) => item.kind === "cli" && connectorEnabled(item.key)).map((item) => item.id))];
-  for (const id of selectedIDs) {
-    const definition = cli.value.find((item) => item.id === id);
-    const enablement = enablements.value.find((item) => item.definition_id === id && item.state === "enabled");
-    if (!definition || definition.authentication_driver !== "feishu" || !enablement) continue;
-    const scopes = requiredUserScopes(definition);
-    if (!scopes.length) continue;
-    let authorizations: CLIConnectorAuthorization[];
-    try { authorizations = await api.listCLIConnectorAuthorizations(enablement.id); }
-    catch { continue; }
-    const authorized = authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
-    if (!authorized) {
-      const current = cliAuthorizationPrompt.value;
-      cliAuthorizationPrompt.value = current?.definition.id === id ? { ...current, definition, enablement, scopes } : { definition, enablement, scopes };
-      return;
-    }
+async function refreshRequestedCLIAuthorization() {
+  const request = props.authorizationRequest;
+  if (!selection.value || !request || disposed || !connectorEnabled(`cli:${request.connectorID}`)) {
+    cliAuthorizationPrompt.value = undefined;
+    return;
   }
-  cliAuthorizationPrompt.value = undefined;
+  const definition = cli.value.find((item) => item.id === request.connectorID);
+  const enablement = enablements.value.find((item) => item.definition_id === request.connectorID && item.state === "enabled");
+  const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
+  if (!definition || definition.authentication_driver !== "feishu" || !enablement || !capability) {
+    cliAuthorizationPrompt.value = undefined;
+    return;
+  }
+  const scopes = [...new Set(capability.scopes ?? [])];
+  if (!scopes.length) {
+    cliAuthorizationPrompt.value = undefined;
+    return;
+  }
+  let authorizations: CLIConnectorAuthorization[];
+  try { authorizations = await api.listCLIConnectorAuthorizations(enablement.id); }
+  catch { return; }
+  if (props.authorizationRequest !== request || disposed) return;
+  const authorized = authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
+  if (authorized) {
+    cliAuthorizationPrompt.value = undefined;
+    return;
+  }
+  const current = cliAuthorizationPrompt.value;
+  cliAuthorizationPrompt.value = current?.definition.id === definition.id && current.scopes.join() === scopes.join() ? { ...current, definition, enablement, scopes } : { definition, enablement, scopes };
 }
 function openCLIWindow(): Window | null {
   try {
@@ -273,7 +280,7 @@ async function initialize() {
       else if (skill) { await chooseSkill(skill); if (!error.value) emit("launchConsumed"); }
       else error.value = t("composer.selectionFailed");
     }
-    await refreshSelectedCLIAuthorization(); persist();
+    await refreshRequestedCLIAuthorization(); persist();
   } catch { error.value = t("composer.selectionFailed"); }
   finally { loading.value = false; }
 }
@@ -286,6 +293,7 @@ onMounted(async () => {
   await initialize();
 });
 watch(selection, (value) => { if (value) emit("selectionChanged", value); });
+watch(() => props.authorizationRequest, () => void refreshRequestedCLIAuthorization(), { deep: true });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
 onBeforeUnmount(() => { disposed = true; if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
 </script>

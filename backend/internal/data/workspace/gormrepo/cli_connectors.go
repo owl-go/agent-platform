@@ -499,10 +499,11 @@ func (repository *Repository) BeginCLIConnectorAuthorization(ctx context.Context
 	if err != nil {
 		return cliconnector.AuthorizationAttempt{}, err
 	}
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ?", ownerID, enablementID, identity).Take(&row).Error; err != nil {
+	var stored cliConnectorAuthorizationAttemptRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ?", ownerID, enablementID, identity).Take(&stored).Error; err != nil {
 		return cliconnector.AuthorizationAttempt{}, err
 	}
-	return cliAuthorizationAttemptDomain(row)
+	return cliAuthorizationAttemptDomain(stored)
 }
 
 func (repository *Repository) GetCLIConnectorAuthorizationAttempt(ctx context.Context, ownerID, attemptID string) (cliconnector.AuthorizationAttempt, error) {
