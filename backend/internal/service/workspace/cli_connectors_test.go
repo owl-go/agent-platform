@@ -10,10 +10,39 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/objectstore/memory"
 
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 )
+
+type cliCatalogRepository struct {
+	workspaceapplication.Repository
+	cliConnectorRepository
+	items []cliconnector.Definition
+}
+
+func (repository *cliCatalogRepository) ListCLIConnectorDefinitions(context.Context, bool) ([]cliconnector.Definition, error) {
+	return repository.items, nil
+}
+
+func TestAvailableCLIConnectorIsEditableForAdministrator(t *testing.T) {
+	repository := &cliCatalogRepository{items: []cliconnector.Definition{{ID: "definition-1", Name: "Example CLI", State: cliconnector.StateAvailable}}}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "administrator-1", Administrator: true})
+	response, err := service.ListCLIConnectorDefinitions(ctx, &workspacev1.ListCLIConnectorDefinitionsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Items) != 1 || !response.Items[0].Mutable {
+		t.Fatalf("available CLI Connector response = %#v", response.Items)
+	}
+}
 
 func TestCLIUploadInputStoresValidatedImmutableSource(t *testing.T) {
 	var archive bytes.Buffer

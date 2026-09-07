@@ -119,7 +119,7 @@ func (repository *Repository) UpdateCLIConnectorDefinition(ctx context.Context, 
 	} else {
 		updates["source_object_key"], updates["source_sha256"] = nil, nil
 	}
-	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed"}).Updates(updates)
+	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed", "available", "disabled"}).Updates(updates)
 	if result.Error != nil {
 		return cliconnector.Definition{}, result.Error
 	}

@@ -377,9 +377,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .extension-card-actions .el-button.is-circle { width: 32px; height: 32px; padding: 0; }
 .extension-card-actions .el-button svg { width: 15px; height: 15px; }
 .extension-card-actions .catalog-launch { border-color: #dce4dd; background: #f4f7f4; color: var(--green); }
-.connector-health-line,.connector-account-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; margin-top: 3px; }
-.connector-health-line span,.connector-account-actions span,.connector-account-actions small { color: var(--muted); font-size: .66rem; }
-.connector-health-line span.attention { color: var(--el-color-warning-dark-2); font-weight: 700; }
+.connector-account-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; margin-top: 3px; }
+.connector-account-actions span,.connector-account-actions small { color: var(--muted); font-size: .66rem; }
 .connector-account-actions a { font-size: .7rem; }
 .extension-empty { grid-column: 1/-1; min-height: 112px; }
 .connector-kind-dialog { width: min(620px,calc(100vw - 40px)); }
@@ -395,6 +394,13 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .recommended-skill-offers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
 .recommended-skill-offers > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 8px; background: #f2f5f1; }
 .recommended-skill-offers > span.warning { background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
+.connector-details .catalog-detail-intro > div { min-width: 0; }
+.connector-details .catalog-detail-intro p { margin: 9px 0 0; }
+.connector-detail-fields { display: grid; gap: 0; margin: 10px 0 24px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.connector-detail-fields > div { display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 16px; padding: 15px 17px; background: #fbfcfa; }
+.connector-detail-fields > div + div { border-top: 1px solid var(--line); }
+.connector-detail-fields dt { color: var(--muted); font-size: .72rem; }
+.connector-detail-fields dd { margin: 0; overflow-wrap: anywhere; font-size: .78rem; }
 
 @media (max-width: 720px) {
   .approval-inbox { margin: 8px 12px 0; }
@@ -408,6 +414,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
   .resource-list article > .extension-card-actions { grid-column: 2; flex-wrap: wrap; justify-content: flex-start; }
   .connector-kind-options { grid-template-columns: 1fr; }
   .connector-kind-options button { min-height: 104px; }
+  .connector-detail-fields > div { grid-template-columns: 1fr; gap: 5px; }
 }
 .artifact-disclosure { width: min(100%,680px); margin: 14px 0 8px; }
 .artifact-disclosure-links { display: flex; flex-wrap: wrap; gap: 6px 20px; }

@@ -259,20 +259,21 @@ describe("ExtensionManager", () => {
     };
     const updateCLIConnectorDefinition = vi.fn(async (_id: string, input: CLIConnectorDefinitionInput) => ({ ...definition, ...input, version: 4 }));
     const publishCLIConnectorDefinition = vi.fn(async () => ({ ...definition, version: 5, state: "building" as const }));
+    const listCLIConnectorHealth = vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, waiting_for_user_count: 0, active_authorization_count: 2, attention_authorization_count: 1 }]);
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
       listCLIConnectorDefinitions: vi.fn(async () => [definition]),
       listCLIConnectorEnablements: vi.fn(async () => []),
-      listCLIConnectorHealth: vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, active_authorization_count: 2, attention_authorization_count: 1 }]),
+      listCLIConnectorHealth,
       updateCLIConnectorDefinition,
       publishCLIConnectorDefinition,
     } as unknown as PlatformApi;
     const wrapper = mountManager(api, true);
     await flushPromises();
-    expect(wrapper.text()).toContain("3 个用户已启用");
-    expect(wrapper.text()).toContain("0 个等待用户操作");
-    expect(wrapper.text()).toContain("2 个有效授权 · 1 个需处理");
+    expect(wrapper.text()).not.toContain("个用户已启用");
+    expect(wrapper.text()).not.toContain("个有效授权");
+    expect(listCLIConnectorHealth).not.toHaveBeenCalled();
 
     await wrapper.get('button[aria-label="编辑"]').trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
@@ -283,6 +284,22 @@ describe("ExtensionManager", () => {
 
     expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, { name: definition.name, icon: "terminal", description: "读取示例服务数据", installation_type: "npm", npm_package: "example-cli", npm_version: "1.0.1", archive: undefined }, definition.version);
     expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, 4);
+    wrapper.unmount();
+  });
+
+  it("opens Connector details from the card and edits from the details", async () => {
+    const definition = { id: "cli-1", name: "Example CLI", icon: "terminal", description: "读取示例服务数据", installation_type: "npm", npm_package: "example-cli", npm_version: "1.0.0", npm_integrity: "sha512-test", executable: "example", authentication_driver: "none", capabilities: [], supported_architectures: [], recommended_skill_ids: [], recommended_skills: [], conformance_runtime_digests: [], state: "available", mutable: true, version: 1 } as const;
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+
+    await wrapper.get(".connector-catalog-card").trigger("click");
+    await flushPromises();
+    expect(document.body.textContent).toContain("npm 安装 · example-cli@1.0.0");
+    const detailEdit = [...document.body.querySelectorAll("button")].find((button) => button.textContent?.trim() === "编辑")!;
+    detailEdit.click();
+    await flushPromises();
+    expect(document.body.querySelector(".cli-install-card")).not.toBeNull();
     wrapper.unmount();
   });
 

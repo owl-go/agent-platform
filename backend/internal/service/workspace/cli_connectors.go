@@ -100,7 +100,7 @@ func (service *Service) ListCLIConnectorDefinitions(ctx context.Context, _ *work
 	}
 	response := make([]*workspacev1.CLIConnectorDefinition, 0, len(items))
 	for _, item := range items {
-		mutable := principal.Administrator && (item.State == cliconnector.StateDraft || item.State == cliconnector.StateFailed)
+		mutable := principal.Administrator && item.State != cliconnector.StateBuilding && item.State != cliconnector.StateTesting
 		response = append(response, cliDefinitionResponse(item, mutable))
 	}
 	return &workspacev1.ListCLIConnectorDefinitionsResponse{Items: response}, nil

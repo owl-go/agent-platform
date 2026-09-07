@@ -151,6 +151,8 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
   skillDetail: "Skill details", backSkills: "Back to Skills", skillLoadFailed: "Could not load the Skill details", noSkillDescription: "This Skill has no description for the current language.",
   documentVersion: "Version", previewDocument: "Preview Skill document", rawDocument: "View SKILL.md source"
 });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorType: "连接器类型", connectionAddress: "连接地址", connectedApplication: "已连接应用", mcpDetailDescription: "通过标准 MCP 协议为会话、工作流和专家提供外部能力。" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorType: "Connector type", connectionAddress: "Connection", connectedApplication: "Connected application", mcpDetailDescription: "Provides external capabilities to Sessions, Workflows, and Experts through the standard MCP protocol." });
 
 Object.assign(zh, { composer: {
   add: "添加到对话", skills: "技能", connectors: "连接器", send: "发送", search: "搜索", empty: "没有匹配的技能",
