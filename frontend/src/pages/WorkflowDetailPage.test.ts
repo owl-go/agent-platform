@@ -449,12 +449,12 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
-  it("uses the same centered composer layout as a Session", async () => {
+  it("uses the Workflow conversation width for its composer", async () => {
     const wrapper = await mountPage();
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    expect(wrapper.find(".run-page > .composer-layer > .resource-composer.composer").exists()).toBe(true);
+    expect(wrapper.find(".run-page > .run-composer-layer > .run-composer.resource-composer.composer").exists()).toBe(true);
     wrapper.unmount();
   });
 
