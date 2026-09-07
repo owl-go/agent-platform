@@ -342,10 +342,11 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 }
 
 .runtime-activity-current { min-width: 0; }
-.runtime-activity-current small { min-width: 0; overflow-wrap: anywhere; }
+.runtime-activity-current strong { flex: none; white-space: nowrap; }
+.runtime-activity-current small { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .activity-pulse { flex: none; }
 .runtime-activity li div { min-width: 0; }
-.runtime-activity li strong { flex: none; }
+.runtime-activity li strong { flex: none; white-space: nowrap; }
 .runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }
 .approval-inbox { position: sticky; top: 12px; z-index: 20; margin: 12px 20px 0; }
 .approval-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 16px; border: 1px solid color-mix(in srgb, var(--el-color-warning) 45%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--el-color-warning-light-9) 92%, white); box-shadow: 0 12px 32px rgba(73, 57, 32, .12); }

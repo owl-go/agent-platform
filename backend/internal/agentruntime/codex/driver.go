@@ -14,6 +14,11 @@ import (
 
 const Version = "0.147.0"
 
+const (
+	maxDiagnosticLines     = 16
+	maxDiagnosticLineBytes = 4 * 1024
+)
+
 type Driver struct{}
 
 func New(config cliadapter.Config) *cliadapter.Adapter {
@@ -85,17 +90,32 @@ func (Driver) Build(request agentruntime.ExecuteRequest, _ string) (cliadapter.I
 func (Driver) NewParser(string) cliadapter.Parser { return &parser{} }
 
 type parser struct {
-	result cliadapter.ParsedResult
+	result    cliadapter.ParsedResult
+	stderr    []string
+	lastError string
 }
 
 func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.ParsedEvent, error) {
-	if stream == processharness.StreamStderr || len(strings.TrimSpace(string(line))) == 0 {
+	if stream == processharness.StreamStderr {
+		if diagnostic := boundedDiagnostic(string(line)); diagnostic != "" {
+			p.stderr = append(p.stderr, diagnostic)
+			if len(p.stderr) > maxDiagnosticLines {
+				p.stderr = p.stderr[len(p.stderr)-maxDiagnosticLines:]
+			}
+		}
+		return nil, nil
+	}
+	if len(strings.TrimSpace(string(line))) == 0 {
 		return nil, nil
 	}
 	var envelope struct {
 		Type     string `json:"type"`
 		ThreadID string `json:"thread_id"`
-		Item     struct {
+		Message  string `json:"message"`
+		Error    struct {
+			Message string `json:"message"`
+		} `json:"error"`
+		Item struct {
 			ID       string `json:"id"`
 			Type     string `json:"type"`
 			Text     string `json:"text"`
@@ -112,6 +132,10 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 		return nil, fmt.Errorf("decode Codex JSONL: %w", err)
 	}
 	switch envelope.Type {
+	case "error":
+		if diagnostic := boundedDiagnostic(envelope.Message); diagnostic != "" {
+			p.lastError = diagnostic
+		}
 	case "thread.started":
 		p.result.CheckpointRef = envelope.ThreadID
 	case "item.started":
@@ -147,8 +171,39 @@ func (p *parser) Parse(stream processharness.Stream, line []byte) ([]cliadapter.
 		if p.result.FinalMessage != "" {
 			return []cliadapter.ParsedEvent{{Kind: agentruntime.EventMessageCompleted, Payload: map[string]string{"message": p.result.FinalMessage}}}, nil
 		}
+	case "turn.failed":
+		diagnostic := boundedDiagnostic(envelope.Error.Message)
+		if diagnostic == "" {
+			diagnostic = p.lastError
+		}
+		if diagnostic == "" {
+			diagnostic = "Codex turn failed without a diagnostic"
+		}
+		p.result.Error = &agentruntime.Error{
+			Code: agentruntime.ErrorModelFailed, Message: "Codex execution failed", Cause: fmt.Errorf("%s", diagnostic),
+		}
 	}
 	return nil, nil
 }
 
-func (p *parser) Result() cliadapter.ParsedResult { return p.result }
+func boundedDiagnostic(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) > maxDiagnosticLineBytes {
+		value = "..." + value[len(value)-(maxDiagnosticLineBytes-3):]
+	}
+	return strings.ToValidUTF8(value, "?")
+}
+
+func (p *parser) Result() cliadapter.ParsedResult {
+	if p.result.Error == nil && p.result.FinalMessage == "" {
+		switch {
+		case p.lastError != "":
+			p.result.Error = &agentruntime.Error{
+				Code: agentruntime.ErrorModelFailed, Message: "Codex execution failed", Cause: fmt.Errorf("%s", p.lastError),
+			}
+		case len(p.stderr) > 0:
+			p.result.Error = fmt.Errorf("Codex diagnostic: %s", strings.Join(p.stderr, "\n"))
+		}
+	}
+	return p.result
+}
