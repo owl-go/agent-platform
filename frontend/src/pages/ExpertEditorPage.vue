@@ -82,7 +82,7 @@ function syncExtensions(value: { mcp: MCPServer[]; skills: Skill[] }) {
         <label class="full">{{ t('experts.outputStandard') }}<el-input v-model="form.output_standard" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
         <label class="full">{{ t('experts.cautions') }}<el-input v-model="form.cautions" type="textarea" :rows="3" maxlength="20000" show-word-limit /></label>
       </div></section>
-      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExtensionManager selectable :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" @resources="syncExtensions" @error="toast = { kind: 'error', message: t('experts.extensionFailed') }" /></section>
+      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExtensionManager selectable :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" @resources="syncExtensions" /></section>
     </form>
   </section>
 

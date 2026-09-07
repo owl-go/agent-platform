@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { ApiError, platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
@@ -24,6 +24,27 @@ function mountManager(api: PlatformApi, administrator = false) {
 }
 
 describe("ExtensionManager", () => {
+  it.each([
+    [new ApiError("unavailable", 500, "request_failed"), "服务暂时不可用"],
+    [new ApiError("unauthenticated", 401, "invalid_authentication"), "重新登录"],
+    [new ApiError("forbidden", 403, "forbidden"), "没有权限"],
+    [new ApiError("not_found", 404, "not_found"), "已不存在"],
+    [new ApiError("conflict", 409, "conflict"), "刷新后重试"],
+    [new ApiError("validation", 422, "invalid_input"), "填写内容"],
+    [new ApiError("rate_limited", 429, "rate_limited"), "请求过于频繁"],
+    [new TypeError("Failed to fetch"), "网络连接"],
+  ])("shows action failures without relying on a parent error listener (%s)", async (cause, message) => {
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [] };
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), enableCLIConnector: vi.fn().mockRejectedValue(cause) } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+    await flushPromises();
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(document.body.textContent).not.toContain("request_failed");
+    wrapper.unmount();
+  });
+
   it("separates platform resources from my resources and protects platform actions", async () => {
     const platformSkill: Skill = { id: "platform-skill", platform: true, name: "平台 PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
     const mySkill: Skill = { id: "my-skill", name: "我的审查技能", source: "upload", sha256: "b".repeat(64), ...timestamps };
@@ -181,7 +202,7 @@ describe("ExtensionManager", () => {
 
   it("confirms administrator deletion and keeps the Connector when deletion fails", async () => {
     const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", authentication_driver: "feishu", capabilities: [], state: "disabled", mutable: true, version: 7 };
-    const deleteCLIConnectorDefinition = vi.fn().mockRejectedValueOnce(new Error("conflict")).mockResolvedValueOnce(undefined);
+    const deleteCLIConnectorDefinition = vi.fn().mockRejectedValueOnce(new ApiError("conflict", 409, "conflict")).mockResolvedValueOnce(undefined);
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), deleteCLIConnectorDefinition } as unknown as PlatformApi;
     const user = mountManager(api);
     await flushPromises();
@@ -200,6 +221,10 @@ describe("ExtensionManager", () => {
     dialog.vm.$emit("confirm");
     await flushPromises();
     expect(admin.emitted("error")).toHaveLength(1);
+    const toast = document.body.querySelector<HTMLElement>(".app-toast")!;
+    expect(toast.textContent).toContain("刷新后重试");
+    const dialogZIndex = Math.max(...Array.from(document.body.querySelectorAll<HTMLElement>(".el-overlay")).map((element) => Number(element.style.zIndex)));
+    expect(Number(toast.style.zIndex)).toBeGreaterThan(dialogZIndex);
     expect(admin.findAll(".connector-catalog-card")).toHaveLength(1);
     dialog.vm.$emit("confirm");
     await flushPromises();
@@ -217,6 +242,52 @@ describe("ExtensionManager", () => {
 
     expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
     expect(wrapper.text()).not.toContain("第三方 CLI");
+    wrapper.unmount();
+  });
+
+  it("keeps installation inputs after a server failure and clears the error on retry", async () => {
+    const draft = { id: "cli-1", name: "Example CLI", state: "draft", version: 1 };
+    const createCLIConnectorDefinition = vi.fn().mockRejectedValueOnce(new ApiError("unavailable", 500, "request_failed")).mockResolvedValueOnce(draft);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createCLIConnectorDefinition, publishCLIConnectorDefinition: vi.fn(async () => ({ ...draft, state: "building" })) } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
+    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get("textarea").setValue("读取示例服务数据");
+    await form.findAll("input")[1]!.setValue("example-cli@1.2.3");
+    await form.trigger("submit");
+    await flushPromises();
+    expect(document.body.querySelector(".app-toast")?.textContent).toContain("服务暂时不可用");
+    expect(document.body.querySelector(".cli-install-card")).not.toBeNull();
+    expect((form.findAll("input")[0]!.element as HTMLInputElement).value).toBe(draft.name);
+    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli@1.2.3");
+    expect(form.find('button.is-loading').exists()).toBe(false);
+    await form.trigger("submit");
+    await flushPromises();
+    expect(createCLIConnectorDefinition).toHaveBeenCalledTimes(2);
+    expect(document.body.querySelector(".app-toast")).toBeNull();
+    expect(document.body.querySelector(".cli-install-card")).toBeNull();
+    wrapper.unmount();
+  });
+
+  it("shows one status warning while polling fails, retains the setup link, and recovers", async () => {
+    vi.useFakeTimers();
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [] };
+    const waiting = { id: "enable-1", definition_id: definition.id, state: "waiting_for_user", action_url: "https://example.test/setup", version: 1 };
+    const completeCLIConnectorEnablement = vi.fn().mockRejectedValueOnce(new ApiError("unavailable", 503, "request_failed")).mockRejectedValueOnce(new TypeError("Failed to fetch")).mockResolvedValueOnce({ ...waiting, state: "enabled" });
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [waiting]), completeCLIConnectorEnablement } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(wrapper.findAll('[data-testid="resource-status-error"]')).toHaveLength(1);
+    expect(wrapper.get('a[href="https://example.test/setup"]').text()).toBe("继续完成授权");
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(wrapper.findAll('[data-testid="resource-status-error"]')).toHaveLength(1);
+    expect(document.body.querySelector(".app-toast")).toBeNull();
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(wrapper.find('[data-testid="resource-status-error"]').exists()).toBe(false);
     wrapper.unmount();
   });
 

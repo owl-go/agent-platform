@@ -2,9 +2,11 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { useZIndex } from "element-plus";
+import ToastMessage from "./ToastMessage.vue";
 import { Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
-import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
+import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import ProfileIcon from "./ProfileIcon.vue";
@@ -37,6 +39,19 @@ const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
 const auth = inject(authContextKey, undefined);
 const { locale, t } = useI18n();
+const { nextZIndex } = useZIndex();
+const operationError = ref<{ message: string; zIndex: number }>();
+const statusErrors = ref<string[]>([]);
+function reportError(cause?: unknown) {
+  const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: "invalidInput", rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
+  const key = cause instanceof ApiError ? keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
+  operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
+  emit("error");
+}
+function setStatusError(source: string, failed: boolean) {
+  statusErrors.value = statusErrors.value.filter((item) => item !== source);
+  if (failed) statusErrors.value.push(source);
+}
 const canManageCLI = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
@@ -97,14 +112,16 @@ async function refresh() {
     [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]);
     await Promise.all([refreshCLIAuthorizations(), refreshSkillDocuments()]);
     notifyResources();
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
 }
 async function refreshSkillDocuments() {
+  let failed = false;
   const entries = await Promise.all(skills.value.map(async (item) => {
     try { return [item.id, (await api.getSkillDocument(item.id)).content] as const; }
-    catch { return [item.id, ""] as const; }
+    catch { failed = true; return [item.id, skillDocuments.value[item.id] ?? ""] as const; }
   }));
   skillDocuments.value = Object.fromEntries(entries);
+  setStatusError("documents", failed);
 }
 function skillDescription(item: Skill) {
   const content = skillDocuments.value[item.id] ?? "";
@@ -121,13 +138,15 @@ function openSkillDetails(item: Skill) {
   else void router.push({ name: "skill-detail", params: { skillId: item.id }, state: { skillReturnTo: router.currentRoute.value.fullPath } });
 }
 async function enableCLI(item: CLIConnectorDefinition) {
+  operationError.value = undefined;
   if (canManageCLI.value || cliEnableBusy.value.includes(item.id)) return;
   cliEnableBusy.value.push(item.id);
   try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; }
-  catch { emit("error"); }
+  catch (cause) { reportError(cause); }
   finally { cliEnableBusy.value = cliEnableBusy.value.filter((id) => id !== item.id); }
 }
 async function removeCLI() {
+  operationError.value = undefined;
   const item = deletingCLI.value;
   if (!item || cliDeleteBusy.value) return;
   cliDeleteBusy.value = true;
@@ -137,7 +156,7 @@ async function removeCLI() {
     cliEnablements.value = cliEnablements.value.filter((entry) => entry.definition_id !== item.id);
     emit("update:cliConnectorDefinitionIds", props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
     deletingCLI.value = undefined;
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
   finally { cliDeleteBusy.value = false; }
 }
 async function completePendingCLIEnablements() {
@@ -146,7 +165,8 @@ async function completePendingCLIEnablements() {
     const completed = await Promise.all(pending.map((item) => api.completeCLIConnectorEnablement(item.id)));
     const replacements = new Map(completed.map((item) => [item.id, item]));
     cliEnablements.value = cliEnablements.value.map((item) => replacements.get(item.id) ?? item);
-  } catch { /* A transient provider failure must not discard the active setup link. */ }
+    setStatusError("enablements", false);
+  } catch { setStatusError("enablements", true); }
 }
 function enablementFor(id: string) { return cliEnablements.value.find((item) => item.definition_id === id); }
 function authorizationsFor(definitionID: string) {
@@ -162,9 +182,10 @@ async function refreshCLIAuthorizations() {
   cliAuthorizations.value = Object.fromEntries(entries);
 }
 async function authorizeCLIAccount(item: CLIConnectorDefinition) {
+  operationError.value = undefined;
   const enablement = enablementFor(item.id);
   if (!enablement) return;
-  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch { emit("error"); }
+  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch (cause) { reportError(cause); }
 }
 async function completeCLIAccountAuthorization() {
   const flow = cliAuthorizationFlow.value;
@@ -174,10 +195,12 @@ async function completeCLIAccountAuthorization() {
     const completed = await api.completeCLIConnectorAuthorization(flow.id);
     cliAuthorizationFlow.value = completed;
     if (completed.authorization) await refreshCLIAuthorizations();
-  } catch { /* Keep the current authorization link available after transient provider errors. */ }
+    setStatusError("authorization", false);
+  } catch { setStatusError("authorization", true); }
 }
 async function disconnectCLIAccount(item: CLIConnectorAuthorization) {
-  try { await api.disconnectCLIConnectorAuthorization(item.id, item.version); await refreshCLIAuthorizations(); } catch { emit("error"); }
+  operationError.value = undefined;
+  try { await api.disconnectCLIConnectorAuthorization(item.id, item.version); await refreshCLIAuthorizations(); } catch (cause) { reportError(cause); }
 }
 function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   if (enablementFor(item.id)?.state !== "enabled") return;
@@ -211,7 +234,7 @@ async function acceptRecommendedSkill(recommendation: CLIRecommendedSkill) {
     if (!skill) skill = await api.createGitSkill({ git_url: recommendation.git_url, git_ref: recommendation.git_ref });
     if (props.selectable) emit("update:skillIds", [...new Set([...props.skillIds, skill.id])]);
     await refresh();
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
 }
 function parseNPMInstall(value: string) {
   const match = value.trim().replace(/^npm\s+(?:install|i)\s+/, "").match(/^((?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*)@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/);
@@ -219,27 +242,33 @@ function parseNPMInstall(value: string) {
 }
 async function selectCLIArchive(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file || file.size > 50 * 1024 * 1024) { if (file) emit("error"); return; }
-  cliForm.value.archive = await fileToBase64(file);
+  cliForm.value.archive = "";
+  if (!file || file.size > 50 * 1024 * 1024) { if (file) reportError(new ApiError("validation", 413, "file_too_large")); return; }
+  try { cliForm.value.archive = await fileToBase64(file); } catch (cause) { reportError(cause); }
 }
 async function saveCLI() {
+  operationError.value = undefined;
   if (cliSaveBusy.value) return;
   cliSaveBusy.value = true;
   try {
     const npm = cliForm.value.installation_type === "npm" ? parseNPMInstall(cliForm.value.npm_install) : { npm_package: "", npm_version: "" };
-    if (!npm) { emit("error"); return; }
+    if (!npm) { reportError(new ApiError("validation", 422, "invalid_npm_install")); return; }
     const input: CLIConnectorDefinitionInput = { name: cliForm.value.name, icon: cliForm.value.icon, description: cliForm.value.description, installation_type: cliForm.value.installation_type, ...npm, archive: cliForm.value.installation_type === "upload" ? cliForm.value.archive : undefined };
     const saved = editingCLI.value ? await api.updateCLIConnectorDefinition(editingCLI.value.id, input, editingCLI.value.version) : await api.createCLIConnectorDefinition(input);
     editingCLI.value = saved;
     await api.publishCLIConnectorDefinition(saved.id, saved.version);
     showCLI.value = false;
     cliDefinitions.value = await api.listCLIConnectorDefinitions();
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
   finally { cliSaveBusy.value = false; }
 }
-async function disableCLI(item: CLIConnectorDefinition) { try { await api.disableCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); cliEnablements.value = await api.listCLIConnectorEnablements(); } catch { emit("error"); } }
-async function refreshCLI() { try { [cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]); } catch { /* Preserve the last usable projection while polling. */ } }
-async function refreshMCP() { try { mcp.value = await api.listMCPServers(); notifyResources(); } catch { /* Preserve the last usable projection while polling. */ } }
+async function disableCLI(item: CLIConnectorDefinition) {
+  operationError.value = undefined;
+  try { await api.disableCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); cliEnablements.value = await api.listCLIConnectorEnablements(); }
+  catch (cause) { reportError(cause); }
+}
+async function refreshCLI() { try { [cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]); setStatusError("cli", false); } catch { setStatusError("cli", true); } }
+async function refreshMCP() { try { mcp.value = await api.listMCPServers(); notifyResources(); setStatusError("mcp", false); } catch { setStatusError("mcp", true); } }
 function openNewMCP() { editingMCP.value = undefined; mcpForm.value = emptyMCPDraft(); showMCP.value = true; }
 function openMCP(item: MCPServer) {
   editingMCP.value = item;
@@ -263,12 +292,13 @@ function mcpPayload(): Record<string, unknown> {
   return { name: mcpForm.value.name, transport: "stdio", runner: mcpForm.value.runner, package: mcpForm.value.package, package_version: mcpForm.value.package_version, arguments: argumentsList, environment };
 }
 async function saveMCP() {
+  operationError.value = undefined;
   try {
     if (editingMCP.value) await api.updateMCPServer(editingMCP.value.id, mcpPayload(), editingMCP.value.version);
     else await api.createMCPServer(mcpPayload());
     showMCP.value = false;
     await refresh();
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
 }
 async function removeMCP(item: MCPServer) {
   await api.deleteMCPServer(item.id, pendingDelete.value?.impact.confirmation_token ?? "");
@@ -276,7 +306,7 @@ async function removeMCP(item: MCPServer) {
   await refresh();
 }
 async function testMCP(item: MCPServer) {
-  try { const updated = await api.testMCPServer(item.id); mcp.value = mcp.value.map((entry) => entry.id === updated.id ? updated : entry); notifyResources(); } catch { emit("error"); }
+  try { const updated = await api.testMCPServer(item.id); mcp.value = mcp.value.map((entry) => entry.id === updated.id ? updated : entry); notifyResources(); } catch (cause) { reportError(cause); }
 }
 function toggleMCP(item: MCPServer, checked: boolean) {
   if (!item.tested) return;
@@ -286,10 +316,12 @@ function openNewSkill() { editingSkill.value = undefined; skillForm.value = { so
 function openSkill(item: Skill) { editingSkill.value = item; skillForm.value = { source: item.source, git_url: item.git_url ?? "", git_ref: "", archive: "" }; showSkill.value = true; }
 async function selectSkillArchive(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file || file.size > 10 * 1024 * 1024) { if (file) emit("error"); return; }
-  skillForm.value.archive = await fileToBase64(file);
+  skillForm.value.archive = "";
+  if (!file || file.size > 10 * 1024 * 1024) { if (file) reportError(new ApiError("validation", 413, "file_too_large")); return; }
+  try { skillForm.value.archive = await fileToBase64(file); } catch (cause) { reportError(cause); }
 }
 async function saveSkill() {
+  operationError.value = undefined;
   try {
     let saved: Skill;
     if (editingSkill.value) {
@@ -300,7 +332,7 @@ async function saveSkill() {
     if (props.selectable && !editingSkill.value) emit("update:skillIds", [...new Set([...props.skillIds, saved.id])]);
     showSkill.value = false;
     await refresh();
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
 }
 async function removeSkill(item: Skill) {
   await api.deleteSkill(item.id, pendingDelete.value?.impact.confirmation_token ?? "");
@@ -309,6 +341,7 @@ async function removeSkill(item: Skill) {
 }
 function toggleSkill(item: Skill, checked: boolean) { emit("update:skillIds", checked ? [...new Set([...props.skillIds, item.id])] : props.skillIds.filter((id) => id !== item.id)); }
 async function confirmRemove() {
+  operationError.value = undefined;
   if (!pendingDelete.value || deleteBusy.value) return;
   const target = pendingDelete.value;
   deleteBusy.value = true;
@@ -316,14 +349,14 @@ async function confirmRemove() {
     if (target.kind === "mcp") await removeMCP(target.item);
     else await removeSkill(target.item);
     pendingDelete.value = undefined;
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
   finally { deleteBusy.value = false; }
 }
 async function requestDelete(target: { kind: "mcp"; item: MCPServer } | { kind: "skill"; item: Skill }) {
   try {
     const impact = target.kind === "mcp" ? await api.getMCPConnectorDeletionImpact(target.item.id) : await api.getSkillDeletionImpact(target.item.id);
     pendingDelete.value = { ...target, impact: { ...impact, affected_experts: impact.affected_experts ?? [] } };
-  } catch { emit("error"); }
+  } catch (cause) { reportError(cause); }
 }
 async function fileToBase64(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer()); let binary = "";
@@ -334,6 +367,7 @@ async function fileToBase64(file: File): Promise<string> {
 
 <template>
   <div class="extension-manager" :class="{ selectable }">
+    <el-alert v-if="statusErrors.length" :title="t('resources.statusUpdateFailed')" type="warning" :closable="false" data-testid="resource-status-error" />
     <nav class="subtabs" :aria-label="t('resources.title')"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
@@ -410,6 +444,7 @@ async function fileToBase64(file: File): Promise<string> {
   <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && (!detailMCP.platform || canManageCLI) || detailCLI && canManageCLI && detailCLI.mutable)" @close="detailMCP = undefined; detailCLI = undefined" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails" />
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
+    <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
     <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><p class="muted">{{ t('resources.skillDisplayNameHint') }}</p><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>

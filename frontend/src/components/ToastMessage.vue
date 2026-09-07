@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<{
   message: string;
   closeLabel: string;
   duration?: number;
+  zIndex?: number;
 }>(), { duration: 5000 });
 const emit = defineEmits<{ dismiss: [] }>();
 let timeout: number | undefined;
@@ -23,7 +24,7 @@ onBeforeUnmount(() => { if (timeout !== undefined) window.clearTimeout(timeout);
 
 <template>
   <Transition name="toast-pop" appear>
-    <aside v-if="message" class="app-toast" :class="kind" :role="kind === 'error' ? 'alert' : 'status'" :aria-live="kind === 'error' ? 'assertive' : 'polite'">
+    <aside v-if="message" class="app-toast" :class="kind" :style="{ zIndex: props.zIndex }" :role="kind === 'error' ? 'alert' : 'status'" :aria-live="kind === 'error' ? 'assertive' : 'polite'">
       <el-icon class="toast-symbol" :size="19"><CircleCheck v-if="kind === 'success'" /><WarningFilled v-else /></el-icon>
       <span class="toast-copy"><strong>{{ title }}</strong><span>{{ message }}</span></span>
       <el-button text circle :icon="Close" :aria-label="closeLabel" @click="emit('dismiss')" />
