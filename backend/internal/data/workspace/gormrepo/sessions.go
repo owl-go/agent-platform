@@ -225,7 +225,12 @@ func (repository *Repository) loadSessionArtifacts(ctx context.Context, ownerID,
 		messageIDs = append(messageIDs, messages[index].ID)
 	}
 	var rows []sessionArtifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND session_id = ? AND message_id IN ?", ownerID, sessionID, messageIDs).Order("created_at, id").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).
+		Table("session_artifacts artifact").Select("artifact.*").
+		Joins("JOIN session_messages message ON message.id = artifact.message_id AND message.session_id = artifact.session_id").
+		Where("artifact.owner_user_id = ? AND artifact.session_id = ? AND artifact.message_id IN ?", ownerID, sessionID, messageIDs).
+		Where("strpos(message.content, artifact.path) > 0 OR strpos(message.content, artifact.name) > 0").
+		Order("artifact.created_at, artifact.id").Scan(&rows).Error; err != nil {
 		return fmt.Errorf("list Session Artifacts: %w", err)
 	}
 	for _, row := range rows {
@@ -240,7 +245,11 @@ func (repository *Repository) loadSessionArtifacts(ctx context.Context, ownerID,
 
 func (repository *Repository) GetSessionArtifact(ctx context.Context, ownerID, sessionID, artifactID string) (domain.Artifact, error) {
 	var row sessionArtifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND session_id = ? AND id = ?", ownerID, sessionID, artifactID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).
+		Table("session_artifacts artifact").Select("artifact.*").
+		Joins("JOIN session_messages message ON message.id = artifact.message_id AND message.session_id = artifact.session_id").
+		Where("artifact.owner_user_id = ? AND artifact.session_id = ? AND artifact.id = ?", ownerID, sessionID, artifactID).
+		Where("strpos(message.content, artifact.path) > 0 OR strpos(message.content, artifact.name) > 0").Take(&row).Error; err != nil {
 		return domain.Artifact{}, mapNotFound(err)
 	}
 	return sessionArtifactDomain(row), nil
