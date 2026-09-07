@@ -24,6 +24,10 @@ const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams
 const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
 const visibleExperts = computed(() => filter(experts.value));
 const visibleTeams = computed(() => filter(teams.value));
+const expertSections = computed(() => [
+  { key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) },
+  { key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) },
+]);
 
 onMounted(refresh);
 watch(activeTab, () => { query.value = ""; tag.value = ""; });
@@ -66,8 +70,11 @@ function selectTab(tab: string | number) {
 
     <ToastMessage v-if="error" kind="error" :title="t('experts.operationFailed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
 
-    <div v-if="activeTab === 'experts'" class="expert-grid catalog-grid">
-      <article v-for="expert in visibleExperts" :key="expert.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="expert.name" @click="detailExpert = expert" @keydown.enter.self="detailExpert = expert" @keydown.space.self.prevent="detailExpert = expert">
+    <div v-if="activeTab === 'experts'" class="catalog-groups">
+      <section v-for="section in expertSections" :key="section.key" class="catalog-group">
+        <h2 class="catalog-group-title">{{ section.title }}</h2>
+        <div class="expert-grid catalog-grid">
+      <article v-for="expert in section.items" :key="expert.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="expert.name" @click="detailExpert = expert" @keydown.enter.self="detailExpert = expert" @keydown.space.self.prevent="detailExpert = expert">
         <el-card class="expert-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!expert.available" @click.stop="summon('expert_id', expert.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
             <ProfileIcon :icon="expert.icon" :background="expert.icon_background" />
@@ -80,7 +87,9 @@ function selectTab(tab: string | number) {
           </div>
         </el-card>
       </article>
-      <el-empty v-if="!visibleExperts.length" class="catalog-empty" :description="t('experts.noExperts')" />
+      <el-empty v-if="!section.items.length" class="catalog-empty" :description="t('experts.noExperts')" />
+        </div>
+      </section>
     </div>
 
     <div v-else class="expert-grid catalog-grid">

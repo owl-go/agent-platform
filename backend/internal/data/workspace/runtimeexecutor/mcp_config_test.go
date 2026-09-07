@@ -16,7 +16,7 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"secret-canary"}`), "mcp-server:owner-1")
+	secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"secret-canary"}`), "mcp-server:platform-owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,13 +30,13 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 	})
 	executor := &Executor{box: box}
 	files, variables, redactions, err := executor.nativeMCPFiles(application.ExecutionJob{
-		OwnerID: "owner-1",
+		OwnerID: "user-owner",
 		Snapshot: domain.ExecutionSnapshot{
 			RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{
 				ModelID: "claude-fable-5", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"},
 			},
 			MCPServers: []domain.MCPServerSnapshot{
-				{ID: "11111111-1111-1111-1111-111111111111", Name: "remote", Transport: "streamable_http", Configuration: httpConfig, SecretCiphertext: secret},
+				{ID: "11111111-1111-1111-1111-111111111111", Name: "remote", Transport: "streamable_http", Configuration: httpConfig, SecretCiphertext: secret, SecretOwnerID: "platform-owner"},
 				{ID: "22222222-2222-2222-2222-222222222222", Name: "local", Transport: "stdio", Configuration: stdioConfig},
 			},
 		},

@@ -4643,6 +4643,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "platform": {
+          "type": "boolean"
         }
       }
     },
@@ -5317,6 +5320,9 @@
           "format": "int64"
         },
         "test_pending": {
+          "type": "boolean"
+        },
+        "platform": {
           "type": "boolean"
         }
       }
@@ -6141,6 +6147,9 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "platform": {
+          "type": "boolean"
         }
       }
     },

@@ -115,6 +115,7 @@ func (workflowRecord) TableName() string { return "workflows" }
 type expertRecord struct {
 	ID                        string     `gorm:"column:id"`
 	OwnerID                   string     `gorm:"column:owner_user_id"`
+	Platform                  bool       `gorm:"->;column:platform"`
 	Name                      string     `gorm:"column:name"`
 	Icon                      string     `gorm:"column:icon"`
 	IconBackground            string     `gorm:"column:icon_background"`
@@ -340,6 +341,7 @@ func (modelProviderCredentialVersionRecord) TableName() string {
 type mcpRecord struct {
 	ID               string     `gorm:"column:id"`
 	OwnerID          string     `gorm:"column:owner_user_id"`
+	Platform         bool       `gorm:"->;column:platform"`
 	Name             string     `gorm:"column:name"`
 	Transport        string     `gorm:"column:transport"`
 	Configuration    []byte     `gorm:"column:configuration;type:jsonb"`
@@ -357,6 +359,7 @@ func (mcpRecord) TableName() string { return "mcp_servers" }
 type skillRecord struct {
 	ID        string    `gorm:"column:id"`
 	OwnerID   string    `gorm:"column:owner_user_id"`
+	Platform  bool      `gorm:"->;column:platform"`
 	Name      string    `gorm:"column:name"`
 	Source    string    `gorm:"column:source"`
 	GitURL    *string   `gorm:"column:git_url"`

@@ -18,6 +18,22 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+func accessibleResourceOwnerIDs(tx *gorm.DB, ownerID string) *gorm.DB {
+	return tx.Table("users").Select("id").Where("id = ? OR administrator", ownerID)
+}
+
+func expertCatalogQuery(tx *gorm.DB) *gorm.DB {
+	return tx.Model(&expertRecord{}).Select("experts.*, EXISTS (SELECT 1 FROM users WHERE users.id = experts.owner_user_id AND users.administrator) AS platform")
+}
+
+func mcpCatalogQuery(tx *gorm.DB) *gorm.DB {
+	return tx.Model(&mcpRecord{}).Select("mcp_servers.*, EXISTS (SELECT 1 FROM users WHERE users.id = mcp_servers.owner_user_id AND users.administrator) AS platform")
+}
+
+func skillCatalogQuery(tx *gorm.DB) *gorm.DB {
+	return tx.Model(&skillRecord{}).Select("skills.*, EXISTS (SELECT 1 FROM users WHERE users.id = skills.owner_user_id AND users.administrator) AS platform")
+}
+
 func deletionImpact(resourceKind, resourceID string, resourceVersion int64, experts []expertRecord) (domain.ResourceDeletionImpact, error) {
 	affected := make([]domain.AffectedExpert, 0)
 	for _, expert := range experts {
@@ -49,7 +65,8 @@ func deletionImpact(resourceKind, resourceID string, resourceVersion int64, expe
 
 func (repository *Repository) ListExperts(ctx context.Context, ownerID string) ([]domain.Expert, error) {
 	var rows []expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := expertCatalogQuery(db).Where("owner_user_id IN (?)", accessibleResourceOwnerIDs(db, ownerID)).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Experts: %w", err)
 	}
 	items := make([]domain.Expert, 0, len(rows))
@@ -102,7 +119,7 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	}); err != nil {
 		return domain.Expert{}, fmt.Errorf("create Expert: %w", err)
 	}
-	return expertDomain(row)
+	return repository.GetExpert(ctx, ownerID, row.ID)
 }
 
 func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertID string, input domain.ExpertInput, expectedVersion int64) (domain.Expert, error) {
@@ -183,21 +200,21 @@ func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertIn
 	if len(input.MCPServerIDs) > 0 {
 		var count int64
 		if err := tx.Model(&mcpRecord{}).
-			Where("owner_user_id = ? AND id IN ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", ownerID, input.MCPServerIDs).
+			Where("owner_user_id IN (?) AND id IN ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), input.MCPServerIDs).
 			Count(&count).Error; err != nil {
 			return err
 		}
 		if count != int64(len(input.MCPServerIDs)) {
-			return fmt.Errorf("%w: every MCP Server must belong to the User and pass its isolated test", domain.ErrInvalid)
+			return fmt.Errorf("%w: every MCP Server must be visible to the User and pass its isolated test", domain.ErrInvalid)
 		}
 	}
 	if len(input.SkillIDs) > 0 {
 		var count int64
-		if err := tx.Model(&skillRecord{}).Where("owner_user_id = ? AND id IN ?", ownerID, input.SkillIDs).Count(&count).Error; err != nil {
+		if err := tx.Model(&skillRecord{}).Where("owner_user_id IN (?) AND id IN ?", accessibleResourceOwnerIDs(tx, ownerID), input.SkillIDs).Count(&count).Error; err != nil {
 			return err
 		}
 		if count != int64(len(input.SkillIDs)) {
-			return fmt.Errorf("%w: every Skill must belong to the User", domain.ErrInvalid)
+			return fmt.Errorf("%w: every Skill must be visible to the User", domain.ErrInvalid)
 		}
 	}
 	if len(input.CLIConnectorDefinitionIDs) > 0 {
@@ -228,13 +245,29 @@ func validateUniqueUUIDs(values []string) error {
 
 func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertID string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var expert expertRecord
+		if err := expertCatalogQuery(tx).Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&expert).Error; err != nil {
+			return mapNotFound(err)
+		}
 		var teams []expertTeamRecord
-		if err := tx.Where("owner_user_id = ?", ownerID).Find(&teams).Error; err != nil {
+		teamQuery := tx.Model(&expertTeamRecord{})
+		if !expert.Platform {
+			teamQuery = teamQuery.Where("owner_user_id = ?", ownerID)
+		}
+		if err := teamQuery.Find(&teams).Error; err != nil {
 			return err
 		}
 		for _, team := range teams {
 			var ids []string
-			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+			var members []domain.ExpertTeamMemberInput
+			if len(team.Members) > 0 && string(team.Members) != "null" {
+				if err := json.Unmarshal(team.Members, &members); err != nil {
+					return fmt.Errorf("decode Expert Team members: %w", err)
+				}
+				for _, member := range members {
+					ids = append(ids, member.ExpertID)
+				}
+			} else if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
 				return fmt.Errorf("decode Expert Team members: %w", err)
 			}
 			for _, id := range ids {
@@ -256,7 +289,8 @@ func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertI
 
 func (repository *Repository) GetExpert(ctx context.Context, ownerID, expertID string) (domain.Expert, error) {
 	var row expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&row).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := expertCatalogQuery(db).Where("owner_user_id IN (?) AND id = ?", accessibleResourceOwnerIDs(db, ownerID), expertID).Take(&row).Error; err != nil {
 		return domain.Expert{}, mapNotFound(err)
 	}
 	return expertDomain(row)
@@ -267,7 +301,7 @@ func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID s
 }
 
 func expertDomain(row expertRecord) (domain.Expert, error) {
-	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
+	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
 	if row.TagProjectionError != nil {
 		item.TagProjectionError = *row.TagProjectionError
 	}
@@ -395,11 +429,11 @@ func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []strin
 		}
 	}
 	var count int64
-	if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND ((introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> '') OR (execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL))", ownerID, unique).Count(&count).Error; err != nil {
+	if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id IN ? AND ((introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> '') OR (execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL))", accessibleResourceOwnerIDs(tx, ownerID), unique).Count(&count).Error; err != nil {
 		return err
 	}
 	if count != int64(len(unique)) {
-		return fmt.Errorf("%w: every Expert Team member must be available and belong to the User", domain.ErrInvalid)
+		return fmt.Errorf("%w: every Expert Team member must be available and visible to the User", domain.ErrInvalid)
 	}
 	return nil
 }
@@ -425,7 +459,8 @@ func (repository *Repository) expertTeamDomain(ctx context.Context, row expertTe
 		return item, nil
 	}
 	var rows []expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id IN ?", row.OwnerID, ids).Find(&rows).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := expertCatalogQuery(db).Where("owner_user_id IN (?) AND id IN ?", accessibleResourceOwnerIDs(db, row.OwnerID), ids).Find(&rows).Error; err != nil {
 		return domain.ExpertTeam{}, err
 	}
 	byID := make(map[string]domain.Expert, len(rows))
@@ -843,7 +878,8 @@ func providerModelDomain(row providerModelRecord) (domain.ProviderModel, error) 
 
 func (repository *Repository) ListMCPServers(ctx context.Context, ownerID string) ([]domain.MCPServer, error) {
 	var rows []mcpRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := mcpCatalogQuery(db).Where("owner_user_id IN (?)", accessibleResourceOwnerIDs(db, ownerID)).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list MCP Servers: %w", err)
 	}
 	items := make([]domain.MCPServer, 0, len(rows))
@@ -869,7 +905,7 @@ func (repository *Repository) CreateMCPServer(ctx context.Context, ownerID strin
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.MCPServer{}, fmt.Errorf("create MCP Server: %w", err)
 	}
-	return mcpDomain(row)
+	return repository.getMCP(ctx, ownerID, row.ID)
 }
 
 func (repository *Repository) UpdateMCPServer(ctx context.Context, ownerID, serverID string, server domain.MCPServer, secretCiphertext []byte, expectedVersion int64) (domain.MCPServer, error) {
@@ -943,11 +979,16 @@ func (repository *Repository) DeleteMCPServer(ctx context.Context, ownerID, serv
 
 func (repository *Repository) GetMCPServerDeletionImpact(ctx context.Context, ownerID, serverID string) (domain.ResourceDeletionImpact, error) {
 	var resource mcpRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := mcpCatalogQuery(db).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
 		return domain.ResourceDeletionImpact{}, mapNotFound(err)
 	}
 	var experts []expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+	expertQuery := db.Model(&expertRecord{})
+	if !resource.Platform {
+		expertQuery = expertQuery.Where("owner_user_id = ?", ownerID)
+	}
+	if err := expertQuery.Find(&experts).Error; err != nil {
 		return domain.ResourceDeletionImpact{}, err
 	}
 	return deletionImpact("mcp", serverID, resource.Version, experts)
@@ -956,11 +997,15 @@ func (repository *Repository) GetMCPServerDeletionImpact(ctx context.Context, ow
 func (repository *Repository) DeleteMCPServerConfirmed(ctx context.Context, ownerID, serverID, confirmationToken string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var resource mcpRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
+		if err := mcpCatalogQuery(tx).Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&resource).Error; err != nil {
 			return mapNotFound(err)
 		}
 		var experts []expertRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		expertQuery := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&expertRecord{})
+		if !resource.Platform {
+			expertQuery = expertQuery.Where("owner_user_id = ?", ownerID)
+		}
+		if err := expertQuery.Find(&experts).Error; err != nil {
 			return err
 		}
 		impact, err := deletionImpact("mcp", serverID, resource.Version, experts)
@@ -996,7 +1041,8 @@ func (repository *Repository) DeleteMCPServerConfirmed(ctx context.Context, owne
 
 func (repository *Repository) getMCP(ctx context.Context, ownerID, serverID string) (domain.MCPServer, error) {
 	var row mcpRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&row).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := mcpCatalogQuery(db).Where("owner_user_id = ? AND id = ?", ownerID, serverID).Take(&row).Error; err != nil {
 		return domain.MCPServer{}, mapNotFound(err)
 	}
 	return mcpDomain(row)
@@ -1026,7 +1072,7 @@ func mcpDomain(row mcpRecord) (domain.MCPServer, error) {
 	if err := json.Unmarshal(row.Configuration, &configuration); err != nil {
 		return domain.MCPServer{}, fmt.Errorf("decode MCP configuration: %w", err)
 	}
-	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.TestError != nil {
 		item.TestError = *row.TestError
 	}
@@ -1035,7 +1081,8 @@ func mcpDomain(row mcpRecord) (domain.MCPServer, error) {
 
 func (repository *Repository) ListSkills(ctx context.Context, ownerID string) ([]domain.Skill, error) {
 	var rows []skillRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := skillCatalogQuery(db).Where("owner_user_id IN (?)", accessibleResourceOwnerIDs(db, ownerID)).Order("updated_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Skills: %w", err)
 	}
 	items := make([]domain.Skill, 0, len(rows))
@@ -1050,7 +1097,7 @@ func (repository *Repository) CreateSkill(ctx context.Context, ownerID string, s
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.Skill{}, fmt.Errorf("create Skill: %w", err)
 	}
-	return skillDomain(row), nil
+	return repository.getSkill(ctx, ownerID, row.ID)
 }
 
 func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
@@ -1065,11 +1112,7 @@ func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID 
 	if result.RowsAffected != 1 {
 		return domain.Skill{}, domain.ErrConflict
 	}
-	var row skillRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&row).Error; err != nil {
-		return domain.Skill{}, mapNotFound(err)
-	}
-	return skillDomain(row), nil
+	return repository.getSkill(ctx, ownerID, skillID)
 }
 
 func (repository *Repository) DeleteSkill(ctx context.Context, ownerID, skillID string) error {
@@ -1082,11 +1125,16 @@ func (repository *Repository) DeleteSkill(ctx context.Context, ownerID, skillID 
 
 func (repository *Repository) GetSkillDeletionImpact(ctx context.Context, ownerID, skillID string) (domain.ResourceDeletionImpact, error) {
 	var resource skillRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
+	db := repository.db.WithContext(ctx)
+	if err := skillCatalogQuery(db).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
 		return domain.ResourceDeletionImpact{}, mapNotFound(err)
 	}
 	var experts []expertRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+	expertQuery := db.Model(&expertRecord{})
+	if !resource.Platform {
+		expertQuery = expertQuery.Where("owner_user_id = ?", ownerID)
+	}
+	if err := expertQuery.Find(&experts).Error; err != nil {
 		return domain.ResourceDeletionImpact{}, err
 	}
 	return deletionImpact("skill", skillID, resource.Version, experts)
@@ -1095,11 +1143,15 @@ func (repository *Repository) GetSkillDeletionImpact(ctx context.Context, ownerI
 func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID, skillID, confirmationToken string) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var resource skillRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
+		if err := skillCatalogQuery(tx).Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
 			return mapNotFound(err)
 		}
 		var experts []expertRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ?", ownerID).Find(&experts).Error; err != nil {
+		expertQuery := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&expertRecord{})
+		if !resource.Platform {
+			expertQuery = expertQuery.Where("owner_user_id = ?", ownerID)
+		}
+		if err := expertQuery.Find(&experts).Error; err != nil {
 			return err
 		}
 		impact, err := deletionImpact("skill", skillID, resource.Version, experts)
@@ -1134,7 +1186,16 @@ func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID,
 }
 
 func skillDomain(row skillRecord) domain.Skill {
-	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+}
+
+func (repository *Repository) getSkill(ctx context.Context, ownerID, skillID string) (domain.Skill, error) {
+	var row skillRecord
+	db := repository.db.WithContext(ctx)
+	if err := skillCatalogQuery(db).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&row).Error; err != nil {
+		return domain.Skill{}, mapNotFound(err)
+	}
+	return skillDomain(row), nil
 }
 
 func removeID(values []string, target string) []string {

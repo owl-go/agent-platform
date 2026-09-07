@@ -598,13 +598,17 @@ func (service *Service) UpdateSkill(ctx context.Context, request *workspacev1.Up
 	if err != nil {
 		return nil, err
 	}
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	items, err := service.workspace.Repository().ListSkills(ctx, owner)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	var current *workspacedomain.Skill
 	for index := range items {
-		if items[index].ID == request.SkillId {
+		if items[index].ID == request.SkillId && (!items[index].Platform || principal.Administrator) {
 			current = &items[index]
 			break
 		}
@@ -682,7 +686,7 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 }
 
 func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
-	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus}
+	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus, Platform: item.Platform}
 	if item.TagProjectionError != "" {
 		response.TagProjectionError = &item.TagProjectionError
 	}
@@ -881,7 +885,7 @@ func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspac
 }
 
 func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
-	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
 	if item.TestError != "" {
 		response.TestError = &item.TestError
 	}
@@ -896,5 +900,5 @@ func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
 }
 
 func skillResponse(item workspacedomain.Skill) *workspacev1.Skill {
-	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
 }

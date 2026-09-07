@@ -58,6 +58,14 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
+const connectorSections = computed(() => [
+  { key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value },
+  { key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] },
+]);
+const skillSections = computed(() => [
+  { key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) },
+  { key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) },
+]);
 
 onMounted(() => {
   void refresh();
@@ -295,8 +303,11 @@ async function fileToBase64(file: File): Promise<string> {
     <nav class="subtabs" :aria-label="t('resources.title')"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
+      <div class="catalog-groups">
+      <section v-for="section in connectorSections" :key="section.key" class="catalog-group">
+      <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
-        <article v-for="item in mcp" :key="`mcp:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
+        <article v-for="item in section.mcp" :key="`mcp:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
           <span class="extension-card-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
           <div class="extension-card-copy">
             <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div>
@@ -304,12 +315,12 @@ async function fileToBase64(file: File): Promise<string> {
           </div>
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
-            <el-button circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
-            <el-button circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
-            <el-button circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
+            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
+            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
+            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
           </div>
         </article>
-        <article v-for="item in cliDefinitions" :key="`cli:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
+        <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
           <ProfileIcon class="connector-card-icon" :icon="item.icon || 'terminal'" />
           <div class="extension-card-copy">
             <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="enablementFor(item.id)?.state === 'enabled'" type="success" size="small">{{ t('common.enabled') }}</el-tag></div>
@@ -335,23 +346,30 @@ async function fileToBase64(file: File): Promise<string> {
             <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
           </div>
         </article>
-        <div v-if="!mcp.length && !cliDefinitions.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+        <div v-if="!section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+      </div>
+      </section>
       </div>
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button></div>
+      <div class="catalog-groups">
+      <section v-for="section in skillSections" :key="section.key" class="catalog-group">
+      <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
-        <article v-for="item in skills" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="detailSkill = item" @keydown.enter.self="detailSkill = item" @keydown.space.self.prevent="detailSkill = item">
+        <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="detailSkill = item" @keydown.enter.self="detailSkill = item" @keydown.space.self.prevent="detailSkill = item">
           <span class="extension-card-mark skill-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
           <div class="extension-card-copy skill-card-copy"><strong>{{ item.name }}</strong><p>{{ skillDescription(item) }}</p><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
+            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
           </div>
         </article>
-        <div v-if="!skills.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+        <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+      </div>
+      </section>
       </div>
     </div>
   </div>

@@ -3,12 +3,14 @@ import { computed, inject, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type ExpertTeam, type Skill } from "../api/client";
+import { authContextKey } from "../auth/session";
 import { renderMarkdown } from "../markdown";
 import ProfileIcon from "./ProfileIcon.vue";
 
 const props = defineProps<{ skill?: Skill; expert?: Expert; team?: ExpertTeam }>();
 const emit = defineEmits<{ close: []; editSkill: [skill: Skill] }>();
 const api = inject(platformApiKey)!;
+const auth = inject(authContextKey, undefined);
 const router = useRouter();
 const { t } = useI18n();
 const content = ref("");
@@ -16,6 +18,8 @@ const loading = ref(false), error = ref("");
 const resourceNames = ref<Record<string, string>>({});
 const item = computed(() => props.skill ?? props.expert ?? props.team);
 const open = computed(() => Boolean(item.value));
+const administrator = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
+const canEdit = computed(() => !props.skill?.platform && !props.expert?.platform || administrator.value || Boolean(props.team));
 const members = computed(() => props.expert ? [{ name: "", expert: props.expert, labels: [] as string[] }] : props.team?.members ?? []);
 const fields = ["core_capability", "operating_procedure", "output_standard", "cautions"] as const;
 const fieldLabels = { core_capability: "experts.coreCapability", operating_procedure: "experts.operatingProcedure", output_standard: "experts.outputStandard", cautions: "experts.cautions" };
@@ -63,6 +67,6 @@ function edit() {
         <h3>{{ t('composer.connectors') }}</h3><div class="tag-row"><el-tag v-for="id in [...member.expert.mcp_server_ids, ...(member.expert.cli_connector_definition_ids ?? [])]" :key="id">{{ resourceNames[id] || t('composer.resourceUnavailable') }}</el-tag><span v-if="!member.expert.mcp_server_ids.length && !member.expert.cli_connector_definition_ids?.length" class="muted">{{ t('common.empty') }}</span></div>
       </section>
     </template>
-    <template #footer><el-button @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" :disabled="Boolean(expert && !expert.available || team && !team.available)" @click="launch">{{ skill ? t('composer.useSkill') : t('composer.summon') }}</el-button></template>
+    <template #footer><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" :disabled="Boolean(expert && !expert.available || team && !team.available)" @click="launch">{{ skill ? t('composer.useSkill') : t('composer.summon') }}</el-button></template>
   </el-drawer>
 </template>

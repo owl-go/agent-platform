@@ -23,6 +23,34 @@ function mountManager(api: PlatformApi, administrator = false) {
 }
 
 describe("ExtensionManager", () => {
+  it("separates platform resources from my resources and protects platform actions", async () => {
+    const platformSkill: Skill = { id: "platform-skill", platform: true, name: "平台 PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
+    const mySkill: Skill = { id: "my-skill", name: "我的审查技能", source: "upload", sha256: "b".repeat(64), ...timestamps };
+    const platformMCP: MCPServer = { id: "platform-mcp", platform: true, name: "平台检索", transport: "streamable_http", url: "https://platform.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
+    const myMCP: MCPServer = { id: "my-mcp", name: "我的数据源", transport: "streamable_http", url: "https://user.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
+    const api = { listMCPServers: vi.fn(async () => [platformMCP, myMCP]), listSkills: vi.fn(async () => [platformSkill, mySkill]), getSkillDocument: vi.fn(async (id: string) => ({ skill: id === platformSkill.id ? platformSkill : mySkill, content: "# Skill" })) } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    const connectorGroups = wrapper.findAll(".catalog-group");
+    expect(connectorGroups[0]!.text()).toContain("平台连接器");
+    expect(connectorGroups[0]!.text()).toContain(platformMCP.name);
+    expect(connectorGroups[0]!.find('button[aria-label="编辑"]').exists()).toBe(false);
+    expect(connectorGroups[1]!.text()).toContain("我的连接器");
+    expect(connectorGroups[1]!.text()).toContain(myMCP.name);
+    expect(connectorGroups[1]!.find('button[aria-label="编辑"]').exists()).toBe(true);
+
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
+    const skillGroups = wrapper.findAll(".catalog-group");
+    expect(skillGroups[0]!.text()).toContain("平台技能");
+    expect(skillGroups[0]!.text()).toContain(platformSkill.name);
+    expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
+    expect(skillGroups[1]!.text()).toContain("我的技能");
+    expect(skillGroups[1]!.text()).toContain(mySkill.name);
+    expect(skillGroups[1]!.find('button[aria-label="删除"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("creates an MCP Server from the shared manager", async () => {
     const saved: MCPServer = { id: "mcp-1", name: "文档 MCP", transport: "streamable_http", url: "https://mcp.example.test", arguments: [], environment: [], tested: false, test_pending: false, ...timestamps };
     const createMCPServer = vi.fn(async () => saved);

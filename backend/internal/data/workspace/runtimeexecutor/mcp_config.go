@@ -56,7 +56,11 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 		}
 		secretValues := make(map[string]string)
 		if len(server.SecretCiphertext) > 0 {
-			plaintext, err := executor.box.Decrypt(server.SecretCiphertext, "mcp-server:"+job.OwnerID)
+			secretOwnerID := server.SecretOwnerID
+			if secretOwnerID == "" {
+				secretOwnerID = job.OwnerID
+			}
+			plaintext, err := executor.box.Decrypt(server.SecretCiphertext, "mcp-server:"+secretOwnerID)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("decrypt MCP Server %q secrets: %w", server.Name, err)
 			}
