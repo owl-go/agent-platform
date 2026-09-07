@@ -90,6 +90,7 @@ The detailed conversation specialist/resource selection rules and accepted revis
 - Archived Sessions are hidden from the active list and read-only until archive is cancelled.
 - Deleting a Session requires confirmation, cancels active generation, and permanently deletes messages and Session execution data.
 - A Session message may contain text, up to ten distinct new attachments and referenced files in total, or both. Each file is at most 100 MiB. File References preserve content accepted with the message. Sessions do not own a persistent Workspace; the Runtime receives checksum-verified, read-only copies for that turn.
+- Selecting an attached image opens an in-product preview instead of starting a browser download. A message with multiple images supports previous and next navigation in the preview; non-image attachments remain explicit downloads.
 
 ### 4.2 Conversation Execution
 

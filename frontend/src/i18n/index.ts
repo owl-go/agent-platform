@@ -174,6 +174,8 @@ Object.assign(en, { composer: {
 } });
 Object.assign(zh.sessions, { welcome: "从一个问题开始，随时添加专家、技能或连接器。" });
 Object.assign(en.sessions, { welcome: "Start with a question and add an Expert, Skill, or Connector whenever you need one." });
+Object.assign(zh, { attachments: { preview: "预览图片 {name}", download: "下载附件 {name}", previous: "上一张图片", next: "下一张图片", position: "第 {current} 张，共 {total} 张", navigationHint: "使用方向键切换图片，Esc 关闭" } });
+Object.assign(en, { attachments: { preview: "Preview image {name}", download: "Download attachment {name}", previous: "Previous image", next: "Next image", position: "{current} of {total}", navigationHint: "Use the arrow keys to move between images and Esc to close" } });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;

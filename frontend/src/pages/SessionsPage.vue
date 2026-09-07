@@ -3,12 +3,13 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
+import ConversationAttachments from "../components/ConversationAttachments.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
@@ -35,7 +36,6 @@ const pendingDelete = ref<Session>();
 const deleting = ref(false);
 const deleteDialog = ref<HTMLElement>();
 const launchSkill = ref<{ sessionID: string; skillID: string }>();
-const attachmentURLs = ref<Record<string, string>>({});
 const loading = ref(true);
 const sending = ref(false);
 const cancellingMessageID = ref<number>();
@@ -128,7 +128,6 @@ async function open(item: Session) {
   const generation = ++pollGeneration;
   if (pollTimer) clearTimeout(pollTimer);
   responseController?.abort(); stopReveal();
-  clearAttachmentURLs();
   cancellingMessageID.value = undefined;
   keepAtLatest.value = true; showJumpToLatest.value = false;
   selected.value = item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
@@ -136,7 +135,6 @@ async function open(item: Session) {
     const loadedMessages = await api.listSessionMessages(item.id);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
     messages.value = loadedMessages.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
-    void hydrateAttachmentURLs(messages.value.flatMap((message) => message.attachments ?? []));
     await nextTick(); scrollToLatest("auto");
     const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating"));
     if (pending) void streamAssistant(item.id, pending.id, generation);
@@ -172,34 +170,8 @@ async function send(message: ComposerSubmission) {
     const pair = await api.sendSessionMessage(sessionID, message.content, message.attachmentIDs, undefined, message.input);
     if (selected.value?.id !== sessionID || generation !== pollGeneration) return;
     messages.value.push(pair.user_message, pair.assistant_message);
-    void hydrateAttachmentURLs(pair.user_message.attachments ?? []);
     void streamAssistant(sessionID, pair.assistant_message.id, generation);
   } finally { sending.value = false; }
-}
-async function hydrateAttachmentURLs(attachments: Attachment[]) {
-  await Promise.all(attachments.filter((item) => item.image && !attachmentURLs.value[item.id]).map(async (item) => {
-    try { attachmentURLs.value[item.id] = URL.createObjectURL(await api.getAttachmentDownload(item.id)); } catch { /* The download action reports failures on demand. */ }
-  }));
-}
-function clearAttachmentURLs() {
-  for (const url of Object.values(attachmentURLs.value)) URL.revokeObjectURL(url);
-  attachmentURLs.value = {};
-}
-function clearAttachmentURL(id: string) {
-  const url = attachmentURLs.value[id];
-  if (!url) return;
-  URL.revokeObjectURL(url);
-  delete attachmentURLs.value[id];
-}
-async function openAttachment(attachment: Attachment) {
-  try {
-    const url = URL.createObjectURL(await api.getAttachmentDownload(attachment.id));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = attachment.name;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  } catch { error.value = t("errors.generic"); }
 }
 async function downloadSessionArtifact(artifact: Artifact) {
   if (!selected.value || artifact.expired) return;
@@ -234,7 +206,6 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
     const latest = await api.listSessionMessages(sessionID);
     if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
     messages.value = latest.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
-    void hydrateAttachmentURLs(messages.value.flatMap((message) => message.attachments ?? []));
     const message = latest.find((item) => item.id === messageID);
     if (message && (message.state === "queued" || message.state === "generating")) {
       pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 900);
@@ -462,7 +433,7 @@ async function confirmRemove() {
   } catch { error.value = t("errors.generic"); }
   finally { deleting.value = false; }
 }
-onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); clearAttachmentURLs(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
+onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
 </script>
 
 <template>
@@ -513,7 +484,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
               <div v-if="message.role === 'user' && messageSkills(index).length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')"><span v-for="skill in messageSkills(index)" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span></div>
               <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="downloadSessionArtifact" />
-              <div v-if="message.attachments?.length" class="turn-attachments"><button v-for="attachment in message.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name" @error="clearAttachmentURL(attachment.id)"><span v-else class="attachment-file-mark">{{ attachment.image ? 'IMG' : 'FILE' }}</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div>
+              <ConversationAttachments v-if="message.attachments?.length" :attachments="message.attachments" :load-attachment="api.getAttachmentDownload" @error="error = t('errors.generic')" />
               <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
               <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">
                 <details v-for="stage in visibleStages(message)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || message.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, message.artifacts))"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(message.id, stage.position, stage.final_text)">{{ copiedStageKey === `${message.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details>
