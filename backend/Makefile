@@ -36,4 +36,4 @@ verify-generated: generate
 	}
 
 wire:
-	go run github.com/google/wire/cmd/wire@v0.6.0 ./cmd/api ./cmd/worker
+	go run github.com/google/wire/cmd/wire@v0.7.0 ./cmd/api ./cmd/worker
