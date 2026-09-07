@@ -19,6 +19,13 @@ The web authorization flow sent `scopes: [null]` when the server omitted its
 optional scopes field. Enabling a Feishu Connector also stopped in
 `waiting_for_user` instead of opening the OAuth flow.
 
+An existing Session retained the exact Feishu Connector revision from before
+the current Codex Runtime image was published. Its frozen Runtime digest list
+therefore rejected the current image before model execution even though the
+same Definition and bundle had since passed exact-digest Conformance. The
+Session response could only tell the User to visit Connector management and
+did not present an authorization action in the conversation.
+
 ## Changes
 
 - `cbffe60` treats omitted authorization scopes as an empty list.
@@ -40,6 +47,12 @@ optional scopes field. Enabling a Feishu Connector also stopped in
 - `1425e33` refreshes the built-in Feishu profile from trusted package metadata
   during every rebuild so an older persisted profile cannot override the
   current reviewed policy.
+- `2ed11dd` lets a retained Connector snapshot use a current passing
+  Conformance record only when Definition ID, frozen bundle SHA-256, and current
+  Runtime RepoDigest match exactly. It also presents missing Feishu User scopes
+  beside the Session or Run Conversation composer, opens the OAuth flow from
+  that prompt, retains its direct recovery link, and asks the User to reply
+  `已授权` after Feishu confirms completion.
 
 ## Executed validation
 
@@ -48,7 +61,8 @@ optional scopes field. Enabling a Feishu Connector also stopped in
   passed, including permissions, cleanup, cold and Warm mount configuration,
   bootstrap failure, execution failure, cancellation, and failed removal.
 - `make test`, `make build`, `make web-typecheck`, and `make web-build` passed.
-  The frontend suite passed 179 tests in 24 files.
+  The frontend suite passed 180 tests in 24 files, including the conversation
+  authorization prompt, direct-link fallback, and completed-state instruction.
 - A cross-compiled Linux test binary ran on the production Linux + gVisor host:
   all `TestUnixBroker` tests passed, including the real Runtime image's
   `agent-cli` talking to the actual broker on cold startup and two Warm
@@ -70,6 +84,11 @@ optional scopes field. Enabling a Feishu Connector also stopped in
 - Production UI verification as user `wuyuewei` showed the Feishu Connector as
   available, enabled, authorized to the existing account, and offering the
   expand-permissions action.
+- After the conversation recovery deployment, the existing failed Session
+  displayed `飞书 CLI 需要飞书账号授权`, an `打开飞书授权` action, and the instruction
+  to return and reply `已授权`. The action was deliberately not clicked during
+  verification. The production database contained one passing record matching
+  the current Feishu Definition bundle and Codex Runtime RepoDigest exactly.
 
 ## Deployment
 
@@ -79,13 +98,14 @@ Codex Runtime RepoDigest:
 
 `127.0.0.1:5000/agent-platform/codex@sha256:9a18fa516d3044f23b3b2588aff83ec66e24c49f7f47b2c98eb5be2f81bf9097`
 
-Active source: `/opt/agent-platform/src.release-feishu-messaging-20260907`.
+Active source:
+`/opt/agent-platform/src.release-conversation-auth-2ed11dd-20260907`.
 
 Active service images:
 
-- API: `sha256:f97d755973113b899c9e9219966e4ed11ab8eb7249d581b5ac21ce0345a7d69a`
-- Worker: `sha256:a7bf8c583c54b1942e312ebafd2653e1fa0120b2ca34fb287938acdd9d0f1d2e`
-- Web: `/opt/agent-platform/web/releases/feishu-messaging-6f5c9cc-20260907`
+- API: `sha256:0f6c8a12b945022d89a20864521647431b073e06d0ad9191a64a0688609eb16e`
+- Worker: `sha256:d839142443440f6b48540d32bfca0113f9b45c7bb48c656b921b6309c9beceb1`
+- Web: `/opt/agent-platform/web/releases/conversation-auth-2ed11dd-20260907`
 
 The runsc runtime now has `runtimeArgs: ["--host-uds=open"]`. Docker validated
 the configuration before a HUP reload; `create` and `all` were not enabled.
@@ -94,9 +114,10 @@ Only the Stage broker directory is mounted into the model Runtime.
 Previous service images, source, platform configuration, and Docker
 configuration remain available for rollback. Deployment checked that no
 Session or Run was executing before service replacement. API and Worker health
-checks passed. Native Resume remains disabled for the new Codex digest pending
-complete capability conformance; platform message context continues to provide
-Session continuity.
+checks passed, their new logs contained no errors, and the public JavaScript
+asset was byte-for-byte identical to the production build. Native Resume
+remains disabled for the new Codex digest pending complete capability
+conformance; platform message context continues to provide Session continuity.
 
 The current built-in policy exposes:
 
@@ -111,7 +132,8 @@ No Feishu chat lookup or message send was performed during this repair. The
 existing authorization does not yet include all newly reviewed scopes, so the
 user must explicitly complete the Feishu expand-permissions OAuth flow before
 an end-to-end business call can be validated. No group message was sent or
-retried, and no account authorization was disconnected.
+retried, no OAuth action was started during the final UI check, and no account
+authorization was disconnected.
 
 This is targeted Linux/gVisor, Egress Controller, Connector, and web validation.
 It is not a complete `make sandbox-conformance` or
