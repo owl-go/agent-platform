@@ -2,6 +2,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIConnectorHealth, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -28,6 +29,7 @@ const emit = defineEmits<{
 const api = inject(platformApiKey)!;
 const router = useRouter();
 const detailSkill = ref<Skill>();
+const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
 const auth = inject(authContextKey, undefined);
 const { t } = useI18n();
@@ -43,6 +45,7 @@ const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
 const editingCLI = ref<CLIConnectorDefinition>();
 const showCLI = ref(false);
+const showConnectorKind = ref(false);
 const cliForm = ref<CLIConnectorDefinitionInput>(emptyCLIDraft());
 const editingMCP = ref<MCPServer>();
 const showMCP = ref(false);
@@ -51,6 +54,7 @@ const editingSkill = ref<Skill>();
 const showSkill = ref(false);
 const skillForm = ref({ name: "", source: "git" as "git" | "upload", git_url: "", git_ref: "main", archive: "" });
 const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; item: Skill }) & { impact: ResourceDeletionImpact }>();
+const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
 
@@ -75,9 +79,25 @@ function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChang
 async function refresh() {
   try {
     [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value, cliHealth.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([]), refreshCLIHealth()]);
-    await refreshCLIAuthorizations();
+    await Promise.all([refreshCLIAuthorizations(), refreshSkillDocuments()]);
     notifyResources();
   } catch { emit("error"); }
+}
+async function refreshSkillDocuments() {
+  const entries = await Promise.all(skills.value.map(async (item) => {
+    try { return [item.id, (await api.getSkillDocument(item.id)).content] as const; }
+    catch { return [item.id, ""] as const; }
+  }));
+  skillDocuments.value = Object.fromEntries(entries);
+}
+function skillDescription(item: Skill) {
+  const content = skillDocuments.value[item.id] ?? "";
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  const description = frontmatter?.[1].match(/^description:\s*["']?(.+?)["']?\s*$/m)?.[1]?.trim();
+  if (description && description !== ">" && description !== "|") return description;
+  const body = frontmatter ? content.slice(frontmatter[0].length) : content;
+  const paragraph = body.split(/\r?\n\s*\r?\n/).map((value) => value.replace(/^#+\s*/gm, "").replace(/[`*_>[\]()-]/g, "").trim()).find(Boolean);
+  return paragraph || (item.source === "git" ? item.git_url : t("composer.localSkill")) || t("composer.localSkill");
 }
 async function refreshCLIHealth() {
   if (!canManageCLI.value || !api.listCLIConnectorHealth) return [];
@@ -127,6 +147,12 @@ function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   if (enablementFor(item.id)?.state !== "enabled") return;
   emit("update:cliConnectorDefinitionIds", checked ? [...new Set([...props.cliConnectorDefinitionIds, item.id])] : props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
 }
+function openNewConnector() { showConnectorKind.value = true; }
+function chooseConnectorKind(kind: "mcp" | "cli") {
+  showConnectorKind.value = false;
+  if (kind === "mcp") openNewMCP();
+  else if (canManageCLI.value) openNewCLI();
+}
 function openNewCLI() { editingCLI.value = undefined; cliForm.value = emptyCLIDraft(); showCLI.value = true; }
 function openCLI(item: CLIConnectorDefinition) {
   editingCLI.value = item;
@@ -145,6 +171,7 @@ function openCLI(item: CLIConnectorDefinition) {
   showCLI.value = true;
 }
 function installedRecommendedSkill(recommendation: CLIRecommendedSkill) { return skills.value.find((skill) => skill.source === "git" && skill.git_url === recommendation.git_url && skill.git_ref === recommendation.git_ref); }
+function healthFor(definitionID: string) { return cliHealth.value.find((item) => item.definition_id === definitionID); }
 function selectedRecommendedSkill(recommendation: CLIRecommendedSkill) { const installed = installedRecommendedSkill(recommendation); return Boolean(installed && props.skillIds.includes(installed.id)); }
 async function acceptRecommendedSkill(recommendation: CLIRecommendedSkill) {
   try {
@@ -197,7 +224,9 @@ async function saveMCP() {
   } catch { emit("error"); }
 }
 async function removeMCP(item: MCPServer) {
-  try { await api.deleteMCPServer(item.id, pendingDelete.value?.impact.confirmation_token ?? ""); emit("update:mcpServerIds", props.mcpServerIds.filter((id) => id !== item.id)); await refresh(); } catch { emit("error"); }
+  await api.deleteMCPServer(item.id, pendingDelete.value?.impact.confirmation_token ?? "");
+  emit("update:mcpServerIds", props.mcpServerIds.filter((id) => id !== item.id));
+  await refresh();
 }
 async function testMCP(item: MCPServer) {
   try { const updated = await api.testMCPServer(item.id); mcp.value = mcp.value.map((entry) => entry.id === updated.id ? updated : entry); notifyResources(); } catch { emit("error"); }
@@ -227,20 +256,26 @@ async function saveSkill() {
   } catch { emit("error"); }
 }
 async function removeSkill(item: Skill) {
-  try { await api.deleteSkill(item.id, pendingDelete.value?.impact.confirmation_token ?? ""); emit("update:skillIds", props.skillIds.filter((id) => id !== item.id)); await refresh(); } catch { emit("error"); }
+  await api.deleteSkill(item.id, pendingDelete.value?.impact.confirmation_token ?? "");
+  emit("update:skillIds", props.skillIds.filter((id) => id !== item.id));
+  await refresh();
 }
 function toggleSkill(item: Skill, checked: boolean) { emit("update:skillIds", checked ? [...new Set([...props.skillIds, item.id])] : props.skillIds.filter((id) => id !== item.id)); }
 async function confirmRemove() {
-	if (!pendingDelete.value) return;
-	const target = pendingDelete.value;
-	if (target.kind === "mcp") await removeMCP(target.item);
-	else await removeSkill(target.item);
-	pendingDelete.value = undefined;
+  if (!pendingDelete.value || deleteBusy.value) return;
+  const target = pendingDelete.value;
+  deleteBusy.value = true;
+  try {
+    if (target.kind === "mcp") await removeMCP(target.item);
+    else await removeSkill(target.item);
+    pendingDelete.value = undefined;
+  } catch { emit("error"); }
+  finally { deleteBusy.value = false; }
 }
 async function requestDelete(target: { kind: "mcp"; item: MCPServer } | { kind: "skill"; item: Skill }) {
   try {
     const impact = target.kind === "mcp" ? await api.getMCPConnectorDeletionImpact(target.item.id) : await api.getSkillDeletionImpact(target.item.id);
-    pendingDelete.value = { ...target, impact };
+    pendingDelete.value = { ...target, impact: { ...impact, affected_experts: impact.affected_experts ?? [] } };
   } catch { emit("error"); }
 }
 async function fileToBase64(file: File): Promise<string> {
@@ -253,52 +288,74 @@ async function fileToBase64(file: File): Promise<string> {
 <template>
   <div class="extension-manager" :class="{ selectable }">
     <nav class="subtabs" :aria-label="t('resources.title')"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></nav>
-    <div v-if="activeTab === 'mcp'">
-      <div class="section-heading"><strong>MCP</strong><el-button type="primary" class="compact-action" @click="openNewMCP">＋ MCP</el-button></div>
-      <div class="resource-list"><article v-for="item in mcp" :key="item.id" class="el-card"><label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label><span class="resource-mark">MCP</span><div><strong>{{ item.name }}</strong><p>{{ item.transport }} · {{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p></div><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag><el-button circle :aria-label="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)">↻</el-button><el-button circle :aria-label="t('common.edit')" @click="openMCP(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })">×</el-button></article></div>
-      <div class="section-heading"><strong>{{ t('resources.cli') }}</strong><el-button v-if="canManageCLI" @click="openNewCLI">＋ {{ t('resources.cliDefinition') }}</el-button></div>
-      <div v-if="canManageCLI && cliHealth.length" class="connector-health-grid">
-        <article v-for="item in cliHealth" :key="item.definition_id" class="el-card">
-          <strong>{{ item.definition_name }}</strong>
-          <span>{{ t('resources.health.enabled', { count: item.enabled_count ?? 0 }) }}</span>
-          <span>{{ t('resources.health.waiting', { count: item.waiting_for_user_count ?? 0 }) }}</span>
-          <span :class="{ attention: Number(item.attention_authorization_count ?? 0) > 0 }">{{ t('resources.health.authorization', { active: item.active_authorization_count ?? 0, attention: item.attention_authorization_count ?? 0 }) }}</span>
+    <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
+      <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
+      <div class="resource-list extension-catalog-grid connector-catalog-grid">
+        <article v-for="item in mcp" :key="`mcp:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
+          <span class="extension-card-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
+          <div class="extension-card-copy">
+            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div>
+            <p>{{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p>
+          </div>
+          <div class="extension-card-actions">
+            <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
+            <el-button circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
+            <el-button circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
+            <el-button circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
+          </div>
         </article>
-      </div>
-      <div class="resource-list">
-        <article v-for="item in cliDefinitions" :key="item.id" class="el-card">
-          <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
-          <span class="resource-mark">CLI</span>
-          <div><strong>{{ item.name }}</strong><p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p><small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small><section v-if="item.recommended_skills?.length" class="recommended-skill-offers"><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section></div>
-          <el-tag>{{ t(`resources.state.${item.state}`) }}</el-tag>
-          <el-button v-if="canManageCLI && item.mutable" circle :aria-label="t('common.edit')" @click="openCLI(item)">✎</el-button>
-          <el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button>
-          <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
-          <template v-if="enablementFor(item.id)?.state === 'waiting_for_user'"><a :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a></template>
-          <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
-            <el-tag type="success">{{ t('common.enabled') }}</el-tag>
-            <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
-            <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id">
-              <span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span>
-              <el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button>
-            </template>
-            <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'">
-              <a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a>
-              <small>{{ t('resources.authorizationPending') }}</small>
-            </template>
-            <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
-          </template>
-          <el-button v-else-if="item.state === 'available'" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
+        <article v-for="item in cliDefinitions" :key="`cli:${item.id}`" class="el-card extension-catalog-card connector-catalog-card">
+          <span class="extension-card-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
+          <div class="extension-card-copy">
+            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="enablementFor(item.id)?.state === 'enabled'" type="success" size="small">{{ t('common.enabled') }}</el-tag></div>
+            <p>{{ item.npm_package }}@{{ item.npm_version }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p>
+            <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
+            <div v-if="canManageCLI && healthFor(item.id)" class="connector-health-line"><span>{{ t('resources.health.enabled', { count: healthFor(item.id)?.enabled_count ?? 0 }) }}</span><span>{{ t('resources.health.waiting', { count: healthFor(item.id)?.waiting_for_user_count ?? 0 }) }}</span><span :class="{ attention: Number(healthFor(item.id)?.attention_authorization_count ?? 0) > 0 }">{{ t('resources.health.authorization', { active: healthFor(item.id)?.active_authorization_count ?? 0, attention: healthFor(item.id)?.attention_authorization_count ?? 0 }) }}</span></div>
+            <section v-if="item.recommended_skills?.length" class="recommended-skill-offers"><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
+            <div class="connector-account-actions">
+              <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a>
+              <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
+                <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
+                <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id"><span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span><el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button></template>
+                <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
+                <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
+              </template>
+              <el-button v-else-if="item.state === 'available'" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
+            </div>
+          </div>
+          <div class="extension-card-actions">
+            <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
+            <el-button v-if="canManageCLI && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
+            <el-button v-if="canManageCLI && (item.state === 'draft' || item.state === 'failed')" @click="publishCLI(item)">{{ t('resources.publish') }}</el-button>
+            <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
+          </div>
         </article>
+        <div v-if="!mcp.length && !cliDefinitions.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
     </div>
-    <div v-if="activeTab === 'skills'"><el-button type="primary" class="compact-action" @click="openNewSkill">＋ {{ t('composer.skills') }}</el-button><div class="resource-list"><article v-for="item in skills" :key="item.id" class="el-card catalog-activatable skill-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="detailSkill = item" @keydown.enter.self="detailSkill = item" @keydown.space.self.prevent="detailSkill = item"><label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label><span class="resource-mark">{{ item.name.slice(0, 1) }}</span><div class="skill-card-copy"><strong>{{ item.name }}</strong><p>{{ item.git_url || t('composer.localSkill') }}</p></div><el-button class="catalog-launch" type="primary" @click.stop="useSkill(item)">{{ t('composer.useSkill') }}</el-button><el-button circle :aria-label="t('common.edit')" @click.stop="openSkill(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })">×</el-button></article></div></div>
+    <div v-if="activeTab === 'skills'" class="extension-catalog-section">
+      <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button></div>
+      <div class="resource-list extension-catalog-grid skill-catalog-grid">
+        <article v-for="item in skills" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="detailSkill = item" @keydown.enter.self="detailSkill = item" @keydown.space.self.prevent="detailSkill = item">
+          <span class="extension-card-mark skill-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
+          <div class="extension-card-copy skill-card-copy"><strong>{{ item.name }}</strong><p>{{ skillDescription(item) }}</p><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
+          <div class="extension-card-actions">
+            <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
+            <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
+            <el-button circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
+            <el-button circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+          </div>
+        </article>
+        <div v-if="!skills.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+      </div>
+    </div>
   </div>
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
+    <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
     <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t("common.edit") : t("common.new") }} Skill</h2><label>{{ t("common.name") }}<input v-model="skillForm.name" :disabled="Boolean(editingSkill)" required></label><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">Git</option><option value="upload">ZIP</option></select></label><template v-if="skillForm.source === 'git'"><label>Git URL<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/…"></label><label>Git ref<input v-model="skillForm.git_ref" required></label></template><label v-else>ZIP<input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"></label><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
     <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card el-card" @submit.prevent="saveCLI"><h2>{{ t('resources.cliDefinition') }}</h2><label>{{ t('common.name') }}<input v-model="cliForm.name" required></label><label>{{ t('resources.npmPackage') }}<input v-model="cliForm.npm_package" required></label><label>{{ t('resources.exactVersion') }}<input v-model="cliForm.npm_version" required placeholder="1.2.3"></label><label>{{ t('resources.npmIntegrity') }}<input v-model="cliForm.npm_integrity" required></label><label>{{ t('resources.executable') }}<input v-model="cliForm.executable" required></label><label>{{ t('resources.architectures') }}<el-select v-model="cliForm.supported_architectures" multiple><el-option value="linux-amd64" label="Linux AMD64" /><el-option value="linux-arm64" label="Linux ARM64" /></el-select></label><label>{{ t('resources.recommendedSkills') }}<el-select v-model="cliForm.recommended_skill_ids" multiple><el-option v-for="skill in skills" :key="skill.id" :value="skill.id" :label="skill.name" /></el-select></label><section class="cli-capabilities"><div class="section-heading"><strong>{{ t('resources.capabilities') }}</strong><el-button @click="addCLICapability">＋ {{ t('experts.add') }}</el-button></div><article v-for="(capability, index) in cliForm.capabilities" :key="index" class="el-card"><label>{{ t('resources.capabilityId') }}<el-input v-model="capability.id" required /></label><label>{{ t('resources.argvPrefix') }}<el-select v-model="capability.argv_prefix" multiple allow-create filterable default-first-option /></label><label>{{ t('resources.risk') }}<el-select v-model="capability.risk"><el-option value="low" :label="t('resources.lowRisk')" /><el-option value="high" :label="t('resources.highRisk')" /></el-select></label><label>{{ t('resources.identities') }}<el-select v-model="capability.identities" multiple><el-option value="user" :label="t('approvals.user')" /><el-option value="bot" :label="t('approvals.bot')" /></el-select></label><label>{{ t('resources.scopes') }}<el-select v-model="capability.scopes" multiple allow-create filterable default-first-option /></label><label>{{ t('resources.egressHosts') }}<el-select v-model="capability.egress_hosts" multiple allow-create filterable default-first-option /></label><label>{{ t('resources.timeoutSeconds') }}<el-input-number v-model="capability.timeout_seconds" :min="1" :max="900" /></label><el-button type="danger" text :disabled="cliForm.capabilities.length === 1" @click="removeCLICapability(index)">{{ t('common.delete') }}</el-button></article></section><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary">{{ t('common.save') }}</el-button></div></form></div>
   </Teleport>
-  <ConfirmDialog :open="Boolean(pendingDelete)" :title="t('common.delete')" :message="pendingDelete ? pendingDelete.impact.affected_experts.length ? t('resources.deleteAffected', { resource: pendingDelete.item.name, experts: pendingDelete.impact.affected_experts.map((expert) => expert.name).join('、') }) : t('resources.deleteUnaffected', { resource: pendingDelete.item.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger @cancel="pendingDelete = undefined" @confirm="confirmRemove" />
+  <ConfirmDialog :open="Boolean(pendingDelete)" :title="t('common.delete')" :message="pendingDelete ? pendingDelete.impact.affected_experts.length ? t('resources.deleteAffected', { resource: pendingDelete.item.name, experts: pendingDelete.impact.affected_experts.map((expert) => expert.name).join('、') }) : t('resources.deleteUnaffected', { resource: pendingDelete.item.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="deleteBusy" danger @cancel="pendingDelete = undefined" @confirm="confirmRemove" />
 </template>

@@ -33,6 +33,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-mcp"]')!).trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
     await form.findAll("input")[0]!.setValue(saved.name);
     await form.findAll("input")[1]!.setValue(saved.url);
@@ -82,6 +83,46 @@ describe("ExtensionManager", () => {
     wrapper.unmount();
   });
 
+  it("shows the uploaded Skill description from its document", async () => {
+    const saved: Skill = { id: "skill-1", name: "PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
+    const api = {
+      listMCPServers: vi.fn(async () => []),
+      listSkills: vi.fn(async () => [saved]),
+      getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndescription: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
+    } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
+
+    expect(wrapper.text()).toContain("创建、读取并检查 PDF 文档。");
+    wrapper.unmount();
+  });
+
+  it("deletes an unreferenced uploaded Skill when protobuf omits the empty impact list", async () => {
+    const saved: Skill = { id: "skill-1", name: "PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
+    const listSkills = vi.fn().mockResolvedValueOnce([saved]).mockResolvedValue([]);
+    const deleteSkill = vi.fn(async () => undefined);
+    const api = {
+      listMCPServers: vi.fn(async () => []),
+      listSkills,
+      getSkillDeletionImpact: vi.fn(async () => ({ confirmation_token: "confirmation" })),
+      deleteSkill,
+    } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
+    await wrapper.get('button[aria-label="删除"]').trigger("click");
+    await flushPromises();
+
+    const confirm = new DOMWrapper(Array.from(document.body.querySelectorAll("button")).find((button) => button.textContent?.trim() === "删除")!);
+    await confirm.trigger("click");
+    await flushPromises();
+
+    expect(deleteSkill).toHaveBeenCalledWith(saved.id, "confirmation");
+    expect(wrapper.find(".skill-catalog-card").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("lets only an Administrator create definitions while Users can enable available CLI Connectors", async () => {
     const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
     const enableCLIConnector = vi.fn(async () => ({ id: "enable-1", definition_id: definition.id, state: "waiting_for_user" as const, action_url: "https://open.feishu.cn/page/cli", version: 1 }));
@@ -97,12 +138,26 @@ describe("ExtensionManager", () => {
 
     const administrator = mountManager(api, true);
     await flushPromises();
-    expect(administrator.text()).toContain("CLI 连接器定义");
-    await administrator.findAll("button").find((button) => button.text().includes("CLI 连接器定义"))!.trigger("click");
+    expect(administrator.text()).toContain("新建连接器");
+    expect(administrator.findAll(".connector-catalog-card")).toHaveLength(1);
+    await administrator.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     await flushPromises();
     expect(document.body.textContent).toContain("能力策略");
     expect(document.body.textContent).toContain("风险等级");
     administrator.unmount();
+  });
+
+  it("shows MCP and CLI Connectors in one catalog", async () => {
+    const mcp: MCPServer = { id: "mcp-1", name: "行情查询", transport: "streamable_http", url: "https://quotes.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
+    const cli = { id: "cli-1", name: "飞书", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
+    const api = { listMCPServers: vi.fn(async () => [mcp]), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [cli]), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
+    expect(wrapper.text()).not.toContain("第三方 CLI");
+    wrapper.unmount();
   });
 
   it("lets an Administrator correct a mutable CLI Connector definition", async () => {
