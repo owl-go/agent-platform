@@ -678,4 +678,19 @@ describe("ExtensionManager", () => {
     expect(wrapper.text()).toContain("已授权：吴粤威");
     wrapper.unmount();
   });
+
+  it("offers permission expansion when an active Feishu authorization lacks reviewed capability scopes", async () => {
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", authentication_driver: "feishu", capabilities: [{ id: "im_chat_search", identities: ["user" as const], scopes: ["im:chat:read"] }] };
+    const enablement = { id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 2 };
+    const authorization = { id: "auth-1", enablement_id: enablement.id, identity: "user" as const, external_identity_id: "ou_user", external_display_name: "吴粤威", scopes: ["offline_access"], state: "active" as const, version: 1 };
+    const beginCLIConnectorAuthorization = vi.fn(async () => ({ id: "flow-1", enablement_id: enablement.id, state: "waiting_for_user" as const, action_url: "https://accounts.feishu.cn/authorize" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [enablement]), listCLIConnectorAuthorizations: vi.fn(async () => [authorization]), beginCLIConnectorAuthorization } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+
+    await wrapper.findAll("button").find((button) => button.text() === "扩展飞书权限")!.trigger("click");
+    await flushPromises();
+    expect(beginCLIConnectorAuthorization).toHaveBeenCalledWith(enablement.id, "user", ["im:chat:read"]);
+    wrapper.unmount();
+  });
 });

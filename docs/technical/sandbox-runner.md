@@ -24,4 +24,4 @@ CLI broker 的真实 socket 保留在当前 Stage 的 `scratch/broker/cli-broker
 
 部署 CLI broker 时，Docker 的 `runsc` 配置必须使用 `--host-uds=open` 以连接已挂载的宿主 Unix socket；不使用允许创建宿主 socket 的 `create` 或 `all`。模型 Runtime 仅显式挂载本 Stage 的 broker socket 目录，不挂载 Docker socket 或其他宿主控制 socket。指定 `CLI_BROKER_TEST_RUNTIME_IMAGE=<RepoDigest>` 后，在 Linux Worker 执行 `go -C backend test ./internal/cliconnector -run TestUnixBrokerRuntimeClientLongPath -v` 验证镜像内 `agent-cli`、长路径、冷启动及 Warm Container 复用；未提供环境变量时此集成测试会 Skip，不代表通过。
 
-额外指定 `CLI_CONNECTOR_TEST_NETWORK=<受管测试网络>` 后，`TestDockerConnectorWaitsForPolicyBeforeCommand` 在真实 Docker + `runsc` 上验证 IP 分配、等待进程不含凭证、策略回调前不执行命令、拒绝时不执行命令，以及成功和拒绝后的 Container 清理。该测试使用记录式 Gate，不替代真实出网规则的端到端验收。
+额外指定 `CLI_CONNECTOR_TEST_NETWORK=<受管测试网络>` 后，`TestDockerConnectorWaitsForPolicyBeforeCommand` 在真实 Docker + `runsc` 上验证 IP 分配、等待进程不含凭证、策略回调前不执行命令、拒绝时不执行命令，以及成功和拒绝后的 Container 清理。再提供 `CLI_CONNECTOR_TEST_EGRESS_CIDR`、`CLI_CONNECTOR_TEST_RESOLVERS` 和可选的 `CLI_CONNECTOR_TEST_EGRESS_SOCKET`，可分别覆盖真实 iptables Gate 或 Worker 到宿主 Egress Controller 的 Unix 协议。

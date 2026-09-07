@@ -233,6 +233,13 @@ function userScopes(item: CLIConnectorDefinition) {
   // Protobuf JSON omits empty repeated fields, including scopes on no-scope capabilities.
   return [...new Set((item.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
 }
+function hasActiveCLIAuthorization(item: CLIConnectorDefinition) {
+  return authorizationsFor(item.id).some((authorization) => authorization.state === "active");
+}
+function needsCLIReauthorization(item: CLIConnectorDefinition) {
+  const required = userScopes(item);
+  return required.length > 0 && !authorizationsFor(item.id).some((authorization) => authorization.state === "active" && required.every((scope) => (authorization.scopes ?? []).includes(scope)));
+}
 async function refreshCLIAuthorizations() {
   const enabled = cliEnablements.value.filter((item) => item.state === "enabled");
   const entries = await Promise.all(enabled.map(async (item) => [item.id, await (api.listCLIConnectorAuthorizations?.(item.id) ?? Promise.resolve([]))] as const));
@@ -240,15 +247,15 @@ async function refreshCLIAuthorizations() {
 }
 async function authorizeCLIAccount(item: CLIConnectorDefinition) {
   if (cliAuthorizationBusy.value.includes(item.id) || !enablementFor(item.id)) return;
-  await beginCLIAccountAuthorization(item, openCLIWindow());
+  await beginCLIAccountAuthorization(item, openCLIWindow(), userScopes(item));
 }
-async function beginCLIAccountAuthorization(item: CLIConnectorDefinition, popup: Window | null) {
+async function beginCLIAccountAuthorization(item: CLIConnectorDefinition, popup: Window | null, scopes: string[] = []) {
   operationError.value = undefined;
   const enablement = enablementFor(item.id);
   if (!enablement || disposed || cliAuthorizationBusy.value.includes(item.id)) { closeBlankCLIWindow(popup); return; }
   cliAuthorizationBusy.value.push(item.id);
   try {
-    const flow = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item));
+    const flow = await api.beginCLIConnectorAuthorization(enablement.id, "user", scopes);
     if (disposed) { closeBlankCLIWindow(popup); return; }
     cliAuthorizationFlow.value = flow;
     navigateCLIWindow(popup, flow.action_url);
@@ -472,7 +479,7 @@ async function fileToBase64(file: File): Promise<string> {
                 <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
                 <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id"><span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span><el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button></template>
                 <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
-                <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
+                <el-button v-else-if="!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item)" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t(hasActiveCLIAuthorization(item) ? 'resources.expandAuthorization' : 'resources.authorizeAccount') }}</el-button>
               </template>
               <el-button v-else-if="item.state === 'available'" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
             </div>

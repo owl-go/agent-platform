@@ -48,7 +48,7 @@ func TestDockerConnectorWaitsForPolicyBeforeCommand(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, err := process.Run(ctx, ProcessRequest{ConnectorID: "connector-1", Executable: "fixture", Arguments: []string{"status"}, Environment: map[string]string{"TOKEN": "diagnostic-canary"}, EgressHosts: []string{"example.com"}})
+			result, err := process.Run(ctx, ProcessRequest{ConnectorID: "connector-1", Executable: "fixture", Arguments: []string{"status"}, Environment: map[string]string{"TOKEN": "diagnostic-canary"}, EgressHosts: []string{"open.feishu.cn"}})
 			if !gate.called {
 				t.Fatalf("policy gate was not reached: %v", err)
 			}
@@ -75,7 +75,7 @@ type integrationPolicyGate struct {
 	reject, called             bool
 }
 
-func (gate *integrationPolicyGate) Execute(ctx context.Context, container string, _ []string, run func(context.Context) (Result, error)) (Result, error) {
+func (gate *integrationPolicyGate) Execute(ctx context.Context, container string, hosts []string, run func(context.Context) (Result, error)) (Result, error) {
 	gate.called, gate.container = true, container
 	output, err := exec.CommandContext(ctx, "docker", "inspect", "--format", "{{(index .NetworkSettings.Networks \""+gate.network+"\").IPAddress}}", container).Output()
 	if _, parseErr := netip.ParseAddr(strings.TrimSpace(string(output))); err != nil || parseErr != nil {
@@ -90,6 +90,25 @@ func (gate *integrationPolicyGate) Execute(ctx context.Context, container string
 	}
 	if gate.reject {
 		return Result{}, errors.New("test policy rejection")
+	}
+	if subnet := os.Getenv("CLI_CONNECTOR_TEST_EGRESS_CIDR"); subnet != "" {
+		resolvers := strings.Fields(os.Getenv("CLI_CONNECTOR_TEST_RESOLVERS"))
+		if socket := os.Getenv("CLI_CONNECTOR_TEST_EGRESS_SOCKET"); socket != "" {
+			actual, err := NewUnixEgressGate(UnixEgressConfig{SocketPath: socket, EgressNetwork: gate.network, NetworkCIDR: subnet, ResolverAddresses: resolvers}, nil)
+			if err != nil {
+				return Result{}, err
+			}
+			return actual.Execute(ctx, container, hosts, run)
+		}
+		resolver, err := NewPublicDNSResolver(resolvers)
+		if err != nil {
+			return Result{}, err
+		}
+		actual, err := NewIPTablesEgressGate(IPTablesEgressConfig{EgressNetwork: gate.network, NetworkCIDR: subnet, ResolverAddresses: resolvers, Resolve: resolver})
+		if err != nil {
+			return Result{}, err
+		}
+		return actual.Execute(ctx, container, hosts, run)
 	}
 	return run(ctx)
 }
