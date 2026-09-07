@@ -49,7 +49,7 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     env:
-      AGENT_PLATFORM_BLACKBOX_DATABASE_DSN: postgres://agent_platform:agent-platform-test@127.0.0.1:5432/agent_platform_test?sslmode=disable
+      WORKSPACE_TEST_POSTGRES_DSN: postgres://agent_platform:agent-platform-test@127.0.0.1:5432/agent_platform_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -58,7 +58,7 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: go test ./...
         working-directory: backend
-      - run: go test -race ./internal/service/api ./internal/server ./internal/architecture ./internal/biz/workflow ./internal/data/workflow/gormtx ./tests/blackbox
+      - run: go test -race ./internal/service/workspace ./internal/server ./internal/architecture ./internal/biz/workspace/... ./internal/data/workspace/gormrepo
         working-directory: backend
       - run: go vet ./...
         working-directory: backend
