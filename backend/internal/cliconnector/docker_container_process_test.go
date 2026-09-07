@@ -48,9 +48,12 @@ func TestDockerContainerProcessStartsOnlyAfterNetworkPolicyAndCleansUp(t *testin
 			createEnvironment = cloneEnvironment(environment)
 		}
 		return nil, nil
-	}, func(_ context.Context, arguments []string) (Result, error) {
+	}, func(_ context.Context, environment map[string]string, arguments []string) (Result, error) {
 		start = append([]string(nil), arguments...)
-		events = append(events, "start")
+		events = append(events, "exec")
+		if environment["TOKEN"] != "secret" {
+			t.Fatal("exec credentials were not provided")
+		}
 		return Result{Stdout: []byte("ok")}, nil
 	}))
 	if err != nil {
@@ -63,12 +66,12 @@ func TestDockerContainerProcessStartsOnlyAfterNetworkPolicyAndCleansUp(t *testin
 	if err != nil || string(result.Stdout) != "ok" || gate.runs != 1 {
 		t.Fatalf("result=%q gate runs=%d err=%v", result.Stdout, gate.runs, err)
 	}
-	if len(commands) != 3 || commands[0][1] != "create" || !reflect.DeepEqual(commands[1], []string{"docker", "network", "connect", "agent-public-egress", "agent-cli-test"}) || !reflect.DeepEqual(commands[2], []string{"docker", "rm", "--force", "agent-cli-test"}) {
+	if len(commands) != 3 || commands[0][1] != "create" || !reflect.DeepEqual(commands[1], []string{"docker", "start", "agent-cli-test"}) || !reflect.DeepEqual(commands[2], []string{"docker", "rm", "--force", "agent-cli-test"}) {
 		t.Fatalf("commands = %#v", commands)
 	}
 	create := commands[0]
 	joined := strings.Join(create, " ")
-	for _, required := range []string{"--network none", "--runtime runsc", "--read-only", "--cap-drop ALL", "no-new-privileges", "src=/runtime/connectors/connector-1,dst=/opt/agent-platform/connector,readonly=true", "--entrypoint /usr/local/bin/runtime-entrypoint", "--env TOKEN", "/opt/agent-platform/connector/node_modules/.bin/tool identity show"} {
+	for _, required := range []string{"--network agent-public-egress", "--runtime runsc", "--read-only", "--cap-drop ALL", "no-new-privileges", "src=/runtime/connectors/connector-1,dst=/opt/agent-platform/connector,readonly=true", "--entrypoint /bin/sleep"} {
 		if !strings.Contains(joined, required) {
 			t.Fatalf("create command missing %q: %#v", required, create)
 		}
@@ -76,13 +79,13 @@ func TestDockerContainerProcessStartsOnlyAfterNetworkPolicyAndCleansUp(t *testin
 	if strings.Contains(joined, "secret") {
 		t.Fatal("secret value was exposed in Docker arguments")
 	}
-	if createEnvironment["TOKEN"] != "secret" {
+	if len(createEnvironment) != 0 || strings.Contains(joined, "--env") {
 		t.Fatalf("create environment = %#v", createEnvironment)
 	}
-	if !reflect.DeepEqual(start, []string{"docker", "start", "--attach", "--interactive", "agent-cli-test"}) || gate.container != "agent-cli-test" || !reflect.DeepEqual(gate.hosts, []string{"open.feishu.cn"}) {
+	if !reflect.DeepEqual(start, []string{"docker", "exec", "--interactive", "--env", "TOKEN", "agent-cli-test", "/usr/local/bin/runtime-entrypoint", "/opt/agent-platform/connector/node_modules/.bin/tool", "identity", "show"}) || gate.container != "agent-cli-test" || !reflect.DeepEqual(gate.hosts, []string{"open.feishu.cn"}) {
 		t.Fatalf("start=%#v container=%q hosts=%#v", start, gate.container, gate.hosts)
 	}
-	wantEvents := []string{"create", "network", "policy-installed", "start", "rm", "policy-removed"}
+	wantEvents := []string{"create", "start", "policy-installed", "exec", "rm", "policy-removed"}
 	if !reflect.DeepEqual(events, wantEvents) {
 		t.Fatalf("events = %#v, want %#v", events, wantEvents)
 	}
@@ -95,7 +98,7 @@ func TestDockerContainerProcessCleansUpWhenEgressGateRejects(t *testing.T) {
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(_ context.Context, _ map[string]string, command string, arguments ...string) ([]byte, error) {
 		commands = append(commands, append([]string{command}, arguments...))
 		return nil, nil
-	}, func(context.Context, []string) (Result, error) {
+	}, func(context.Context, map[string]string, []string) (Result, error) {
 		started = true
 		return Result{}, nil
 	}))
@@ -114,7 +117,7 @@ func TestDockerContainerProcessDoesNotCleanupContainerCreateItDidNotOwn(t *testi
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(_ context.Context, _ map[string]string, command string, arguments ...string) ([]byte, error) {
 		commands = append(commands, append([]string{command}, arguments...))
 		return []byte("create failed"), errors.New("exit 1")
-	}, func(context.Context, []string) (Result, error) { return Result{}, nil }))
+	}, func(context.Context, map[string]string, []string) (Result, error) { return Result{}, nil }))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,12 +127,59 @@ func TestDockerContainerProcessDoesNotCleanupContainerCreateItDidNotOwn(t *testi
 	}
 }
 
+func TestDockerContainerProcessCleansUpBootstrapAndExecutionFailures(t *testing.T) {
+	for _, stage := range []string{"bootstrap", "exec", "cancel", "remove"} {
+		t.Run(stage, func(t *testing.T) {
+			gate := &recordingEgressGate{}
+			removed, executed := false, false
+			cause := errors.New("injected failure")
+			process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(_ context.Context, environment map[string]string, _ string, arguments ...string) ([]byte, error) {
+				if len(environment) != 0 {
+					t.Fatal("bootstrap received credentials")
+				}
+				if arguments[0] == "start" && stage == "bootstrap" {
+					return nil, cause
+				}
+				if arguments[0] == "rm" {
+					removed = true
+					if stage == "remove" {
+						return nil, cause
+					}
+				}
+				return nil, nil
+			}, func(context.Context, map[string]string, []string) (Result, error) {
+				executed = true
+				if stage == "cancel" {
+					return Result{}, context.Canceled
+				}
+				if stage == "exec" {
+					return Result{}, cause
+				}
+				return Result{}, nil
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = process.Run(context.Background(), ProcessRequest{ConnectorID: "connector-1", Executable: "tool", Arguments: []string{"status"}, Environment: map[string]string{"TOKEN": "secret"}, EgressHosts: []string{"example.com"}})
+			if err == nil || !removed || executed != (stage != "bootstrap") {
+				t.Fatalf("err=%v removed=%v executed=%v", err, removed, executed)
+			}
+			if stage == "cancel" && !errors.Is(err, context.Canceled) {
+				t.Fatalf("lost cancellation cause: %v", err)
+			}
+			if stage == "remove" && !errors.Is(err, ErrEgressSubjectActive) {
+				t.Fatalf("unsafe policy release: %v", err)
+			}
+		})
+	}
+}
+
 func TestDockerContainerProcessRejectsRuntimeSocketEnvironmentOverride(t *testing.T) {
 	gate := &recordingEgressGate{}
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(context.Context, map[string]string, string, ...string) ([]byte, error) {
 		t.Fatal("Docker must not run")
 		return nil, nil
-	}, func(context.Context, []string) (Result, error) { return Result{}, nil }))
+	}, func(context.Context, map[string]string, []string) (Result, error) { return Result{}, nil }))
 	if err != nil {
 		t.Fatal(err)
 	}

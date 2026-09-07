@@ -32,7 +32,7 @@ type EgressGate interface {
 }
 
 type DockerCommandRunner func(context.Context, map[string]string, string, ...string) ([]byte, error)
-type DockerStartRunner func(context.Context, []string) (Result, error)
+type DockerStartRunner func(context.Context, map[string]string, []string) (Result, error)
 type ContainerNameFactory func() (string, error)
 
 type DockerContainerProcessConfig struct {
@@ -55,7 +55,8 @@ type DockerContainerProcessConfig struct {
 }
 
 // DockerContainerProcess runs one reviewed command in a dedicated container.
-// The container remains stopped until its capability-specific Egress policy is installed.
+// A credential-free bootstrap acquires its network address before policy installation.
+// Only the policy-protected exec receives credentials and runs Connector code.
 type DockerContainerProcess struct {
 	config DockerContainerProcessConfig
 }
@@ -92,7 +93,7 @@ func (process *DockerContainerProcess) Run(ctx context.Context, request ProcessR
 	}
 
 	create := process.createCommand(name, request)
-	if output, err := process.config.Run(ctx, request.Environment, create[0], create[1:]...); err != nil {
+	if output, err := process.config.Run(ctx, nil, create[0], create[1:]...); err != nil {
 		return Result{}, fmt.Errorf("create CLI Connector container: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	removed := false
@@ -107,11 +108,11 @@ func (process *DockerContainerProcess) Run(ctx context.Context, request ProcessR
 		}
 	}()
 
-	if output, err := process.config.Run(ctx, nil, process.config.DockerCommand, "network", "connect", process.config.EgressNetwork, name); err != nil {
-		return Result{}, fmt.Errorf("connect CLI Connector Egress network: %w: %s", err, strings.TrimSpace(string(output)))
+	if output, err := process.config.Run(ctx, nil, process.config.DockerCommand, "start", name); err != nil {
+		return Result{}, fmt.Errorf("start CLI Connector bootstrap: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return process.config.Egress.Execute(ctx, name, append([]string(nil), request.EgressHosts...), func(executionCtx context.Context) (Result, error) {
-		result, startErr := process.config.Start(executionCtx, []string{process.config.DockerCommand, "start", "--attach", "--interactive", name})
+		result, startErr := process.config.Start(executionCtx, request.Environment, process.execCommand(name, request))
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(executionCtx), 15*time.Second)
 		defer cancel()
 		removeErr := process.remove(cleanupCtx, name)
@@ -174,13 +175,12 @@ func validateProcessRequest(request ProcessRequest) error {
 
 func (process *DockerContainerProcess) createCommand(name string, request ProcessRequest) []string {
 	bundle := filepath.Join(process.config.BundleDirectory, request.ConnectorID)
-	executable := filepath.Join(connectorContainerRoot, "node_modules", ".bin", request.Executable)
 	arguments := []string{
 		process.config.DockerCommand, "create", "--name", name,
 		"--runtime", process.config.Runtime,
 		"--user", fmt.Sprintf("%d:%d", process.config.UID, process.config.GID),
 		"--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-		"--network", "none",
+		"--network", process.config.EgressNetwork,
 		"--memory", strconv.FormatInt(process.config.Limits.MemoryBytes, 10),
 		"--pids-limit", strconv.FormatInt(process.config.Limits.PIDs, 10),
 		"--cpus", strconv.FormatFloat(process.config.Limits.CPUs, 'f', -1, 64),
@@ -189,12 +189,17 @@ func (process *DockerContainerProcess) createCommand(name string, request Proces
 		"--mount", "type=bind,src=" + process.config.ResolverConfigFile + ",dst=/etc/resolv.conf,readonly=true",
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=" + strconv.FormatInt(process.config.Limits.TempBytes, 10),
 		"--workdir", process.config.ContainerWorkspace,
-		"--entrypoint", "/usr/local/bin/runtime-entrypoint",
+		"--entrypoint", "/bin/sleep",
 		"--label", "agent-platform.managed=true",
 		"--label", "agent-platform.run-id=" + process.config.RunID,
 		"--label", "agent-platform.role=cli-connector",
 		"--init",
 	}
+	return append(arguments, process.config.Image, "900")
+}
+
+func (process *DockerContainerProcess) execCommand(name string, request ProcessRequest) []string {
+	arguments := []string{process.config.DockerCommand, "exec", "--interactive"}
 	names := make([]string, 0, len(request.Environment))
 	for name := range request.Environment {
 		names = append(names, name)
@@ -203,7 +208,8 @@ func (process *DockerContainerProcess) createCommand(name string, request Proces
 	for _, name := range names {
 		arguments = append(arguments, "--env", name)
 	}
-	arguments = append(arguments, process.config.Image, executable)
+	executable := filepath.Join(connectorContainerRoot, "node_modules", ".bin", request.Executable)
+	arguments = append(arguments, name, "/usr/local/bin/runtime-entrypoint", executable)
 	return append(arguments, request.Arguments...)
 }
 
@@ -213,11 +219,12 @@ func runDockerCommand(ctx context.Context, environment map[string]string, comman
 	return process.CombinedOutput()
 }
 
-func runDockerStart(ctx context.Context, arguments []string) (Result, error) {
+func runDockerStart(ctx context.Context, environment map[string]string, arguments []string) (Result, error) {
 	if len(arguments) == 0 {
 		return Result{}, errors.New("Docker command is required")
 	}
 	command := exec.CommandContext(ctx, arguments[0], arguments[1:]...)
+	command.Env = processEnvironment(os.Environ(), environment)
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr
 	err := command.Run()
