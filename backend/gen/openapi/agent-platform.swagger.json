@@ -74,6 +74,41 @@
       }
     },
     "/api/v1/admin/connectors/cli/{definition_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteCLIConnectorDefinition",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
       "patch": {
         "operationId": "AgentWorkspaceService_UpdateCLIConnectorDefinition",
         "responses": {

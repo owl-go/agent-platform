@@ -46,6 +46,10 @@ const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
 const editingCLI = ref<CLIConnectorDefinition>();
+const deletingCLI = ref<CLIConnectorDefinition>();
+const cliDeleteBusy = ref(false);
+const cliSaveBusy = ref(false);
+const cliEnableBusy = ref<string[]>([]);
 const showCLI = ref(false);
 const showConnectorKind = ref(false);
 const cliForm = ref<CLIDraft>(emptyCLIDraft());
@@ -116,7 +120,26 @@ function openSkillDetails(item: Skill) {
   if (props.selectable) detailSkill.value = item;
   else void router.push({ name: "skill-detail", params: { skillId: item.id }, state: { skillReturnTo: router.currentRoute.value.fullPath } });
 }
-async function enableCLI(item: CLIConnectorDefinition) { try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; } catch { emit("error"); } }
+async function enableCLI(item: CLIConnectorDefinition) {
+  if (canManageCLI.value || cliEnableBusy.value.includes(item.id)) return;
+  cliEnableBusy.value.push(item.id);
+  try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; }
+  catch { emit("error"); }
+  finally { cliEnableBusy.value = cliEnableBusy.value.filter((id) => id !== item.id); }
+}
+async function removeCLI() {
+  const item = deletingCLI.value;
+  if (!item || cliDeleteBusy.value) return;
+  cliDeleteBusy.value = true;
+  try {
+    await api.deleteCLIConnectorDefinition(item.id, item.version);
+    cliDefinitions.value = cliDefinitions.value.filter((entry) => entry.id !== item.id);
+    cliEnablements.value = cliEnablements.value.filter((entry) => entry.definition_id !== item.id);
+    emit("update:cliConnectorDefinitionIds", props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
+    deletingCLI.value = undefined;
+  } catch { emit("error"); }
+  finally { cliDeleteBusy.value = false; }
+}
 async function completePendingCLIEnablements() {
   const pending = cliEnablements.value.filter((item) => item.state === "waiting_for_user");
   try {
@@ -200,15 +223,19 @@ async function selectCLIArchive(event: Event) {
   cliForm.value.archive = await fileToBase64(file);
 }
 async function saveCLI() {
+  if (cliSaveBusy.value) return;
+  cliSaveBusy.value = true;
   try {
     const npm = cliForm.value.installation_type === "npm" ? parseNPMInstall(cliForm.value.npm_install) : { npm_package: "", npm_version: "" };
     if (!npm) { emit("error"); return; }
     const input: CLIConnectorDefinitionInput = { name: cliForm.value.name, icon: cliForm.value.icon, description: cliForm.value.description, installation_type: cliForm.value.installation_type, ...npm, archive: cliForm.value.installation_type === "upload" ? cliForm.value.archive : undefined };
     const saved = editingCLI.value ? await api.updateCLIConnectorDefinition(editingCLI.value.id, input, editingCLI.value.version) : await api.createCLIConnectorDefinition(input);
+    editingCLI.value = saved;
     await api.publishCLIConnectorDefinition(saved.id, saved.version);
     showCLI.value = false;
     cliDefinitions.value = await api.listCLIConnectorDefinitions();
   } catch { emit("error"); }
+  finally { cliSaveBusy.value = false; }
 }
 async function disableCLI(item: CLIConnectorDefinition) { try { await api.disableCLIConnectorDefinition(item.id, item.version); cliDefinitions.value = await api.listCLIConnectorDefinitions(); cliEnablements.value = await api.listCLIConnectorEnablements(); } catch { emit("error"); } }
 async function refreshCLI() { try { [cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]); } catch { /* Preserve the last usable projection while polling. */ } }
@@ -335,7 +362,7 @@ async function fileToBase64(file: File): Promise<string> {
             <small>{{ item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
             <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
             <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
-            <div class="connector-account-actions" @click.stop>
+            <div v-if="!canManageCLI" class="connector-account-actions" @click.stop>
               <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a>
               <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
                 <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
@@ -343,13 +370,14 @@ async function fileToBase64(file: File): Promise<string> {
                 <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
                 <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
               </template>
-              <el-button v-else-if="item.state === 'available'" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
+              <el-button v-else-if="item.state === 'available'" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
             </div>
           </div>
           <div class="extension-card-actions" @click.stop>
             <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
             <el-button v-if="canManageCLI && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
             <el-button v-if="canManageCLI && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
+            <el-button v-if="canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
           </div>
         </article>
         <div v-if="!section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
@@ -385,7 +413,8 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
     <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><p class="muted">{{ t('resources.skillDisplayNameHint') }}</p><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>
-    <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><label>{{ t('resources.icon') }}<span class="cli-icon-field"><ProfileIcon :icon="cliForm.icon" /><select v-model="cliForm.icon"><option value="terminal">⌘ Terminal</option><option value="code">‹› Code</option><option value="sparkles">✦ Sparkles</option><option value="compass">⌖ Compass</option></select></span></label><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmInstall') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary">{{ t('resources.install') }}</el-button></div></form></div>
+    <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><label>{{ t('resources.icon') }}<span class="cli-icon-field"><ProfileIcon :icon="cliForm.icon" /><select v-model="cliForm.icon"><option value="terminal">⌘ Terminal</option><option value="code">‹› Code</option><option value="sparkles">✦ Sparkles</option><option value="compass">⌖ Compass</option></select></span></label><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmInstall') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="cliSaveBusy">{{ t('resources.install') }}</el-button></div></form></div>
   </Teleport>
   <ConfirmDialog :open="Boolean(pendingDelete)" :title="t('common.delete')" :message="pendingDelete ? pendingDelete.impact.affected_experts.length ? t('resources.deleteAffected', { resource: pendingDelete.item.name, experts: pendingDelete.impact.affected_experts.map((expert) => expert.name).join('、') }) : t('resources.deleteUnaffected', { resource: pendingDelete.item.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="deleteBusy" danger @cancel="pendingDelete = undefined" @confirm="confirmRemove" />
+  <ConfirmDialog :open="Boolean(deletingCLI)" :title="t('common.delete')" :message="deletingCLI ? t('resources.deleteCLI', { resource: deletingCLI.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="cliDeleteBusy" danger @cancel="deletingCLI = undefined" @confirm="removeCLI" />
 </template>

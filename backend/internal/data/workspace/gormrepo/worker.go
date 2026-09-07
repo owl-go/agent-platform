@@ -133,7 +133,10 @@ func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job a
 		capabilities, _ := json.Marshal(build.Capabilities)
 		architectures, _ := json.Marshal(build.SupportedArchitectures)
 		for _, digest := range build.RuntimeDigests {
-			if err := tx.Table("cli_connector_conformance").Create(map[string]any{"definition_id": job.CLIConnector.ID, "bundle_sha256": build.BundleSHA256, "runtime_repo_digest": digest, "environment": []byte(`{}`), "tested_at": time.Now().UTC(), "passed": true}).Error; err != nil {
+			if err := tx.Table("cli_connector_conformance").Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "definition_id"}, {Name: "bundle_sha256"}, {Name: "runtime_repo_digest"}},
+				DoUpdates: clause.AssignmentColumns([]string{"environment", "tested_at", "passed"}),
+			}).Create(map[string]any{"definition_id": job.CLIConnector.ID, "bundle_sha256": build.BundleSHA256, "runtime_repo_digest": digest, "environment": []byte(`{}`), "tested_at": time.Now().UTC(), "passed": true}).Error; err != nil {
 				return err
 			}
 		}

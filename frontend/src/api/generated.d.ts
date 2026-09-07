@@ -46,7 +46,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["AgentWorkspaceService_DeleteCLIConnectorDefinition"];
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateCLIConnectorDefinition"];
@@ -2293,6 +2293,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListCLIConnectorHealthResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteCLIConnectorDefinition: {
+        parameters: {
+            query?: {
+                expected_version?: number;
+            };
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
                 };
             };
             /** @description An unexpected error response. */

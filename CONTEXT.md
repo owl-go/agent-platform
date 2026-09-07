@@ -216,6 +216,7 @@ _Avoid_: Extension, Skill, Runtime Engine
 
 **CLI Connector Definition**:
 An Administrator-owned, platform-wide definition of one Third-party CLI's icon, name, capability description, immutable installation source, derived executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
+Administrator deletion retains a disabled historical record, removes catalog visibility and mutable Expert bindings, and revokes User access without changing frozen snapshots.
 _Avoid_: CLI authorization, MCP Connector, arbitrary package command
 
 **CLI Connector Authorization**:

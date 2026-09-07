@@ -58,6 +58,8 @@ Derived Expertise Tag 后台任务与 Session、Run 共用执行阶段的版本�
 
 ## 数据库
 
+CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_cli_connector_draft_authentication.sql` 仅在非 `available` 状态允许空值，Builder 完成后必须写入受支持的 Driver。重复验证同一 Bundle/Runtime 时更新原 Conformance 结果，目录只投影当前 Bundle 的证据。`000030_cli_connector_deletion.sql` 引入受限的软删除及仅针对未删除 Definition 的唯一索引。管理员删除在一个事务中停用 Definition 和 Enablement、清理临时授权与账号 Token、解除所有 Expert 的可变绑定；历史 Snapshot、Artifact 与 User 的 Feishu Application 保留。重新安装后启用可复用原 Application，但已断开的账号需要重新授权。
+
 当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构，后续 Migration 删除模型类型字段，`000014_global_model_catalog.sql` 再把已有连接与模型目录提升为全局可读资源并保留原凭证加密作用域。Provider Model 优先来自供应商 `/models`，失败或不支持时使用平台维护的厂商默认列表，Administrator 也可显式补充。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。

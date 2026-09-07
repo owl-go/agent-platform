@@ -168,6 +168,7 @@ export interface PlatformApi {
   updateCLIConnectorDefinition(id: string, input: CLIConnectorDefinitionInput, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   publishCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   disableCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
+  deleteCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<void>;
   enableCLIConnector(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   completeCLIConnectorEnablement(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   listCLIConnectorEnablements(signal?: AbortSignal): Promise<CLIConnectorEnablement[]>;
@@ -405,6 +406,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },
     publishCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/publish`, json("POST", { expected_version: version }, signal)); },
     disableCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
+    async deleteCLIConnectorDefinition(id, version, signal) { await call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}?expected_version=${version}`, { method: "DELETE", signal }); },
     enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
     completeCLIConnectorEnablement(id, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(id)}/complete`, json("POST", {}, signal)); },
     async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },

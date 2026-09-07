@@ -20,7 +20,39 @@ import (
 type cliCatalogRepository struct {
 	workspaceapplication.Repository
 	cliConnectorRepository
-	items []cliconnector.Definition
+	items          []cliconnector.Definition
+	deletedID      string
+	deletedVersion int64
+}
+
+func (repository *cliCatalogRepository) DeleteCLIConnectorDefinition(_ context.Context, id string, version int64) error {
+	repository.deletedID, repository.deletedVersion = id, version
+	return nil
+}
+
+func TestCLIConnectorDeletionRequiresAdministratorAndVersion(t *testing.T) {
+	repository := &cliCatalogRepository{}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	user := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "user"})
+	admin := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "admin", Administrator: true})
+	request := &workspacev1.DeleteCLIConnectorDefinitionRequest{DefinitionId: "definition-1", ExpectedVersion: 3}
+	if _, err := service.DeleteCLIConnectorDefinition(user, request); kratoserrors.Code(err) != http.StatusForbidden {
+		t.Fatalf("user deletion = %v", err)
+	}
+	if repository.deletedID != "" {
+		t.Fatal("unauthorized deletion reached repository")
+	}
+	if _, err := service.DeleteCLIConnectorDefinition(admin, &workspacev1.DeleteCLIConnectorDefinitionRequest{DefinitionId: request.DefinitionId}); kratoserrors.Code(err) != http.StatusUnprocessableEntity {
+		t.Fatalf("unversioned deletion = %v", err)
+	}
+	response, err := service.DeleteCLIConnectorDefinition(admin, request)
+	if err != nil || !response.Deleted || repository.deletedID != request.DefinitionId || repository.deletedVersion != 3 {
+		t.Fatalf("administrator deletion failed: %v", err)
+	}
 }
 
 func (repository *cliCatalogRepository) ListCLIConnectorDefinitions(context.Context, bool) ([]cliconnector.Definition, error) {

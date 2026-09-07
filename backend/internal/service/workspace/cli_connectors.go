@@ -27,6 +27,7 @@ type cliConnectorRepository interface {
 	UpdateCLIConnectorDefinition(context.Context, string, cliconnector.Definition, int64) (cliconnector.Definition, error)
 	PublishCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
 	DisableCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
+	DeleteCLIConnectorDefinition(context.Context, string, int64) error
 	GetAvailableCLIConnectorDefinition(context.Context, string) (cliconnector.Definition, error)
 	GetCLIConnectorEnablement(context.Context, string, string) (cliconnector.Enablement, error)
 	EnableCLIConnector(context.Context, string, string) (cliconnector.Enablement, error)
@@ -175,6 +176,23 @@ func (service *Service) DisableCLIConnectorDefinition(ctx context.Context, reque
 	return cliDefinitionResponse(item, false), nil
 }
 
+func (service *Service) DeleteCLIConnectorDefinition(ctx context.Context, request *workspacev1.DeleteCLIConnectorDefinitionRequest) (*workspacev1.DeleteResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	if request.ExpectedVersion < 1 {
+		return nil, publicError(workspacedomain.ErrInvalid)
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := repository.DeleteCLIConnectorDefinition(ctx, request.DefinitionId, request.ExpectedVersion); err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
 func (service *Service) EnableCLIConnector(ctx context.Context, request *workspacev1.EnableCLIConnectorRequest) (*workspacev1.CLIConnectorEnablement, error) {
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
@@ -204,6 +222,11 @@ func (service *Service) EnableCLIConnector(ctx context.Context, request *workspa
 		}
 	} else if !errors.Is(existingErr, workspacedomain.ErrNotFound) {
 		return nil, publicError(existingErr)
+	}
+	if existing, err := repository.EnableCLIConnector(ctx, principal.UserID, definition.ID); err == nil {
+		return cliEnablementResponse(existing), nil
+	} else if !errors.Is(err, workspacedomain.ErrNotFound) {
+		return nil, publicError(err)
 	}
 	registration, err := service.feishu.Begin(ctx)
 	if err != nil {

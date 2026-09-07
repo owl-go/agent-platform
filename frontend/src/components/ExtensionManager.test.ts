@@ -5,6 +5,7 @@ import { platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type 
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
+import ConfirmDialog from "./ConfirmDialog.vue";
 
 const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30T00:00:00Z", version: 1 };
 
@@ -168,6 +169,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
     expect(administrator.text()).toContain("新建连接器");
     expect(administrator.findAll(".connector-catalog-card")).toHaveLength(1);
+    expect(administrator.findAll("button").some((button) => button.text() === "启用")).toBe(false);
     await administrator.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     await flushPromises();
@@ -175,6 +177,35 @@ describe("ExtensionManager", () => {
     expect(document.body.textContent).not.toContain("npm 完整性");
     expect(document.body.textContent).not.toContain("可执行命令");
     administrator.unmount();
+  });
+
+  it("confirms administrator deletion and keeps the Connector when deletion fails", async () => {
+    const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", authentication_driver: "feishu", capabilities: [], state: "disabled", mutable: true, version: 7 };
+    const deleteCLIConnectorDefinition = vi.fn().mockRejectedValueOnce(new Error("conflict")).mockResolvedValueOnce(undefined);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), deleteCLIConnectorDefinition } as unknown as PlatformApi;
+    const user = mountManager(api);
+    await flushPromises();
+    expect(user.find('button[aria-label="删除"]').exists()).toBe(false);
+    user.unmount();
+    const admin = mountManager(api, true);
+    await flushPromises();
+    await admin.get('.connector-catalog-card button[aria-label="删除"]').trigger("click");
+    const dialog = admin.findAllComponents(ConfirmDialog).find((entry) => entry.props("open"))!;
+    expect(dialog.props("message")).toContain("所有用户");
+    expect(deleteCLIConnectorDefinition).not.toHaveBeenCalled();
+    dialog.vm.$emit("cancel");
+    await flushPromises();
+    expect(deleteCLIConnectorDefinition).not.toHaveBeenCalled();
+    await admin.get('.connector-catalog-card button[aria-label="删除"]').trigger("click");
+    dialog.vm.$emit("confirm");
+    await flushPromises();
+    expect(admin.emitted("error")).toHaveLength(1);
+    expect(admin.findAll(".connector-catalog-card")).toHaveLength(1);
+    dialog.vm.$emit("confirm");
+    await flushPromises();
+    expect(deleteCLIConnectorDefinition).toHaveBeenLastCalledWith(definition.id, 7);
+    expect(admin.findAll(".connector-catalog-card")).toHaveLength(0);
+    admin.unmount();
   });
 
   it("shows MCP and CLI Connectors in one catalog", async () => {
