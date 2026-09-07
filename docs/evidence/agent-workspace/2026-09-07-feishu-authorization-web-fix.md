@@ -40,3 +40,30 @@ account authorization; token issuance and Connector commands were not verified.
 This Web-only change did not run backend, Runtime, Linux sandbox, or remote
 storage conformance gates. No backend service, database, or Feishu application
 credential was changed by the deployment.
+
+## Automatic opening follow-up
+
+Source commit `6d50e2f` opens a tab during the Enable click, navigates it to Feishu
+registration, and starts account authorization automatically when registration
+completes. A retained application enters account authorization directly. Manual
+authorization also opens its URL without requiring a second platform click.
+Continuation links remain available if the browser blocks or detaches the tab.
+
+The full frontend suite passed 178 tests across 24 files. After correcting a test
+fixture type, the targeted component suite passed all 43 tests and both
+`make web-typecheck` and `make web-build` passed. Coverage includes tab creation
+before asynchronous requests, tab reuse, retained applications, blocked and closed
+tabs, continuation links, slow polling, duplicate clicks, failure cleanup, and
+Connectors without authentication.
+
+`scripts/deploy-web.sh` activated `feishu-auto-authorization-6d50e2f-20260907` with
+the existing public OIDC configuration. Public HTML serves
+`/assets/index-DFpGgliw.js`. The preceding `feishu-authorization-cbffe60-20260907`
+release remains available. An independent authenticated browser page loaded the
+Connector catalog and preserved the existing enabled Connector and active account
+authorization. Opening that catalog did not initiate another authorization.
+
+The automatic first-registration sequence is covered by component tests; it was
+not replayed with a new production account. Existing account authorization was
+not disconnected for testing. No external consent or Connector command was
+performed during this follow-up verification.
