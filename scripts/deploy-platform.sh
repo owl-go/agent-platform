@@ -260,7 +260,9 @@ if updated != 1:
     raise SystemExit("CLI Builder image_digest could not be updated")
 temporary = path.with_name(path.name + ".next")
 temporary.write_text("".join(lines))
-os.chmod(temporary, path.stat().st_mode)
+original = path.stat()
+os.chown(temporary, original.st_uid, original.st_gid)
+os.chmod(temporary, original.st_mode)
 os.replace(temporary, path)
 PY
 compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
