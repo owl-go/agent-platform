@@ -86,13 +86,20 @@ func (repository *Repository) ListCLIConnectorHealth(ctx context.Context, now ti
 }
 
 func (repository *Repository) CreateCLIConnectorDefinition(ctx context.Context, administratorID string, input cliconnector.Definition) (cliconnector.Definition, error) {
-	if err := input.Validate(); err != nil {
+	if err := input.ValidateDraft(); err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: %v", domain.ErrInvalid, err)
 	}
 	capabilities, _ := json.Marshal(input.Capabilities)
 	architectures, _ := json.Marshal(input.SupportedArchitectures)
 	recommendedSkills, _ := json.Marshal(input.RecommendedSkills)
-	row := cliConnectorDefinitionRecord{ID: uuid.NewString(), Name: input.Name, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: []byte(`[]`), RecommendedSkills: recommendedSkills, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
+	id := input.ID
+	if id == "" {
+		id = uuid.NewString()
+	}
+	row := cliConnectorDefinitionRecord{ID: id, Name: input.Name, Icon: input.Icon, Description: input.Description, InstallationType: input.InstallationType, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: []byte(`[]`), RecommendedSkills: recommendedSkills, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
+	if input.SourceObjectKey != "" {
+		row.SourceObjectKey, row.SourceSHA256 = &input.SourceObjectKey, &input.SourceSHA256
+	}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("create CLI Connector Definition: %w", err)
 	}
@@ -100,13 +107,19 @@ func (repository *Repository) CreateCLIConnectorDefinition(ctx context.Context, 
 }
 
 func (repository *Repository) UpdateCLIConnectorDefinition(ctx context.Context, id string, input cliconnector.Definition, expectedVersion int64) (cliconnector.Definition, error) {
-	if err := input.Validate(); err != nil {
+	if err := input.ValidateDraft(); err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: %v", domain.ErrInvalid, err)
 	}
 	capabilities, _ := json.Marshal(input.Capabilities)
 	architectures, _ := json.Marshal(input.SupportedArchitectures)
 	recommendedSkills, _ := json.Marshal(input.RecommendedSkills)
-	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed"}).Updates(map[string]any{"name": input.Name, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skills": recommendedSkills, "state": "draft", "failure_reason": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	updates := map[string]any{"name": input.Name, "icon": input.Icon, "description": input.Description, "installation_type": input.InstallationType, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skills": recommendedSkills, "state": "draft", "failure_reason": nil, "bundle_object_key": nil, "bundle_sha256": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+	if input.SourceObjectKey != "" {
+		updates["source_object_key"], updates["source_sha256"] = input.SourceObjectKey, input.SourceSHA256
+	} else {
+		updates["source_object_key"], updates["source_sha256"] = nil, nil
+	}
+	result := repository.db.WithContext(ctx).Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state IN ?", id, expectedVersion, []string{"draft", "failed"}).Updates(updates)
 	if result.Error != nil {
 		return cliconnector.Definition{}, result.Error
 	}
@@ -133,7 +146,7 @@ func (repository *Repository) PublishCLIConnectorDefinition(ctx context.Context,
 		if err != nil {
 			return err
 		}
-		if err := definition.Validate(); err != nil {
+		if err := definition.ValidateDraft(); err != nil {
 			return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
 		}
 		result := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ?", id, expectedVersion).Updates(map[string]any{"state": string(cliconnector.StateBuilding), "failure_reason": nil, "bundle_object_key": nil, "bundle_sha256": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
@@ -567,7 +580,13 @@ func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definit
 	if err := json.Unmarshal(row.RecommendedSkills, &recommendedSkills); err != nil {
 		return cliconnector.Definition{}, err
 	}
-	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkills: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
+	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Icon: row.Icon, Description: row.Description, InstallationType: row.InstallationType, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkills: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
+	if row.SourceObjectKey != nil {
+		item.SourceObjectKey = *row.SourceObjectKey
+	}
+	if row.SourceSHA256 != nil {
+		item.SourceSHA256 = *row.SourceSHA256
+	}
 	if row.BundleObjectKey != nil {
 		item.BundleObjectKey = *row.BundleObjectKey
 	}

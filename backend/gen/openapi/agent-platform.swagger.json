@@ -3817,6 +3817,15 @@
             "type": "object",
             "$ref": "#/definitions/v1CLIRecommendedSkill"
           }
+        },
+        "icon": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "installation_type": {
+          "type": "string"
         }
       }
     },
@@ -3866,6 +3875,19 @@
             "type": "object",
             "$ref": "#/definitions/v1CLIRecommendedSkill"
           }
+        },
+        "icon": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "installation_type": {
+          "type": "string"
+        },
+        "archive": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },

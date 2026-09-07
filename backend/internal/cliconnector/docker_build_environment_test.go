@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +26,10 @@ func TestDockerBuildEnvironmentAppliesIsolatedPolicy(t *testing.T) {
 		if err := os.WriteFile(host+"/integrity.txt", []byte("sha512-value\n"), 0600); err != nil {
 			return err
 		}
-		return os.WriteFile(host+"/bins.json", []byte(`{"tool":"bin/tool.js"}`), 0600)
+		if err := os.WriteFile(host+"/bins.json", []byte(`{"tool":"bin/tool.js"}`), 0600); err != nil {
+			return err
+		}
+		return os.WriteFile(host+"/manifest.json", []byte(`{"name":"tool","version":"1.2.3","bin":{"tool":"bin/tool.js"}}`), 0600)
 	}
 	config := DockerBuildConfig{DockerCommand: "docker", Runtime: "runsc", ImageDigest: "registry.example/cli-builder@sha256:" + strings.Repeat("a", 64), EgressNetwork: "npm-egress", ResolverConfig: "/etc/resolv.conf", TempRoot: tempRoot, UID: os.Getuid(), GID: os.Getgid(), Timeout: time.Minute}
 	environment, err := NewDockerBuildEnvironment(config, run)
@@ -39,7 +43,7 @@ func TestDockerBuildEnvironmentAppliesIsolatedPolicy(t *testing.T) {
 	if string(artifact.BundleBytes) != "bundle" || artifact.Bins["tool"] != "bin/tool.js" {
 		t.Fatalf("artifact = %#v", artifact)
 	}
-	for _, required := range []string{"--runtime", "runsc", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--network", "npm-egress"} {
+	for _, required := range []string{"--runtime", "runsc", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--network", "npm-egress", "/work:rw,nosuid,nodev,uid=" + strconv.Itoa(os.Getuid()) + ",gid=" + strconv.Itoa(os.Getgid()) + ",mode=0700,size=536870912"} {
 		if !slices.Contains(arguments, required) {
 			t.Fatalf("missing %q in %v", required, arguments)
 		}

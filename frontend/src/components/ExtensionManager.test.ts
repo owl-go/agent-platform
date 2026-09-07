@@ -143,8 +143,9 @@ describe("ExtensionManager", () => {
     await administrator.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     await flushPromises();
-    expect(document.body.textContent).toContain("能力策略");
-    expect(document.body.textContent).toContain("风险等级");
+    for (const field of ["图标", "名称", "能力描述", "安装方式", "npm 安装", "上传 ZIP 包"]) expect(document.body.textContent).toContain(field);
+    expect(document.body.textContent).not.toContain("npm 完整性");
+    expect(document.body.textContent).not.toContain("可执行命令");
     administrator.unmount();
   });
 
@@ -160,10 +161,61 @@ describe("ExtensionManager", () => {
     wrapper.unmount();
   });
 
+  it("installs an npm CLI from only its icon, name, capability description, and source", async () => {
+    const draft = { id: "cli-1", name: "Example CLI", icon: "code", description: "读取示例服务数据", installation_type: "npm" as const, npm_package: "example-cli", npm_version: "1.2.3", npm_integrity: "", executable: "", authentication_driver: "none" as const, capabilities: [], supported_architectures: [], recommended_skills: [], recommended_skill_ids: [], state: "draft" as const, mutable: true, version: 1, conformance_runtime_digests: [] };
+    const createCLIConnectorDefinition = vi.fn(async () => draft);
+    const publishCLIConnectorDefinition = vi.fn(async () => ({ ...draft, state: "building" as const, version: 2 }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listCLIConnectorHealth: vi.fn(async () => []), createCLIConnectorDefinition, publishCLIConnectorDefinition } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
+    await form.findAll("select")[0]!.setValue("code");
+    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get("textarea").setValue(draft.description);
+    await form.findAll("input")[1]!.setValue("npm install example-cli@1.2.3");
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(createCLIConnectorDefinition).toHaveBeenCalledWith({ name: draft.name, icon: "code", description: draft.description, installation_type: "npm", npm_package: "example-cli", npm_version: "1.2.3", archive: undefined });
+    expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(draft.id, draft.version);
+    wrapper.unmount();
+  });
+
+  it("uploads a ZIP package through the same minimal CLI installer", async () => {
+    const draft = { id: "cli-zip", name: "Local CLI", icon: "terminal", description: "处理本地数据", installation_type: "upload" as const, npm_package: "", npm_version: "", npm_integrity: "", executable: "", authentication_driver: "none" as const, capabilities: [], supported_architectures: [], recommended_skills: [], recommended_skill_ids: [], state: "draft" as const, mutable: true, version: 1, conformance_runtime_digests: [] };
+    const createCLIConnectorDefinition = vi.fn(async () => draft);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listCLIConnectorHealth: vi.fn(async () => []), createCLIConnectorDefinition, publishCLIConnectorDefinition: vi.fn(async () => ({ ...draft, state: "building" as const, version: 2 })) } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
+    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get("textarea").setValue(draft.description);
+    await form.findAll("select")[1]!.setValue("upload");
+    await flushPromises();
+    const file = new File(["zip-content"], "connector.zip", { type: "application/zip" });
+    Object.defineProperty(file, "arrayBuffer", { value: vi.fn(async () => new TextEncoder().encode("zip-content").buffer) });
+    const input = form.get('input[type="file"]');
+    Object.defineProperty(input.element, "files", { value: [file] });
+    await input.trigger("change");
+    await flushPromises();
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(createCLIConnectorDefinition).toHaveBeenCalledWith(expect.objectContaining({ name: draft.name, description: draft.description, installation_type: "upload", npm_package: "", npm_version: "", archive: btoa("zip-content") }));
+    wrapper.unmount();
+  });
+
   it("lets an Administrator correct a mutable CLI Connector definition", async () => {
     const definition = {
       id: "cli-1",
       name: "Example CLI",
+      icon: "terminal",
+      description: "读取示例服务数据",
+      installation_type: "npm" as const,
       npm_package: "example-cli",
       npm_version: "1.0.0",
       npm_integrity: "sha512-old",
@@ -178,6 +230,7 @@ describe("ExtensionManager", () => {
       version: 3,
     };
     const updateCLIConnectorDefinition = vi.fn(async (_id: string, input: CLIConnectorDefinitionInput) => ({ ...definition, ...input, version: 4 }));
+    const publishCLIConnectorDefinition = vi.fn(async () => ({ ...definition, version: 5, state: "building" as const }));
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
@@ -185,6 +238,7 @@ describe("ExtensionManager", () => {
       listCLIConnectorEnablements: vi.fn(async () => []),
       listCLIConnectorHealth: vi.fn(async () => [{ definition_id: definition.id, definition_name: definition.name, definition_state: definition.state, enablement_count: 4, enabled_count: 3, active_authorization_count: 2, attention_authorization_count: 1 }]),
       updateCLIConnectorDefinition,
+      publishCLIConnectorDefinition,
     } as unknown as PlatformApi;
     const wrapper = mountManager(api, true);
     await flushPromises();
@@ -194,12 +248,13 @@ describe("ExtensionManager", () => {
 
     await wrapper.get('button[aria-label="编辑"]').trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli");
-    await form.findAll("input")[2]!.setValue("1.0.1");
+    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli@1.0.0");
+    await form.findAll("input")[1]!.setValue("example-cli@1.0.1");
     await form.trigger("submit");
     await flushPromises();
 
-    expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, expect.objectContaining({ npm_version: "1.0.1" }), definition.version);
+    expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, { name: definition.name, icon: "terminal", description: "读取示例服务数据", installation_type: "npm", npm_package: "example-cli", npm_version: "1.0.1", archive: undefined }, definition.version);
+    expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, 4);
     wrapper.unmount();
   });
 

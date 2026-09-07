@@ -2,7 +2,8 @@ FROM public.ecr.aws/docker/library/node:22.22.0-bookworm-slim@sha256:dd9d21971ec
 
 RUN apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && install -d -m 0700 -o 65532 -g 65532 /work
 
 COPY --chmod=0555 deploy/runtimes/cli-builder/build-cli-bundle.mjs /usr/local/bin/build-cli-bundle.mjs
 

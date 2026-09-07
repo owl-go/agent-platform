@@ -10129,6 +10129,10 @@ type CLIConnectorDefinitionInput struct {
 	// Deprecated: Marked as deprecated in workspace/v1/workspace.proto.
 	RecommendedSkillIds []string               `protobuf:"bytes,9,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
 	RecommendedSkills   []*CLIRecommendedSkill `protobuf:"bytes,10,rep,name=recommended_skills,json=recommendedSkills,proto3" json:"recommended_skills,omitempty"`
+	Icon                string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
+	Description         string                 `protobuf:"bytes,12,opt,name=description,proto3" json:"description,omitempty"`
+	InstallationType    string                 `protobuf:"bytes,13,opt,name=installation_type,json=installationType,proto3" json:"installation_type,omitempty"`
+	Archive             []byte                 `protobuf:"bytes,14,opt,name=archive,proto3" json:"archive,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -10234,6 +10238,34 @@ func (x *CLIConnectorDefinitionInput) GetRecommendedSkills() []*CLIRecommendedSk
 	return nil
 }
 
+func (x *CLIConnectorDefinitionInput) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetInstallationType() string {
+	if x != nil {
+		return x.InstallationType
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetArchive() []byte {
+	if x != nil {
+		return x.Archive
+	}
+	return nil
+}
+
 type CLIConnectorDefinition struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -10254,6 +10286,9 @@ type CLIConnectorDefinition struct {
 	RecommendedSkillIds       []string               `protobuf:"bytes,15,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
 	ConformanceRuntimeDigests []string               `protobuf:"bytes,16,rep,name=conformance_runtime_digests,json=conformanceRuntimeDigests,proto3" json:"conformance_runtime_digests,omitempty"`
 	RecommendedSkills         []*CLIRecommendedSkill `protobuf:"bytes,17,rep,name=recommended_skills,json=recommendedSkills,proto3" json:"recommended_skills,omitempty"`
+	Icon                      string                 `protobuf:"bytes,18,opt,name=icon,proto3" json:"icon,omitempty"`
+	Description               string                 `protobuf:"bytes,19,opt,name=description,proto3" json:"description,omitempty"`
+	InstallationType          string                 `protobuf:"bytes,20,opt,name=installation_type,json=installationType,proto3" json:"installation_type,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -10406,6 +10441,27 @@ func (x *CLIConnectorDefinition) GetRecommendedSkills() []*CLIRecommendedSkill {
 		return x.RecommendedSkills
 	}
 	return nil
+}
+
+func (x *CLIConnectorDefinition) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinition) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinition) GetInstallationType() string {
+	if x != nil {
+		return x.InstallationType
+	}
+	return ""
 }
 
 type ListCLIConnectorDefinitionsRequest struct {
@@ -13843,7 +13899,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13CLIRecommendedSkill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n" +
 	"\agit_url\x18\x02 \x01(\tR\x06gitUrl\x12\x17\n" +
-	"\agit_ref\x18\x03 \x01(\tR\x06gitRef\"\xf1\x03\n" +
+	"\agit_ref\x18\x03 \x01(\tR\x06gitRef\"\xee\x04\n" +
 	"\x1bCLIConnectorDefinitionInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vnpm_package\x18\x02 \x01(\tR\n" +
@@ -13859,7 +13915,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x17supported_architectures\x18\b \x03(\tR\x16supportedArchitectures\x126\n" +
 	"\x15recommended_skill_ids\x18\t \x03(\tB\x02\x18\x01R\x13recommendedSkillIds\x12P\n" +
 	"\x12recommended_skills\x18\n" +
-	" \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\"\x81\x06\n" +
+	" \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\x12\x12\n" +
+	"\x04icon\x18\v \x01(\tR\x04icon\x12 \n" +
+	"\vdescription\x18\f \x01(\tR\vdescription\x12+\n" +
+	"\x11installation_type\x18\r \x01(\tR\x10installationType\x12\x18\n" +
+	"\aarchive\x18\x0e \x01(\fR\aarchive\"\xe4\x06\n" +
 	"\x16CLIConnectorDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -13882,7 +13942,10 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x17supported_architectures\x18\x0e \x03(\tR\x16supportedArchitectures\x126\n" +
 	"\x15recommended_skill_ids\x18\x0f \x03(\tB\x02\x18\x01R\x13recommendedSkillIds\x12>\n" +
 	"\x1bconformance_runtime_digests\x18\x10 \x03(\tR\x19conformanceRuntimeDigests\x12P\n" +
-	"\x12recommended_skills\x18\x11 \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkillsB\x11\n" +
+	"\x12recommended_skills\x18\x11 \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\x12\x12\n" +
+	"\x04icon\x18\x12 \x01(\tR\x04icon\x12 \n" +
+	"\vdescription\x18\x13 \x01(\tR\vdescription\x12+\n" +
+	"\x11installation_type\x18\x14 \x01(\tR\x10installationTypeB\x11\n" +
 	"\x0f_failure_reasonB\x10\n" +
 	"\x0e_bundle_sha256\"$\n" +
 	"\"ListCLIConnectorDefinitionsRequest\"a\n" +

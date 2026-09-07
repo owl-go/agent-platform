@@ -354,8 +354,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .approval-card div { display: grid; gap: 4px; min-width: 0; }
 .approval-card p, .approval-card small { margin: 0; }
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cli-capabilities { display: grid; gap: 12px; margin-top: 8px; }
-.cli-capabilities article { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; }
 .resource-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .resource-toolbar .compact-action.el-button { display: inline-flex; gap: 6px; margin: 0; }
 .resource-toolbar .compact-action svg { width: 16px; height: 16px; }
@@ -364,6 +362,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .resource-list .extension-catalog-card:hover { border-color: #cfd8d0; box-shadow: 0 10px 28px rgba(30,48,39,.07); transform: translateY(-1px); }
 .extension-card-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #e7eee8; color: var(--green); font: 750 .78rem/1 ui-monospace,monospace; }
 .extension-card-mark.skill-mark { border-radius: 50%; background: #eee9ff; color: #7354d8; }
+.connector-card-icon { width: 42px; height: 42px; border-radius: 12px; }
 .extension-card-copy { min-width: 0; display: grid; align-content: start; gap: 5px; }
 .extension-card-copy > strong,.extension-card-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .86rem; }
 .extension-card-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
@@ -387,6 +386,9 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .connector-kind-options button:disabled { cursor: not-allowed; opacity: .48; }
 .connector-kind-options strong { font-size: .92rem; }
 .connector-kind-options span { color: var(--muted); font-size: .72rem; line-height: 1.6; }
+.cli-install-card { width: min(560px,calc(100vw - 40px)); }
+.cli-icon-field { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 10px; }
+.cli-install-card label > small { color: var(--muted); font-size: .68rem; line-height: 1.5; }
 .recommended-skill-offers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
 .recommended-skill-offers > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 8px; background: #f2f5f1; }
 .recommended-skill-offers > span.warning { background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
@@ -395,7 +397,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
   .approval-inbox { margin: 8px 12px 0; }
   .approval-card { grid-template-columns: 1fr 1fr; }
   .approval-card div { grid-column: 1 / -1; }
-  .cli-capabilities article { grid-template-columns: 1fr; }
 }
 @media (max-width: 980px) { .extension-catalog-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {

@@ -1371,6 +1371,9 @@ export interface components {
             recommended_skill_ids?: string[];
             conformance_runtime_digests?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1383,6 +1386,11 @@ export interface components {
             supported_architectures?: string[];
             recommended_skill_ids?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
+            /** Format: byte */
+            archive?: string;
         };
         v1CLIConnectorEnablement: {
             id?: string;

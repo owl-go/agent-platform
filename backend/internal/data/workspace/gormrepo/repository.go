@@ -163,6 +163,11 @@ func (expertTeamRecord) TableName() string { return "expert_teams" }
 type cliConnectorDefinitionRecord struct {
 	ID                     string    `gorm:"column:id"`
 	Name                   string    `gorm:"column:name"`
+	Icon                   string    `gorm:"column:icon"`
+	Description            string    `gorm:"column:description"`
+	InstallationType       string    `gorm:"column:installation_type"`
+	SourceObjectKey        *string   `gorm:"column:source_object_key"`
+	SourceSHA256           *string   `gorm:"column:source_sha256"`
 	NPMPackage             string    `gorm:"column:npm_package"`
 	NPMVersion             string    `gorm:"column:npm_version"`
 	NPMIntegrity           string    `gorm:"column:npm_integrity"`

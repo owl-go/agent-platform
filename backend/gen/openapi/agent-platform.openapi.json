@@ -4814,6 +4814,15 @@
             "items": {
               "$ref": "#/components/schemas/v1CLIRecommendedSkill"
             }
+          },
+          "icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "installation_type": {
+            "type": "string"
           }
         }
       },
@@ -4861,6 +4870,19 @@
             "items": {
               "$ref": "#/components/schemas/v1CLIRecommendedSkill"
             }
+          },
+          "icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "installation_type": {
+            "type": "string"
+          },
+          "archive": {
+            "type": "string",
+            "format": "byte"
           }
         }
       },

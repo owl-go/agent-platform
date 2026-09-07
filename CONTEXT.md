@@ -211,7 +211,7 @@ A selectable integration through which a Session response or Run accesses an ext
 _Avoid_: Extension, Skill, Runtime Engine
 
 **CLI Connector Definition**:
-An Administrator-owned, platform-wide definition of one Third-party CLI's package, executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
+An Administrator-owned, platform-wide definition of one Third-party CLI's icon, name, capability description, immutable installation source, derived executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
 _Avoid_: CLI authorization, MCP Connector, arbitrary package command
 
 **CLI Connector Authorization**:
@@ -231,7 +231,7 @@ A User-owned Connector reached through Streamable HTTP or started as a fixed-ver
 _Avoid_: API Endpoint, Skill, Third-party CLI
 
 **Third-party CLI**:
-An Administrator-created Connector installed from a fixed-version package, such as an npm package distributed through `npx`, and exposed as a direct command inside an isolated Runtime environment without using the MCP protocol. Availability is restricted to Runtime image Digests with the required conformance evidence.
+An Administrator-created Connector installed from an exact npm package or a validated ZIP package and exposed as a direct command inside an isolated Runtime environment without using the MCP protocol. Availability is restricted to Runtime image Digests with the required conformance evidence.
 _Avoid_: MCP Connector, arbitrary host command, Runtime Engine
 
 **Feishu CLI Application**:

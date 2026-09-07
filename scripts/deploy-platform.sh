@@ -157,7 +157,7 @@ release_dir=$2
 backup_dir=$3
 env_file=$4
 config_file=$5
-for command_name in curl df docker rsync tar; do
+for command_name in curl df docker python3 rsync tar; do
   command -v "$command_name" >/dev/null
 done
 docker compose version >/dev/null
@@ -205,15 +205,64 @@ rsync --archive --checksum \
   --exclude='coverage/' \
   "$repo_root/" "$deploy_host:$release_dir/"
 
-stage "Build service images"
-ssh "$deploy_host" bash -s -- "$release_dir" "$remote_env_file" "$remote_config_file" <<'REMOTE_BUILD'
+stage "Build CLI Builder and service images"
+ssh "$deploy_host" bash -s -- "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" <<'REMOTE_BUILD'
 set -euo pipefail
 release_dir=$1
-env_file=$2
-config_file=$3
+release_id=$2
+env_file=$3
+config_file=$4
 cd "$release_dir"
 test -s backend/go.mod
 test -s frontend/package.json
+builder_reference=$(python3 - "$config_file" <<'PY'
+import pathlib, sys
+lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
+inside = False
+for line in lines:
+    stripped = line.strip()
+    if stripped == "cli_builder:":
+        inside = True
+        continue
+    if inside and stripped.startswith("image_digest:"):
+        print(stripped.split(":", 1)[1].strip().strip('"'))
+        break
+else:
+    raise SystemExit("CLI Builder image_digest was not found")
+PY
+)
+builder_repository=${builder_reference%@sha256:*}
+test -n "$builder_repository"
+test "$builder_repository" != "$builder_reference"
+builder_tag="$builder_repository:$release_id"
+docker build --pull --tag "$builder_tag" --file deploy/runtimes/cli-builder/Dockerfile .
+docker push "$builder_tag"
+builder_digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$builder_tag" | awk -v prefix="$builder_repository@" 'index($0, prefix) == 1 { print; exit }')
+test -n "$builder_digest"
+python3 - "$config_file" "$builder_digest" <<'PY'
+import os, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+digest = sys.argv[2]
+lines = path.read_text().splitlines(keepends=True)
+inside = False
+updated = 0
+for index, line in enumerate(lines):
+    stripped = line.strip()
+    if stripped == "cli_builder:":
+        inside = True
+        continue
+    if inside and stripped.startswith("image_digest:"):
+        indent = line[:len(line) - len(line.lstrip())]
+        lines[index] = f'{indent}image_digest: "{digest}"\n'
+        updated += 1
+        break
+if updated != 1:
+    raise SystemExit("CLI Builder image_digest could not be updated")
+temporary = path.with_name(path.name + ".next")
+temporary.write_text("".join(lines))
+os.chmod(temporary, path.stat().st_mode)
+os.replace(temporary, path)
+PY
 compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" config --quiet
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" build api worker egress-controller
