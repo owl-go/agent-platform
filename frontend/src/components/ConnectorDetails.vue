@@ -34,7 +34,7 @@ function edit() {
     <template v-else-if="cli">
       <div class="catalog-detail-intro">
         <ProfileIcon :icon="cli.icon || 'terminal'" />
-        <div><el-tag size="small">{{ t(`resources.state.${cli.state}`) }}</el-tag><p>{{ cli.description || t('resources.noCapabilityDescription') }}</p></div>
+        <div><el-tag size="small">{{ t(`resources.state.${cli.state}`) }}</el-tag><p>{{ cli.description || (cli.npm_package === '@larksuite/cli' ? t('resources.feishuCapability') : t('resources.noCapabilityDescription')) }}</p></div>
       </div>
       <dl class="connector-detail-fields">
         <div><dt>{{ t('resources.connectorType') }}</dt><dd>{{ t('resources.cliConnector') }}</dd></div>

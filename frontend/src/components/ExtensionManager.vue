@@ -172,7 +172,7 @@ function openCLI(item: CLIConnectorDefinition) {
   cliForm.value = {
     name: item.name,
     icon: item.icon || "terminal",
-    description: item.description || "",
+    description: cliDescription(item),
     installation_type: item.installation_type || "npm",
     npm_install: item.installation_type === "upload" ? "" : `${item.npm_package}@${item.npm_version}`,
     archive: "",
