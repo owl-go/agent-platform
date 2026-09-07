@@ -126,3 +126,37 @@ func TestParserDoesNotReportOmittedUsage(t *testing.T) {
 		t.Fatal("omitted usage was reported as measured zero")
 	}
 }
+
+func TestParserReturnsStderrDiagnosticWhenCodexDoesNotProduceAnAnswer(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	diagnostic := strings.Repeat("verbose details ", 400) + "failed to write presentation: permission denied"
+	if _, err := parser.Parse(processharness.StreamStderr, []byte(diagnostic)); err != nil {
+		t.Fatal(err)
+	}
+
+	result := parser.Result()
+	if result.Error == nil || !strings.Contains(result.Error.Error(), "failed to write presentation: permission denied") {
+		t.Fatalf("error = %v, want concrete stderr diagnostic", result.Error)
+	}
+	if len(result.Error.Error()) > maxDiagnosticLineBytes+100 {
+		t.Fatalf("stderr diagnostic is not bounded: %d bytes", len(result.Error.Error()))
+	}
+}
+
+func TestParserReturnsStructuredTurnFailure(t *testing.T) {
+	parser := Driver{}.NewParser(t.TempDir())
+	fixtures := []string{
+		`{"type":"error","message":"Reconnecting... 5/5"}`,
+		`{"type":"turn.failed","error":{"message":"presentation export failed: template file is unreadable"}}`,
+	}
+	for _, fixture := range fixtures {
+		if _, err := parser.Parse(processharness.StreamStdout, []byte(fixture)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result := parser.Result()
+	if agentruntime.ErrorCodeOf(result.Error) != agentruntime.ErrorModelFailed || !strings.Contains(result.Error.Error(), "presentation export failed: template file is unreadable") {
+		t.Fatalf("error = %v, want structured Codex turn failure", result.Error)
+	}
+}

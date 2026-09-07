@@ -12,6 +12,7 @@ Runtime JSONL 的单个结构化事件允许增长到本次执行的总输出上
 
 - Event 的 Run ID 必须与请求一致；Sequence 从 1 严格递增。
 - stdout/stderr、结构化 delta、错误与终态在持久化前经过同一组 Secret 精确值脱敏。
+- Driver 必须保留 Runtime 的最终结构化错误消息；若 CLI 在生成结构化失败前退出，则使用有界 stderr 尾部作为诊断。错误经 Secret 脱敏后返回 User，不能只保留进程退出码。
 - Runtime 可发布 `reasoning.summary` 作为面向 User 的公开推理摘要；它不是原始 chain-of-thought。Session 只持久化经过脱敏和长度限制的活动摘要、命令及状态，不持久化工具输出作为活动明细。
 - Event Sink 写入失败立即停止 Runtime，避免执行继续而审计记录丢失。
 - 取消通过 Context 传播并终止完整进程组或 Container。
