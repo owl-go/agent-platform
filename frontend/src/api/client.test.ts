@@ -46,6 +46,14 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
+  it("normalizes an omitted deletion impact list from protobuf JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ confirmation_token: "confirmation" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const result = await createPlatformApi(() => "token").getSkillDeletionImpact("skill-1");
+
+    expect(result).toEqual({ affected_experts: [], confirmation_token: "confirmation" });
+  });
+
   it("allowlists fields when updating a Model Provider Connection", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);

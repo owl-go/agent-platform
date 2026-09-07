@@ -8,6 +8,7 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/skillstore"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -557,15 +558,12 @@ func (service *Service) CreateSkill(ctx context.Context, request *workspacev1.Cr
 	if err != nil {
 		return nil, err
 	}
-	name := strings.TrimSpace(request.Name)
-	if name == "" || len(name) > 100 {
-		return nil, publicError(fmt.Errorf("%w: invalid Skill name", workspacedomain.ErrInvalid))
-	}
 	var objectKey, digest string
 	var gitRef *string
+	var metadata skillstore.Metadata
 	switch request.Source {
 	case "upload":
-		objectKey, digest, err = service.skills.InstallUpload(ctx, owner, request.Archive)
+		objectKey, digest, metadata, err = service.skills.InstallUploadWithMetadata(ctx, owner, request.Archive)
 	case "git":
 		if request.GitUrl == nil {
 			err = fmt.Errorf("Git URL is required")
@@ -576,7 +574,7 @@ func (service *Service) CreateSkill(ctx context.Context, request *workspacev1.Cr
 			ref = *request.GitRef
 		}
 		var resolved string
-		objectKey, digest, resolved, err = service.skills.InstallGit(ctx, owner, *request.GitUrl, ref)
+		objectKey, digest, resolved, metadata, err = service.skills.InstallGitWithMetadata(ctx, owner, *request.GitUrl, ref)
 		if err == nil {
 			gitRef = &resolved
 		}
@@ -586,7 +584,7 @@ func (service *Service) CreateSkill(ctx context.Context, request *workspacev1.Cr
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
 	}
-	item, err := service.workspace.Repository().CreateSkill(ctx, owner, workspacedomain.Skill{Name: name, Source: request.Source, GitURL: request.GitUrl, GitRef: gitRef, ObjectKey: objectKey, SHA256: digest})
+	item, err := service.workspace.Repository().CreateSkill(ctx, owner, workspacedomain.Skill{Name: metadata.DisplayName, Source: request.Source, GitURL: request.GitUrl, GitRef: gitRef, ObjectKey: objectKey, SHA256: digest})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -598,13 +596,17 @@ func (service *Service) UpdateSkill(ctx context.Context, request *workspacev1.Up
 	if err != nil {
 		return nil, err
 	}
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	items, err := service.workspace.Repository().ListSkills(ctx, owner)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	var current *workspacedomain.Skill
 	for index := range items {
-		if items[index].ID == request.SkillId {
+		if items[index].ID == request.SkillId && (!items[index].Platform || principal.Administrator) {
 			current = &items[index]
 			break
 		}
@@ -614,21 +616,22 @@ func (service *Service) UpdateSkill(ctx context.Context, request *workspacev1.Up
 	}
 	var objectKey, digest string
 	var resolvedRef *string
+	var metadata skillstore.Metadata
 	if current.Source == "git" {
 		ref := ""
 		if request.GitRef != nil {
 			ref = *request.GitRef
 		}
 		var resolved string
-		objectKey, digest, resolved, err = service.skills.InstallGit(ctx, owner, *current.GitURL, ref)
+		objectKey, digest, resolved, metadata, err = service.skills.InstallGitWithMetadata(ctx, owner, *current.GitURL, ref)
 		resolvedRef = &resolved
 	} else {
-		objectKey, digest, err = service.skills.InstallUpload(ctx, owner, request.Archive)
+		objectKey, digest, metadata, err = service.skills.InstallUploadWithMetadata(ctx, owner, request.Archive)
 	}
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
 	}
-	item, err := service.workspace.Repository().UpdateSkill(ctx, owner, request.SkillId, resolvedRef, objectKey, digest, request.ExpectedVersion)
+	item, err := service.workspace.Repository().UpdateSkill(ctx, owner, request.SkillId, metadata.DisplayName, resolvedRef, objectKey, digest, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -682,7 +685,7 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 }
 
 func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
-	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus}
+	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus, Platform: item.Platform}
 	if item.TagProjectionError != "" {
 		response.TagProjectionError = &item.TagProjectionError
 	}
@@ -881,7 +884,7 @@ func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspac
 }
 
 func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
-	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
 	if item.TestError != "" {
 		response.TestError = &item.TestError
 	}
@@ -896,5 +899,5 @@ func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
 }
 
 func skillResponse(item workspacedomain.Skill) *workspacev1.Skill {
-	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
 }

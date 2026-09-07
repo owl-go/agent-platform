@@ -17,6 +17,7 @@ import (
 )
 
 const maxBundleSize = 256 << 20
+const maxSourceArchiveSize = 50 << 20
 
 var bundleDigest = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
@@ -66,6 +67,61 @@ func (store *ArtifactStore) PutImmutable(ctx context.Context, key string, bundle
 		return errors.New("Object Store returned mismatched CLI bundle metadata")
 	}
 	return nil
+}
+
+func (store *ArtifactStore) PutSource(ctx context.Context, key string, archive []byte, digest string) error {
+	if err := validateSourceReference(key, digest); err != nil {
+		return err
+	}
+	if len(archive) == 0 || len(archive) > maxSourceArchiveSize {
+		return errors.New("CLI source archive must contain 1-50 MiB")
+	}
+	actual := sha256.Sum256(archive)
+	if digest != hex.EncodeToString(actual[:]) {
+		return objectstore.ErrChecksumMismatch
+	}
+	if existing, err := store.objects.Stat(ctx, key); err == nil {
+		if existing.SHA256 == digest && existing.Size == int64(len(archive)) {
+			stored, readErr := store.GetSourceVerified(ctx, key, digest)
+			if readErr == nil && bytes.Equal(stored, archive) {
+				return nil
+			}
+		}
+		return errors.New("immutable CLI source key already contains different content")
+	} else if !errors.Is(err, objectstore.ErrNotFound) {
+		return fmt.Errorf("inspect CLI source archive: %w", err)
+	}
+	stored, err := store.objects.Put(ctx, key, bytes.NewReader(archive), objectstore.PutOptions{Size: int64(len(archive)), SHA256: digest, ContentType: "application/zip", Metadata: map[string]string{"artifact-kind": "cli-connector-source"}})
+	if err != nil {
+		return err
+	}
+	if stored.Key != key || stored.Size != int64(len(archive)) || stored.SHA256 != digest {
+		return errors.New("Object Store returned mismatched CLI source metadata")
+	}
+	return nil
+}
+
+func (store *ArtifactStore) GetSourceVerified(ctx context.Context, key, digest string) ([]byte, error) {
+	if err := validateSourceReference(key, digest); err != nil {
+		return nil, err
+	}
+	body, metadata, err := store.objects.Get(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("get CLI source archive: %w", err)
+	}
+	defer body.Close()
+	if metadata.Key != key || metadata.SHA256 != digest || metadata.Size <= 0 || metadata.Size > maxSourceArchiveSize {
+		return nil, errors.New("CLI source metadata does not match its frozen reference")
+	}
+	archive, err := io.ReadAll(io.LimitReader(body, metadata.Size+1))
+	if err != nil {
+		return nil, fmt.Errorf("read CLI source archive: %w", err)
+	}
+	actual := sha256.Sum256(archive)
+	if int64(len(archive)) != metadata.Size || digest != hex.EncodeToString(actual[:]) {
+		return nil, objectstore.ErrChecksumMismatch
+	}
+	return archive, nil
 }
 
 func (store *ArtifactStore) GetVerified(ctx context.Context, key, digest string) ([]byte, error) {
@@ -151,6 +207,16 @@ func validateBundleReference(key, digest string) error {
 	}
 	if !bundleDigest.MatchString(digest) {
 		return errors.New("invalid CLI bundle SHA-256")
+	}
+	return objectstore.ValidateKey(key)
+}
+
+func validateSourceReference(key, digest string) error {
+	if !strings.HasPrefix(key, "cli-connectors/sources/") || !strings.HasSuffix(key, ".zip") {
+		return errors.New("invalid CLI source Object Key")
+	}
+	if !bundleDigest.MatchString(digest) {
+		return errors.New("invalid CLI source SHA-256")
 	}
 	return objectstore.ValidateKey(key)
 }

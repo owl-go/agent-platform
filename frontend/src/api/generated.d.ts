@@ -1371,6 +1371,9 @@ export interface components {
             recommended_skill_ids?: string[];
             conformance_runtime_digests?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1383,6 +1386,11 @@ export interface components {
             supported_architectures?: string[];
             recommended_skill_ids?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
+            /** Format: byte */
+            archive?: string;
         };
         v1CLIConnectorEnablement: {
             id?: string;
@@ -1651,6 +1659,7 @@ export interface components {
             tag_projection_status?: string;
             tag_projection_error?: string;
             cli_connector_definition_ids?: string[];
+            platform?: boolean;
         };
         v1ExpertInput: {
             name?: string;
@@ -1852,6 +1861,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             test_pending?: boolean;
+            platform?: boolean;
         };
         v1MCPConnectorInput: {
             name?: string;
@@ -2133,6 +2143,7 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            platform?: boolean;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];

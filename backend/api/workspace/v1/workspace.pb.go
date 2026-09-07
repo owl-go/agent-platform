@@ -6436,6 +6436,7 @@ type Expert struct {
 	TagProjectionStatus       string                 `protobuf:"bytes,25,opt,name=tag_projection_status,json=tagProjectionStatus,proto3" json:"tag_projection_status,omitempty"`
 	TagProjectionError        *string                `protobuf:"bytes,26,opt,name=tag_projection_error,json=tagProjectionError,proto3,oneof" json:"tag_projection_error,omitempty"`
 	CliConnectorDefinitionIds []string               `protobuf:"bytes,27,rep,name=cli_connector_definition_ids,json=cliConnectorDefinitionIds,proto3" json:"cli_connector_definition_ids,omitempty"`
+	Platform                  bool                   `protobuf:"varint,28,opt,name=platform,proto3" json:"platform,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -6622,6 +6623,13 @@ func (x *Expert) GetCliConnectorDefinitionIds() []string {
 		return x.CliConnectorDefinitionIds
 	}
 	return nil
+}
+
+func (x *Expert) GetPlatform() bool {
+	if x != nil {
+		return x.Platform
+	}
+	return false
 }
 
 type ListExpertTeamsRequest struct {
@@ -9285,6 +9293,7 @@ type MCPConnector struct {
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Version        int64                  `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
 	TestPending    bool                   `protobuf:"varint,15,opt,name=test_pending,json=testPending,proto3" json:"test_pending,omitempty"`
+	Platform       bool                   `protobuf:"varint,16,opt,name=platform,proto3" json:"platform,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -9420,6 +9429,13 @@ func (x *MCPConnector) GetVersion() int64 {
 func (x *MCPConnector) GetTestPending() bool {
 	if x != nil {
 		return x.TestPending
+	}
+	return false
+}
+
+func (x *MCPConnector) GetPlatform() bool {
+	if x != nil {
+		return x.Platform
 	}
 	return false
 }
@@ -9755,6 +9771,7 @@ type Skill struct {
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Version       int64                  `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
+	Platform      bool                   `protobuf:"varint,10,opt,name=platform,proto3" json:"platform,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9850,6 +9867,13 @@ func (x *Skill) GetVersion() int64 {
 		return x.Version
 	}
 	return 0
+}
+
+func (x *Skill) GetPlatform() bool {
+	if x != nil {
+		return x.Platform
+	}
+	return false
 }
 
 type AffectedExpert struct {
@@ -10129,6 +10153,10 @@ type CLIConnectorDefinitionInput struct {
 	// Deprecated: Marked as deprecated in workspace/v1/workspace.proto.
 	RecommendedSkillIds []string               `protobuf:"bytes,9,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
 	RecommendedSkills   []*CLIRecommendedSkill `protobuf:"bytes,10,rep,name=recommended_skills,json=recommendedSkills,proto3" json:"recommended_skills,omitempty"`
+	Icon                string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
+	Description         string                 `protobuf:"bytes,12,opt,name=description,proto3" json:"description,omitempty"`
+	InstallationType    string                 `protobuf:"bytes,13,opt,name=installation_type,json=installationType,proto3" json:"installation_type,omitempty"`
+	Archive             []byte                 `protobuf:"bytes,14,opt,name=archive,proto3" json:"archive,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -10234,6 +10262,34 @@ func (x *CLIConnectorDefinitionInput) GetRecommendedSkills() []*CLIRecommendedSk
 	return nil
 }
 
+func (x *CLIConnectorDefinitionInput) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetInstallationType() string {
+	if x != nil {
+		return x.InstallationType
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinitionInput) GetArchive() []byte {
+	if x != nil {
+		return x.Archive
+	}
+	return nil
+}
+
 type CLIConnectorDefinition struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -10254,6 +10310,9 @@ type CLIConnectorDefinition struct {
 	RecommendedSkillIds       []string               `protobuf:"bytes,15,rep,name=recommended_skill_ids,json=recommendedSkillIds,proto3" json:"recommended_skill_ids,omitempty"`
 	ConformanceRuntimeDigests []string               `protobuf:"bytes,16,rep,name=conformance_runtime_digests,json=conformanceRuntimeDigests,proto3" json:"conformance_runtime_digests,omitempty"`
 	RecommendedSkills         []*CLIRecommendedSkill `protobuf:"bytes,17,rep,name=recommended_skills,json=recommendedSkills,proto3" json:"recommended_skills,omitempty"`
+	Icon                      string                 `protobuf:"bytes,18,opt,name=icon,proto3" json:"icon,omitempty"`
+	Description               string                 `protobuf:"bytes,19,opt,name=description,proto3" json:"description,omitempty"`
+	InstallationType          string                 `protobuf:"bytes,20,opt,name=installation_type,json=installationType,proto3" json:"installation_type,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -10406,6 +10465,27 @@ func (x *CLIConnectorDefinition) GetRecommendedSkills() []*CLIRecommendedSkill {
 		return x.RecommendedSkills
 	}
 	return nil
+}
+
+func (x *CLIConnectorDefinition) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinition) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CLIConnectorDefinition) GetInstallationType() string {
+	if x != nil {
+		return x.InstallationType
+	}
+	return ""
 }
 
 type ListCLIConnectorDefinitionsRequest struct {
@@ -13503,7 +13583,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13operating_procedure\x18\r \x01(\tR\x12operatingProcedure\x12'\n" +
 	"\x0foutput_standard\x18\x0e \x01(\tR\x0eoutputStandard\x12\x1a\n" +
 	"\bcautions\x18\x0f \x01(\tR\bcautions\x12?\n" +
-	"\x1ccli_connector_definition_ids\x18\x10 \x03(\tR\x19cliConnectorDefinitionIdsJ\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x17capability_introductionR\x15execution_instructionR\x0eexpertise_tagsR\x11provider_model_idR\x0eruntime_engine\"\x9f\b\n" +
+	"\x1ccli_connector_definition_ids\x18\x10 \x03(\tR\x19cliConnectorDefinitionIdsJ\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x17capability_introductionR\x15execution_instructionR\x0eexpertise_tagsR\x11provider_model_idR\x0eruntime_engine\"\xbb\b\n" +
 	"\x06Expert\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -13529,7 +13609,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bcautions\x18\x18 \x01(\tR\bcautions\x122\n" +
 	"\x15tag_projection_status\x18\x19 \x01(\tR\x13tagProjectionStatus\x125\n" +
 	"\x14tag_projection_error\x18\x1a \x01(\tH\x01R\x12tagProjectionError\x88\x01\x01\x12?\n" +
-	"\x1ccli_connector_definition_ids\x18\x1b \x03(\tR\x19cliConnectorDefinitionIdsB\x16\n" +
+	"\x1ccli_connector_definition_ids\x18\x1b \x03(\tR\x19cliConnectorDefinitionIds\x12\x1a\n" +
+	"\bplatform\x18\x1c \x01(\bR\bplatformB\x16\n" +
 	"\x14_availability_reasonB\x17\n" +
 	"\x15_tag_projection_errorJ\x04\b\x03\x10\x04J\x04\b\t\x10\n" +
 	"J\x04\b\f\x10\rJ\x04\b\r\x10\x0eJ\x04\b\x11\x10\x12R\x17capability_introductionR\x15execution_instructionR\x11provider_model_idR\x0eruntime_engineR\x13provider_model_name\"\x18\n" +
@@ -13750,7 +13831,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\a_runnerB\n" +
 	"\n" +
 	"\b_packageB\x12\n" +
-	"\x10_package_version\"\xe5\x04\n" +
+	"\x10_package_version\"\x81\x05\n" +
 	"\fMCPConnector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -13770,7 +13851,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\x0e \x01(\x03R\aversion\x12!\n" +
-	"\ftest_pending\x18\x0f \x01(\bR\vtestPendingB\x06\n" +
+	"\ftest_pending\x18\x0f \x01(\bR\vtestPending\x12\x1a\n" +
+	"\bplatform\x18\x10 \x01(\bR\bplatformB\x06\n" +
 	"\x04_urlB\t\n" +
 	"\a_runnerB\n" +
 	"\n" +
@@ -13805,7 +13887,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\"^\n" +
 	"\x12DeleteSkillRequest\x12\x19\n" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\x12-\n" +
-	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xbf\x02\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xdb\x02\n" +
 	"\x05Skill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -13817,7 +13899,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
-	"\aversion\x18\t \x01(\x03R\aversionB\n" +
+	"\aversion\x18\t \x01(\x03R\aversion\x12\x1a\n" +
+	"\bplatform\x18\n" +
+	" \x01(\bR\bplatformB\n" +
 	"\n" +
 	"\b_git_urlB\n" +
 	"\n" +
@@ -13843,7 +13927,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13CLIRecommendedSkill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n" +
 	"\agit_url\x18\x02 \x01(\tR\x06gitUrl\x12\x17\n" +
-	"\agit_ref\x18\x03 \x01(\tR\x06gitRef\"\xf1\x03\n" +
+	"\agit_ref\x18\x03 \x01(\tR\x06gitRef\"\xee\x04\n" +
 	"\x1bCLIConnectorDefinitionInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vnpm_package\x18\x02 \x01(\tR\n" +
@@ -13859,7 +13943,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x17supported_architectures\x18\b \x03(\tR\x16supportedArchitectures\x126\n" +
 	"\x15recommended_skill_ids\x18\t \x03(\tB\x02\x18\x01R\x13recommendedSkillIds\x12P\n" +
 	"\x12recommended_skills\x18\n" +
-	" \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\"\x81\x06\n" +
+	" \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\x12\x12\n" +
+	"\x04icon\x18\v \x01(\tR\x04icon\x12 \n" +
+	"\vdescription\x18\f \x01(\tR\vdescription\x12+\n" +
+	"\x11installation_type\x18\r \x01(\tR\x10installationType\x12\x18\n" +
+	"\aarchive\x18\x0e \x01(\fR\aarchive\"\xe4\x06\n" +
 	"\x16CLIConnectorDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -13882,7 +13970,10 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x17supported_architectures\x18\x0e \x03(\tR\x16supportedArchitectures\x126\n" +
 	"\x15recommended_skill_ids\x18\x0f \x03(\tB\x02\x18\x01R\x13recommendedSkillIds\x12>\n" +
 	"\x1bconformance_runtime_digests\x18\x10 \x03(\tR\x19conformanceRuntimeDigests\x12P\n" +
-	"\x12recommended_skills\x18\x11 \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkillsB\x11\n" +
+	"\x12recommended_skills\x18\x11 \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\x12\x12\n" +
+	"\x04icon\x18\x12 \x01(\tR\x04icon\x12 \n" +
+	"\vdescription\x18\x13 \x01(\tR\vdescription\x12+\n" +
+	"\x11installation_type\x18\x14 \x01(\tR\x10installationTypeB\x11\n" +
 	"\x0f_failure_reasonB\x10\n" +
 	"\x0e_bundle_sha256\"$\n" +
 	"\"ListCLIConnectorDefinitionsRequest\"a\n" +

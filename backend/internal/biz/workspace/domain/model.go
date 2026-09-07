@@ -103,6 +103,7 @@ type ResponseSnapshot struct {
 type MCPServer struct {
 	ID              string
 	OwnerID         string
+	Platform        bool
 	Name            string
 	Transport       string
 	URL             *string
@@ -162,6 +163,7 @@ func (server MCPServer) Validate() error {
 type Skill struct {
 	ID        string
 	OwnerID   string
+	Platform  bool
 	Name      string
 	Source    string
 	GitURL    *string
@@ -567,6 +569,7 @@ func (input ExpertInput) Validate() error {
 type Expert struct {
 	ID                        string
 	OwnerID                   string
+	Platform                  bool
 	Name                      string
 	Icon                      string
 	IconBackground            string

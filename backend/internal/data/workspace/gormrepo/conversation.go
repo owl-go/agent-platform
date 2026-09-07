@@ -285,7 +285,7 @@ func loadConversationSpecialist(tx *gorm.DB, owner string, selection *domain.Con
 	}
 	for index, member := range members {
 		var expert expertRecord
-		if err := tx.Where("owner_user_id = ? AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", owner, member.ExpertID).Take(&expert).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", accessibleResourceOwnerIDs(tx, owner), member.ExpertID).Take(&expert).Error; err != nil {
 			return fmt.Errorf("%w: Expert is incomplete or unavailable", domain.ErrInvalid)
 		}
 		resources, err := loadExpertMemberSnapshot(tx, owner, expert, index+1)

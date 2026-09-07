@@ -23,6 +23,24 @@ function api(): PlatformApi {
 }
 
 describe("ExpertsPage", () => {
+  it("separates Administrator Experts from the current User's Experts", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/experts");
+    const platformExpert = { ...expert, id: "platform-expert", name: "平台研究专家", platform: true };
+    const testApi = api();
+    testApi.listExperts = vi.fn(async () => [platformExpert, expert]);
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: testApi } } });
+    await flushPromises();
+
+    const groups = wrapper.findAll(".catalog-group");
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.text()).toContain("平台专家");
+    expect(groups[0]!.text()).toContain("平台研究专家");
+    expect(groups[0]!.text()).not.toContain("架构专家");
+    expect(groups[1]!.text()).toContain("我的专家");
+    expect(groups[1]!.text()).toContain("架构专家");
+  });
+
   it("shows searchable Expert cards with capability and expertise tags", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts");

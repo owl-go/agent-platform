@@ -120,9 +120,10 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 		model any
 		name  string
 		where string
+		owner any
 	}{
-		{value: input.ExpertID, model: &expertRecord{}, name: "Expert", where: "owner_user_id = ? AND id = ?"},
-		{value: input.ExpertTeamID, model: &expertTeamRecord{}, name: "Expert Team", where: "owner_user_id = ? AND id = ?"},
+		{value: input.ExpertID, model: &expertRecord{}, name: "Expert", where: "owner_user_id IN (?) AND id = ?", owner: accessibleResourceOwnerIDs(tx, ownerID)},
+		{value: input.ExpertTeamID, model: &expertTeamRecord{}, name: "Expert Team", where: "owner_user_id = ? AND id = ?", owner: ownerID},
 	}
 	for _, check := range checks {
 		if check.value == nil {
@@ -132,7 +133,7 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 			return fmt.Errorf("%w: invalid %s identifier", domain.ErrInvalid, check.name)
 		}
 		var count int64
-		if err := tx.Model(check.model).Where(check.where, ownerID, *check.value).Count(&count).Error; err != nil {
+		if err := tx.Model(check.model).Where(check.where, check.owner, *check.value).Count(&count).Error; err != nil {
 			return err
 		}
 		if count != 1 {
@@ -145,14 +146,22 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 			return fmt.Errorf("%w: selected Expert Team does not belong to the User", domain.ErrInvalid)
 		}
 		var ids []string
-		if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+		var members []domain.ExpertTeamMemberInput
+		if len(team.Members) > 0 && string(team.Members) != "null" {
+			if err := json.Unmarshal(team.Members, &members); err != nil {
+				return err
+			}
+			for _, member := range members {
+				ids = append(ids, member.ExpertID)
+			}
+		} else if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
 			return err
 		}
 		if len(ids) < 2 {
 			return fmt.Errorf("%w: selected Expert Team requires at least two Experts", domain.ErrInvalid)
 		}
 		var available int64
-		if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&available).Error; err != nil {
+		if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", accessibleResourceOwnerIDs(tx, ownerID), ids).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(ids)) {
@@ -492,7 +501,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	}
 	if workflow.ExpertID != nil {
 		var expert expertRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertID).Take(&expert).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ?", accessibleResourceOwnerIDs(tx, workflow.OwnerID), *workflow.ExpertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert for Run: %w", mapNotFound(err))
 		}
 		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, providerModelID, runtime, 1)
@@ -523,7 +532,7 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	}
 	for index, expertID := range expertIDs {
 		var expert expertRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, expertID).Take(&expert).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ?", accessibleResourceOwnerIDs(tx, workflow.OwnerID), expertID).Take(&expert).Error; err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team member is unavailable", domain.ErrInvalid)
 		}
 		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, providerModelID, runtime, index+1)
@@ -631,14 +640,14 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	}
 	for _, id := range mcpIDs {
 		var row mcpRecord
-		if err := tx.Where("owner_user_id = ? AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", ownerID, id).Take(&row).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
 		}
-		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext})
+		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, id).Take(&row).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ?", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert Skill is unavailable", domain.ErrInvalid)
 		}
 		member.Skills = append(member.Skills, domain.SkillSnapshot{ID: row.ID, Name: row.Name, ObjectKey: row.ObjectKey, SHA256: row.SHA256})

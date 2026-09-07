@@ -51,6 +51,11 @@ type Capability struct {
 type Definition struct {
 	ID                     string
 	Name                   string
+	Icon                   string
+	Description            string
+	InstallationType       string
+	SourceObjectKey        string
+	SourceSHA256           string
 	Package                string
 	Version                string
 	Integrity              string
@@ -128,12 +133,13 @@ type EncryptedExecutionCredentials struct {
 
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)
 var npmPackage = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
+var connectorIcon = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 var policyToken = regexp.MustCompile(`^[A-Za-z0-9._:/-]+$`)
 var egressHost = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$`)
 
 func (definition Definition) Validate() error {
-	if strings.TrimSpace(definition.Name) == "" || !npmPackage.MatchString(definition.Package) || !exactVersion.MatchString(definition.Version) {
-		return errors.New("CLI Connector requires a name, valid npm package, and exact version")
+	if err := definition.ValidateDraft(); err != nil {
+		return err
 	}
 	if err := validateExecutionPolicy(definition); err != nil {
 		return err
@@ -154,6 +160,38 @@ func (definition Definition) Validate() error {
 		if strings.TrimSpace(skill.Name) == "" || strings.TrimSpace(skill.GitRef) == "" || err != nil || parsed.Scheme != "https" || parsed.Host == "" {
 			return errors.New("recommended Skill requires a name, HTTPS Git URL, and Git ref")
 		}
+	}
+	return nil
+}
+
+func (definition Definition) ValidateDraft() error {
+	if strings.TrimSpace(definition.Name) == "" {
+		return errors.New("CLI Connector name is required")
+	}
+	if definition.Icon != "" && !connectorIcon.MatchString(definition.Icon) {
+		return errors.New("CLI Connector icon is invalid")
+	}
+	if definition.InstallationType != "" && strings.TrimSpace(definition.Description) == "" {
+		return errors.New("CLI Connector capability description is required")
+	}
+	if len(strings.TrimSpace(definition.Description)) > 2000 {
+		return errors.New("CLI Connector capability description is too long")
+	}
+	installationType := definition.InstallationType
+	if installationType == "" {
+		installationType = "npm"
+	}
+	switch installationType {
+	case "npm":
+		if !npmPackage.MatchString(definition.Package) || !exactVersion.MatchString(definition.Version) {
+			return errors.New("CLI Connector npm installation requires a valid package and exact version")
+		}
+	case "upload":
+		if validateSourceReference(definition.SourceObjectKey, definition.SourceSHA256) != nil {
+			return errors.New("CLI Connector ZIP installation requires an immutable source archive")
+		}
+	default:
+		return errors.New("unsupported CLI Connector installation type")
 	}
 	return nil
 }

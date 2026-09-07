@@ -3,6 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
 import { platformApiKey, type PlatformApi, type Skill } from "../api/client";
+import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import CatalogDetails from "./CatalogDetails.vue";
@@ -18,4 +19,16 @@ it("renders installed Skill Markdown safely and launches a preselected new Sessi
  expect(document.body.querySelector(".skill-document script, .skill-document img, a[href^='javascript:']")).toBeNull();
  const launch = [...document.body.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent?.includes("去使用")); expect(launch).toBeDefined(); launch!.click(); await flushPromises();
  expect(router.currentRoute.value.path).toBe("/sessions"); expect(router.currentRoute.value.query.skill_id).toBe("pdf"); expect(router.currentRoute.value.query.new).toBeTruthy(); expect(wrapper.emitted("close")).toBeTruthy(); wrapper.unmount();
+});
+
+it("does not offer editing for a platform Skill to an ordinary User", async () => {
+ const skill = { id: "platform-pdf", name: "平台 PDF", source: "upload", version: 1, platform: true } as Skill;
+ const api = { getSkillDocument: vi.fn(async () => ({ skill, content: "# PDF" })) } as unknown as PlatformApi;
+ const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator: false } } } } } as unknown as AuthContext;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/resources"); await router.isReady();
+ const wrapper = mount(CatalogDetails, { attachTo: document.body, props: { skill }, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth } } });
+ await flushPromises();
+ expect([...document.body.querySelectorAll("button")].some((button) => button.textContent?.trim() === "编辑")).toBe(false);
+ expect(document.body.textContent).toContain("去使用");
+ wrapper.unmount();
 });

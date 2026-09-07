@@ -18,7 +18,7 @@ An Expert becomes an engine-independent specialist profile. Its Core Capability,
 
 An Expert Team becomes an ordered set of stable Team Member roles. Each member has its own name and Member Labels, may reference the same Expert as another member, and executes in an isolated context. All members use the execution configuration frozen for the Session or Run Conversation.
 
-Skills remain User-owned packages. Connectors have two ownership models: Users create private MCP Connectors, while Administrators create platform-wide CLI Connector Definitions for exact, verified npm packages. Users enable and authorize available CLI Connectors without gaining permission to create CLI Definitions. The official Feishu CLI is the first real CLI Connector.
+Experts, Skills, and MCP Connectors created by an ordinary User remain private. The same resource types created by the Administrator become Platform Resources visible to every User and editable only by the Administrator. Each catalog separates platform resources from the current User's resources. Administrators also create platform-wide CLI Connector Definitions for exact, verified npm packages. Users enable and authorize available CLI Connectors without gaining permission to create CLI Definitions. The official Feishu CLI is the first real CLI Connector.
 
 High-risk CLI commands require a time-bounded, one-use approval from the owning User. A Session response or Run may enter a persisted `waiting_for_user` state and resume after approval without weakening the existing event, transaction, cancellation, workspace, credit, or secret boundaries.
 
@@ -78,6 +78,8 @@ High-risk CLI commands require a time-bounded, one-use approval from the owning 
 52. As a User, I want business scopes requested only when enabling a capability or approving an operation, so that authorization follows least privilege.
 53. As a User, I want to connect more than one Feishu account to my single Feishu application, so that I can use distinct external identities.
 54. As a User, I want User and Bot execution identities distinguished, so that external actions clearly identify who performs them.
+55. As a User, I want Administrator-created Experts, Skills, and Connectors available in a platform section, so that shared resources do not need to be copied into my account.
+56. As a User, I want only resources I created to appear under `My Experts`, `My Skills`, and `My Connectors`, so that ownership and available actions remain clear.
 55. As a User, I want to choose User or Bot identity when approving an operation that supports both, so that actions are attributed correctly.
 56. As a User, I want missing User scopes to start an explicit OAuth flow, so that User authority is never inferred from Bot authority.
 57. As a User, I want missing Bot scopes or publication prerequisites to produce a direct recovery link, so that I can repair the application deliberately.

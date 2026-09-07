@@ -4814,6 +4814,15 @@
             "items": {
               "$ref": "#/components/schemas/v1CLIRecommendedSkill"
             }
+          },
+          "icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "installation_type": {
+            "type": "string"
           }
         }
       },
@@ -4861,6 +4870,19 @@
             "items": {
               "$ref": "#/components/schemas/v1CLIRecommendedSkill"
             }
+          },
+          "icon": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "installation_type": {
+            "type": "string"
+          },
+          "archive": {
+            "type": "string",
+            "format": "byte"
           }
         }
       },
@@ -5606,6 +5628,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "platform": {
+            "type": "boolean"
           }
         }
       },
@@ -6252,6 +6277,9 @@
             "format": "int64"
           },
           "test_pending": {
+            "type": "boolean"
+          },
+          "platform": {
             "type": "boolean"
           }
         }
@@ -7063,6 +7091,9 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "platform": {
+            "type": "boolean"
           }
         }
       },

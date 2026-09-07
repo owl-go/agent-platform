@@ -67,7 +67,7 @@ func (environment *DockerBuildEnvironment) Build(ctx context.Context, request Pa
 		"--network", environment.config.EgressNetwork,
 		"--memory", strconv.FormatInt(1<<30, 10), "--cpus", "2", "--pids-limit", "256",
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=268435456",
-		"--tmpfs", "/work:rw,nosuid,nodev,size=536870912",
+		"--tmpfs", fmt.Sprintf("/work:rw,nosuid,nodev,uid=%d,gid=%d,mode=0700,size=536870912", environment.config.UID, environment.config.GID),
 		"--mount", "type=bind,src=" + output + ",dst=/output,readonly=false",
 		"--mount", "type=bind,src=" + environment.config.ResolverConfig + ",dst=/etc/resolv.conf,readonly=true",
 		"--label", "agent-platform.managed=true", "--label", "agent-platform.workload=cli-builder",
@@ -93,7 +93,11 @@ func (environment *DockerBuildEnvironment) Build(ctx context.Context, request Pa
 	if err != nil || json.Unmarshal(binBytes, &bins) != nil {
 		return PackageArtifact{}, errors.New("read CLI package bin metadata")
 	}
-	return PackageArtifact{PackageBytes: packageBytes, BundleBytes: bundleBytes, Integrity: strings.TrimSpace(string(integrityBytes)), Bins: bins}, nil
+	manifest, err := os.ReadFile(filepath.Join(output, "manifest.json"))
+	if err != nil {
+		return PackageArtifact{}, errors.New("read CLI package manifest metadata")
+	}
+	return PackageArtifact{PackageBytes: packageBytes, BundleBytes: bundleBytes, Integrity: strings.TrimSpace(string(integrityBytes)), Bins: bins, Manifest: manifest}, nil
 }
 
 var _ PackageBuildEnvironment = (*DockerBuildEnvironment)(nil)
