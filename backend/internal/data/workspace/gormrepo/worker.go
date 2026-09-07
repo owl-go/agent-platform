@@ -123,12 +123,24 @@ func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job a
 		if build.State != cliconnector.StateAvailable || build.BundleObjectKey == "" || len(build.BundleSHA256) != 64 || len(build.RuntimeDigests) == 0 {
 			return fmt.Errorf("%w: invalid CLI Connector build result", domain.ErrInvalid)
 		}
+		completed := job.CLIConnector
+		completed.Package, completed.Version, completed.Integrity = build.Package, build.Version, build.Integrity
+		completed.Executable, completed.AuthenticationDriver = build.Executable, build.AuthenticationDriver
+		completed.Capabilities, completed.SupportedArchitectures = build.Capabilities, build.SupportedArchitectures
+		if err := completed.Validate(); err != nil {
+			return fmt.Errorf("%w: invalid completed CLI Connector: %v", domain.ErrInvalid, err)
+		}
+		capabilities, _ := json.Marshal(build.Capabilities)
+		architectures, _ := json.Marshal(build.SupportedArchitectures)
 		for _, digest := range build.RuntimeDigests {
-			if err := tx.Table("cli_connector_conformance").Create(map[string]any{"definition_id": job.CLIConnector.ID, "bundle_sha256": build.BundleSHA256, "runtime_repo_digest": digest, "environment": []byte(`{}`), "tested_at": time.Now().UTC(), "passed": true}).Error; err != nil {
+			if err := tx.Table("cli_connector_conformance").Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "definition_id"}, {Name: "bundle_sha256"}, {Name: "runtime_repo_digest"}},
+				DoUpdates: clause.AssignmentColumns([]string{"environment", "tested_at", "passed"}),
+			}).Create(map[string]any{"definition_id": job.CLIConnector.ID, "bundle_sha256": build.BundleSHA256, "runtime_repo_digest": digest, "environment": []byte(`{}`), "tested_at": time.Now().UTC(), "passed": true}).Error; err != nil {
 				return err
 			}
 		}
-		result := query.Updates(map[string]any{"state": string(cliconnector.StateAvailable), "failure_reason": nil, "bundle_object_key": build.BundleObjectKey, "bundle_sha256": build.BundleSHA256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		result := query.Updates(map[string]any{"state": string(cliconnector.StateAvailable), "failure_reason": nil, "bundle_object_key": build.BundleObjectKey, "bundle_sha256": build.BundleSHA256, "npm_package": build.Package, "npm_version": build.Version, "npm_integrity": build.Integrity, "executable": build.Executable, "authentication_driver": build.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}

@@ -46,7 +46,7 @@ func uploadArchive(t *testing.T, entries []archiveEntry) []byte {
 }
 
 func TestInstallUploadNormalizesSkillRoot(t *testing.T) {
-	want := map[string]string{"SKILL.md": "# PDF", "scripts/convert.py": "print('pdf')"}
+	want := map[string]string{"SKILL.md": "---\ndisplay_name: PDF 文档处理\n---\n# PDF", "scripts/convert.py": "print('pdf')"}
 	for _, test := range []struct {
 		name     string
 		prefix   string

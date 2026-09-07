@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -14,6 +16,7 @@ import (
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/feishucli"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -24,6 +27,7 @@ type cliConnectorRepository interface {
 	UpdateCLIConnectorDefinition(context.Context, string, cliconnector.Definition, int64) (cliconnector.Definition, error)
 	PublishCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
 	DisableCLIConnectorDefinition(context.Context, string, int64) (cliconnector.Definition, error)
+	DeleteCLIConnectorDefinition(context.Context, string, int64) error
 	GetAvailableCLIConnectorDefinition(context.Context, string) (cliconnector.Definition, error)
 	GetCLIConnectorEnablement(context.Context, string, string) (cliconnector.Enablement, error)
 	EnableCLIConnector(context.Context, string, string) (cliconnector.Enablement, error)
@@ -97,7 +101,7 @@ func (service *Service) ListCLIConnectorDefinitions(ctx context.Context, _ *work
 	}
 	response := make([]*workspacev1.CLIConnectorDefinition, 0, len(items))
 	for _, item := range items {
-		mutable := principal.Administrator && (item.State == cliconnector.StateDraft || item.State == cliconnector.StateFailed)
+		mutable := principal.Administrator && item.State != cliconnector.StateBuilding && item.State != cliconnector.StateTesting
 		response = append(response, cliDefinitionResponse(item, mutable))
 	}
 	return &workspacev1.ListCLIConnectorDefinitionsResponse{Items: response}, nil
@@ -108,7 +112,7 @@ func (service *Service) CreateCLIConnectorDefinition(ctx context.Context, reques
 	if err != nil {
 		return nil, err
 	}
-	input, err := cliDefinitionInput(request.Definition)
+	input, err := service.cliDefinitionInput(ctx, request.Definition, uuid.NewString(), 1)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -127,7 +131,7 @@ func (service *Service) UpdateCLIConnectorDefinition(ctx context.Context, reques
 	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
 	}
-	input, err := cliDefinitionInput(request.Definition)
+	input, err := service.cliDefinitionInput(ctx, request.Definition, request.DefinitionId, request.ExpectedVersion+1)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -172,6 +176,23 @@ func (service *Service) DisableCLIConnectorDefinition(ctx context.Context, reque
 	return cliDefinitionResponse(item, false), nil
 }
 
+func (service *Service) DeleteCLIConnectorDefinition(ctx context.Context, request *workspacev1.DeleteCLIConnectorDefinitionRequest) (*workspacev1.DeleteResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	if request.ExpectedVersion < 1 {
+		return nil, publicError(workspacedomain.ErrInvalid)
+	}
+	repository, err := service.cliConnectors()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := repository.DeleteCLIConnectorDefinition(ctx, request.DefinitionId, request.ExpectedVersion); err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
 func (service *Service) EnableCLIConnector(ctx context.Context, request *workspacev1.EnableCLIConnectorRequest) (*workspacev1.CLIConnectorEnablement, error) {
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
@@ -201,6 +222,11 @@ func (service *Service) EnableCLIConnector(ctx context.Context, request *workspa
 		}
 	} else if !errors.Is(existingErr, workspacedomain.ErrNotFound) {
 		return nil, publicError(existingErr)
+	}
+	if existing, err := repository.EnableCLIConnector(ctx, principal.UserID, definition.ID); err == nil {
+		return cliEnablementResponse(existing), nil
+	} else if !errors.Is(err, workspacedomain.ErrNotFound) {
+		return nil, publicError(err)
 	}
 	registration, err := service.feishu.Begin(ctx)
 	if err != nil {
@@ -522,7 +548,7 @@ func (service *Service) DecideCommandApproval(ctx context.Context, request *work
 	return commandApprovalResponse(item), nil
 }
 
-func cliDefinitionInput(input *workspacev1.CLIConnectorDefinitionInput) (cliconnector.Definition, error) {
+func (service *Service) cliDefinitionInput(ctx context.Context, input *workspacev1.CLIConnectorDefinitionInput, definitionID string, sourceVersion int64) (cliconnector.Definition, error) {
 	if input == nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: CLI Connector Definition is required", workspacedomain.ErrInvalid)
 	}
@@ -538,8 +564,34 @@ func cliDefinitionInput(input *workspacev1.CLIConnectorDefinitionInput) (cliconn
 	for _, skill := range input.RecommendedSkills {
 		recommendedSkills = append(recommendedSkills, cliconnector.RecommendedSkill{Name: skill.Name, GitURL: skill.GitUrl, GitRef: skill.GitRef})
 	}
-	value := cliconnector.Definition{Name: input.Name, Package: input.NpmPackage, Version: input.NpmVersion, Integrity: input.NpmIntegrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: append([]string(nil), input.SupportedArchitectures...), RecommendedSkills: recommendedSkills}
-	if err := value.Validate(); err != nil {
+	installationType := input.InstallationType
+	if installationType == "" {
+		installationType = "npm"
+	}
+	value := cliconnector.Definition{ID: definitionID, Name: input.Name, Icon: input.Icon, Description: input.Description, InstallationType: installationType, Package: input.NpmPackage, Version: input.NpmVersion, Integrity: input.NpmIntegrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: append([]string(nil), input.SupportedArchitectures...), RecommendedSkills: recommendedSkills, State: cliconnector.StateDraft}
+	if value.Icon == "" {
+		value.Icon = "terminal"
+	}
+	if installationType == "upload" {
+		if err := cliconnector.ValidateZIPPackage(input.Archive); err != nil {
+			return cliconnector.Definition{}, fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err)
+		}
+		digestValue := sha256.Sum256(input.Archive)
+		digest := hex.EncodeToString(digestValue[:])
+		key := fmt.Sprintf("cli-connectors/sources/%s/v%d/%s.zip", definitionID, sourceVersion, digest)
+		store, err := cliconnector.NewArtifactStore(service.objects)
+		if err != nil {
+			return cliconnector.Definition{}, err
+		}
+		if err := store.PutSource(ctx, key, input.Archive, digest); err != nil {
+			return cliconnector.Definition{}, err
+		}
+		value.Package, value.Version = "upload-"+strings.ReplaceAll(definitionID, "-", ""), "0.0.0"
+		value.Integrity, value.Executable, value.AuthenticationDriver = "", "", ""
+		value.Capabilities, value.SupportedArchitectures = nil, nil
+		value.SourceObjectKey, value.SourceSHA256 = key, digest
+	}
+	if err := value.ValidateDraft(); err != nil {
 		return cliconnector.Definition{}, fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err)
 	}
 	return value, nil
@@ -557,7 +609,7 @@ func cliDefinitionResponse(item cliconnector.Definition, mutable bool) *workspac
 	for _, skill := range item.RecommendedSkills {
 		recommendedSkills = append(recommendedSkills, &workspacev1.CLIRecommendedSkill{Name: skill.Name, GitUrl: skill.GitURL, GitRef: skill.GitRef})
 	}
-	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, ConformanceRuntimeDigests: item.RuntimeDigests, RecommendedSkills: recommendedSkills}
+	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, Icon: item.Icon, Description: item.Description, InstallationType: item.InstallationType, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, ConformanceRuntimeDigests: item.RuntimeDigests, RecommendedSkills: recommendedSkills}
 	if item.FailureReason != "" {
 		response.FailureReason = &item.FailureReason
 	}

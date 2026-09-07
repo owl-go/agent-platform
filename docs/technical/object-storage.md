@@ -10,8 +10,8 @@ Artifact、Skill 包、CLI Connector bundle 与消息附件只通过 `internal/o
 
 Skill 安装会把 Git 精确 Commit 或 ZIP 内容规范化，验证根目录存在 `SKILL.md`，再保存不可变对象和 SHA-256。Run Snapshot 冻结 Skill 的 Object Key 与 Digest，后续更新不改变已排队 Run。
 
-ZIP 上传支持根目录直接包含 `SKILL.md`，或由一个顶层 Skill 目录包裹全部有效文件。上传时移除这层目录及 macOS 元数据（`__MACOSX`、`.DS_Store`、`._*`），按路径排序重建 ZIP，确保 Runtime 读取的包根目录包含普通文件 `SKILL.md`。多个候选 Skill 目录、Skill 目录之外的文件、路径穿越、重复或冲突路径、符号链接和特殊文件均拒绝；读取内容时校验 ZIP 完整性，压缩包、解压文件总量和规范化后 ZIP 均不得超过 50 MiB。Size 与 SHA-256 根据规范化后的实际对象字节计算。
+ZIP 上传支持根目录直接包含 `SKILL.md`，或由一个顶层 Skill 目录包裹全部有效文件。上传时移除这层目录及 macOS 元数据（`__MACOSX`、`.DS_Store`、`._*`），按路径排序重建 ZIP，确保 Runtime 读取的包根目录包含普通文件 `SKILL.md`。多个候选 Skill 目录、Skill 目录之外的文件、路径穿越、重复或冲突路径、符号链接和特殊文件均拒绝；读取内容时校验 ZIP 完整性，压缩包、解压文件总量和规范化后 ZIP 均不得超过 50 MiB。Size 与 SHA-256 根据规范化后的实际对象字节计算。Skill 和 CLI Connector 的 ZIP 新建与更新通过 Base64 JSON 传输；HTTP 层为这四个上传路由保留 50 MiB 压缩包编码后的空间及 64 KiB JSON 元数据空间，其余 JSON 路由仍限制为 64 KiB。大小校验按实际读取字节执行，不依赖 Content-Length；超限返回 HTTP 413 `request_body_too_large`，格式错误保持 HTTP 400 `invalid_request_body`。
 
-CLI Connector bundle 由隔离且无 User 凭证的 Builder 从 Administrator 指定的 exact npm package、version 和 integrity 生成，保存不可变 Object Key、npm integrity 与最终小写 SHA-256。Run Snapshot 只冻结 Definition、bundle Digest、能力策略和 Authorization identity；App Secret 与 Token 不进入 Snapshot。Worker 下载后重新校验 Digest，并只读挂载 bundle，永不向 Runtime 暴露对象存储 URL 或签名参数。
+CLI Connector 的 ZIP 源包在 API 边界完成路径、类型、大小、`package.json` 和 `bin` 校验后，以逻辑 Object Key 和小写 SHA-256 不可变保存。CLI Connector bundle 由隔离且无 User 凭证的 Builder 从 Administrator 指定的 exact npm package 或已校验 ZIP 源包生成，保存不可变 Object Key、包完整性与最终小写 SHA-256。Run Snapshot 只冻结 Definition、bundle Digest、能力策略和 Authorization identity；App Secret 与 Token 不进入 Snapshot。Worker 下载后重新校验 Digest，并只读挂载 bundle，永不向 Runtime 暴露对象存储 URL 或签名参数。
 
 Provider 行为变化先进入共享 Conformance，再分别验证 MinIO 与阿里云 OSS。缺少远端凭据导致的 Skip 不能记作通过。

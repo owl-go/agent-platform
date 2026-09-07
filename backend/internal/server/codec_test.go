@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,75 @@ import (
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/transportmeta"
+	"google.golang.org/protobuf/proto"
 )
+
+func TestArchiveJSONThroughFilterAndDecoder(t *testing.T) {
+	archive := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("a", 80*1024)))
+	for _, test := range []struct {
+		method string
+		path   string
+		body   string
+		input  proto.Message
+	}{
+		{http.MethodPost, "/api/v1/skills", `{"source":"upload","archive":"` + archive + `"}`, &workspacev1.CreateSkillRequest{}},
+		{http.MethodPatch, "/api/v1/skills/skill-1", `{"archive":"` + archive + `","expected_version":1}`, &workspacev1.UpdateSkillRequest{}},
+		{http.MethodPost, "/api/v1/admin/connectors/cli", `{"definition":{"archive":"` + archive + `"}}`, &workspacev1.CreateCLIConnectorDefinitionRequest{}},
+		{http.MethodPatch, "/api/v1/admin/connectors/cli/cli-1", `{"definition":{"archive":"` + archive + `"},"expected_version":1}`, &workspacev1.UpdateCLIConnectorDefinitionRequest{}},
+	} {
+		t.Run(test.method+test.path, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, test.path, strings.NewReader(test.body))
+			request.Header.Set("Content-Type", "application/json")
+			request.ContentLength = -1
+			response := httptest.NewRecorder()
+			rawBodyFilter(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				if err := decodeStrictJSONRequest(request, test.input); err != nil {
+					t.Fatal(err)
+				}
+				body, ok := transportmeta.RawBodyFromContext(request.Context())
+				if !ok || string(body) != test.body {
+					t.Fatal("archive body was truncated")
+				}
+				writer.WriteHeader(http.StatusNoContent)
+			})).ServeHTTP(response, request)
+			if response.Code != http.StatusNoContent {
+				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestArchiveJSONRejectsUnknownFieldsAndMalformedBase64(t *testing.T) {
+	for _, body := range []string{`{"archive":"not base64!"}`, `{"unknown":true}`, `{} {}`} {
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/skills", strings.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		if err := decodeStrictJSONRequest(request, &workspacev1.CreateSkillRequest{}); err == nil {
+			t.Fatalf("accepted %s", body)
+		}
+	}
+}
+
+type endlessBody struct{ read int }
+
+func (body *endlessBody) Read(buffer []byte) (int, error) {
+	clear(buffer)
+	body.read += len(buffer)
+	return len(buffer), nil
+}
+
+func TestArchiveJSONRejectsOversizeChunkedBodyWithBoundedRead(t *testing.T) {
+	body := &endlessBody{}
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/skills", body)
+	request.ContentLength = -1
+	response := httptest.NewRecorder()
+	rawBodyFilter(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("oversized request reached handler") })).ServeHTTP(response, request)
+	if response.Code != http.StatusRequestEntityTooLarge || response.Body.String() != "{\"error\":\"request_body_too_large\"}\n" {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if body.read != transportmeta.MaxArchiveJSONBody+1 {
+		t.Fatalf("read=%d", body.read)
+	}
+}
 
 func TestStrictJSONRequestDecoderPreservesRawBody(t *testing.T) {
 	body := `{"workflow":{"name":"Daily report","goal":"Summarize changes"}}`

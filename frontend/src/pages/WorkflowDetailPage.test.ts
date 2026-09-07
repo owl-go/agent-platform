@@ -252,8 +252,9 @@ describe("WorkflowDetailPage", () => {
   });
 
   it("downloads a Run Artifact from its conversation card", async () => {
-    const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 1536, sha256: "abc", text_preview: "workflow report", expired: false, created_at: run.ended_at! };
-    const artifactRun = { ...run, final_text: "已生成 `/workspace/report.md`" };
+    const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "Agent_Workspace_项目介绍.pptx", path: "Agent_Workspace_项目介绍.pptx", size: 1536, sha256: "abc", text_preview: "workflow report", expired: false, created_at: run.ended_at! };
+    const artifactText = "PPT 已生成：\n\n[下载 Agent Workspace 项目介绍 PPT](Agent_Workspace_项目介绍.pptx)";
+    const artifactRun = { ...run, final_text: artifactText, expert_stages: [{ expert_id: "expert-1", expert_name: "演示文稿专家", position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 1000, final_text: artifactText }] };
     const getArtifactDownload = vi.fn(async () => new Blob(["workflow report"], { type: "application/octet-stream" }));
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [artifactRun]), listRunTurns: vi.fn(async () => [artifactRun]), listArtifacts: vi.fn(async () => [generatedFile]), getArtifactDownload }));
@@ -263,11 +264,12 @@ describe("WorkflowDetailPage", () => {
     const disclosureLinks = wrapper.findAll(".artifact-disclosure-links button");
     await disclosureLinks[0]!.trigger("click");
     expect(wrapper.get(".generated-artifact").text()).toContain("1.5 KB");
-    expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("report.md");
+    expect(wrapper.get(".message.assistant .markdown-body").text()).toContain("Agent_Workspace_项目介绍.pptx");
+    expect(wrapper.findAll(".message.assistant .markdown-body a")).toHaveLength(0);
     expect(wrapper.get(".message.assistant .markdown-body").text()).not.toContain("/workspace/");
     await disclosureLinks[1]!.trigger("click");
     expect(wrapper.find(".generated-artifact").exists()).toBe(false);
-    expect(wrapper.get(".artifact-changes").text()).toContain("report.md");
+    expect(wrapper.get(".artifact-changes").text()).toContain("Agent_Workspace_项目介绍.pptx");
     expect(wrapper.get(".artifact-changes").text()).not.toContain("workflow report");
     await disclosureLinks[0]!.trigger("click");
     await wrapper.get(".generated-artifact").trigger("click");
@@ -449,12 +451,12 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
-  it("uses the same centered composer layout as a Session", async () => {
+  it("uses the Workflow conversation width for its composer", async () => {
     const wrapper = await mountPage();
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    expect(wrapper.find(".run-page > .composer-layer > .resource-composer.composer").exists()).toBe(true);
+    expect(wrapper.find(".run-page > .run-composer-layer > .run-composer.resource-composer.composer").exists()).toBe(true);
     wrapper.unmount();
   });
 

@@ -39,6 +39,7 @@ const OperationAgentWorkspaceServiceCreateSkill = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceService/CreateUser"
 const OperationAgentWorkspaceServiceCreateWorkflow = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 const OperationAgentWorkspaceServiceDecideCommandApproval = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
+const OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 const OperationAgentWorkspaceServiceDeleteMCPConnector = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
@@ -135,6 +136,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error)
+	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
@@ -295,6 +297,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/admin/connectors/cli/{definition_id}", _AgentWorkspaceService_UpdateCLIConnectorDefinition0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/connectors/cli/{definition_id}/publish", _AgentWorkspaceService_PublishCLIConnectorDefinition0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/connectors/cli/{definition_id}/disable", _AgentWorkspaceService_DisableCLIConnectorDefinition0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/admin/connectors/cli/{definition_id}", _AgentWorkspaceService_DeleteCLIConnectorDefinition0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/admin/connectors/cli-health", _AgentWorkspaceService_ListCLIConnectorHealth0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/connectors/cli/{definition_id}/enable", _AgentWorkspaceService_EnableCLIConnector0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/connectors/cli/enablements", _AgentWorkspaceService_ListCLIConnectorEnablements0_HTTP_Handler(srv))
@@ -2056,6 +2059,28 @@ func _AgentWorkspaceService_DisableCLIConnectorDefinition0_HTTP_Handler(srv Agen
 	}
 }
 
+func _AgentWorkspaceService_DeleteCLIConnectorDefinition0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteCLIConnectorDefinitionRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteCLIConnectorDefinition(ctx, req.(*DeleteCLIConnectorDefinitionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_ListCLIConnectorHealth0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListCLIConnectorHealthRequest
@@ -2290,6 +2315,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateUser(ctx context.Context, req *CreateUserRequest, opts ...http.CallOption) (rsp *CreateUserResponse, err error)
 	CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	DecideCommandApproval(ctx context.Context, req *DecideCommandApprovalRequest, opts ...http.CallOption) (rsp *CommandApproval, err error)
+	DeleteCLIConnectorDefinition(ctx context.Context, req *DeleteCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteMCPConnector(ctx context.Context, req *DeleteMCPConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -2740,6 +2766,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DecideCommandApproval(ctx context.
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteCLIConnectorDefinition(ctx context.Context, in *DeleteCLIConnectorDefinitionRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/admin/connectors/cli/{definition_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

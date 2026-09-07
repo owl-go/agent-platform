@@ -4,6 +4,11 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("classifies oversized Skill uploads as validation errors", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "request_body_too_large" }), { status: 413 })));
+    await expect(createPlatformApi(() => "token").createUploadSkill({ archive: "YQ==" })).rejects.toMatchObject({ kind: "validation", status: 413 });
+  });
+
   it("projects Runtime availability from the authenticated API", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ items: [{ name: "codex", available: true, native_resume: false, cli_version: "0.147.0" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
@@ -44,6 +49,14 @@ describe("Agent Workspace API client", () => {
 
     expect(result[0]?.protocols).toEqual([]);
     expect(result[0]?.models).toEqual([]);
+  });
+
+  it("normalizes an omitted deletion impact list from protobuf JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ confirmation_token: "confirmation" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const result = await createPlatformApi(() => "token").getSkillDeletionImpact("skill-1");
+
+    expect(result).toEqual({ affected_experts: [], confirmation_token: "confirmation" });
   });
 
   it("allowlists fields when updating a Model Provider Connection", async () => {

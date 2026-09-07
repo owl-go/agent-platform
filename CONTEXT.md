@@ -9,11 +9,11 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Experts, Skills, MCP Connectors, Personal Settings, Credit Balance, and Credit Ledger, and selects from the platform-wide Model Catalog and available CLI Connectors.
+An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. Every User may also select Administrator-created Platform Resources, the platform-wide Model Catalog, and available CLI Connectors.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
-The single bootstrap identity that manages User accounts, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to User-owned content or execution-level consumption.
+The single bootstrap identity that manages User accounts, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption.
 _Avoid_: Platform operator, Organization administrator, support user
 
 ## Credits And Usage
@@ -146,6 +146,10 @@ _Avoid_: Mutable Workspace path, signed download URL, filename mention
 
 ## Experts, Skills, And Connectors
 
+**Platform Resource**:
+An Expert, Skill, or MCP Connector created by the Administrator and visible to every authenticated User. It appears only in the platform section of its catalog, remains editable only by the Administrator, and may be selected by Users alongside their private resources.
+_Avoid_: shared User resource, public credential, CLI Connector Definition
+
 **Expert**:
 A reusable specialist profile with an Icon, display name, display-only Introduction, visible structured guidance, and selected Skills and Connectors. Its Core Capability, Operating Procedure, Output Standard, and Cautions form its injected guidance; it does not select a Provider Model or Runtime Engine.
 _Avoid_: Persona, Workflow
@@ -207,11 +211,12 @@ A migrated or partially edited Expert missing required Introduction, Core Capabi
 _Avoid_: unavailable execution configuration, deleted Expert
 
 **Connector**:
-A selectable integration through which a Session response or Run accesses an external capability, with or without an Expert. A User creates and exclusively owns each MCP Connector, while an Administrator creates each platform-wide Third-party CLI Connector; User-specific CLI authorization remains private to that User.
+A selectable integration through which a Session response or Run accesses an external capability, with or without an Expert. A User may privately own an MCP Connector, while an Administrator creates platform-wide MCP and Third-party CLI Connectors; User-specific CLI authorization remains private to that User.
 _Avoid_: Extension, Skill, Runtime Engine
 
 **CLI Connector Definition**:
-An Administrator-owned, platform-wide definition of one Third-party CLI's package, executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
+An Administrator-owned, platform-wide definition of one Third-party CLI's icon, name, capability description, immutable installation source, derived executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
+Administrator deletion retains a disabled historical record, removes catalog visibility and mutable Expert bindings, and revokes User access without changing frozen snapshots.
 _Avoid_: CLI authorization, MCP Connector, arbitrary package command
 
 **CLI Connector Authorization**:
@@ -227,11 +232,11 @@ A time-bounded User decision required before one high-risk CLI Connector command
 _Avoid_: Connector authorization, permanent permission, implicit consent
 
 **MCP Connector**:
-A User-owned Connector reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
+A private User-owned or Administrator-created Platform Resource reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
 _Avoid_: API Endpoint, Skill, Third-party CLI
 
 **Third-party CLI**:
-An Administrator-created Connector installed from a fixed-version package, such as an npm package distributed through `npx`, and exposed as a direct command inside an isolated Runtime environment without using the MCP protocol. Availability is restricted to Runtime image Digests with the required conformance evidence.
+An Administrator-created Connector installed from an exact npm package or a validated ZIP package and exposed as a direct command inside an isolated Runtime environment without using the MCP protocol. Availability is restricted to Runtime image Digests with the required conformance evidence.
 _Avoid_: MCP Connector, arbitrary host command, Runtime Engine
 
 **Feishu CLI Application**:
@@ -239,7 +244,7 @@ The single Feishu developer application created for one User when that User enab
 _Avoid_: CLI Connector Definition, one application per Expert, platform-wide Feishu application
 
 **Skill**:
-A versioned capability package containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
+A private User-owned or Administrator-created Platform Resource containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
 _Avoid_: Connector, Prompt, Runtime Engine
 
 **Recommended Skill Offer**:

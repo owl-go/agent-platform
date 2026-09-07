@@ -119,7 +119,7 @@ func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Pr
 		runtimeDigests = append(runtimeDigests, digest)
 	}
 	slices.Sort(runtimeDigests)
-	return &cliconnector.Builder{Packages: packages, Store: store, Conformance: conformance, RuntimeDigests: runtimeDigests}, nil
+	return &cliconnector.Builder{Packages: packages, Uploads: cliconnector.ZIPPackageBuilder{}, Store: store, Sources: store, Conformance: conformance, RuntimeDigests: runtimeDigests}, nil
 }
 
 func NewServers(database *gormdb.Database, worker *workspaceapplication.Worker, warm *containerprocess.WarmManager, config platformconfig.Config) ([]transport.Server, error) {

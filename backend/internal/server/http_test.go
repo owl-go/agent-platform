@@ -212,11 +212,12 @@ func TestGeneratedWriteRouteUsesStrictProtoJSONBinding(t *testing.T) {
 		body        string
 		contentType string
 		wantCode    string
+		wantStatus  int
 	}{
 		{name: "missing content type", body: `{}`, wantCode: "application_json_required"},
 		{name: "wrong content type", body: `{}`, contentType: "text/plain", wantCode: "application_json_required"},
 		{name: "multiple documents", body: `{} {}`, contentType: "application/json", wantCode: "invalid_request_body"},
-		{name: "oversized", body: `{"runtime":"` + strings.Repeat("x", 65*1024) + `"}`, contentType: "application/json", wantCode: "invalid_request_body"},
+		{name: "oversized", body: `{"runtime":"` + strings.Repeat("x", 65*1024) + `"}`, contentType: "application/json", wantCode: "request_body_too_large", wantStatus: http.StatusRequestEntityTooLarge},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/v1/workflows", strings.NewReader(test.body))
@@ -226,8 +227,12 @@ func TestGeneratedWriteRouteUsesStrictProtoJSONBinding(t *testing.T) {
 			response := httptest.NewRecorder()
 			server.ServeHTTP(response, request)
 			wantBody := "{\"error\":\"" + test.wantCode + "\"}\n"
-			if response.Code != http.StatusBadRequest || response.Body.String() != wantBody {
-				t.Fatalf("response=(%d, %q), want (400, %q)", response.Code, response.Body.String(), wantBody)
+			wantStatus := test.wantStatus
+			if wantStatus == 0 {
+				wantStatus = http.StatusBadRequest
+			}
+			if response.Code != wantStatus || response.Body.String() != wantBody {
+				t.Fatalf("response=(%d, %q), want (%d, %q)", response.Code, response.Body.String(), wantStatus, wantBody)
 			}
 		})
 	}

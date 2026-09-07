@@ -6,16 +6,18 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/objectstore/memory"
+	"agent-platform/backend/internal/platformconfig"
 	platformserver "agent-platform/backend/internal/server"
 	"agent-platform/backend/internal/skillstore"
 )
@@ -39,11 +41,11 @@ func (repository *skillUploadRepository) ListSkills(_ context.Context, owner str
 	return []domain.Skill{repository.item}, nil
 }
 
-func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id string, ref *string, key, digest string, version int64) (domain.Skill, error) {
+func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id, name string, ref *string, key, digest string, version int64) (domain.Skill, error) {
 	if owner != repository.owner || id != repository.item.ID || version != repository.item.Version {
 		return domain.Skill{}, domain.ErrNotFound
 	}
-	repository.item.ObjectKey, repository.item.SHA256 = key, digest
+	repository.item.Name, repository.item.ObjectKey, repository.item.SHA256 = name, key, digest
 	repository.item.Version++
 	return repository.item, nil
 }
@@ -60,19 +62,32 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := &Service{accounts: &accountapplication.Service{}, workspace: application, skills: store}
-	server := platformserver.NewHTTPServer(platformserver.HTTPConfig{}, nil)
-	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	handlers, err := platformserver.NewWorkspaceHTTPHandlers(service, func(next http.Handler) http.Handler { return next })
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := platformserver.NewHTTPServerFromConfig(platformconfig.Config{}, nil, handlers, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, method := range []string{http.MethodPost, http.MethodPatch} {
 		t.Run(method, func(t *testing.T) {
 			var archive bytes.Buffer
 			writer := zip.NewWriter(&archive)
 			for _, name := range []string{"pdf/SKILL.md", "pdf/scripts/convert.py", "__MACOSX/pdf/._SKILL.md", "pdf/.DS_Store"} {
-				entry, err := writer.Create(name)
+				entry, err := writer.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := io.WriteString(entry, method); err != nil {
+				content := method
+				if name == "pdf/scripts/convert.py" {
+					content = strings.Repeat("# fixture script\n", 16*1024)
+				}
+				if name == "pdf/SKILL.md" {
+					content = "---\ndisplay_name: PDF 文档处理\n---\n" + method
+				}
+				if _, err := io.WriteString(entry, content); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -80,7 +95,7 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 				t.Fatal(err)
 			}
 			url := "/api/v1/skills"
-			payload := map[string]any{"name": "pdf", "source": "upload", "archive": archive.Bytes()}
+			payload := map[string]any{"source": "upload", "archive": archive.Bytes()}
 			if method == http.MethodPatch {
 				url += "/skill-1"
 				payload = map[string]any{"archive": archive.Bytes(), "expected_version": repository.item.Version}
@@ -119,8 +134,11 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 			}
 			defer root.Close()
 			content, err := io.ReadAll(root)
-			if err != nil || string(content) != method {
+			if err != nil || string(content) != "---\ndisplay_name: PDF 文档处理\n---\n"+method {
 				t.Fatalf("stored Skill contents = %q, error = %v", content, err)
+			}
+			if repository.item.Name != "PDF 文档处理" {
+				t.Fatalf("Skill name = %q", repository.item.Name)
 			}
 		})
 	}

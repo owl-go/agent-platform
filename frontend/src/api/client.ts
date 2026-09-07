@@ -36,7 +36,7 @@ export interface Artifact { id: string; run_id?: string; message_id?: number; ki
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
 export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[]; cli_connector_definition_ids: string[] }
-export interface Expert extends ExpertInput { id: string; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
+export interface Expert extends ExpertInput { id: string; platform?: boolean; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
 export interface ExpertTeamMemberInput { id: string; name: string; expert_id: string; labels: string[] }
 export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert; position: number }
 export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
@@ -49,13 +49,13 @@ export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; stat
 export interface ProviderModel { id: string; connection_id: string; model_id: string; display_name: string; available: boolean; manually_added: boolean; compatibility: RuntimeModelCompatibility[] }
 export interface ModelProviderConnection { id: string; name: string; provider_type: string; endpoint: string; protocols: string[]; api_key_configured: boolean; verification_status: "verified" | "unverified" | "failed"; verification_error?: string; custom_endpoint: boolean; last_synced_at?: string; last_sync_error?: string; models: ProviderModel[]; created_at: string; updated_at: string; version: number }
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
-export interface MCPServer { id: string; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
-export interface Skill { id: string; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
+export interface MCPServer { id: string; platform?: boolean; name: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
+export interface Skill { id: string; platform?: boolean; name: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
 export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: string }
-export interface CLIConnectorDefinitionInput { name: string; npm_package: string; npm_version: string; npm_integrity: string; executable: string; authentication_driver: "none" | "feishu"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skills: CLIRecommendedSkill[]; recommended_skill_ids: string[] }
-export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[] }
+export interface CLIConnectorDefinitionInput { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_package: string; npm_version: string; archive?: string; npm_integrity?: string; executable?: string; authentication_driver?: "none" | "feishu"; capabilities?: CLICapability[]; supported_architectures?: Array<"linux-amd64" | "linux-arm64">; recommended_skills?: CLIRecommendedSkill[]; recommended_skill_ids?: string[] }
+export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { npm_integrity: string; executable: string; authentication_driver: "none" | "feishu"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skills: CLIRecommendedSkill[]; recommended_skill_ids: string[]; id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[] }
 export interface CLIConnectorHealth { definition_id: string; definition_name: string; definition_state: CLIConnectorDefinition["state"]; enablement_count: number; enabled_count: number; waiting_for_user_count: number; active_authorization_count: number; attention_authorization_count: number }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
@@ -157,8 +157,8 @@ export interface PlatformApi {
   getMCPConnectorDeletionImpact(id: string, signal?: AbortSignal): Promise<ResourceDeletionImpact>;
   deleteMCPServer(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
   listSkills(signal?: AbortSignal): Promise<Skill[]>;
-  createGitSkill(input: { name: string; git_url: string; git_ref?: string }, signal?: AbortSignal): Promise<Skill>;
-  createUploadSkill(input: { name: string; archive: string }, signal?: AbortSignal): Promise<Skill>;
+  createGitSkill(input: { git_url: string; git_ref?: string }, signal?: AbortSignal): Promise<Skill>;
+  createUploadSkill(input: { archive: string }, signal?: AbortSignal): Promise<Skill>;
   updateSkill(id: string, input: { git_ref?: string; archive?: string }, version: number, signal?: AbortSignal): Promise<Skill>;
   getSkillDeletionImpact(id: string, signal?: AbortSignal): Promise<ResourceDeletionImpact>;
   deleteSkill(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
@@ -168,6 +168,7 @@ export interface PlatformApi {
   updateCLIConnectorDefinition(id: string, input: CLIConnectorDefinitionInput, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   publishCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   disableCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
+  deleteCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<void>;
   enableCLIConnector(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   completeCLIConnectorEnablement(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   listCLIConnectorEnablements(signal?: AbortSignal): Promise<CLIConnectorEnablement[]>;
@@ -385,13 +386,19 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createMCPServer(input, signal) { return call("/api/v1/connectors/mcp", json("POST", { mcp_server: input }, signal)); },
     updateMCPServer(id, input, version, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_server: input, expected_version: version }, signal)); },
     testMCPServer(id, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
-    getMCPConnectorDeletionImpact(id, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/deletion-impact`, { signal }); },
+    async getMCPConnectorDeletionImpact(id, signal) {
+      const impact = await call<ResourceDeletionImpact>(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/deletion-impact`, { signal });
+      return { ...impact, affected_experts: impact.affected_experts ?? [] };
+    },
     deleteMCPServer(id, confirmationToken, signal) { return remove(`/api/v1/connectors/mcp/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/skills", { signal })).items ?? []; },
-    createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "git", git_url: input.git_url, git_ref: input.git_ref }, signal)); },
-    createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "upload", archive: input.archive }, signal)); },
+    createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "git", git_url: input.git_url, git_ref: input.git_ref || undefined }, signal)); },
+    createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "upload", archive: input.archive }, signal)); },
     updateSkill(id, input, version, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },
-    getSkillDeletionImpact(id, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}/deletion-impact`, { signal }); },
+    async getSkillDeletionImpact(id, signal) {
+      const impact = await call<ResourceDeletionImpact>(`/api/v1/skills/${encodeURIComponent(id)}/deletion-impact`, { signal });
+      return { ...impact, affected_experts: impact.affected_experts ?? [] };
+    },
     deleteSkill(id, confirmationToken, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
     async listCLIConnectorHealth(signal) { return (await call<{ items: CLIConnectorHealth[] }>("/api/v1/admin/connectors/cli-health", { signal })).items ?? []; },
@@ -399,6 +406,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },
     publishCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/publish`, json("POST", { expected_version: version }, signal)); },
     disableCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
+    async deleteCLIConnectorDefinition(id, version, signal) { await call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}?expected_version=${version}`, { method: "DELETE", signal }); },
     enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
     completeCLIConnectorEnablement(id, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(id)}/complete`, json("POST", {}, signal)); },
     async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },
@@ -436,7 +444,7 @@ async function request<T>(accessToken: string, path: string, init: RequestInit =
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { reason?: string; message?: string; error?: string };
     const code = body.reason ?? body.error ?? body.message ?? `request_failed_${response.status}`;
-    const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
+    const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 413 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
     throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "");
   }
   if (response.status === 204) return undefined as T;

@@ -115,6 +115,7 @@ func (workflowRecord) TableName() string { return "workflows" }
 type expertRecord struct {
 	ID                        string     `gorm:"column:id"`
 	OwnerID                   string     `gorm:"column:owner_user_id"`
+	Platform                  bool       `gorm:"->;column:platform"`
 	Name                      string     `gorm:"column:name"`
 	Icon                      string     `gorm:"column:icon"`
 	IconBackground            string     `gorm:"column:icon_background"`
@@ -161,25 +162,31 @@ type expertTeamRecord struct {
 func (expertTeamRecord) TableName() string { return "expert_teams" }
 
 type cliConnectorDefinitionRecord struct {
-	ID                     string    `gorm:"column:id"`
-	Name                   string    `gorm:"column:name"`
-	NPMPackage             string    `gorm:"column:npm_package"`
-	NPMVersion             string    `gorm:"column:npm_version"`
-	NPMIntegrity           string    `gorm:"column:npm_integrity"`
-	Executable             string    `gorm:"column:executable"`
-	AuthenticationDriver   string    `gorm:"column:authentication_driver"`
-	Capabilities           []byte    `gorm:"column:capabilities;type:jsonb"`
-	SupportedArchitectures []byte    `gorm:"column:supported_architectures;type:jsonb"`
-	RecommendedSkillIDs    []byte    `gorm:"column:recommended_skill_ids;type:jsonb"`
-	RecommendedSkills      []byte    `gorm:"column:recommended_skills;type:jsonb"`
-	State                  string    `gorm:"column:state"`
-	FailureReason          *string   `gorm:"column:failure_reason"`
-	BundleObjectKey        *string   `gorm:"column:bundle_object_key"`
-	BundleSHA256           *string   `gorm:"column:bundle_sha256"`
-	CreatedByUserID        string    `gorm:"column:created_by_user_id"`
-	CreatedAt              time.Time `gorm:"column:created_at"`
-	UpdatedAt              time.Time `gorm:"column:updated_at"`
-	Version                int64     `gorm:"column:version"`
+	DeletedAt              gorm.DeletedAt `gorm:"column:deleted_at"`
+	ID                     string         `gorm:"column:id"`
+	Name                   string         `gorm:"column:name"`
+	Icon                   string         `gorm:"column:icon"`
+	Description            string         `gorm:"column:description"`
+	InstallationType       string         `gorm:"column:installation_type"`
+	SourceObjectKey        *string        `gorm:"column:source_object_key"`
+	SourceSHA256           *string        `gorm:"column:source_sha256"`
+	NPMPackage             string         `gorm:"column:npm_package"`
+	NPMVersion             string         `gorm:"column:npm_version"`
+	NPMIntegrity           string         `gorm:"column:npm_integrity"`
+	Executable             string         `gorm:"column:executable"`
+	AuthenticationDriver   string         `gorm:"column:authentication_driver"`
+	Capabilities           []byte         `gorm:"column:capabilities;type:jsonb"`
+	SupportedArchitectures []byte         `gorm:"column:supported_architectures;type:jsonb"`
+	RecommendedSkillIDs    []byte         `gorm:"column:recommended_skill_ids;type:jsonb"`
+	RecommendedSkills      []byte         `gorm:"column:recommended_skills;type:jsonb"`
+	State                  string         `gorm:"column:state"`
+	FailureReason          *string        `gorm:"column:failure_reason"`
+	BundleObjectKey        *string        `gorm:"column:bundle_object_key"`
+	BundleSHA256           *string        `gorm:"column:bundle_sha256"`
+	CreatedByUserID        string         `gorm:"column:created_by_user_id"`
+	CreatedAt              time.Time      `gorm:"column:created_at"`
+	UpdatedAt              time.Time      `gorm:"column:updated_at"`
+	Version                int64          `gorm:"column:version"`
 }
 
 func (cliConnectorDefinitionRecord) TableName() string { return "cli_connector_definitions" }
@@ -335,6 +342,7 @@ func (modelProviderCredentialVersionRecord) TableName() string {
 type mcpRecord struct {
 	ID               string     `gorm:"column:id"`
 	OwnerID          string     `gorm:"column:owner_user_id"`
+	Platform         bool       `gorm:"->;column:platform"`
 	Name             string     `gorm:"column:name"`
 	Transport        string     `gorm:"column:transport"`
 	Configuration    []byte     `gorm:"column:configuration;type:jsonb"`
@@ -352,6 +360,7 @@ func (mcpRecord) TableName() string { return "mcp_servers" }
 type skillRecord struct {
 	ID        string    `gorm:"column:id"`
 	OwnerID   string    `gorm:"column:owner_user_id"`
+	Platform  bool      `gorm:"->;column:platform"`
 	Name      string    `gorm:"column:name"`
 	Source    string    `gorm:"column:source"`
 	GitURL    *string   `gorm:"column:git_url"`

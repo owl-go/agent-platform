@@ -44,6 +44,22 @@ func TestBuilderPublishesOnlyExactVerifiedArtifact(t *testing.T) {
 	}
 }
 
+func TestBuilderDerivesRuntimeContractFromPackageMetadata(t *testing.T) {
+	packageBytes := []byte("exact npm package")
+	sum := sha512.Sum512(packageBytes)
+	integrity := "sha512-" + base64.StdEncoding.EncodeToString(sum[:])
+	manifest := []byte(`{"name":"example-cli","version":"1.2.3","bin":{"example":"bin/cli.js"},"agentWorkspace":{"executable":"example","authenticationDriver":"none","supportedArchitectures":["linux-amd64"],"capabilities":[{"id":"read","argvPrefix":["read"],"risk":"low","identities":["user"],"egressHosts":["api.example.test"],"timeoutSeconds":60}]}}`)
+	builder := Builder{Packages: fakePackageBuilder{artifact: PackageArtifact{PackageBytes: packageBytes, BundleBytes: []byte("immutable bundle"), Integrity: integrity, Bins: map[string]string{"example": "bin/cli.js"}, Manifest: manifest}}, Store: &recordingBundleStore{}, Conformance: &passingConformance{}, RuntimeDigests: []string{"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	definition := Definition{ID: "definition-1", Name: "Example", Icon: "terminal", Description: "Reads examples", InstallationType: "npm", Package: "example-cli", Version: "1.2.3", State: StateBuilding, VersionNumber: 1}
+	result, err := builder.Build(context.Background(), definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Integrity != integrity || result.Executable != "example" || result.AuthenticationDriver != "none" || len(result.Capabilities) != 1 || len(result.SupportedArchitectures) != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+}
+
 func TestBuilderRejectsIntegrityMismatchBeforeStorage(t *testing.T) {
 	store := &recordingBundleStore{}
 	builder := Builder{Packages: fakePackageBuilder{artifact: PackageArtifact{PackageBytes: []byte("changed"), BundleBytes: []byte("bundle"), Integrity: "sha512-wrong", Bins: map[string]string{"lark-cli": "bin/index.js"}}}, Store: store, Conformance: &passingConformance{}, RuntimeDigests: []string{"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}

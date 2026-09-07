@@ -46,7 +46,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["AgentWorkspaceService_DeleteCLIConnectorDefinition"];
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateCLIConnectorDefinition"];
@@ -1371,6 +1371,9 @@ export interface components {
             recommended_skill_ids?: string[];
             conformance_runtime_digests?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1383,6 +1386,11 @@ export interface components {
             supported_architectures?: string[];
             recommended_skill_ids?: string[];
             recommended_skills?: components["schemas"]["v1CLIRecommendedSkill"][];
+            icon?: string;
+            description?: string;
+            installation_type?: string;
+            /** Format: byte */
+            archive?: string;
         };
         v1CLIConnectorEnablement: {
             id?: string;
@@ -1651,6 +1659,7 @@ export interface components {
             tag_projection_status?: string;
             tag_projection_error?: string;
             cli_connector_definition_ids?: string[];
+            platform?: boolean;
         };
         v1ExpertInput: {
             name?: string;
@@ -1852,6 +1861,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             test_pending?: boolean;
+            platform?: boolean;
         };
         v1MCPConnectorInput: {
             name?: string;
@@ -2133,6 +2143,7 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            platform?: boolean;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];
@@ -2282,6 +2293,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListCLIConnectorHealthResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteCLIConnectorDefinition: {
+        parameters: {
+            query?: {
+                expected_version?: number;
+            };
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
                 };
             };
             /** @description An unexpected error response. */

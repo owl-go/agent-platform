@@ -192,6 +192,7 @@ type MCPServerSnapshot struct {
 	Transport        string          `json:"transport"`
 	Configuration    json.RawMessage `json:"configuration"`
 	SecretCiphertext []byte          `json:"secret_ciphertext,omitempty"`
+	SecretOwnerID    string          `json:"secret_owner_id,omitempty"`
 }
 
 type SkillSnapshot struct {
