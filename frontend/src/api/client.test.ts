@@ -4,6 +4,11 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("classifies oversized Skill uploads as validation errors", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "request_body_too_large" }), { status: 413 })));
+    await expect(createPlatformApi(() => "token").createUploadSkill({ archive: "YQ==" })).rejects.toMatchObject({ kind: "validation", status: 413 });
+  });
+
   it("projects Runtime availability from the authenticated API", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ items: [{ name: "codex", available: true, native_resume: false, cli_version: "0.147.0" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);

@@ -31,6 +31,7 @@ describe("ExtensionManager", () => {
     [new ApiError("not_found", 404, "not_found"), "已不存在"],
     [new ApiError("conflict", 409, "conflict"), "刷新后重试"],
     [new ApiError("validation", 422, "invalid_input"), "填写内容"],
+    [new ApiError("validation", 413, "request_body_too_large"), "上传内容过大"],
     [new ApiError("rate_limited", 429, "rate_limited"), "请求过于频繁"],
     [new TypeError("Failed to fetch"), "网络连接"],
   ])("shows action failures without relying on a parent error listener (%s)", async (cause, message) => {

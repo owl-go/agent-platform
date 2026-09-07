@@ -44,7 +44,7 @@ const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
 function reportError(cause?: unknown) {
   const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: "invalidInput", rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
-  const key = cause instanceof ApiError ? keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
+  const key = cause instanceof ApiError ? cause.status === 413 ? "uploadTooLarge" : keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
 }
@@ -317,7 +317,7 @@ function openSkill(item: Skill) { editingSkill.value = item; skillForm.value = {
 async function selectSkillArchive(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   skillForm.value.archive = "";
-  if (!file || file.size > 10 * 1024 * 1024) { if (file) reportError(new ApiError("validation", 413, "file_too_large")); return; }
+  if (!file || file.size > 50 * 1024 * 1024) { if (file) reportError(new ApiError("validation", 413, "file_too_large")); return; }
   try { skillForm.value.archive = await fileToBase64(file); } catch (cause) { reportError(cause); }
 }
 async function saveSkill() {

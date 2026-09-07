@@ -6,16 +6,18 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/objectstore/memory"
+	"agent-platform/backend/internal/platformconfig"
 	platformserver "agent-platform/backend/internal/server"
 	"agent-platform/backend/internal/skillstore"
 )
@@ -60,19 +62,28 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := &Service{accounts: &accountapplication.Service{}, workspace: application, skills: store}
-	server := platformserver.NewHTTPServer(platformserver.HTTPConfig{}, nil)
-	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	handlers, err := platformserver.NewWorkspaceHTTPHandlers(service, func(next http.Handler) http.Handler { return next })
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := platformserver.NewHTTPServerFromConfig(platformconfig.Config{}, nil, handlers, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, method := range []string{http.MethodPost, http.MethodPatch} {
 		t.Run(method, func(t *testing.T) {
 			var archive bytes.Buffer
 			writer := zip.NewWriter(&archive)
 			for _, name := range []string{"pdf/SKILL.md", "pdf/scripts/convert.py", "__MACOSX/pdf/._SKILL.md", "pdf/.DS_Store"} {
-				entry, err := writer.Create(name)
+				entry, err := writer.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
 				if err != nil {
 					t.Fatal(err)
 				}
 				content := method
+				if name == "pdf/scripts/convert.py" {
+					content = strings.Repeat("# fixture script\n", 16*1024)
+				}
 				if name == "pdf/SKILL.md" {
 					content = "---\ndisplay_name: PDF 文档处理\n---\n" + method
 				}

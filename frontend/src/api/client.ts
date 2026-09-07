@@ -444,7 +444,7 @@ async function request<T>(accessToken: string, path: string, init: RequestInit =
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { reason?: string; message?: string; error?: string };
     const code = body.reason ?? body.error ?? body.message ?? `request_failed_${response.status}`;
-    const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
+    const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 413 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
     throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "");
   }
   if (response.status === 204) return undefined as T;

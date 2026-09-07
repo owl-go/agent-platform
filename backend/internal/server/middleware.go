@@ -92,8 +92,12 @@ func rawBodyFilter(next http.Handler) http.Handler {
 			return
 		}
 		body, err := transportmeta.CaptureRawBody(request)
-		if err != nil || len(body) > transportmeta.MaxJSONBody {
+		if err != nil {
 			writePublicError(writer, http.StatusBadRequest, "invalid_request_body")
+			return
+		}
+		if len(body) > transportmeta.JSONBodyLimit(request) {
+			writePublicError(writer, http.StatusRequestEntityTooLarge, "request_body_too_large")
 			return
 		}
 		next.ServeHTTP(writer, transportmeta.WithRawBody(request, body))

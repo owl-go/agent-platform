@@ -21,8 +21,11 @@ func decodeStrictJSONRequest(request *http.Request, value any) error {
 		return kratoserrors.BadRequest("application_json_required", "application/json Content-Type is required")
 	}
 	body, err := transportmeta.CaptureRawBody(request)
-	if err != nil || len(body) == 0 || len(body) > transportmeta.MaxJSONBody {
+	if err != nil || len(body) == 0 {
 		return kratoserrors.BadRequest("invalid_request_body", "request body is invalid")
+	}
+	if len(body) > transportmeta.JSONBodyLimit(request) {
+		return kratoserrors.New(http.StatusRequestEntityTooLarge, "request_body_too_large", "request body exceeds the size limit")
 	}
 	*request = *transportmeta.WithRawBody(request, body)
 	message, ok := value.(proto.Message)
