@@ -822,7 +822,12 @@ func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workfl
 		return nil, err
 	}
 	var rows []artifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND kind = 'file'", ownerID, workflowID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).
+		Table("artifacts artifact").Select("artifact.*").
+		Joins("JOIN runs run ON run.id = artifact.run_id").
+		Where("artifact.owner_user_id = ? AND artifact.workflow_id = ? AND artifact.kind = 'file'", ownerID, workflowID).
+		Where("strpos(COALESCE(run.final_result ->> 'text', ''), artifact.path) > 0 OR strpos(COALESCE(run.final_result ->> 'text', ''), artifact.name) > 0").
+		Order("artifact.created_at DESC, artifact.id DESC").Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Artifacts: %w", err)
 	}
 	items := make([]domain.Artifact, 0, len(rows))
@@ -844,7 +849,11 @@ func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workfl
 
 func (repository *Repository) GetArtifact(ctx context.Context, ownerID, workflowID, artifactID string) (domain.Artifact, error) {
 	var row artifactRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND kind = 'file'", ownerID, workflowID, artifactID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).
+		Table("artifacts artifact").Select("artifact.*").
+		Joins("JOIN runs run ON run.id = artifact.run_id").
+		Where("artifact.owner_user_id = ? AND artifact.workflow_id = ? AND artifact.id = ? AND artifact.kind = 'file'", ownerID, workflowID, artifactID).
+		Where("strpos(COALESCE(run.final_result ->> 'text', ''), artifact.path) > 0 OR strpos(COALESCE(run.final_result ->> 'text', ''), artifact.name) > 0").Take(&row).Error; err != nil {
 		return domain.Artifact{}, mapNotFound(err)
 	}
 	item := domain.Artifact{ID: row.ID, RunID: row.RunID, Kind: row.Kind, Name: row.Name, Path: row.Path, Size: row.Size, CreatedAt: row.CreatedAt, ExpiresAt: row.ExpiresAt}

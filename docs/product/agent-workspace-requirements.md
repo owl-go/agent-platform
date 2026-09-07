@@ -83,6 +83,7 @@ The detailed conversation specialist/resource selection rules and accepted revis
 
 - A User can create, rename, archive, cancel archive, and permanently delete a Session.
 - New Session creation succeeds immediately without an Expert. The composer offers a grouped `No Expert / Expert / Expert Team` selector through its `+` menu, including after the first message, without reopening a creation modal.
+- The first Runtime invocation in a new Session is explicitly scoped to that Session and must not assume context from any other Session. Subsequent platform summaries and recent messages are always labeled and queried as history from the same Session.
 - Each Session response can use no specialist profile, one Expert, or one Expert Team. The selection persists until changed, while every accepted message preserves its actual Expert Snapshot containing visible profile metadata, structured Expert guidance, stable Team Member identities and order, and exact Skill and Connector revisions. Selection changes affect subsequent messages only.
 - The composer supports direct Skill and Connector selection with or without an Expert. Explicit Skills apply to one message; the selected specialist and Connectors remain for subsequent messages. Expert-derived defaults, explicit overrides, revision retention, and Conversation Draft recovery follow `docs/product/conversation-resource-selection.md`.
 - The title is derived locally from the first User message and remains editable; title generation does not invoke a model.
@@ -205,10 +206,11 @@ Settings contains five collapsed sections:
 
 ### 7.1 Artifacts
 
-- A successful Run persists its final text or JSON in the Run Conversation and captures files added or changed by that Run as Artifacts.
-- A successful Session response also captures files generated in that turn as Artifacts and shows them directly beneath the Agent response.
-- Only actual generated or changed files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
-- Artifacts are grouped by Run time. A terminal response with generated or changed files shows compact, mutually exclusive `View all artifacts` and `View all changes` controls; the controls expand downloadable file cards and changed-file metadata respectively, without rendering file contents in the conversation.
+- A successful Run persists its final text or JSON in the Run Conversation and captures only final deliverable files explicitly named in that response as Artifacts.
+- A successful Session response also captures only final deliverable files explicitly named in that turn's Agent response and shows them directly beneath the response.
+- Dependencies, fonts, generation scripts, caches, and other intermediate Workspace files are not Artifacts. A Workflow may retain those files in its persistent Workspace for later Runs.
+- Only actual generated or changed final files are Artifacts. An ordinary text or JSON response does not create a synthetic file or Artifact.
+- Artifacts are grouped by Run time. A terminal response with final deliverables shows compact, mutually exclusive `View all artifacts` and `View all changes` controls; the controls expand downloadable file cards and final-file metadata respectively, without rendering file contents in the conversation.
 - Session and Run Conversation final text renders references to captured Artifacts as plain file names rather than download links. Artifact cards show the file name and size; selecting a non-expired card starts a browser download instead of exposing a Runtime Workspace path.
 - Failed and cancelled Runs do not create file Artifacts; their temporary Workspace changes are discarded.
 - Artifact files expire after 90 days. The UI preserves metadata and reports that the file has expired.

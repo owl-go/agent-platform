@@ -141,6 +141,19 @@ func TestSessionInstructionUsesOnlyCurrentMessageWhenNativeResumeIsActive(t *tes
 	}
 }
 
+func TestSessionInstructionMarksTheFirstMessageAsSessionIsolated(t *testing.T) {
+	got := sessionInstruction("", nil, "create a PDF", false)
+	for _, expected := range []string{
+		"This is the first message in a new Session.",
+		"Do not assume context from any other Session.",
+		"Current user message:\ncreate a PDF",
+	} {
+		if !strings.Contains(got, expected) {
+			t.Fatalf("instruction %q does not contain %q", got, expected)
+		}
+	}
+}
+
 func TestSessionMessagePairInitializesRuntimeActivities(t *testing.T) {
 	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`))
 	for _, message := range []messageRecord{user, assistant} {

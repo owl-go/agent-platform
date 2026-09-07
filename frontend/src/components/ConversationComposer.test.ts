@@ -26,6 +26,7 @@ afterEach(() => { localStorage.clear(); document.body.replaceChildren(); vi.rest
 describe("ConversationComposer", () => {
  it("replaces action icons with a single loading icon while sending or stopping", async () => {
   const { wrapper, submit } = await setup({ initial: true });
+  const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.append(document.createTextNode("创建 PDF")); await editor.trigger("input");
   let finish: (() => void) | undefined;
   submit.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
   const send = wrapper.get('[aria-label="发送"]');
@@ -45,8 +46,9 @@ describe("ConversationComposer", () => {
   const { wrapper, submit } = await setup({ initial: true });
   expect(wrapper.get(".composer-token").text()).toContain(skill.name); expect(submit).not.toHaveBeenCalled();
   expect(wrapper.emitted("launchConsumed")).toHaveLength(1);
+  const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.append(document.createTextNode("创建 PDF")); await editor.trigger("input");
   await wrapper.get('[aria-label="发送"]').trigger("click"); await flushPromises();
-  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ content: `[${skill.name}]`, input: { selection_id: "selection-2", file_references: [] } }));
+  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ content: "创建 PDF", input: { selection_id: "selection-2", file_references: [] } }));
   expect(wrapper.find(".composer-token").exists()).toBe(false);
   expect(wrapper.get(".composer-specialist").text()).toContain("Reviewer"); expect(wrapper.find('[aria-label="Search"]').exists()).toBe(true);
   wrapper.unmount();
@@ -54,6 +56,7 @@ describe("ConversationComposer", () => {
  });
  it("keeps the exact Skill and draft after submit failure and restores it after reload", async () => {
   const { wrapper, submit } = await setup({ initial: true, fail: true });
+  const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.append(document.createTextNode("创建 PDF")); await editor.trigger("input");
   await wrapper.get('[aria-label="发送"]').trigger("click"); await flushPromises();
   expect(submit).toHaveBeenCalledOnce(); expect(wrapper.get(".composer-token").text()).toContain(skill.name); expect(wrapper.find('[role="alert"]').exists()).toBe(true);
   wrapper.unmount(); const restored = await setup(); expect(restored.wrapper.get(".composer-token").text()).toContain(skill.name); restored.wrapper.unmount();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
+import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
@@ -372,6 +372,21 @@ function responseIdentity(message: SessionMessage) {
 function visibleStages(message: SessionMessage) {
 	return message.expert_stages ?? [];
 }
+function messageSkills(index: number) {
+  if (messages.value[index]?.role !== "user") return [];
+  const response = messages.value[index + 1];
+  if (response?.role !== "assistant") return [];
+  const skills = response.response_snapshot?.stages?.flatMap((stage) => stage.skills ?? []) ?? [];
+  return skills.filter((skill, skillIndex) => skills.findIndex((candidate) => candidate.id === skill.id) === skillIndex);
+}
+function userMessageContent(message: SessionMessage, index: number) {
+  let content = message.content;
+  for (const skill of messageSkills(index)) {
+    const prefix = `[${skill.name}]`;
+    if (content.trimStart().startsWith(prefix)) content = content.trimStart().slice(prefix.length).trimStart();
+  }
+  return content;
+}
 function activityLabel(activity: ExecutionActivity, historical = false) {
   if (activity.type === "runtime.started") return historical ? t("workflows.runtimePrepared") : t("sessions.progress.preparing");
   if (activity.type === "reasoning.summary") return t("workflows.reasoningSummary");
@@ -383,9 +398,9 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
 function stageStateLabel(state: string) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
 }
-async function copyMessage(message: SessionMessage) {
+async function copyMessage(message: SessionMessage, index: number) {
   try {
-    await navigator.clipboard.writeText(message.content);
+    await navigator.clipboard.writeText(message.role === "user" ? userMessageContent(message, index) : message.content);
     copiedMessageID.value = message.id;
     if (copiedTimer) clearTimeout(copiedTimer);
     copiedTimer = setTimeout(() => { copiedMessageID.value = undefined; }, 1600);
@@ -495,7 +510,8 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
                 <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
-              <p v-else-if="message.content">{{ message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
+              <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
+              <div v-if="message.role === 'user' && messageSkills(index).length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')"><span v-for="skill in messageSkills(index)" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span></div>
               <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="downloadSessionArtifact" />
               <div v-if="message.attachments?.length" class="turn-attachments"><button v-for="attachment in message.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name" @error="clearAttachmentURL(attachment.id)"><span v-else class="attachment-file-mark">{{ attachment.image ? 'IMG' : 'FILE' }}</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div>
               <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
@@ -505,7 +521,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <CreditConsumption v-if="message.role === 'assistant'" :value="message.credit_consumption" />
               <div class="message-actions">
                 <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"> · {{ responseIdentity(message)?.modelName }}</span></small>
-                <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
+                <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message, index)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
                 <el-button v-if="message.role === 'assistant' && message.state === 'failed'" text type="primary" @click="retry(index)">{{ t('common.retry') }}</el-button>
               </div>
             </div>
