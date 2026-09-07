@@ -1100,8 +1100,8 @@ func (repository *Repository) CreateSkill(ctx context.Context, ownerID string, s
 	return repository.getSkill(ctx, ownerID, row.ID)
 }
 
-func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
-	updates := map[string]any{"object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
+	updates := map[string]any{"name": strings.TrimSpace(name), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	if gitRef != nil {
 		updates["git_ref"] = gitRef
 	}

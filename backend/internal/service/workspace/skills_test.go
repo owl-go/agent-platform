@@ -39,11 +39,11 @@ func (repository *skillUploadRepository) ListSkills(_ context.Context, owner str
 	return []domain.Skill{repository.item}, nil
 }
 
-func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id string, ref *string, key, digest string, version int64) (domain.Skill, error) {
+func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id, name string, ref *string, key, digest string, version int64) (domain.Skill, error) {
 	if owner != repository.owner || id != repository.item.ID || version != repository.item.Version {
 		return domain.Skill{}, domain.ErrNotFound
 	}
-	repository.item.ObjectKey, repository.item.SHA256 = key, digest
+	repository.item.Name, repository.item.ObjectKey, repository.item.SHA256 = name, key, digest
 	repository.item.Version++
 	return repository.item, nil
 }
@@ -72,7 +72,11 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := io.WriteString(entry, method); err != nil {
+				content := method
+				if name == "pdf/SKILL.md" {
+					content = "---\ndisplay_name: PDF 文档处理\n---\n" + method
+				}
+				if _, err := io.WriteString(entry, content); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -80,7 +84,7 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 				t.Fatal(err)
 			}
 			url := "/api/v1/skills"
-			payload := map[string]any{"name": "pdf", "source": "upload", "archive": archive.Bytes()}
+			payload := map[string]any{"source": "upload", "archive": archive.Bytes()}
 			if method == http.MethodPatch {
 				url += "/skill-1"
 				payload = map[string]any{"archive": archive.Bytes(), "expected_version": repository.item.Version}
@@ -119,8 +123,11 @@ func TestSkillUploadHTTPNormalizesFolderForCreateAndUpdate(t *testing.T) {
 			}
 			defer root.Close()
 			content, err := io.ReadAll(root)
-			if err != nil || string(content) != method {
+			if err != nil || string(content) != "---\ndisplay_name: PDF 文档处理\n---\n"+method {
 				t.Fatalf("stored Skill contents = %q, error = %v", content, err)
+			}
+			if repository.item.Name != "PDF 文档处理" {
+				t.Fatalf("Skill name = %q", repository.item.Name)
 			}
 		})
 	}

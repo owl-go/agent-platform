@@ -84,12 +84,11 @@ describe("ExtensionManager", () => {
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.get(".compact-action").trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    await form.findAll("input")[0]!.setValue(saved.name);
-    await form.findAll("input")[1]!.setValue(saved.git_url);
+    await form.findAll("input")[0]!.setValue(saved.git_url);
     await form.trigger("submit");
     await flushPromises();
 
-    expect(createGitSkill).toHaveBeenCalledWith({ name: saved.name, git_url: saved.git_url, git_ref: "main" });
+    expect(createGitSkill).toHaveBeenCalledWith({ git_url: saved.git_url, git_ref: undefined });
     expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
     wrapper.unmount();
   });
@@ -116,13 +115,14 @@ describe("ExtensionManager", () => {
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => [saved]),
-      getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndescription: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
+      getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndisplay_name: PDF 文档处理\ndescription: Process PDFs.\ndescription_zh: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
     } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
 
     expect(wrapper.text()).toContain("创建、读取并检查 PDF 文档。");
+    expect(wrapper.text()).toContain("PDF 文档处理");
     wrapper.unmount();
   });
 
@@ -312,7 +312,7 @@ describe("ExtensionManager", () => {
     await wrapper.findAll("button").find((button) => button.text().includes("安装技能"))!.trigger("click");
     await flushPromises();
 
-    expect(createGitSkill).toHaveBeenCalledWith(recommendation);
+    expect(createGitSkill).toHaveBeenCalledWith({ git_url: recommendation.git_url, git_ref: recommendation.git_ref });
     expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
     wrapper.unmount();
   });

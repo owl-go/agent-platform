@@ -8,6 +8,7 @@ import { platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthor
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import ProfileIcon from "./ProfileIcon.vue";
+import { localizedSkillDescription, parseSkillDocument } from "../skillDocument";
 
 type ResourceTab = "mcp" | "skills";
 type MCPDraft = { name: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
@@ -34,7 +35,7 @@ const detailSkill = ref<Skill>();
 const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
 const auth = inject(authContextKey, undefined);
-const { t } = useI18n();
+const { locale, t } = useI18n();
 const canManageCLI = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
@@ -53,7 +54,7 @@ const showMCP = ref(false);
 const mcpForm = ref<MCPDraft>(emptyMCPDraft());
 const editingSkill = ref<Skill>();
 const showSkill = ref(false);
-const skillForm = ref({ name: "", source: "git" as "git" | "upload", git_url: "", git_ref: "main", archive: "" });
+const skillForm = ref({ source: "git" as "git" | "upload", git_url: "", git_ref: "", archive: "" });
 const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; item: Skill }) & { impact: ResourceDeletionImpact }>();
 const deleteBusy = ref(false);
 let poll: number | undefined;
@@ -101,12 +102,17 @@ async function refreshSkillDocuments() {
 }
 function skillDescription(item: Skill) {
   const content = skillDocuments.value[item.id] ?? "";
-  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
-  const description = frontmatter?.[1].match(/^description:\s*["']?(.+?)["']?\s*$/m)?.[1]?.trim();
-  if (description && description !== ">" && description !== "|") return description;
-  const body = frontmatter ? content.slice(frontmatter[0].length) : content;
+  const metadata = parseSkillDocument(content);
+  const description = localizedSkillDescription(metadata, locale.value);
+  if (description) return description;
+  const body = metadata.body;
   const paragraph = body.split(/\r?\n\s*\r?\n/).map((value) => value.replace(/^#+\s*/gm, "").replace(/[`*_>[\]()-]/g, "").trim()).find(Boolean);
   return paragraph || (item.source === "git" ? item.git_url : t("composer.localSkill")) || t("composer.localSkill");
+}
+function skillDisplayName(item: Skill) { return parseSkillDocument(skillDocuments.value[item.id] ?? "").displayName || item.name; }
+function openSkillDetails(item: Skill) {
+  if (props.selectable) detailSkill.value = item;
+  else void router.push({ name: "skill-detail", params: { skillId: item.id }, state: { skillReturnTo: router.currentRoute.value.fullPath } });
 }
 async function refreshCLIHealth() {
   if (!canManageCLI.value || !api.listCLIConnectorHealth) return [];
@@ -182,7 +188,7 @@ function selectedRecommendedSkill(recommendation: CLIRecommendedSkill) { const i
 async function acceptRecommendedSkill(recommendation: CLIRecommendedSkill) {
   try {
     let skill = installedRecommendedSkill(recommendation);
-    if (!skill) skill = await api.createGitSkill({ name: recommendation.name, git_url: recommendation.git_url, git_ref: recommendation.git_ref });
+    if (!skill) skill = await api.createGitSkill({ git_url: recommendation.git_url, git_ref: recommendation.git_ref });
     if (props.selectable) emit("update:skillIds", [...new Set([...props.skillIds, skill.id])]);
     await refresh();
   } catch { emit("error"); }
@@ -248,8 +254,8 @@ function toggleMCP(item: MCPServer, checked: boolean) {
   if (!item.tested) return;
   emit("update:mcpServerIds", checked ? [...new Set([...props.mcpServerIds, item.id])] : props.mcpServerIds.filter((id) => id !== item.id));
 }
-function openNewSkill() { editingSkill.value = undefined; skillForm.value = { name: "", source: "git", git_url: "", git_ref: "main", archive: "" }; showSkill.value = true; }
-function openSkill(item: Skill) { editingSkill.value = item; skillForm.value = { name: item.name, source: item.source, git_url: item.git_url ?? "", git_ref: item.git_ref ?? "main", archive: "" }; showSkill.value = true; }
+function openNewSkill() { editingSkill.value = undefined; skillForm.value = { source: "git", git_url: "", git_ref: "", archive: "" }; showSkill.value = true; }
+function openSkill(item: Skill) { editingSkill.value = item; skillForm.value = { source: item.source, git_url: item.git_url ?? "", git_ref: "", archive: "" }; showSkill.value = true; }
 async function selectSkillArchive(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!file || file.size > 10 * 1024 * 1024) { if (file) emit("error"); return; }
@@ -259,10 +265,10 @@ async function saveSkill() {
   try {
     let saved: Skill;
     if (editingSkill.value) {
-      const input = editingSkill.value.source === "git" ? { git_ref: skillForm.value.git_ref } : { archive: skillForm.value.archive };
+      const input = editingSkill.value.source === "git" ? { git_ref: skillForm.value.git_ref.trim() || undefined } : { archive: skillForm.value.archive };
       saved = await api.updateSkill(editingSkill.value.id, input, editingSkill.value.version);
-    } else if (skillForm.value.source === "git") saved = await api.createGitSkill({ name: skillForm.value.name, git_url: skillForm.value.git_url, git_ref: skillForm.value.git_ref });
-    else saved = await api.createUploadSkill({ name: skillForm.value.name, archive: skillForm.value.archive });
+    } else if (skillForm.value.source === "git") saved = await api.createGitSkill({ git_url: skillForm.value.git_url, git_ref: skillForm.value.git_ref.trim() || undefined });
+    else saved = await api.createUploadSkill({ archive: skillForm.value.archive });
     if (props.selectable && !editingSkill.value) emit("update:skillIds", [...new Set([...props.skillIds, saved.id])]);
     showSkill.value = false;
     await refresh();
@@ -357,9 +363,9 @@ async function fileToBase64(file: File): Promise<string> {
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
-        <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="detailSkill = item" @keydown.enter.self="detailSkill = item" @keydown.space.self.prevent="detailSkill = item">
-          <span class="extension-card-mark skill-mark">{{ item.name.slice(0, 1).toUpperCase() }}</span>
-          <div class="extension-card-copy skill-card-copy"><strong>{{ item.name }}</strong><p>{{ skillDescription(item) }}</p><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
+        <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="skillDisplayName(item)" @click="openSkillDetails(item)" @keydown.enter.self="openSkillDetails(item)" @keydown.space.self.prevent="openSkillDetails(item)">
+          <span class="extension-card-mark skill-mark">{{ skillDisplayName(item).slice(0, 1).toUpperCase() }}</span>
+          <div class="extension-card-copy skill-card-copy"><strong>{{ skillDisplayName(item) }}</strong><p>{{ skillDescription(item) }}</p><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
@@ -377,7 +383,7 @@ async function fileToBase64(file: File): Promise<string> {
   <Teleport to="body">
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
-    <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t("common.edit") : t("common.new") }} Skill</h2><label>{{ t("common.name") }}<input v-model="skillForm.name" :disabled="Boolean(editingSkill)" required></label><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">Git</option><option value="upload">ZIP</option></select></label><template v-if="skillForm.source === 'git'"><label>Git URL<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/…"></label><label>Git ref<input v-model="skillForm.git_ref" required></label></template><label v-else>ZIP<input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"></label><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
+    <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><p class="muted">{{ t('resources.skillDisplayNameHint') }}</p><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>
     <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><label>{{ t('resources.icon') }}<span class="cli-icon-field"><ProfileIcon :icon="cliForm.icon" /><select v-model="cliForm.icon"><option value="terminal">⌘ Terminal</option><option value="code">‹› Code</option><option value="sparkles">✦ Sparkles</option><option value="compass">⌖ Compass</option></select></span></label><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmInstall') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary">{{ t('resources.install') }}</el-button></div></form></div>
   </Teleport>
   <ConfirmDialog :open="Boolean(pendingDelete)" :title="t('common.delete')" :message="pendingDelete ? pendingDelete.impact.affected_experts.length ? t('resources.deleteAffected', { resource: pendingDelete.item.name, experts: pendingDelete.impact.affected_experts.map((expert) => expert.name).join('、') }) : t('resources.deleteUnaffected', { resource: pendingDelete.item.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="deleteBusy" danger @cancel="pendingDelete = undefined" @confirm="confirmRemove" />

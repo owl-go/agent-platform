@@ -157,8 +157,8 @@ export interface PlatformApi {
   getMCPConnectorDeletionImpact(id: string, signal?: AbortSignal): Promise<ResourceDeletionImpact>;
   deleteMCPServer(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
   listSkills(signal?: AbortSignal): Promise<Skill[]>;
-  createGitSkill(input: { name: string; git_url: string; git_ref?: string }, signal?: AbortSignal): Promise<Skill>;
-  createUploadSkill(input: { name: string; archive: string }, signal?: AbortSignal): Promise<Skill>;
+  createGitSkill(input: { git_url: string; git_ref?: string }, signal?: AbortSignal): Promise<Skill>;
+  createUploadSkill(input: { archive: string }, signal?: AbortSignal): Promise<Skill>;
   updateSkill(id: string, input: { git_ref?: string; archive?: string }, version: number, signal?: AbortSignal): Promise<Skill>;
   getSkillDeletionImpact(id: string, signal?: AbortSignal): Promise<ResourceDeletionImpact>;
   deleteSkill(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
@@ -391,8 +391,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     deleteMCPServer(id, confirmationToken, signal) { return remove(`/api/v1/connectors/mcp/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/skills", { signal })).items ?? []; },
-    createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "git", git_url: input.git_url, git_ref: input.git_ref }, signal)); },
-    createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { name: input.name, source: "upload", archive: input.archive }, signal)); },
+    createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "git", git_url: input.git_url, git_ref: input.git_ref || undefined }, signal)); },
+    createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "upload", archive: input.archive }, signal)); },
     updateSkill(id, input, version, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },
     async getSkillDeletionImpact(id, signal) {
       const impact = await call<ResourceDeletionImpact>(`/api/v1/skills/${encodeURIComponent(id)}/deletion-impact`, { signal });

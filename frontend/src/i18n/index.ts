@@ -139,6 +139,19 @@ Object.assign(en.experts, { iconTeam: "Team", iconSparkles: "Sparkles", iconComp
 Object.assign(zh.experts, { deleteExpertHint: "被专家团引用的专家不允许删除；请先移除对应成员。历史快照不会改变。" });
 Object.assign(en.experts, { deleteExpertHint: "An Expert referenced by an Expert Team cannot be deleted; remove those members first. Historical snapshots stay unchanged." });
 
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
+  importSkill: "导入技能", updateSkill: "更新技能", gitAddress: "Git 地址", gitBranchOptional: "分支（可选）", defaultBranchHint: "留空使用仓库默认分支",
+  skillDisplayNameHint: "技能名称将直接读取 SKILL.md 中的 display_name。", chooseSkillArchive: "选择包含 SKILL.md 的 ZIP 包", skillArchiveReady: "ZIP 包已选择",
+  skillDetail: "技能详情", backSkills: "返回技能", skillLoadFailed: "无法加载技能详情", noSkillDescription: "该技能未提供当前语言的描述。",
+  documentVersion: "版本", previewDocument: "预览技能文档", rawDocument: "查看 SKILL.md 源文件"
+});
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
+  importSkill: "Import Skill", updateSkill: "Update Skill", gitAddress: "Git URL", gitBranchOptional: "Branch (optional)", defaultBranchHint: "Leave blank to use the repository default branch",
+  skillDisplayNameHint: "The Skill name is read directly from display_name in SKILL.md.", chooseSkillArchive: "Choose a ZIP package containing SKILL.md", skillArchiveReady: "ZIP package selected",
+  skillDetail: "Skill details", backSkills: "Back to Skills", skillLoadFailed: "Could not load the Skill details", noSkillDescription: "This Skill has no description for the current language.",
+  documentVersion: "Version", previewDocument: "Preview Skill document", rawDocument: "View SKILL.md source"
+});
+
 Object.assign(zh, { composer: {
   add: "添加到对话", skills: "技能", connectors: "连接器", send: "发送", search: "搜索", empty: "没有匹配的技能",
   placeholder: "输入消息，/ 选择技能，{'@'} 引用对话文件", removeToken: "移除 {name}", useSkill: "去使用", summon: "召唤",

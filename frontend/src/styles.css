@@ -499,6 +499,36 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 }
 @media (prefers-reduced-motion: reduce) { .catalog-launch { transition: none; } }
 
+.skill-import-name { margin: -7px 0 0; font-weight: 650; color: var(--green); }
+.skill-upload-field { padding: 18px; border: 1px dashed #b9c7bf; border-radius: 13px; background: var(--wash); }
+.skill-upload-field input { padding: 10px 0 3px; border: 0; background: transparent; }
+.skill-upload-field small { display: block; margin-top: 6px; color: var(--muted); font-weight: 400; }
+.skill-detail-page { display: grid; gap: 24px; }
+.skill-detail-back { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 8px 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.skill-detail-back svg { width: 17px; }
+.skill-detail-back:hover { color: var(--green); }
+.skill-detail-loading { max-width: 980px; }
+.skill-detail-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding: 18px 0 12px; border-bottom: 1px solid var(--line); }
+.skill-detail-hero > div { min-width: 0; }
+.skill-detail-hero h1 { margin: 5px 0 12px; font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -.035em; }
+.skill-detail-hero p:last-child { max-width: 980px; margin: 0; color: var(--muted); line-height: 1.8; }
+.skill-document-card { padding: clamp(22px, 4vw, 42px); border-radius: 20px; }
+.skill-document-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.skill-document-toolbar dl { display: flex; flex-wrap: wrap; gap: 18px 46px; margin: 0; min-width: 0; }
+.skill-document-toolbar dl div { min-width: 120px; max-width: min(520px, 60vw); }
+.skill-document-toolbar dt { color: var(--muted); font-size: 12px; }
+.skill-document-toolbar dd { margin: 5px 0 0; overflow-wrap: anywhere; }
+.skill-document-view-switch { display: flex; gap: 7px; flex: none; }
+.skill-document { padding-top: 28px; }
+.skill-document-raw { max-height: 65vh; overflow: auto; margin: 28px 0 0; padding: 22px; border-radius: 14px; background: #18231f; color: #e7efe9; font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .skill-detail-hero, .skill-document-toolbar { align-items: stretch; flex-direction: column; }
+  .skill-detail-hero .el-button { width: 100%; }
+  .skill-document-toolbar dl { display: grid; gap: 14px; }
+  .skill-document-toolbar dl div { max-width: 100%; }
+  .skill-document-view-switch { align-self: flex-end; }
+}
+
 .composer-toolbar .composer-connector { color: var(--green); background: var(--wash); }
 .composer-specialist .profile-icon { flex: none; width: 27px; height: 27px; border-radius: 8px; }
 .composer-specialist .profile-icon svg { width: 18px; height: 18px; }

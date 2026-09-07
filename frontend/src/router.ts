@@ -23,6 +23,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/expert-teams/new", name: "expert-team-new", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "experts" } },
       { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "experts" } },
       { path: "/resources", name: "resources", component: () => import("./pages/SkillsConnectorsPage.vue"), meta: { surface: "resources" } },
+      { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
       { path: "/:pathMatch(.*)*", redirect: "/sessions" },
