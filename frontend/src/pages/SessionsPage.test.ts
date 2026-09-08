@@ -7,6 +7,7 @@ import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import ConversationComposer from "../components/ConversationComposer.vue";
+import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
 import SessionsPage from "./SessionsPage.vue";
 
 const session: Session = {
@@ -63,6 +64,7 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
   afterEach(() => {
+    embeddedSessionApprovalID.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
@@ -456,6 +458,17 @@ describe("SessionsPage conversation layout", () => {
 
     expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "feishu", capabilityID: "im_messages_send" });
     wrapper.unmount();
+  });
+
+  it("places a waiting Session approval in the active conversation composer", async () => {
+    const waiting: SessionMessage = { ...messages[1]!, state: "waiting_for_user", content: "", progress_stage: "using_tool" };
+    const wrapper = await mountPage([messages[0]!, waiting]);
+
+    expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(waiting.id);
+    expect(embeddedSessionApprovalID.value).toBe(String(waiting.id));
+    expect(wrapper.find("#session-command-approval-slot").exists()).toBe(true);
+    wrapper.unmount();
+    expect(embeddedSessionApprovalID.value).toBeUndefined();
   });
 
   it("does not present an old runtime activity as current after failure", async () => {
