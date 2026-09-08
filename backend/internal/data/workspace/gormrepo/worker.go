@@ -21,7 +21,18 @@ import (
 
 var _ application.WorkerRepository = (*Repository)(nil)
 
+const workerClaimLockID int64 = 770091734642
+
 func (repository *Repository) ClaimNext(ctx context.Context) (*application.ExecutionJob, error) {
+	if err := repository.acquireWorkerClaimLock(ctx); err != nil {
+		return nil, err
+	}
+	repository.recoveryOnce.Do(func() {
+		repository.recoveryError = repository.recoverInterruptedExecutions(ctx)
+	})
+	if repository.recoveryError != nil {
+		return nil, repository.recoveryError
+	}
 	var job *application.ExecutionJob
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := cancelDisabledOwnerWork(tx, time.Now().UTC()); err != nil {
@@ -77,6 +88,233 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job.Timezone = timezone
 	}
 	return job, nil
+}
+
+func (repository *Repository) acquireWorkerClaimLock(ctx context.Context) error {
+	repository.workerLockMu.Lock()
+	defer repository.workerLockMu.Unlock()
+	if repository.workerLock != nil {
+		if err := repository.workerLock.PingContext(ctx); err != nil {
+			return fmt.Errorf("check Worker claim lock connection: %w", err)
+		}
+		return nil
+	}
+	sqlDB, err := repository.db.DB()
+	if err != nil {
+		return fmt.Errorf("open Worker claim lock connection: %w", err)
+	}
+	connection, err := sqlDB.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("reserve Worker claim lock connection: %w", err)
+	}
+	var acquired bool
+	if err := connection.QueryRowContext(ctx, "SELECT pg_try_advisory_lock($1)", workerClaimLockID).Scan(&acquired); err != nil {
+		_ = connection.Close()
+		return fmt.Errorf("acquire Worker claim lock: %w", err)
+	}
+	if !acquired {
+		_ = connection.Close()
+		return fmt.Errorf("another Agent Workspace Worker is already active")
+	}
+	repository.workerLock = connection
+	return nil
+}
+
+func (repository *Repository) releaseWorkerClaimLock(ctx context.Context) error {
+	repository.workerLockMu.Lock()
+	defer repository.workerLockMu.Unlock()
+	if repository.workerLock == nil {
+		return nil
+	}
+	connection := repository.workerLock
+	repository.workerLock = nil
+	var released bool
+	queryErr := connection.QueryRowContext(ctx, "SELECT pg_advisory_unlock($1)", workerClaimLockID).Scan(&released)
+	closeErr := connection.Close()
+	if queryErr != nil {
+		return fmt.Errorf("release Worker claim lock: %w", queryErr)
+	}
+	if !released {
+		return fmt.Errorf("Worker claim lock was not held")
+	}
+	if closeErr != nil {
+		return fmt.Errorf("close Worker claim lock connection: %w", closeErr)
+	}
+	return nil
+}
+
+func (repository *Repository) recoverInterruptedExecutions(ctx context.Context) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		now := time.Now().UTC()
+		if err := recoverInterruptedSessionMessages(tx, now); err != nil {
+			return fmt.Errorf("recover interrupted Session responses: %w", err)
+		}
+		if err := recoverInterruptedWorkflowRuns(tx, now); err != nil {
+			return fmt.Errorf("recover interrupted Workflow Runs: %w", err)
+		}
+		return nil
+	})
+}
+
+func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
+	var messages []struct {
+		ID               int64  `gorm:"column:id"`
+		SessionID        string `gorm:"column:session_id"`
+		OwnerID          string `gorm:"column:owner_user_id"`
+		ExpertStages     []byte `gorm:"column:expert_stages"`
+		CancelRequested  bool   `gorm:"column:cancel_requested"`
+		Unavailable      bool   `gorm:"column:unavailable"`
+		ConsumedApproval bool   `gorm:"column:consumed_approval"`
+	}
+	if err := tx.Raw(`
+		SELECT message.id, message.session_id, session.owner_user_id, message.expert_stages,
+		       message.cancel_requested_at IS NOT NULL AS cancel_requested,
+		       session.archived_at IS NOT NULL OR owner.disabled_at IS NOT NULL AS unavailable,
+		       EXISTS (
+		         SELECT 1 FROM cli_command_approvals approval
+		         WHERE approval.execution_kind = 'session'
+		           AND approval.execution_id = message.id::text
+		           AND approval.state = 'consumed'
+		       ) AS consumed_approval
+		FROM session_messages message
+		JOIN sessions session ON session.id = message.session_id
+		JOIN users owner ON owner.id = session.owner_user_id
+		WHERE message.role = 'assistant' AND message.state IN ('generating', 'waiting_for_user')
+		FOR UPDATE OF message`).Scan(&messages).Error; err != nil {
+		return err
+	}
+	for _, message := range messages {
+		jobID := fmt.Sprintf("session-%s-%d", message.SessionID, message.ID)
+		if err := deleteExecutionCreditLease(tx, message.OwnerID, jobID); err != nil {
+			return err
+		}
+		if err := closeInterruptedApprovals(tx, "session", fmt.Sprintf("%d", message.ID)); err != nil {
+			return err
+		}
+		switch {
+		case message.CancelRequested || message.Unavailable:
+			stages, err := closeRunningExpertStages(message.ExpertStages, "cancelled", "", now)
+			if err != nil {
+				return err
+			}
+			updates := map[string]any{
+				"state": "cancelled", "expert_stages": stages, "progress_stage": "", "completed_at": now,
+				"elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now),
+			}
+			if err := tx.Model(&messageRecord{}).Where("id = ?", message.ID).Updates(updates).Error; err != nil {
+				return err
+			}
+		case message.ConsumedApproval:
+			const interruptedOperation = "Worker restarted after an approved Connector command; its outcome is unknown, so this response was not retried automatically"
+			stages, err := closeRunningExpertStages(message.ExpertStages, "failed", interruptedOperation, now)
+			if err != nil {
+				return err
+			}
+			updates := map[string]any{
+				"state": "failed", "error": interruptedOperation, "expert_stages": stages, "progress_stage": "", "completed_at": now,
+				"elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now),
+			}
+			if err := tx.Model(&messageRecord{}).Where("id = ?", message.ID).Updates(updates).Error; err != nil {
+				return err
+			}
+		default:
+			if err := tx.Model(&messageRecord{}).Where("id = ?", message.ID).Updates(map[string]any{
+				"state": "queued", "content": "", "error": nil, "progress_stage": "preparing",
+				"cancel_requested_at": nil, "completed_at": nil, "expert_stages": []byte("[]"),
+				"runtime_activities": []byte("[]"), "credit_consumption": nil,
+			}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
+	var runs []struct {
+		ID               string `gorm:"column:id"`
+		OwnerID          string `gorm:"column:owner_user_id"`
+		ExpertStages     []byte `gorm:"column:expert_stages"`
+		CancelRequested  bool   `gorm:"column:cancel_requested"`
+		Unavailable      bool   `gorm:"column:unavailable"`
+		ConsumedApproval bool   `gorm:"column:consumed_approval"`
+	}
+	if err := tx.Raw(`
+		SELECT run.id, run.owner_user_id, run.expert_stages,
+		       run.cancel_requested_at IS NOT NULL AS cancel_requested,
+		       owner.disabled_at IS NOT NULL OR workflow.id IS NULL OR workflow.deleted_at IS NOT NULL AS unavailable,
+		       EXISTS (
+		         SELECT 1 FROM cli_command_approvals approval
+		         WHERE approval.execution_kind = 'run'
+		           AND approval.execution_id = run.id::text
+		           AND approval.state = 'consumed'
+		       ) AS consumed_approval
+		FROM runs run
+		JOIN users owner ON owner.id = run.owner_user_id
+		LEFT JOIN workflows workflow ON workflow.id = run.workflow_id
+		WHERE run.state IN ('running', 'waiting_for_user')
+		FOR UPDATE OF run`).Scan(&runs).Error; err != nil {
+		return err
+	}
+	for _, run := range runs {
+		if err := deleteExecutionCreditLease(tx, run.OwnerID, run.ID); err != nil {
+			return err
+		}
+		if err := closeInterruptedApprovals(tx, "run", run.ID); err != nil {
+			return err
+		}
+		switch {
+		case run.CancelRequested || run.Unavailable:
+			stages, err := closeRunningExpertStages(run.ExpertStages, "cancelled", "", now)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&runRecord{}).Where("id = ?", run.ID).Updates(map[string]any{
+				"state": "cancelled", "expert_stages": stages, "ended_at": now, "version": gorm.Expr("version + 1"),
+			}).Error; err != nil {
+				return err
+			}
+			if err := appendRunEvents(tx, run.ID, nil, "run.cancelled", now); err != nil {
+				return err
+			}
+		case run.ConsumedApproval:
+			const interruptedOperation = "Worker restarted after an approved Connector command; its outcome is unknown, so this Run was not retried automatically"
+			stages, err := closeRunningExpertStages(run.ExpertStages, "failed", interruptedOperation, now)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&runRecord{}).Where("id = ?", run.ID).Updates(map[string]any{
+				"state": "failed", "terminal_error": interruptedOperation, "expert_stages": stages, "ended_at": now,
+				"version": gorm.Expr("version + 1"),
+			}).Error; err != nil {
+				return err
+			}
+			if err := appendRunEvents(tx, run.ID, nil, "run.failed", now); err != nil {
+				return err
+			}
+		default:
+			if err := tx.Model(&runRecord{}).Where("id = ?", run.ID).Updates(map[string]any{
+				"state": "queued", "started_at": nil, "ended_at": nil, "cancel_requested_at": nil,
+				"final_result": nil, "terminal_error": nil, "expert_stages": []byte("[]"),
+				"credit_consumption": nil, "version": gorm.Expr("version + 1"),
+			}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func closeInterruptedApprovals(tx *gorm.DB, executionKind, executionID string) error {
+	return tx.Table("cli_command_approvals").
+		Where("execution_kind = ? AND execution_id = ? AND state IN ?", executionKind, executionID, []string{"pending", "approved"}).
+		Updates(map[string]any{"state": "closed", "version": gorm.Expr("version + 1")}).Error
+}
+
+func deleteExecutionCreditLease(tx *gorm.DB, ownerID, executionID string) error {
+	return tx.Exec(`
+		DELETE FROM credit_execution_leases
+		WHERE user_id = ? AND source LIKE ?`, ownerID, executionID+":%").Error
 }
 
 func claimCLIConnectorBuild(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -337,7 +575,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if result.Error != nil || result.RowsAffected != 1 {
 		return nil, result.Error
 	}
-	if err := tx.Table("run_events").Create(map[string]any{"run_id": row.ID, "sequence": 1, "event_type": "run.started", "payload": []byte(`{}`)}).Error; err != nil {
+	if err := appendRunEvents(tx, row.ID, nil, "run.started", time.Now().UTC()); err != nil {
 		return nil, err
 	}
 	workflowID := ""
