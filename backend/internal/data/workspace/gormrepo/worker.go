@@ -1108,8 +1108,11 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 			}
 			updates["runtime_activities"] = gorm.Expr("CASE WHEN jsonb_array_length(runtime_activities) >= 32 THEN (runtime_activities - 0) || ?::jsonb ELSE runtime_activities || ?::jsonb END", string(encoded), string(encoded))
 		}
+		if stage, ok := updates["progress_stage"].(string); ok {
+			updates["progress_stage"] = gorm.Expr("CASE WHEN state = 'waiting_for_user' THEN 'waiting_for_user' ELSE ? END", stage)
+		}
 		result := repository.db.WithContext(ctx).Model(&messageRecord{}).
-			Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).
+			Where("id = ? AND session_id = ? AND state IN ? AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID, []string{"generating", "waiting_for_user"}).
 			Updates(updates)
 		if result.Error != nil {
 			return fmt.Errorf("record Session response progress: %w", result.Error)
@@ -1127,7 +1130,7 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state").Where("id = ? AND owner_user_id = ?", job.ID, job.OwnerID).Take(&run).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if run.State != "running" {
+		if run.State != "running" && run.State != "waiting_for_user" {
 			return domain.ErrConflict
 		}
 		var sequence int64
@@ -1218,13 +1221,13 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 	var encoded []byte
 	if job.Kind == application.JobSession {
 		var row messageRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state IN ?", job.AssistantMessageID, job.SessionID, []string{"generating", "waiting_for_user"}).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		encoded = row.ExpertStages
 	} else if job.Kind == application.JobWorkflow {
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages").Where("id = ? AND owner_user_id = ? AND state IN ?", job.ID, job.OwnerID, []string{"running", "waiting_for_user"}).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		encoded = row.ExpertStages
@@ -1251,7 +1254,7 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 		return err
 	}
 	if job.Kind == application.JobSession {
-		updates := map[string]any{"expert_stages": encoded, "progress_stage": "thinking"}
+		updates := map[string]any{"expert_stages": encoded, "progress_stage": gorm.Expr("CASE WHEN state = 'waiting_for_user' THEN 'waiting_for_user' ELSE 'thinking' END")}
 		if stage.State == "running" {
 			updates["content"] = ""
 		}

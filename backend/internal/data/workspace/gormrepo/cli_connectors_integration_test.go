@@ -2,6 +2,7 @@ package gormrepo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -160,6 +161,24 @@ func TestConnectorActionPausesAndResumesSessionMessage(t *testing.T) {
 	}
 	if paused.State != "waiting_for_user" || paused.ProgressStage != "waiting_for_user" {
 		t.Fatalf("paused message = state %q progress %q", paused.State, paused.ProgressStage)
+	}
+	if err := repository.RecordProgress(ctx, application.ExecutionJob{
+		Kind: application.JobSession, OwnerID: owner, SessionID: sessionID, AssistantMessageID: messageID,
+	}, application.ExecutionEvent{Type: "command.requested", Payload: []byte(`{"command":"agent-cli"}`)}); err != nil {
+		t.Fatalf("record progress while waiting for User action: %v", err)
+	}
+	if err := db.Where("id = ?", messageID).Take(&paused).Error; err != nil {
+		t.Fatal(err)
+	}
+	if paused.State != "waiting_for_user" || paused.ProgressStage != "waiting_for_user" {
+		t.Fatalf("progress event changed paused message = state %q progress %q", paused.State, paused.ProgressStage)
+	}
+	var activities []domain.ExecutionActivity
+	if err := json.Unmarshal(paused.RuntimeActivities, &activities); err != nil {
+		t.Fatal(err)
+	}
+	if len(activities) != 1 || activities[0].Type != "command.requested" {
+		t.Fatalf("paused message activities = %#v", activities)
 	}
 	if _, err := repository.CancelConnectorAction(ctx, owner, action.ID); err != nil {
 		t.Fatal(err)
