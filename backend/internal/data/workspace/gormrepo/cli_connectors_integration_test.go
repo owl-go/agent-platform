@@ -220,7 +220,7 @@ func TestBeginCLIConnectorAuthorizationUpdatesExistingAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondExpiry := time.Now().Add(2 * time.Minute)
+	secondExpiry := time.Now().Add(2 * time.Minute).Truncate(time.Microsecond)
 	second, err := repository.BeginCLIConnectorAuthorization(ctx, owner, enablementID, cliconnector.IdentityUser, []string{"chat:read", "chat:write"}, "https://example.test/second", secondExpiry, []byte("second-device"))
 	if err != nil {
 		t.Fatal(err)
