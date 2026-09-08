@@ -119,7 +119,7 @@ One immutable execution turn inside a Run Conversation, with fixed input, one te
 _Avoid_: Workflow, Run Conversation, Session response, Worker process
 
 **User Action Wait**:
-A non-terminal execution state in which a Session response or Run is paused until the User completes Connector authorization or approves a high-risk Connector command before a fixed deadline. No protected action executes without the required confirmation.
+A non-terminal execution state in which a Session response or Run is paused until the User completes Connector authorization or approves a high-risk Connector operation before a fixed deadline. Verification resumes the same execution automatically; a User recovery signal may request another verification when provider callbacks or polling are unavailable. Rejection resumes that execution with a structured cancelled_by_user result, while expiry ends it with user_action_expired and invalidates every stale action link.
 _Avoid_: queued execution, indefinite pause, automatic approval
 
 **Deleted Workflow Record**:
@@ -214,25 +214,77 @@ _Avoid_: unavailable execution configuration, deleted Expert
 A selectable integration through which a Session response or Run accesses an external capability, with or without an Expert. A User may privately own an MCP Connector, while an Administrator creates platform-wide MCP and Third-party CLI Connectors; User-specific CLI authorization remains private to that User.
 _Avoid_: Extension, Skill, Runtime Engine
 
+**Connector Manifest**:
+A versioned, machine-readable declaration of one Connector's capabilities, structured inputs, User-visible operation semantics, Authorization Scheme, required permissions, risk, network destinations, and execution limits. It may describe behavior but cannot supply executable authorization logic.
+_Avoid_: README, Connector Usage Guide, arbitrary command script
+
+**Resolved Connector Manifest**:
+The reviewed, validated Connector Manifest bound to one exact Connector Definition and its immutable package or remote-service revision. Publication requires schema and trusted-reference validation, transport conformance evidence, and Administrator review. An exact platform Profile is authoritative when present; otherwise the package Manifest is used, while automatically discovered command metadata remains a draft input. Existing conversations retain their frozen version, while new conversations use the latest published version after any required User review of security-semantic changes.
+_Avoid_: generated Manifest draft, current upstream README, mutable catalog description
+
+**Connector Usage Guide**:
+Versioned, User-visible instructions that help an Agent choose and combine a selected Connector's structured capabilities. A selected Connector contributes a compact capability index, while the Agent retrieves the frozen full guide through a platform-local read-only description operation.
+_Avoid_: README, hidden prompt, Skill, security policy
+
+**Connector Operation**:
+One invocation of a structured capability through a selected Connector, bound to its frozen Definition, execution identity, Authorization Binding, reviewed input, and optional target. Its lifecycle and outcome are reported through a versioned, typed contract by the CLI Wrapper or MCP Gateway rather than inferred from Runtime command text. Recovery follows the frozen capability's idempotency policy; an interrupted operation whose result cannot be established becomes outcome_unknown instead of being retried blindly.
+_Avoid_: arbitrary shell command, Agent message, Connector Operation Approval
+
+**Connector Capability Index**:
+The compact, frozen list of structured capabilities supplied to an Agent when a Connector is selected. It identifies available operations and the local description action without embedding the full Connector Usage Guide in every model invocation.
+_Avoid_: Connector Usage Guide, README, dynamically discovered tool list
+
 **CLI Connector Definition**:
 An Administrator-owned, platform-wide definition of one Third-party CLI's icon, name, capability description, immutable installation source, derived executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
 Administrator deletion retains a disabled historical record, removes catalog visibility and mutable Expert bindings, and revokes User access without changing frozen snapshots.
 _Avoid_: CLI authorization, MCP Connector, arbitrary package command
 
-**CLI Connector Authorization**:
-A User-private account authorization under one enabled CLI Connector. It records the authorized external identity and protected, versioned credentials without exposing them to the Administrator or an Expert Snapshot.
-_Avoid_: CLI Connector Definition, Connector Enablement, shared platform credential
+**Connector Authorization**:
+A User-private grant from an external identity to exactly one enabled Connector, covering an explicit set of permissions and protected, versioned credentials. At most one Authorization is active for each User and Connector. Credentials are never shared with another Connector, including a Connector that uses the same provider or Authorization Scheme. Permission expansion requires explicit User consent; an authorization response for a different external identity enters the account-switch flow instead of replacing the identity silently. Its stable lifecycle state is separate from a structured reason explaining required action, provider failure, expiry, or revocation.
+_Avoid_: CLI Connector Definition, Connector Enablement, Connector Operation Approval, shared platform credential
 
-**CLI Connector Enablement**:
-A User's activation of one available CLI Connector Definition before selecting or using it. It is distinct from each external account authorization under that Connector.
-_Avoid_: CLI Connector Authorization, Expert selection, Run
+**Connector Setup**:
+User-private configuration required by one Connector before its Authorization Scheme can request an external account grant, such as that User's App ID and App Secret for the Connector. The Authorization Scheme provides a structured Setup schema so a missing Setup can be completed from a generic setup_required Action Requirement in the conversation. Setup and Authorization have separate lifecycles and protected records, but neither may be reused by another Connector.
+_Avoid_: Connector Authorization, platform-wide provider credential, shared OAuth application
 
-**Connector Command Approval**:
-A time-bounded User decision required before one high-risk CLI Connector command executes. Approval is specific to the displayed Connector, identity, operation, and target; expiry or rejection prevents that command from running.
+**Connector Credential Delivery**:
+A trusted, declarative mapping from one Connector's own Authorization credential slots to the exact environment variables, HTTP headers, or temporary files accepted by that Connector's frozen execution transport. It cannot reference another Connector's Authorization, execute code, or expose plaintext credentials to the Agent.
+_Avoid_: shared provider credential, arbitrary environment template, Authorization Adapter
+
+**Connector Authorization Binding**:
+A Conversation Selection's stable reference to the single active Connector Authorization under that same Connector when its first protected capability is invoked. Credential refresh and permission expansion for the same external identity preserve the binding, while account replacement does not silently move existing conversations. No Authorization from another Connector can satisfy the binding.
+_Avoid_: encrypted Token, account discovery, per-command account guess
+
+**Connector Enablement**:
+A User's activation of one available Connector before selecting or using it. It is distinct from Connector Setup and external account Authorization. Selecting or opening an enabled Connector does not request authorization; the first actual capability that requires missing Permissions creates a Connector Action Requirement in that conversation.
+_Avoid_: Connector Authorization, Expert selection, Run
+
+**Connector Authorization Scheme**:
+A platform-trusted authorization protocol referenced by a Connector, defining its Setup schema, Permission Catalog, credential slots, and how external grants, refresh, revocation, and execution credentials behave. Its registered Adapter emits only supported generic User actions such as opening a platform URL, showing or copying a code, checking status, or editing Setup. A Connector package may select a supported scheme but cannot supply executable authorization logic.
+_Avoid_: Connector Authorization, arbitrary authentication script, credential template
+
+**Connector Permission**:
+A stable authorization capability from one Connector Authorization Scheme that maps a User-visible meaning to exact provider scopes. Connector capabilities reference Permission identities rather than supplying arbitrary provider scopes.
+_Avoid_: Provider scope string, Connector capability, Connector Operation Approval
+
+**Connector Action Requirement**:
+A versioned, typed, time-bounded description of the Connector-related User action needed to resume an execution, including the frozen Connector and capability identities, external identity, stable reason code, and permitted generic actions. Sessions, Run Conversations, and the global action inbox present the same requirement without parsing command, provider error text, or provider-specific identifiers in the frontend. An unsupported action type fails closed with a generic client-compatibility message.
+_Avoid_: raw error message, authorization popup, Connector-specific frontend event
+
+**Connector Authorization Session**:
+A short-lived, one-time platform flow that binds one User, Connector, Conversation, Connector Operation, requested Permissions, and random state to an external authorization redirect. Its Action Requirement exposes a platform URL as both a button and copyable link; a verified callback resumes the same execution without exposing provider parameters to the Agent.
+_Avoid_: Provider authorization URL generated by an Agent, permanent authorization link, Connector Authorization
+
+**Connector Operation Approval**:
+A time-bounded User decision required before one high-risk Connector Operation executes through CLI or MCP. Approval is specific to exactly one displayed Connector Operation, Authorization identity, structured input summary, target, and input digest; it is never reused by a later operation. Expiry or rejection prevents that operation from running. When Authorization is also required, the platform establishes the actual external identity before requesting approval.
 _Avoid_: Connector authorization, permanent permission, implicit consent
 
+**Connector Audit Record**:
+A minimal, Secret-redacted record of a Connector authorization action, approval, or operation containing stable identities, frozen versions, Permission and reason codes, result, timestamps, target summary, and input digest. Provider continuation data remains encrypted server-side, while Tokens, Setup Secrets, authorization URLs, credential delivery values, and complete command arguments never enter ordinary audit records.
+_Avoid_: Runtime transcript, plaintext credential, full provider response
+
 **MCP Connector**:
-A private User-owned or Administrator-created Platform Resource reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment.
+A private User-owned or Administrator-created Platform Resource reached through Streamable HTTP or started as a fixed-version `npx` or `uvx` stdio process inside an isolated Runtime environment. It shares the Connector Manifest, Permission, Authorization, and Action Requirement model while retaining its existing ownership and enablement rules.
 _Avoid_: API Endpoint, Skill, Third-party CLI
 
 **Third-party CLI**:
