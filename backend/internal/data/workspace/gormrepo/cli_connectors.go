@@ -941,7 +941,7 @@ func transitionApprovalExecution(tx *gorm.DB, request cliconnector.ApprovalReque
 		} else {
 			from, to = "waiting_for_user", "generating"
 		}
-		result := tx.Model(&messageRecord{}).Where("id = ? AND state = ? AND session_id IN (SELECT id FROM sessions WHERE owner_user_id = ?)", messageID, from, request.OwnerID).Updates(map[string]any{"state": to, "progress_stage": map[bool]string{false: "waiting_for_user", true: "using_tool"}[resume]})
+		result := tx.Model(&messageRecord{}).Where("id = ? AND state = ? AND session_id IN (SELECT id FROM sessions WHERE owner_user_id = ?)", messageID, from, request.OwnerID).Updates(map[string]any{"state": to, "progress_stage": "using_tool"})
 		if result.Error != nil {
 			return result.Error
 		}

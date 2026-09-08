@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -118,6 +119,77 @@ func TestBeginCLIConnectorAuthorizationReusesPendingAttempt(t *testing.T) {
 	}
 	if second.ID != first.ID || second.ActionURL != "https://accounts.feishu.cn/second" || len(second.Scopes) != 1 || second.Scopes[0] != "im:message" {
 		t.Fatalf("reused authorization attempt = %#v, first = %#v", second, first)
+	}
+}
+
+func TestSessionCommandApprovalEntersUserActionWait(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	owner, session := uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO sessions(id,owner_user_id) VALUES(?,?)", session, owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO session_messages(session_id,role,content,state,progress_stage) VALUES(?,'assistant','','generating','using_tool')", session).Error; err != nil {
+		t.Fatal(err)
+	}
+	var messageID int64
+	if err := db.Raw("SELECT id FROM session_messages WHERE session_id=?", session).Scan(&messageID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := make(chan error, 1)
+	digest := strings.Repeat("a", 64)
+	go func() {
+		_, err := repository.Await(ctx, cliconnector.ApprovalRequest{
+			OwnerID: owner, ExecutionKind: "session", ExecutionID: fmt.Sprint(messageID), StageID: fmt.Sprintf("session:%d:stage:1", messageID),
+			ConnectorName: "Feishu CLI", Operation: "im_messages_send", Target: "oc_test", RedactedArguments: "im +messages-send [arguments redacted]",
+			CommandDigest: digest, Nonce: "nonce-1", Identity: cliconnector.IdentityUser, AllowedIdentities: []cliconnector.Identity{cliconnector.IdentityUser},
+			CommandDigests: map[cliconnector.Identity]string{cliconnector.IdentityUser: digest}, ExpiresAt: time.Now().Add(time.Minute),
+		})
+		result <- err
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		approvals, err := repository.ListCommandApprovals(context.Background(), owner, time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(approvals) == 1 {
+			break
+		}
+		select {
+		case err := <-result:
+			t.Fatalf("approval wait stopped before becoming visible: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("approval did not become visible")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	var state, progress string
+	if err := db.Raw("SELECT state,progress_stage FROM session_messages WHERE id=?", messageID).Row().Scan(&state, &progress); err != nil {
+		t.Fatal(err)
+	}
+	if state != "waiting_for_user" || progress != "using_tool" {
+		t.Fatalf("message state=%q progress=%q", state, progress)
+	}
+	cancel()
+	if err := <-result; !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled approval wait = %v", err)
+	}
+	if err := db.Raw("SELECT state,progress_stage FROM session_messages WHERE id=?", messageID).Row().Scan(&state, &progress); err != nil {
+		t.Fatal(err)
+	}
+	if state != "generating" || progress != "using_tool" {
+		t.Fatalf("resumed message state=%q progress=%q", state, progress)
 	}
 }
 
