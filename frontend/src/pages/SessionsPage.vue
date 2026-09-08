@@ -14,6 +14,8 @@ import type { ComposerSubmission } from "../conversationDraft";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { displayArtifactNames } from "../artifactDisplay";
+import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
+import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -55,6 +57,10 @@ const activeAssistant = computed(() => {
     if (message?.role === "assistant" && (message.state === "queued" || message.state === "generating" || message.state === "waiting_for_user")) return message;
   }
   return undefined;
+});
+const cliAuthorizationRequest = computed(() => {
+  const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
+  return cliAuthorizationRequestFromActivities(latestAssistant?.activities);
 });
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let pollGeneration = 0;
@@ -336,12 +342,17 @@ function activeStageLabel(message: SessionMessage) {
 function responseIdentity(message: SessionMessage) {
 	const snapshot = message.response_snapshot;
 	const stage = snapshot?.stages?.at(-1);
-	if (stage) return { connection: stage.provider_model.connection_name, modelID: stage.provider_model.model_id, modelName: stage.provider_model.name, runtime: stage.runtime_engine };
-	if (snapshot?.model_name) return { connection: snapshot.connection_name, modelID: snapshot.model_id, modelName: snapshot.model_name, runtime: snapshot.runtime_engine };
+	const expertName = message.expert_stages?.at(-1)?.expert_name;
+	if (stage) return { connection: stage.provider_model.connection_name, modelID: stage.provider_model.model_id, modelName: stage.provider_model.name, runtime: stage.runtime_engine, expertName };
+	if (snapshot?.model_name) return { connection: snapshot.connection_name, modelID: snapshot.model_id, modelName: snapshot.model_name, runtime: snapshot.runtime_engine, expertName };
 	return undefined;
 }
 function visibleStages(message: SessionMessage) {
-	return message.expert_stages ?? [];
+	const stages = message.expert_stages ?? [];
+	if (stages.length !== 1) return stages;
+	const finalText = stages[0]?.final_text?.replace(/\r\n/g, "\n").trim();
+	const messageText = message.content.replace(/\r\n/g, "\n").trim();
+	return finalText && finalText === messageText ? [] : stages;
 }
 function messageSkills(index: number) {
   if (messages.value[index]?.role !== "user") return [];
@@ -365,6 +376,13 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
   if (activity.type === "command.completed") return t("workflows.toolCompleted");
   if (activity.type === "file.changed") return t("workflows.updatingFiles");
   return t("sessions.progress.working");
+}
+function activitySummaries(message: SessionMessage) {
+  return summarizeExecutionActivities(message.activities ?? []);
+}
+function activitySummaryLabel(summary: ExecutionActivitySummary) {
+  if (summary.kind === "reasoning" && summary.detail) return summary.detail;
+  return t(`sessions.activitySummary.${summary.kind}.${summary.state}`);
 }
 function stageStateLabel(state: string) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
@@ -477,8 +495,8 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ message.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
               <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
-                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
-                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
+                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activitySummaryLabel(activitySummaries(message).at(-1)!) }}</strong></div>
+                <details class="runtime-activity-history"><summary>{{ t('workflows.activityDetails') }}</summary><div class="activity-summary-list"><details v-for="summary in activitySummaries(message)" :key="`${message.id}-${summary.id}`" class="activity-summary-group"><summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ activitySummaryLabel(summary) }}</strong></summary><ol class="activity-detail-list"><li v-for="(activity, activityIndex) in summary.activities" :key="`${message.id}-${summary.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div></details>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
@@ -491,7 +509,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               </div>
               <CreditConsumption v-if="message.role === 'assistant'" :value="message.credit_consumption" />
               <div class="message-actions">
-                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"> · {{ responseIdentity(message)?.modelName }}</span></small>
+                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"><template v-if="responseIdentity(message)?.expertName"> · {{ responseIdentity(message)?.expertName }}</template> · {{ responseIdentity(message)?.modelName }}</span></small>
                 <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message, index)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
                 <el-button v-if="message.role === 'assistant' && message.state === 'failed'" text type="primary" @click="retry(index)">{{ t('common.retry') }}</el-button>
               </div>
@@ -500,7 +518,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { inject, onBeforeUnmount, onMounted, ref } from "vue";
-import { useI18n } from "vue-i18n";
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { platformApiKey, type CommandApproval } from "../api/client";
+import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
+import CommandApprovalCards from "./CommandApprovalCards.vue";
 
 const api = inject(platformApiKey)!;
-const { t } = useI18n();
 const approvals = ref<CommandApproval[]>([]);
 const identities = ref<Record<string, "user" | "bot">>({});
+const embeddedApprovals = computed(() => approvals.value.filter((item) => item.execution_kind === "session" && item.execution_id === embeddedSessionApprovalID.value));
+const globalApprovals = computed(() => approvals.value.filter((item) => !embeddedApprovals.value.includes(item)));
 let poll: number | undefined;
 let disposed = false;
 let refreshing = false;
@@ -33,16 +35,13 @@ async function refresh(immediate = false) {
 }
 function onVisibilityChange() { clearPoll(); if (visible()) void refresh(true); }
 async function decide(item: CommandApproval, decision: "approved" | "rejected") { await api.decideCommandApproval(item.id, decision, decision === "approved" ? (identities.value[item.id] ?? "user") : undefined, item.version); await refresh(true); }
+function setIdentity(approvalID: string, identity: "user" | "bot") { identities.value[approvalID] = identity; }
 onMounted(() => { document.addEventListener("visibilitychange", onVisibilityChange); void refresh(); });
+watch(embeddedSessionApprovalID, () => void refresh(true));
 onBeforeUnmount(() => { disposed = true; clearPoll(); document.removeEventListener("visibilitychange", onVisibilityChange); });
 </script>
 
 <template>
-  <aside v-if="approvals.length" class="approval-inbox" aria-live="polite">
-    <article v-for="item in approvals" :key="item.id" class="approval-card">
-      <div><strong>{{ t('approvals.title') }} · {{ item.connector_name }}</strong><p>{{ item.operation }} · {{ item.target }}</p><code>{{ item.redacted_arguments }}</code><small>{{ t('approvals.expires', { time: new Date(item.expires_at).toLocaleTimeString() }) }}</small></div>
-      <select v-model="identities[item.id]" :disabled="Boolean(item.identity)" :aria-label="t('approvals.identity')"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select>
-      <el-button @click="decide(item, 'rejected')">{{ t('approvals.reject') }}</el-button><el-button type="primary" @click="decide(item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
-    </article>
-  </aside>
+  <CommandApprovalCards :items="globalApprovals" :identities="identities" @decide="decide" @identity="setIdentity" />
+  <Teleport v-if="embeddedApprovals.length" to="#session-command-approval-slot"><CommandApprovalCards embedded :items="embeddedApprovals" :identities="identities" @decide="decide" @identity="setIdentity" /></Teleport>
 </template>

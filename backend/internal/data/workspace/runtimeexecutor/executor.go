@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -52,7 +53,7 @@ type Executor struct {
 	connectors     *cliconnector.ArtifactStore
 	cliEgress      cliconnector.EgressGate
 	cliApprovals   cliconnector.ApprovalCoordinator
-	cliCredentials cliCredentialRepository
+	cliCredentials cliExecutionRepository
 	warm           *containerprocess.WarmManager
 	checkout       func(context.Context, string) (runtimeLease, error)
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -60,8 +61,9 @@ type Executor struct {
 	credits        *creditsapplication.Service
 }
 
-type cliCredentialRepository interface {
+type cliExecutionRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
+	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
 }
 
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
@@ -88,7 +90,7 @@ func (executor *Executor) EnableCLIApprovals(coordinator cliconnector.ApprovalCo
 	return nil
 }
 
-func (executor *Executor) EnableCLICredentials(repository cliCredentialRepository) error {
+func (executor *Executor) EnableCLICredentials(repository cliExecutionRepository) error {
 	if repository == nil {
 		return fmt.Errorf("CLI Connector credential repository is required")
 	}
@@ -711,9 +713,9 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 			return "", fmt.Errorf("duplicate frozen CLI Connector %q", connector.ID)
 		}
 		seen[connector.ID] = struct{}{}
-		compatible := false
-		for _, digest := range connector.RuntimeDigests {
-			compatible = compatible || digest == runtimeDigest
+		compatible, err := executor.cliConnectorRuntimeVerified(ctx, connector, runtimeDigest)
+		if err != nil {
+			return "", fmt.Errorf("verify CLI Connector %q Runtime conformance: %w", connector.Name, err)
 		}
 		if !compatible {
 			return "", fmt.Errorf("CLI Connector %q is not verified for Runtime %s", connector.Name, runtimeDigest)
@@ -757,14 +759,25 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
 	for _, snapshot := range job.Snapshot.CLIConnectors {
+		verified, err := executor.cliConnectorRuntimeVerified(ctx, snapshot, runtimeDigest)
+		if err != nil {
+			return nil, "", fmt.Errorf("verify CLI Connector %q Runtime conformance: %w", snapshot.Name, err)
+		}
+		if !verified {
+			return nil, "", fmt.Errorf("CLI Connector %q is not verified for Runtime %s", snapshot.Name, runtimeDigest)
+		}
 		var capabilities []cliconnector.Capability
 		if err := json.Unmarshal(snapshot.Capabilities, &capabilities); err != nil {
 			return nil, "", fmt.Errorf("decode frozen CLI Connector %q capabilities: %w", snapshot.Name, err)
 		}
+		runtimeDigests := append([]string(nil), snapshot.RuntimeDigests...)
+		if !slices.Contains(runtimeDigests, runtimeDigest) {
+			runtimeDigests = append(runtimeDigests, runtimeDigest)
+		}
 		definitions = append(definitions, cliconnector.Definition{
 			ID: snapshot.ID, Name: snapshot.Name, Executable: snapshot.Executable,
 			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable,
-			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: append([]string(nil), snapshot.RuntimeDigests...),
+			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: runtimeDigests,
 			Capabilities: capabilities, VersionNumber: snapshot.Version,
 		})
 		for _, capability := range capabilities {
@@ -805,6 +818,16 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", err
 	}
 	return server, socket, nil
+}
+
+func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {
+	if slices.Contains(connector.RuntimeDigests, runtimeDigest) {
+		return true, nil
+	}
+	if executor.cliCredentials == nil {
+		return false, nil
+	}
+	return executor.cliCredentials.HasCLIConnectorRuntimeConformance(ctx, connector.ID, connector.BundleSHA256, runtimeDigest)
 }
 
 func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.EnvironmentResolver {
@@ -1517,15 +1540,13 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 				continue
 			}
 			for _, capability := range capabilities {
-				identities := make([]string, 0, len(capability.Identities))
 				for _, identity := range capability.Identities {
-					identities = append(identities, string(identity))
+					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, identity, strings.Join(capability.ArgvPrefix, " ")))
 				}
-				commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity <%s> [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, strings.Join(identities, "|"), strings.Join(capability.ArgvPrefix, " ")))
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors (use only these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors (copy the identity value literally from one of these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

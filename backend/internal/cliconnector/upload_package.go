@@ -70,7 +70,10 @@ func packageDefinitionMetadata(raw []byte) (PackageDefinitionMetadata, error) {
 		metadata.Executable = "lark-cli"
 		metadata.AuthenticationDriver = "feishu"
 		metadata.SupportedArchitectures = []string{"linux-amd64"}
-		metadata.Capabilities = []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}
+		metadata.Capabilities = []Capability{
+			{ID: "im_chat_search", ArgvPrefix: []string{"im", "+chat-search"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Scopes: []string{"im:chat:read"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
+			{ID: "im_messages_send", ArgvPrefix: []string{"im", "+messages-send"}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Scopes: []string{"im:message", "im:message.send_as_user"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
+		}
 	}
 	return metadata, nil
 }

@@ -6,6 +6,8 @@ import { platformApiKey, type Artifact, type Expert, type ModelProviderConnectio
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
+import ConversationComposer from "../components/ConversationComposer.vue";
+import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
 import SessionsPage from "./SessionsPage.vue";
 
 const session: Session = {
@@ -62,6 +64,7 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
   afterEach(() => {
+    embeddedSessionApprovalID.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
@@ -417,7 +420,7 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("shows an expandable activity timeline with the concrete Codex command", async () => {
+  it("shows execution summaries before revealing concrete commands", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const api = apiStub([messages[0]!, pending]);
     api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, onSnapshot, signal) => {
@@ -437,10 +440,70 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
-    expect(wrapper.get(".runtime-activity").text()).toContain("先检查仓库状态");
-    expect(wrapper.get(".runtime-activity").text()).toContain("git status --short");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".activity-summary-group > summary").text()).toContain("先检查仓库状态");
+    expect(wrapper.get(".activity-summary-group > summary").text()).not.toContain("git status --short");
+    expect(wrapper.get(".activity-detail-list").text()).toContain("git status --short");
     wrapper.unmount();
+  });
+
+  it("groups Feishu command pairs into human-readable summaries", async () => {
+    const command = (capability: string, args: string) => `/bin/sh -lc 'agent-cli --connector connector-1 --capability ${capability} --identity user -- ${args}'`;
+    const chatHelp = command("im_chat_search", "im chat-search --help");
+    const chatSearch = command("im_chat_search", "im chat-search --query 云隙科技");
+    const send = command("im_messages_send", "im messages-send --chat-id oc_1 --text 大家好");
+    const completed: SessionMessage = {
+      ...messages[1]!,
+      activities: [
+        { type: "runtime.started", detail: "codex" },
+        { type: "command.requested", detail: chatHelp },
+        { type: "command.completed", detail: chatHelp },
+        { type: "command.requested", detail: chatSearch },
+        { type: "command.completed", detail: chatSearch },
+        { type: "command.requested", detail: send },
+        { type: "command.completed", detail: send },
+      ],
+    };
+
+    const wrapper = await mountPage([messages[0]!, completed]);
+    const summaries = wrapper.findAll(".activity-summary-group > summary");
+
+    expect(summaries.map((summary) => summary.text())).toEqual([
+      "运行环境已准备",
+      "已调用飞书连接器读取群聊搜索说明",
+      "已调用飞书连接器搜索群聊",
+      "已调用飞书连接器发送消息",
+    ]);
+    expect(summaries.every((summary) => !summary.text().includes("/bin/sh"))).toBe(true);
+    expect(wrapper.findAll(".activity-summary-group").every((summary) => summary.attributes("open") === undefined)).toBe(true);
+    expect(wrapper.get(".activity-detail-list").text()).toContain("codex");
+    expect(wrapper.findAll(".activity-detail-list").at(-1)?.text()).toContain("/bin/sh -lc");
+    wrapper.unmount();
+  });
+
+  it("passes an attempted user CLI operation to the conversation composer", async () => {
+    const attempted: SessionMessage = {
+      ...messages[1]!,
+      state: "failed",
+      content: "",
+      error: "authorization unavailable",
+      activities: [{ type: "command.requested", detail: "/bin/sh -lc 'agent-cli --connector feishu --capability im_messages_send --identity user -- im +messages-send'" }],
+    };
+    const wrapper = await mountPage([messages[0]!, attempted]);
+
+    expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "feishu", capabilityID: "im_messages_send" });
+    wrapper.unmount();
+  });
+
+  it("places a waiting Session approval in the active conversation composer", async () => {
+    const waiting: SessionMessage = { ...messages[1]!, state: "waiting_for_user", content: "", progress_stage: "using_tool" };
+    const wrapper = await mountPage([messages[0]!, waiting]);
+
+    expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(waiting.id);
+    expect(embeddedSessionApprovalID.value).toBe(String(waiting.id));
+    expect(wrapper.find("#session-command-approval-slot").exists()).toBe(true);
+    wrapper.unmount();
+    expect(embeddedSessionApprovalID.value).toBeUndefined();
   });
 
   it("does not present an old runtime activity as current after failure", async () => {
@@ -457,9 +520,28 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, failed]);
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
     expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
+    wrapper.unmount();
+  });
+
+  it("omits a single execution stage that repeats the final answer", async () => {
+    const stage = { expert_id: "expert-1", expert_name: "飞书助手", provider_model_name: "GPT 5.6 Sol", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 47_000, final_text: "未发送任何消息。" };
+    const duplicate = { ...messages[1]!, content: "未发送任何消息。", expert_stages: [stage] };
+    const wrapper = await mountPage([messages[0]!, duplicate]);
+
+    expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
+    expect(wrapper.get(".message.assistant .message-content").text().match(/未发送任何消息。/g)).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("keeps stage results that add information to the final answer", async () => {
+    const stage = { expert_id: "expert-1", expert_name: "检索专家", provider_model_name: "GPT 5.6 Sol", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 12_000, final_text: "阶段检索结果" };
+    const response = { ...messages[1]!, content: "综合回答", expert_stages: [stage] };
+    const wrapper = await mountPage([messages[0]!, response]);
+
+    expect(wrapper.get(".expert-stage-list").text()).toContain("阶段检索结果");
     wrapper.unmount();
   });
 

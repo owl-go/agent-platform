@@ -377,7 +377,23 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .runtime-activity li div { min-width: 0; }
 .runtime-activity li strong { flex: none; white-space: nowrap; }
 .runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }
+.runtime-activity .runtime-activity-history { margin-left: 16px; }
+.runtime-activity .runtime-activity-history > summary { padding: 2px 0; }
+.activity-summary-list { display: grid; gap: 7px; margin-top: 9px; }
+.runtime-activity .activity-summary-group { margin: 0; }
+.runtime-activity .activity-summary-group > summary { display: grid; grid-template-columns: 8px minmax(0,auto) 8px; align-items: center; gap: 7px; width: fit-content; max-width: 100%; padding: 5px 8px; border: 1px solid #e2e8e3; border-radius: 7px; background: #f8faf7; color: #52615a; }
+.runtime-activity .activity-summary-group > summary::after { content: "›"; color: #9aa49f; font-size: .9rem; line-height: 1; transition: transform .16s ease; }
+.runtime-activity .activity-summary-group[open] > summary::after { transform: rotate(90deg); }
+.activity-summary-mark { width: 6px; height: 6px; border-radius: 50%; background: #8caf9e; }
+.runtime-activity .activity-summary-group > summary strong { min-width: 0; overflow-wrap: anywhere; color: #405149; font-size: .72rem; }
+.runtime-activity .activity-detail-list { margin: 7px 0 4px 14px; padding-left: 10px; border-left: 1px solid #dfe6e1; }
+.runtime-activity .activity-detail-list li div { display: grid; gap: 2px; }
+.runtime-activity .activity-detail-list li strong { white-space: normal; }
+.runtime-activity .activity-detail-list li small { font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: .66rem; line-height: 1.45; }
 .approval-inbox { position: sticky; top: 12px; z-index: 20; margin: 12px 20px 0; }
+.composer-approval-slot:empty { display: none; }
+.approval-inbox.is-embedded { position: static; width: 100%; margin: 0; }
+.approval-inbox.is-embedded .approval-card { padding: 11px 12px; border-radius: 11px; box-shadow: 0 6px 18px rgba(73,57,32,.09); }
 .approval-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 16px; border: 1px solid color-mix(in srgb, var(--el-color-warning) 45%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--el-color-warning-light-9) 92%, white); box-shadow: 0 12px 32px rgba(73, 57, 32, .12); }
 .approval-card div { display: grid; gap: 4px; min-width: 0; }
 .approval-card p, .approval-card small { margin: 0; }
@@ -501,6 +517,13 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .composer-options > small { padding: 6px 12px; }
 .composer-menu button.composer-menu-footer { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 6px; }
 .composer-error, .composer-notice { font-size: 13px; line-height: 1.6; border-radius: 8px; padding: 7px 10px; background: #fff3eb; color: #8a4129; }
+.composer-authorization { grid-column: 1/-1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 11px 12px; border: 1px solid #bfd7c7; border-radius: 11px; background: linear-gradient(120deg,#edf7ef,#f7fbf5); color: #244a39; }
+.composer-authorization > div { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.composer-authorization strong { font-size: 13px; }
+.composer-authorization small { color: #5f7469; font-size: 12px; line-height: 1.45; }
+.composer-authorization > a { flex: none; display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 8px; background: var(--green); color: #fff; font-size: 12px; font-weight: 650; text-decoration: none; }
+.composer-authorization .el-button { flex: none; width: auto; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 650; box-shadow: 0 3px 10px rgba(24,93,69,.14); }
+.composer-authorization .authorization-error { flex: 0 0 100%; color: #9b4637; }
 .catalog-activatable { cursor: pointer; position: relative; min-width: 0; }
 .catalog-activatable:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; border-radius: 16px; }
 .catalog-activatable .expert-card { position: relative; }

@@ -499,10 +499,11 @@ func (repository *Repository) BeginCLIConnectorAuthorization(ctx context.Context
 	if err != nil {
 		return cliconnector.AuthorizationAttempt{}, err
 	}
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ?", ownerID, enablementID, identity).Take(&row).Error; err != nil {
+	var stored cliConnectorAuthorizationAttemptRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ? AND identity = ?", ownerID, enablementID, identity).Take(&stored).Error; err != nil {
 		return cliconnector.AuthorizationAttempt{}, err
 	}
-	return cliAuthorizationAttemptDomain(row)
+	return cliAuthorizationAttemptDomain(stored)
 }
 
 func (repository *Repository) GetCLIConnectorAuthorizationAttempt(ctx context.Context, ownerID, attemptID string) (cliconnector.AuthorizationAttempt, error) {
@@ -629,6 +630,18 @@ func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx contex
 	result.TokenCiphertext = append([]byte(nil), authorizations[0].TokenCiphertext...)
 	result.ExternalIdentityID = authorizations[0].ExternalIdentityID
 	return result, nil
+}
+
+func (repository *Repository) HasCLIConnectorRuntimeConformance(ctx context.Context, definitionID, bundleSHA256, runtimeDigest string) (bool, error) {
+	var count int64
+	err := repository.db.WithContext(ctx).Table("cli_connector_conformance").Where(
+		"definition_id = ? AND bundle_sha256 = ? AND runtime_repo_digest = ? AND passed = ?",
+		definitionID, bundleSHA256, runtimeDigest, true,
+	).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("check CLI Connector Runtime conformance: %w", err)
+	}
+	return count == 1, nil
 }
 
 func containsAllScopes(granted, required []string) bool {
@@ -928,7 +941,7 @@ func transitionApprovalExecution(tx *gorm.DB, request cliconnector.ApprovalReque
 		} else {
 			from, to = "waiting_for_user", "generating"
 		}
-		result := tx.Model(&messageRecord{}).Where("id = ? AND state = ? AND session_id IN (SELECT id FROM sessions WHERE owner_user_id = ?)", messageID, from, request.OwnerID).Updates(map[string]any{"state": to, "progress_stage": map[bool]string{false: "waiting_for_user", true: "using_tool"}[resume]})
+		result := tx.Model(&messageRecord{}).Where("id = ? AND state = ? AND session_id IN (SELECT id FROM sessions WHERE owner_user_id = ?)", messageID, from, request.OwnerID).Updates(map[string]any{"state": to, "progress_stage": "using_tool"})
 		if result.Error != nil {
 			return result.Error
 		}

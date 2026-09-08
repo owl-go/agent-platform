@@ -58,7 +58,7 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: go test ./...
         working-directory: backend
-      - run: go test -race ./internal/service/api ./internal/server ./internal/architecture ./internal/biz/workflow ./internal/data/workflow/gormtx ./tests/blackbox
+      - run: go test -race ./internal/service/workspace ./internal/server/... ./internal/architecture ./internal/biz/workspace/... ./internal/data/workspace/...
         working-directory: backend
       - run: go vet ./...
         working-directory: backend
@@ -75,9 +75,9 @@ jobs:
       MINIO_ROOT_PASSWORD: compose-validation-only-secret
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose -f deploy/platform/compose.yaml config --quiet
+      - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml config --quiet
       - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml -f deploy/platform/compose.execution.yaml config --quiet
-      - run: docker compose -f deploy/platform/compose.yaml build api worker
+      - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml build api worker
       - run: bash -n scripts/deploy-web.sh
 
   frontend:

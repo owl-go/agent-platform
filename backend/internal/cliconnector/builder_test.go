@@ -87,3 +87,28 @@ func TestBuilderDoesNotPublishFailedConformance(t *testing.T) {
 		t.Fatalf("store=%#v err=%v", store, err)
 	}
 }
+
+func TestResolvePackageDefinitionReplacesStaleBuiltInFeishuPolicy(t *testing.T) {
+	packageBytes := []byte("package")
+	sum := sha512.Sum512(packageBytes)
+	artifact := PackageArtifact{
+		PackageBytes: packageBytes,
+		BundleBytes:  []byte("bundle"),
+		Integrity:    "sha512-" + base64.StdEncoding.EncodeToString(sum[:]),
+		Manifest:     []byte(`{"name":"@larksuite/cli","version":"1.0.93","bin":{"lark-cli":"scripts/run.js"}}`),
+		Bins:         map[string]string{"lark-cli": "node_modules/@larksuite/cli/scripts/run.js"},
+	}
+	definition := Definition{
+		ID: "definition-1", Name: "Feishu", Package: "@larksuite/cli", Version: "1.0.93", State: StateBuilding,
+		Executable: "lark-cli", AuthenticationDriver: "feishu", SupportedArchitectures: []string{"linux-amd64"},
+		Capabilities:  []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}},
+		VersionNumber: 2,
+	}
+	resolved, err := resolvePackageDefinition(definition, artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved.Capabilities) != 2 || resolved.Capabilities[0].ID != "im_chat_search" || resolved.Capabilities[1].ID != "im_messages_send" {
+		t.Fatalf("capabilities = %#v", resolved.Capabilities)
+	}
+}

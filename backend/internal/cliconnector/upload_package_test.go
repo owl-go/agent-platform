@@ -52,6 +52,28 @@ func TestZIPPackageBuilderRejectsSymlinks(t *testing.T) {
 	}
 }
 
+func TestPackageDefinitionMetadataProvidesReviewedFeishuMessagingPolicy(t *testing.T) {
+	metadata, err := packageDefinitionMetadata([]byte(`{"name":"@larksuite/cli","version":"1.0.93","bin":{"lark-cli":"scripts/run.js"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadata.Executable != "lark-cli" || metadata.AuthenticationDriver != "feishu" || len(metadata.Capabilities) != 2 {
+		t.Fatalf("metadata = %#v", metadata)
+	}
+	search, send := metadata.Capabilities[0], metadata.Capabilities[1]
+	if strings.Join(search.ArgvPrefix, " ") != "im +chat-search" || search.Risk != RiskLow || strings.Join(search.Scopes, " ") != "im:chat:read" {
+		t.Fatalf("search policy = %#v", search)
+	}
+	if strings.Join(send.ArgvPrefix, " ") != "im +messages-send" || send.Risk != RiskHigh || strings.Join(send.Scopes, " ") != "im:message im:message.send_as_user" {
+		t.Fatalf("send policy = %#v", send)
+	}
+	for _, capability := range metadata.Capabilities {
+		if len(capability.Identities) != 1 || capability.Identities[0] != IdentityUser || strings.Join(capability.EgressHosts, " ") != "open.feishu.cn" {
+			t.Fatalf("unexpected execution boundary = %#v", capability)
+		}
+	}
+}
+
 func zipPackageFixture(t *testing.T, files map[string]string) []byte {
 	t.Helper()
 	var buffer bytes.Buffer

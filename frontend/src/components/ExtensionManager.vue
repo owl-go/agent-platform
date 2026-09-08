@@ -42,8 +42,8 @@ const { locale, t } = useI18n();
 const { nextZIndex } = useZIndex();
 const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
-function reportError(cause?: unknown) {
-  const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: "invalidInput", rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
+function reportError(cause?: unknown, validationKey = "invalidInput") {
+  const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
   const key = cause instanceof ApiError ? cause.status === 413 ? "uploadTooLarge" : keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
@@ -65,6 +65,10 @@ const deletingCLI = ref<CLIConnectorDefinition>();
 const cliDeleteBusy = ref(false);
 const cliSaveBusy = ref(false);
 const cliEnableBusy = ref<string[]>([]);
+const cliAuthorizationBusy = ref<string[]>([]);
+const cliSetupWindows = new Map<string, Window | null>();
+let cliCompletionBusy = false;
+let disposed = false;
 const showCLI = ref(false);
 const showConnectorKind = ref(false);
 const cliForm = ref<CLIDraft>(emptyCLIDraft());
@@ -101,7 +105,12 @@ onMounted(() => {
     if (cliAuthorizationFlow.value?.state === "waiting_for_user" && Date.now() - lastCLICompletionPoll >= 5000) void completeCLIAccountAuthorization();
   }, 1500);
 });
-onBeforeUnmount(() => { if (poll !== undefined) window.clearInterval(poll); });
+onBeforeUnmount(() => {
+  disposed = true;
+  if (poll !== undefined) window.clearInterval(poll);
+  for (const popup of cliSetupWindows.values()) closeBlankCLIWindow(popup);
+  cliSetupWindows.clear();
+});
 
 function emptyMCPDraft(): MCPDraft { return { name: "", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
@@ -141,9 +150,48 @@ async function enableCLI(item: CLIConnectorDefinition) {
   operationError.value = undefined;
   if (canManageCLI.value || cliEnableBusy.value.includes(item.id)) return;
   cliEnableBusy.value.push(item.id);
-  try { const value = await api.enableCLIConnector(item.id); cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value]; }
-  catch (cause) { reportError(cause); }
+  const popup = item.authentication_driver === "feishu" ? openCLIWindow() : null;
+  if (item.authentication_driver === "feishu") cliSetupWindows.set(item.id, popup);
+  try {
+    const value = await api.enableCLIConnector(item.id);
+    if (disposed) { closeBlankCLIWindow(popup); return; }
+    cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value];
+    if (value.state === "waiting_for_user") navigateCLIWindow(popup, value.action_url);
+    else await continueCLISetup(item, value);
+  }
+  catch (cause) { cliSetupWindows.delete(item.id); closeBlankCLIWindow(popup); reportError(cause); }
   finally { cliEnableBusy.value = cliEnableBusy.value.filter((id) => id !== item.id); }
+}
+
+function openCLIWindow(): Window | null {
+  // Reserve the tab during the click so async API responses do not trigger popup blocking.
+  try {
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    return popup;
+  } catch { return null; }
+}
+function navigateCLIWindow(popup: Window | null, url?: string) {
+  if (!url || disposed) { closeBlankCLIWindow(popup); return; }
+  try {
+    if (popup && !popup.closed) popup.location.href = url;
+  } catch { /* The visible link remains available if the browser detached the tab. */ }
+}
+function closeBlankCLIWindow(popup: Window | null) {
+  try { if (popup && !popup.closed && popup.location.href === "about:blank") popup.close(); } catch { /* Keep external pages open. */ }
+}
+function resumeCLISetup(item: CLIConnectorDefinition, event: MouseEvent) {
+  const popup = openCLIWindow();
+  if (popup) event.preventDefault();
+  cliSetupWindows.set(item.id, popup);
+  navigateCLIWindow(popup, enablementFor(item.id)?.action_url);
+}
+async function continueCLISetup(item: CLIConnectorDefinition, enablement: CLIConnectorEnablement) {
+  if (!cliSetupWindows.has(item.id) || enablement.state === "waiting_for_user") return;
+  const popup = cliSetupWindows.get(item.id) ?? null;
+  cliSetupWindows.delete(item.id);
+  if (enablement.state === "enabled") await beginCLIAccountAuthorization(item, popup);
+  else closeBlankCLIWindow(popup);
 }
 async function removeCLI() {
   operationError.value = undefined;
@@ -160,13 +208,21 @@ async function removeCLI() {
   finally { cliDeleteBusy.value = false; }
 }
 async function completePendingCLIEnablements() {
+  if (cliCompletionBusy) return;
+  cliCompletionBusy = true;
   const pending = cliEnablements.value.filter((item) => item.state === "waiting_for_user");
   try {
     const completed = await Promise.all(pending.map((item) => api.completeCLIConnectorEnablement(item.id)));
+    if (disposed) return;
     const replacements = new Map(completed.map((item) => [item.id, item]));
     cliEnablements.value = cliEnablements.value.map((item) => replacements.get(item.id) ?? item);
     setStatusError("enablements", false);
+    for (const enablement of completed) {
+      const definition = cliDefinitions.value.find((item) => item.id === enablement.definition_id);
+      if (definition) await continueCLISetup(definition, enablement);
+    }
   } catch { setStatusError("enablements", true); }
+  finally { cliCompletionBusy = false; }
 }
 function enablementFor(id: string) { return cliEnablements.value.find((item) => item.definition_id === id); }
 function authorizationsFor(definitionID: string) {
@@ -174,7 +230,15 @@ function authorizationsFor(definitionID: string) {
   return enablement ? cliAuthorizations.value[enablement.id] ?? [] : [];
 }
 function userScopes(item: CLIConnectorDefinition) {
-  return [...new Set(item.capabilities.filter((capability) => capability.identities.includes("user")).flatMap((capability) => capability.scopes))];
+  // Protobuf JSON omits empty repeated fields, including scopes on no-scope capabilities.
+  return [...new Set((item.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
+}
+function hasActiveCLIAuthorization(item: CLIConnectorDefinition) {
+  return authorizationsFor(item.id).some((authorization) => authorization.state === "active");
+}
+function needsCLIReauthorization(item: CLIConnectorDefinition) {
+  const required = userScopes(item);
+  return required.length > 0 && !authorizationsFor(item.id).some((authorization) => authorization.state === "active" && required.every((scope) => (authorization.scopes ?? []).includes(scope)));
 }
 async function refreshCLIAuthorizations() {
   const enabled = cliEnablements.value.filter((item) => item.state === "enabled");
@@ -182,14 +246,26 @@ async function refreshCLIAuthorizations() {
   cliAuthorizations.value = Object.fromEntries(entries);
 }
 async function authorizeCLIAccount(item: CLIConnectorDefinition) {
+  if (cliAuthorizationBusy.value.includes(item.id) || !enablementFor(item.id)) return;
+  await beginCLIAccountAuthorization(item, openCLIWindow(), userScopes(item));
+}
+async function beginCLIAccountAuthorization(item: CLIConnectorDefinition, popup: Window | null, scopes: string[] = []) {
   operationError.value = undefined;
   const enablement = enablementFor(item.id);
-  if (!enablement) return;
-  try { cliAuthorizationFlow.value = await api.beginCLIConnectorAuthorization(enablement.id, "user", userScopes(item)); } catch (cause) { reportError(cause); }
+  if (!enablement || disposed || cliAuthorizationBusy.value.includes(item.id)) { closeBlankCLIWindow(popup); return; }
+  cliAuthorizationBusy.value.push(item.id);
+  try {
+    const flow = await api.beginCLIConnectorAuthorization(enablement.id, "user", scopes);
+    if (disposed) { closeBlankCLIWindow(popup); return; }
+    cliAuthorizationFlow.value = flow;
+    navigateCLIWindow(popup, flow.action_url);
+  } catch (cause) { closeBlankCLIWindow(popup); reportError(cause, "authorizationInvalidInput"); }
+  finally { cliAuthorizationBusy.value = cliAuthorizationBusy.value.filter((id) => id !== item.id); }
 }
 async function completeCLIAccountAuthorization() {
   const flow = cliAuthorizationFlow.value;
-  if (!flow || flow.state !== "waiting_for_user") return;
+  if (!flow || flow.state !== "waiting_for_user" || cliCompletionBusy) return;
+  cliCompletionBusy = true;
   lastCLICompletionPoll = Date.now();
   try {
     const completed = await api.completeCLIConnectorAuthorization(flow.id);
@@ -197,6 +273,7 @@ async function completeCLIAccountAuthorization() {
     if (completed.authorization) await refreshCLIAuthorizations();
     setStatusError("authorization", false);
   } catch { setStatusError("authorization", true); }
+  finally { cliCompletionBusy = false; }
 }
 async function disconnectCLIAccount(item: CLIConnectorAuthorization) {
   operationError.value = undefined;
@@ -397,12 +474,12 @@ async function fileToBase64(file: File): Promise<string> {
             <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
             <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
             <div v-if="!canManageCLI" class="connector-account-actions" @click.stop>
-              <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer">{{ t('resources.continueSetup') }}</a>
+              <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer" @click="resumeCLISetup(item, $event)">{{ t('resources.continueSetup') }}</a>
               <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
                 <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
                 <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id"><span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span><el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button></template>
                 <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
-                <el-button v-else-if="!authorizationsFor(item.id).some((authorization) => authorization.state === 'active')" @click="authorizeCLIAccount(item)">{{ t('resources.authorizeAccount') }}</el-button>
+                <el-button v-else-if="!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item)" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t(hasActiveCLIAuthorization(item) ? 'resources.expandAuthorization' : 'resources.authorizeAccount') }}</el-button>
               </template>
               <el-button v-else-if="item.state === 'available'" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
             </div>

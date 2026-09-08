@@ -2,11 +2,12 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { platformApiKey, type CommandApproval, type PlatformApi } from "../api/client";
+import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
 import { createAppI18n } from "../i18n";
 import ApprovalInbox from "./ApprovalInbox.vue";
 
 beforeEach(() => { vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible"); });
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { embeddedSessionApprovalID.value = undefined; document.querySelector("#session-command-approval-slot")?.remove(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("ApprovalInbox", () => {
   it("checks idle approvals less frequently and pauses while the tab is hidden", async () => {
@@ -75,6 +76,27 @@ describe("ApprovalInbox", () => {
     const identity = wrapper.get<HTMLSelectElement>("select");
     expect(identity.element.value).toBe("bot");
     expect(identity.attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+
+  it("places the current Session approval beside the conversation composer and keeps background approvals global", async () => {
+    const target = document.createElement("div");
+    target.id = "session-command-approval-slot";
+    document.body.append(target);
+    const current = { id: "approval-session", execution_kind: "session", execution_id: "42", connector_name: "Feishu CLI", operation: "send", target: "current-chat", redacted_arguments: "message [redacted]", state: "pending", identity: "user", expires_at: "2026-09-08T12:00:00Z", version: 1 } as CommandApproval;
+    const background = { ...current, id: "approval-run", execution_kind: "run", execution_id: "run-1", target: "background-chat" } as CommandApproval;
+    const api = { listCommandApprovals: vi.fn().mockResolvedValueOnce([]).mockResolvedValue([current, background]) } as unknown as PlatformApi;
+
+    const wrapper = mount(ApprovalInbox, { attachTo: document.body, global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    embeddedSessionApprovalID.value = "42";
+    await flushPromises();
+
+    expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
+    expect(target.textContent).toContain("current-chat");
+    expect(target.textContent).not.toContain("background-chat");
+    expect(wrapper.text()).toContain("background-chat");
+    expect(wrapper.text()).not.toContain("current-chat");
     wrapper.unmount();
   });
 });

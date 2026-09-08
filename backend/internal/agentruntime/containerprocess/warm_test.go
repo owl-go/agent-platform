@@ -143,12 +143,13 @@ func TestWarmManagerReusesContainerDefinitionAndExecutesBothInvocations(t *testi
 		"type=bind,src=/workspaces/scratch/attachments,dst=/workspaces/scratch/attachments,readonly=true",
 		"type=bind,src=/workspaces/scratch/connectors,dst=/workspaces/scratch/connectors,readonly=true",
 		"type=bind,src=/workspaces/scratch/broker,dst=/workspaces/scratch/broker,readonly=true",
+		"type=bind,src=/workspaces/scratch/broker,dst=/run/agent-cli,readonly=true",
 	} {
 		if !containsPair(createArguments, "--mount", protectedMount) {
 			t.Fatalf("nested read-only mount %q missing from %#v", protectedMount, createArguments)
 		}
 	}
-	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", "--env", "AGENT_PLATFORM_CLI_SOCKET=/workspaces/scratch/broker/cli-broker.sock", name, "/usr/local/bin/runtime-entrypoint", "claude"}
+	wantPrefix := []string{"docker", "exec", "--interactive", "--workdir", "/workspace", "--env", "AGENT_PLATFORM_CLI_SOCKET=/run/agent-cli/cli-broker.sock", name, "/usr/local/bin/runtime-entrypoint", "claude"}
 	for _, command := range commands {
 		if len(command) < len(wantPrefix) || !reflect.DeepEqual(command[:len(wantPrefix)], wantPrefix) {
 			t.Fatalf("warm exec command = %#v", command)

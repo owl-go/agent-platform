@@ -120,6 +120,9 @@ func NewBroker(config BrokerConfig) (*Broker, error) {
 func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerResponse {
 	broker.mu.Lock()
 	defer broker.mu.Unlock()
+	if command.Identity == "me" {
+		command.Identity = IdentityUser
+	}
 	definition, ok := broker.definitions[command.ConnectorID]
 	if !ok {
 		return brokerFailure("connector_unavailable", "CLI Connector is unavailable")
@@ -343,6 +346,9 @@ func (broker *Broker) serveConnection(ctx context.Context, connection net.Conn) 
 func validateBrokerCommand(command BrokerCommand) error {
 	if strings.TrimSpace(command.ConnectorID) == "" || strings.TrimSpace(command.Capability) == "" || len(command.Arguments) == 0 || len(command.Arguments) > 256 {
 		return errors.New("CLI command is incomplete")
+	}
+	if command.Identity != IdentityUser && command.Identity != IdentityBot {
+		return errors.New("CLI command has an unsupported execution identity")
 	}
 	if len(command.Target) > 4096 {
 		return errors.New("CLI command target is too long")
