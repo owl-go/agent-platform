@@ -1,9 +1,11 @@
 package gormrepo
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
@@ -14,8 +16,12 @@ import (
 )
 
 type Repository struct {
-	db      *gorm.DB
-	credits creditTransactionSettler
+	db            *gorm.DB
+	credits       creditTransactionSettler
+	recoveryOnce  sync.Once
+	recoveryError error
+	workerLock    *sql.Conn
+	workerLockMu  sync.Mutex
 }
 
 type creditTransactionSettler interface {

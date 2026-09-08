@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康已实现；Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 ## 结构
 
@@ -31,7 +31,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 - 每个 User 的积分模型调用串行。调用开始前事务性物化当日额度并检查正余额；每个 Execution Stage 冻结 Model Credit Rate 修订，完成后以本次输入和输出 Token 增量结算。Stage 终态、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交；单 Stage 或团队最后一个 Stage 同事务提交 Assistant Message 或 Run 终态，结算后的负余额会阻止下一次调用。
 - 跨零点调用归属开始时的 Credit Day。次日额度通过首次余额读取或执行准入惰性物化，不依赖零点批处理；Personal Settings 时区变更只能从下一个 Credit Day 生效。
 - 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
-- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务。进程崩溃后的悬挂任务由运行超时和后续对账收口，不暴露为产品控制。
+- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务，并在专用数据库连接上持有进程级 Advisory Lock，保证同一数据库只有一个执行 Worker 能够领取和恢复任务；连接或进程退出会自动释放该锁。每个 Worker 进程的第一次领取会在同一 PostgreSQL 事务中对账上一个进程遗留的 `generating`、`running` 和 `waiting_for_user`：已请求取消或所属资源已停用的执行直接收口为 `cancelled`，其余执行清除未完成输出后重新进入队列。对账同时释放该执行遗留的 Credit lease，并关闭尚未消费的 Connector Approval；已经消费 Approval 的外部命令结果无法安全确认，因此对应执行 fail closed 而不盲目重放。恢复只改变非终态执行，不重开或改写终态 Session response 或 Run。
 
 ## API
 

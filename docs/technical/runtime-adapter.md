@@ -1,6 +1,6 @@
 # Runtime Adapter
 
-状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker 与存活 Worker 内 User Action Wait 已实现；CLI 等待期间普通执行 deadline 暂停、Worker 重启恢复和 Linux + gVisor 端到端证据尚未完成
+状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker、User Action Wait 与 Worker 重启恢复已实现；CLI 等待期间普通执行 deadline 暂停和 Linux + gVisor 端到端证据尚未完成
 
 Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Code、Codex、Hermes、OpenClaw 与 PI Agent 的命令参数、版本探测和输出解析保留在各自 Driver，共享的进程、容器和事件行为位于 `cliadapter`、`processharness` 与 `containerprocess`。
 
@@ -35,5 +35,7 @@ Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wra
 会话快照继续冻结 Connector Definition、bundle Digest、Capabilities 和策略。若旧快照的 Runtime RepoDigest 列表早于当前镜像，Worker 只可查询与该冻结 Definition ID、bundle SHA-256 和当前 Runtime RepoDigest 完全匹配且 `passed` 的最新 Conformance 记录作为补充证据；查询失败、记录缺失或任一键不匹配都必须 fail closed。补充证据只用于当前执行内的镜像兼容判断，不修改历史快照，也不刷新其命令或权限策略。
 
 高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime 和临时 Workspace、暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
+
+Worker 重启后的第一次任务领取会先对账遗留的非终态 Session response 和 Run。未消费 Connector Approval 的执行关闭旧 Approval、丢弃旧进程的部分输出与暂存 Stage 状态并从冻结快照重新排队；已请求取消的执行直接提交取消终态。已经消费 Approval 的外部命令可能已经产生副作用，平台无法从旧进程确认结果，因此该执行以明确失败收口，不自动重放命令。Workflow Run 保留重启前的非终态事件并以新的递增 Sequence 追加再次启动及最终终态事件。
 
 PI Agent 固定使用非交互 JSONL 模式，并关闭隐式 Extension、Skill、Prompt Template 和 Context File 发现；平台冻结的 Skill 仍通过公共 Instruction seam 暴露。PI Agent 本身不内置 MCP，因此带 MCP Connector 的执行会 fail closed，直到平台提供并验证明确的 PI Extension 适配。
