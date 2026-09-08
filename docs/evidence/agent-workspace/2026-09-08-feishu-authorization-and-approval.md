@@ -76,3 +76,31 @@ the separate approval for the actual send. Both were correctly treated as
 distinct one-use high-risk commands, but the extra help invocation is a remaining
 interaction inefficiency rather than part of the authorization or approval
 persistence failure fixed here.
+
+## Conversation placement follow-up
+
+Commit `fa6ec50` moves the approval for the currently open Session into the
+Conversation Composer, immediately above the editor in the same recovery area
+used by Feishu authorization. The page-level inbox continues to show approvals
+for other Sessions and Runs, so embedding the current item does not hide
+background User Action Waits or render one approval twice. Entering the embedded
+wait also requests an immediate inbox refresh instead of waiting for the empty
+inbox's next 30-second poll.
+
+The component regression first failed because the current approval remained in
+the page-level component. It now verifies that the matching Session approval is
+teleported into the composer target, a background Run remains global, and the
+placement refreshes immediately. The Sessions page test verifies registration
+only for its active `waiting_for_user` message and cleanup on unmount. All 186
+frontend tests, `make web-typecheck`, `make web-build`, and `git diff --check`
+passed.
+
+Web release `feishu-approval-composer-fa6ec50-20260908` is active at
+`/opt/agent-platform/web/releases/feishu-approval-composer-fa6ec50-20260908`.
+Both the remote release and public origin serve `assets/index-x2RZBYxv.js`. An
+authenticated production browser loaded the new release. A safety-only request
+explicitly asked to inspect help without sending; the Runtime omitted the
+required high-risk target, so Broker rejected it before creating an approval and
+the response confirmed that no message was sent. Production placement therefore
+relies on the focused DOM regression rather than claiming another live send-card
+capture.
