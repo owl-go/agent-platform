@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -66,6 +67,7 @@ type Executor struct {
 type cliCredentialRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
 	RevalidateCLIConnectorExecution(context.Context, string, string, int64) error
+	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
 }
 
 type connectorCredentialMaterializer interface {
@@ -750,9 +752,9 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 			return "", fmt.Errorf("duplicate frozen CLI Connector %q", connector.ID)
 		}
 		seen[connector.ID] = struct{}{}
-		compatible := false
-		for _, digest := range connector.RuntimeDigests {
-			compatible = compatible || digest == runtimeDigest
+		compatible, err := executor.cliConnectorRuntimeVerified(ctx, connector, runtimeDigest)
+		if err != nil {
+			return "", fmt.Errorf("verify CLI Connector %q Runtime conformance: %w", connector.Name, err)
 		}
 		if !compatible {
 			return "", fmt.Errorf("CLI Connector %q is not verified for Runtime %s", connector.Name, runtimeDigest)
@@ -796,15 +798,26 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
 	for _, snapshot := range job.Snapshot.CLIConnectors {
+		verified, err := executor.cliConnectorRuntimeVerified(ctx, snapshot, runtimeDigest)
+		if err != nil {
+			return nil, "", fmt.Errorf("verify CLI Connector %q Runtime conformance: %w", snapshot.Name, err)
+		}
+		if !verified {
+			return nil, "", fmt.Errorf("CLI Connector %q is not verified for Runtime %s", snapshot.Name, runtimeDigest)
+		}
 		var capabilities []cliconnector.Capability
 		if err := json.Unmarshal(snapshot.Capabilities, &capabilities); err != nil {
 			return nil, "", fmt.Errorf("decode frozen CLI Connector %q capabilities: %w", snapshot.Name, err)
+		}
+		runtimeDigests := append([]string(nil), snapshot.RuntimeDigests...)
+		if !slices.Contains(runtimeDigests, runtimeDigest) {
+			runtimeDigests = append(runtimeDigests, runtimeDigest)
 		}
 		definitions = append(definitions, cliconnector.Definition{
 			ID: snapshot.ID, Name: snapshot.Name, Executable: snapshot.Executable,
 			ManifestVersion: snapshot.ManifestVersion, UsageGuide: snapshot.UsageGuide,
 			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable,
-			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: append([]string(nil), snapshot.RuntimeDigests...),
+			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: runtimeDigests,
 			Capabilities: capabilities, VersionNumber: snapshot.Version,
 		})
 		for _, capability := range capabilities {
@@ -862,6 +875,16 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", err
 	}
 	return server, socket, nil
+}
+
+func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {
+	if slices.Contains(connector.RuntimeDigests, runtimeDigest) {
+		return true, nil
+	}
+	if executor.cliRepository == nil {
+		return false, nil
+	}
+	return executor.cliRepository.HasCLIConnectorRuntimeConformance(ctx, connector.ID, connector.BundleSHA256, runtimeDigest)
 }
 
 func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.EnvironmentResolver {

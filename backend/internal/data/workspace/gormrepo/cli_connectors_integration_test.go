@@ -83,6 +83,14 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 		if _, err := repository.PublishCLIConnectorDefinition(ctx, item.ID, items[0].VersionNumber); err != nil {
 			t.Fatalf("installation %d review publish: %v", attempt+1, err)
 		}
+		verified, err := repository.HasCLIConnectorRuntimeConformance(ctx, item.ID, result.BundleSHA256, result.RuntimeDigests[0])
+		if err != nil || !verified {
+			t.Fatalf("installation %d exact Runtime conformance: verified=%v err=%v", attempt+1, verified, err)
+		}
+		verified, err = repository.HasCLIConnectorRuntimeConformance(ctx, item.ID, strings.Repeat("c", 64), result.RuntimeDigests[0])
+		if err != nil || verified {
+			t.Fatalf("installation %d mismatched bundle conformance: verified=%v err=%v", attempt+1, verified, err)
+		}
 		available, err := repository.GetAvailableCLIConnectorDefinition(ctx, item.ID)
 		if err != nil {
 			t.Fatal(err)

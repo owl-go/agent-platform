@@ -695,6 +695,18 @@ func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx contex
 	return result, nil
 }
 
+func (repository *Repository) HasCLIConnectorRuntimeConformance(ctx context.Context, definitionID, bundleSHA256, runtimeDigest string) (bool, error) {
+	var count int64
+	err := repository.db.WithContext(ctx).Table("cli_connector_conformance").Where(
+		"definition_id = ? AND bundle_sha256 = ? AND runtime_repo_digest = ? AND passed = ?",
+		definitionID, bundleSHA256, runtimeDigest, true,
+	).Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("check CLI Connector Runtime conformance: %w", err)
+	}
+	return count == 1, nil
+}
+
 func containsAllScopes(granted, required []string) bool {
 	set := make(map[string]struct{}, len(granted))
 	for _, scope := range granted {
