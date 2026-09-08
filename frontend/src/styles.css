@@ -352,6 +352,20 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .runtime-activity li div { min-width: 0; }
 .runtime-activity li strong { flex: none; white-space: nowrap; }
 .runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }
+.runtime-activity .runtime-activity-history { margin-left: 16px; }
+.runtime-activity .runtime-activity-history > summary { padding: 2px 0; }
+.activity-summary-list { display: grid; gap: 7px; margin-top: 9px; }
+.runtime-activity .activity-summary-group { margin: 0; }
+.runtime-activity .activity-summary-group > summary { display: grid; grid-template-columns: 8px minmax(0,auto) auto 8px; align-items: center; gap: 7px; width: fit-content; max-width: 100%; padding: 5px 8px; border: 1px solid #e2e8e3; border-radius: 7px; background: #f8faf7; color: #52615a; }
+.runtime-activity .activity-summary-group > summary::after { content: "›"; color: #9aa49f; font-size: .9rem; line-height: 1; transition: transform .16s ease; }
+.runtime-activity .activity-summary-group[open] > summary::after { transform: rotate(90deg); }
+.activity-summary-mark { width: 6px; height: 6px; border-radius: 50%; background: #8caf9e; }
+.runtime-activity .activity-summary-group > summary strong { min-width: 0; overflow-wrap: anywhere; color: #405149; font-size: .72rem; }
+.runtime-activity .activity-summary-group > summary small { color: #8b9690; font-size: .66rem; }
+.runtime-activity .activity-detail-list { margin: 7px 0 4px 14px; padding-left: 10px; border-left: 1px solid #dfe6e1; }
+.runtime-activity .activity-detail-list li div { display: grid; gap: 2px; }
+.runtime-activity .activity-detail-list li strong { white-space: normal; }
+.runtime-activity .activity-detail-list li small { font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: .66rem; line-height: 1.45; }
 .approval-inbox { position: sticky; top: 12px; z-index: 20; margin: 12px 20px 0; }
 .composer-approval-slot:empty { display: none; }
 .approval-inbox.is-embedded { position: static; width: 100%; margin: 0; }

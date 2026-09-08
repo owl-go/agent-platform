@@ -14,6 +14,7 @@ import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { displayArtifactNames } from "../artifactDisplay";
 import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
+import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -400,6 +401,13 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
   if (activity.type === "file.changed") return t("workflows.updatingFiles");
   return t("sessions.progress.working");
 }
+function activitySummaries(message: SessionMessage) {
+  return summarizeExecutionActivities(message.activities ?? []);
+}
+function activitySummaryLabel(summary: ExecutionActivitySummary) {
+  if (summary.kind === "reasoning" && summary.detail) return summary.detail;
+  return t(`sessions.activitySummary.${summary.kind}.${summary.state}`);
+}
 function stageStateLabel(state: string) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
 }
@@ -511,8 +519,8 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ message.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
               <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
-                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
-                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
+                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activitySummaryLabel(activitySummaries(message).at(-1)!) }}</strong></div>
+                <details class="runtime-activity-history"><summary>{{ t('workflows.activityDetails') }}</summary><div class="activity-summary-list"><details v-for="summary in activitySummaries(message)" :key="`${message.id}-${summary.id}`" class="activity-summary-group"><summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ activitySummaryLabel(summary) }}</strong><small>{{ t('sessions.activitySummary.expand') }}</small></summary><ol class="activity-detail-list"><li v-for="(activity, activityIndex) in summary.activities" :key="`${message.id}-${summary.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div></details>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>

@@ -420,7 +420,7 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("shows an expandable activity timeline with the concrete Codex command", async () => {
+  it("shows execution summaries before revealing concrete commands", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const api = apiStub([messages[0]!, pending]);
     api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, onSnapshot, signal) => {
@@ -440,9 +440,44 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
-    expect(wrapper.get(".runtime-activity").text()).toContain("先检查仓库状态");
-    expect(wrapper.get(".runtime-activity").text()).toContain("git status --short");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".activity-summary-group > summary").text()).toContain("先检查仓库状态");
+    expect(wrapper.get(".activity-summary-group > summary").text()).not.toContain("git status --short");
+    expect(wrapper.get(".activity-detail-list").text()).toContain("git status --short");
+    wrapper.unmount();
+  });
+
+  it("groups Feishu command pairs into human-readable summaries", async () => {
+    const command = (capability: string, args: string) => `/bin/sh -lc 'agent-cli --connector connector-1 --capability ${capability} --identity user -- ${args}'`;
+    const chatHelp = command("im_chat_search", "im chat-search --help");
+    const chatSearch = command("im_chat_search", "im chat-search --query 云隙科技");
+    const send = command("im_messages_send", "im messages-send --chat-id oc_1 --text 大家好");
+    const completed: SessionMessage = {
+      ...messages[1]!,
+      activities: [
+        { type: "runtime.started", detail: "codex" },
+        { type: "command.requested", detail: chatHelp },
+        { type: "command.completed", detail: chatHelp },
+        { type: "command.requested", detail: chatSearch },
+        { type: "command.completed", detail: chatSearch },
+        { type: "command.requested", detail: send },
+        { type: "command.completed", detail: send },
+      ],
+    };
+
+    const wrapper = await mountPage([messages[0]!, completed]);
+    const summaries = wrapper.findAll(".activity-summary-group > summary");
+
+    expect(summaries.map((summary) => summary.text())).toEqual([
+      "运行环境已准备展开具体过程",
+      "已读取飞书群聊搜索说明展开具体过程",
+      "已搜索飞书群聊展开具体过程",
+      "已发送飞书消息展开具体过程",
+    ]);
+    expect(summaries.every((summary) => !summary.text().includes("/bin/sh"))).toBe(true);
+    expect(wrapper.findAll(".activity-summary-group").every((summary) => summary.attributes("open") === undefined)).toBe(true);
+    expect(wrapper.get(".activity-detail-list").text()).toContain("codex");
+    expect(wrapper.findAll(".activity-detail-list").at(-1)?.text()).toContain("/bin/sh -lc");
     wrapper.unmount();
   });
 
@@ -485,7 +520,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, failed]);
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
     expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
     wrapper.unmount();
