@@ -49,7 +49,7 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     env:
-      AGENT_PLATFORM_BLACKBOX_DATABASE_DSN: postgres://agent_platform:agent-platform-test@127.0.0.1:5432/agent_platform_test?sslmode=disable
+      WORKSPACE_TEST_POSTGRES_DSN: postgres://agent_platform:agent-platform-test@127.0.0.1:5432/agent_platform_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
