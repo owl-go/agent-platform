@@ -30,7 +30,7 @@ Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 R
 
 MCP Connector 配置在每次执行中生成：Claude 使用 `--mcp-config`，Codex 使用 `$HOME/.codex/config.toml`，Hermes 使用 `$HOME/.hermes/config.yaml`，OpenClaw 使用受控配置文件。stdio MCP 只允许固定版本的 `npx`/`uvx` 包；Streamable HTTP 只允许 HTTPS 与可选写入型 Bearer Token。Administrator 创建的平台 MCP 仍以 Administrator 为 Secret 所有者；冻结快照保留该所有者并使用对应 AAD 解密，调用 User 只能执行连接器，不能读取、修改或重新拥有其 Secret。
 
-Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wrapper 根据冻结 Definition 和当前 User-private Authorization 生成真实可执行文件与参数数组，强制检查 bundle Digest、Runtime RepoDigest、能力、身份、argv、scope、Egress、Workspace、输出和超时，并在进程启动前再次检查 Definition、Enablement、Authorization 与批准状态。当前 Secret 只为这一次命令物化、加入精确值脱敏集合并幂等清理。
+Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wrapper 根据冻结 Definition 和当前 User-private Authorization 生成真实可执行文件与参数数组，强制检查 bundle Digest、Runtime RepoDigest、能力、身份、argv、scope、Egress、Workspace、输出和超时，并在进程启动前再次检查 Definition、Enablement、Authorization 与批准状态。Runtime Instruction 为每个允许身份给出字面量 `--identity user` 或 `--identity bot` 命令；Broker 在可信边界把 Feishu CLI 常用的 `me` 别名规范化为 `user`，然后拒绝其他未知身份。当前 Secret 只为这一次命令物化、加入精确值脱敏集合并幂等清理。
 
 会话快照继续冻结 Connector Definition、bundle Digest、Capabilities 和策略。若旧快照的 Runtime RepoDigest 列表早于当前镜像，Worker 只可查询与该冻结 Definition ID、bundle SHA-256 和当前 Runtime RepoDigest 完全匹配且 `passed` 的最新 Conformance 记录作为补充证据；查询失败、记录缺失或任一键不匹配都必须 fail closed。补充证据只用于当前执行内的镜像兼容判断，不修改历史快照，也不刷新其命令或权限策略。
 

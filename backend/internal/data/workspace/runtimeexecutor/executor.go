@@ -1540,15 +1540,13 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 				continue
 			}
 			for _, capability := range capabilities {
-				identities := make([]string, 0, len(capability.Identities))
 				for _, identity := range capability.Identities {
-					identities = append(identities, string(identity))
+					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, identity, strings.Join(capability.ArgvPrefix, " ")))
 				}
-				commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity <%s> [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, strings.Join(identities, "|"), strings.Join(capability.ArgvPrefix, " ")))
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors (use only these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors (copy the identity value literally from one of these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

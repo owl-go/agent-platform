@@ -184,6 +184,46 @@ func TestBrokerResolvesCredentialsForReviewedCapability(t *testing.T) {
 	}
 }
 
+func TestBrokerCanonicalizesMeAsUserBeforeResolvingCredentials(t *testing.T) {
+	process := &recordingProcess{}
+	definition := brokerDefinition(RiskLow)
+	definition.AuthenticationDriver = "feishu"
+	resolvedIdentity := Identity("")
+	broker, err := NewBroker(BrokerConfig{
+		Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process},
+		ResolveEnvironment: func(_ context.Context, _ Definition, _ Capability, identity Identity) (map[string]string, error) {
+			resolvedIdentity = identity
+			return map[string]string{"LARKSUITE_CLI_USER_ACCESS_TOKEN": "secret"}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: "me", Arguments: []string{"auth", "status"}})
+	if response.ErrorCode != "" || resolvedIdentity != IdentityUser || process.starts != 1 {
+		t.Fatalf("response=%#v identity=%q starts=%d", response, resolvedIdentity, process.starts)
+	}
+}
+
+func TestBrokerRejectsUnknownExecutionIdentityBeforeCredentialResolution(t *testing.T) {
+	definition := brokerDefinition(RiskLow)
+	resolved := false
+	broker, err := NewBroker(BrokerConfig{
+		Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: &recordingProcess{}},
+		ResolveEnvironment: func(context.Context, Definition, Capability, Identity) (map[string]string, error) {
+			resolved = true
+			return map[string]string{}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: "administrator", Arguments: []string{"auth", "status"}})
+	if response.ErrorCode != "invalid_request" || resolved {
+		t.Fatalf("response=%#v resolved=%v", response, resolved)
+	}
+}
+
 func brokerDefinition(risk Risk) Definition {
 	return Definition{
 		ID: "connector-1", Name: "Tool", Executable: "tool", AuthenticationDriver: "none", State: StateAvailable,

@@ -468,7 +468,7 @@ func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
 	}
 	job := application.ExecutionJob{Instruction: "Check identity", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "connector-1", Name: "Feishu CLI", Capabilities: capabilities}}}}
 	got := buildInstruction(job, nil)
-	want := "agent-cli --connector connector-1 --capability identity --identity <user> [--target <target>] -- auth status"
+	want := "agent-cli --connector connector-1 --capability identity --identity user [--target <target>] -- auth status"
 	if !strings.Contains(got, want) || strings.Contains(got, "/opt/agent-platform/connector") {
 		t.Fatalf("CLI Connector instruction = %q", got)
 	}
