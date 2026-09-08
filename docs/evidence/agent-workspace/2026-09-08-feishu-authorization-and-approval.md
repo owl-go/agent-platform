@@ -104,3 +104,35 @@ required high-risk target, so Broker rejected it before creating an approval and
 the response confirmed that no message was sent. Production placement therefore
 relies on the focused DOM regression rather than claiming another live send-card
 capture.
+
+## Session execution summary follow-up
+
+Commits `71f36dd` and `9a722b9` replace the flat Session activity timeline with
+two disclosure levels. Opening `View execution progress` first shows concise
+summary rows. Runtime preparation and matching command requested/completed pairs
+are grouped, and known Feishu capabilities are described as chat search,
+instruction lookup, or message send operations. Opening one summary row then
+reveals the persisted redacted command records. The summary wording says that a
+Connector was invoked rather than claiming the external operation succeeded,
+because `command.completed` records process completion and does not carry its
+exit status into the Session activity projection.
+
+The redundant `Expand details` text was removed from each summary row; the native
+disclosure arrow remains. A single execution stage whose `final_text` exactly
+matches the final Agent message is also omitted, so the same response is not
+rendered twice. Different single-stage results, failures, and multi-stage Expert
+Team results remain available.
+
+All 189 frontend tests, `make web-typecheck`, `make web-build`, and
+`git diff --check` passed. Web release
+`feishu-activity-summary-9a722b9-20260908` is active at
+`/opt/agent-platform/web/releases/feishu-activity-summary-9a722b9-20260908`.
+Both the remote release and public origin serve `assets/index-CypoTZhI.js`.
+
+An authenticated production browser reloaded the existing successful Feishu
+Session without invoking a new Runtime or external action. Expanding its activity
+history showed four collapsed summaries: Runtime prepared, Feishu chat search,
+message-send instruction lookup, and Feishu message send. No raw command was
+present at that level. Expanding only the message-send summary revealed the
+matching requested and completed command records. The repeated `1/1` stage card
+was absent where its text matched the final Agent response.
