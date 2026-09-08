@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -101,6 +102,77 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func TestConnectorActionPausesAndResumesSessionMessage(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	owner, sessionID := uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO sessions(id,owner_user_id) VALUES(?,?)", sessionID, owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	var messageID int64
+	if err := db.Raw("INSERT INTO session_messages(session_id,role,state,content,progress_stage) VALUES(?,'assistant','generating','','using_tool') RETURNING id", sessionID).Scan(&messageID).Error; err != nil {
+		t.Fatal(err)
+	}
+	definition, err := repository.CreateCLIConnectorDefinition(ctx, owner, cliconnector.Definition{
+		Name: "Example CLI", Icon: "terminal", Description: "Read examples", InstallationType: "npm", Package: "example-cli", Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	enablementID := uuid.NewString()
+	if err := db.Exec("INSERT INTO cli_connector_enablements(id,owner_user_id,definition_id,state) VALUES(?,?,?,'enabled')", enablementID, owner, definition.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	result := make(chan error, 1)
+	go func() {
+		result <- repository.AwaitAction(ctx, cliconnector.ActionRequest{
+			OwnerID: owner, ExecutionKind: "session", ExecutionID: fmt.Sprint(messageID), StageID: "stage-1",
+			OperationID: uuid.NewString(), ConnectorID: definition.ID, ConnectorName: definition.Name,
+			AuthorizationScheme: "example", Identity: cliconnector.IdentityUser, EnablementID: enablementID,
+			CapabilityID: "read", Reason: cliconnector.ReasonAuthorizationRequired,
+			Actions: []cliconnector.UserAction{cliconnector.UserActionOpenURL}, ExpiresAt: time.Now().UTC().Add(5 * time.Second),
+		})
+	}()
+
+	var action connectorActionRequirementRecord
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if err := db.Where("owner_user_id = ? AND execution_id = ?", owner, fmt.Sprint(messageID)).Take(&action).Error; err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if action.ID == "" {
+		t.Fatal("Connector action was not persisted")
+	}
+	var paused messageRecord
+	if err := db.Where("id = ?", messageID).Take(&paused).Error; err != nil {
+		t.Fatal(err)
+	}
+	if paused.State != "waiting_for_user" || paused.ProgressStage != "waiting_for_user" {
+		t.Fatalf("paused message = state %q progress %q", paused.State, paused.ProgressStage)
+	}
+	if _, err := repository.CancelConnectorAction(ctx, owner, action.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-result; !errors.Is(err, cliconnector.ErrActionRejected) {
+		t.Fatalf("AwaitAction error = %v", err)
+	}
+	var resumed messageRecord
+	if err := db.Where("id = ?", messageID).Take(&resumed).Error; err != nil {
+		t.Fatal(err)
+	}
+	if resumed.State != "generating" || resumed.ProgressStage != "using_tool" {
+		t.Fatalf("resumed message = state %q progress %q", resumed.State, resumed.ProgressStage)
 	}
 }
 
