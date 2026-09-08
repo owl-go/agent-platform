@@ -371,12 +371,17 @@ function activeStageLabel(message: SessionMessage) {
 function responseIdentity(message: SessionMessage) {
 	const snapshot = message.response_snapshot;
 	const stage = snapshot?.stages?.at(-1);
-	if (stage) return { connection: stage.provider_model.connection_name, modelID: stage.provider_model.model_id, modelName: stage.provider_model.name, runtime: stage.runtime_engine };
-	if (snapshot?.model_name) return { connection: snapshot.connection_name, modelID: snapshot.model_id, modelName: snapshot.model_name, runtime: snapshot.runtime_engine };
+	const expertName = message.expert_stages?.at(-1)?.expert_name;
+	if (stage) return { connection: stage.provider_model.connection_name, modelID: stage.provider_model.model_id, modelName: stage.provider_model.name, runtime: stage.runtime_engine, expertName };
+	if (snapshot?.model_name) return { connection: snapshot.connection_name, modelID: snapshot.model_id, modelName: snapshot.model_name, runtime: snapshot.runtime_engine, expertName };
 	return undefined;
 }
 function visibleStages(message: SessionMessage) {
-	return message.expert_stages ?? [];
+	const stages = message.expert_stages ?? [];
+	if (stages.length !== 1) return stages;
+	const finalText = stages[0]?.final_text?.replace(/\r\n/g, "\n").trim();
+	const messageText = message.content.replace(/\r\n/g, "\n").trim();
+	return finalText && finalText === messageText ? [] : stages;
 }
 function messageSkills(index: number) {
   if (messages.value[index]?.role !== "user") return [];
@@ -520,7 +525,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
               <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
                 <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activitySummaryLabel(activitySummaries(message).at(-1)!) }}</strong></div>
-                <details class="runtime-activity-history"><summary>{{ t('workflows.activityDetails') }}</summary><div class="activity-summary-list"><details v-for="summary in activitySummaries(message)" :key="`${message.id}-${summary.id}`" class="activity-summary-group"><summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ activitySummaryLabel(summary) }}</strong><small>{{ t('sessions.activitySummary.expand') }}</small></summary><ol class="activity-detail-list"><li v-for="(activity, activityIndex) in summary.activities" :key="`${message.id}-${summary.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div></details>
+                <details class="runtime-activity-history"><summary>{{ t('workflows.activityDetails') }}</summary><div class="activity-summary-list"><details v-for="summary in activitySummaries(message)" :key="`${message.id}-${summary.id}`" class="activity-summary-group"><summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ activitySummaryLabel(summary) }}</strong></summary><ol class="activity-detail-list"><li v-for="(activity, activityIndex) in summary.activities" :key="`${message.id}-${summary.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div></details>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
@@ -533,7 +538,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               </div>
               <CreditConsumption v-if="message.role === 'assistant'" :value="message.credit_consumption" />
               <div class="message-actions">
-                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"> · {{ responseIdentity(message)?.modelName }}</span></small>
+                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"><template v-if="responseIdentity(message)?.expertName"> · {{ responseIdentity(message)?.expertName }}</template> · {{ responseIdentity(message)?.modelName }}</span></small>
                 <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message, index)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
                 <el-button v-if="message.role === 'assistant' && message.state === 'failed'" text type="primary" @click="retry(index)">{{ t('common.retry') }}</el-button>
               </div>

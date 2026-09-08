@@ -469,10 +469,10 @@ describe("SessionsPage conversation layout", () => {
     const summaries = wrapper.findAll(".activity-summary-group > summary");
 
     expect(summaries.map((summary) => summary.text())).toEqual([
-      "运行环境已准备展开具体过程",
-      "已读取飞书群聊搜索说明展开具体过程",
-      "已搜索飞书群聊展开具体过程",
-      "已发送飞书消息展开具体过程",
+      "运行环境已准备",
+      "已调用飞书连接器读取群聊搜索说明",
+      "已调用飞书连接器搜索群聊",
+      "已调用飞书连接器发送消息",
     ]);
     expect(summaries.every((summary) => !summary.text().includes("/bin/sh"))).toBe(true);
     expect(wrapper.findAll(".activity-summary-group").every((summary) => summary.attributes("open") === undefined)).toBe(true);
@@ -523,6 +523,25 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
     expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
+    wrapper.unmount();
+  });
+
+  it("omits a single execution stage that repeats the final answer", async () => {
+    const stage = { expert_id: "expert-1", expert_name: "飞书助手", provider_model_name: "GPT 5.6 Sol", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 47_000, final_text: "未发送任何消息。" };
+    const duplicate = { ...messages[1]!, content: "未发送任何消息。", expert_stages: [stage] };
+    const wrapper = await mountPage([messages[0]!, duplicate]);
+
+    expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
+    expect(wrapper.get(".message.assistant .message-content").text().match(/未发送任何消息。/g)).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("keeps stage results that add information to the final answer", async () => {
+    const stage = { expert_id: "expert-1", expert_name: "检索专家", provider_model_name: "GPT 5.6 Sol", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 12_000, final_text: "阶段检索结果" };
+    const response = { ...messages[1]!, content: "综合回答", expert_stages: [stage] };
+    const wrapper = await mountPage([messages[0]!, response]);
+
+    expect(wrapper.get(".expert-stage-list").text()).toContain("阶段检索结果");
     wrapper.unmount();
   });
 

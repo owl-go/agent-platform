@@ -318,7 +318,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - Runtime Settings shows only Claude Code, Codex, Hermes, OpenClaw, and PI Agent, their available state, and one default Provider Model per Runtime Engine. Creating a connection never changes these defaults automatically.
 - Runtime Model Compatibility is verified, unverified, or incompatible. Unverified combinations show a non-blocking warning and remain selectable in Personal Settings; an incompatible pair cannot be saved as a Runtime default. An incompatible historical invocation fails explicitly without replacement.
 - Personality controls communication style only and does not select a model.
-- Historical Agent responses show the final execution stage's identity and expose every stage's Expert, connection, model identifier, and Runtime metadata on demand. Regeneration reuses the original ordered Response Snapshot.
+- Historical Agent responses show the final execution stage's identity and expose every stage's Expert, connection, model identifier, and Runtime metadata on demand. A single stage whose final text exactly matches the Agent response is not rendered as a duplicate result card. Regeneration reuses the original ordered Response Snapshot.
 - An unavailable selected Runtime fails explicitly and is never silently replaced.
 - Personal Settings also stores language and time zone.
 
