@@ -1,10 +1,12 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；AI Creation 图片生成已完成设计但尚未实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
+
+AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 
 ## 结构
 
-后端是两个 Go Kratos 进程：`cmd/api` 提供认证后的控制面，`cmd/worker` 领取会话回复、工作流 Run、定时触发和 MCP 测试。Wire 只负责显式装配；所有运行配置来自严格校验的 YAML。
+后端是两个 Go Kratos 进程：`cmd/api` 提供认证后的控制面，`cmd/worker` 领取会话回复、工作流 Run、定时触发和 MCP 测试。AI Creation 实现后，Worker 还会领取持久化的 Image Generation Record；图片供应商调用不在 API 请求生命周期内运行。Wire 只负责显式装配；所有运行配置来自严格校验的 YAML。
 
 当前实现分为三个限界上下文：
 
@@ -12,13 +14,17 @@
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、User-owned MCP Connector、Administrator-owned CLI Connector Definition、User-private CLI Enablement/Authorization/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 
-Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。三个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
+AI Creation 修订将新增第四个限界上下文：
+
+- AI Creation：Image Model、Prompt Optimization 候选配置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；通过 Application 端口引用 Workspace 拥有的全局 Model Provider Connection 和 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
+
+Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
 
 ## 所有权
 
-Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement 和 Authorization。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
+Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval、Personal Settings 和 Image Generation Record 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model、Image Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取可用投影，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement、Authorization 和最近图片模型选择。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、图片提示词、Reference Image、Generated Image、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
 ## 事务与并发
 
@@ -29,6 +35,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
 - Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
 - 每个 User 的积分模型调用串行。调用开始前事务性物化当日额度并检查正余额；每个 Execution Stage 冻结 Model Credit Rate 修订，完成后以本次输入和输出 Token 增量结算。Stage 终态、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交；单 Stage 或团队最后一个 Stage 同事务提交 Assistant Message 或 Run 终态，结算后的负余额会阻止下一次调用。
+- Image Generation 是上述串行规则的受控例外：提交时在 Credits 上下文按 User 锁定余额，为完整输出数量创建归属提交 Credit Day 的 Image Credit Reservation，并分别记录来自当日额度与兑换余额的来源；同一 User 最多一个非终态图片批次，但可与一个 Runtime-backed 调用并行。后续任何准入都使用扣除未结算预留的 Available Credit。图片终态、成功输出元数据、Credit Consumption 和预留释放在一个事务提交；释放时已过期的旧 Daily Credit Allocation 不带入次日，未使用的 Redeemed Credit Balance 回到原余额。删除私有记录不退款，只留下不含执行内容的通用账本金额与时间。
+- Image Generation Record 由 Worker 通过 `FOR UPDATE SKIP LOCKED` 和租约领取。未发给供应商的工作可在进程重启后恢复；已发出但结果不确定的工作进入 `outcome_unknown`，不盲目重试。User 停止后拒收迟到输出，且只对停止前已验证持久化的图片结算。
 - 跨零点调用归属开始时的 Credit Day。次日额度通过首次余额读取或执行准入惰性物化，不依赖零点批处理；Personal Settings 时区变更只能从下一个 Credit Day 生效。
 - 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
 - Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务。进程崩溃后的悬挂任务由运行超时和后续对账收口，不暴露为产品控制。
@@ -37,9 +45,11 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；返回的 15 分钟 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
-Credits 契约允许 User 读取自己的余额和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前余额与下一次每日额度时间，不返回其他 User 或内部费率数据。
+Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、图片预留汇总和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前 Available Credit、预留汇总与下一次每日额度时间，不返回其他 User 或内部费率数据。
 
 工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
+
+AI Creation 使用普通 Proto/HTTP API 管理 Image Model、Prompt Optimization 候选、临时 Reference Image、Image Generation Record、历史和下载。当前记录另有手写 SSE Handler，只发布有界产品进度；断线后客户端先读取权威记录再续接。首期不向 Workflow Credential 或外部调用方开放图片生成接口。
 
 `GET/POST /api/v1/conversation-selection` 读取或解析 owning User 的不可变选择修订。客户端仅持有 opaque ID 与展示元数据，不提交执行配置或读取 Secret。`GET /api/v1/conversation-files` 汇总当前对话附件与 Artifact，并为 Workflow 提供标明来源的 Workspace 文件；发送接口接收 `selection_id` 和 `file_references`。引用在提交前经 scope、路径、大小和 SHA-256 校验后复制为普通不可变附件；失败提交清理新副本，成功提交使用既有附件物化与只读挂载路径。`GET /api/v1/skills/{skill_id}/document` 在拥有者校验后读取已安装包中的 `SKILL.md`，前端安全渲染。
 
@@ -56,6 +66,8 @@ Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/
 
 Derived Expertise Tag 后台任务与 Session、Run 共用执行阶段的版本化 Model Provider 凭证加载逻辑：Worker 领取任务时按 Connection ID 和 Version 读取密文及凭证归属，再交给 Runtime Executor 解密，不将凭证写入普通 Snapshot。凭证不可用时将标签任务标为失败并保留旧标签，不向 Runtime 提交缺失凭证的任务。
 
+AI Creation Worker 同样只按冻结的 Connection ID 与 Version 获取单次调用凭证，并在调用后清理明文。`ImageProvider` Adapter 只接收结构化生成或编辑参数和流式图片输入，返回结构化图片结果与安全错误，不管理 Repository、Credits、Object Storage 或权限。首个实现使用 OpenAI Images；Prompt Optimization 通过独立直接调用 Adapter 支持 OpenAI Responses 与 OpenAI Chat Completions。普通日志和审计不保存提示词、图片、Base64、原始供应商响应、Object Key 或签名 URL。
+
 ## 数据库
 
 CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_cli_connector_draft_authentication.sql` 仅在非 `available` 状态允许空值，Builder 完成后必须写入受支持的 Driver。重复验证同一 Bundle/Runtime 时更新原 Conformance 结果，目录只投影当前 Bundle 的证据。`000030_cli_connector_deletion.sql` 引入受限的软删除及仅针对未删除 Definition 的唯一索引。管理员删除在一个事务中停用 Definition 和 Enablement、清理临时授权与账号 Token、解除所有 Expert 的可变绑定；历史 Snapshot、Artifact 与 User 的 Feishu Application 保留。重新安装后启用可复用原 Application，但已断开的账号需要重新授权。
@@ -63,6 +75,8 @@ CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_c
 当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构，后续 Migration 删除模型类型字段，`000014_global_model_catalog.sql` 再把已有连接与模型目录提升为全局可读资源并保留原凭证加密作用域。Provider Model 优先来自供应商 `/models`，失败或不支持时使用平台维护的厂商默认列表，Administrator 也可显式补充。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
+
+AI Creation 通过新的追加式 Migration 引入 Image Model revisions、Prompt Optimization 候选、Image Credit Rate revisions、Image Credit Reservations、Image Generation Records、Reference Images、Generated Images 和每 User 最近选择；不修改既有 Migration，也不从现有 Artifact 或附件猜测回填图片生成历史。对象内容保留在私有 Object Storage，数据库只保存经过校验的逻辑 Object Key、SHA-256、大小、格式和像素尺寸。
 
 Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。启用飞书 CLI Connector 时，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Feishu Application 并销毁临时设备码。历史 Snapshot JSON 不回写。
 

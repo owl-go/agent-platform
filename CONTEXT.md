@@ -19,12 +19,16 @@ _Avoid_: Platform operator, Organization administrator, support user
 ## Credits And Usage
 
 **Credit**:
-A product usage unit available to one User and consumed by Provider Model usage; at a Model Credit Rate of 1.00, one Credit represents 10,000 input or output Tokens. A User without available Credits cannot start another model execution.
+A product usage unit available to one User and consumed by Provider Model usage; at a Model Credit Rate of 1.00, one Credit represents 10,000 input or output Tokens, while Image Credit Rates price successfully Generated Images directly. A User without available Credits cannot start another model execution.
 _Avoid_: Currency, Provider charge, Token
 
 **Credit Balance**:
 The sum of one User's remaining Daily Credit Allocation and Redeemed Credit Balance. A completed execution may make it temporarily negative, preventing another execution until Credits become available again.
 _Avoid_: Daily Credit Limit, Provider balance, Token balance
+
+**Available Credit**:
+The portion of one User's Credit Balance not withheld by active Image Credit Reservations and therefore available to admit another execution. It is the balance shown in the product's compact account surfaces.
+_Avoid_: Credit Balance, reserved Credit, Provider balance
 
 **Daily Credit Allocation**:
 A User-specific amount of expiring Credits restored at the start of each calendar day in that User's configured time zone. Unused daily Credits do not carry forward and are consumed before redeemed Credits.
@@ -55,7 +59,7 @@ The calendar day used for one User's Daily Credit Allocation and daily consumpti
 _Avoid_: Rolling 24-hour window, UTC day, billing cycle
 
 **Credit Consumption**:
-The immutable two-decimal Credit amount charged to one completed, failed, or cancelled model execution from its measured input and output Tokens and frozen Model Credit Rate.
+The immutable two-decimal Credit amount charged to one model execution, calculated from measured text Tokens and a frozen Model Credit Rate or from successfully Generated Images and frozen Image Credit Rates.
 _Avoid_: Token Usage, Provider cost, Session total
 
 ## Conversations
@@ -125,6 +129,40 @@ _Avoid_: queued execution, indefinite pause, automatic approval
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
 _Avoid_: Restorable Workflow, archived Workflow
+
+## AI Creation
+
+**AI Creation**:
+The product area in which a User uses task-specific generative tools outside a continuing Session or Workflow. Its first tool is Image Generation.
+_Avoid_: Session, Workflow, generic AI tools
+
+**Image Model**:
+An Administrator-managed image-generation configuration that binds one exact provider model to an Images protocol and its supported request options. A User may select an available Image Model for an Image Generation Record, but cannot modify its configuration.
+_Avoid_: Runtime Engine default, Provider Model type, User-owned model
+
+**Image Generation Record**:
+An immutable, User-owned record of one submitted text-to-image or image-to-image request and its generated results. Regeneration creates another Image Generation Record for the full original output count instead of replacing any original result.
+_Avoid_: Session response, Run, mutable generation job
+
+**Reference Image**:
+An image supplied as an ordered input to an image-to-image request, either by new upload or by selecting an unexpired Generated Image owned by the same User.
+_Avoid_: prompt-only input, mutable external URL, cross-User image
+
+**Prompt Optimization**:
+An explicit, separately charged AI Creation action that expands the current editable image prompt with a User-selected, Administrator-approved Provider Model. It replaces the draft prompt after success but does not submit an Image Generation Record.
+_Avoid_: automatic image generation, hidden prompt rewrite, Runtime Engine default
+
+**Generated Image**:
+An immutable image produced as one result of an Image Generation Record and retained with that record for 90 days.
+_Avoid_: Artifact, attachment, temporary preview
+
+**Image Credit Rate**:
+The Administrator-managed Credit amount charged for one successfully Generated Image under an exact Image Model, size, and quality combination.
+_Avoid_: Model Credit Rate, Provider price, batch price
+
+**Image Credit Reservation**:
+The temporary, source-preserving Credit amount atomically withheld from one User's Available Credit when an Image Generation Record is submitted, based on its frozen Image Credit Rate and requested output count. It belongs to the submission Credit Day and releases only through terminal settlement without carrying expired Daily Credits forward.
+_Avoid_: Credit Consumption, provider prepayment, daily allocation
 
 ## Files And Results
 

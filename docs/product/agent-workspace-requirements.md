@@ -1,10 +1,10 @@
 # Agent Workspace Product Requirements
 
-Status: accepted for implementation on 2026-08-25; Expert Team amendment accepted on 2026-09-02; Credits amendment accepted on 2026-09-04; Expert, Skill, and Connector simplification accepted on 2026-09-05.
+Status: accepted for implementation on 2026-08-25; Expert Team amendment accepted on 2026-09-02; Credits amendment accepted on 2026-09-04; Expert, Skill, and Connector simplification accepted on 2026-09-05; AI Creation amendment accepted on 2026-09-08.
 
 ## 1. Product Outcome
 
-Agent Workspace is a personal AI workspace centered on Sessions, Workflows, Experts, Skills and Connectors, and Settings. It replaces the previous Coding Agent control-plane product rather than adding another layer on top of Agent Studio, Coding Tasks, Releases, and Operations.
+Agent Workspace is a personal AI workspace centered on Sessions, Workflows, AI Creation, Experts, Skills and Connectors, and Settings. It replaces the previous Coding Agent control-plane product rather than adding another layer on top of Agent Studio, Coding Tasks, Releases, and Operations.
 
 The primary experience is intentionally lightweight: a ChatGPT-like left navigation and object list with one focused content surface. Advanced configuration remains collapsed until requested. The product name shown in the UI is `Agent Workspace`; the repository and deployment identifiers may remain `agent-platform`.
 
@@ -29,14 +29,14 @@ Transient operation success and failure feedback uses one standardized Toast pat
 
 - Every User receives a Daily Credit Allocation. Its default is 600 Credits, an Administrator may configure it per User, and unused Daily Credits do not carry into the next calendar day.
 - A User may redeem a Redemption Code for additional Credits. Redeemed Credits persist across daily boundaries and are consumed only after the current day's allocation.
-- The displayed Credit Balance is the sum of the remaining Daily Credit Allocation and Redeemed Credit Balance. A User whose balance is not positive cannot start another Session response or Workflow Run.
-- Every actual Provider Model invocation consumes Credits, including every Subagent invocation in an Expert Team. Validation, queueing, Runtime preparation, and MCP testing do not consume Credits.
-- At a multiplier of 1.00, one Credit represents 10,000 input or output Tokens. Credit Consumption is calculated as `input Tokens / 10000 * input multiplier + output Tokens / 10000 * output multiplier`, rounded to two decimal places per invocation with a minimum non-zero charge of 0.01 Credits.
-- Each invocation freezes its Model Credit Rate when the Session response or Workflow Run is queued. Later rate changes affect only subsequently queued invocations.
+- Credit Balance is the sum of the remaining Daily Credit Allocation and Redeemed Credit Balance. Available Credit subtracts every active Image Credit Reservation and is the amount shown in compact account surfaces and used for new-execution admission. A User whose Available Credit is not positive cannot start another Session response, Workflow Run, Prompt Optimization, or Image Generation Record.
+- Every actual Provider Model invocation consumes Credits, including every Subagent invocation in an Expert Team and every Prompt Optimization. Each successfully Generated Image consumes its frozen Image Credit Rate. Validation, queueing, Runtime preparation, and MCP testing do not consume Credits.
+- For a text invocation at a multiplier of 1.00, one Credit represents 10,000 input or output Tokens. Its Credit Consumption is calculated as `input Tokens / 10000 * input multiplier + output Tokens / 10000 * output multiplier`, rounded to two decimal places per invocation with a minimum non-zero charge of 0.01 Credits. Image Generation instead uses its exact per-image rate and successful output count.
+- Each text invocation freezes its Model Credit Rate when the Session response, Workflow Run, or Prompt Optimization is queued. An Image Generation Record freezes its Image Credit Rates and reserves its maximum consumption when submitted. Later rate changes affect only later submissions.
 - Successful, failed, cancelled, and timed-out invocations consume their measured usage when available. An execution that fails before Provider Model usage does not consume Credits, and a retry is a new independently charged execution.
-- Starting an invocation requires a positive Credit Balance. Because final usage is settled after execution, one invocation may make the balance negative; no further invocation may start until Credits become available again.
+- Starting a text invocation requires positive Available Credit. Because final text usage is settled after execution, one invocation may make Credit Balance negative; no further invocation may start until Available Credit becomes positive again. Image Generation requires enough Available Credit for its full maximum consumption and cannot itself overdraw the balance.
 - Every Expert Team member rechecks Credit Balance before its own invocation. If a preceding member's settled usage makes the balance non-positive, the turn fails before the next member starts; completed invocations remain charged, unstarted members are not charged, and the turn's temporary Workspace and Native Session changes are discarded.
-- Each terminal Assistant response displays that response's total Credit Consumption. Each terminal Workflow Run turn does the same; an Expert Team total is the sum of all member invocations that consumed Credits.
+- Each terminal Assistant response, Workflow Run turn, and Image Generation Record displays its total Credit Consumption. An Expert Team total is the sum of all member invocations that consumed Credits; an image total is the sum of its successfully validated outputs.
 - A Runtime-reported input/output Token count is accepted for this anti-abuse accounting even when the Runtime image has not passed Usage Conformance. A Model Credit Rate supplies a fixed fallback charge when a successful final response has no Runtime-reported Token counts. A failed, cancelled, or timed-out invocation with no final response and no measured Usage is uncharged; the fallback never converts Runtime output into a claim of verified Usage support.
 - The platform default Model Credit Rate uses input and output multipliers of `1.00` and a missing-Usage fallback charge of `10.00` Credits. An exact matching rate overrides those values.
 - The User's current credit day begins at `00:00` in their Personal Settings time zone. A time-zone change takes effect at the next credit-day boundary and cannot restore the Daily Credit Allocation twice.
@@ -48,20 +48,20 @@ Transient operation success and failure feedback uses one standardized Toast pat
 - A Credit Ledger is the immutable source of every daily allocation, redemption, adjustment, and consumption. The current balance and today's usage are transactionally maintained projections, not independently editable values.
 - Negative Credit Balance carries forward and is offset by the next Daily Credit Allocation or redeemed Credits; the daily reset never forgives prior consumption.
 - When an interactive Session or manual Workflow lacks Credits, the request fails without creating an execution. Workflow API requests return an explicit insufficient-credit error; a Scheduled Trigger records a failed, uncharged Run so its missed execution remains auditable.
-- Credit-consuming model invocations are serialized per User. Waiting invocations recheck the balance immediately before starting so concurrently submitted work cannot amplify a negative balance.
+- Runtime-backed Credit-consuming model invocations remain serialized per User. One separately reserved Image Generation Record may run concurrently with that queue; no User may have more than one active image generation batch.
 - A User may read their complete Credit Ledger. The Administrator can read account balance, today's usage, Daily Credit Allocation, redemption, and adjustment records, but cannot read execution-level consumption records or their Session, Workflow, model, or Token details.
 - The Administrator's own executions follow the same credit rules. Administrator changes to their own allocation or persistent balance use the same immutable records as changes for an ordinary User.
 - Runtime usage is normalized to the input and output Token delta for the current model invocation. Resumed native-session totals must not cause tokens from earlier responses to be charged again.
 - A newly created User immediately receives the current Credit Day's full allocation. On feature rollout, every existing User receives the current day's allocation with no redeemed Credits.
-- A model invocation belongs to the Credit Day in effect when that invocation starts, even if it settles after midnight. The next day's allocation offsets any resulting negative balance rather than changing the invocation's original day.
+- A text model invocation belongs to the Credit Day in effect when that invocation starts, even if it settles after midnight. An Image Generation Record belongs to the Credit Day reserved when it is submitted. The next day's allocation offsets any resulting negative balance rather than changing either execution's original day.
 - The current Credit Day's allocation is materialized transactionally on the first balance read or execution admission after its boundary. A uniqueness constraint for User and Credit Day prevents duplicate allocation without requiring a midnight batch job.
-- Each invocation's terminal Execution Stage state, Credit Ledger consumption, and balance projections commit in one database transaction. A single-stage execution or the final Expert Team stage commits the Assistant Message or Run terminal state in that transaction; the execution identity and stage position make every settlement idempotent across Worker retries.
-- Credit Ledger entries, Redemption Code records, and Model Credit Rate revisions are retained for the life of the User and cannot be deleted in the first version.
-- The avatar menu displays the User's current Credit Balance and opens a Credit panel with total balance, today's allocation remaining, redeemed balance, today's usage, next allocation time, Redemption Code input, and the User's Credit Ledger. The first version has no low-balance notification or configurable alert threshold.
-- Each terminal Assistant response and Workflow Run displays only its total Credit Consumption, such as `共消耗 ✧ 79.05`. Per-invocation Tokens, frozen multipliers, and fallback details are not shown in the conversation interface.
+- Each text invocation's terminal Execution Stage state, Credit Ledger consumption, and balance projections commit in one database transaction. A single-stage execution or the final Expert Team stage commits the Assistant Message or Run terminal state in that transaction; the execution identity and stage position make every settlement idempotent across Worker retries. Image Generation terminal state, Credit Consumption, reservation release, and Generated Image metadata likewise commit atomically under the record identity.
+- Credit Ledger entries, Redemption Code records, Model Credit Rate revisions, and Image Credit Rate revisions are retained for the life of the User and cannot be deleted in the first version. Deleting an Image Generation Record removes its private content and identifying execution metadata but retains a generic dated ledger entry and amount without issuing a refund.
+- The avatar menu displays the User's Available Credit and opens a Credit panel with Credit Balance, Available Credit, active Image Credit Reservations, today's allocation remaining, redeemed balance, today's usage, next allocation time, Redemption Code input, and the User's Credit Ledger. The first version has no low-balance notification or configurable alert threshold.
+- Each terminal Assistant response, Workflow Run, and Image Generation Record displays only its total Credit Consumption, such as `共消耗 ✧ 79.05`. Per-invocation Tokens, frozen multipliers, provider costs, and internal rate details are not shown in the execution interface.
 - User Management contains `Users`, `Model Rates`, and `Redemption Codes` tabs. The Users tab displays balance, Credits consumed today, and Daily Credit Allocation and supports reasoned adjustments; allocation changes take effect on the next Credit Day, and a value of zero disables future daily allocation.
 - A Model Credit Rate may explicitly set its input multiplier, output multiplier, or missing-Usage fallback to zero to make matching usage free. An unmatched model always uses the versioned platform default rather than becoming free implicitly.
-- Insufficient Credits use the public error code `insufficient_credits`. HTTP APIs return `429 Too Many Requests` with the current balance and next Daily Credit Allocation time, without exposing another account or internal rate data.
+- Insufficient Credits use the public error code `insufficient_credits`. HTTP APIs return `429 Too Many Requests` with the current Available Credit, active reserved total, and next Daily Credit Allocation time, without exposing another account or internal rate data.
 
 ## 3. Navigation And First Use
 
@@ -69,11 +69,12 @@ The main navigation contains exactly:
 
 1. Sessions
 2. Workflows
-3. Experts
-4. Skills & Connectors
-5. Settings
+3. AI Creation
+4. Experts
+5. Skills & Connectors
+6. Settings
 
-The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs. The Skills & Connectors entry (Chinese: `技能·连接器`, not Capability) contains `Skills` and `Connectors` tabs. Login opens Sessions. A User without a usable platform Model Provider Connection, Provider Model, or personal Runtime Engine default sees setup guidance: an Administrator must configure the platform Model Catalog, then the User selects a default Provider Model for a Runtime Engine before starting a Session or Workflow. Expert, Skill, and Connector setup is optional and never blocks first use.
+The AI Creation entry (Chinese: `AI 创作`) contains Image Generation. Image Generation uses a dedicated workbench rather than a Session or Workflow: its left side contains request settings and its right side displays generated results. An Administrator can manage the available image models from Image Generation settings, while every User may select one of those configured models for a request. The entry remains visible when no verified Image Model exists: ordinary Users see setup guidance, while the Administrator receives an action that opens Image Generation settings. The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs. The Skills & Connectors entry (Chinese: `技能·连接器`, not Capability) contains `Skills` and `Connectors` tabs. Login opens Sessions. A User without a usable platform Model Provider Connection, Provider Model, or personal Runtime Engine default sees setup guidance: an Administrator must configure the platform Model Catalog, then the User selects a default Provider Model for a Runtime Engine before starting a Session or Workflow. Expert, Skill, and Connector setup is optional and never blocks first use.
 
 ## 4. Sessions
 
@@ -100,7 +101,7 @@ The detailed conversation specialist/resource selection rules and accepted revis
 - A Session may keep each isolated Runtime container definition warm for 30 minutes after a response finishes. Warm reuse is scoped by Session, frozen Team Member identity when present, Expert identity, and Runtime Engine, so team members never share execution context even when they reference the same Expert.
 - The UI streams the response and shows generating, failed, cancelled, retry, and elapsed-time states. While a response is generating, the send control becomes a stop control that requests backend cancellation and stops the active Runtime execution. It does not expose Attempt, Lease, Runtime Event, or a separate Run record.
 - While generating and after completion, the UI may show persisted execution activity. Its first expanded level groups activity into concise execution summaries such as preparing the Runtime, searching a Connector, updating files, and composing the answer. Expanding one summary reveals its public reasoning summary and redacted tool commands. It never exposes raw model chain-of-thought, private reasoning, raw Runtime events, or tool output.
-- A single selected Expert executes directly using its four visible guidance fields and snapshotted Skills and Connectors. An Expert Team uses the fixed sequential execution contract in Section 8.2.
+- A single selected Expert executes directly using its four visible guidance fields and snapshotted Skills and Connectors. An Expert Team uses the fixed sequential execution contract in Section 9.2.
 - Ordinary Runtime text remains a message; only files explicitly uploaded by a User or actually generated by a Runtime are presented as files.
 - The platform maintains a Rolling Summary and recent-message window after every successful response.
 
@@ -203,9 +204,42 @@ Settings contains five collapsed sections:
 - Runs operate on a temporary copy. A successful Run atomically advances the persistent Workspace; failed or cancelled Runs discard their file changes.
 - Runtime and Skill processes access only the temporary Workspace, explicitly assigned environment, and allowed public network. They cannot access the host, platform private services, or another User's data.
 
-## 7. Artifacts And Run History
+## 7. AI Creation
 
-### 7.1 Artifacts
+AI Creation is a top-level product area whose first tool is Image Generation. Image Generation is not a Session, Workflow, Run, or Runtime Engine capability. Its dedicated responsive workbench presents request settings on the left and the current Image Generation Record and its Generated Images on the right.
+
+- Image Generation supports text-to-image requests and image-to-image requests. Supplying at least one Reference Image selects image-to-image behavior; otherwise the request is text-to-image.
+- The platform invokes the selected Image Model directly through the OpenAI Images protocol rather than asking a Runtime Engine to generate the images.
+- An Image Model is an Administrator-managed configuration that reuses a Model Provider Connection's Endpoint and protected API Key while separately recording a display name, exact provider model identifier, Images protocol, availability, defaults, supported request options, and Image Credit Rates. It does not appear as a Runtime Engine default or add a type classification to Provider Model. Known OpenAI models start from platform-maintained capability templates that the Administrator may narrow but never expand; custom compatible models require explicit allowlists, and capabilities are never guessed from a model name. A later platform template adds no capability to an existing Image Model until the Administrator reviews it, completes every new rate, retests, and saves a new revision.
+- Only the Administrator can open Image Generation settings or create, update, test, enable, disable, and delete Image Models. The User-facing selector groups Image Models by Model Provider Connection; there is no separately managed model group.
+- Every User may select an enabled Image Model for a request. The workbench remembers that User's most recently selected valid Image Model and requires a new selection if it becomes unavailable.
+- The request requires a non-blank prompt of at most 10,000 Unicode characters and allows model-supported size, quality, output count, output format, and background selections. Output count is limited to one through four, output format to PNG, JPEG, or WebP, quality to auto, low, medium, or high, and background to auto, opaque, or transparent; the selected Image Model may expose a narrower allowlist. The interface presents only valid declared combinations, including hiding transparent background for JPEG, and the API rejects every undeclared value or combination. Content safety enforcement is always active and is not displayed as a User setting.
+- An image-to-image request accepts up to ten ordered Reference Images. A User may upload PNG, JPEG, or WebP images of at most 20 MiB and 64 million decoded pixels each or select one of their own unexpired Generated Images. The platform validates that each upload decodes as its declared image type, then preserves and sends the original bytes without removing EXIF or other metadata. Accepted input bytes are retained with the immutable record independently of the source file's later lifecycle and expire 90 days after record creation.
+- Prompt optimization is an explicit action before generation. The Administrator selects eligible Provider Models on OpenAI Responses or OpenAI Chat Completions connections in Image Generation settings; every User may select one of those models, and the workbench remembers their most recent valid selection. A successful optimization replaces the editable prompt with expanded text, offers one-step restoration of its immediate predecessor, and never starts image generation. Repeated optimizations use the current text, each is independently charged, and the immutable Image Generation Record preserves the initial User prompt and final submitted prompt without retaining intermediate drafts. Prompt Optimization calls the configured protocol directly, does not use or change a Runtime Engine default, and is unavailable while an Image Generation Record is active.
+- Submitting a valid request creates one immutable, User-owned Image Generation Record that freezes the selected Image Model revision, prompt, ordered Reference Images, requested output count, size, quality, output format, background, and applicable Image Credit Rate revisions.
+- Image generation continues as a background task if the User leaves the page. The workbench restores active progress when reopened and offers best-effort cancellation. One image batch may run in parallel with the User's serialized Session and Workflow model queue, but the workbench locks every generation setting and rejects another image submission until that batch reaches a terminal state; only Stop remains available. Work not yet sent to the provider stops immediately. Once Stop is accepted, the platform rejects any later provider output: already validated images remain and are charged, while later or unknown output is neither stored nor charged to the User even if the provider charges the platform.
+- Durable work ownership and leases allow a pending request that has not reached the provider to resume after an API or Worker restart. A request known to have reached the provider but lacking a confirmed result terminates as outcome_unknown and is never retried automatically.
+- The active record streams bounded product progress over a dedicated SSE endpoint. Reconnection and browser visibility recovery first fetch the authoritative record and then resume streaming; events expose no raw provider response, image bytes, prompt, or private reasoning.
+- An Image Generation Record has exactly one terminal state: succeeded, partially_succeeded, failed, cancelled, or outcome_unknown. The platform decodes and validates actual output bytes against the frozen format, dimensions, 64-million-pixel limit, 25-MiB encoded-size limit, and other safety limits before persistence. A mismatched or oversized output is not stored, shown, or charged; other valid outputs may still make the batch partially successful. A partially successful or cancelled record retains and settles only successfully validated images. Safe structured errors explain a provider failure or safety rejection without displaying a content-review control or raw provider response.
+- Each successfully Generated Image is private to the owning User, retained for 90 days, and available for in-product preview, individual download, or reuse as a Reference Image. One result uses a large presentation; two through four results use a responsive two-column desktop grid and single-column mobile layout, with full-screen preview on selection. Missing positions in a partially successful batch display their safe failure state. Record metadata remains after image expiry. A User may delete an entire terminal Image Generation Record and all of its prompts, identifying metadata, Reference Images, and Generated Images, but cannot delete one Generated Image from a record; an active record must first be stopped. A later record that copied one of its images as a Reference Image remains independent. Downloading all available results creates a temporary ZIP and does not persist another Generated Image.
+- Image Generation history is a collapsible region within the workbench, ordered newest first and paginated without search or filters in the first version. It becomes a drawer on mobile and lists only the owning User's records without exposing another User's prompts, Reference Images, Generated Images, model selections, or costs.
+- The workbench has no persistent unsubmitted draft. Navigating away or refreshing clears an unsubmitted prompt, undo value, Reference Image uploads, and current parameter edits; an already submitted Image Generation Record continues independently. The User's most recently selected valid Image Model, Prompt Optimization model, and valid options remain lightweight preferences and repopulate a fresh workbench. Successfully submitting a record likewise clears the editable prompt and Reference Images while retaining those preferences.
+- Every terminal record exposes one `Regenerate` action rather than separate retry and regeneration semantics. It creates a new Image Generation Record for the full original output count using the original prompts, Reference Images, and visible request options, but resolves and displays the current verified Image Model revision and current Image Credit Rate before submission. If the current model no longer supports the original options, direct regeneration is unavailable. Every original result remains unchanged even when only some were unsatisfactory. The platform automatically retries only when it can prove a request did not reach the provider; an unknown provider outcome is never retried blindly. `Reuse settings` instead copies the original request into the editable workbench without submitting it.
+- Regeneration is unavailable when its Image Model is disabled or deleted or any Reference Image bytes have expired. `Reuse settings` then copies the prompt and still-valid options, removes unavailable Reference Images, and requires a currently enabled Image Model.
+- Image generation uses an Image Credit Rate managed by the Administrator for each exact Image Model, size, and quality combination. Every allowed combination must have an explicit, optionally zero rate before the Image Model can be enabled; there is no image-rate fallback. Submission atomically reserves the maximum charge for the requested output count from the current Credit Day, preserving the amounts drawn from Daily Credit Allocation and Redeemed Credit Balance, and that reservation remains assigned to the submission day across midnight. Available Credit excludes every unsettled reservation so concurrent Session and Workflow admission cannot spend it. Terminal settlement charges only successfully Generated Images and releases the remainder to its original source: an expired prior-day allocation does not return, while unused redeemed Credit does. Every rate revision and Credit Consumption remains immutable. Prompt optimization is a separate Provider Model invocation charged through its text Model Credit Rate on every click.
+- The result panel shows the frozen model display name, creation time, requested size, quality, format, output count, terminal state, and total Credit Consumption. Each Generated Image shows its actual pixel dimensions, file size, and download action. It never exposes the Provider Endpoint, internal Object Key, raw provider response, or provider cost; downloads use a stable record-time and output-position filename.
+- A new or materially changed Image Model cannot be enabled until the Administrator completes a real test generation that validates the current Endpoint, API Key, model identifier, returned content, and configured limits. The test incurs provider cost but consumes no User Credits and does not claim that every parameter combination has production evidence. Changing the Endpoint, API Key, model identifier, or supported options returns the Image Model to an unverified, disabled state.
+- Disabling an Image Model immediately prevents new submissions and regeneration without changing historical records. An Image Model with an active or queued record cannot be deleted; after deletion, frozen historical identity remains readable but cannot be invoked. A deleted or disabled model selection is cleared the next time a User opens the workbench.
+- The Reference Image uploader states that selected image bytes and embedded metadata are sent unchanged to the selected model provider and names its Model Provider Connection. It does not add a per-upload confirmation dialog.
+- Image Generation Records, prompts, Reference Images, and Generated Images are completely private to their owning User. The first version has no public link, cross-User share, gallery publication, or Administrator content access.
+- Ordinary logs and audit records may retain only safe structured error codes, HTTP status, provider request identity, duration, returned count, and byte-validation outcome. They never retain prompts, image bytes or Base64, raw provider responses, Object Keys, signed URLs, or other User content.
+- Because the workbench has no draft, leaving it requests immediate deletion of every unsubmitted temporary Reference Image. A lifecycle job deletes every unbound temporary upload after 24 hours even when browser cleanup never arrives.
+- When a background record reaches a terminal state away from the open Image Generation view, the product shows an in-app Toast and an unread marker on AI Creation. Opening Image Generation clears the marker; the first version does not request browser notification permission or send email.
+- The first version exposes Image Generation only through the authenticated Web workbench. Workflows, Scheduled Triggers, Workflow API credentials, and external image-generation APIs cannot start it.
+
+## 8. Artifacts And Run History
+
+### 8.1 Artifacts
 
 - A successful Run persists its final text or JSON in the Run Conversation and captures only final deliverable files explicitly named in that response as Artifacts.
 - A successful Session response also captures only final deliverable files explicitly named in that turn's Agent response and shows them directly beneath the response.
@@ -216,7 +250,7 @@ Settings contains five collapsed sections:
 - Failed and cancelled Runs do not create file Artifacts; their temporary Workspace changes are discarded.
 - Artifact files expire after 90 days. The UI preserves metadata and reports that the file has expired.
 
-### 7.2 Run History
+### 8.2 Run History
 
 The Run list shows:
 
@@ -231,17 +265,17 @@ Each Run History row represents a Run Conversation. Opening it replaces the Work
 
 Run metadata and final text/JSON results are retained without a time limit in the first version. Users cannot delete individual Run records.
 
-### 7.3 Workflow Deletion
+### 8.3 Workflow Deletion
 
 - Deleting a Workflow requires confirmation and permanently deletes its mutable configuration, API credential, schedule, Workspace, private Git key, and ability to run.
 - Run metadata, final results, and unexpired Artifacts remain available through the Workflows list's `Deleted Records` filter.
 - A Deleted Workflow Record is read-only, cannot be restored, and cannot be run again.
 
-## 8. Experts, Skills, And Connectors
+## 9. Experts, Skills, And Connectors
 
 The detailed profile and management behavior and implementation/test seams are defined in `docs/product/expert-skill-connector-simplification.md`. Catalog details, launch actions, and conversation resource selection are defined in `docs/product/conversation-resource-selection.md`.
 
-### 8.1 Experts
+### 9.1 Experts
 
 - An Expert contains a preset Profile Icon, a unique-per-User name, required display-only Introduction, required Core Capability, required Operating Procedure, required Output Standard, optional Cautions, Derived Expertise Tags, and selected Skills and Connectors. It contains no Provider Model or Runtime Engine setting.
 - The interface labels Operating Procedure as `工作流程`; domain and API contracts use `operating_procedure` so it is not confused with the executable Workflow aggregate.
@@ -252,7 +286,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - Editing an Expert affects new selections, not retained selections or historical execution snapshots. An Expert referenced by a mutable Expert Team cannot be deleted; immutable historical snapshots do not block deletion.
 - A migrated Expert missing Introduction, Core Capability, Operating Procedure, or Output Standard is an Incomplete Expert. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
 
-### 8.2 Expert Teams
+### 9.2 Expert Teams
 
 - An Expert Team contains a preset Profile Icon, a unique-per-User name, required display-only Introduction, required display-only Core Capability, and two to ten ordered Team Members.
 - Each Team Member has a stable internal identity, a team-unique User-authored name, an Expert reference, zero to five Member Labels of at most twenty characters, and an order. The same Expert may appear in multiple member roles, whose Native Sessions and Runtime contexts remain isolated by stable Team Member identity.
@@ -264,7 +298,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - Workflow team execution retains the shared temporary Workspace, success-only merge, final-member official response, atomic Native Session promotion, cancellation behavior, and full-team retry defined by ADR-0022 and ADR-0026.
 - Deleting an Expert Team clears it from mutable Workflows and unstarted Sessions. Existing Session and Run Conversation snapshots remain executable.
 
-### 8.3 Skills And MCP Connectors
+### 9.3 Skills And MCP Connectors
 
 - The Skills & Connectors entry has `Skills` and `Connectors` tabs. Each catalog separates Administrator-created Platform Resources from the current User's `My Skills` or `My Connectors`. Administrator-created resources are visible to every User and never appear in a `My` section. The Connectors tab presents MCP and available Third-party CLI Connectors together under Platform Connectors without protocol-specific sections; `New Connector` asks for the Connector type before showing the permitted configuration. Connector cards omit aggregate User, setup, and authorization counts; clicking a card opens its details, where an authorized owner or Administrator can enter editing. The User-visible Extension concept and resource management in Personal Settings are removed.
 - Users install private Skills from a Git URL with an optional branch or from a ZIP upload, while Skills installed by the Administrator become platform-wide. A valid package contains `SKILL.md`, uses its required `display_name` as the catalog name, and may include scripts and resources. Skill cards use the description matching the current interface language, such as `description_zh` for Chinese, with the default `description` as fallback. Clicking a card opens a dedicated in-site detail page whose Back action restores the preceding catalog page; the detail page separates parsed frontmatter from the rendered document. New selections resolve the latest available exact revision; retained selections and historical Response Snapshots keep their frozen revisions. The catalog launch action opens a new Session with the Skill selected.
@@ -274,7 +308,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - Before deletion, the product shows affected mutable Experts. Confirmation transactionally detaches a private resource from its owner's Experts or a Platform Resource from every referencing Expert; historical snapshots remain unchanged.
 - New public routes are `/api/v1/skills` and `/api/v1/connectors/mcp`; deprecated `/extensions` aliases are not retained.
 
-### 8.4 Third-party CLI Connectors
+### 9.4 Third-party CLI Connectors
 
 - Only an Administrator may create or edit a platform-wide CLI Connector Definition. Available and disabled Definitions may be edited and republished; Definitions being built or tested remain locked until that operation reaches a terminal state. Ordinary Users may browse, enable, authorize, and select available Definitions but cannot create them; each enablement and authorization remains private to its User.
 - The Administrator installation form contains only a preset icon, name, capability description, and installation method. The method accepts an exact npm package specification or a ZIP upload whose root contains `package.json`; saving immediately starts the immutable build and conformance flow. Integrity, executable, supported architecture, built-in authentication driver, structured capabilities, identities, argument allowlists, risk, required scopes, Egress, and supported Runtime image Digests are derived from trusted built-in profiles or validated package metadata rather than entered as form fields. Arbitrary Shell install or authentication scripts are prohibited.
@@ -287,7 +321,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - A common CLI Connector Wrapper, rather than each Runtime Driver, enforces the frozen executable contract, arguments, identity, scopes, Egress, authorization, risk, timeout, output, Workspace, and Secret policy.
 - Recommended Skills are explicit install offers that become ordinary User-owned Skills. Enabling a Connector never injects hidden instructions.
 
-### 8.5 Feishu CLI And User Action Waits
+### 9.5 Feishu CLI And User Action Waits
 
 - The first CLI Connector uses a fixed version of the official `@larksuite/cli` package. Browsing requires no authorization; enabling idempotently creates exactly one Feishu CLI Application per Agent Workspace User, while allowing multiple isolated Feishu account authorizations under that application.
 - Clicking Enable opens the Feishu setup page automatically. After application registration completes, the same User-initiated flow starts account authorization and navigates the opened tab to Feishu authorization without another platform click. A retained application goes directly to account authorization. Manual account authorization also opens its returned page automatically. Visible continuation links remain available when popups are blocked, closed, or detached; resuming registration through its link continues the same sequence. Merely browsing the catalog does not launch authorization. Feishu-side consent remains an explicit User action.
@@ -303,7 +337,7 @@ The detailed profile and management behavior and implementation/test seams are d
 - The approval timeout defaults to five minutes, has a hard cap of fifteen minutes, and may be lowered by an Administrator. Scheduled and API Runs may wait for approval in the authenticated product; without User action they expire normally.
 - Rejection or expiry returns a structured CLI error to the Runtime rather than forcing the whole execution to fail. Actual model Usage remains chargeable. Definition, enablement, authorization, scopes, and policy are revalidated after approval and immediately before command execution.
 
-## 9. Personal Settings
+## 10. Personal Settings
 
 - Personality choices are gentle-professional, direct-efficient, lively-friendly, and custom.
 - A User may add personality guidance to any preset; custom requires guidance.
@@ -325,7 +359,7 @@ The detailed profile and management behavior and implementation/test seams are d
 
 Personal Settings does not manage Skills or Connectors.
 
-## 10. Security And Isolation
+## 11. Security And Isolation
 
 - User-owned resource queries and mutations enforce the authenticated User owner at the server and return non-enumerating not-found behavior across owners. Model Catalog and available CLI Connector Definition reads are global to authenticated Users, while their mutations require the Administrator.
 - Login uses OIDC Authorization Code with PKCE. Workflow API credentials cannot authenticate ordinary product APIs.
@@ -336,7 +370,7 @@ Personal Settings does not manage Skills or Connectors.
 - Workspace paths are normalized, symlinks cannot escape the root, object-store buckets remain private, and downloads use short-lived authorization.
 - Writes use idempotency and optimistic concurrency where replay or concurrent editing could duplicate or overwrite intent.
 
-## 11. Technical Constraints
+## 12. Technical Constraints
 
 - Frontend remains Vue 3 and TypeScript with responsive desktop/mobile behavior.
 - Backend remains Go with DDD Domain/Application boundaries, Kratos transport, GORM, PostgreSQL, and strict YAML configuration.
@@ -344,7 +378,7 @@ Personal Settings does not manage Skills or Connectors.
 - API, Worker, PostgreSQL, MinIO, Keycloak, Caddy, Secret redaction, Object Storage, Runtime Adapters, Sandbox, Run/Event/SSE, and deployment foundations are retained and refactored.
 - MinIO and Aliyun OSS remain supported Object Storage providers.
 
-## 12. Replacement And Data Reset
+## 13. Replacement And Data Reset
 
 This product replaces rather than hides the former control-plane model. Remove the following product code, APIs, schema, and UI after the replacement paths are ready:
 
@@ -358,7 +392,7 @@ Retain only the lower-level Git Clone capability needed by Workflow Workspace in
 
 The original Agent Workspace cutover reset the former control-plane database. Later amendments use incremental migrations and preserve all current Sessions, Workflows, Runs, Experts, Skills, MCP configurations, and immutable snapshots. Migrate old Capability Introduction to Introduction and old Execution Instruction unchanged to Operating Procedure; leave Core Capability, Output Standard, and Cautions empty, so affected Experts remain visible but incomplete until edited. Stop reading legacy Expert Provider Model, Runtime Engine, and hand-authored tags for new execution, while retaining compatibility columns and historical snapshot readers. Give existing profiles default icons and migrate each old team position to a stable Team Member whose initial name is the referenced Expert name and whose Member Labels are empty. New public Expert, Skill, and Connector contracts have no deprecated `description`, `capability_introduction`, `execution_instruction`, or `/extensions` aliases.
 
-## 13. Acceptance Boundary
+## 14. Acceptance Boundary
 
 Completion requires real browser-to-API closure for both Administrator and ordinary User flows, not interface previews. At minimum acceptance covers:
 
@@ -370,6 +404,7 @@ Completion requires real browser-to-API closure for both Administrator and ordin
 - avatar Credit Balance and redemption panel, User Credit Ledger, per-response and per-Run total `共消耗` display without Token details, and Administrator Users/Model Rates/Redemption Codes tabs without access to User-owned execution detail
 - Session create, image/file attachment upload and history, stream, retry, rename, archive, cancel archive, delete, Rolling Summary, one settings-derived execution configuration with or without an Expert, and capability-gated native Resume
 - Workflow CRUD, manual/scheduled/API Run, follow-up image/file attachments, queueing, cancellation, rerun, record detail, and deleted-record access
+- AI Creation navigation and empty guidance; Administrator Image Model, capability, verification, Prompt Optimization model, and Image Credit Rate management; User text-to-image and image-to-image requests, original-metadata disclosure, model and parameter selection, Prompt Optimization, one-batch concurrency, cancellation, durable recovery, SSE progress, partial and unknown outcomes, regeneration, responsive results, preview/download/ZIP/reference reuse, history, expiry, deletion, owner isolation, reservations, exact settlement, and redacted logging
 - read-only Workspace browse/preview/download, Git Settings Clone authentication/config validation, quotas, success merge, and failure rollback
 - Artifact creation, preview/download, expiry, and post-Workflow deletion access
 - Expert and Expert Team CRUD, preset icons, visible structured guidance, derived tags, responsive cards, search/tag filters, stable ordered Team Member editing, repeated Expert roles, incomplete states, grouped selection, snapshot behavior, and deletion conflicts
@@ -383,3 +418,5 @@ Completion requires real browser-to-API closure for both Administrator and ordin
 - Chinese/English, keyboard navigation, mobile layout, empty state, offline state, and explicit errors
 
 Real Runtime and native Resume claims remain gated by the conformance evidence for the exact deployed Runtime image. Unsupported capabilities use the documented Rolling Summary fallback rather than fabricated evidence.
+
+Image Generation completion additionally requires Repository, HTTP contract, frontend interaction, and fake-provider browser closure. Real OpenAI Images and Prompt Optimization claims require a separately executed live-provider gate with protected credentials; skipped or unavailable live tests are reported as missing evidence rather than passed Conformance.
