@@ -65,6 +65,8 @@ type BuildResult struct {
 	AuthenticationDriver   string
 	Capabilities           []Capability
 	SupportedArchitectures []string
+	ManifestVersion        string
+	UsageGuide             string
 }
 
 var runtimeDigest = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
@@ -129,7 +131,7 @@ func (builder Builder) Build(ctx context.Context, definition Definition) (BuildR
 	if err := builder.Store.PutImmutable(ctx, objectKey, artifact.BundleBytes, bundleDigest); err != nil {
 		return BuildResult{}, fmt.Errorf("store immutable CLI bundle: %w", err)
 	}
-	return BuildResult{State: StateAvailable, BundleObjectKey: objectKey, BundleSHA256: bundleDigest, RuntimeDigests: slices.Clone(builder.RuntimeDigests), Package: resolved.Package, Version: resolved.Version, Integrity: resolved.Integrity, Executable: resolved.Executable, AuthenticationDriver: resolved.AuthenticationDriver, Capabilities: slices.Clone(resolved.Capabilities), SupportedArchitectures: slices.Clone(resolved.SupportedArchitectures)}, nil
+	return BuildResult{State: StateAvailable, BundleObjectKey: objectKey, BundleSHA256: bundleDigest, RuntimeDigests: slices.Clone(builder.RuntimeDigests), Package: resolved.Package, Version: resolved.Version, Integrity: resolved.Integrity, Executable: resolved.Executable, AuthenticationDriver: resolved.AuthenticationDriver, Capabilities: slices.Clone(resolved.Capabilities), SupportedArchitectures: slices.Clone(resolved.SupportedArchitectures), ManifestVersion: resolved.ManifestVersion, UsageGuide: resolved.UsageGuide}, nil
 }
 
 func resolvePackageDefinition(definition Definition, artifact PackageArtifact) (Definition, error) {
@@ -151,6 +153,8 @@ func resolvePackageDefinition(definition Definition, artifact PackageArtifact) (
 	if subtle.ConstantTimeCompare(expected, actual[:]) != 1 {
 		return Definition{}, errors.New("CLI package integrity verification failed")
 	}
+	reviewedUsageGuide := strings.TrimSpace(definition.UsageGuide)
+	reviewedCapabilities := append([]Capability(nil), definition.Capabilities...)
 	metadata := PackageDefinitionMetadata{Name: definition.Package, Version: definition.Version}
 	if len(artifact.Manifest) > 0 {
 		metadata, err = packageDefinitionMetadata(artifact.Manifest)
@@ -186,6 +190,45 @@ func resolvePackageDefinition(definition Definition, artifact PackageArtifact) (
 	if len(definition.SupportedArchitectures) == 0 {
 		definition.SupportedArchitectures = metadata.SupportedArchitectures
 	}
+	if definition.ManifestVersion == "" {
+		definition.ManifestVersion = metadata.ManifestVersion
+	}
+	if definition.ManifestVersion == "" {
+		definition.ManifestVersion = "legacy-v1"
+	}
+	if definition.UsageGuide == "" {
+		definition.UsageGuide = metadata.UsageGuide
+	}
+	if metadata.ManifestVersion == "1" {
+		// Security semantics in a package Manifest are immutable review input;
+		// catalog form values cannot override them.
+		definition.Executable = metadata.Executable
+		definition.AuthenticationDriver = metadata.AuthenticationDriver
+		definition.Capabilities = append([]Capability(nil), metadata.Capabilities...)
+		definition.SupportedArchitectures = append([]string(nil), metadata.SupportedArchitectures...)
+		definition.ManifestVersion = metadata.ManifestVersion
+		definition.UsageGuide = metadata.UsageGuide
+		if reviewedUsageGuide != "" {
+			definition.UsageGuide = reviewedUsageGuide
+		}
+		definition.Capabilities = mergeReviewedPresentation(definition.Capabilities, reviewedCapabilities)
+		permissions := make([]string, 0)
+		for _, capability := range definition.Capabilities {
+			for _, permission := range capability.Scopes {
+				if !slices.Contains(permissions, permission) {
+					permissions = append(permissions, permission)
+				}
+			}
+		}
+		if err := validateManifest(Manifest{
+			SchemaVersion: metadata.ManifestVersion,
+			Authorization: AuthorizationDeclaration{Scheme: definition.AuthenticationDriver, Permissions: permissions},
+			UsageGuide:    definition.UsageGuide,
+			Capabilities:  definition.Capabilities,
+		}); err != nil {
+			return Definition{}, fmt.Errorf("validate Connector Manifest: %w", err)
+		}
+	}
 	if len(definition.SupportedArchitectures) == 0 {
 		definition.SupportedArchitectures = []string{"linux-amd64"}
 	}
@@ -197,4 +240,23 @@ func resolvePackageDefinition(definition Definition, artifact PackageArtifact) (
 		return Definition{}, errors.New("CLI executable is not a safe package bin entry")
 	}
 	return definition, nil
+}
+
+func mergeReviewedPresentation(resolved, reviewed []Capability) []Capability {
+	result := append([]Capability(nil), resolved...)
+	for index := range result {
+		for _, candidate := range reviewed {
+			if candidate.ID != result[index].ID {
+				continue
+			}
+			if len(candidate.DisplayName) > 0 {
+				result[index].DisplayName = cloneStrings(candidate.DisplayName)
+			}
+			if len(candidate.OperationPhrase) > 0 {
+				result[index].OperationPhrase = cloneStrings(candidate.OperationPhrase)
+			}
+			break
+		}
+	}
+	return result
 }

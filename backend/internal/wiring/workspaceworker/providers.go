@@ -57,6 +57,12 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err := executor.EnableCLIApprovals(repository); err != nil {
 		return nil, err
 	}
+	if err := executor.EnableCLIActions(repository); err != nil {
+		return nil, err
+	}
+	if err := executor.EnableConnectorAudit(repository.RecordConnectorAudit); err != nil {
+		return nil, err
+	}
 	if err := executor.EnableCLICredentials(repository); err != nil {
 		return nil, err
 	}

@@ -17,6 +17,9 @@ type ApprovalRequest struct {
 	OwnerID, ExecutionKind, ExecutionID, StageID string
 	ConnectorName, Operation, Target             string
 	RedactedArguments, CommandDigest, Nonce      string
+	OperationID, ManifestVersion, InputDigest    string
+	AuthorizationID, ExternalIdentityID          string
+	ExternalDisplayName                          string
 	Identity                                     Identity
 	AllowedIdentities                            []Identity
 	CommandDigests                               map[Identity]string

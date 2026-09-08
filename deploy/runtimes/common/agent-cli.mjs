@@ -10,9 +10,13 @@ function fail(message, code = 2) {
 }
 
 function parseArguments(values) {
-  const command = { connector_id: "", capability: "", identity: "", arguments: [] };
+	if (values[0] === "describe") {
+		if (values.length !== 3 || values[1] !== "--connector" || !values[2]) fail("usage: agent-cli describe --connector <id>");
+		return { kind: "describe", connector_id: values[2] };
+	}
+  const command = { kind: "execute", connector_id: "", capability: "", identity: "" };
   let index = 0;
-  while (index < values.length && values[index] !== "--") {
+	while (index < values.length) {
     const option = values[index++];
     const value = values[index++];
     if (!value) fail(`missing value for ${option}`);
@@ -20,11 +24,14 @@ function parseArguments(values) {
     else if (option === "--capability") command.capability = value;
     else if (option === "--identity") command.identity = value;
     else if (option === "--target") command.target = value;
+		else if (option === "--input") {
+			try { command.input = JSON.parse(value); }
+			catch { fail("--input must be valid JSON"); }
+			if (command.input === null || Array.isArray(command.input) || typeof command.input !== "object") fail("--input must be a JSON object");
+		}
     else fail(`unknown option ${option}`);
   }
-  if (values[index] !== "--") fail("missing command separator --");
-  command.arguments = values.slice(index + 1);
-  if (!command.connector_id || !command.capability || !command.identity || command.arguments.length === 0) fail("incomplete CLI command");
+	if (!command.connector_id || !command.capability || !command.identity) fail("incomplete CLI command");
   return command;
 }
 

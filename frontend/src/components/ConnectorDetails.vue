@@ -4,8 +4,8 @@ import { useI18n } from "vue-i18n";
 import type { CLIConnectorDefinition, CLIConnectorEnablement, MCPServer } from "../api/client";
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ mcp?: MCPServer; cli?: CLIConnectorDefinition; enablement?: CLIConnectorEnablement; canEdit?: boolean }>();
-const emit = defineEmits<{ close: []; "edit-mcp": [item: MCPServer]; "edit-cli": [item: CLIConnectorDefinition] }>();
+const props = defineProps<{ mcp?: MCPServer; cli?: CLIConnectorDefinition; enablement?: CLIConnectorEnablement; canEdit?: boolean; canPublish?: boolean }>();
+const emit = defineEmits<{ close: []; "edit-mcp": [item: MCPServer]; "edit-cli": [item: CLIConnectorDefinition]; "publish-cli": [item: CLIConnectorDefinition] }>();
 const { t } = useI18n();
 const open = computed(() => Boolean(props.mcp || props.cli));
 const title = computed(() => props.mcp?.name || props.cli?.name || "");
@@ -40,9 +40,12 @@ function edit() {
         <div><dt>{{ t('resources.connectorType') }}</dt><dd>{{ t('resources.cliConnector') }}</dd></div>
         <div><dt>{{ t('resources.installationType') }}</dt><dd>{{ cli.installation_type === 'upload' ? t('resources.zipUpload') : `${t('resources.npmInstall')} · ${cli.npm_package}@${cli.npm_version}` }}</dd></div>
         <div v-if="enablement?.provider_name"><dt>{{ t('resources.connectedApplication') }}</dt><dd>{{ enablement.provider_name }}</dd></div>
+        <div><dt>Manifest</dt><dd>v{{ cli.manifest_version }} · {{ cli.bundle_sha256 || '—' }}</dd></div>
+        <div><dt>{{ t('resources.capabilities') }}</dt><dd><article v-for="capability in cli.capabilities" :key="capability.id" class="connector-manifest-capability"><strong>{{ capability.display_name?.['zh-CN'] || capability.display_name?.en || capability.id }}</strong><small v-if="capability.display_name?.en">EN: {{ capability.display_name.en }}</small><small>{{ t('resources.operationPhraseZh') }}: {{ capability.operation_phrase?.['zh-CN'] || '—' }}</small><small>{{ t('resources.operationPhraseEn') }}: {{ capability.operation_phrase?.en || '—' }}</small><small>{{ capability.risk === 'high' ? t('resources.highRisk') : t('resources.lowRisk') }} · {{ capability.identities.join(', ') }}</small><code>{{ capability.argv_prefix.join(' ') }}</code><small>{{ t('resources.scopes') }}: {{ capability.scopes.join(', ') || '—' }}</small><small>{{ t('resources.egressHosts') }}: {{ capability.egress_hosts.join(', ') }}</small><small>{{ t('resources.timeoutSeconds') }}: {{ capability.timeout_seconds }} · {{ capability.idempotency }}</small></article></dd></div>
+        <div><dt>{{ t('resources.usageGuide') }}</dt><dd class="connector-usage-guide">{{ cli.usage_guide || '—' }}</dd></div>
       </dl>
       <el-alert v-if="cli.failure_reason" :title="cli.failure_reason" type="error" :closable="false" />
     </template>
-    <template #footer><el-button v-if="canEdit" type="primary" @click="edit">{{ t('common.edit') }}</el-button></template>
+    <template #footer><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button v-if="canPublish && cli" type="primary" @click="emit('publish-cli', cli)">{{ t('resources.publish') }}</el-button></template>
   </el-drawer>
 </template>

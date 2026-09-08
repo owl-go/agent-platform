@@ -179,6 +179,8 @@ type cliConnectorDefinitionRecord struct {
 	SupportedArchitectures []byte         `gorm:"column:supported_architectures;type:jsonb"`
 	RecommendedSkillIDs    []byte         `gorm:"column:recommended_skill_ids;type:jsonb"`
 	RecommendedSkills      []byte         `gorm:"column:recommended_skills;type:jsonb"`
+	ManifestVersion        string         `gorm:"column:manifest_version"`
+	UsageGuide             string         `gorm:"column:usage_guide"`
 	State                  string         `gorm:"column:state"`
 	FailureReason          *string        `gorm:"column:failure_reason"`
 	BundleObjectKey        *string        `gorm:"column:bundle_object_key"`
@@ -259,27 +261,81 @@ func (cliConnectorAuthorizationAttemptRecord) TableName() string {
 }
 
 type cliCommandApprovalRecord struct {
-	ID                string     `gorm:"column:id"`
-	OwnerID           string     `gorm:"column:owner_user_id"`
-	ExecutionKind     string     `gorm:"column:execution_kind"`
-	ExecutionID       string     `gorm:"column:execution_id"`
-	StageID           string     `gorm:"column:stage_id"`
-	ConnectorName     string     `gorm:"column:connector_name"`
-	Operation         string     `gorm:"column:operation"`
-	Target            string     `gorm:"column:target"`
-	RedactedArguments string     `gorm:"column:redacted_arguments"`
-	CommandDigest     string     `gorm:"column:command_digest"`
-	NonceHash         string     `gorm:"column:nonce_hash"`
-	Identity          *string    `gorm:"column:identity"`
-	State             string     `gorm:"column:state"`
-	ExpiresAt         time.Time  `gorm:"column:expires_at"`
-	DecidedAt         *time.Time `gorm:"column:decided_at"`
-	ConsumedAt        *time.Time `gorm:"column:consumed_at"`
-	CreatedAt         time.Time  `gorm:"column:created_at"`
-	Version           int64      `gorm:"column:version"`
+	ID                  string     `gorm:"column:id"`
+	OwnerID             string     `gorm:"column:owner_user_id"`
+	ExecutionKind       string     `gorm:"column:execution_kind"`
+	ExecutionID         string     `gorm:"column:execution_id"`
+	StageID             string     `gorm:"column:stage_id"`
+	ConnectorName       string     `gorm:"column:connector_name"`
+	Operation           string     `gorm:"column:operation"`
+	Target              string     `gorm:"column:target"`
+	RedactedArguments   string     `gorm:"column:redacted_arguments"`
+	OperationID         string     `gorm:"column:operation_id"`
+	ManifestVersion     string     `gorm:"column:manifest_version"`
+	InputDigest         string     `gorm:"column:input_digest"`
+	AuthorizationID     *string    `gorm:"column:authorization_id"`
+	ExternalIdentityID  string     `gorm:"column:external_identity_id"`
+	ExternalDisplayName string     `gorm:"column:external_display_name"`
+	CommandDigest       string     `gorm:"column:command_digest"`
+	NonceHash           string     `gorm:"column:nonce_hash"`
+	Identity            *string    `gorm:"column:identity"`
+	State               string     `gorm:"column:state"`
+	ExpiresAt           time.Time  `gorm:"column:expires_at"`
+	DecidedAt           *time.Time `gorm:"column:decided_at"`
+	ConsumedAt          *time.Time `gorm:"column:consumed_at"`
+	CreatedAt           time.Time  `gorm:"column:created_at"`
+	Version             int64      `gorm:"column:version"`
 }
 
 func (cliCommandApprovalRecord) TableName() string { return "cli_command_approvals" }
+
+type connectorActionRequirementRecord struct {
+	ID                  string     `gorm:"column:id"`
+	OwnerID             string     `gorm:"column:owner_user_id"`
+	ExecutionKind       string     `gorm:"column:execution_kind"`
+	ExecutionID         string     `gorm:"column:execution_id"`
+	StageID             string     `gorm:"column:stage_id"`
+	OperationID         string     `gorm:"column:operation_id"`
+	ConnectorID         string     `gorm:"column:connector_id"`
+	ConnectorName       string     `gorm:"column:connector_name"`
+	AuthorizationScheme string     `gorm:"column:authorization_scheme"`
+	Identity            string     `gorm:"column:identity"`
+	EnablementID        string     `gorm:"column:enablement_id"`
+	CapabilityID        string     `gorm:"column:capability_id"`
+	OperationPhrase     []byte     `gorm:"column:operation_phrase;type:jsonb"`
+	Reason              string     `gorm:"column:reason"`
+	Permissions         []byte     `gorm:"column:permissions;type:jsonb"`
+	Actions             []byte     `gorm:"column:actions;type:jsonb"`
+	State               string     `gorm:"column:state"`
+	ActionURLTokenHash  []byte     `gorm:"column:action_url_token_hash"`
+	ActionURLOpenedAt   *time.Time `gorm:"column:action_url_opened_at"`
+	ExpiresAt           time.Time  `gorm:"column:expires_at"`
+	CreatedAt           time.Time  `gorm:"column:created_at"`
+	UpdatedAt           time.Time  `gorm:"column:updated_at"`
+	Version             int64      `gorm:"column:version"`
+}
+
+func (connectorActionRequirementRecord) TableName() string { return "connector_action_requirements" }
+
+type connectorAuditRecord struct {
+	ID                string    `gorm:"column:id"`
+	OperationID       string    `gorm:"column:operation_id"`
+	OwnerID           string    `gorm:"column:owner_user_id"`
+	ConnectorID       string    `gorm:"column:connector_id"`
+	ManifestVersion   string    `gorm:"column:manifest_version"`
+	CapabilityID      string    `gorm:"column:capability_id"`
+	Permissions       []byte    `gorm:"column:permissions;type:jsonb"`
+	ExecutionIdentity string    `gorm:"column:execution_identity"`
+	AuthorizationID   *string   `gorm:"column:authorization_id"`
+	Action            string    `gorm:"column:action"`
+	Reason            string    `gorm:"column:reason"`
+	Result            string    `gorm:"column:result"`
+	TargetSummary     string    `gorm:"column:target_summary"`
+	InputDigest       string    `gorm:"column:input_digest"`
+	OccurredAt        time.Time `gorm:"column:occurred_at"`
+}
+
+func (connectorAuditRecord) TableName() string { return "connector_audit_records" }
 
 type settingsRecord struct {
 	UserID                  string `gorm:"column:user_id"`

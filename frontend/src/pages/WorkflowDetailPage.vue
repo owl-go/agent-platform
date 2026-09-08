@@ -6,12 +6,14 @@ import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
 import { displayArtifactNames } from "../artifactDisplay";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type Expert, type ExpertTeam, type GitSourceInput, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type CommandApproval, type ConnectorActionRequirement, type Expert, type ExpertTeam, type GitSourceInput, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
+import ConnectorActionCard from "../components/ConnectorActionCard.vue";
+import CommandApprovalCard from "../components/CommandApprovalCard.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
@@ -25,6 +27,9 @@ const runComposerClearance = ref(154);
 const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const attachmentURLs = ref<Record<string, string>>({});
 const copiedStageKey = ref("");
+const connectorActions = ref<ConnectorActionRequirement[]>([]);
+const commandApprovals = ref<CommandApproval[]>([]);
+const connectorActionBusy = ref("");
 const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const gitForm = ref<GitSourceInput>({ url: "", branch: "main", authentication: "none", ssh_config: "", config: [] });
@@ -62,6 +67,8 @@ watch(tab, (value) => {
 });
 watch(() => gitForm.value.authentication, () => { clearGitCredential(); editingGitCredential.value = false; });
 let runTimer: ReturnType<typeof setInterval> | undefined;
+let connectorActionTimer: ReturnType<typeof setTimeout> | undefined;
+const connectorActionWindows = new Map<string, Window>();
 let disposed = false;
 let refreshingRuns = false;
 let lastRunRefresh = 0;
@@ -82,6 +89,7 @@ onMounted(async () => {
     nowMS.value = Date.now();
     const active = Boolean(activeConversationRun.value) || runs.value.some(isActiveRun);
     if (Date.now() - lastRunRefresh >= (active ? 1500 : 30_000)) void refreshRuns();
+    if (selectedRun.value && active) void refreshConversationUserActions();
   }, 1500);
 });
 watch(runComposerLayer, (current, previous) => {
@@ -93,6 +101,8 @@ onBeforeUnmount(() => {
   disposed = true;
   clearGitCredential();
   if (runTimer) clearInterval(runTimer);
+  if (connectorActionTimer) clearTimeout(connectorActionTimer);
+  for (const popup of connectorActionWindows.values()) popup.close();
   eventController?.abort();
   stopRunReveal();
   clearAttachmentURLs();
@@ -174,6 +184,7 @@ async function openRun(item: Run) {
 	clearAttachmentURLs();
 	selectedRun.value = item;
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
+	await refreshConversationUserActions();
 	void hydrateAttachmentURLs(conversationRuns.value.flatMap((turn) => turn.attachments ?? []));
 	runEvents.value = [];
 	eventRunID.value = "";
@@ -262,7 +273,75 @@ function clearAttachmentURL(id: string) { const url = attachmentURLs.value[id]; 
 async function openTurnAttachment(attachment: Attachment) { try { const url = URL.createObjectURL(await api.getAttachmentDownload(attachment.id)); const anchor = document.createElement("a"); anchor.href = url; anchor.download = attachment.name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("errors.generic"); } }
 async function copyStage(runID: string, position: number, value: string) { try { await navigator.clipboard.writeText(value); copiedStageKey.value = `${runID}:${position}`; window.setTimeout(() => { copiedStageKey.value = ""; }, 1600); } catch { error.value = t("errors.copy"); } }
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); clearAttachmentURLs(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); clearAttachmentURLs(); if (connectorActionTimer) clearTimeout(connectorActionTimer); for (const popup of connectorActionWindows.values()) popup.close(); connectorActionWindows.clear(); selectedRun.value = undefined; conversationRuns.value = []; connectorActions.value = []; commandApprovals.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function connectorActionFor(item: Run) { return connectorActions.value.find((action) => action.execution_kind === "run" && action.execution_id === item.id && action.state === "pending"); }
+function commandApprovalFor(item: Run) { return commandApprovals.value.find((approval) => approval.execution_kind === "run" && approval.execution_id === item.id && (approval.state === "pending" || approval.state === "approved")); }
+function connectorActionURL(action: ConnectorActionRequirement) { return action.action_url ? new URL(action.action_url, window.location.origin).toString() : ""; }
+function replaceConnectorAction(action: ConnectorActionRequirement) { connectorActions.value = [...connectorActions.value.filter((item) => item.id !== action.id), ...(action.state === "pending" ? [action] : [])]; }
+async function refreshConversationUserActions() {
+	try {
+		[connectorActions.value, commandApprovals.value] = await Promise.all([api.listConnectorActions(), api.listCommandApprovals()]);
+	} catch { /* Keep visible actions while a transient poll fails. */ }
+}
+function scheduleConnectorActionCheck(actionID: string) {
+	if (connectorActionTimer) clearTimeout(connectorActionTimer);
+	connectorActionTimer = setTimeout(() => void checkConnectorAction(actionID, true), 1800);
+}
+async function startConnectorAction(action: ConnectorActionRequirement) {
+	if (connectorActionBusy.value) return;
+	const popup = window.open(connectorActionURL(action) || "about:blank", "_blank");
+	if (popup) { popup.opener = null; connectorActionWindows.set(action.id, popup); }
+	connectorActionBusy.value = action.id;
+	try {
+		const updated = action.action_url ? action : await api.startConnectorAction(action.id);
+		replaceConnectorAction(updated);
+		if (updated.action_url && popup) popup.location.href = connectorActionURL(updated);
+		else if (!updated.action_url) popup?.close();
+		scheduleConnectorActionCheck(action.id);
+	} catch { popup?.close(); error.value = t("connectorActions.startFailed"); }
+	finally { connectorActionBusy.value = ""; }
+}
+async function checkConnectorAction(actionID: string, automatic = false) {
+	if (connectorActionBusy.value) return;
+	connectorActionBusy.value = actionID;
+	try {
+		const previousURL = connectorActions.value.find((item) => item.id === actionID)?.action_url;
+		const updated = await api.checkConnectorAction(actionID);
+		replaceConnectorAction(updated);
+		if (updated.state === "pending") {
+			if (updated.action_url && updated.action_url !== previousURL) {
+				const popup = connectorActionWindows.get(updated.id);
+				if (popup && !popup.closed) popup.location.replace(connectorActionURL(updated));
+				else window.open(connectorActionURL(updated), "_blank");
+			}
+			if (automatic) scheduleConnectorActionCheck(actionID);
+		} else {
+			connectorActionWindows.delete(updated.id);
+			void refreshRuns();
+		}
+	} catch {
+		if (automatic) scheduleConnectorActionCheck(actionID);
+		else error.value = t("connectorActions.checkFailed");
+	} finally { connectorActionBusy.value = ""; }
+}
+async function copyConnectorActionLink(action: ConnectorActionRequirement) { if (action.action_url) await navigator.clipboard.writeText(connectorActionURL(action)); }
+async function cancelConnectorAction(action: ConnectorActionRequirement) {
+	if (connectorActionBusy.value) return;
+	connectorActionBusy.value = action.id;
+	try { replaceConnectorAction(await api.cancelConnectorAction(action.id)); }
+	catch { error.value = t("errors.generic"); }
+	finally { connectorActionBusy.value = ""; }
+}
+async function decideCommandApproval(approval: CommandApproval, decision: "approved" | "rejected", identity?: "user" | "bot") {
+	if (connectorActionBusy.value) return;
+	connectorActionBusy.value = approval.id;
+	try {
+		await api.decideCommandApproval(approval.id, decision, identity, approval.version);
+		commandApprovals.value = commandApprovals.value.filter((item) => item.id !== approval.id);
+		void refreshRuns();
+	} catch { error.value = t("errors.generic"); }
+	finally { connectorActionBusy.value = ""; }
+}
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
@@ -307,7 +386,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
         <template v-for="(turn, index) in conversationRuns" :key="turn.id">
           <article class="message user"><div class="message-content"><p v-if="runInputText(turn, index)">{{ runInputText(turn, index) }}</p><div v-if="turn.attachments?.length" class="turn-attachments"><button v-for="attachment in turn.attachments" :key="attachment.id" type="button" class="turn-attachment" @click="openTurnAttachment(attachment)"><img v-if="attachment.image && attachmentURLs[attachment.id]" :src="attachmentURLs[attachment.id]" :alt="attachment.name" @error="clearAttachmentURL(attachment.id)"><span v-else class="attachment-file-mark">{{ attachment.image ? 'IMG' : 'FILE' }}</span><span><strong>{{ attachment.name }}</strong><small>{{ (attachment.size / 1024).toFixed(1) }} KB</small></span></button></div><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article>
-          <article class="message assistant"><div class="message-content"><div v-if="turn.id === eventRunID && runtimeActivities.length" class="runtime-activity" aria-live="polite"><div v-if="turn.id === streamingRunID" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ runtimeActivities.at(-1)?.label }}</strong><small v-if="runtimeActivities.at(-1)?.detail">{{ runtimeActivities.at(-1)?.detail }}</small></div><details v-if="runtimeActivities.length > 1 || turn.id !== streamingRunID"><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="activity in runtimeActivities" :key="activity.sequence"><span></span><div><strong>{{ activity.historyLabel }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(displayArtifactNames(runOutput(turn), runArtifacts(turn)))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running' || turn.state === 'waiting_for_user'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ turn.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small v-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small><small v-else>{{ t('sessions.progress.thinking') }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, runArtifacts(turn)))"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><CreditConsumption :value="turn.credit_consumption" /><ArtifactDisclosure v-if="runArtifacts(turn).length" :artifacts="runArtifacts(turn)" @download="openArtifact" /><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
+          <article class="message assistant"><div class="message-content"><ConnectorActionCard v-if="connectorActionFor(turn)" :action="connectorActionFor(turn)!" :busy="connectorActionBusy === connectorActionFor(turn)!.id" @start="startConnectorAction(connectorActionFor(turn)!)" @copy="copyConnectorActionLink(connectorActionFor(turn)!)" @check="checkConnectorAction(connectorActionFor(turn)!.id)" @cancel="cancelConnectorAction(connectorActionFor(turn)!)" /><CommandApprovalCard v-if="commandApprovalFor(turn)" :approval="commandApprovalFor(turn)!" :busy="connectorActionBusy === commandApprovalFor(turn)!.id" @decide="(decision, identity) => decideCommandApproval(commandApprovalFor(turn)!, decision, identity)" /><div v-if="turn.id === eventRunID && runtimeActivities.length" class="runtime-activity" aria-live="polite"><details v-if="runtimeActivities.length > 1"><summary class="runtime-activity-summary"><span v-if="turn.id === streamingRunID" class="activity-pulse active"></span><strong>{{ runtimeActivities.at(-1)?.label }}</strong><small v-if="runtimeActivities.at(-1)?.detail">{{ runtimeActivities.at(-1)?.detail }}</small></summary><ol><li v-for="activity in runtimeActivities.slice(0, -1)" :key="activity.sequence"><span></span><div><strong>{{ activity.historyLabel }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details><div v-else class="runtime-activity-summary"><span v-if="turn.id === streamingRunID" class="activity-pulse active"></span><strong>{{ runtimeActivities[0]?.label }}</strong><small v-if="runtimeActivities[0]?.detail">{{ runtimeActivities[0]?.detail }}</small></div></div><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(displayArtifactNames(runOutput(turn), runArtifacts(turn)))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running' || turn.state === 'waiting_for_user'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ turn.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small v-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small><small v-else>{{ t('sessions.progress.thinking') }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, runArtifacts(turn)))"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><CreditConsumption :value="turn.credit_consumption" /><ArtifactDisclosure v-if="runArtifacts(turn).length" :artifacts="runArtifacts(turn)" @download="openArtifact" /><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
         </template>
       </div>
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>

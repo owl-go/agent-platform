@@ -52,7 +52,10 @@ type Executor struct {
 	connectors     *cliconnector.ArtifactStore
 	cliEgress      cliconnector.EgressGate
 	cliApprovals   cliconnector.ApprovalCoordinator
-	cliCredentials cliCredentialRepository
+	cliActions     cliconnector.ActionCoordinator
+	cliAudit       cliconnector.AuditSink
+	cliCredentials map[string]connectorCredentialMaterializer
+	cliRepository  cliCredentialRepository
 	warm           *containerprocess.WarmManager
 	checkout       func(context.Context, string) (runtimeLease, error)
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -62,6 +65,11 @@ type Executor struct {
 
 type cliCredentialRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
+	RevalidateCLIConnectorExecution(context.Context, string, string, int64) error
+}
+
+type connectorCredentialMaterializer interface {
+	ResolveEnvironment(context.Context, string, cliconnector.Definition, cliconnector.Capability, cliconnector.Identity) (cliconnector.EnvironmentResolution, error)
 }
 
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
@@ -88,11 +96,41 @@ func (executor *Executor) EnableCLIApprovals(coordinator cliconnector.ApprovalCo
 	return nil
 }
 
+func (executor *Executor) EnableCLIActions(coordinator cliconnector.ActionCoordinator) error {
+	if coordinator == nil {
+		return fmt.Errorf("Connector Action Coordinator is required")
+	}
+	executor.cliActions = coordinator
+	return nil
+}
+
+func (executor *Executor) EnableConnectorAudit(sink cliconnector.AuditSink) error {
+	if sink == nil {
+		return fmt.Errorf("Connector Audit Sink is required")
+	}
+	executor.cliAudit = sink
+	return nil
+}
+
 func (executor *Executor) EnableCLICredentials(repository cliCredentialRepository) error {
 	if repository == nil {
 		return fmt.Errorf("CLI Connector credential repository is required")
 	}
-	executor.cliCredentials = repository
+	executor.cliRepository = repository
+	return executor.registerConnectorCredentialMaterializer("feishu", feishuCredentialMaterializer{repository: repository, box: executor.box})
+}
+
+func (executor *Executor) registerConnectorCredentialMaterializer(scheme string, materializer connectorCredentialMaterializer) error {
+	if scheme == "" || scheme == "none" || materializer == nil {
+		return fmt.Errorf("valid Connector credential materializer is required")
+	}
+	if executor.cliCredentials == nil {
+		executor.cliCredentials = make(map[string]connectorCredentialMaterializer)
+	}
+	if _, exists := executor.cliCredentials[scheme]; exists {
+		return fmt.Errorf("Connector credential materializer %q is already registered", scheme)
+	}
+	executor.cliCredentials[scheme] = materializer
 	return nil
 }
 
@@ -341,7 +379,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, executionStage.Position, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch)
+		redactor := environment.Redactor()
+		stageRedactor = redactor
+		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, executionStage.Position, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch, progress, redactor)
 		if brokerErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()
@@ -363,8 +403,6 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = environment.Cleanup()
 			return result, failStage(startErr)
 		}
-		redactor := environment.Redactor()
-		stageRedactor = redactor
 		sink.suppressMessages = job.Snapshot.ExpertTeam != nil && index < len(memberJobs)-1
 		adapter, adapterErr := executor.newAdapter(executionStage.RuntimeEngine, cliadapter.Config{
 			ExpectedVersion: stageRuntimeConfig.CLIVersion, RunProcess: runProcess,
@@ -437,6 +475,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		}
 		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
 		runtimeFinishedAt = time.Now()
+		allRedactValues = append(allRedactValues, redactor.Patterns()...)
 		brokerCloseErr := closeBroker()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
@@ -743,7 +782,7 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 	return directory, nil
 }
 
-func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, stagePosition int, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string) (*cliconnector.UnixBrokerServer, string, error) {
+func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, stagePosition int, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string, progress application.ProgressRecorder, redactor *credentials.Redactor) (*cliconnector.UnixBrokerServer, string, error) {
 	if len(job.Snapshot.CLIConnectors) == 0 {
 		return nil, "", nil
 	}
@@ -763,6 +802,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		}
 		definitions = append(definitions, cliconnector.Definition{
 			ID: snapshot.ID, Name: snapshot.Name, Executable: snapshot.Executable,
+			ManifestVersion: snapshot.ManifestVersion, UsageGuide: snapshot.UsageGuide,
 			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable,
 			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: append([]string(nil), snapshot.RuntimeDigests...),
 			Capabilities: capabilities, VersionNumber: snapshot.Version,
@@ -790,11 +830,28 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	}
 	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
-		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
+		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process, Revalidate: func(revalidateCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
+			if executor.cliRepository == nil {
+				return errors.New("CLI Connector policy revalidation is unavailable")
+			}
+			return executor.cliRepository.RevalidateCLIConnectorExecution(revalidateCtx, job.OwnerID, definition.ID, definition.VersionNumber)
+		}},
 		ResolveEnvironment: executor.cliEnvironmentResolver(job.OwnerID),
-		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
+		Approval:           executor.cliApprovals, Actions: executor.cliActions, ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
 		},
+		Events: func(eventCtx context.Context, event cliconnector.OperationEvent) error {
+			if progress == nil {
+				return errors.New("Connector operation progress recorder is unavailable")
+			}
+			payload, marshalErr := json.Marshal(event)
+			if marshalErr != nil {
+				return marshalErr
+			}
+			return progress.RecordProgress(eventCtx, job, application.ExecutionEvent{Type: "connector.operation." + string(event.State), Payload: payload})
+		},
+		Audit:    executor.cliAudit,
+		Redactor: redactor,
 	})
 	if err != nil {
 		return nil, "", err
@@ -808,37 +865,15 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 }
 
 func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.EnvironmentResolver {
-	return func(ctx context.Context, definition cliconnector.Definition, capability cliconnector.Capability, identity cliconnector.Identity) (map[string]string, error) {
+	return func(ctx context.Context, definition cliconnector.Definition, capability cliconnector.Capability, identity cliconnector.Identity) (cliconnector.EnvironmentResolution, error) {
 		if definition.AuthenticationDriver == "none" {
-			return map[string]string{}, nil
+			return cliconnector.EnvironmentResolution{Environment: map[string]string{}}, nil
 		}
-		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
-			return nil, errors.New("CLI Connector credentials are unavailable")
+		materializer, ok := executor.cliCredentials[definition.AuthenticationDriver]
+		if !ok {
+			return cliconnector.EnvironmentResolution{}, errors.New("CLI Connector credentials are unavailable")
 		}
-		credentials, err := executor.cliCredentials.ResolveCLIConnectorExecutionCredentials(ctx, ownerID, definition.ID, identity, capability.Scopes)
-		if err != nil {
-			return nil, err
-		}
-		appID, err := executor.box.Decrypt(credentials.AppIDCiphertext, "feishu-cli-application:"+ownerID)
-		if err != nil {
-			return nil, err
-		}
-		appSecret, err := executor.box.Decrypt(credentials.AppSecretCiphertext, "feishu-cli-application:"+ownerID)
-		if err != nil {
-			return nil, err
-		}
-		environment := map[string]string{
-			"LARKSUITE_CLI_APP_ID": string(appID), "LARKSUITE_CLI_APP_SECRET": string(appSecret), "LARKSUITE_CLI_BRAND": "feishu",
-			"LARKSUITE_CLI_DEFAULT_AS": string(identity), "LARKSUITE_CLI_STRICT_MODE": string(identity), "LARKSUITE_CLI_NO_UPDATE_NOTIFIER": "1", "LARKSUITE_CLI_NO_SKILLS_NOTIFIER": "1",
-		}
-		if identity == cliconnector.IdentityUser {
-			token, decryptErr := executor.box.Decrypt(credentials.TokenCiphertext, "feishu-cli-authorization-token:"+ownerID+":"+credentials.EnablementID+":"+credentials.ExternalIdentityID)
-			if decryptErr != nil {
-				return nil, decryptErr
-			}
-			environment["LARKSUITE_CLI_USER_ACCESS_TOKEN"] = string(token)
-		}
-		return environment, nil
+		return materializer.ResolveEnvironment(ctx, ownerID, definition, capability, identity)
 	}
 }
 
@@ -1512,6 +1547,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 	if len(job.Snapshot.CLIConnectors) > 0 {
 		commands := make([]string, 0)
 		for _, connector := range job.Snapshot.CLIConnectors {
+			commands = append(commands, fmt.Sprintf("- %s: inspect with `agent-cli describe --connector %s`", connector.Name, connector.ID))
 			var capabilities []cliconnector.Capability
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
@@ -1521,11 +1557,11 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 				for _, identity := range capability.Identities {
 					identities = append(identities, string(identity))
 				}
-				commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity <%s> [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, strings.Join(identities, "|"), strings.Join(capability.ArgvPrefix, " ")))
+				commands = append(commands, fmt.Sprintf("  - %s: `agent-cli --connector %s --capability %s --identity <%s> --input '<json>'`", capability.ID, connector.ID, capability.ID, strings.Join(identities, "|")))
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors (use only these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors. Inspect the frozen Capability Contract before first use, then invoke only with structured JSON input:\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

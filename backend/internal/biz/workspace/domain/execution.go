@@ -212,5 +212,7 @@ type CLIConnectorSnapshot struct {
 	BundleSHA256         string          `json:"bundle_sha256"`
 	RuntimeDigests       []string        `json:"runtime_digests"`
 	Capabilities         json.RawMessage `json:"capabilities"`
+	ManifestVersion      string          `json:"manifest_version"`
+	UsageGuide           string          `json:"usage_guide"`
 	Version              int64           `json:"version"`
 }

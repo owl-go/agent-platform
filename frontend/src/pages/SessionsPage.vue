@@ -3,12 +3,14 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type Artifact, type Attachment, type CommandApproval, type ConnectorActionRequirement, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
 import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
+import ConnectorActionCard from "../components/ConnectorActionCard.vue";
+import CommandApprovalCard from "../components/CommandApprovalCard.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
@@ -26,6 +28,9 @@ const runtimes = ref<RuntimeEngineStatus[]>([]);
 const settings = ref<PersonalSettings>();
 const selected = ref<Session>();
 const messages = ref<SessionMessage[]>([]);
+const connectorActions = ref<ConnectorActionRequirement[]>([]);
+const commandApprovals = ref<CommandApproval[]>([]);
+const connectorActionBusy = ref("");
 const loadingMessages = ref(false);
 const copiedMessageID = ref<number>();
 const copiedStageKey = ref("");
@@ -57,6 +62,8 @@ const activeAssistant = computed(() => {
   return undefined;
 });
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
+let actionTimer: ReturnType<typeof setTimeout> | undefined;
+const connectorActionWindows = new Map<string, Window>();
 let pollGeneration = 0;
 let composerObserver: ResizeObserver | undefined;
 let responseController: AbortController | undefined;
@@ -127,18 +134,20 @@ async function refresh() {
 async function open(item: Session) {
   const generation = ++pollGeneration;
   if (pollTimer) clearTimeout(pollTimer);
+  if (actionTimer) clearTimeout(actionTimer);
   responseController?.abort(); stopReveal();
   clearAttachmentURLs();
   cancellingMessageID.value = undefined;
   keepAtLatest.value = true; showJumpToLatest.value = false;
-  selected.value = item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
+  selected.value = item; specialistName.value = ""; messages.value = []; connectorActions.value = []; commandApprovals.value = []; loadingMessages.value = true;
   try {
     const loadedMessages = await api.listSessionMessages(item.id);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
     messages.value = loadedMessages.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
+    await refreshPendingUserActions();
     void hydrateAttachmentURLs(messages.value.flatMap((message) => message.attachments ?? []));
     await nextTick(); scrollToLatest("auto");
-    const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating"));
+    const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating" || message.state === "waiting_for_user"));
     if (pending) void streamAssistant(item.id, pending.id, generation);
   } catch {
     if (generation === pollGeneration) error.value = t("errors.generic");
@@ -236,7 +245,8 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
     messages.value = latest.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
     void hydrateAttachmentURLs(messages.value.flatMap((message) => message.attachments ?? []));
     const message = latest.find((item) => item.id === messageID);
-    if (message && (message.state === "queued" || message.state === "generating")) {
+    if (message && (message.state === "queued" || message.state === "generating" || message.state === "waiting_for_user")) {
+      if (message.state === "waiting_for_user") await refreshPendingUserActions();
       pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 900);
     } else {
       if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
@@ -278,7 +288,10 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
-  if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
+  if (snapshot.state === "queued" || snapshot.state === "generating" || snapshot.state === "waiting_for_user") {
+    message.state = snapshot.state;
+    if (snapshot.state === "waiting_for_user") void refreshPendingUserActions();
+  }
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
     if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
@@ -388,12 +401,108 @@ function userMessageContent(message: SessionMessage, index: number) {
   return content;
 }
 function activityLabel(activity: ExecutionActivity, historical = false) {
+  if (activity.type.startsWith("connector.operation.")) {
+    const state = activity.type.slice("connector.operation.".length);
+    const key = `sessions.connectorOperation.${state}`;
+    return t(key, { operation: activity.detail });
+  }
   if (activity.type === "runtime.started") return historical ? t("workflows.runtimePrepared") : t("sessions.progress.preparing");
   if (activity.type === "reasoning.summary") return t("workflows.reasoningSummary");
   if (activity.type === "command.requested") return t("sessions.progress.using_tool");
   if (activity.type === "command.completed") return t("workflows.toolCompleted");
   if (activity.type === "file.changed") return t("workflows.updatingFiles");
   return t("sessions.progress.working");
+}
+function activityDetail(activity: ExecutionActivity) {
+  return activity.type.startsWith("connector.operation.") ? "" : activity.detail;
+}
+function connectorActionFor(message: SessionMessage) {
+  return connectorActions.value.find((action) => action.execution_kind === "session" && action.execution_id === String(message.id) && action.state === "pending");
+}
+async function refreshConnectorActions() {
+  if (typeof api.listConnectorActions !== "function") return;
+  try { connectorActions.value = await api.listConnectorActions(); } catch { /* Keep the current card while a transient poll fails. */ }
+}
+async function refreshCommandApprovals() {
+  if (typeof api.listCommandApprovals !== "function") return;
+  try {
+    commandApprovals.value = await api.listCommandApprovals();
+  } catch { /* Keep the current card while a transient poll fails. */ }
+}
+async function refreshPendingUserActions() {
+  await Promise.all([refreshConnectorActions(), refreshCommandApprovals()]);
+}
+function commandApprovalFor(message: SessionMessage) {
+  return commandApprovals.value.find((approval) => approval.execution_kind === "session" && approval.execution_id === String(message.id) && (approval.state === "pending" || approval.state === "approved"));
+}
+async function decideCommandApproval(approval: CommandApproval, decision: "approved" | "rejected", identity?: "user" | "bot") {
+  if (connectorActionBusy.value) return;
+  connectorActionBusy.value = approval.id;
+  try {
+    await api.decideCommandApproval(approval.id, decision, identity, approval.version);
+    commandApprovals.value = commandApprovals.value.filter((item) => item.id !== approval.id);
+    if (selected.value) void pollAssistant(selected.value.id, Number(approval.execution_id), pollGeneration);
+  } catch { error.value = t("errors.generic"); }
+  finally { connectorActionBusy.value = ""; }
+}
+function replaceConnectorAction(action: ConnectorActionRequirement) {
+  connectorActions.value = [...connectorActions.value.filter((item) => item.id !== action.id), ...(action.state === "pending" ? [action] : [])];
+}
+function connectorActionURL(action: ConnectorActionRequirement) {
+  return action.action_url ? new URL(action.action_url, window.location.origin).toString() : "";
+}
+function scheduleConnectorActionCheck(actionID: string) {
+  if (actionTimer) clearTimeout(actionTimer);
+  actionTimer = setTimeout(() => void checkConnectorAction(actionID, true), 1800);
+}
+async function startConnectorAction(action: ConnectorActionRequirement) {
+  if (connectorActionBusy.value) return;
+  const external = window.open(connectorActionURL(action) || "about:blank", "_blank");
+  if (external) { external.opener = null; connectorActionWindows.set(action.id, external); }
+  connectorActionBusy.value = action.id;
+  try {
+    const updated = action.action_url ? action : await api.startConnectorAction(action.id);
+    replaceConnectorAction(updated);
+    if (updated.action_url && external) external.location.href = connectorActionURL(updated);
+    else if (!updated.action_url) external?.close();
+    scheduleConnectorActionCheck(action.id);
+  } catch {
+    external?.close(); error.value = t("connectorActions.startFailed");
+  } finally { connectorActionBusy.value = ""; }
+}
+async function checkConnectorAction(actionID: string, automatic = false) {
+  if (connectorActionBusy.value) return;
+  connectorActionBusy.value = actionID;
+  try {
+    const previousURL = connectorActions.value.find((item) => item.id === actionID)?.action_url;
+    const updated = await api.checkConnectorAction(actionID);
+    replaceConnectorAction(updated);
+    if (updated.state === "pending") {
+      if (updated.action_url && updated.action_url !== previousURL) {
+        const external = connectorActionWindows.get(updated.id);
+        if (external && !external.closed) external.location.replace(connectorActionURL(updated));
+        else window.open(connectorActionURL(updated), "_blank");
+      }
+      if (automatic) scheduleConnectorActionCheck(actionID);
+    } else if (selected.value) {
+      connectorActionWindows.delete(updated.id);
+      const message = messages.value.find((item) => String(item.id) === updated.execution_id);
+      if (message) void pollAssistant(selected.value.id, message.id, pollGeneration);
+    }
+  } catch {
+    if (automatic) scheduleConnectorActionCheck(actionID);
+    else error.value = t("connectorActions.checkFailed");
+  } finally { connectorActionBusy.value = ""; }
+}
+async function copyConnectorActionLink(action: ConnectorActionRequirement) {
+  if (action.action_url) await navigator.clipboard.writeText(connectorActionURL(action));
+}
+async function cancelConnectorAction(action: ConnectorActionRequirement) {
+  if (connectorActionBusy.value) return;
+  connectorActionBusy.value = action.id;
+  try { replaceConnectorAction(await api.cancelConnectorAction(action.id)); }
+  catch { error.value = t("errors.generic"); }
+  finally { connectorActionBusy.value = ""; }
 }
 function stageStateLabel(state: string) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
@@ -462,7 +571,7 @@ async function confirmRemove() {
   } catch { error.value = t("errors.generic"); }
   finally { deleting.value = false; }
 }
-onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); clearAttachmentURLs(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
+onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (actionTimer) clearTimeout(actionTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); clearAttachmentURLs(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
 </script>
 
 <template>
@@ -505,9 +614,11 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
             <div class="message-content">
               <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ message.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
               <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
+              <ConnectorActionCard v-if="connectorActionFor(message)" :action="connectorActionFor(message)!" :busy="connectorActionBusy === connectorActionFor(message)!.id" @start="startConnectorAction(connectorActionFor(message)!)" @copy="copyConnectorActionLink(connectorActionFor(message)!)" @check="checkConnectorAction(connectorActionFor(message)!.id)" @cancel="cancelConnectorAction(connectorActionFor(message)!)" />
+              <CommandApprovalCard v-if="commandApprovalFor(message)" :approval="commandApprovalFor(message)!" :busy="connectorActionBusy === commandApprovalFor(message)!.id" @decide="(decision, identity) => decideCommandApproval(commandApprovalFor(message)!, decision, identity)" />
               <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
-                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activityLabel(message.activities.at(-1)!) }}</strong><small v-if="message.activities.at(-1)?.detail">{{ message.activities.at(-1)?.detail }}</small></div>
-                <details><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="(activity, activityIndex) in message.activities" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details>
+                <details v-if="message.activities.length > 1"><summary class="runtime-activity-summary"><span v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="activity-pulse active"></span><strong>{{ activityLabel(message.activities.at(-1)!, message.state !== 'queued' && message.state !== 'generating' && message.state !== 'waiting_for_user') }}</strong><small v-if="activityDetail(message.activities.at(-1)!)">{{ activityDetail(message.activities.at(-1)!) }}</small></summary><ol><li v-for="(activity, activityIndex) in message.activities.slice(0, -1)" :key="`${message.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activityDetail(activity)">{{ activityDetail(activity) }}</small></div></li></ol></details>
+                <div v-else class="runtime-activity-summary"><span v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="activity-pulse active"></span><strong>{{ activityLabel(message.activities[0]!, message.state !== 'queued' && message.state !== 'generating' && message.state !== 'waiting_for_user') }}</strong><small v-if="activityDetail(message.activities[0]!)">{{ activityDetail(message.activities[0]!) }}</small></div>
               </div>
               <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>

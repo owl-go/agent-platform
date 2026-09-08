@@ -26,6 +26,8 @@ type PackageDefinitionMetadata struct {
 	AuthenticationDriver   string
 	Capabilities           []Capability
 	SupportedArchitectures []string
+	ManifestVersion        string
+	UsageGuide             string
 }
 
 type packageManifest struct {
@@ -33,17 +35,23 @@ type packageManifest struct {
 	Version        string          `json:"version"`
 	Bin            json.RawMessage `json:"bin"`
 	AgentWorkspace struct {
+		SchemaVersion          string   `json:"schemaVersion"`
+		UsageGuide             string   `json:"usageGuide"`
 		Executable             string   `json:"executable"`
 		AuthenticationDriver   string   `json:"authenticationDriver"`
 		SupportedArchitectures []string `json:"supportedArchitectures"`
 		Capabilities           []struct {
-			ID             string   `json:"id"`
-			ArgvPrefix     []string `json:"argvPrefix"`
-			Risk           string   `json:"risk"`
-			Identities     []string `json:"identities"`
-			Scopes         []string `json:"scopes"`
-			EgressHosts    []string `json:"egressHosts"`
-			TimeoutSeconds int      `json:"timeoutSeconds"`
+			ID              string            `json:"id"`
+			DisplayName     map[string]string `json:"displayName"`
+			OperationPhrase map[string]string `json:"operationPhrase"`
+			ArgvPrefix      []string          `json:"argvPrefix"`
+			Input           InputSchema       `json:"input"`
+			Risk            string            `json:"risk"`
+			Identities      []string          `json:"identities"`
+			Scopes          []string          `json:"scopes"`
+			EgressHosts     []string          `json:"egressHosts"`
+			TimeoutSeconds  int               `json:"timeoutSeconds"`
+			Idempotency     Idempotency       `json:"idempotency"`
 		} `json:"capabilities"`
 	} `json:"agentWorkspace"`
 }
@@ -58,19 +66,27 @@ func packageDefinitionMetadata(raw []byte) (PackageDefinitionMetadata, error) {
 		Executable:             manifest.AgentWorkspace.Executable,
 		AuthenticationDriver:   manifest.AgentWorkspace.AuthenticationDriver,
 		SupportedArchitectures: append([]string(nil), manifest.AgentWorkspace.SupportedArchitectures...),
+		ManifestVersion:        manifest.AgentWorkspace.SchemaVersion,
+		UsageGuide:             manifest.AgentWorkspace.UsageGuide,
 	}
 	for _, item := range manifest.AgentWorkspace.Capabilities {
 		identities := make([]Identity, 0, len(item.Identities))
 		for _, identity := range item.Identities {
 			identities = append(identities, Identity(identity))
 		}
-		metadata.Capabilities = append(metadata.Capabilities, Capability{ID: item.ID, ArgvPrefix: append([]string(nil), item.ArgvPrefix...), Risk: Risk(item.Risk), Identities: identities, Scopes: append([]string(nil), item.Scopes...), EgressHosts: append([]string(nil), item.EgressHosts...), Timeout: time.Duration(item.TimeoutSeconds) * time.Second})
+		metadata.Capabilities = append(metadata.Capabilities, Capability{ID: item.ID, DisplayName: cloneStrings(item.DisplayName), OperationPhrase: cloneStrings(item.OperationPhrase), ArgvPrefix: append([]string(nil), item.ArgvPrefix...), Input: item.Input, Risk: Risk(item.Risk), Identities: identities, Scopes: append([]string(nil), item.Scopes...), EgressHosts: append([]string(nil), item.EgressHosts...), Timeout: time.Duration(item.TimeoutSeconds) * time.Second, Idempotency: item.Idempotency})
 	}
-	if manifest.Name == "@larksuite/cli" && len(metadata.Capabilities) == 0 {
+	if manifest.Name == "@larksuite/cli" && manifest.Version == "1.0.93" && len(metadata.Capabilities) == 0 {
 		metadata.Executable = "lark-cli"
 		metadata.AuthenticationDriver = "feishu"
 		metadata.SupportedArchitectures = []string{"linux-amd64"}
-		metadata.Capabilities = []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}
+		metadata.ManifestVersion = "1"
+		metadata.UsageGuide = "Use chat.search to resolve a visible group name to a chat ID before messages.send. Confirm the target and message text before sending."
+		metadata.Capabilities = []Capability{
+			{ID: "identity", DisplayName: map[string]string{"zh-CN": "读取飞书身份", "en": "Read Feishu identity"}, OperationPhrase: map[string]string{"zh-CN": "读取飞书身份", "en": "read Feishu identity"}, ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute, Idempotency: IdempotencyRetrySafe},
+			{ID: "chat.search", DisplayName: map[string]string{"zh-CN": "搜索飞书群聊", "en": "Search Feishu chats"}, OperationPhrase: map[string]string{"zh-CN": "搜索飞书群聊", "en": "search Feishu chats"}, ArgvPrefix: []string{"im", "+chat-search"}, Input: InputSchema{Fields: []InputField{{Name: "query", Type: InputString, Required: true, Flag: "--query"}}}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Scopes: []string{"im:chat:readonly"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute, Idempotency: IdempotencyRetrySafe},
+			{ID: "messages.send", DisplayName: map[string]string{"zh-CN": "发送飞书消息", "en": "Send Feishu message"}, OperationPhrase: map[string]string{"zh-CN": "发送飞书消息", "en": "send a Feishu message"}, ArgvPrefix: []string{"im", "+messages-send"}, Input: InputSchema{Fields: []InputField{{Name: "chat_id", Type: InputString, Required: true, Flag: "--chat-id"}, {Name: "text", Type: InputString, Required: true, Flag: "--text"}, {Name: "idempotency_key", Type: InputString, Required: true, Flag: "--idempotency-key"}}}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Scopes: []string{"im:message:send_as_user"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute, Idempotency: IdempotencyKeyRequired},
+		}
 	}
 	return metadata, nil
 }

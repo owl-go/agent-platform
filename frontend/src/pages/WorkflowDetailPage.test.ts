@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type CommandApproval, type ConnectorActionRequirement, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -163,6 +163,25 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
     wrapper.unmount();
+  });
+
+  it("renders Connector authorization and approval inside the waiting Run conversation", async () => {
+	const waiting = { ...run, state: "waiting_for_user" as const, final_text: undefined, ended_at: undefined };
+	const action: ConnectorActionRequirement = {
+		contract_version: 1, id: "action-1", execution_kind: "run", execution_id: run.id, operation_id: "operation-1", connector_id: "connector-1", connector_name: "飞书 CLI", enablement_id: "enablement-1", capability_id: "messages.send", identity: "user", operation_phrase: { "zh-CN": "发送飞书消息" }, reason: "authorization_required", permissions: ["im:message:send_as_user"], actions: ["open_url", "check_status"], state: "pending", expires_at: "2026-09-08T15:00:00Z", version: 1,
+	};
+	const approval: CommandApproval = {
+		id: "approval-1", execution_kind: "run", execution_id: run.id, connector_name: "飞书 CLI", operation: "messages.send", target: "云隙科技", redacted_arguments: 'text="大家好"', state: "pending", identity: "user", expires_at: "2026-09-08T15:00:00Z", version: 1,
+	};
+	const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [waiting]), listRunTurns: vi.fn(async () => [waiting]), listConnectorActions: vi.fn(async () => [action]), listCommandApprovals: vi.fn(async () => [approval]) }));
+
+	await wrapper.get(".run-row:not(.run-head)").trigger("click");
+	await flushPromises();
+
+	expect(wrapper.findAll(".connector-action-card")).toHaveLength(2);
+	expect(wrapper.text()).toContain("飞书 CLI 需要你的操作");
+	expect(wrapper.text()).toContain("仅批准本次");
+	wrapper.unmount();
   });
 
   it("renders a Run Conversation image from authenticated attachment content", async () => {
@@ -500,7 +519,8 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity summary").text()).toContain("正在生成回答");
+    expect(wrapper.get(".runtime-activity summary").text()).not.toContain("查看执行过程");
     expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity details").text()).not.toContain("正在准备运行环境");
     const initiallyVisible = wrapper.get(".run-conversation .message.assistant .markdown-body").text();

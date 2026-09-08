@@ -49,6 +49,10 @@ func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *wo
 				next.ServeHTTP(writer, request)
 				return
 			}
+			if connectorActionOpenRoute(request.Method, request.URL.Path) {
+				next.ServeHTTP(writer, request)
+				return
+			}
 			scheme, token, found := strings.Cut(request.Header.Get("Authorization"), " ")
 			if found && strings.EqualFold(scheme, "Basic") {
 				workflowID, allowed := workflowCredentialRoute(request.Method, request.URL.Path)
@@ -93,6 +97,11 @@ func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *wo
 			}
 		})
 	}, nil
+}
+
+func connectorActionOpenRoute(method, path string) bool {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	return method == http.MethodGet && len(parts) == 5 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "connector-actions" && parts[3] != "" && parts[4] == "open"
 }
 
 func workflowCredentialRoute(method, path string) (string, bool) {

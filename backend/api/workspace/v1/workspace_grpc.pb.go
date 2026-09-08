@@ -114,6 +114,10 @@ const (
 	AgentWorkspaceService_CompleteCLIConnectorAuthorization_FullMethodName   = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorAuthorization"
 	AgentWorkspaceService_ListCLIConnectorAuthorizations_FullMethodName      = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
 	AgentWorkspaceService_DisconnectCLIConnectorAuthorization_FullMethodName = "/workspace.v1.AgentWorkspaceService/DisconnectCLIConnectorAuthorization"
+	AgentWorkspaceService_ListConnectorActions_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListConnectorActions"
+	AgentWorkspaceService_StartConnectorAction_FullMethodName                = "/workspace.v1.AgentWorkspaceService/StartConnectorAction"
+	AgentWorkspaceService_CheckConnectorAction_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CheckConnectorAction"
+	AgentWorkspaceService_CancelConnectorAction_FullMethodName               = "/workspace.v1.AgentWorkspaceService/CancelConnectorAction"
 )
 
 // AgentWorkspaceServiceClient is the client API for AgentWorkspaceService service.
@@ -215,6 +219,10 @@ type AgentWorkspaceServiceClient interface {
 	CompleteCLIConnectorAuthorization(ctx context.Context, in *CompleteCLIConnectorAuthorizationRequest, opts ...grpc.CallOption) (*CLIConnectorAuthorizationFlow, error)
 	ListCLIConnectorAuthorizations(ctx context.Context, in *ListCLIConnectorAuthorizationsRequest, opts ...grpc.CallOption) (*ListCLIConnectorAuthorizationsResponse, error)
 	DisconnectCLIConnectorAuthorization(ctx context.Context, in *DisconnectCLIConnectorAuthorizationRequest, opts ...grpc.CallOption) (*CLIConnectorAuthorization, error)
+	ListConnectorActions(ctx context.Context, in *ListConnectorActionsRequest, opts ...grpc.CallOption) (*ListConnectorActionsResponse, error)
+	StartConnectorAction(ctx context.Context, in *StartConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error)
+	CheckConnectorAction(ctx context.Context, in *CheckConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error)
+	CancelConnectorAction(ctx context.Context, in *CancelConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error)
 }
 
 type agentWorkspaceServiceClient struct {
@@ -1175,6 +1183,46 @@ func (c *agentWorkspaceServiceClient) DisconnectCLIConnectorAuthorization(ctx co
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ListConnectorActions(ctx context.Context, in *ListConnectorActionsRequest, opts ...grpc.CallOption) (*ListConnectorActionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorActionsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorActions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StartConnectorAction(ctx context.Context, in *StartConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorActionRequirement)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StartConnectorAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CheckConnectorAction(ctx context.Context, in *CheckConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorActionRequirement)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CheckConnectorAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CancelConnectorAction(ctx context.Context, in *CancelConnectorActionRequest, opts ...grpc.CallOption) (*ConnectorActionRequirement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorActionRequirement)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CancelConnectorAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentWorkspaceServiceServer is the server API for AgentWorkspaceService service.
 // All implementations must embed UnimplementedAgentWorkspaceServiceServer
 // for forward compatibility.
@@ -1274,6 +1322,10 @@ type AgentWorkspaceServiceServer interface {
 	CompleteCLIConnectorAuthorization(context.Context, *CompleteCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorizationFlow, error)
 	ListCLIConnectorAuthorizations(context.Context, *ListCLIConnectorAuthorizationsRequest) (*ListCLIConnectorAuthorizationsResponse, error)
 	DisconnectCLIConnectorAuthorization(context.Context, *DisconnectCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorization, error)
+	ListConnectorActions(context.Context, *ListConnectorActionsRequest) (*ListConnectorActionsResponse, error)
+	StartConnectorAction(context.Context, *StartConnectorActionRequest) (*ConnectorActionRequirement, error)
+	CheckConnectorAction(context.Context, *CheckConnectorActionRequest) (*ConnectorActionRequirement, error)
+	CancelConnectorAction(context.Context, *CancelConnectorActionRequest) (*ConnectorActionRequirement, error)
 	mustEmbedUnimplementedAgentWorkspaceServiceServer()
 }
 
@@ -1568,6 +1620,18 @@ func (UnimplementedAgentWorkspaceServiceServer) ListCLIConnectorAuthorizations(c
 }
 func (UnimplementedAgentWorkspaceServiceServer) DisconnectCLIConnectorAuthorization(context.Context, *DisconnectCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorization, error) {
 	return nil, status.Error(codes.Unimplemented, "method DisconnectCLIConnectorAuthorization not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorActions(context.Context, *ListConnectorActionsRequest) (*ListConnectorActionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorActions not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StartConnectorAction(context.Context, *StartConnectorActionRequest) (*ConnectorActionRequirement, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartConnectorAction not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CheckConnectorAction(context.Context, *CheckConnectorActionRequest) (*ConnectorActionRequirement, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckConnectorAction not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CancelConnectorAction(context.Context, *CancelConnectorActionRequest) (*ConnectorActionRequirement, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelConnectorAction not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) mustEmbedUnimplementedAgentWorkspaceServiceServer() {}
 func (UnimplementedAgentWorkspaceServiceServer) testEmbeddedByValue()                               {}
@@ -3300,6 +3364,78 @@ func _AgentWorkspaceService_DisconnectCLIConnectorAuthorization_Handler(srv inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ListConnectorActions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorActionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorActions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorActions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorActions(ctx, req.(*ListConnectorActionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StartConnectorAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartConnectorActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StartConnectorAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StartConnectorAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StartConnectorAction(ctx, req.(*StartConnectorActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CheckConnectorAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckConnectorActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CheckConnectorAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CheckConnectorAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CheckConnectorAction(ctx, req.(*CheckConnectorActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CancelConnectorAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelConnectorActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CancelConnectorAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CancelConnectorAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CancelConnectorAction(ctx, req.(*CancelConnectorActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentWorkspaceService_ServiceDesc is the grpc.ServiceDesc for AgentWorkspaceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3686,6 +3822,22 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DisconnectCLIConnectorAuthorization",
 			Handler:    _AgentWorkspaceService_DisconnectCLIConnectorAuthorization_Handler,
+		},
+		{
+			MethodName: "ListConnectorActions",
+			Handler:    _AgentWorkspaceService_ListConnectorActions_Handler,
+		},
+		{
+			MethodName: "StartConnectorAction",
+			Handler:    _AgentWorkspaceService_StartConnectorAction_Handler,
+		},
+		{
+			MethodName: "CheckConnectorAction",
+			Handler:    _AgentWorkspaceService_CheckConnectorAction_Handler,
+		},
+		{
+			MethodName: "CancelConnectorAction",
+			Handler:    _AgentWorkspaceService_CancelConnectorAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

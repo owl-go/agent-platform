@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"io"
 	"sort"
+	"sync"
 )
 
 const redactedValue = "[REDACTED]"
 
 // Redactor replaces exact credential values without interpreting them as patterns.
 type Redactor struct {
+	mu       sync.RWMutex
 	patterns [][]byte
 }
 
@@ -35,8 +37,8 @@ func (r *Redactor) Bytes(input []byte) []byte {
 	if r == nil {
 		return output
 	}
-
-	for _, pattern := range r.patterns {
+	patterns := r.Patterns()
+	for _, pattern := range patterns {
 		output = bytes.ReplaceAll(output, pattern, []byte(redactedValue))
 	}
 
@@ -44,11 +46,39 @@ func (r *Redactor) Bytes(input []byte) []byte {
 }
 
 func (r *Redactor) Reader(source io.Reader) io.Reader {
-	if r == nil || len(r.patterns) == 0 {
+	patterns := r.Patterns()
+	if len(patterns) == 0 {
 		return source
 	}
+	return &redactingReader{source: source, patterns: patterns}
+}
 
-	return &redactingReader{source: source, patterns: r.patterns}
+// AddPatterns registers credentials discovered lazily during an operation.
+func (r *Redactor) AddPatterns(patterns ...[]byte) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, pattern := range patterns {
+		if len(pattern) > 0 {
+			r.patterns = append(r.patterns, bytes.Clone(pattern))
+		}
+	}
+	sort.SliceStable(r.patterns, func(i, j int) bool { return len(r.patterns[i]) > len(r.patterns[j]) })
+}
+
+func (r *Redactor) Patterns() [][]byte {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	patterns := make([][]byte, 0, len(r.patterns))
+	for _, pattern := range r.patterns {
+		patterns = append(patterns, bytes.Clone(pattern))
+	}
+	return patterns
 }
 
 type redactingReader struct {

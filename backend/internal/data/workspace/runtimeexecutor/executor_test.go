@@ -112,7 +112,7 @@ func TestStartCLIConnectorBrokerExposesOnlyProtectedSocketToModelRuntime(t *test
 		BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{runtimeDigest}, Capabilities: capabilities, Version: 1,
 	}}}}
 	runtime := platformconfig.RuntimeEngineConfig{ImageDigest: "registry.example/runtime@" + runtimeDigest}
-	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, 1, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root)
+	server, socket, err := executor.startCLIConnectorBroker(context.Background(), job, 1, runtime, filepath.Join(root, "connectors"), filepath.Join(root, "workspace"), root, &recordingProgress{}, credentials.NewRedactor())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,14 +227,17 @@ func TestCLIEnvironmentResolverInjectsOneRunFeishuCredentials(t *testing.T) {
 	appSecret, _ := box.Encrypt([]byte("app-secret"), "feishu-cli-application:"+ownerID)
 	token, _ := box.Encrypt([]byte("user-token"), "feishu-cli-authorization-token:"+ownerID+":"+enablementID+":"+externalID)
 	repository := &stubCLICredentialRepository{credentials: cliconnector.EncryptedExecutionCredentials{
-		AppIDCiphertext: appID, AppSecretCiphertext: appSecret, TokenCiphertext: token, EnablementID: enablementID, ExternalIdentityID: externalID,
+		AppIDCiphertext: appID, AppSecretCiphertext: appSecret, TokenCiphertext: token, EnablementID: enablementID, AuthorizationID: "authorization-1", ExternalIdentityID: externalID, ExternalDisplayName: "Alice",
 	}}
-	executor := &Executor{box: box, cliCredentials: repository}
+	executor := &Executor{box: box}
+	if err := executor.EnableCLICredentials(repository); err != nil {
+		t.Fatal(err)
+	}
 	environment, err := executor.cliEnvironmentResolver(ownerID)(context.Background(), cliconnector.Definition{ID: "connector-1", AuthenticationDriver: "feishu"}, cliconnector.Capability{ID: "calendar", Scopes: []string{"calendar:calendar:read"}}, cliconnector.IdentityUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if environment["LARKSUITE_CLI_APP_ID"] != "cli_app" || environment["LARKSUITE_CLI_APP_SECRET"] != "app-secret" || environment["LARKSUITE_CLI_USER_ACCESS_TOKEN"] != "user-token" || environment["LARKSUITE_CLI_STRICT_MODE"] != "user" {
+	if environment.Environment["LARKSUITE_CLI_APP_ID"] != "cli_app" || environment.Environment["LARKSUITE_CLI_APP_SECRET"] != "app-secret" || environment.Environment["LARKSUITE_CLI_USER_ACCESS_TOKEN"] != "user-token" || environment.Environment["LARKSUITE_CLI_STRICT_MODE"] != "user" || environment.AuthorizationID != "authorization-1" || environment.ExternalDisplayName != "Alice" {
 		t.Fatalf("CLI environment = %#v", environment)
 	}
 	if repository.ownerID != ownerID || repository.definitionID != "connector-1" || strings.Join(repository.scopes, " ") != "calendar:calendar:read" {
@@ -247,6 +250,10 @@ type stubCLICredentialRepository struct {
 	ownerID, definitionID string
 	identity              cliconnector.Identity
 	scopes                []string
+}
+
+func (repository *stubCLICredentialRepository) RevalidateCLIConnectorExecution(context.Context, string, string, int64) error {
+	return nil
 }
 
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
@@ -440,16 +447,15 @@ func TestBuildInstructionUsesExecutionInstructionNotCapabilityIntroduction(t *te
 	}
 }
 
-func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
+func TestBuildInstructionIncludesCompactCLIConnectorIndex(t *testing.T) {
 	capabilities, err := json.Marshal([]cliconnector.Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	job := application.ExecutionJob{Instruction: "Check identity", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "connector-1", Name: "Feishu CLI", Capabilities: capabilities}}}}
 	got := buildInstruction(job, nil)
-	want := "agent-cli --connector connector-1 --capability identity --identity <user> [--target <target>] -- auth status"
-	if !strings.Contains(got, want) || strings.Contains(got, "/opt/agent-platform/connector") {
-		t.Fatalf("CLI Connector instruction = %q", got)
+	if !strings.Contains(got, "agent-cli describe --connector connector-1") || !strings.Contains(got, "agent-cli --connector connector-1 --capability identity --identity <user> --input '<json>'") || strings.Contains(got, "-- auth status") || strings.Contains(got, "/opt/agent-platform/connector") {
+		t.Fatalf("CLI Connector capability index = %q", got)
 	}
 }
 

@@ -5,16 +5,21 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/objectstore/memory"
 
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
+	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
 )
 
 type cliCatalogRepository struct {
@@ -23,6 +28,40 @@ type cliCatalogRepository struct {
 	items          []cliconnector.Definition
 	deletedID      string
 	deletedVersion int64
+	enabledOwner   string
+	enabledID      string
+	action         cliconnector.ActionRequirement
+	providerURL    string
+}
+
+func (repository *cliCatalogRepository) ListConnectorActions(_ context.Context, ownerID string, _ time.Time) ([]cliconnector.ActionRequirement, error) {
+	if repository.action.OwnerID != ownerID {
+		return nil, nil
+	}
+	item := repository.action
+	return []cliconnector.ActionRequirement{item}, nil
+}
+
+func (repository *cliCatalogRepository) GetConnectorAction(_ context.Context, ownerID, id string) (cliconnector.ActionRequirement, error) {
+	if repository.action.OwnerID != ownerID || repository.action.ID != id {
+		return cliconnector.ActionRequirement{}, workspacedomain.ErrNotFound
+	}
+	return repository.action, nil
+}
+
+func (repository *cliCatalogRepository) ResetConnectorActionProviderURL(_ context.Context, ownerID, id string) (cliconnector.ActionRequirement, error) {
+	item, err := repository.GetConnectorAction(context.Background(), ownerID, id)
+	item.ActionURLToken = "action-token"
+	return item, err
+}
+
+func (repository *cliCatalogRepository) ConsumeConnectorActionProviderURL(_ context.Context, id string, expectedVersion int64, token string) (string, error) {
+	if repository.action.ID != id || repository.action.Version != expectedVersion || token != "action-token" || repository.providerURL == "" {
+		return "", workspacedomain.ErrNotFound
+	}
+	value := repository.providerURL
+	repository.providerURL = ""
+	return value, nil
 }
 
 func (repository *cliCatalogRepository) DeleteCLIConnectorDefinition(_ context.Context, id string, version int64) error {
@@ -57,6 +96,20 @@ func TestCLIConnectorDeletionRequiresAdministratorAndVersion(t *testing.T) {
 
 func (repository *cliCatalogRepository) ListCLIConnectorDefinitions(context.Context, bool) ([]cliconnector.Definition, error) {
 	return repository.items, nil
+}
+
+func (repository *cliCatalogRepository) GetAvailableCLIConnectorDefinition(_ context.Context, id string) (cliconnector.Definition, error) {
+	for _, item := range repository.items {
+		if item.ID == id && item.State == cliconnector.StateAvailable {
+			return item, nil
+		}
+	}
+	return cliconnector.Definition{}, workspacedomain.ErrNotFound
+}
+
+func (repository *cliCatalogRepository) EnableCLIConnector(_ context.Context, ownerID, id string) (cliconnector.Enablement, error) {
+	repository.enabledOwner, repository.enabledID = ownerID, id
+	return cliconnector.Enablement{ID: "enablement-1", OwnerID: ownerID, DefinitionID: id, State: "enabled", Version: 1}, nil
 }
 
 func TestAvailableCLIConnectorIsEditableForAdministrator(t *testing.T) {
@@ -118,6 +171,63 @@ func TestAdministratorCannotEnableCLIConnector(t *testing.T) {
 	_, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
 	if code := kratoserrors.Code(err); code != http.StatusForbidden {
 		t.Fatalf("Administrator enablement code = %d, want %d", code, http.StatusForbidden)
+	}
+}
+
+func TestEnablingProtectedConnectorDoesNotStartAuthorization(t *testing.T) {
+	repository := &cliCatalogRepository{items: []cliconnector.Definition{{ID: "definition-1", Name: "Feishu CLI", State: cliconnector.StateAvailable, AuthenticationDriver: "feishu"}}}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "user-1"})
+	response, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.State != "enabled" || response.ActionUrl != nil || repository.enabledOwner != "user-1" || repository.enabledID != "definition-1" {
+		t.Fatalf("enablement=%#v repository=%#v", response, repository)
+	}
+}
+
+func TestConversationAuthorizationUsesOwnerCheckedPlatformURL(t *testing.T) {
+	action := cliconnector.ActionRequirement{ID: "action-1", OwnerID: "user-1", State: cliconnector.ActionPending, ExpiresAt: time.Now().Add(time.Minute), Version: 1}
+	repository := &cliCatalogRepository{action: action, providerURL: "https://open.feishu.cn/open-apis/authen/v1/authorize?secret=value"}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	platformAction := connectorActionResponseWithPlatformURL(cliconnector.ActionRequirement{ID: action.ID, Version: 1, ActionURL: repository.providerURL, ActionURLToken: "action-token"})
+	if platformAction.ActionUrl == nil || strings.Contains(*platformAction.ActionUrl, "secret") || !strings.Contains(*platformAction.ActionUrl, "token=action-token") {
+		t.Fatalf("platform action = %#v", platformAction)
+	}
+
+	authentication, err := NewAuthenticationFilter(service.accounts, application)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := kratoshttp.NewServer(kratoshttp.Filter(authentication))
+	service.RegisterHTTP(server)
+	request := httptest.NewRequest(http.MethodGet, *platformAction.ActionUrl, nil)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "https://open.feishu.cn/open-apis/authen/v1/authorize?secret=value" || response.Header().Get("Referrer-Policy") != "no-referrer" {
+		t.Fatalf("status=%d headers=%v", response.Code, response.Header())
+	}
+	replayed := httptest.NewRequest(http.MethodGet, *platformAction.ActionUrl, nil)
+	response = httptest.NewRecorder()
+	server.ServeHTTP(response, replayed)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("replayed URL status=%d", response.Code)
+	}
+
+	other := httptest.NewRequest(http.MethodGet, "/api/v1/connector-actions/action-1/open?version=1&token=wrong", nil)
+	response = httptest.NewRecorder()
+	server.ServeHTTP(response, other)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("cross-owner status=%d", response.Code)
 	}
 }
 

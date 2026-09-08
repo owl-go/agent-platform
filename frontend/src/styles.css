@@ -352,6 +352,19 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .runtime-activity li div { min-width: 0; }
 .runtime-activity li strong { flex: none; white-space: nowrap; }
 .runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }
+.runtime-activity-summary { display: inline-flex; align-items: center; gap: 7px; min-height: 28px; max-width: 100%; padding: 4px 9px; border: 1px solid #dce6df; border-radius: 9px; background: #f5f8f5; color: #526159; }
+.runtime-activity-summary strong { color: #405048; font-size: .74rem; font-weight: 650; }
+.runtime-activity-summary small { min-width: 0; overflow-wrap: anywhere; color: #7e8983; }
+.runtime-activity details { margin-left: 0; }
+.connector-action-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: min(100%,720px); margin: 0 0 14px; padding: 10px 12px; border: 1px solid #bdd7c8; border-radius: 11px; background: linear-gradient(115deg,#f1f8f3,#f8fbf8); color: #214c39; }
+.connector-action-card > div:first-child { display: grid; min-width: 0; gap: 2px; }
+.connector-action-card strong { font-size: .8rem; }
+.connector-action-card span,.connector-action-card small { color: #5d7469; font-size: .7rem; }
+.connector-action-link { max-width: 440px; overflow: hidden; color: #39745a; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.connector-action-buttons { display: flex; flex: none; align-items: center; gap: 6px; }
+.connector-action-buttons .el-button { min-height: 28px; padding: 5px 10px; border-radius: 8px; font-size: .72rem; }
+.connector-action-buttons select { min-height: 28px; padding: 4px 24px 4px 8px; border: 1px solid #cfd9d2; border-radius: 8px; background: #fff; color: #425249; font-size: .72rem; }
+@media (max-width: 680px) { .connector-action-card { align-items: stretch; flex-direction: column; }.connector-action-buttons { flex-wrap: wrap; } }
 .approval-inbox { position: sticky; top: 12px; z-index: 20; margin: 12px 20px 0; }
 .approval-card { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 16px; border: 1px solid color-mix(in srgb, var(--el-color-warning) 45%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--el-color-warning-light-9) 92%, white); box-shadow: 0 12px 32px rgba(73, 57, 32, .12); }
 .approval-card div { display: grid; gap: 4px; min-width: 0; }
@@ -391,6 +404,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .cli-install-card { width: min(560px,calc(100vw - 40px)); }
 .cli-icon-field { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 10px; }
 .cli-install-card label > small { color: var(--muted); font-size: .68rem; line-height: 1.5; }
+.cli-presentation-editor { display: grid; gap: 9px; }
+.cli-presentation-editor > small { color: var(--muted); font-size: .7rem; }
+.cli-presentation-editor fieldset { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+@media (max-width: 560px) { .cli-presentation-editor fieldset { grid-template-columns: 1fr; } }
 .recommended-skill-offers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
 .recommended-skill-offers > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 8px; background: #f2f5f1; }
 .recommended-skill-offers > span.warning { background: var(--el-color-warning-light-9); color: var(--el-color-warning-dark-2); }
@@ -401,6 +418,9 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .connector-detail-fields > div + div { border-top: 1px solid var(--line); }
 .connector-detail-fields dt { color: var(--muted); font-size: .72rem; }
 .connector-detail-fields dd { margin: 0; overflow-wrap: anywhere; font-size: .78rem; }
+.connector-manifest-capability { display: grid; gap: 4px; margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.connector-manifest-capability small, .connector-manifest-capability code { overflow-wrap: anywhere; }
+.connector-usage-guide { white-space: pre-wrap; }
 
 @media (max-width: 720px) {
   .approval-inbox { margin: 8px 12px 0; }

@@ -127,6 +127,7 @@ func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job a
 		completed.Package, completed.Version, completed.Integrity = build.Package, build.Version, build.Integrity
 		completed.Executable, completed.AuthenticationDriver = build.Executable, build.AuthenticationDriver
 		completed.Capabilities, completed.SupportedArchitectures = build.Capabilities, build.SupportedArchitectures
+		completed.ManifestVersion, completed.UsageGuide = build.ManifestVersion, build.UsageGuide
 		if err := completed.Validate(); err != nil {
 			return fmt.Errorf("%w: invalid completed CLI Connector: %v", domain.ErrInvalid, err)
 		}
@@ -140,7 +141,7 @@ func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job a
 				return err
 			}
 		}
-		result := query.Updates(map[string]any{"state": string(cliconnector.StateAvailable), "failure_reason": nil, "bundle_object_key": build.BundleObjectKey, "bundle_sha256": build.BundleSHA256, "npm_package": build.Package, "npm_version": build.Version, "npm_integrity": build.Integrity, "executable": build.Executable, "authentication_driver": build.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		result := query.Updates(map[string]any{"state": string(cliconnector.StateReview), "failure_reason": nil, "bundle_object_key": build.BundleObjectKey, "bundle_sha256": build.BundleSHA256, "npm_package": build.Package, "npm_version": build.Version, "npm_integrity": build.Integrity, "executable": build.Executable, "authentication_driver": build.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "manifest_version": build.ManifestVersion, "usage_guide": build.UsageGuide, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -1158,6 +1159,23 @@ func sessionExecutionActivity(event application.ExecutionEvent) (*domain.Executi
 				}
 			}
 		}
+		if strings.Contains(detail, "agent-cli") && strings.Contains(detail, "--connector") {
+			return nil, nil
+		}
+	case "connector.operation.requested", "connector.operation.waiting", "connector.operation.started", "connector.operation.succeeded", "connector.operation.failed", "connector.operation.cancelled", "connector.operation.timed_out", "connector.operation.outcome_unknown":
+		connectorName, _ := payload["connector_name"].(string)
+		phrase := ""
+		if phrases, ok := payload["operation_phrase"].(map[string]any); ok {
+			phrase, _ = phrases["zh-CN"].(string)
+			if phrase == "" {
+				phrase, _ = phrases["en"].(string)
+			}
+		}
+		if phrase == "" {
+			phrase, _ = payload["capability_id"].(string)
+		}
+		detail = strings.TrimSpace(strings.TrimSpace(connectorName) + " · " + strings.TrimSpace(phrase))
+		detail = strings.Trim(detail, " ·")
 	case "file.changed":
 	default:
 		return nil, nil

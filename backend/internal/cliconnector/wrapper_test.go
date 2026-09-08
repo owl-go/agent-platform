@@ -3,6 +3,7 @@ package cliconnector
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -70,6 +71,16 @@ func TestWrapperRejectsExpiredApprovalBeforeConsumption(t *testing.T) {
 	_, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "send", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"message", "send"}, Target: "chat-1", ApprovalNonce: "once", ApprovalExpiresAt: time.Unix(199, 0)})
 	if err == nil || consumed || process.starts != 0 {
 		t.Fatalf("consumed=%v starts=%d err=%v", consumed, process.starts, err)
+	}
+}
+
+func TestWrapperRejectsConnectorDisabledAfterSnapshotBeforeProcessStart(t *testing.T) {
+	process := &recordingProcess{}
+	wrapper := Wrapper{Process: process, Revalidate: func(context.Context, Definition, Request) error { return errors.New("Connector disabled") }}
+	definition := Definition{ID: "connector-1", State: StateAvailable, Executable: "tool", BundleSHA256: strings.Repeat("a", 64), RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "read", ArgvPrefix: []string{"read"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"example.test"}, Timeout: time.Minute}}}
+	_, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "read", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"read"}})
+	if err == nil || process.starts != 0 {
+		t.Fatalf("starts=%d err=%v", process.starts, err)
 	}
 }
 

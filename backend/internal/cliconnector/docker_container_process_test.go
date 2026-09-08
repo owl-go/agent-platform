@@ -48,7 +48,7 @@ func TestDockerContainerProcessStartsOnlyAfterNetworkPolicyAndCleansUp(t *testin
 			createEnvironment = cloneEnvironment(environment)
 		}
 		return nil, nil
-	}, func(_ context.Context, arguments []string) (Result, error) {
+	}, func(_ context.Context, arguments []string, _ int) (Result, error) {
 		start = append([]string(nil), arguments...)
 		events = append(events, "start")
 		return Result{Stdout: []byte("ok")}, nil
@@ -95,7 +95,7 @@ func TestDockerContainerProcessCleansUpWhenEgressGateRejects(t *testing.T) {
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(_ context.Context, _ map[string]string, command string, arguments ...string) ([]byte, error) {
 		commands = append(commands, append([]string{command}, arguments...))
 		return nil, nil
-	}, func(context.Context, []string) (Result, error) {
+	}, func(context.Context, []string, int) (Result, error) {
 		started = true
 		return Result{}, nil
 	}))
@@ -114,7 +114,7 @@ func TestDockerContainerProcessDoesNotCleanupContainerCreateItDidNotOwn(t *testi
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(_ context.Context, _ map[string]string, command string, arguments ...string) ([]byte, error) {
 		commands = append(commands, append([]string{command}, arguments...))
 		return []byte("create failed"), errors.New("exit 1")
-	}, func(context.Context, []string) (Result, error) { return Result{}, nil }))
+	}, func(context.Context, []string, int) (Result, error) { return Result{}, nil }))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,13 +129,23 @@ func TestDockerContainerProcessRejectsRuntimeSocketEnvironmentOverride(t *testin
 	process, err := NewDockerContainerProcess(testDockerContainerConfig(gate, func(context.Context, map[string]string, string, ...string) ([]byte, error) {
 		t.Fatal("Docker must not run")
 		return nil, nil
-	}, func(context.Context, []string) (Result, error) { return Result{}, nil }))
+	}, func(context.Context, []string, int) (Result, error) { return Result{}, nil }))
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = process.Run(context.Background(), ProcessRequest{ConnectorID: "connector-1", Executable: "tool", Arguments: []string{"read"}, Environment: map[string]string{"AGENT_PLATFORM_CLI_SOCKET": "/forged"}, EgressHosts: []string{"example.com"}})
 	if err == nil || gate.runs != 0 {
 		t.Fatalf("err=%v gate runs=%d", err, gate.runs)
+	}
+}
+
+func TestDockerStartStopsWhenCombinedOutputExceedsLimit(t *testing.T) {
+	result, err := runDockerStart(context.Background(), []string{"sh", "-c", "while :; do printf 1234567890; done"}, 128)
+	if !errors.Is(err, ErrOutputLimit) {
+		t.Fatalf("err=%v", err)
+	}
+	if len(result.Stdout)+len(result.Stderr) > 128 {
+		t.Fatalf("captured output exceeded limit: %d", len(result.Stdout)+len(result.Stderr))
 	}
 }
 

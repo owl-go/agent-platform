@@ -100,7 +100,11 @@ func (repository *Repository) CreateCLIConnectorDefinition(ctx context.Context, 
 	if id == "" {
 		id = uuid.NewString()
 	}
-	row := cliConnectorDefinitionRecord{ID: id, Name: input.Name, Icon: input.Icon, Description: input.Description, InstallationType: input.InstallationType, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: []byte(`[]`), RecommendedSkills: recommendedSkills, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
+	manifestVersion := input.ManifestVersion
+	if manifestVersion == "" {
+		manifestVersion = "draft-v1"
+	}
+	row := cliConnectorDefinitionRecord{ID: id, Name: input.Name, Icon: input.Icon, Description: input.Description, InstallationType: input.InstallationType, NPMPackage: input.Package, NPMVersion: input.Version, NPMIntegrity: input.Integrity, Executable: input.Executable, AuthenticationDriver: input.AuthenticationDriver, Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkillIDs: []byte(`[]`), RecommendedSkills: recommendedSkills, ManifestVersion: manifestVersion, UsageGuide: input.UsageGuide, State: string(cliconnector.StateDraft), CreatedByUserID: administratorID, Version: 1}
 	if input.SourceObjectKey != "" {
 		row.SourceObjectKey, row.SourceSHA256 = &input.SourceObjectKey, &input.SourceSHA256
 	}
@@ -117,7 +121,11 @@ func (repository *Repository) UpdateCLIConnectorDefinition(ctx context.Context, 
 	capabilities, _ := json.Marshal(input.Capabilities)
 	architectures, _ := json.Marshal(input.SupportedArchitectures)
 	recommendedSkills, _ := json.Marshal(input.RecommendedSkills)
-	updates := map[string]any{"name": input.Name, "icon": input.Icon, "description": input.Description, "installation_type": input.InstallationType, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skills": recommendedSkills, "state": "draft", "failure_reason": nil, "bundle_object_key": nil, "bundle_sha256": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+	manifestVersion := input.ManifestVersion
+	if manifestVersion == "" {
+		manifestVersion = "draft-v1"
+	}
+	updates := map[string]any{"name": input.Name, "icon": input.Icon, "description": input.Description, "installation_type": input.InstallationType, "npm_package": input.Package, "npm_version": input.Version, "npm_integrity": input.Integrity, "executable": input.Executable, "authentication_driver": input.AuthenticationDriver, "capabilities": capabilities, "supported_architectures": architectures, "recommended_skills": recommendedSkills, "manifest_version": manifestVersion, "usage_guide": input.UsageGuide, "state": "draft", "failure_reason": nil, "bundle_object_key": nil, "bundle_sha256": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	if input.SourceObjectKey != "" {
 		updates["source_object_key"], updates["source_sha256"] = input.SourceObjectKey, input.SourceSHA256
 	} else {
@@ -143,12 +151,47 @@ func (repository *Repository) PublishCLIConnectorDefinition(ctx context.Context,
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if row.Version != expectedVersion || (row.State != string(cliconnector.StateDraft) && row.State != string(cliconnector.StateFailed)) {
+		if row.Version != expectedVersion || (row.State != string(cliconnector.StateDraft) && row.State != string(cliconnector.StateFailed) && row.State != string(cliconnector.StateReview)) {
 			return domain.ErrConflict
 		}
 		definition, err := cliDefinitionDomain(row)
 		if err != nil {
 			return err
+		}
+		if row.State == string(cliconnector.StateReview) {
+			if err := definition.Validate(); err != nil {
+				return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
+			}
+			var conformanceCount int64
+			if err := tx.Table("cli_connector_conformance").Where("definition_id = ? AND bundle_sha256 = ? AND passed", row.ID, definition.BundleSHA256).Count(&conformanceCount).Error; err != nil {
+				return err
+			}
+			permissions := make([]string, 0)
+			for _, capability := range definition.Capabilities {
+				for _, permission := range capability.Scopes {
+					if !slices.Contains(permissions, permission) {
+						permissions = append(permissions, permission)
+					}
+				}
+			}
+			source := cliconnector.ManifestSourcePackage
+			if definition.Package == "@larksuite/cli" && definition.Version == "1.0.93" {
+				source = cliconnector.ManifestSourceProfile
+			}
+			if _, err := cliconnector.ResolveManifest(cliconnector.Manifest{
+				SchemaVersion: definition.ManifestVersion, Authorization: cliconnector.AuthorizationDeclaration{Scheme: definition.AuthenticationDriver, Permissions: permissions},
+				UsageGuide: definition.UsageGuide, Capabilities: definition.Capabilities,
+			}, cliconnector.ManifestResolution{Source: source, ArtifactSHA256: definition.BundleSHA256, DefinitionVersion: definition.VersionNumber, Reviewed: true, Conformant: conformanceCount > 0}); err != nil {
+				return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
+			}
+			result := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ? AND version = ? AND state = ?", id, expectedVersion, cliconnector.StateReview).Updates(map[string]any{"state": string(cliconnector.StateAvailable), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			if result.Error != nil || result.RowsAffected != 1 {
+				if result.Error != nil {
+					return result.Error
+				}
+				return domain.ErrConflict
+			}
+			return tx.Where("id = ?", id).Take(&row).Error
 		}
 		if err := definition.ValidateDraft(); err != nil {
 			return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
@@ -235,6 +278,24 @@ func (repository *Repository) GetAvailableCLIConnectorDefinition(ctx context.Con
 	return cliDefinitionDomain(row)
 }
 
+func (repository *Repository) RevalidateCLIConnectorExecution(ctx context.Context, ownerID, definitionID string, frozenVersion int64) error {
+	if frozenVersion <= 0 {
+		return fmt.Errorf("%w: invalid frozen Connector version", domain.ErrConflict)
+	}
+	var count int64
+	if err := repository.db.WithContext(ctx).Table("cli_connector_definitions AS definition").
+		Joins("JOIN cli_connector_enablements AS enablement ON enablement.definition_id = definition.id AND enablement.owner_user_id = ? AND enablement.state = 'enabled'", ownerID).
+		Where("definition.id = ? AND definition.version >= ? AND definition.state <> ? AND definition.deleted_at IS NULL", definitionID, frozenVersion, cliconnector.StateDisabled).
+		Where("NOT (definition.state = ? AND definition.manifest_version = 'legacy-v1')", cliconnector.StateDraft).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("%w: frozen Connector definition is no longer executable", domain.ErrConflict)
+	}
+	return nil
+}
+
 func (repository *Repository) GetCLIConnectorEnablement(ctx context.Context, ownerID, definitionID string) (cliconnector.Enablement, error) {
 	var row cliConnectorEnablementRecord
 	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err != nil {
@@ -254,25 +315,7 @@ func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, d
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND state = 'available'", definitionID).Take(&definition).Error; err != nil {
 			return mapNotFound(err)
 		}
-		var application feishuCLIApplicationRecord
-		if definition.AuthenticationDriver == "feishu" {
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ?", ownerID).Take(&application).Error; err != nil {
-				return mapNotFound(err)
-			}
-			var previous cliConnectorEnablementRecord
-			if err := tx.Where("id = ?", application.EnablementID).Take(&previous).Error; err != nil {
-				return err
-			}
-			if previous.DefinitionID != definitionID {
-				var count int64
-				if err := tx.Model(&cliConnectorDefinitionRecord{}).Where("id = ?", previous.DefinitionID).Count(&count).Error; err != nil {
-					return err
-				}
-				if count != 0 {
-					return domain.ErrConflict
-				}
-			}
-		} else if definition.AuthenticationDriver != "none" {
+		if err := cliconnector.ValidateAuthorizationReferences(definition.AuthenticationDriver, nil); err != nil {
 			return domain.ErrInvalid
 		}
 		row = cliConnectorEnablementRecord{ID: uuid.NewString(), OwnerID: ownerID, DefinitionID: definitionID, State: "enabled", Version: 1}
@@ -285,9 +328,6 @@ func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, d
 		row = cliConnectorEnablementRecord{}
 		if err := tx.Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err != nil {
 			return err
-		}
-		if application.ID != "" && application.EnablementID != row.ID {
-			return tx.Model(&feishuCLIApplicationRecord{}).Where("id = ?", application.ID).Updates(map[string]any{"enablement_id": row.ID, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error
 		}
 		return nil
 	})
@@ -312,7 +352,7 @@ func (repository *Repository) BeginFeishuCLIConnectorEnablement(ctx context.Cont
 			return mapNotFound(err)
 		}
 		if err := tx.Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err == nil {
-			if row.State == "enabled" || row.State == "waiting_for_user" && row.ActionExpiresAt != nil && row.ActionExpiresAt.After(time.Now().UTC()) {
+			if row.State == "waiting_for_user" && row.ActionExpiresAt != nil && row.ActionExpiresAt.After(time.Now().UTC()) {
 				return nil
 			}
 			result := tx.Model(&cliConnectorEnablementRecord{}).Where("id = ? AND version = ?", row.ID, row.Version).Updates(map[string]any{
@@ -516,6 +556,17 @@ func (repository *Repository) GetCLIConnectorAuthorizationAttempt(ctx context.Co
 	return cliAuthorizationAttemptDomain(row)
 }
 
+func (repository *Repository) GetCLIConnectorAuthorizationAttemptForEnablement(ctx context.Context, ownerID, enablementID string) (cliconnector.AuthorizationAttempt, error) {
+	var row cliConnectorAuthorizationAttemptRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ?", ownerID, enablementID).Take(&row).Error; err != nil {
+		return cliconnector.AuthorizationAttempt{}, mapNotFound(err)
+	}
+	if !time.Now().UTC().Before(row.ExpiresAt) {
+		return cliconnector.AuthorizationAttempt{}, domain.ErrConflict
+	}
+	return cliAuthorizationAttemptDomain(row)
+}
+
 func (repository *Repository) CompleteCLIConnectorAuthorization(ctx context.Context, attempt cliconnector.AuthorizationAttempt, externalID, displayName string, scopes []string, tokenCiphertext, refreshTokenCiphertext []byte, expiresAt time.Time) (cliconnector.Authorization, error) {
 	if attempt.Identity != cliconnector.IdentityUser || externalID == "" || displayName == "" || len(tokenCiphertext) == 0 || !expiresAt.After(time.Now().UTC()) {
 		return cliconnector.Authorization{}, domain.ErrInvalid
@@ -530,6 +581,14 @@ func (repository *Repository) CompleteCLIConnectorAuthorization(ctx context.Cont
 		var enablement cliConnectorEnablementRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ? AND state = 'enabled'", attempt.EnablementID, attempt.OwnerID).Take(&enablement).Error; err != nil {
 			return mapNotFound(err)
+		}
+		var active cliConnectorAuthorizationRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND enablement_id = ? AND state = 'active'", attempt.OwnerID, attempt.EnablementID).Take(&active).Error; err == nil {
+			if active.ExternalIdentityID != externalID {
+				return fmt.Errorf("%w: changing the Connector account requires an explicit switch", domain.ErrConflict)
+			}
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 		result := tx.Where("id = ? AND owner_user_id = ?", attempt.ID, attempt.OwnerID).Delete(&cliConnectorAuthorizationAttemptRecord{})
 		if result.Error != nil || result.RowsAffected != 1 {
@@ -600,6 +659,9 @@ func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx contex
 	}
 	var application feishuCLIApplicationRecord
 	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND enablement_id = ?", ownerID, enablement.ID).Take(&application).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return cliconnector.EncryptedExecutionCredentials{}, cliconnector.NewRequirementError(cliconnector.ReasonSetupRequired, enablement.ID, requiredScopes, cliconnector.UserActionOpenURL, cliconnector.UserActionCopyValue, cliconnector.UserActionCheckStatus)
+		}
 		return cliconnector.EncryptedExecutionCredentials{}, mapNotFound(err)
 	}
 	result := cliconnector.EncryptedExecutionCredentials{
@@ -608,7 +670,7 @@ func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx contex
 	if identity == cliconnector.IdentityBot {
 		var granted []string
 		if err := json.Unmarshal(application.GrantedScopes, &granted); err != nil || !containsAllScopes(granted, requiredScopes) {
-			return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+			return cliconnector.EncryptedExecutionCredentials{}, cliconnector.NewRequirementError(cliconnector.ReasonPermissionsMissing, enablement.ID, requiredScopes, cliconnector.UserActionOpenURL, cliconnector.UserActionCopyValue, cliconnector.UserActionCheckStatus)
 		}
 		return result, nil
 	}
@@ -620,14 +682,16 @@ func (repository *Repository) ResolveCLIConnectorExecutionCredentials(ctx contex
 		return cliconnector.EncryptedExecutionCredentials{}, err
 	}
 	if len(authorizations) != 1 {
-		return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+		return cliconnector.EncryptedExecutionCredentials{}, cliconnector.NewRequirementError(cliconnector.ReasonAuthorizationRequired, enablement.ID, requiredScopes, cliconnector.UserActionOpenURL, cliconnector.UserActionCopyValue, cliconnector.UserActionCheckStatus)
 	}
 	var granted []string
 	if err := json.Unmarshal(authorizations[0].Scopes, &granted); err != nil || !containsAllScopes(granted, requiredScopes) || len(authorizations[0].TokenCiphertext) == 0 {
-		return cliconnector.EncryptedExecutionCredentials{}, domain.ErrInvalid
+		return cliconnector.EncryptedExecutionCredentials{}, cliconnector.NewRequirementError(cliconnector.ReasonPermissionsMissing, enablement.ID, requiredScopes, cliconnector.UserActionOpenURL, cliconnector.UserActionCopyValue, cliconnector.UserActionCheckStatus)
 	}
 	result.TokenCiphertext = append([]byte(nil), authorizations[0].TokenCiphertext...)
+	result.AuthorizationID = authorizations[0].ID
 	result.ExternalIdentityID = authorizations[0].ExternalIdentityID
+	result.ExternalDisplayName = authorizations[0].ExternalDisplayName
 	return result, nil
 }
 
@@ -657,7 +721,7 @@ func cliDefinitionDomain(row cliConnectorDefinitionRecord) (cliconnector.Definit
 	if err := json.Unmarshal(row.RecommendedSkills, &recommendedSkills); err != nil {
 		return cliconnector.Definition{}, err
 	}
-	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Icon: row.Icon, Description: row.Description, InstallationType: row.InstallationType, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkills: recommendedSkills, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
+	item := cliconnector.Definition{ID: row.ID, Name: row.Name, Icon: row.Icon, Description: row.Description, InstallationType: row.InstallationType, Package: row.NPMPackage, Version: row.NPMVersion, Integrity: row.NPMIntegrity, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, State: cliconnector.State(row.State), Capabilities: capabilities, SupportedArchitectures: architectures, RecommendedSkills: recommendedSkills, ManifestVersion: row.ManifestVersion, UsageGuide: row.UsageGuide, VersionNumber: row.Version, CreatedByUserID: row.CreatedByUserID}
 	if row.SourceObjectKey != nil {
 		item.SourceObjectKey = *row.SourceObjectKey
 	}
@@ -754,7 +818,10 @@ func (repository *Repository) DecideCommandApproval(ctx context.Context, ownerID
 }
 
 func commandApprovalDomain(row cliCommandApprovalRecord) domain.CommandApproval {
-	value := domain.CommandApproval{ID: row.ID, OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID, CommandDigest: row.CommandDigest, NonceHash: row.NonceHash, ConnectorName: row.ConnectorName, Operation: row.Operation, Target: row.Target, RedactedArguments: row.RedactedArguments, State: domain.ApprovalState(row.State), ExpiresAt: row.ExpiresAt, DecidedAt: row.DecidedAt, ConsumedAt: row.ConsumedAt, Version: row.Version}
+	value := domain.CommandApproval{ID: row.ID, OwnerID: row.OwnerID, ExecutionKind: row.ExecutionKind, ExecutionID: row.ExecutionID, StageID: row.StageID, CommandDigest: row.CommandDigest, NonceHash: row.NonceHash, ConnectorName: row.ConnectorName, Operation: row.Operation, Target: row.Target, RedactedArguments: row.RedactedArguments, OperationID: row.OperationID, ManifestVersion: row.ManifestVersion, InputDigest: row.InputDigest, ExternalIdentityID: row.ExternalIdentityID, ExternalDisplayName: row.ExternalDisplayName, State: domain.ApprovalState(row.State), ExpiresAt: row.ExpiresAt, DecidedAt: row.DecidedAt, ConsumedAt: row.ConsumedAt, Version: row.Version}
+	if row.AuthorizationID != nil {
+		value.AuthorizationID = *row.AuthorizationID
+	}
 	if row.Identity != nil {
 		value.Identity = domain.ExecutionIdentity(*row.Identity)
 	}
@@ -776,10 +843,18 @@ func (repository *Repository) Await(ctx context.Context, request cliconnector.Ap
 	approval.ExecutionKind, approval.ExecutionID = request.ExecutionKind, request.ExecutionID
 	approval.ConnectorName, approval.Operation, approval.Target = request.ConnectorName, request.Operation, request.Target
 	approval.RedactedArguments = request.RedactedArguments
+	approval.OperationID, approval.ManifestVersion, approval.InputDigest = request.OperationID, request.ManifestVersion, request.InputDigest
+	approval.AuthorizationID, approval.ExternalIdentityID, approval.ExternalDisplayName = request.AuthorizationID, request.ExternalIdentityID, request.ExternalDisplayName
+	var authorizationID *string
+	if approval.AuthorizationID != "" {
+		authorizationID = &approval.AuthorizationID
+	}
 	row := cliCommandApprovalRecord{
 		ID: approval.ID, OwnerID: approval.OwnerID, ExecutionKind: approval.ExecutionKind, ExecutionID: approval.ExecutionID,
 		StageID: approval.StageID, ConnectorName: approval.ConnectorName, Operation: approval.Operation,
 		Target: approval.Target, RedactedArguments: approval.RedactedArguments, CommandDigest: approval.CommandDigest,
+		OperationID: approval.OperationID, ManifestVersion: approval.ManifestVersion, InputDigest: approval.InputDigest,
+		AuthorizationID: authorizationID, ExternalIdentityID: approval.ExternalIdentityID, ExternalDisplayName: approval.ExternalDisplayName,
 		NonceHash: approval.NonceHash, State: string(approval.State), ExpiresAt: approval.ExpiresAt, Version: 1,
 	}
 	if len(request.AllowedIdentities) == 1 {

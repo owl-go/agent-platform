@@ -260,6 +260,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connector-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connector-actions/{action_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CancelConnectorAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connector-actions/{action_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CheckConnectorAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connector-actions/{action_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StartConnectorAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli": {
         parameters: {
             query?: never;
@@ -1138,8 +1202,10 @@ export interface components {
             identity?: string;
             scopes?: string[];
         };
+        AgentWorkspaceServiceCancelConnectorActionBody: Record<string, never>;
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceCheckConnectorActionBody: Record<string, never>;
         AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody: Record<string, never>;
         AgentWorkspaceServiceCompleteCLIConnectorEnablementBody: Record<string, never>;
         AgentWorkspaceServiceConfigureUserDailyCreditsBody: {
@@ -1216,6 +1282,7 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceStartConnectorActionBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
         AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
@@ -1327,6 +1394,14 @@ export interface components {
             egress_hosts?: string[];
             /** Format: int32 */
             timeout_seconds?: number;
+            display_name?: {
+                [key: string]: string;
+            };
+            operation_phrase?: {
+                [key: string]: string;
+            };
+            input_fields?: components["schemas"]["v1CLIInputField"][];
+            idempotency?: string;
         };
         v1CLIConnectorAuthorization: {
             id?: string;
@@ -1374,6 +1449,8 @@ export interface components {
             icon?: string;
             description?: string;
             installation_type?: string;
+            manifest_version?: string;
+            usage_guide?: string;
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;
@@ -1391,6 +1468,8 @@ export interface components {
             installation_type?: string;
             /** Format: byte */
             archive?: string;
+            manifest_version?: string;
+            usage_guide?: string;
         };
         v1CLIConnectorEnablement: {
             id?: string;
@@ -1429,6 +1508,14 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1CLIInputField: {
+            name?: string;
+            type?: string;
+            required?: boolean;
+            flag?: string;
+            sensitive?: boolean;
+            enum?: string[];
+        };
         v1CLIRecommendedSkill: {
             name?: string;
             git_url?: string;
@@ -1448,6 +1535,37 @@ export interface components {
             expires_at?: string;
             /** Format: int64 */
             version?: number;
+            operation_id?: string;
+            manifest_version?: string;
+            input_digest?: string;
+            authorization_id?: string;
+            external_identity_id?: string;
+            external_display_name?: string;
+        };
+        v1ConnectorActionRequirement: {
+            /** Format: int32 */
+            contract_version?: number;
+            id?: string;
+            execution_kind?: string;
+            execution_id?: string;
+            operation_id?: string;
+            connector_id?: string;
+            connector_name?: string;
+            enablement_id?: string;
+            capability_id?: string;
+            operation_phrase?: {
+                [key: string]: string;
+            };
+            reason?: string;
+            permissions?: string[];
+            actions?: string[];
+            state?: string;
+            action_url?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+            identity?: string;
         };
         v1ConversationFile: {
             kind?: string;
@@ -1784,6 +1902,9 @@ export interface components {
         };
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
+        };
+        v1ListConnectorActionsResponse: {
+            items?: components["schemas"]["v1ConnectorActionRequirement"][];
         };
         v1ListConversationFilesResponse: {
             items?: components["schemas"]["v1ConversationFile"][];
@@ -2859,6 +2980,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CommandApproval"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListConnectorActions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorActionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CancelConnectorAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCancelConnectorActionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorActionRequirement"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CheckConnectorAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCheckConnectorActionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorActionRequirement"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StartConnectorAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStartConnectorActionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorActionRequirement"];
                 };
             };
             /** @description An unexpected error response. */

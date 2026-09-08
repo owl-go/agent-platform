@@ -668,7 +668,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		if len(runtimeDigests) == 0 {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no passing Runtime conformance", domain.ErrInvalid)
 		}
-		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
+		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), ManifestVersion: row.ManifestVersion, UsageGuide: row.UsageGuide, Version: row.Version})
 	}
 	return member, nil
 }

@@ -835,6 +835,186 @@
         ]
       }
     },
+    "/api/v1/connector-actions": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorActions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListConnectorActionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connector-actions/{action_id}/cancel": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CancelConnectorAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorActionRequirement"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceCancelConnectorActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connector-actions/{action_id}/check": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CheckConnectorAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorActionRequirement"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceCheckConnectorActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connector-actions/{action_id}/start": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StartConnectorAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorActionRequirement"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceStartConnectorActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli": {
       "get": {
         "operationId": "AgentWorkspaceService_ListCLIConnectorDefinitions",
@@ -4226,10 +4406,16 @@
           }
         }
       },
+      "AgentWorkspaceServiceCancelConnectorActionBody": {
+        "type": "object"
+      },
       "AgentWorkspaceServiceCancelRunBody": {
         "type": "object"
       },
       "AgentWorkspaceServiceCancelSessionMessageBody": {
+        "type": "object"
+      },
+      "AgentWorkspaceServiceCheckConnectorActionBody": {
         "type": "object"
       },
       "AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody": {
@@ -4445,6 +4631,9 @@
             "format": "int64"
           }
         }
+      },
+      "AgentWorkspaceServiceStartConnectorActionBody": {
+        "type": "object"
       },
       "AgentWorkspaceServiceTestMCPConnectorBody": {
         "type": "object"
@@ -4719,6 +4908,27 @@
           "timeout_seconds": {
             "type": "integer",
             "format": "int32"
+          },
+          "display_name": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "operation_phrase": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "input_fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1CLIInputField"
+            }
+          },
+          "idempotency": {
+            "type": "string"
           }
         }
       },
@@ -4870,6 +5080,12 @@
           },
           "installation_type": {
             "type": "string"
+          },
+          "manifest_version": {
+            "type": "string"
+          },
+          "usage_guide": {
+            "type": "string"
           }
         }
       },
@@ -4930,6 +5146,12 @@
           "archive": {
             "type": "string",
             "format": "byte"
+          },
+          "manifest_version": {
+            "type": "string"
+          },
+          "usage_guide": {
+            "type": "string"
           }
         }
       },
@@ -5028,6 +5250,32 @@
           }
         }
       },
+      "v1CLIInputField": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "flag": {
+            "type": "string"
+          },
+          "sensitive": {
+            "type": "boolean"
+          },
+          "enum": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "v1CLIRecommendedSkill": {
         "type": "object",
         "properties": {
@@ -5079,6 +5327,95 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "operation_id": {
+            "type": "string"
+          },
+          "manifest_version": {
+            "type": "string"
+          },
+          "input_digest": {
+            "type": "string"
+          },
+          "authorization_id": {
+            "type": "string"
+          },
+          "external_identity_id": {
+            "type": "string"
+          },
+          "external_display_name": {
+            "type": "string"
+          }
+        }
+      },
+      "v1ConnectorActionRequirement": {
+        "type": "object",
+        "properties": {
+          "contract_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string"
+          },
+          "execution_kind": {
+            "type": "string"
+          },
+          "execution_id": {
+            "type": "string"
+          },
+          "operation_id": {
+            "type": "string"
+          },
+          "connector_id": {
+            "type": "string"
+          },
+          "connector_name": {
+            "type": "string"
+          },
+          "enablement_id": {
+            "type": "string"
+          },
+          "capability_id": {
+            "type": "string"
+          },
+          "operation_phrase": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "action_url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "identity": {
+            "type": "string"
           }
         }
       },
@@ -6064,6 +6401,17 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1CommandApproval"
+            }
+          }
+        }
+      },
+      "v1ListConnectorActionsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ConnectorActionRequirement"
             }
           }
         }

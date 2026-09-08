@@ -19,6 +19,7 @@ const (
 	StateDraft     State = "draft"
 	StateBuilding  State = "building"
 	StateTesting   State = "testing"
+	StateReview    State = "review"
 	StateAvailable State = "available"
 	StateFailed    State = "failed"
 	StateDisabled  State = "disabled"
@@ -39,13 +40,17 @@ const (
 )
 
 type Capability struct {
-	ID          string        `json:"id"`
-	ArgvPrefix  []string      `json:"argv_prefix"`
-	Risk        Risk          `json:"risk"`
-	Identities  []Identity    `json:"identities"`
-	Scopes      []string      `json:"scopes"`
-	EgressHosts []string      `json:"egress_hosts"`
-	Timeout     time.Duration `json:"timeout"`
+	ID              string            `json:"id"`
+	DisplayName     map[string]string `json:"display_name,omitempty"`
+	OperationPhrase map[string]string `json:"operation_phrase,omitempty"`
+	ArgvPrefix      []string          `json:"argv_prefix"`
+	Input           InputSchema       `json:"input,omitempty"`
+	Risk            Risk              `json:"risk"`
+	Identities      []Identity        `json:"identities"`
+	Scopes          []string          `json:"scopes"`
+	EgressHosts     []string          `json:"egress_hosts"`
+	Timeout         time.Duration     `json:"timeout"`
+	Idempotency     Idempotency       `json:"idempotency,omitempty"`
 }
 
 type Definition struct {
@@ -71,6 +76,8 @@ type Definition struct {
 	VersionNumber          int64
 	FailureReason          string
 	CreatedByUserID        string
+	ManifestVersion        string
+	UsageGuide             string
 }
 
 type RecommendedSkill struct {
@@ -128,7 +135,8 @@ type FeishuApplicationCredentials struct {
 
 type EncryptedExecutionCredentials struct {
 	AppIDCiphertext, AppSecretCiphertext, TokenCiphertext []byte
-	EnablementID, ExternalIdentityID                      string
+	EnablementID, AuthorizationID, ExternalIdentityID     string
+	ExternalDisplayName                                   string
 }
 
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)
@@ -200,8 +208,8 @@ func validateExecutionPolicy(definition Definition) error {
 	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
 		return errors.New("CLI executable must be selected from package bin metadata")
 	}
-	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" {
-		return errors.New("unsupported built-in authentication driver")
+	if definition.AuthenticationDriver != "none" && !policyToken.MatchString(definition.AuthenticationDriver) {
+		return errors.New("invalid Connector Authorization Scheme")
 	}
 	if len(definition.Capabilities) == 0 {
 		return errors.New("at least one reviewed CLI capability is required")
@@ -219,6 +227,9 @@ func validateExecutionPolicy(definition Definition) error {
 			if arg == "" || strings.ContainsAny(arg, "\x00\r\n") {
 				return errors.New("unsafe CLI argument pattern")
 			}
+		}
+		if err := validateInputSchema(capability.Input); err != nil {
+			return err
 		}
 		if capability.Risk != RiskLow && capability.Risk != RiskHigh {
 			return errors.New("unsupported CLI capability risk")
@@ -252,15 +263,25 @@ type Request struct {
 	CapabilityID, RuntimeDigest, BundleSHA256 string
 	Target                                    string
 	Identity                                  Identity
+	AuthorizationID                           string
+	ExternalIdentityID                        string
 	Argv                                      []string
 	Environment                               map[string]string
 	ApprovalNonce                             string
 	ApprovalExpiresAt                         time.Time
+	OutputLimit                               int
 }
 type Result struct {
 	Stdout, Stderr []byte
 	ExitCode       int
 }
+
+type ExecutionError struct{ Cause error }
+
+var ErrOutputLimit = errors.New("Connector output limit exceeded")
+
+func (err *ExecutionError) Error() string { return "Connector transport failed: " + err.Cause.Error() }
+func (err *ExecutionError) Unwrap() error { return err.Cause }
 
 type ProcessRequest struct {
 	ConnectorID string
@@ -268,6 +289,7 @@ type ProcessRequest struct {
 	Arguments   []string
 	Environment map[string]string
 	EgressHosts []string
+	OutputLimit int
 }
 
 type Process interface {
@@ -323,17 +345,22 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 	}
 	execution, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	return wrapper.Process.Run(execution, ProcessRequest{
+	result, err := wrapper.Process.Run(execution, ProcessRequest{
 		ConnectorID: definition.ID,
 		Executable:  definition.Executable,
 		Arguments:   append([]string(nil), request.Argv...),
 		Environment: cloneEnvironment(request.Environment),
 		EgressHosts: append([]string(nil), capability.EgressHosts...),
+		OutputLimit: request.OutputLimit,
 	})
+	if err != nil {
+		return result, &ExecutionError{Cause: err}
+	}
+	return result, nil
 }
 
 func CommandDigest(definition Definition, request Request) string {
-	sum := sha256.Sum256([]byte(strings.Join([]string{definition.ID, fmt.Sprint(definition.VersionNumber), definition.Executable, strings.Join(request.Argv, "\x00"), request.Target, request.CapabilityID, string(request.Identity), request.BundleSHA256, request.RuntimeDigest, request.ApprovalExpiresAt.UTC().Format(time.RFC3339Nano)}, "\x1f")))
+	sum := sha256.Sum256([]byte(strings.Join([]string{definition.ID, fmt.Sprint(definition.VersionNumber), definition.Executable, strings.Join(request.Argv, "\x00"), request.Target, request.CapabilityID, string(request.Identity), request.AuthorizationID, request.ExternalIdentityID, request.BundleSHA256, request.RuntimeDigest, request.ApprovalExpiresAt.UTC().Format(time.RFC3339Nano)}, "\x1f")))
 	return hex.EncodeToString(sum[:])
 }
 func hasPrefix(value, prefix []string) bool {

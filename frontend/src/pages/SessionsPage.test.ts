@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { platformApiKey, type Artifact, type CommandApproval, type ConnectorActionRequirement, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -417,7 +417,7 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("shows an expandable activity timeline with the concrete Codex command", async () => {
+  it("uses the latest activity as the expandable execution summary", async () => {
     const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "using_tool", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
     const api = apiStub([messages[0]!, pending]);
     api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, onSnapshot, signal) => {
@@ -437,9 +437,128 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity summary").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity summary").text()).toContain("git status --short");
+    expect(wrapper.get(".runtime-activity ol").text()).not.toContain("git status --short");
     expect(wrapper.get(".runtime-activity").text()).toContain("先检查仓库状态");
-    expect(wrapper.get(".runtime-activity").text()).toContain("git status --short");
+    wrapper.unmount();
+  });
+
+  it("renders a typed Connector operation as a concise business summary", async () => {
+    const completed: SessionMessage = {
+      id: 2,
+      role: "assistant",
+      state: "completed",
+      content: "已找到三个群聊。",
+      elapsed_ms: 1200,
+      created_at: "2026-08-25T12:00:01Z",
+      activities: [{ type: "connector.operation.succeeded", detail: "飞书 CLI · 搜索飞书群聊" }],
+    };
+    const wrapper = await mountPage([messages[0]!, completed]);
+
+    expect(wrapper.get(".runtime-activity-summary").text()).toContain("已完成：飞书 CLI · 搜索飞书群聊");
+    expect(wrapper.text()).not.toContain("查看执行过程");
+    wrapper.unmount();
+  });
+
+  it("renders a generic Connector action only for the waiting conversation", async () => {
+    const waiting: SessionMessage = { id: 2, role: "assistant", state: "waiting_for_user", content: "", progress_stage: "waiting_for_user", elapsed_ms: 500, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, waiting]);
+    api.listConnectorActions = vi.fn(async () => [{
+      contract_version: 1, id: "action-1", execution_kind: "session", execution_id: "2", operation_id: "operation-1",
+      connector_id: "connector-1", connector_name: "飞书 CLI", enablement_id: "enablement-1", capability_id: "chat.search", identity: "user",
+      operation_phrase: { "zh-CN": "搜索飞书群聊" }, reason: "authorization_required", permissions: ["im:chat:read"],
+      actions: ["open_url", "copy_value", "check_status"], state: "pending", action_url: "/api/v1/connector-actions/action-1/open?version=1", expires_at: "2026-09-08T15:00:00Z", version: 1,
+    } as ConnectorActionRequirement]);
+
+    const wrapper = await mountPageWithAPI(api);
+
+    expect(wrapper.get(".connector-action-card").text()).toContain("飞书 CLI 需要你的操作");
+    expect(wrapper.get(".connector-action-card").text()).toContain("为了搜索飞书群聊，需要授权外部账号");
+    expect(wrapper.get(".connector-action-card").text()).toContain("打开授权");
+    expect(wrapper.get(".connector-action-card").text()).toContain("复制链接");
+    expect(wrapper.get<HTMLAnchorElement>(".connector-action-link").attributes("href")).toBe(new URL("/api/v1/connector-actions/action-1/open?version=1", window.location.origin).toString());
+    expect(wrapper.get(".connector-action-buttons .el-button").classes()).toContain("el-button--small");
+    wrapper.unmount();
+  });
+
+  it("fails closed when the client cannot render an action variant", async () => {
+    const waiting: SessionMessage = { id: 2, role: "assistant", state: "waiting_for_user", content: "", progress_stage: "waiting_for_user", elapsed_ms: 500, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, waiting]);
+    api.listConnectorActions = vi.fn(async () => [{
+      contract_version: 1, id: "action-1", execution_kind: "session", execution_id: "2", operation_id: "operation-1",
+      connector_id: "connector-1", connector_name: "飞书 CLI", enablement_id: "enablement-1", capability_id: "chat.search", identity: "user",
+      operation_phrase: { "zh-CN": "搜索飞书群聊" }, reason: "authorization_required", permissions: [],
+      actions: ["show_code"], state: "pending", expires_at: "2026-09-08T15:00:00Z", version: 1,
+    } as ConnectorActionRequirement]);
+
+    const wrapper = await mountPageWithAPI(api);
+
+    expect(wrapper.get(".connector-action-card").text()).toContain("当前客户端版本无法安全处理这个操作");
+    expect(wrapper.get(".connector-action-card").text()).not.toContain("打开授权");
+    wrapper.unmount();
+  });
+
+  it("opens the authorization URL returned by the action start request", async () => {
+	const waiting: SessionMessage = { id: 2, role: "assistant", state: "waiting_for_user", content: "", progress_stage: "waiting_for_user", elapsed_ms: 500, created_at: "2026-08-25T12:00:01Z" };
+	const action = {
+		contract_version: 1, id: "action-1", execution_kind: "session", execution_id: "2", operation_id: "operation-1",
+		connector_id: "connector-1", connector_name: "飞书 CLI", enablement_id: "enablement-1", capability_id: "chat.search", identity: "user",
+		operation_phrase: { "zh-CN": "搜索飞书群聊" }, reason: "authorization_required", permissions: ["im:chat:read"],
+		actions: ["open_url", "check_status"], state: "pending", expires_at: "2026-09-08T15:00:00Z", version: 1,
+	} as ConnectorActionRequirement;
+	const api = apiStub([messages[0]!, waiting]);
+	api.listConnectorActions = vi.fn(async () => [action]);
+	api.startConnectorAction = vi.fn(async () => ({ ...action, action_url: "https://authorize.example.test/action-1" }));
+	const external = { opener: null, closed: false, close: vi.fn(), location: { href: "", replace: vi.fn() } };
+	vi.spyOn(window, "open").mockReturnValue(external as unknown as Window);
+
+	const wrapper = await mountPageWithAPI(api);
+	await wrapper.findAll("button").find((button) => button.text().includes("打开授权"))!.trigger("click");
+	await flushPromises();
+
+	expect(window.open).toHaveBeenCalledWith("about:blank", "_blank");
+	expect(external.location.href).toBe("https://authorize.example.test/action-1");
+	wrapper.unmount();
+  });
+
+  it("navigates the same window from Connector Setup to account authorization", async () => {
+	const waiting: SessionMessage = { id: 2, role: "assistant", state: "waiting_for_user", content: "", progress_stage: "waiting_for_user", elapsed_ms: 500, created_at: "2026-08-25T12:00:01Z" };
+	const action = {
+		contract_version: 1, id: "action-1", execution_kind: "session", execution_id: "2", operation_id: "operation-1",
+		connector_id: "connector-1", connector_name: "飞书 CLI", enablement_id: "enablement-1", capability_id: "chat.search", identity: "user",
+		operation_phrase: { "zh-CN": "搜索飞书群聊" }, reason: "setup_required", permissions: ["im:chat:readonly"],
+		actions: ["open_url", "check_status"], state: "pending", expires_at: "2026-09-08T15:00:00Z", version: 1,
+	} as ConnectorActionRequirement;
+	const api = apiStub([messages[0]!, waiting]);
+	api.listConnectorActions = vi.fn(async () => [action]);
+	api.startConnectorAction = vi.fn(async () => ({ ...action, action_url: "https://setup.example.test/action-1" }));
+	api.checkConnectorAction = vi.fn(async () => ({ ...action, reason: "authorization_required" as const, action_url: "https://authorize.example.test/action-1", version: 2 }));
+	const external = { opener: null, closed: false, close: vi.fn(), location: { href: "", replace: vi.fn() } };
+	vi.spyOn(window, "open").mockReturnValue(external as unknown as Window);
+	const wrapper = await mountPageWithAPI(api);
+
+	await wrapper.findAll("button").find((button) => button.text().includes("打开授权"))!.trigger("click");
+	await flushPromises();
+	await wrapper.findAll("button").find((button) => button.text().includes("检查状态"))!.trigger("click");
+	await flushPromises();
+
+	expect(external.location.replace).toHaveBeenCalledWith("https://authorize.example.test/action-1");
+	wrapper.unmount();
+  });
+
+  it("renders one-use Connector approval beside the waiting message", async () => {
+    const waiting: SessionMessage = { id: 2, role: "assistant", state: "waiting_for_user", content: "", progress_stage: "waiting_for_user", elapsed_ms: 500, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, waiting]);
+    api.listCommandApprovals = vi.fn(async () => [{ id: "approval-1", execution_kind: "session", execution_id: "2", connector_name: "飞书 CLI", operation: "发送群消息", target: "云隙科技", redacted_arguments: 'text="大家好"', external_display_name: "Frank 的飞书", state: "pending", identity: "user", expires_at: "2026-09-08T15:00:00Z", version: 1 } as CommandApproval]);
+
+    const wrapper = await mountPageWithAPI(api);
+
+    expect(wrapper.get(".connector-approval-card").text()).toContain("等待你的确认 · 飞书 CLI");
+    expect(wrapper.get(".connector-approval-card").text()).toContain("发送群消息 · 云隙科技");
+    expect(wrapper.get(".connector-approval-card").text()).toContain("外部账号：Frank 的飞书");
+    expect(wrapper.get(".connector-approval-card").text()).toContain('操作内容：text="大家好"');
+    expect(wrapper.get(".connector-approval-card").text()).not.toContain("redacted_arguments");
     wrapper.unmount();
   });
 
@@ -457,8 +576,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, failed]);
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
-    expect(wrapper.get(".runtime-activity summary").text()).toContain("查看执行过程");
-    expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity-summary").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
     wrapper.unmount();
   });

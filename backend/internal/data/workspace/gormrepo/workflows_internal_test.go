@@ -72,6 +72,26 @@ func TestSessionExecutionActivityKeepsRedactedCommandButNotToolOutput(t *testing
 	}
 }
 
+func TestSessionExecutionActivityUsesTypedConnectorSummary(t *testing.T) {
+	activity, err := sessionExecutionActivity(application.ExecutionEvent{Type: "connector.operation.succeeded", Payload: []byte(`{"contract_version":1,"operation_id":"operation-1","connector_name":"飞书 CLI","capability_id":"chat.search","operation_phrase":{"zh-CN":"搜索飞书群聊","en":"Search Feishu chats"},"state":"succeeded"}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activity == nil || activity.Type != "connector.operation.succeeded" || activity.Detail != "飞书 CLI · 搜索飞书群聊" {
+		t.Fatalf("activity = %#v", activity)
+	}
+}
+
+func TestSessionExecutionActivitySuppressesBrokerCommandDetails(t *testing.T) {
+	activity, err := sessionExecutionActivity(application.ExecutionEvent{Type: "command.completed", Payload: []byte(`{"command":"agent-cli --connector connector-1 --capability chat.search --identity user --input '{\"query\":\"private\"}'"}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activity != nil {
+		t.Fatalf("broker command activity = %#v", activity)
+	}
+}
+
 func TestCloseRunningExpertStagesPreservesTerminalStages(t *testing.T) {
 	started := time.Now().UTC().Add(-time.Second)
 	encoded, err := json.Marshal([]domain.ExpertStage{

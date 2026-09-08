@@ -19,8 +19,10 @@ const _ = http.SupportPackageIsVersion3
 
 const OperationAgentWorkspaceServiceAdjustUserCredits = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
 const OperationAgentWorkspaceServiceBeginCLIConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/BeginCLIConnectorAuthorization"
+const OperationAgentWorkspaceServiceCancelConnectorAction = "/workspace.v1.AgentWorkspaceService/CancelConnectorAction"
 const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceService/CancelRun"
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+const OperationAgentWorkspaceServiceCheckConnectorAction = "/workspace.v1.AgentWorkspaceService/CheckConnectorAction"
 const OperationAgentWorkspaceServiceCompleteCLIConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorAuthorization"
 const OperationAgentWorkspaceServiceCompleteCLIConnectorEnablement = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorEnablement"
 const OperationAgentWorkspaceServiceConfigureUserDailyCredits = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
@@ -71,6 +73,7 @@ const OperationAgentWorkspaceServiceListCLIConnectorDefinitions = "/workspace.v1
 const OperationAgentWorkspaceServiceListCLIConnectorEnablements = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
 const OperationAgentWorkspaceServiceListCLIConnectorHealth = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
 const OperationAgentWorkspaceServiceListCommandApprovals = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
+const OperationAgentWorkspaceServiceListConnectorActions = "/workspace.v1.AgentWorkspaceService/ListConnectorActions"
 const OperationAgentWorkspaceServiceListConversationFiles = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
 const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
@@ -101,6 +104,7 @@ const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWor
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
 const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
+const OperationAgentWorkspaceServiceStartConnectorAction = "/workspace.v1.AgentWorkspaceService/StartConnectorAction"
 const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
@@ -116,8 +120,10 @@ const OperationAgentWorkspaceServiceVoidRedemptionCode = "/workspace.v1.AgentWor
 type AgentWorkspaceServiceHTTPServer interface {
 	AdjustUserCredits(context.Context, *AdjustUserCreditsRequest) (*CreditBalance, error)
 	BeginCLIConnectorAuthorization(context.Context, *BeginCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorizationFlow, error)
+	CancelConnectorAction(context.Context, *CancelConnectorActionRequest) (*ConnectorActionRequirement, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	CheckConnectorAction(context.Context, *CheckConnectorActionRequest) (*ConnectorActionRequirement, error)
 	CompleteCLIConnectorAuthorization(context.Context, *CompleteCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorizationFlow, error)
 	CompleteCLIConnectorEnablement(context.Context, *CompleteCLIConnectorEnablementRequest) (*CLIConnectorEnablement, error)
 	ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error)
@@ -168,6 +174,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
 	ListCLIConnectorHealth(context.Context, *ListCLIConnectorHealthRequest) (*ListCLIConnectorHealthResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
+	ListConnectorActions(context.Context, *ListConnectorActionsRequest) (*ListConnectorActionsResponse, error)
 	ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error)
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
@@ -198,6 +205,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
 	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
+	StartConnectorAction(context.Context, *StartConnectorActionRequest) (*ConnectorActionRequirement, error)
 	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
@@ -308,6 +316,10 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete", _AgentWorkspaceService_CompleteCLIConnectorAuthorization0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations", _AgentWorkspaceService_ListCLIConnectorAuthorizations0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect", _AgentWorkspaceService_DisconnectCLIConnectorAuthorization0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/connector-actions", _AgentWorkspaceService_ListConnectorActions0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connector-actions/{action_id}/start", _AgentWorkspaceService_StartConnectorAction0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connector-actions/{action_id}/check", _AgentWorkspaceService_CheckConnectorAction0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/connector-actions/{action_id}/cancel", _AgentWorkspaceService_CancelConnectorAction0_HTTP_Handler(srv))
 }
 
 func _AgentWorkspaceService_GetConversationSelection0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
@@ -2292,11 +2304,98 @@ func _AgentWorkspaceService_DisconnectCLIConnectorAuthorization0_HTTP_Handler(sr
 	}
 }
 
+func _AgentWorkspaceService_ListConnectorActions0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListConnectorActionsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListConnectorActions)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListConnectorActions(ctx, req.(*ListConnectorActionsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListConnectorActionsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_StartConnectorAction0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in StartConnectorActionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceStartConnectorAction)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.StartConnectorAction(ctx, req.(*StartConnectorActionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ConnectorActionRequirement)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CheckConnectorAction0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CheckConnectorActionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCheckConnectorAction)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CheckConnectorAction(ctx, req.(*CheckConnectorActionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ConnectorActionRequirement)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CancelConnectorAction0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CancelConnectorActionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCancelConnectorAction)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CancelConnectorAction(ctx, req.(*CancelConnectorActionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ConnectorActionRequirement)
+		return ctx.Result(200, reply)
+	}
+}
+
 type AgentWorkspaceServiceHTTPClient interface {
 	AdjustUserCredits(ctx context.Context, req *AdjustUserCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	BeginCLIConnectorAuthorization(ctx context.Context, req *BeginCLIConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *CLIConnectorAuthorizationFlow, err error)
+	CancelConnectorAction(ctx context.Context, req *CancelConnectorActionRequest, opts ...http.CallOption) (rsp *ConnectorActionRequirement, err error)
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
+	CheckConnectorAction(ctx context.Context, req *CheckConnectorActionRequest, opts ...http.CallOption) (rsp *ConnectorActionRequirement, err error)
 	CompleteCLIConnectorAuthorization(ctx context.Context, req *CompleteCLIConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *CLIConnectorAuthorizationFlow, err error)
 	CompleteCLIConnectorEnablement(ctx context.Context, req *CompleteCLIConnectorEnablementRequest, opts ...http.CallOption) (rsp *CLIConnectorEnablement, err error)
 	ConfigureUserDailyCredits(ctx context.Context, req *ConfigureUserDailyCreditsRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
@@ -2347,6 +2446,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCLIConnectorEnablements(ctx context.Context, req *ListCLIConnectorEnablementsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorEnablementsResponse, err error)
 	ListCLIConnectorHealth(ctx context.Context, req *ListCLIConnectorHealthRequest, opts ...http.CallOption) (rsp *ListCLIConnectorHealthResponse, err error)
 	ListCommandApprovals(ctx context.Context, req *ListCommandApprovalsRequest, opts ...http.CallOption) (rsp *ListCommandApprovalsResponse, err error)
+	ListConnectorActions(ctx context.Context, req *ListConnectorActionsRequest, opts ...http.CallOption) (rsp *ListConnectorActionsResponse, err error)
 	ListConversationFiles(ctx context.Context, req *ListConversationFilesRequest, opts ...http.CallOption) (rsp *ListConversationFilesResponse, err error)
 	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
@@ -2377,6 +2477,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
+	StartConnectorAction(ctx context.Context, req *StartConnectorActionRequest, opts ...http.CallOption) (rsp *ConnectorActionRequirement, err error)
 	TestMCPConnector(ctx context.Context, req *TestMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
@@ -2432,6 +2533,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) BeginCLIConnectorAuthorization(ctx
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) CancelConnectorAction(ctx context.Context, in *CancelConnectorActionRequest, opts ...http.CallOption) (*ConnectorActionRequirement, error) {
+	var out ConnectorActionRequirement
+	pattern := "/api/v1/connector-actions/{action_id}/cancel"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCancelConnectorAction),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) CancelRun(ctx context.Context, in *CancelRunRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation"
@@ -2457,6 +2575,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CancelSessionMessage(ctx context.C
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCancelSessionMessage),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CheckConnectorAction(ctx context.Context, in *CheckConnectorActionRequest, opts ...http.CallOption) (*ConnectorActionRequirement, error) {
+	var out ConnectorActionRequirement
+	pattern := "/api/v1/connector-actions/{action_id}/check"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCheckConnectorAction),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -3289,6 +3424,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListCommandApprovals(ctx context.C
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListConnectorActions(ctx context.Context, in *ListConnectorActionsRequest, opts ...http.CallOption) (*ListConnectorActionsResponse, error) {
+	var out ListConnectorActionsResponse
+	pattern := "/api/v1/connector-actions"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListConnectorActions),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...http.CallOption) (*ListConversationFilesResponse, error) {
 	var out ListConversationFilesResponse
 	pattern := "/api/v1/conversation-files"
@@ -3775,6 +3926,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserEnabled(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) StartConnectorAction(ctx context.Context, in *StartConnectorActionRequest, opts ...http.CallOption) (*ConnectorActionRequirement, error) {
+	var out ConnectorActionRequirement
+	pattern := "/api/v1/connector-actions/{action_id}/start"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceStartConnectorAction),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

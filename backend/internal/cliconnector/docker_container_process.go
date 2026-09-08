@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"agent-platform/backend/internal/sandbox"
@@ -32,7 +33,7 @@ type EgressGate interface {
 }
 
 type DockerCommandRunner func(context.Context, map[string]string, string, ...string) ([]byte, error)
-type DockerStartRunner func(context.Context, []string) (Result, error)
+type DockerStartRunner func(context.Context, []string, int) (Result, error)
 type ContainerNameFactory func() (string, error)
 
 type DockerContainerProcessConfig struct {
@@ -111,7 +112,7 @@ func (process *DockerContainerProcess) Run(ctx context.Context, request ProcessR
 		return Result{}, fmt.Errorf("connect CLI Connector Egress network: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return process.config.Egress.Execute(ctx, name, append([]string(nil), request.EgressHosts...), func(executionCtx context.Context) (Result, error) {
-		result, startErr := process.config.Start(executionCtx, []string{process.config.DockerCommand, "start", "--attach", "--interactive", name})
+		result, startErr := process.config.Start(executionCtx, []string{process.config.DockerCommand, "start", "--attach", "--interactive", name}, request.OutputLimit)
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(executionCtx), 15*time.Second)
 		defer cancel()
 		removeErr := process.remove(cleanupCtx, name)
@@ -213,15 +214,24 @@ func runDockerCommand(ctx context.Context, environment map[string]string, comman
 	return process.CombinedOutput()
 }
 
-func runDockerStart(ctx context.Context, arguments []string) (Result, error) {
+func runDockerStart(ctx context.Context, arguments []string, outputLimit int) (Result, error) {
 	if len(arguments) == 0 {
 		return Result{}, errors.New("Docker command is required")
 	}
-	command := exec.CommandContext(ctx, arguments[0], arguments[1:]...)
+	if outputLimit <= 0 {
+		return Result{}, errors.New("positive Docker output limit is required")
+	}
+	executionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	command := exec.CommandContext(executionCtx, arguments[0], arguments[1:]...)
 	var stdout, stderr bytes.Buffer
-	command.Stdout, command.Stderr = &stdout, &stderr
+	budget := &outputBudget{remaining: outputLimit, cancel: cancel}
+	command.Stdout, command.Stderr = &limitedOutputWriter{target: &stdout, budget: budget}, &limitedOutputWriter{target: &stderr, budget: budget}
 	err := command.Run()
 	result := Result{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}
+	if budget.exceededLimit() {
+		return result, ErrOutputLimit
+	}
 	var exitError *exec.ExitError
 	if errors.As(err, &exitError) {
 		result.ExitCode = exitError.ExitCode()
@@ -231,6 +241,37 @@ func runDockerStart(ctx context.Context, arguments []string) (Result, error) {
 		return Result{}, fmt.Errorf("start CLI Connector container: %w", err)
 	}
 	return result, nil
+}
+
+type outputBudget struct {
+	mu        sync.Mutex
+	remaining int
+	exceeded  bool
+	cancel    context.CancelFunc
+}
+
+func (budget *outputBudget) exceededLimit() bool {
+	budget.mu.Lock()
+	defer budget.mu.Unlock()
+	return budget.exceeded
+}
+
+type limitedOutputWriter struct {
+	target *bytes.Buffer
+	budget *outputBudget
+}
+
+func (writer *limitedOutputWriter) Write(value []byte) (int, error) {
+	writer.budget.mu.Lock()
+	defer writer.budget.mu.Unlock()
+	if len(value) > writer.budget.remaining {
+		writer.budget.exceeded = true
+		writer.budget.cancel()
+		return 0, ErrOutputLimit
+	}
+	written, err := writer.target.Write(value)
+	writer.budget.remaining -= written
+	return written, err
 }
 
 func randomConnectorContainerName() (string, error) {

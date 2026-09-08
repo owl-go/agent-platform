@@ -110,6 +110,10 @@ service AgentWorkspaceService {
   rpc CompleteCLIConnectorAuthorization(CompleteCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorizationFlow) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete" body: "*"}; }
   rpc ListCLIConnectorAuthorizations(ListCLIConnectorAuthorizationsRequest) returns (ListCLIConnectorAuthorizationsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations"}; }
   rpc DisconnectCLIConnectorAuthorization(DisconnectCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect" body: "*"}; }
+  rpc ListConnectorActions(ListConnectorActionsRequest) returns (ListConnectorActionsResponse) { option (google.api.http) = {get: "/api/v1/connector-actions"}; }
+  rpc StartConnectorAction(StartConnectorActionRequest) returns (ConnectorActionRequirement) { option (google.api.http) = {post: "/api/v1/connector-actions/{action_id}/start" body: "*"}; }
+  rpc CheckConnectorAction(CheckConnectorActionRequest) returns (ConnectorActionRequirement) { option (google.api.http) = {post: "/api/v1/connector-actions/{action_id}/check" body: "*"}; }
+  rpc CancelConnectorAction(CancelConnectorActionRequest) returns (ConnectorActionRequirement) { option (google.api.http) = {post: "/api/v1/connector-actions/{action_id}/cancel" body: "*"}; }
 }
 
 message GetCurrentUserRequest {}
@@ -271,10 +275,11 @@ message Skill { string id = 1; string name = 2; string source = 3; optional stri
 message AffectedExpert { string id = 1; string name = 2; int64 version = 3; }
 message ResourceDeletionImpact { repeated AffectedExpert affected_experts = 1; string confirmation_token = 2; }
 
-message CLICapability { string id = 1; repeated string argv_prefix = 2; string risk = 3; repeated string identities = 4; repeated string scopes = 5; repeated string egress_hosts = 6; int32 timeout_seconds = 7; }
+message CLIInputField { string name = 1; string type = 2; bool required = 3; optional string flag = 4; bool sensitive = 5; repeated string enum = 6; }
+message CLICapability { string id = 1; repeated string argv_prefix = 2; string risk = 3; repeated string identities = 4; repeated string scopes = 5; repeated string egress_hosts = 6; int32 timeout_seconds = 7; map<string, string> display_name = 8; map<string, string> operation_phrase = 9; repeated CLIInputField input_fields = 10; string idempotency = 11; }
 message CLIRecommendedSkill { string name = 1; string git_url = 2; string git_ref = 3; }
-message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; repeated string supported_architectures = 8; repeated string recommended_skill_ids = 9 [deprecated = true]; repeated CLIRecommendedSkill recommended_skills = 10; string icon = 11; string description = 12; string installation_type = 13; bytes archive = 14; }
-message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; repeated string supported_architectures = 14; repeated string recommended_skill_ids = 15 [deprecated = true]; repeated string conformance_runtime_digests = 16; repeated CLIRecommendedSkill recommended_skills = 17; string icon = 18; string description = 19; string installation_type = 20; }
+message CLIConnectorDefinitionInput { string name = 1; string npm_package = 2; string npm_version = 3; string npm_integrity = 4; string executable = 5; string authentication_driver = 6; repeated CLICapability capabilities = 7; repeated string supported_architectures = 8; repeated string recommended_skill_ids = 9 [deprecated = true]; repeated CLIRecommendedSkill recommended_skills = 10; string icon = 11; string description = 12; string installation_type = 13; bytes archive = 14; string manifest_version = 15; string usage_guide = 16; }
+message CLIConnectorDefinition { string id = 1; string name = 2; string npm_package = 3; string npm_version = 4; string npm_integrity = 5; string executable = 6; string authentication_driver = 7; repeated CLICapability capabilities = 8; string state = 9; optional string failure_reason = 10; optional string bundle_sha256 = 11; bool mutable = 12; int64 version = 13; repeated string supported_architectures = 14; repeated string recommended_skill_ids = 15 [deprecated = true]; repeated string conformance_runtime_digests = 16; repeated CLIRecommendedSkill recommended_skills = 17; string icon = 18; string description = 19; string installation_type = 20; string manifest_version = 21; string usage_guide = 22; }
 message ListCLIConnectorDefinitionsRequest {}
 message ListCLIConnectorDefinitionsResponse { repeated CLIConnectorDefinition items = 1; }
 message CreateCLIConnectorDefinitionRequest { CLIConnectorDefinitionInput definition = 1; }
@@ -296,10 +301,16 @@ message CompleteCLIConnectorAuthorizationRequest { string flow_id = 1; }
 message ListCLIConnectorAuthorizationsRequest { string enablement_id = 1; }
 message ListCLIConnectorAuthorizationsResponse { repeated CLIConnectorAuthorization items = 1; }
 message DisconnectCLIConnectorAuthorizationRequest { string authorization_id = 1; int64 expected_version = 2; }
-message CommandApproval { string id = 1; string execution_kind = 2; string execution_id = 3; string connector_name = 4; string operation = 5; string target = 6; string redacted_arguments = 7; string state = 8; optional string identity = 9; google.protobuf.Timestamp expires_at = 10; int64 version = 11; }
+message CommandApproval { string id = 1; string execution_kind = 2; string execution_id = 3; string connector_name = 4; string operation = 5; string target = 6; string redacted_arguments = 7; string state = 8; optional string identity = 9; google.protobuf.Timestamp expires_at = 10; int64 version = 11; string operation_id = 12; string manifest_version = 13; string input_digest = 14; string authorization_id = 15; string external_identity_id = 16; string external_display_name = 17; }
 message ListCommandApprovalsRequest {}
 message ListCommandApprovalsResponse { repeated CommandApproval items = 1; }
 message DecideCommandApprovalRequest { string approval_id = 1; string decision = 2; optional string identity = 3; int64 expected_version = 4; }
+message ConnectorActionRequirement { int32 contract_version = 1; string id = 2; string execution_kind = 3; string execution_id = 4; string operation_id = 5; string connector_id = 6; string connector_name = 7; string enablement_id = 8; string capability_id = 9; map<string, string> operation_phrase = 10; string reason = 11; repeated string permissions = 12; repeated string actions = 13; string state = 14; optional string action_url = 15; google.protobuf.Timestamp expires_at = 16; int64 version = 17; string identity = 18; }
+message ListConnectorActionsRequest {}
+message ListConnectorActionsResponse { repeated ConnectorActionRequirement items = 1; }
+message StartConnectorActionRequest { string action_id = 1; }
+message CheckConnectorActionRequest { string action_id = 1; }
+message CancelConnectorActionRequest { string action_id = 1; }
 
 message DeleteResponse { bool deleted = 1; }
 message Attachment { string id = 1; string name = 2; string content_type = 3; int64 size = 4; string sha256 = 5; bool image = 6; }

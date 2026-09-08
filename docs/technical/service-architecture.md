@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、通用 CLI Action Requirement、飞书 User 授权与管理员聚合健康已实现；MCP Gateway、第二种 Authorization Scheme 的通用 Setup/Credential 存储、Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
 
 ## 结构
 
@@ -9,7 +9,7 @@
 当前实现分为三个限界上下文：
 
 - Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
-- Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、User-owned MCP Connector、Administrator-owned CLI Connector Definition、User-private CLI Enablement/Authorization/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
+- Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、MCP 与 CLI Connector、Resolved Connector Manifest、User-private Connector Enablement/Setup/Authorization/Binding/Approval/Operation、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 
 Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。三个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
@@ -18,14 +18,14 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 
 ## 所有权
 
-Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement 和 Authorization。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
+Session、Workflow、Expert、Expert Team、Skill、Connector Enablement/Setup/Authorization/Binding/Approval/Operation 和 Personal Settings 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model 与 Administrator 创建的 Connector Definition 是平台级目录，所有认证 User 可读取，只有 Administrator 可写；User 只保存引用全局资源的个人选择、Enablement、Setup 和 Authorization。每个 User 与 Connector 最多一个 active Authorization，且 Credential 不跨 Connector 复用。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、Connector Secret、外部身份、Permission 或逐次执行内容。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
 ## 事务与并发
 
 - Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
 - Session 首次发送消息、Run Conversation 首个 Run 创建时从 Personal Settings 解析并冻结一个 Provider Model 与 Runtime Engine。Snapshot 的每个 Stage 共用该配置，同时独立包含可选 Expert/Team Member 身份、四段结构化 guidance、Model Provider Connection 版本、Model API Protocol、Endpoint，以及 exact Skill/Connector revisions；环境变量和共享 Workspace 配置保留在公共快照层。后续消息或 Run 复用冻结的执行配置；每轮按 owning User 与 Session / Run Conversation 隔离的不可变 Conversation Selection 合并专家默认和显式资源，在该轮 Response Snapshot / Run Snapshot 中保留实际执行计划。成功提交在同一事务内清空 retained selection 的显式 Skills，保留专家与 Connector 选择。API Key 与 Connector Secret 通过版本化凭证引用在 Worker 领取或命令启动前加载，不进入普通 Snapshot JSON。
 - Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）、Runtime Engine 和实际资源集合摘要维护隔离的 Warm Runtime Container 租约。动态资源选择的轮次关闭 Native Resume，始终使用平台消息与摘要续接，避免旧上下文保留已移除的指导与工具。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
-- CLI Connector bundle 在无 User 凭证的 Builder 中生成并通过 Object Storage 发布；Definition 状态与 exact bundle/Runtime Digest Conformance 控制 availability。公共 Wrapper 是所有 Runtime 的唯一 direct CLI 入口，负责 argv 与权限策略。`waiting_for_user`、一次性 Approval、nonce consumption 和执行前重校验由 Workspace Application 协调并持久化；每个 Stage 同时只有一个 active Approval。
+- Connector Builder 在无 User 凭证的环境中生成 Manifest Draft 和 immutable CLI bundle。Schema、可信引用、管理员审核与 exact artifact Conformance 共同生成 Resolved Connector Manifest。当前公共 Connector Broker 协调 CLI Wrapper；`waiting_for_user`、Action Requirement、Authorization Session、一次性 Approval、nonce/state consumption 和执行前重校验由 Workspace Application 持久化；每个 Stage 同时只有一个 active User Action。Authorization Scheme 和 Permission Catalog 已由平台注册表约束，但 Setup、Credential slot 持久化与加密 AAD 仍沿用飞书兼容表，增加第二种 Scheme 前必须下沉为共享端口和通用存储。经过测试的 MCP Tool schema 冻结和 MCP Gateway 是同一目标 seam 的后续工作，当前原生 MCP 配置不冒充已经满足这些保证。
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
 - Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
 - 每个 User 的积分模型调用串行。调用开始前事务性物化当日额度并检查正余额；每个 Execution Stage 冻结 Model Credit Rate 修订，完成后以本次输入和输出 Token 增量结算。Stage 终态、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交；单 Stage 或团队最后一个 Stage 同事务提交 Assistant Message 或 Run 终态，结算后的负余额会阻止下一次调用。
@@ -64,6 +64,6 @@ CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_c
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
 
-Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。启用飞书 CLI Connector 时，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Feishu Application 并销毁临时设备码。历史 Snapshot JSON 不回写。
+Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。Connector 通用化采用 expand-contract：先追加 Manifest、Setup、Authorization、Binding、Action Requirement、Operation 与 Audit 结构并保持旧 Feishu 读取，再迁移可验证的原记录，最后删除供应商专用路径。无法证明 owner、identity、Permission、credential version 或加密 AAD 的记录进入 reauthorization-required，不猜测迁移。历史 Snapshot JSON 不回写。
 
 Conversation Selection 使用追加式 Migration `000027_conversation_selections.sql`，按 owner 与 Session / 根 Run 约束修订；删除所属对话时数据库级联删除修订。本地 PostgreSQL 17 临时数据库已验证完整迁移链与会话/工作流选择事务，生产迁移及 Linux + runsc 证据须单独取得。

@@ -35,7 +35,7 @@ func TestUnixBrokerServesAndRemovesProtectedSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.NewEncoder(connection).Encode(BrokerCommand{ConnectorID: "connector-1", Capability: "identity", Identity: IdentityUser, Arguments: []string{"auth", "status"}}); err != nil {
+	if err := json.NewEncoder(connection).Encode(BrokerCommand{ConnectorID: "connector-1", Capability: "identity", Identity: IdentityUser, Input: map[string]any{}}); err != nil {
 		t.Fatal(err)
 	}
 	var response BrokerResponse

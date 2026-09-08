@@ -26,14 +26,16 @@ const (
 )
 
 type CommandApproval struct {
-	ID, OwnerID, StageID, CommandDigest, NonceHash      string
-	ExecutionKind, ExecutionID                          string
-	ConnectorName, Operation, Target, RedactedArguments string
-	State                                               ApprovalState
-	Identity                                            ExecutionIdentity
-	ExpiresAt                                           time.Time
-	DecidedAt, ConsumedAt                               *time.Time
-	Version                                             int64
+	ID, OwnerID, StageID, CommandDigest, NonceHash           string
+	ExecutionKind, ExecutionID                               string
+	ConnectorName, Operation, Target, RedactedArguments      string
+	OperationID, ManifestVersion, InputDigest                string
+	AuthorizationID, ExternalIdentityID, ExternalDisplayName string
+	State                                                    ApprovalState
+	Identity                                                 ExecutionIdentity
+	ExpiresAt                                                time.Time
+	DecidedAt, ConsumedAt                                    *time.Time
+	Version                                                  int64
 }
 
 func NewCommandApproval(id, ownerID, stageID, digest, nonce string, now time.Time, timeout time.Duration) (CommandApproval, error) {

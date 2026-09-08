@@ -61,7 +61,7 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := cliconnector.BuildResult{State: cliconnector.StateAvailable, BundleObjectKey: "cli-connectors/bundles/test.zip", BundleSHA256: strings.Repeat("a", 64), RuntimeDigests: []string{"sha256:" + strings.Repeat("b", 64)}, Package: input.Package, Version: input.Version, Integrity: "sha512-test", Executable: "example", AuthenticationDriver: "none", SupportedArchitectures: []string{"linux-amd64"}, Capabilities: []cliconnector.Capability{{ID: "read", ArgvPrefix: []string{"read"}, Risk: cliconnector.RiskLow, Identities: []cliconnector.Identity{cliconnector.IdentityUser}, EgressHosts: []string{"example.test"}, Timeout: time.Minute}}}
+	result := cliconnector.BuildResult{State: cliconnector.StateAvailable, BundleObjectKey: "cli-connectors/bundles/test.zip", BundleSHA256: strings.Repeat("a", 64), RuntimeDigests: []string{"sha256:" + strings.Repeat("b", 64)}, Package: input.Package, Version: input.Version, Integrity: "sha512-test", Executable: "example", AuthenticationDriver: "none", SupportedArchitectures: []string{"linux-amd64"}, ManifestVersion: "1", UsageGuide: "Use read to retrieve an example.", Capabilities: []cliconnector.Capability{{ID: "read", DisplayName: map[string]string{"en": "Read example"}, OperationPhrase: map[string]string{"en": "read an example"}, ArgvPrefix: []string{"read"}, Risk: cliconnector.RiskLow, Identities: []cliconnector.Identity{cliconnector.IdentityUser}, EgressHosts: []string{"example.test"}, Timeout: time.Minute, Idempotency: cliconnector.IdempotencyRetrySafe}}}
 	for attempt := 0; attempt < 2; attempt++ {
 		if _, err := repository.PublishCLIConnectorDefinition(ctx, item.ID, item.VersionNumber); err != nil {
 			t.Fatal(err)
@@ -76,6 +76,13 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 		if err := repository.FinishCLIConnectorBuild(ctx, *job, result, ""); err != nil {
 			t.Fatalf("installation %d could not finish: %v", attempt+1, err)
 		}
+		items, err := repository.ListCLIConnectorDefinitions(ctx, true)
+		if err != nil || len(items) != 1 || items[0].State != cliconnector.StateReview {
+			t.Fatalf("installation %d review state: items=%#v err=%v", attempt+1, items, err)
+		}
+		if _, err := repository.PublishCLIConnectorDefinition(ctx, item.ID, items[0].VersionNumber); err != nil {
+			t.Fatalf("installation %d review publish: %v", attempt+1, err)
+		}
 		available, err := repository.GetAvailableCLIConnectorDefinition(ctx, item.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -86,6 +93,50 @@ func TestCLIConnectorReinstallCanRecordRepeatedConformance(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func TestCLIConnectorExecutionRevalidationKeepsFrozenVersionsUntilSecurityDisable(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	input := cliconnector.Definition{Name: "Example CLI", Icon: "terminal", Description: "Read examples", InstallationType: "npm", Package: "example-cli", Version: "1.0.0", ManifestVersion: "1"}
+	item, err := repository.CreateCLIConnectorDefinition(ctx, owner, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("UPDATE cli_connector_definitions SET state='available' WHERE id=?", item.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO cli_connector_enablements(owner_user_id,definition_id,state) VALUES(?,?,'enabled')", owner, item.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	available, err := repository.GetAvailableCLIConnectorDefinition(ctx, item.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RevalidateCLIConnectorExecution(ctx, owner, item.ID, available.VersionNumber); err != nil {
+		t.Fatalf("current frozen version was rejected: %v", err)
+	}
+	updated, err := repository.UpdateCLIConnectorDefinition(ctx, item.ID, input, available.VersionNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RevalidateCLIConnectorExecution(ctx, owner, item.ID, available.VersionNumber); err != nil {
+		t.Fatalf("normal version evolution rejected an active frozen version: %v", err)
+	}
+	if err := db.Exec("UPDATE cli_connector_definitions SET state='available' WHERE id=?", item.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.DisableCLIConnectorDefinition(ctx, item.ID, updated.VersionNumber); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RevalidateCLIConnectorExecution(ctx, owner, item.ID, available.VersionNumber); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("security disable did not reject frozen execution: %v", err)
 	}
 }
 
@@ -169,11 +220,11 @@ func TestCLIConnectorDeletionRevokesAccessAndPreservesHistory(t *testing.T) {
 	}
 	exec("UPDATE cli_connector_definitions SET state='available' WHERE id=?", replacement.ID)
 	restored, err := repository.EnableCLIConnector(ctx, owner, replacement.ID)
-	if err != nil || restored.State != "enabled" || restored.ProviderName != "Test" {
-		t.Fatalf("existing Feishu Application was not reused: %v", err)
+	if err != nil || restored.State != "enabled" || restored.ProviderName != "" {
+		t.Fatalf("replacement Connector was not enabled independently: %#v, %v", restored, err)
 	}
-	if _, err := repository.GetFeishuCLIApplicationCredentials(ctx, owner, restored.ID); err != nil {
-		t.Fatalf("restored credentials unavailable: %v", err)
+	if _, err := repository.GetFeishuCLIApplicationCredentials(ctx, owner, restored.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("replacement Connector reused another Connector's credentials: %v", err)
 	}
 	again, err := repository.EnableCLIConnector(ctx, owner, replacement.ID)
 	if err != nil || again.ID != restored.ID || again.Version != restored.Version {

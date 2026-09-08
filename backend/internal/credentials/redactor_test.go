@@ -63,3 +63,13 @@ func TestRedactorHandlesBinaryPayload(t *testing.T) {
 		t.Fatalf("redacted binary = %v, want %v", got, want)
 	}
 }
+
+func TestRedactorAcceptsSecretsDiscoveredAfterConstruction(t *testing.T) {
+	redactor := credentials.NewRedactor([]byte("initial-secret"))
+	redactor.AddPatterns([]byte("lazy-secret"))
+
+	got := string(redactor.Bytes([]byte("initial-secret lazy-secret")))
+	if got != "[REDACTED] [REDACTED]" {
+		t.Fatalf("redacted dynamic credentials = %q", got)
+	}
+}

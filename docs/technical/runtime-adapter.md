@@ -1,6 +1,6 @@
 # Runtime Adapter
 
-状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker 与存活 Worker 内 User Action Wait 已实现；CLI 等待期间普通执行 deadline 暂停、Worker 重启恢复和 Linux + gVisor 端到端证据尚未完成
+状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI Broker 与存活 Worker 内 User Action Wait 已实现；MCP Gateway、CLI 等待期间普通执行 deadline 暂停、Worker 重启恢复、通用 `show_code`/`edit_setup` Action 和 Linux + gVisor 端到端证据尚未完成
 
 Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Code、Codex、Hermes、OpenClaw 与 PI Agent 的命令参数、版本探测和输出解析保留在各自 Driver，共享的进程、容器和事件行为位于 `cliadapter`、`processharness` 与 `containerprocess`。
 
@@ -30,8 +30,10 @@ Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 R
 
 MCP Connector 配置在每次执行中生成：Claude 使用 `--mcp-config`，Codex 使用 `$HOME/.codex/config.toml`，Hermes 使用 `$HOME/.hermes/config.yaml`，OpenClaw 使用受控配置文件。stdio MCP 只允许固定版本的 `npx`/`uvx` 包；Streamable HTTP 只允许 HTTPS 与可选写入型 Bearer Token。Administrator 创建的平台 MCP 仍以 Administrator 为 Secret 所有者；冻结快照保留该所有者并使用对应 AAD 解密，调用 User 只能执行连接器，不能读取、修改或重新拥有其 Secret。
 
-Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wrapper 根据冻结 Definition 和当前 User-private Authorization 生成真实可执行文件与参数数组，强制检查 bundle Digest、Runtime RepoDigest、能力、身份、argv、scope、Egress、Workspace、输出和超时，并在进程启动前再次检查 Definition、Enablement、Authorization 与批准状态。当前 Secret 只为这一次命令物化、加入精确值脱敏集合并幂等清理。
+Third-party CLI Connector 不进入各 Runtime Driver。当前公共 Connector Broker 根据冻结的 Resolved Connector Manifest 校验结构化输入、Enablement、Setup、Authorization、Permission、风险、Egress、幂等策略和执行限制；CLI Wrapper 只按受限声明映射生成真实可执行文件与 argv，并在启动前重新校验可变安全状态。Connector Credential Delivery 只能把当前 Connector 自己的 Secret 槽位映射到受控环境变量；Secret 只为一次 Operation 物化、加入精确值脱敏集合并幂等清理。现有 MCP 仍通过 Runtime 原生配置执行，尚未接入同一 Broker/Gateway，因此不声明 per-User Authorization 或高风险 Approval 已覆盖 MCP。
 
-高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime 和临时 Workspace、暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
+缺少 Setup、Authorization、Permission 或高风险 Operation Approval 时，Broker 持久化版本化 Connector Action Requirement，然后令 Session response 或 Run 进入 `waiting_for_user`。当前前端和服务端共同支持 `open_url`、`copy_value` 与 `check_status`，并对其他 Action 类型 fail closed；目标契约中的 `show_code` 与 `edit_setup` 仍待实现。前端不识别供应商 ID。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime 和临时 Workspace并继续响应取消，但普通执行 deadline 暂停尚未实现。只有认证的 owning User 可决定；授权验证自动恢复同一存活 Worker 中的执行，拒绝返回 `cancelled_by_user`，超时返回 `user_action_expired`。高风险 CLI Operation 的一次性 Approval 在外部身份确定后绑定冻结 Manifest、目标、输入摘要和 digest，消费后才可启动 Transport；MCP 接入同一生命周期仍待实现。
+
+CLI Wrapper 通过 Broker 发布版本化 Connector Operation Event，而不是由 Runtime 命令文本推断业务状态。存活 Worker 内的单次传输中断服从冻结 Capability 的幂等策略：安全读和具有稳定幂等键的写可重试一次，结果无法确认的写进入 `outcome_unknown`。普通审计只保存稳定 ID、版本、Permission、原因、结果、目标摘要和输入 digest，不保存 Token、Setup Secret、授权 URL、Header、临时文件、完整 argv 或 Provider 响应。MCP 事件与跨 Worker 恢复仍属于待实现能力。
 
 PI Agent 固定使用非交互 JSONL 模式，并关闭隐式 Extension、Skill、Prompt Template 和 Context File 发现；平台冻结的 Skill 仍通过公共 Instruction seam 暴露。PI Agent 本身不内置 MCP，因此带 MCP Connector 的执行会 fail closed，直到平台提供并验证明确的 PI Extension 适配。

@@ -17,6 +17,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
@@ -31,15 +32,15 @@ import (
 
 type Service struct {
 	workspacev1.UnimplementedAgentWorkspaceServiceServer
-	accounts  *accountapplication.Service
-	credits   *creditsapplication.Service
-	workspace *workspaceapplication.Service
-	box       *secretcrypto.Box
-	files     *workspacefs.Store
-	skills    *skillstore.Store
-	objects   objectstore.Provider
-	config    platformconfig.Config
-	feishu    feishuApplicationRegistrar
+	accounts              *accountapplication.Service
+	credits               *creditsapplication.Service
+	workspace             *workspaceapplication.Service
+	box                   *secretcrypto.Box
+	files                 *workspacefs.Store
+	skills                *skillstore.Store
+	objects               objectstore.Provider
+	config                platformconfig.Config
+	authorizationAdapters *cliconnector.AuthorizationRegistry
 }
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
@@ -51,13 +52,25 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/workflows/{workflow_id}/workspace/download", http.HandlerFunc(service.downloadWorkspaceFile))
 	server.Handle("/api/v1/attachments/upload", http.HandlerFunc(service.uploadAttachment))
 	server.Handle("/api/v1/attachments/{attachment_id}/download", http.HandlerFunc(service.downloadAttachment))
+	server.Handle("/api/v1/connector-actions/{action_id}/open", http.HandlerFunc(service.openConnectorAction))
 }
 
 func New(accounts *accountapplication.Service, credits *creditsapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
 	if accounts == nil || credits == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil)}, nil
+	registry := cliconnector.NewAuthorizationRegistry()
+	if err := registry.Register("feishu", feishuAuthorizationAdapter{registrar: feishucli.NewRegistrar(nil)}); err != nil {
+		return nil, err
+	}
+	return &Service{accounts: accounts, credits: credits, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, authorizationAdapters: registry}, nil
+}
+
+func (service *Service) authorizationAdapter(scheme string) (cliconnector.AuthorizationAdapter, error) {
+	if service.authorizationAdapters == nil {
+		return nil, fmt.Errorf("Connector Authorization registry is unavailable")
+	}
+	return service.authorizationAdapters.Resolve(scheme)
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {

@@ -92,7 +92,7 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
       <button v-if="mobileOpen" class="scrim" @click="mobileOpen = false"></button>
       <el-main class="main-stage">
         <header class="mobile-header"><el-button text :icon="Menu" @click="mobileOpen = true" /><strong>{{ t('product') }}</strong><el-avatar :size="32">{{ initials }}</el-avatar></header>
-        <ApprovalInbox v-if="currentUser" />
+        <ApprovalInbox v-if="currentUser && route.meta.surface !== 'sessions'" />
         <RouterView :key="String(route.name)" />
       </el-main>
       <CreditPanel :open="creditPanelOpen" @close="creditPanelOpen = false" @updated="creditBalance = $event" />

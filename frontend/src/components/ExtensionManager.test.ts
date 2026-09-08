@@ -176,7 +176,7 @@ describe("ExtensionManager", () => {
 
   it("lets only an Administrator create definitions while Users can enable available CLI Connectors", async () => {
     const definition = { id: "cli-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
-    const enableCLIConnector = vi.fn(async () => ({ id: "enable-1", definition_id: definition.id, state: "waiting_for_user" as const, action_url: "https://open.feishu.cn/page/cli", version: 1 }));
+    const enableCLIConnector = vi.fn(async () => ({ id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 }));
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), listExperts: vi.fn(async () => []), enableCLIConnector } as unknown as PlatformApi;
     const user = mountManager(api);
     await flushPromises();
@@ -184,7 +184,8 @@ describe("ExtensionManager", () => {
     await user.findAll(".resource-list article button").at(-1)!.trigger("click");
     await flushPromises();
     expect(enableCLIConnector).toHaveBeenCalledWith(definition.id);
-    expect(user.text()).toContain("继续完成授权");
+    expect(user.text()).toContain("已启用");
+    expect(user.text()).not.toContain("继续完成授权");
     user.unmount();
 
     const administrator = mountManager(api, true);
@@ -352,13 +353,15 @@ describe("ExtensionManager", () => {
       npm_integrity: "sha512-old",
       executable: "example",
       authentication_driver: "none" as const,
-      capabilities: [{ id: "read", argv_prefix: ["read"], risk: "low" as const, identities: ["user" as const], scopes: [], egress_hosts: ["api.example.test"], timeout_seconds: 60 }],
+      capabilities: [{ id: "read", display_name: { "zh-CN": "读取", en: "Read" }, operation_phrase: { "zh-CN": "读取示例", en: "read an example" }, argv_prefix: ["read"], risk: "low" as const, identities: ["user" as const], scopes: [], egress_hosts: ["api.example.test"], timeout_seconds: 60 }],
       supported_architectures: ["linux-amd64" as const],
       recommended_skill_ids: [],
       recommended_skills: [],
       state: "failed" as const,
       mutable: true,
       version: 3,
+      manifest_version: "1",
+      usage_guide: "Use read to retrieve an example.",
     };
     const updateCLIConnectorDefinition = vi.fn(async (_id: string, input: CLIConnectorDefinitionInput) => ({ ...definition, ...input, version: 4 }));
     const publishCLIConnectorDefinition = vi.fn(async () => ({ ...definition, version: 5, state: "building" as const }));
@@ -380,12 +383,19 @@ describe("ExtensionManager", () => {
 
     await wrapper.get('button[aria-label="编辑"]').trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli@1.0.0");
-    await form.findAll("input")[1]!.setValue("example-cli@1.0.1");
+    expect((form.get('input[placeholder="@scope/package@1.2.3"]').element as HTMLInputElement).value).toBe("example-cli@1.0.0");
+    await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("example-cli@1.0.1");
+    await form.get('[data-testid="cli-usage-guide"]').setValue("Reviewed usage guide");
+    await form.get('[data-testid="cli-read-display-zh"]').setValue("读取记录");
+    await form.get('[data-testid="cli-read-phrase-zh"]').setValue("读取一条示例记录");
     await form.trigger("submit");
     await flushPromises();
 
-    expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, { name: definition.name, icon: "terminal", description: "读取示例服务数据", installation_type: "npm", npm_package: "example-cli", npm_version: "1.0.1", archive: undefined }, definition.version);
+    expect(updateCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, expect.objectContaining({
+      name: definition.name, icon: "terminal", description: "读取示例服务数据", installation_type: "npm", npm_package: "example-cli", npm_version: "1.0.1", archive: undefined,
+      manifest_version: "1", usage_guide: "Reviewed usage guide",
+      capabilities: [expect.objectContaining({ id: "read", display_name: { "zh-CN": "读取记录", en: "Read" }, operation_phrase: { "zh-CN": "读取一条示例记录", en: "read an example" }, argv_prefix: ["read"] })],
+    }), definition.version);
     expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(definition.id, 4);
     wrapper.unmount();
   });
@@ -469,10 +479,10 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     await flushPromises();
 
-    await wrapper.findAll("button").find((button) => button.text().includes("授权飞书账号"))!.trigger("click");
+    await wrapper.findAll("button").find((button) => button.text().includes("授权外部账号"))!.trigger("click");
     await flushPromises();
     expect(beginCLIConnectorAuthorization).toHaveBeenCalledWith(enablement.id, "user", ["calendar:calendar:read"]);
-    expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开飞书授权");
+    expect(wrapper.get('a[href="https://accounts.feishu.cn/authorize"]').text()).toBe("打开账号授权");
 
     listCLIConnectorAuthorizations.mockResolvedValueOnce([authorization]);
     await vi.advanceTimersByTimeAsync(6000);
