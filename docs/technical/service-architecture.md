@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康已实现；AI Creation 图片生成已完成设计但尚未实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 
@@ -14,7 +14,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、User-owned MCP Connector、Administrator-owned CLI Connector Definition、User-private CLI Enablement/Authorization/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 
-AI Creation 修订将新增第四个限界上下文：
+AI Creation 修订新增第四个限界上下文：
 
 - AI Creation：Image Model、Prompt Optimization 候选配置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；通过 Application 端口引用 Workspace 拥有的全局 Model Provider Connection 和 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
 

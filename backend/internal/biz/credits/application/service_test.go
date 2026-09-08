@@ -127,3 +127,11 @@ func (repository *recordingRepository) ListRates(context.Context) ([]domain.Rate
 func (repository *recordingRepository) CreateRateRevision(context.Context, string, domain.ModelCreditRate, string, time.Time) (domain.ModelCreditRate, error) {
 	return domain.ModelCreditRate{}, nil
 }
+
+func (repository *recordingRepository) ReserveImage(_ context.Context, reservation domain.ImageReservation) (domain.ImageReservation, error) {
+	return reservation, nil
+}
+
+func (repository *recordingRepository) SettleImage(context.Context, string, domain.Amount, time.Time) error {
+	return nil
+}

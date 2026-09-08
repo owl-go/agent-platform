@@ -13,6 +13,7 @@ import (
 	"agent-platform/backend/internal/service/platform"
 	"agent-platform/backend/internal/service/workspace"
 	"agent-platform/backend/internal/wiring/agentworkspace"
+	"agent-platform/backend/internal/wiring/aicreation"
 	platform2 "agent-platform/backend/internal/wiring/platform"
 	"context"
 	"github.com/go-kratos/kratos/v3"
@@ -43,15 +44,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	service3, err := agentworkspace.NewWorkspaceService(database, repository)
-	if err != nil {
-		return nil, err
-	}
 	box, err := agentworkspace.NewSecretBox(config)
-	if err != nil {
-		return nil, err
-	}
-	store, err := agentworkspace.NewWorkspaceFiles(config)
 	if err != nil {
 		return nil, err
 	}
@@ -59,15 +52,27 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
+	service3, err := aicreation.NewApplication(database, repository, service2, box, objectstoreProvider)
+	if err != nil {
+		return nil, err
+	}
+	service4, err := agentworkspace.NewWorkspaceService(database, repository)
+	if err != nil {
+		return nil, err
+	}
+	store, err := agentworkspace.NewWorkspaceFiles(config)
+	if err != nil {
+		return nil, err
+	}
 	skillstoreStore, err := agentworkspace.NewSkillStore(objectstoreProvider)
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, service3, box, store, skillstoreStore, objectstoreProvider, config)
+	workspaceService, err := workspace.New(applicationService, service2, service3, service4, box, store, skillstoreStore, objectstoreProvider, config)
 	if err != nil {
 		return nil, err
 	}
-	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service3)
+	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service4)
 	if err != nil {
 		return nil, err
 	}

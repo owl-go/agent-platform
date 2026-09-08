@@ -29,6 +29,7 @@ const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.Age
 const OperationAgentWorkspaceServiceCreateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
+const OperationAgentWorkspaceServiceCreateImageModel = "/workspace.v1.AgentWorkspaceService/CreateImageModel"
 const OperationAgentWorkspaceServiceCreateMCPConnector = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
 const OperationAgentWorkspaceServiceCreateModelCreditRate = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
@@ -42,6 +43,8 @@ const OperationAgentWorkspaceServiceDecideCommandApproval = "/workspace.v1.Agent
 const OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
+const OperationAgentWorkspaceServiceDeleteImageGeneration = "/workspace.v1.AgentWorkspaceService/DeleteImageGeneration"
+const OperationAgentWorkspaceServiceDeleteImageModel = "/workspace.v1.AgentWorkspaceService/DeleteImageModel"
 const OperationAgentWorkspaceServiceDeleteMCPConnector = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
 const OperationAgentWorkspaceServiceDeleteModelProviderConnection = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
 const OperationAgentWorkspaceServiceDeleteSession = "/workspace.v1.AgentWorkspaceService/DeleteSession"
@@ -57,6 +60,7 @@ const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorks
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+const OperationAgentWorkspaceServiceGetImageGeneration = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -75,6 +79,9 @@ const OperationAgentWorkspaceServiceListConversationFiles = "/workspace.v1.Agent
 const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
 const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceService/ListExperts"
+const OperationAgentWorkspaceServiceListImageGenerationOptions = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
+const OperationAgentWorkspaceServiceListImageGenerations = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
+const OperationAgentWorkspaceServiceListImageModels = "/workspace.v1.AgentWorkspaceService/ListImageModels"
 const OperationAgentWorkspaceServiceListMCPConnectors = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
@@ -89,18 +96,25 @@ const OperationAgentWorkspaceServiceListSkills = "/workspace.v1.AgentWorkspaceSe
 const OperationAgentWorkspaceServiceListUsers = "/workspace.v1.AgentWorkspaceService/ListUsers"
 const OperationAgentWorkspaceServiceListWorkflows = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 const OperationAgentWorkspaceServiceListWorkspaceEntries = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
+const OperationAgentWorkspaceServiceOptimizeImagePrompt = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
 const OperationAgentWorkspaceServicePublishCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceRedeemCreditCode = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
 const OperationAgentWorkspaceServiceRefreshProviderModels = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
+const OperationAgentWorkspaceServiceRegenerateImageGeneration = "/workspace.v1.AgentWorkspaceService/RegenerateImageGeneration"
+const OperationAgentWorkspaceServiceReplacePromptOptimizationCandidates = "/workspace.v1.AgentWorkspaceService/ReplacePromptOptimizationCandidates"
 const OperationAgentWorkspaceServiceRerunWorkflow = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
 const OperationAgentWorkspaceServiceResetUserPassword = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
 const OperationAgentWorkspaceServiceResolveConversationSelection = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
 const OperationAgentWorkspaceServiceRetrySessionMessage = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
+const OperationAgentWorkspaceServiceReviseImageModel = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
 const OperationAgentWorkspaceServiceRunWorkflow = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
+const OperationAgentWorkspaceServiceSetImageModelAvailability = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
 const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
+const OperationAgentWorkspaceServiceStopImageGeneration = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
+const OperationAgentWorkspaceServiceSubmitImageGeneration = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
 const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
@@ -111,6 +125,7 @@ const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceUpdateSettings = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
 const OperationAgentWorkspaceServiceUpdateSkill = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
 const OperationAgentWorkspaceServiceUpdateWorkflow = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
+const OperationAgentWorkspaceServiceVerifyImageModel = "/workspace.v1.AgentWorkspaceService/VerifyImageModel"
 const OperationAgentWorkspaceServiceVoidRedemptionCode = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
 
 type AgentWorkspaceServiceHTTPServer interface {
@@ -126,6 +141,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
+	CreateImageModel(context.Context, *CreateImageModelRequest) (*ImageModel, error)
 	CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error)
 	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
@@ -139,6 +155,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
+	DeleteImageGeneration(context.Context, *DeleteImageGenerationRequest) (*DeleteResponse, error)
+	DeleteImageModel(context.Context, *DeleteImageModelRequest) (*DeleteResponse, error)
 	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
 	DeleteModelProviderConnection(context.Context, *DeleteModelProviderConnectionRequest) (*DeleteResponse, error)
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
@@ -154,6 +172,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
+	GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error)
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -172,6 +191,9 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
+	ListImageGenerationOptions(context.Context, *ListImageGenerationOptionsRequest) (*ListImageGenerationOptionsResponse, error)
+	ListImageGenerations(context.Context, *ListImageGenerationsRequest) (*ListImageGenerationsResponse, error)
+	ListImageModels(context.Context, *ListImageModelsRequest) (*ListImageModelsResponse, error)
 	ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error)
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
@@ -186,18 +208,25 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
+	OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
 	RefreshProviderModels(context.Context, *RefreshProviderModelsRequest) (*ModelProviderConnection, error)
+	RegenerateImageGeneration(context.Context, *RegenerateImageGenerationRequest) (*ImageGenerationRecord, error)
+	ReplacePromptOptimizationCandidates(context.Context, *ReplacePromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
 	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
+	ReviseImageModel(context.Context, *ReviseImageModelRequest) (*ImageModel, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
+	SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error)
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
 	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
+	StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error)
+	SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error)
 	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
@@ -208,6 +237,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
+	VerifyImageModel(context.Context, *VerifyImageModelRequest) (*ImageModel, error)
 	VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error)
 }
 
@@ -232,6 +262,21 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/admin/redemption-code-batches", _AgentWorkspaceService_CreateRedemptionCodeBatch0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/admin/redemption-codes", _AgentWorkspaceService_ListRedemptionCodes0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/redemption-codes/{code_id}/void", _AgentWorkspaceService_VoidRedemptionCode0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/ai-creation/image-generation/options", _AgentWorkspaceService_ListImageGenerationOptions0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/ai-creation/image-generations", _AgentWorkspaceService_SubmitImageGeneration0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/ai-creation/image-generations", _AgentWorkspaceService_ListImageGenerations0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/ai-creation/image-generations/{record_id}", _AgentWorkspaceService_GetImageGeneration0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/ai-creation/image-generations/{record_id}/cancellation", _AgentWorkspaceService_StopImageGeneration0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/ai-creation/image-generations/{record_id}/regeneration", _AgentWorkspaceService_RegenerateImageGeneration0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/ai-creation/image-generations/{record_id}", _AgentWorkspaceService_DeleteImageGeneration0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/ai-creation/image-generation/prompt-optimizations", _AgentWorkspaceService_OptimizeImagePrompt0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/ai-creation/image-models", _AgentWorkspaceService_ListImageModels0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/ai-creation/image-models", _AgentWorkspaceService_CreateImageModel0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/admin/ai-creation/image-models/{image_model_id}", _AgentWorkspaceService_ReviseImageModel0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/admin/ai-creation/image-models/{image_model_id}", _AgentWorkspaceService_DeleteImageModel0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/ai-creation/image-models/{image_model_id}/test", _AgentWorkspaceService_VerifyImageModel0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability", _AgentWorkspaceService_SetImageModelAvailability0_HTTP_Handler(srv))
+	r.Handle("PUT", "/api/v1/admin/ai-creation/prompt-optimization-models", _AgentWorkspaceService_ReplacePromptOptimizationCandidates0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions", _AgentWorkspaceService_ListSessions0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions", _AgentWorkspaceService_CreateSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_GetSession0_HTTP_Handler(srv))
@@ -685,6 +730,315 @@ func _AgentWorkspaceService_VoidRedemptionCode0_HTTP_Handler(srv AgentWorkspaceS
 			return err
 		}
 		reply := out.(*RedemptionCodeStatus)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListImageGenerationOptions0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListImageGenerationOptionsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListImageGenerationOptions)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListImageGenerationOptions(ctx, req.(*ListImageGenerationOptionsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListImageGenerationOptionsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SubmitImageGeneration0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SubmitImageGenerationRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSubmitImageGeneration)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SubmitImageGeneration(ctx, req.(*SubmitImageGenerationRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageGenerationRecord)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListImageGenerations0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListImageGenerationsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListImageGenerations)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListImageGenerations(ctx, req.(*ListImageGenerationsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListImageGenerationsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetImageGeneration0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetImageGenerationRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetImageGeneration)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetImageGeneration(ctx, req.(*GetImageGenerationRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageGenerationRecord)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_StopImageGeneration0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in StopImageGenerationRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceStopImageGeneration)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.StopImageGeneration(ctx, req.(*StopImageGenerationRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageGenerationRecord)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_RegenerateImageGeneration0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in RegenerateImageGenerationRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceRegenerateImageGeneration)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RegenerateImageGeneration(ctx, req.(*RegenerateImageGenerationRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageGenerationRecord)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteImageGeneration0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteImageGenerationRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteImageGeneration)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteImageGeneration(ctx, req.(*DeleteImageGenerationRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_OptimizeImagePrompt0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in OptimizeImagePromptRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceOptimizeImagePrompt)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.OptimizeImagePrompt(ctx, req.(*OptimizeImagePromptRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*OptimizeImagePromptResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListImageModels0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListImageModelsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListImageModels)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListImageModels(ctx, req.(*ListImageModelsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListImageModelsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateImageModel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateImageModelRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateImageModel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateImageModel(ctx, req.(*CreateImageModelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageModel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ReviseImageModel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ReviseImageModelRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceReviseImageModel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ReviseImageModel(ctx, req.(*ReviseImageModelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageModel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteImageModel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteImageModelRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteImageModel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteImageModel(ctx, req.(*DeleteImageModelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_VerifyImageModel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in VerifyImageModelRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceVerifyImageModel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.VerifyImageModel(ctx, req.(*VerifyImageModelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageModel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SetImageModelAvailability0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetImageModelAvailabilityRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSetImageModelAvailability)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetImageModelAvailability(ctx, req.(*SetImageModelAvailabilityRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ImageModel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ReplacePromptOptimizationCandidates0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ReplacePromptOptimizationCandidatesRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceReplacePromptOptimizationCandidates)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ReplacePromptOptimizationCandidates(ctx, req.(*ReplacePromptOptimizationCandidatesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListPromptOptimizationCandidatesResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -2305,6 +2659,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateCLIConnectorDefinition(ctx context.Context, req *CreateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	CreateImageModel(ctx context.Context, req *CreateImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
 	CreateMCPConnector(ctx context.Context, req *CreateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	CreateModelCreditRate(ctx context.Context, req *CreateModelCreditRateRequest, opts ...http.CallOption) (rsp *ModelCreditRate, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
@@ -2318,6 +2673,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	DeleteCLIConnectorDefinition(ctx context.Context, req *DeleteCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteImageGeneration(ctx context.Context, req *DeleteImageGenerationRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteImageModel(ctx context.Context, req *DeleteImageModelRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteMCPConnector(ctx context.Context, req *DeleteMCPConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteModelProviderConnection(ctx context.Context, req *DeleteModelProviderConnectionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSession(ctx context.Context, req *DeleteSessionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -2333,6 +2690,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	GetImageGeneration(ctx context.Context, req *GetImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
@@ -2351,6 +2709,9 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
 	ListExperts(ctx context.Context, req *ListExpertsRequest, opts ...http.CallOption) (rsp *ListExpertsResponse, err error)
+	ListImageGenerationOptions(ctx context.Context, req *ListImageGenerationOptionsRequest, opts ...http.CallOption) (rsp *ListImageGenerationOptionsResponse, err error)
+	ListImageGenerations(ctx context.Context, req *ListImageGenerationsRequest, opts ...http.CallOption) (rsp *ListImageGenerationsResponse, err error)
+	ListImageModels(ctx context.Context, req *ListImageModelsRequest, opts ...http.CallOption) (rsp *ListImageModelsResponse, err error)
 	ListMCPConnectors(ctx context.Context, req *ListMCPConnectorsRequest, opts ...http.CallOption) (rsp *ListMCPConnectorsResponse, err error)
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
@@ -2365,18 +2726,25 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListUsers(ctx context.Context, req *ListUsersRequest, opts ...http.CallOption) (rsp *ListUsersResponse, err error)
 	ListWorkflows(ctx context.Context, req *ListWorkflowsRequest, opts ...http.CallOption) (rsp *ListWorkflowsResponse, err error)
 	ListWorkspaceEntries(ctx context.Context, req *ListWorkspaceEntriesRequest, opts ...http.CallOption) (rsp *ListWorkspaceEntriesResponse, err error)
+	OptimizeImagePrompt(ctx context.Context, req *OptimizeImagePromptRequest, opts ...http.CallOption) (rsp *OptimizeImagePromptResponse, err error)
 	PublishCLIConnectorDefinition(ctx context.Context, req *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
 	RefreshProviderModels(ctx context.Context, req *RefreshProviderModelsRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
+	RegenerateImageGeneration(ctx context.Context, req *RegenerateImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
+	ReplacePromptOptimizationCandidates(ctx context.Context, req *ReplacePromptOptimizationCandidatesRequest, opts ...http.CallOption) (rsp *ListPromptOptimizationCandidatesResponse, err error)
 	RerunWorkflow(ctx context.Context, req *RerunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	ResetUserPassword(ctx context.Context, req *ResetUserPasswordRequest, opts ...http.CallOption) (rsp *ResetUserPasswordResponse, err error)
 	ResolveConversationSelection(ctx context.Context, req *ResolveConversationSelectionRequest, opts ...http.CallOption) (rsp *ConversationSelection, err error)
 	RetrySessionMessage(ctx context.Context, req *RetrySessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
+	ReviseImageModel(ctx context.Context, req *ReviseImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
 	RunWorkflow(ctx context.Context, req *RunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	SendSessionMessage(ctx context.Context, req *SendSessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
+	SetImageModelAvailability(ctx context.Context, req *SetImageModelAvailabilityRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
+	StopImageGeneration(ctx context.Context, req *StopImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
+	SubmitImageGeneration(ctx context.Context, req *SubmitImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	TestMCPConnector(ctx context.Context, req *TestMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
@@ -2387,6 +2755,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	UpdateSkill(ctx context.Context, req *UpdateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	UpdateWorkflow(ctx context.Context, req *UpdateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	VerifyImageModel(ctx context.Context, req *VerifyImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
 	VoidRedemptionCode(ctx context.Context, req *VoidRedemptionCodeRequest, opts ...http.CallOption) (rsp *RedemptionCodeStatus, err error)
 }
 
@@ -2593,6 +2962,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateExpertTeam(ctx context.Conte
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCreateExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateImageModel(ctx context.Context, in *CreateImageModelRequest, opts ...http.CallOption) (*ImageModel, error) {
+	var out ImageModel
+	pattern := "/api/v1/admin/ai-creation/image-models"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateImageModel),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -2811,6 +3197,38 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteExpertTeam(ctx context.Conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceDeleteExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteImageGeneration(ctx context.Context, in *DeleteImageGenerationRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/ai-creation/image-generations/{record_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteImageGeneration),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteImageModel(ctx context.Context, in *DeleteImageModelRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/admin/ai-creation/image-models/{image_model_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteImageModel),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
@@ -3056,6 +3474,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetExpertTeam(ctx context.Context,
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetImageGeneration(ctx context.Context, in *GetImageGenerationRequest, opts ...http.CallOption) (*ImageGenerationRecord, error) {
+	var out ImageGenerationRecord
+	pattern := "/api/v1/ai-creation/image-generations/{record_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetImageGeneration),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -3353,6 +3787,54 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListExperts(ctx context.Context, i
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListImageGenerationOptions(ctx context.Context, in *ListImageGenerationOptionsRequest, opts ...http.CallOption) (*ListImageGenerationOptionsResponse, error) {
+	var out ListImageGenerationOptionsResponse
+	pattern := "/api/v1/ai-creation/image-generation/options"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListImageGenerationOptions),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListImageGenerations(ctx context.Context, in *ListImageGenerationsRequest, opts ...http.CallOption) (*ListImageGenerationsResponse, error) {
+	var out ListImageGenerationsResponse
+	pattern := "/api/v1/ai-creation/image-generations"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListImageGenerations),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListImageModels(ctx context.Context, in *ListImageModelsRequest, opts ...http.CallOption) (*ListImageModelsResponse, error) {
+	var out ListImageModelsResponse
+	pattern := "/api/v1/admin/ai-creation/image-models"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListImageModels),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListMCPConnectors(ctx context.Context, in *ListMCPConnectorsRequest, opts ...http.CallOption) (*ListMCPConnectorsResponse, error) {
 	var out ListMCPConnectorsResponse
 	pattern := "/api/v1/connectors/mcp"
@@ -3577,6 +4059,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListWorkspaceEntries(ctx context.C
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) OptimizeImagePrompt(ctx context.Context, in *OptimizeImagePromptRequest, opts ...http.CallOption) (*OptimizeImagePromptResponse, error) {
+	var out OptimizeImagePromptResponse
+	pattern := "/api/v1/ai-creation/image-generation/prompt-optimizations"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceOptimizeImagePrompt),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (*CLIConnectorDefinition, error) {
 	var out CLIConnectorDefinition
 	pattern := "/api/v1/admin/connectors/cli/{definition_id}/publish"
@@ -3622,6 +4121,40 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) RefreshProviderModels(ctx context.
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) RegenerateImageGeneration(ctx context.Context, in *RegenerateImageGenerationRequest, opts ...http.CallOption) (*ImageGenerationRecord, error) {
+	var out ImageGenerationRecord
+	pattern := "/api/v1/ai-creation/image-generations/{record_id}/regeneration"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceRegenerateImageGeneration),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ReplacePromptOptimizationCandidates(ctx context.Context, in *ReplacePromptOptimizationCandidatesRequest, opts ...http.CallOption) (*ListPromptOptimizationCandidatesResponse, error) {
+	var out ListPromptOptimizationCandidatesResponse
+	pattern := "/api/v1/admin/ai-creation/prompt-optimization-models"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceReplacePromptOptimizationCandidates),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3696,6 +4229,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) RetrySessionMessage(ctx context.Co
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ReviseImageModel(ctx context.Context, in *ReviseImageModelRequest, opts ...http.CallOption) (*ImageModel, error) {
+	var out ImageModel
+	pattern := "/api/v1/admin/ai-creation/image-models/{image_model_id}"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceReviseImageModel),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/api/v1/workflows/{workflow_id}/runs"
@@ -3724,6 +4274,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SendSessionMessage(ctx context.Con
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) SetImageModelAvailability(ctx context.Context, in *SetImageModelAvailabilityRequest, opts ...http.CallOption) (*ImageModel, error) {
+	var out ImageModel
+	pattern := "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSetImageModelAvailability),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3775,6 +4342,40 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserEnabled(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) StopImageGeneration(ctx context.Context, in *StopImageGenerationRequest, opts ...http.CallOption) (*ImageGenerationRecord, error) {
+	var out ImageGenerationRecord
+	pattern := "/api/v1/ai-creation/image-generations/{record_id}/cancellation"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceStopImageGeneration),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) SubmitImageGeneration(ctx context.Context, in *SubmitImageGenerationRequest, opts ...http.CallOption) (*ImageGenerationRecord, error) {
+	var out ImageGenerationRecord
+	pattern := "/api/v1/ai-creation/image-generations"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSubmitImageGeneration),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -3945,6 +4546,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateWorkflow(ctx context.Context
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) VerifyImageModel(ctx context.Context, in *VerifyImageModelRequest, opts ...http.CallOption) (*ImageModel, error) {
+	var out ImageModel
+	pattern := "/api/v1/admin/ai-creation/image-models/{image_model_id}/test"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceVerifyImageModel),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

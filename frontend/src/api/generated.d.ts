@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+    "/api/v1/admin/ai-creation/image-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListImageModels"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateImageModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteImageModel"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_ReviseImageModel"];
+        trace?: never;
+    };
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_SetImageModelAvailability"];
+        trace?: never;
+    };
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_VerifyImageModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai-creation/prompt-optimization-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["AgentWorkspaceService_ReplacePromptOptimizationCandidates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/connectors/cli": {
         parameters: {
             query?: never;
@@ -222,6 +302,102 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AgentWorkspaceService_ResetUserPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generation/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListImageGenerationOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generation/prompt-optimizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_OptimizeImagePrompt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListImageGenerations"];
+        put?: never;
+        post: operations["AgentWorkspaceService_SubmitImageGeneration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generations/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetImageGeneration"];
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteImageGeneration"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generations/{record_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StopImageGeneration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai-creation/image-generations/{record_id}/regeneration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RegenerateImageGeneration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1187,9 +1363,32 @@ export interface components {
             expected_version?: number;
         };
         AgentWorkspaceServiceRefreshProviderModelsBody: Record<string, never>;
+        AgentWorkspaceServiceRegenerateImageGenerationBody: {
+            request_id?: string;
+        };
         AgentWorkspaceServiceRerunWorkflowBody: Record<string, never>;
         AgentWorkspaceServiceResetUserPasswordBody: Record<string, never>;
         AgentWorkspaceServiceRetrySessionMessageBody: Record<string, never>;
+        AgentWorkspaceServiceReviseImageModelBody: {
+            /** Format: int64 */
+            expected_version?: number;
+            display_name?: string;
+            connection_id?: string;
+            /** Format: int64 */
+            connection_version?: number;
+            connection_name?: string;
+            provider_model_id?: string;
+            modes?: string[];
+            sizes?: string[];
+            qualities?: string[];
+            formats?: string[];
+            backgrounds?: string[];
+            default_size?: string;
+            default_quality?: string;
+            default_format?: string;
+            default_background?: string;
+            rates?: components["schemas"]["v1ImageCreditRate"][];
+        };
         AgentWorkspaceServiceRunWorkflowBody: {
             text_input?: string;
             json_input?: Record<string, never>;
@@ -1199,6 +1398,9 @@ export interface components {
             attachment_ids?: string[];
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
+        };
+        AgentWorkspaceServiceSetImageModelAvailabilityBody: {
+            available?: boolean;
         };
         AgentWorkspaceServiceSetSessionArchivedBody: {
             archived?: boolean;
@@ -1216,6 +1418,7 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceStopImageGenerationBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
         AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
@@ -1262,6 +1465,7 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceVerifyImageModelBody: Record<string, never>;
         AgentWorkspaceServiceVoidRedemptionCodeBody: Record<string, never>;
         protobufAny: {
             "@type"?: string;
@@ -1485,6 +1689,24 @@ export interface components {
         v1CreateExpertTeamRequest: {
             expert_team?: components["schemas"]["v1ExpertTeamInput"];
         };
+        v1CreateImageModelRequest: {
+            display_name?: string;
+            connection_id?: string;
+            /** Format: int64 */
+            connection_version?: number;
+            connection_name?: string;
+            provider_model_id?: string;
+            modes?: string[];
+            sizes?: string[];
+            qualities?: string[];
+            formats?: string[];
+            backgrounds?: string[];
+            default_size?: string;
+            default_quality?: string;
+            default_format?: string;
+            default_background?: string;
+            rates?: components["schemas"]["v1ImageCreditRate"][];
+        };
         v1CreateMCPConnectorRequest: {
             mcp_connector?: components["schemas"]["v1MCPConnectorInput"];
         };
@@ -1559,6 +1781,10 @@ export interface components {
             pending_effective_day?: string;
             /** Format: int64 */
             version?: number;
+            /** Format: int64 */
+            reserved_hundredths?: number;
+            /** Format: int64 */
+            available_hundredths?: number;
         };
         v1CreditConsumption: {
             /** Format: int64 */
@@ -1751,6 +1977,19 @@ export interface components {
             id?: string;
             path?: string;
         };
+        v1GeneratedImage: {
+            /** Format: int32 */
+            position?: number;
+            media_type?: string;
+            /** Format: int64 */
+            encoded_size?: number;
+            /** Format: int32 */
+            width?: number;
+            /** Format: int32 */
+            height?: number;
+            /** Format: date-time */
+            expires_at?: string;
+        };
         v1GitConfigEntry: {
             key?: string;
             value?: string;
@@ -1766,6 +2005,74 @@ export interface components {
         };
         v1HealthResponse: {
             status?: string;
+        };
+        v1ImageCreditRate: {
+            size?: string;
+            quality?: string;
+            /** Format: int64 */
+            amount_hundredths?: number;
+        };
+        v1ImageGenerationRecord: {
+            id?: string;
+            image_model_id?: string;
+            image_model_revision_id?: string;
+            image_model_name?: string;
+            connection_name?: string;
+            prompt?: string;
+            mode?: string;
+            size?: string;
+            quality?: string;
+            format?: string;
+            background?: string;
+            /** Format: int32 */
+            requested_count?: number;
+            /** Format: int32 */
+            validated_count?: number;
+            /** Format: int64 */
+            reservation_hundredths?: number;
+            /** Format: int64 */
+            consumption_hundredths?: number;
+            state?: string;
+            safe_error?: string;
+            images?: components["schemas"]["v1GeneratedImage"][];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            started_at?: string;
+            /** Format: date-time */
+            completed_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ImageModel: {
+            id?: string;
+            revision_id?: string;
+            display_name?: string;
+            connection_id?: string;
+            /** Format: int64 */
+            connection_version?: number;
+            connection_name?: string;
+            provider_model_id?: string;
+            api_protocol?: string;
+            modes?: string[];
+            sizes?: string[];
+            qualities?: string[];
+            formats?: string[];
+            backgrounds?: string[];
+            default_size?: string;
+            default_quality?: string;
+            default_format?: string;
+            default_background?: string;
+            rates?: components["schemas"]["v1ImageCreditRate"][];
+            state?: string;
+            /** Format: date-time */
+            verified_at?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
         };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
@@ -1798,6 +2105,16 @@ export interface components {
         v1ListExpertsResponse: {
             items?: components["schemas"]["v1Expert"][];
         };
+        v1ListImageGenerationOptionsResponse: {
+            image_models?: components["schemas"]["v1ImageModel"][];
+            prompt_optimization_models?: components["schemas"]["v1PromptOptimizationCandidate"][];
+        };
+        v1ListImageGenerationsResponse: {
+            items?: components["schemas"]["v1ImageGenerationRecord"][];
+        };
+        v1ListImageModelsResponse: {
+            items?: components["schemas"]["v1ImageModel"][];
+        };
         v1ListMCPConnectorsResponse: {
             items?: components["schemas"]["v1MCPConnector"][];
         };
@@ -1809,6 +2126,9 @@ export interface components {
         };
         v1ListModelProviderPresetsResponse: {
             items?: components["schemas"]["v1ModelProviderPreset"][];
+        };
+        v1ListPromptOptimizationCandidatesResponse: {
+            items?: components["schemas"]["v1PromptOptimizationCandidate"][];
         };
         v1ListRedemptionCodesResponse: {
             items?: components["schemas"]["v1RedemptionCodeStatus"][];
@@ -1926,6 +2246,18 @@ export interface components {
             official_endpoint?: string;
             protocols?: string[];
         };
+        v1OptimizeImagePromptRequest: {
+            provider_model_id?: string;
+            prompt?: string;
+            locale?: string;
+        };
+        v1OptimizeImagePromptResponse: {
+            prompt?: string;
+            /** Format: int64 */
+            input_tokens?: number;
+            /** Format: int64 */
+            output_tokens?: number;
+        };
         v1PersonalSettings: {
             personality?: string;
             personality_instructions?: string;
@@ -1935,6 +2267,16 @@ export interface components {
             timezone?: string;
             /** Format: int64 */
             version?: number;
+        };
+        v1PromptOptimizationCandidate: {
+            provider_model_id?: string;
+            display_name?: string;
+            connection_name?: string;
+            api_protocol?: string;
+        };
+        v1PromptOptimizationCandidateInput: {
+            provider_model_id?: string;
+            api_protocol?: string;
         };
         v1ProviderModel: {
             id?: string;
@@ -1997,6 +2339,9 @@ export interface components {
             voided_at?: string;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1ReplacePromptOptimizationCandidatesRequest: {
+            items?: components["schemas"]["v1PromptOptimizationCandidateInput"][];
         };
         v1ResetUserPasswordResponse: {
             temporary_password?: string;
@@ -2155,6 +2500,20 @@ export interface components {
             object_key?: string;
             sha256?: string;
         };
+        v1SubmitImageGenerationRequest: {
+            image_model_id?: string;
+            mode?: string;
+            prompt?: string;
+            size?: string;
+            quality?: string;
+            format?: string;
+            background?: string;
+            /** Format: int32 */
+            count?: number;
+            reference_upload_ids?: string[];
+            request_id?: string;
+            original_prompt?: string;
+        };
         v1UpdateSettingsRequest: {
             personality?: string;
             personality_instructions?: string;
@@ -2244,6 +2603,239 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AgentWorkspaceService_ListImageModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListImageModelsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateImageModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateImageModelRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteImageModel: {
+        parameters: {
+            query?: {
+                expected_version?: number;
+            };
+            header?: never;
+            path: {
+                image_model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ReviseImageModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceReviseImageModelBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetImageModelAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSetImageModelAvailabilityBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_VerifyImageModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_model_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceVerifyImageModelBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ReplacePromptOptimizationCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1ReplacePromptOptimizationCandidatesRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListPromptOptimizationCandidatesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_CreateCLIConnectorDefinition: {
         parameters: {
             query?: never;
@@ -2795,6 +3387,264 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ResetUserPasswordResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListImageGenerationOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListImageGenerationOptionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_OptimizeImagePrompt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1OptimizeImagePromptRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1OptimizeImagePromptResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListImageGenerations: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListImageGenerationsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SubmitImageGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1SubmitImageGenerationRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageGenerationRecord"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetImageGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageGenerationRecord"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteImageGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StopImageGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStopImageGenerationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageGenerationRecord"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RegenerateImageGeneration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRegenerateImageGenerationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ImageGenerationRecord"];
                 };
             };
             /** @description An unexpected error response. */

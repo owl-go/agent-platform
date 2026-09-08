@@ -103,10 +103,23 @@ type Balance struct {
 	Persistent             Amount
 	TodayConsumed          Amount
 	Total                  Amount
+	Reserved               Amount
+	Available              Amount
 	PendingDailyAllocation *Amount
 	PendingEffectiveDay    string
 	NextAllocationAt       time.Time
 	Version                int64
+}
+
+type ImageReservation struct {
+	RecordID           string
+	UserID             string
+	CreditDay          string
+	Timezone           string
+	Amount             Amount
+	DailyReserved      Amount
+	PersistentReserved Amount
+	CreatedAt          time.Time
 }
 
 type LedgerEntry struct {

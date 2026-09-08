@@ -2,7 +2,8 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { Box, ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { ElNotification } from "element-plus";
+import { Box, ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -22,15 +23,27 @@ const online = ref<boolean | undefined>();
 const mobileOpen = ref(false);
 const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
+const aiCreationUnread = ref(localStorage.getItem("ai-creation-unread") === "1");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 const nav = [
-  { id: "sessions", icon: ChatDotRound }, { id: "workflows", icon: Connection }, { id: "experts", icon: MagicStick }, { id: "resources", icon: Box }, { id: "settings", icon: Setting },
+  { id: "sessions", icon: ChatDotRound, path: "/sessions" }, { id: "workflows", icon: Connection, path: "/workflows" }, { id: "experts", icon: MagicStick, path: "/experts" }, { id: "resources", icon: Box, path: "/resources" }, { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" }, { id: "settings", icon: Setting, path: "/settings" },
 ] as const;
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
+let imageMonitorTimer: number | undefined;
+let monitoredImageRecord = "";
 const formatCredits = (hundredths: number | undefined) => (Number(hundredths ?? 0) / 100).toFixed(2);
 
-watch(currentUser, (user) => { if (user?.credit_balance) creditBalance.value = user.credit_balance; }, { immediate: true });
+watch(currentUser, (user) => {
+  if (user?.credit_balance) creditBalance.value = user.credit_balance;
+  if (user) void monitorImageGeneration();
+}, { immediate: true });
+watch(() => route.meta.surface, (surface) => {
+  if (surface === "ai-creation") {
+    aiCreationUnread.value = false;
+    localStorage.removeItem("ai-creation-unread");
+  }
+}, { immediate: true });
 
 async function refreshCredits() {
   if (!currentUser.value) return;
@@ -43,7 +56,29 @@ onMounted(() => {
   getHealth(controller.signal).then(() => { online.value = true; }).catch(() => { online.value = false; });
   window.addEventListener("credits-updated", refreshCredits);
 });
-onUnmounted(() => { controller?.abort(); auth.session.dispose(); window.removeEventListener("credits-updated", refreshCredits); });
+onUnmounted(() => { controller?.abort(); window.clearTimeout(imageMonitorTimer); auth.session.dispose(); window.removeEventListener("credits-updated", refreshCredits); });
+
+async function monitorImageGeneration() {
+  window.clearTimeout(imageMonitorTimer);
+  if (!currentUser.value) return;
+  try {
+    const records = await api.listImageGenerations();
+    const running = records.find((record) => record.state === "pending" || record.state === "running");
+    if (running) monitoredImageRecord = running.id;
+    else if (monitoredImageRecord) {
+      const completed = records.find((record) => record.id === monitoredImageRecord);
+      if (completed) {
+        ElNotification({ title: t("imageGeneration.title"), message: t(`imageGeneration.${completed.state}`), type: completed.state === "succeeded" ? "success" : "warning" });
+        if (route.meta.surface !== "ai-creation") {
+          aiCreationUnread.value = true;
+          localStorage.setItem("ai-creation-unread", "1");
+        }
+      }
+      monitoredImageRecord = "";
+    }
+  } catch { /* The page remains authoritative if background polling is unavailable. */ }
+  imageMonitorTimer = window.setTimeout(monitorImageGeneration, 3000);
+}
 
 function setLocale(value: SupportedLocale) {
   locale.value = value;
@@ -73,7 +108,7 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
         <RouterLink to="/sessions" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
         <el-button class="new-session" @click="$router.push('/sessions?new=1'); mobileOpen = false"><el-icon><Plus /></el-icon>{{ t('sessions.new') }}</el-button>
         <nav>
-          <RouterLink v-for="item in nav" :key="item.id" :to="`/${item.id}`" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}</RouterLink>
+          <RouterLink v-for="item in nav" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-creation' && aiCreationUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
         </nav>
         <div class="sidebar-spacer"></div>
         <div class="connection-state"><el-badge is-dot :type="online === true ? 'success' : online === false ? 'danger' : 'info'" /><span>{{ online === true ? t('auth.online') : online === false ? t('auth.offline') : t('auth.checkingApi') }}</span></div>

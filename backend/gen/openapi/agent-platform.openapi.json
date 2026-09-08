@@ -13,6 +13,311 @@
     }
   ],
   "paths": {
+    "/api/v1/admin/ai-creation/image-models": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListImageModels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListImageModelsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateImageModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateImageModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteImageModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "image_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_ReviseImageModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "image_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceReviseImageModelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetImageModelAvailability",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "image_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceSetImageModelAvailabilityBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/ai-creation/image-models/{image_model_id}/test": {
+      "post": {
+        "operationId": "AgentWorkspaceService_VerifyImageModel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageModel"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "image_model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceVerifyImageModelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/ai-creation/prompt-optimization-models": {
+      "put": {
+        "operationId": "AgentWorkspaceService_ReplacePromptOptimizationCandidates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListPromptOptimizationCandidatesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1ReplacePromptOptimizationCandidatesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/connectors/cli": {
       "post": {
         "operationId": "AgentWorkspaceService_CreateCLIConnectorDefinition",
@@ -745,6 +1050,333 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AgentWorkspaceServiceResetUserPasswordBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generation/options": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListImageGenerationOptions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListImageGenerationOptionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generation/prompt-optimizations": {
+      "post": {
+        "operationId": "AgentWorkspaceService_OptimizeImagePrompt",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1OptimizeImagePromptResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1OptimizeImagePromptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generations": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListImageGenerations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListImageGenerationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_SubmitImageGeneration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageGenerationRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SubmitImageGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generations/{record_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetImageGeneration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageGenerationRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteImageGeneration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generations/{record_id}/cancellation": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StopImageGeneration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageGenerationRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceStopImageGenerationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/ai-creation/image-generations/{record_id}/regeneration": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RegenerateImageGeneration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ImageGenerationRecord"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceRegenerateImageGenerationBody"
               }
             }
           },
@@ -4364,6 +4996,14 @@
       "AgentWorkspaceServiceRefreshProviderModelsBody": {
         "type": "object"
       },
+      "AgentWorkspaceServiceRegenerateImageGenerationBody": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
       "AgentWorkspaceServiceRerunWorkflowBody": {
         "type": "object"
       },
@@ -4372,6 +5012,79 @@
       },
       "AgentWorkspaceServiceRetrySessionMessageBody": {
         "type": "object"
+      },
+      "AgentWorkspaceServiceReviseImageModelBody": {
+        "type": "object",
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "connection_id": {
+            "type": "string"
+          },
+          "connection_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "qualities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "backgrounds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_size": {
+            "type": "string"
+          },
+          "default_quality": {
+            "type": "string"
+          },
+          "default_format": {
+            "type": "string"
+          },
+          "default_background": {
+            "type": "string"
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageCreditRate"
+            }
+          }
+        }
       },
       "AgentWorkspaceServiceRunWorkflowBody": {
         "type": "object",
@@ -4404,6 +5117,14 @@
             "items": {
               "$ref": "#/components/schemas/v1FileReference"
             }
+          }
+        }
+      },
+      "AgentWorkspaceServiceSetImageModelAvailabilityBody": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
           }
         }
       },
@@ -4445,6 +5166,9 @@
             "format": "int64"
           }
         }
+      },
+      "AgentWorkspaceServiceStopImageGenerationBody": {
+        "type": "object"
       },
       "AgentWorkspaceServiceTestMCPConnectorBody": {
         "type": "object"
@@ -4560,6 +5284,9 @@
             "format": "int64"
           }
         }
+      },
+      "AgentWorkspaceServiceVerifyImageModelBody": {
+        "type": "object"
       },
       "AgentWorkspaceServiceVoidRedemptionCodeBody": {
         "type": "object"
@@ -5202,6 +5929,75 @@
           }
         }
       },
+      "v1CreateImageModelRequest": {
+        "type": "object",
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "connection_id": {
+            "type": "string"
+          },
+          "connection_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "qualities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "backgrounds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_size": {
+            "type": "string"
+          },
+          "default_quality": {
+            "type": "string"
+          },
+          "default_format": {
+            "type": "string"
+          },
+          "default_background": {
+            "type": "string"
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageCreditRate"
+            }
+          }
+        }
+      },
       "v1CreateMCPConnectorRequest": {
         "type": "object",
         "properties": {
@@ -5385,6 +6181,14 @@
             "type": "string"
           },
           "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reserved_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "available_hundredths": {
             "type": "integer",
             "format": "int64"
           }
@@ -5954,6 +6758,34 @@
           }
         }
       },
+      "v1GeneratedImage": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "media_type": {
+            "type": "string"
+          },
+          "encoded_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "v1GitConfigEntry": {
         "type": "object",
         "properties": {
@@ -5999,6 +6831,200 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "v1ImageCreditRate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "amount_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1ImageGenerationRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "image_model_id": {
+            "type": "string"
+          },
+          "image_model_revision_id": {
+            "type": "string"
+          },
+          "image_model_name": {
+            "type": "string"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "background": {
+            "type": "string"
+          },
+          "requested_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "validated_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reservation_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "consumption_hundredths": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "state": {
+            "type": "string"
+          },
+          "safe_error": {
+            "type": "string"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1GeneratedImage"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1ImageModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "connection_id": {
+            "type": "string"
+          },
+          "connection_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "api_protocol": {
+            "type": "string"
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "qualities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "backgrounds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_size": {
+            "type": "string"
+          },
+          "default_quality": {
+            "type": "string"
+          },
+          "default_format": {
+            "type": "string"
+          },
+          "default_background": {
+            "type": "string"
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageCreditRate"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -6115,6 +7141,45 @@
           }
         }
       },
+      "v1ListImageGenerationOptionsResponse": {
+        "type": "object",
+        "properties": {
+          "image_models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageModel"
+            }
+          },
+          "prompt_optimization_models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1PromptOptimizationCandidate"
+            }
+          }
+        }
+      },
+      "v1ListImageGenerationsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageGenerationRecord"
+            }
+          }
+        }
+      },
+      "v1ListImageModelsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ImageModel"
+            }
+          }
+        }
+      },
       "v1ListMCPConnectorsResponse": {
         "type": "object",
         "properties": {
@@ -6155,6 +7220,17 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1ModelProviderPreset"
+            }
+          }
+        }
+      },
+      "v1ListPromptOptimizationCandidatesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1PromptOptimizationCandidate"
             }
           }
         }
@@ -6515,6 +7591,36 @@
           }
         }
       },
+      "v1OptimizeImagePromptRequest": {
+        "type": "object",
+        "properties": {
+          "provider_model_id": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          }
+        }
+      },
+      "v1OptimizeImagePromptResponse": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "input_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1PersonalSettings": {
         "type": "object",
         "properties": {
@@ -6542,6 +7648,34 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "v1PromptOptimizationCandidate": {
+        "type": "object",
+        "properties": {
+          "provider_model_id": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "connection_name": {
+            "type": "string"
+          },
+          "api_protocol": {
+            "type": "string"
+          }
+        }
+      },
+      "v1PromptOptimizationCandidateInput": {
+        "type": "object",
+        "properties": {
+          "provider_model_id": {
+            "type": "string"
+          },
+          "api_protocol": {
+            "type": "string"
           }
         }
       },
@@ -6710,6 +7844,17 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "v1ReplacePromptOptimizationCandidatesRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1PromptOptimizationCandidateInput"
+            }
           }
         }
       },
@@ -7168,6 +8313,48 @@
             "type": "string"
           },
           "sha256": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SubmitImageGenerationRequest": {
+        "type": "object",
+        "properties": {
+          "image_model_id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "background": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reference_upload_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "original_prompt": {
             "type": "string"
           }
         }

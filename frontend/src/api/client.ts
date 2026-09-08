@@ -1,12 +1,20 @@
 import type { InjectionKey } from "vue";
 
-export interface CreditBalance { total_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number }
+export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number }
 export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
 export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
 export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
 export interface ModelCreditRate { revision_id: string; provider_type?: string; api_protocol?: string; provider_model_id?: string; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; created_at: string; superseded_at?: string }
 export interface RedemptionCodeBatch { id: string; count: number; value_hundredths: number; expires_at?: string; created_at: string; codes: Array<{ id: string; identifier: string; plaintext: string; state: string }> }
 export interface RedemptionCodeStatus { id: string; batch_id: string; identifier: string; state: "available" | "redeemed" | "void" | "expired"; value_hundredths: number; expires_at?: string; redeemed_at?: string; voided_at?: string; created_at: string }
+export interface ImageCreditRate { size: string; quality: string; amount_hundredths: number }
+export interface ImageModel { id: string; revision_id: string; display_name: string; connection_id: string; connection_version: number; connection_name: string; provider_model_id: string; api_protocol: "openai_images"; modes: Array<"generate" | "edit">; sizes: string[]; qualities: string[]; formats: Array<"png" | "jpeg" | "webp">; backgrounds: Array<"opaque" | "transparent">; default_size: string; default_quality: string; default_format: "png" | "jpeg" | "webp"; default_background: "opaque" | "transparent"; rates: ImageCreditRate[]; state: "unverified" | "available" | "disabled" | "deleted"; verified_at?: string; created_at: string; updated_at: string; version: number }
+export interface GeneratedImage { position: number; media_type: string; encoded_size: number; width: number; height: number; expires_at: string }
+export interface ImageGenerationRecord { id: string; image_model_id: string; image_model_revision_id: string; image_model_name: string; connection_name: string; prompt: string; mode: "generate" | "edit"; size: string; quality: string; format: "png" | "jpeg" | "webp"; background: "opaque" | "transparent"; requested_count: number; validated_count: number; reservation_hundredths: number; consumption_hundredths: number; state: "pending" | "running" | "succeeded" | "partially_succeeded" | "failed" | "cancelled" | "outcome_unknown"; safe_error?: string; images: GeneratedImage[]; created_at: string; started_at?: string; completed_at?: string; version: number }
+export interface ImageGenerationInput { request_id?: string; original_prompt?: string; image_model_id: string; mode: "generate" | "edit"; prompt: string; size: string; quality: string; format: "png" | "jpeg" | "webp"; background: "opaque" | "transparent"; count: number; reference_upload_ids?: string[] }
+export interface ImageGenerationEvent { sequence: number; type: string }
+export interface ReferenceImageUpload { id: string; media_type: string; encoded_size: number; width: number; height: number; expires_at: string }
+export interface PromptOptimizationCandidate { provider_model_id: string; display_name: string; connection_name: string; api_protocol: "openai_responses" | "openai_chat_completions" }
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; skills?: Array<{ id: string; name: string; object_key: string; sha256: string }>; cli_connectors?: Array<{ id: string; name: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
@@ -96,6 +104,26 @@ export interface PlatformApi {
   createRedemptionCodeBatch(count: number, valueHundredths: number, expiresAt?: string, signal?: AbortSignal): Promise<RedemptionCodeBatch>;
   listRedemptionCodes(cursor?: string, signal?: AbortSignal): Promise<{ items: RedemptionCodeStatus[]; next_cursor?: string }>;
   voidRedemptionCode(codeID: string, signal?: AbortSignal): Promise<RedemptionCodeStatus>;
+  getImageGenerationOptions(signal?: AbortSignal): Promise<{ image_models: ImageModel[]; prompt_optimization_models: PromptOptimizationCandidate[] }>;
+  submitImageGeneration(input: ImageGenerationInput, signal?: AbortSignal): Promise<ImageGenerationRecord>;
+  listImageGenerations(signal?: AbortSignal): Promise<ImageGenerationRecord[]>;
+  getImageGeneration(id: string, signal?: AbortSignal): Promise<ImageGenerationRecord>;
+  streamImageGeneration(id: string, onEvent: (event: ImageGenerationEvent) => void, signal?: AbortSignal, lastEventID?: number): Promise<void>;
+  stopImageGeneration(id: string, signal?: AbortSignal): Promise<ImageGenerationRecord>;
+  regenerateImageGeneration(id: string, requestID: string, signal?: AbortSignal): Promise<ImageGenerationRecord>;
+  deleteImageGeneration(id: string, signal?: AbortSignal): Promise<void>;
+  getGeneratedImage(id: string, position: number, signal?: AbortSignal): Promise<Blob>;
+  getGeneratedImagesZIP(id: string, signal?: AbortSignal): Promise<Blob>;
+  uploadReferenceImage(file: File, signal?: AbortSignal): Promise<ReferenceImageUpload>;
+  deleteReferenceImage(id: string, signal?: AbortSignal): Promise<void>;
+  listImageModels(signal?: AbortSignal): Promise<ImageModel[]>;
+  createImageModel(input: Omit<ImageModel, "id" | "revision_id" | "api_protocol" | "state" | "verified_at" | "created_at" | "updated_at" | "version">, signal?: AbortSignal): Promise<ImageModel>;
+  reviseImageModel(id: string, expectedVersion: number, input: Omit<ImageModel, "id" | "revision_id" | "api_protocol" | "state" | "verified_at" | "created_at" | "updated_at" | "version">, signal?: AbortSignal): Promise<ImageModel>;
+  deleteImageModel(id: string, expectedVersion: number, signal?: AbortSignal): Promise<void>;
+  verifyImageModel(id: string, signal?: AbortSignal): Promise<ImageModel>;
+  setImageModelAvailability(id: string, available: boolean, signal?: AbortSignal): Promise<ImageModel>;
+  optimizeImagePrompt(providerModelID: string, prompt: string, locale: string, signal?: AbortSignal): Promise<{ prompt: string; input_tokens: number; output_tokens: number }>;
+  replacePromptOptimizationCandidates(items: Array<{ provider_model_id: string; api_protocol: string }>, signal?: AbortSignal): Promise<PromptOptimizationCandidate[]>;
   listSessions(archived?: boolean, signal?: AbortSignal): Promise<Session[]>;
   createSession(selection?: { expert_id?: string; expert_team_id?: string }, signal?: AbortSignal): Promise<Session>;
   renameSession(id: string, title: string, version: number, signal?: AbortSignal): Promise<Session>;
@@ -226,6 +254,54 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createRedemptionCodeBatch(count, valueHundredths, expiresAt, signal) { return call("/api/v1/admin/redemption-code-batches", json("POST", { count, value_hundredths: valueHundredths, ...(expiresAt ? { expires_at: expiresAt } : {}) }, signal)); },
     listRedemptionCodes(cursor = "", signal) { return call(`/api/v1/admin/redemption-codes?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
     voidRedemptionCode(codeID, signal) { return call(`/api/v1/admin/redemption-codes/${encodeURIComponent(codeID)}/void`, json("POST", {}, signal)); },
+    async getImageGenerationOptions(signal) { const result = await call<{ image_models?: ImageModel[]; prompt_optimization_models?: PromptOptimizationCandidate[] }>("/api/v1/ai-creation/image-generation/options", { signal }); return { image_models: result.image_models ?? [], prompt_optimization_models: result.prompt_optimization_models ?? [] }; },
+    submitImageGeneration(input, signal) { return call("/api/v1/ai-creation/image-generations", json("POST", input, signal)); },
+    async listImageGenerations(signal) { return (await call<{ items?: ImageGenerationRecord[] }>("/api/v1/ai-creation/image-generations?limit=50", { signal })).items ?? []; },
+    getImageGeneration(id, signal) { return call(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}`, { signal }); },
+    async streamImageGeneration(id, onEvent, signal, lastEventID = 0) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const headers: Record<string, string> = { Accept: "text/event-stream", Authorization: `Bearer ${token}` };
+      if (lastEventID > 0) headers["Last-Event-ID"] = String(lastEventID);
+      const response = await fetch(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}/events`, { signal, headers });
+      if (!response.ok || !response.body) throw new ApiError(response.status === 404 ? "not_found" : "unknown", response.status, "image_generation_stream_failed");
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      let pending = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        pending = (pending + (value ?? "")).replace(/\r\n/g, "\n");
+        let boundary = pending.indexOf("\n\n");
+        while (boundary >= 0) {
+          const block = pending.slice(0, boundary);
+          pending = pending.slice(boundary + 2);
+          const fields = Object.fromEntries(block.split("\n").filter((line) => line.includes(":") && !line.startsWith(":"))
+            .map((line) => { const index = line.indexOf(":"); return [line.slice(0, index), line.slice(index + 1).trimStart()]; }));
+          if (fields.id && fields.event) onEvent({ sequence: Number(fields.id), type: fields.event });
+          boundary = pending.indexOf("\n\n");
+        }
+        if (done) return;
+      }
+    },
+    stopImageGeneration(id, signal) { return call(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}/cancellation`, json("POST", {}, signal)); },
+    regenerateImageGeneration(id, requestID, signal) { return call(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}/regeneration`, json("POST", { request_id: requestID }, signal)); },
+    deleteImageGeneration(id, signal) { return remove(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}`, signal); },
+    getGeneratedImage(id, position, signal) { return download(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}/images/${position}`, signal); },
+    getGeneratedImagesZIP(id, signal) { return download(`/api/v1/ai-creation/image-generations/${encodeURIComponent(id)}/download`, signal); },
+    uploadReferenceImage(file, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const body = new FormData(); body.append("image", file);
+      return request<ReferenceImageUpload>(token, "/api/v1/ai-creation/reference-images", { method: "POST", body, signal });
+    },
+    deleteReferenceImage(id, signal) { return remove(`/api/v1/ai-creation/reference-images/${encodeURIComponent(id)}`, signal); },
+    async listImageModels(signal) { return (await call<{ items?: ImageModel[] }>("/api/v1/admin/ai-creation/image-models", { signal })).items ?? []; },
+    createImageModel(input, signal) { return call("/api/v1/admin/ai-creation/image-models", json("POST", input, signal)); },
+    reviseImageModel(id, expectedVersion, input, signal) { return call(`/api/v1/admin/ai-creation/image-models/${encodeURIComponent(id)}`, json("PATCH", { ...input, image_model_id: id, expected_version: expectedVersion }, signal)); },
+    deleteImageModel(id, expectedVersion, signal) { return remove(`/api/v1/admin/ai-creation/image-models/${encodeURIComponent(id)}?expected_version=${expectedVersion}`, signal); },
+    verifyImageModel(id, signal) { return call(`/api/v1/admin/ai-creation/image-models/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
+    setImageModelAvailability(id, available, signal) { return call(`/api/v1/admin/ai-creation/image-models/${encodeURIComponent(id)}/availability`, json("PATCH", { available }, signal)); },
+    optimizeImagePrompt(providerModelID, prompt, locale, signal) { return call("/api/v1/ai-creation/image-generation/prompt-optimizations", json("POST", { provider_model_id: providerModelID, prompt, locale }, signal)); },
+    async replacePromptOptimizationCandidates(items, signal) { return (await call<{ items?: PromptOptimizationCandidate[] }>("/api/v1/admin/ai-creation/prompt-optimization-models", json("PUT", { items }, signal))).items ?? []; },
     async listSessions(archived = false, signal) { return (await call<{ items: Session[] }>(`/api/v1/sessions?archived=${archived}`, { signal })).items ?? []; },
     createSession(selection = {}, signal) { return call("/api/v1/sessions", json("POST", selection, signal)); },
     renameSession(id, title, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(id)}`, json("PATCH", { title, expected_version: version }, signal)); },

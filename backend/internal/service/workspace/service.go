@@ -13,6 +13,8 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	aicreationapplication "agent-platform/backend/internal/biz/aicreation/application"
+	aicreationdomain "agent-platform/backend/internal/biz/aicreation/domain"
 	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
@@ -31,15 +33,16 @@ import (
 
 type Service struct {
 	workspacev1.UnimplementedAgentWorkspaceServiceServer
-	accounts  *accountapplication.Service
-	credits   *creditsapplication.Service
-	workspace *workspaceapplication.Service
-	box       *secretcrypto.Box
-	files     *workspacefs.Store
-	skills    *skillstore.Store
-	objects   objectstore.Provider
-	config    platformconfig.Config
-	feishu    feishuApplicationRegistrar
+	accounts   *accountapplication.Service
+	credits    *creditsapplication.Service
+	aicreation *aicreationapplication.Service
+	workspace  *workspaceapplication.Service
+	box        *secretcrypto.Box
+	files      *workspacefs.Store
+	skills     *skillstore.Store
+	objects    objectstore.Provider
+	config     platformconfig.Config
+	feishu     feishuApplicationRegistrar
 }
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
@@ -51,13 +54,18 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/workflows/{workflow_id}/workspace/download", http.HandlerFunc(service.downloadWorkspaceFile))
 	server.Handle("/api/v1/attachments/upload", http.HandlerFunc(service.uploadAttachment))
 	server.Handle("/api/v1/attachments/{attachment_id}/download", http.HandlerFunc(service.downloadAttachment))
+	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/images/{position}", http.HandlerFunc(service.downloadGeneratedImage))
+	server.Handle("/api/v1/ai-creation/reference-images", http.HandlerFunc(service.uploadReferenceImage))
+	server.Handle("/api/v1/ai-creation/reference-images/{upload_id}", http.HandlerFunc(service.deleteReferenceImage))
+	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/download", http.HandlerFunc(service.downloadGeneratedImages))
+	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/events", http.HandlerFunc(service.streamImageGeneration))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
-	if accounts == nil || credits == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
-		return nil, fmt.Errorf("Account, Credits, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
+	if accounts == nil || credits == nil || aicreation == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
+		return nil, fmt.Errorf("Account, Credits, AI Creation, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil)}, nil
+	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil)}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {
@@ -148,6 +156,16 @@ func publicError(err error) error {
 	case errors.Is(err, creditsdomain.ErrConflict):
 		return kratoserrors.New(http.StatusPreconditionFailed, "credit_conflict", "Credits state changed")
 	case errors.Is(err, creditsdomain.ErrInvalid):
+		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
+	case errors.Is(err, aicreationdomain.ErrNotFound):
+		return kratoserrors.New(http.StatusNotFound, "resource_not_found", "resource not found")
+	case errors.Is(err, aicreationdomain.ErrConflict):
+		return kratoserrors.New(http.StatusConflict, "active_image_generation_conflict", "an Image Generation Record is already active")
+	case errors.Is(err, aicreationdomain.ErrVersionConflict):
+		return kratoserrors.New(http.StatusPreconditionFailed, "version_conflict", "resource version changed")
+	case errors.Is(err, aicreationapplication.ErrInsufficientCredits):
+		return kratoserrors.New(http.StatusTooManyRequests, "insufficient_credits", "Available Credit is insufficient")
+	case errors.Is(err, aicreationdomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	default:
 		return kratoserrors.New(http.StatusInternalServerError, "request_failed", "request failed")
