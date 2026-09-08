@@ -32,7 +32,7 @@ WITH ranked AS (
     FROM cli_connector_authorizations
     WHERE state = 'active'
 )
-UPDATE cli_connector_authorizations authorization
+UPDATE cli_connector_authorizations AS target_authorization
 SET state = 'invalid',
     token_ciphertext = NULL,
     refresh_token_ciphertext = NULL,
@@ -40,7 +40,7 @@ SET state = 'invalid',
     updated_at = now(),
     version = version + 1
 FROM ranked
-WHERE ranked.id = authorization.id
+WHERE ranked.id = target_authorization.id
   AND ranked.position > 1;
 
 CREATE UNIQUE INDEX cli_connector_authorizations_one_active_per_connector
