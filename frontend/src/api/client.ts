@@ -406,26 +406,35 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       return { ...impact, affected_experts: impact.affected_experts ?? [] };
     },
     deleteSkill(id, confirmationToken, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
-    async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
+    async listCLIConnectorDefinitions(signal) {
+      const items = (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? [];
+      return items.map(normalizeCLIConnectorDefinition);
+    },
     async listCLIConnectorHealth(signal) { return (await call<{ items: CLIConnectorHealth[] }>("/api/v1/admin/connectors/cli-health", { signal })).items ?? []; },
-    createCLIConnectorDefinition(input, signal) { return call("/api/v1/admin/connectors/cli", json("POST", { definition: input }, signal)); },
-    updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },
-    publishCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/publish`, json("POST", { expected_version: version }, signal)); },
-    disableCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
+    async createCLIConnectorDefinition(input, signal) { return normalizeCLIConnectorDefinition(await call<CLIConnectorDefinition>("/api/v1/admin/connectors/cli", json("POST", { definition: input }, signal))); },
+    async updateCLIConnectorDefinition(id, input, version, signal) { return normalizeCLIConnectorDefinition(await call<CLIConnectorDefinition>(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal))); },
+    async publishCLIConnectorDefinition(id, version, signal) { return normalizeCLIConnectorDefinition(await call<CLIConnectorDefinition>(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/publish`, json("POST", { expected_version: version }, signal))); },
+    async disableCLIConnectorDefinition(id, version, signal) { return normalizeCLIConnectorDefinition(await call<CLIConnectorDefinition>(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal))); },
     async deleteCLIConnectorDefinition(id, version, signal) { await call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}?expected_version=${version}`, { method: "DELETE", signal }); },
     enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
     completeCLIConnectorEnablement(id, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(id)}/complete`, json("POST", {}, signal)); },
     async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },
-    beginCLIConnectorAuthorization(enablementID, identity, scopes, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, json("POST", { identity, scopes }, signal)); },
-    completeCLIConnectorAuthorization(flowID, signal) { return call(`/api/v1/connectors/cli/authorization-flows/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
-    async listCLIConnectorAuthorizations(enablementID, signal) { return (await call<{ items: CLIConnectorAuthorization[] }>(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, { signal })).items ?? []; },
+    async beginCLIConnectorAuthorization(enablementID, identity, scopes, signal) { return normalizeCLIConnectorAuthorizationFlow(await call<CLIConnectorAuthorizationFlow>(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, json("POST", { identity, scopes }, signal))); },
+    async completeCLIConnectorAuthorization(flowID, signal) { return normalizeCLIConnectorAuthorizationFlow(await call<CLIConnectorAuthorizationFlow>(`/api/v1/connectors/cli/authorization-flows/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal))); },
+    async listCLIConnectorAuthorizations(enablementID, signal) {
+      const items = (await call<{ items: CLIConnectorAuthorization[] }>(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, { signal })).items ?? [];
+      return items.map(normalizeCLIConnectorAuthorization);
+    },
     disconnectCLIConnectorAuthorization(id, version, signal) { return call(`/api/v1/connectors/cli/authorizations/${encodeURIComponent(id)}/disconnect`, json("POST", { expected_version: version }, signal)); },
     async listCommandApprovals(signal) { return (await call<{ items: CommandApproval[] }>("/api/v1/command-approvals", { signal })).items ?? []; },
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
-    async listConnectorActions(signal) { return (await call<{ items: ConnectorActionRequirement[] }>("/api/v1/connector-actions", { signal })).items ?? []; },
-    startConnectorAction(id, signal) { return call(`/api/v1/connector-actions/${encodeURIComponent(id)}/start`, json("POST", {}, signal)); },
-    checkConnectorAction(id, signal) { return call(`/api/v1/connector-actions/${encodeURIComponent(id)}/check`, json("POST", {}, signal)); },
-    cancelConnectorAction(id, signal) { return call(`/api/v1/connector-actions/${encodeURIComponent(id)}/cancel`, json("POST", {}, signal)); },
+    async listConnectorActions(signal) {
+      const items = (await call<{ items: ConnectorActionRequirement[] }>("/api/v1/connector-actions", { signal })).items ?? [];
+      return items.map(normalizeConnectorActionRequirement);
+    },
+    async startConnectorAction(id, signal) { return normalizeConnectorActionRequirement(await call<ConnectorActionRequirement>(`/api/v1/connector-actions/${encodeURIComponent(id)}/start`, json("POST", {}, signal))); },
+    async checkConnectorAction(id, signal) { return normalizeConnectorActionRequirement(await call<ConnectorActionRequirement>(`/api/v1/connector-actions/${encodeURIComponent(id)}/check`, json("POST", {}, signal))); },
+    async cancelConnectorAction(id, signal) { return normalizeConnectorActionRequirement(await call<ConnectorActionRequirement>(`/api/v1/connector-actions/${encodeURIComponent(id)}/cancel`, json("POST", {}, signal))); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
     setUserEnabled(id, enabled, version, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version }, signal)); },
@@ -435,6 +444,38 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
 
 function normalizeExpert(expert: Expert): Expert {
   return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [], cli_connector_definition_ids: expert.cli_connector_definition_ids ?? [] };
+}
+
+function normalizeCLIConnectorDefinition(item: CLIConnectorDefinition): CLIConnectorDefinition {
+  return {
+    ...item,
+    capabilities: (item.capabilities ?? []).map((capability) => ({
+      ...capability,
+      display_name: capability.display_name ?? {},
+      operation_phrase: capability.operation_phrase ?? {},
+      argv_prefix: capability.argv_prefix ?? [],
+      identities: capability.identities ?? [],
+      scopes: capability.scopes ?? [],
+      egress_hosts: capability.egress_hosts ?? [],
+      input_fields: (capability.input_fields ?? []).map((field) => ({ ...field, enum: field.enum ?? [] })),
+    })),
+    supported_architectures: item.supported_architectures ?? [],
+    recommended_skills: item.recommended_skills ?? [],
+    recommended_skill_ids: item.recommended_skill_ids ?? [],
+    conformance_runtime_digests: item.conformance_runtime_digests ?? [],
+  };
+}
+
+function normalizeCLIConnectorAuthorization(item: CLIConnectorAuthorization): CLIConnectorAuthorization {
+  return { ...item, scopes: item.scopes ?? [] };
+}
+
+function normalizeCLIConnectorAuthorizationFlow(item: CLIConnectorAuthorizationFlow): CLIConnectorAuthorizationFlow {
+  return { ...item, scopes: item.scopes ?? [], authorization: item.authorization ? normalizeCLIConnectorAuthorization(item.authorization) : undefined };
+}
+
+function normalizeConnectorActionRequirement(item: ConnectorActionRequirement): ConnectorActionRequirement {
+  return { ...item, operation_phrase: item.operation_phrase ?? {}, permissions: item.permissions ?? [], actions: item.actions ?? [] };
 }
 
 function scopeQuery(scope: ConversationScope): string { return new URLSearchParams(Object.entries(scope).filter((entry): entry is [string, string] => Boolean(entry[1]))).toString(); }

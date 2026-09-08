@@ -51,6 +51,18 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
+  it("normalizes omitted Connector Manifest collections from protobuf JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{
+      id: "connector-1", name: "Feishu CLI", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", state: "available", mutable: true, version: 1,
+      capabilities: [{ id: "identity", risk: "low", timeout_seconds: 60 }],
+    }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const result = await createPlatformApi(() => "token").listCLIConnectorDefinitions();
+
+    expect(result[0]).toMatchObject({ supported_architectures: [], recommended_skills: [], conformance_runtime_digests: [] });
+    expect(result[0]?.capabilities[0]).toMatchObject({ display_name: {}, operation_phrase: {}, argv_prefix: [], identities: [], scopes: [], egress_hosts: [], input_fields: [] });
+  });
+
   it("normalizes an omitted deletion impact list from protobuf JSON", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ confirmation_token: "confirmation" }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
