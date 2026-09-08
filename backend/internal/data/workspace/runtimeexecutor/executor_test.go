@@ -94,7 +94,12 @@ func TestStartCLIConnectorBrokerExposesOnlyProtectedSocketToModelRuntime(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	temporaryRoot := root
+	t.Cleanup(func() { _ = os.RemoveAll(temporaryRoot) })
+	root = filepath.Join(root, ".runtime-containers", strings.Repeat("a", 32), "scratch")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	capabilities, err := json.Marshal([]cliconnector.Capability{{
 		ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: cliconnector.RiskLow,
 		Identities: []cliconnector.Identity{cliconnector.IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute,

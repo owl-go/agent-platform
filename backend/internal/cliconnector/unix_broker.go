@@ -36,7 +36,7 @@ func StartUnixBroker(ctx context.Context, broker *Broker, socketPath string, uid
 	if err != nil || len(entries) != 0 {
 		return nil, errors.New("CLI broker directory must contain only its reserved socket")
 	}
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socketPath, Net: "unix"})
+	listener, err := listenBrokerSocket(socketPath)
 	if err != nil {
 		return nil, fmt.Errorf("listen on CLI broker socket: %w", err)
 	}
@@ -62,6 +62,26 @@ func StartUnixBroker(ctx context.Context, broker *Broker, socketPath string, uid
 	server := &UnixBrokerServer{path: socketPath, directory: directory, listener: listener, cancel: cancel, done: make(chan error, 1)}
 	go func() { server.done <- broker.Serve(serverCtx, listener) }()
 	return server, nil
+}
+
+func listenBrokerSocket(socketPath string) (*net.UnixListener, error) {
+	// bind(2) limits the supplied pathname even when the filesystem accepts it.
+	// A private short alias creates the socket at its protected Stage location.
+	aliasRoot, err := os.MkdirTemp("/tmp", "cli-sock-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(aliasRoot)
+	alias := filepath.Join(aliasRoot, "broker")
+	if err := os.Symlink(filepath.Dir(socketPath), alias); err != nil {
+		return nil, err
+	}
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: filepath.Join(alias, filepath.Base(socketPath)), Net: "unix"})
+	if err != nil {
+		return nil, err
+	}
+	listener.SetUnlinkOnClose(false)
+	return listener, nil
 }
 
 func (server *UnixBrokerServer) Close() error {

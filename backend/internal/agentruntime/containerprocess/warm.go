@@ -183,7 +183,7 @@ func warmRunProcess(manager *WarmManager, config Config, name string) cliadapter
 func warmExecCommand(dockerCommand string, config Config, spec processharness.Spec, name string) []string {
 	arguments := []string{dockerCommand, "exec", "--interactive", "--workdir", config.ContainerWorkspace}
 	if config.CLIBrokerSocket != "" {
-		arguments = append(arguments, "--env", "AGENT_PLATFORM_CLI_SOCKET="+config.CLIBrokerSocket)
+		arguments = append(arguments, "--env", "AGENT_PLATFORM_CLI_SOCKET="+RuntimeCLIBrokerSocket())
 	}
 	for _, entry := range spec.Env {
 		variable, _, _ := strings.Cut(entry, "=")
@@ -230,6 +230,7 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 	if config.CLIBrokerSocket != "" {
 		brokerDirectory := filepath.Dir(config.CLIBrokerSocket)
 		arguments = append(arguments, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=true")
+		arguments = append(arguments, "--mount", "type=bind,src="+brokerDirectory+",dst="+filepath.Dir(RuntimeCLIBrokerSocket())+",readonly=true")
 	}
 	if config.Egress == sandbox.EgressPublic {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
@@ -258,6 +259,9 @@ func warmFingerprint(name string, config Config) string {
 		strconv.FormatInt(config.Limits.PIDs, 10), strconv.FormatInt(config.Limits.TempBytes, 10),
 		strconv.Itoa(config.UID), strconv.Itoa(config.GID),
 	}, "\x00")
+	if config.CLIBrokerSocket != "" {
+		value += "\x00" + RuntimeCLIBrokerSocket()
+	}
 	digest := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(digest[:])
 }

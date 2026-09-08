@@ -272,7 +272,7 @@ func TestRunMountsAndProtectsAdapterScratchDirectory(t *testing.T) {
 		t.Fatalf("CLI Connector mount %q missing from %#v", wantConnectorMount, captured.Command)
 	}
 	wantBrokerMount := "type=bind,src=/workspaces/runtime-scratch/broker,dst=/workspaces/runtime-scratch/broker,readonly=true"
-	if !containsPair(captured.Command, "--mount", wantBrokerMount) || !containsPair(captured.Command, "--env", "AGENT_PLATFORM_CLI_SOCKET=/workspaces/runtime-scratch/broker/cli-broker.sock") {
+	if !containsPair(captured.Command, "--mount", wantBrokerMount) || !containsPair(captured.Command, "--mount", "type=bind,src=/workspaces/runtime-scratch/broker,dst=/run/agent-cli,readonly=true") || !containsPair(captured.Command, "--env", "AGENT_PLATFORM_CLI_SOCKET=/run/agent-cli/cli-broker.sock") {
 		t.Fatalf("CLI broker socket mount or environment missing from %#v", captured.Command)
 	}
 }

@@ -327,7 +327,8 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	if config.CLIBrokerSocket != "" {
 		brokerDirectory := filepath.Dir(config.CLIBrokerSocket)
 		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=true")
-		args = append(args, "--env", "AGENT_PLATFORM_CLI_SOCKET="+config.CLIBrokerSocket)
+		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+filepath.Dir(RuntimeCLIBrokerSocket())+",readonly=true")
+		args = append(args, "--env", "AGENT_PLATFORM_CLI_SOCKET="+RuntimeCLIBrokerSocket())
 	}
 	if config.Egress == sandbox.EgressPublic {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
@@ -372,6 +373,11 @@ func RuntimeAttachmentDirectory(containerWorkspace string) string {
 // CLI Connector broker may resolve executables beneath this mount.
 func RuntimeCLIConnectorDirectory() string {
 	return "/opt/agent-platform/connectors"
+}
+
+// RuntimeCLIBrokerSocket stays below Unix socket pathname limits regardless of host roots.
+func RuntimeCLIBrokerSocket() string {
+	return "/run/agent-cli/cli-broker.sock"
 }
 
 func prepareAdapterScratch(config Config, command []string) ([]string, error) {
