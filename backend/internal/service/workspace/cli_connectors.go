@@ -550,6 +550,16 @@ func (service *Service) StartConnectorAction(ctx context.Context, request *works
 		action.ActionURL = enablement.ActionURL
 		return connectorActionResponseWithPlatformURL(action), nil
 	}
+	if attempt, attemptErr := repository.GetCLIConnectorAuthorizationAttemptForEnablement(ctx, principal.UserID, action.EnablementID); attemptErr == nil && containsScopes(attempt.Scopes, action.Permissions) {
+		action, err = repository.ResetConnectorActionProviderURL(ctx, principal.UserID, action.ID)
+		if err != nil {
+			return nil, publicError(err)
+		}
+		action.ActionURL = attempt.ActionURL
+		return connectorActionResponseWithPlatformURL(action), nil
+	} else if attemptErr != nil && !errors.Is(attemptErr, workspacedomain.ErrNotFound) && !errors.Is(attemptErr, workspacedomain.ErrConflict) {
+		return nil, publicError(attemptErr)
+	}
 	flow, err := service.BeginCLIConnectorAuthorization(ctx, &workspacev1.BeginCLIConnectorAuthorizationRequest{EnablementId: action.EnablementID, Identity: string(action.Identity), Scopes: append([]string(nil), action.Permissions...)})
 	if err != nil {
 		return nil, err
@@ -565,6 +575,15 @@ func (service *Service) StartConnectorAction(ctx context.Context, request *works
 		action.ActionURL = *flow.ActionUrl
 	}
 	return connectorActionResponseWithPlatformURL(action), nil
+}
+
+func containsScopes(granted, required []string) bool {
+	for _, scope := range required {
+		if !slices.Contains(granted, scope) {
+			return false
+		}
+	}
+	return true
 }
 
 func (service *Service) CheckConnectorAction(ctx context.Context, request *workspacev1.CheckConnectorActionRequest) (*workspacev1.ConnectorActionRequirement, error) {

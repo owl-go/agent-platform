@@ -1,10 +1,12 @@
 package gormrepo
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -192,6 +194,39 @@ func TestConnectorActionPausesAndResumesSessionMessage(t *testing.T) {
 	}
 	if resumed.State != "generating" || resumed.ProgressStage != "using_tool" {
 		t.Fatalf("resumed message = state %q progress %q", resumed.State, resumed.ProgressStage)
+	}
+}
+
+func TestBeginCLIConnectorAuthorizationUpdatesExistingAttempt(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	definition, err := repository.CreateCLIConnectorDefinition(ctx, owner, cliconnector.Definition{
+		Name: "Example CLI", Icon: "terminal", Description: "Read examples", InstallationType: "npm", Package: "example-cli", Version: "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	enablementID := uuid.NewString()
+	if err := db.Exec("INSERT INTO cli_connector_enablements(id,owner_user_id,definition_id,state) VALUES(?,?,?,'enabled')", enablementID, owner, definition.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := repository.BeginCLIConnectorAuthorization(ctx, owner, enablementID, cliconnector.IdentityUser, []string{"chat:read"}, "https://example.test/first", time.Now().Add(time.Minute), []byte("first-device"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondExpiry := time.Now().Add(2 * time.Minute)
+	second, err := repository.BeginCLIConnectorAuthorization(ctx, owner, enablementID, cliconnector.IdentityUser, []string{"chat:read", "chat:write"}, "https://example.test/second", secondExpiry, []byte("second-device"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.ID != first.ID || second.ActionURL != "https://example.test/second" || !slices.Equal(second.Scopes, []string{"chat:read", "chat:write"}) || !second.ExpiresAt.Equal(secondExpiry) || !bytes.Equal(second.DeviceCodeCiphertext, []byte("second-device")) {
+		t.Fatalf("first=%#v second=%#v", first, second)
 	}
 }
 

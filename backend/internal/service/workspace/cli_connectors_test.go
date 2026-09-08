@@ -25,13 +25,15 @@ import (
 type cliCatalogRepository struct {
 	workspaceapplication.Repository
 	cliConnectorRepository
-	items          []cliconnector.Definition
-	deletedID      string
-	deletedVersion int64
-	enabledOwner   string
-	enabledID      string
-	action         cliconnector.ActionRequirement
-	providerURL    string
+	items                []cliconnector.Definition
+	deletedID            string
+	deletedVersion       int64
+	enabledOwner         string
+	enabledID            string
+	action               cliconnector.ActionRequirement
+	providerURL          string
+	authorizationAttempt cliconnector.AuthorizationAttempt
+	resetActionURLCount  int
 }
 
 func (repository *cliCatalogRepository) ListConnectorActions(_ context.Context, ownerID string, _ time.Time) ([]cliconnector.ActionRequirement, error) {
@@ -51,8 +53,16 @@ func (repository *cliCatalogRepository) GetConnectorAction(_ context.Context, ow
 
 func (repository *cliCatalogRepository) ResetConnectorActionProviderURL(_ context.Context, ownerID, id string) (cliconnector.ActionRequirement, error) {
 	item, err := repository.GetConnectorAction(context.Background(), ownerID, id)
+	repository.resetActionURLCount++
 	item.ActionURLToken = "action-token"
 	return item, err
+}
+
+func (repository *cliCatalogRepository) GetCLIConnectorAuthorizationAttemptForEnablement(_ context.Context, ownerID, enablementID string) (cliconnector.AuthorizationAttempt, error) {
+	if repository.authorizationAttempt.OwnerID != ownerID || repository.authorizationAttempt.EnablementID != enablementID {
+		return cliconnector.AuthorizationAttempt{}, workspacedomain.ErrNotFound
+	}
+	return repository.authorizationAttempt, nil
 }
 
 func (repository *cliCatalogRepository) ConsumeConnectorActionProviderURL(_ context.Context, id string, expectedVersion int64, token string) (string, error) {
@@ -228,6 +238,36 @@ func TestConversationAuthorizationUsesOwnerCheckedPlatformURL(t *testing.T) {
 	server.ServeHTTP(response, other)
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("cross-owner status=%d", response.Code)
+	}
+}
+
+func TestStartingConnectorActionReusesCompatibleAuthorizationAttempt(t *testing.T) {
+	action := cliconnector.ActionRequirement{
+		ID: "action-1", OwnerID: "user-1", State: cliconnector.ActionPending,
+		Reason: cliconnector.ReasonAuthorizationRequired, Identity: cliconnector.IdentityUser,
+		EnablementID: "enablement-1", Permissions: []string{"chat:read"},
+		ExpiresAt: time.Now().Add(time.Minute), Version: 1,
+	}
+	repository := &cliCatalogRepository{
+		action: action,
+		authorizationAttempt: cliconnector.AuthorizationAttempt{
+			ID: "attempt-1", OwnerID: action.OwnerID, EnablementID: action.EnablementID,
+			Identity: cliconnector.IdentityUser, Scopes: []string{"chat:read", "offline_access"},
+			ActionURL: "https://open.feishu.cn/authorize?secret=value", ExpiresAt: time.Now().Add(time.Minute),
+		},
+	}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: action.OwnerID})
+	response, err := service.StartConnectorAction(ctx, &workspacev1.StartConnectorActionRequest{ActionId: action.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repository.resetActionURLCount != 1 || response.ActionUrl == nil || !strings.Contains(*response.ActionUrl, "token=action-token") || strings.Contains(*response.ActionUrl, "secret") {
+		t.Fatalf("response=%#v reset count=%d", response, repository.resetActionURLCount)
 	}
 }
 
