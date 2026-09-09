@@ -89,6 +89,10 @@ func isEventStreamRequest(request *http.Request) bool {
 	if len(parts) == 4 {
 		return parts[0] == "v1" && parts[1] == "runs" && parts[3] == "events"
 	}
+	if len(parts) == 6 {
+		return parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-creation" &&
+			parts[3] == "image-generations" && parts[4] != "" && parts[5] == "events"
+	}
 	if len(parts) != 7 || parts[0] != "api" || parts[1] != "v1" || parts[6] != "events" {
 		return false
 	}

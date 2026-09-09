@@ -25,6 +25,32 @@ function mountPage(api: PlatformApi, administrator = false) {
 }
 
 describe("ImageGenerationPage", () => {
+  it("reconnects a cleanly closed event stream while the generation is still active", async () => {
+    vi.useFakeTimers();
+    const running = {
+      id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,
+      prompt: "a circle", mode: "generate", size: "1024x1024", quality: "high", format: "png", background: "opaque",
+      requested_count: 1, validated_count: 0, reservation_hundredths: 5000, consumption_hundredths: 0,
+      state: "running", images: [], created_at: "2026-09-09T00:00:00Z", version: 2,
+    } as Awaited<ReturnType<PlatformApi["listImageGenerations"]>>[number];
+    const streamImageGeneration = vi.fn(async () => undefined);
+    const api = {
+      getImageGenerationOptions: vi.fn(async () => ({ image_models: [model] })),
+      listImageGenerations: vi.fn(async () => [running]),
+      getImageGeneration: vi.fn(async () => running),
+      streamImageGeneration,
+    } as unknown as PlatformApi;
+    const wrapper = mountPage(api);
+    await flushPromises();
+
+    expect(streamImageGeneration).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1_600);
+    expect(streamImageGeneration).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
+
 	it("keeps rendering when an empty generation omits repeated JSON fields", async () => {
 		const record = {
 			id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,

@@ -26,6 +26,7 @@ const originalPrompt = ref("");
 const optimizing = ref(false);
 const previewPosition = ref<number>();
 let streamAbort: AbortController | undefined;
+let streamReconnect: number | undefined;
 let lastEventID = 0;
 let submitRequestID = "";
 let regenerationRequestID = "";
@@ -100,6 +101,8 @@ async function refreshActive(recordID: string) {
 }
 
 function startStream() {
+  if (streamReconnect !== undefined) window.clearTimeout(streamReconnect);
+  streamReconnect = undefined;
   streamAbort?.abort();
   if (!locked.value || !active.value) return;
   const recordID = active.value.id;
@@ -108,8 +111,11 @@ function startStream() {
   void api.streamImageGeneration(recordID, (event) => {
     lastEventID = event.sequence;
     void refreshActive(recordID);
-  }, controller.signal, lastEventID).then(() => refreshActive(recordID)).catch(() => {
-    if (!controller.signal.aborted && active.value?.id === recordID) window.setTimeout(startStream, 1500);
+  }, controller.signal, lastEventID).then(async () => {
+    await refreshActive(recordID);
+    if (!controller.signal.aborted && active.value?.id === recordID && locked.value) streamReconnect = window.setTimeout(startStream, 1500);
+  }).catch(() => {
+    if (!controller.signal.aborted && active.value?.id === recordID) streamReconnect = window.setTimeout(startStream, 1500);
   });
 }
 
@@ -192,7 +198,9 @@ async function downloadAll() {
 }
 
 async function selectRecord(record: ImageGenerationRecord) {
-  streamAbort?.abort(); lastEventID = 0;
+  streamAbort?.abort();
+  if (streamReconnect !== undefined) window.clearTimeout(streamReconnect);
+  streamReconnect = undefined; lastEventID = 0;
   active.value = record;
   await loadImages(record);
   startStream();
@@ -267,6 +275,7 @@ async function savePromptCandidates() {
 onMounted(load);
 onBeforeUnmount(() => {
   streamAbort?.abort();
+  if (streamReconnect !== undefined) window.clearTimeout(streamReconnect);
   for (const reference of references.value) void api.deleteReferenceImage(reference.id).catch(() => undefined);
   for (const url of Object.values(imageURLs.value)) URL.revokeObjectURL(url);
 });

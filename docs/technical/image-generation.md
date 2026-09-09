@@ -231,6 +231,8 @@ Binary operations use explicit authenticated HTTP handlers because they stream b
 - `GET /api/v1/ai-creation/image-generations/{record_id}/download` streams a temporary ZIP assembled from available images;
 - `GET /api/v1/ai-creation/image-generations/{record_id}/events` streams bounded SSE progress.
 
+The Image Generation event stream uses the platform's 30-minute SSE request deadline, exceeding the required ten-minute generation window. If an intermediary or transient connection ends the stream earlier while the record remains non-terminal, the workbench reconciles the authoritative record and reconnects from the last event sequence; it does not resume idle history polling after a terminal state.
+
 Create, Stop, Regenerate, and Delete require an idempotency key or expected aggregate version as appropriate. Replaying the same submission returns the original record and never creates another reservation. SSE event sequence starts at 1, increases monotonically, and contains exactly one terminal event. Reconnection accepts the last event identity; a normal GET remains authoritative.
 
 The public record response contains frozen display metadata, request options, ordered output metadata, safe status, total Credit Consumption, timestamps, and action availability. It never returns Provider Endpoint, credential identity, Object Key, raw provider response, or another User's data.

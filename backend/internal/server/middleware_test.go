@@ -21,6 +21,7 @@ func TestRequestTimeoutSelection(t *testing.T) {
 		{name: "legacy Run SSE", path: "/v1/runs/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
 		{name: "Session message SSE", path: "/api/v1/sessions/00000000-0000-4000-8000-000000000001/messages/2/events", wantTimeout: 30 * time.Minute},
 		{name: "Workflow Run SSE", path: "/api/v1/workflows/00000000-0000-4000-8000-000000000001/runs/00000000-0000-4000-8000-000000000002/events", wantTimeout: 30 * time.Minute},
+		{name: "Image Generation SSE", path: "/api/v1/ai-creation/image-generations/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
