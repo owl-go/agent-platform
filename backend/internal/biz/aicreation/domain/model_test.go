@@ -1,12 +1,24 @@
 package domain_test
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"agent-platform/backend/internal/biz/aicreation/domain"
 )
+
+func TestRateKeyCanBeStoredInPostgresJSONB(t *testing.T) {
+	encoded, err := json.Marshal(map[string]int64{domain.RateKey("1024x1024", "auto"): 100})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), `\u0000`) {
+		t.Fatalf("encoded rates contain PostgreSQL-unsupported NUL escape: %s", encoded)
+	}
+}
 
 func TestAvailableImageModelAcceptsOnlyPublishedCapabilities(t *testing.T) {
 	model := availableModel()
@@ -77,6 +89,6 @@ func availableModel() domain.ImageModelRevision {
 		Qualities: []string{"high"}, Formats: []string{"png", "jpeg"},
 		Backgrounds: []string{"opaque", "transparent"},
 		DefaultSize: "1024x1024", DefaultQuality: "high", DefaultFormat: "png", DefaultBackground: "opaque",
-		Rates: map[string]int64{"1024x1024\x00high": 125}, VerifiedAt: time.Unix(1, 0),
+		Rates: map[string]int64{domain.RateKey("1024x1024", "high"): 125}, VerifiedAt: time.Unix(1, 0),
 	}
 }

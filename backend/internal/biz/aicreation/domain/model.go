@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -126,7 +127,9 @@ func (model ImageModelRevision) ValidateConfiguration() error {
 }
 
 func RateKey(size, quality string) string { return rateKey(size, quality) }
-func rateKey(size, quality string) string { return size + "\x00" + quality }
+func rateKey(size, quality string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(size)) + "." + base64.RawURLEncoding.EncodeToString([]byte(quality))
+}
 
 func contains[T comparable](values []T, wanted T) bool {
 	for _, value := range values {

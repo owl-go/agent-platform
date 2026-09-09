@@ -31,12 +31,13 @@ const nav = [
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
 let imageMonitorTimer: number | undefined;
+let imageMonitorRun = 0;
 let monitoredImageRecord = "";
 const formatCredits = (hundredths: number | undefined) => (Number(hundredths ?? 0) / 100).toFixed(2);
 
 watch(currentUser, (user) => {
   if (user?.credit_balance) creditBalance.value = user.credit_balance;
-  if (user) void monitorImageGeneration();
+  void monitorImageGeneration();
 }, { immediate: true });
 watch(() => route.meta.surface, (surface) => {
   if (surface === "ai-creation") {
@@ -50,21 +51,32 @@ async function refreshCredits() {
   try { creditBalance.value = await api.getCreditBalance(); } catch { /* Keep the last known projection. */ }
 }
 
+function handleCreditsUpdated() {
+  void refreshCredits();
+  void monitorImageGeneration();
+}
+
 onMounted(() => {
   void auth.session.initialize(auth.isCallback);
   controller = new AbortController();
   getHealth(controller.signal).then(() => { online.value = true; }).catch(() => { online.value = false; });
-  window.addEventListener("credits-updated", refreshCredits);
+  window.addEventListener("credits-updated", handleCreditsUpdated);
 });
-onUnmounted(() => { controller?.abort(); window.clearTimeout(imageMonitorTimer); auth.session.dispose(); window.removeEventListener("credits-updated", refreshCredits); });
+onUnmounted(() => { controller?.abort(); imageMonitorRun++; window.clearTimeout(imageMonitorTimer); auth.session.dispose(); window.removeEventListener("credits-updated", handleCreditsUpdated); });
 
 async function monitorImageGeneration() {
+  const run = ++imageMonitorRun;
   window.clearTimeout(imageMonitorTimer);
   if (!currentUser.value) return;
+  let continueMonitoring = false;
   try {
     const records = await api.listImageGenerations();
+    if (run !== imageMonitorRun) return;
     const running = records.find((record) => record.state === "pending" || record.state === "running");
-    if (running) monitoredImageRecord = running.id;
+    if (running) {
+      monitoredImageRecord = running.id;
+      continueMonitoring = true;
+    }
     else if (monitoredImageRecord) {
       const completed = records.find((record) => record.id === monitoredImageRecord);
       if (completed) {
@@ -76,8 +88,8 @@ async function monitorImageGeneration() {
       }
       monitoredImageRecord = "";
     }
-  } catch { /* The page remains authoritative if background polling is unavailable. */ }
-  imageMonitorTimer = window.setTimeout(monitorImageGeneration, 3000);
+  } catch { continueMonitoring = monitoredImageRecord !== ""; }
+  if (run === imageMonitorRun && continueMonitoring) imageMonitorTimer = window.setTimeout(monitorImageGeneration, 3000);
 }
 
 function setLocale(value: SupportedLocale) {
