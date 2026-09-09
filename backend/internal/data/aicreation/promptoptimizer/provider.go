@@ -1,6 +1,7 @@
 package promptoptimizer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -44,7 +45,10 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 	switch request.Candidate.Protocol {
 	case "openai_responses":
 		path = "responses"
-		payload = map[string]any{"model": request.Candidate.ModelID, "instructions": instruction, "input": request.Prompt}
+		payload = map[string]any{
+			"model": request.Candidate.ModelID, "instructions": instruction, "stream": true,
+			"input": []any{map[string]any{"role": "user", "content": []any{map[string]string{"type": "input_text", "text": request.Prompt}}}},
+		}
 	default:
 		return application.OptimizationResult{}, fmt.Errorf("unsupported Prompt Optimization protocol")
 	}
@@ -59,6 +63,7 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 	httpRequest.Header.Set("Authorization", "Bearer "+string(connection.APIKey))
 	defer httpRequest.Header.Del("Authorization")
 	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("Accept", "text/event-stream, application/json")
 	response, err := provider.client.Do(httpRequest)
 	if err != nil {
 		return application.OptimizationResult{}, fmt.Errorf("call Prompt Optimization model: %w", err)
@@ -68,30 +73,89 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64*1024))
 		return application.OptimizationResult{}, fmt.Errorf("Prompt Optimization returned status %d", response.StatusCode)
 	}
-	var raw struct {
-		Output []struct {
-			Content []struct{ Type, Text string } `json:"content"`
-		} `json:"output"`
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-		Usage struct {
-			InputTokens      int64 `json:"input_tokens"`
-			OutputTokens     int64 `json:"output_tokens"`
-			PromptTokens     int64 `json:"prompt_tokens"`
-			CompletionTokens int64 `json:"completion_tokens"`
-		} `json:"usage"`
+	if strings.Contains(response.Header.Get("Content-Type"), "text/event-stream") {
+		return decodeResponsesStream(response.Body)
 	}
-	if err := json.NewDecoder(io.LimitReader(response.Body, 2*1024*1024)).Decode(&raw); err != nil {
+	return decodeResponsesJSON(response.Body)
+}
+
+type responsesPayload struct {
+	Output []struct {
+		Content []struct{ Type, Text string } `json:"content"`
+	} `json:"output"`
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+	Usage struct {
+		InputTokens      int64 `json:"input_tokens"`
+		OutputTokens     int64 `json:"output_tokens"`
+		PromptTokens     int64 `json:"prompt_tokens"`
+		CompletionTokens int64 `json:"completion_tokens"`
+	} `json:"usage"`
+}
+
+func decodeResponsesJSON(reader io.Reader) (application.OptimizationResult, error) {
+	var raw responsesPayload
+	if err := json.NewDecoder(io.LimitReader(reader, 2*1024*1024)).Decode(&raw); err != nil {
 		return application.OptimizationResult{}, err
 	}
+	return optimizationResult(raw, ""), nil
+}
+
+func decodeResponsesStream(reader io.Reader) (application.OptimizationResult, error) {
+	limited := &io.LimitedReader{R: reader, N: 2*1024*1024 + 1}
+	scanner := bufio.NewScanner(limited)
+	scanner.Buffer(make([]byte, 64*1024), 2*1024*1024)
 	text := ""
-	for _, output := range raw.Output {
-		for _, content := range output.Content {
-			if content.Type == "output_text" {
-				text += content.Text
+	var completed responsesPayload
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "" || data == "[DONE]" {
+			continue
+		}
+		var event struct {
+			Type     string           `json:"type"`
+			Delta    string           `json:"delta"`
+			Text     string           `json:"text"`
+			Response responsesPayload `json:"response"`
+		}
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			return application.OptimizationResult{}, fmt.Errorf("decode Prompt Optimization stream: %w", err)
+		}
+		switch event.Type {
+		case "response.output_text.delta":
+			text += event.Delta
+		case "response.output_text.done":
+			if text == "" {
+				text = event.Text
+			}
+		case "response.completed":
+			completed = event.Response
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return application.OptimizationResult{}, fmt.Errorf("read Prompt Optimization stream: %w", err)
+	}
+	if limited.N <= 0 {
+		return application.OptimizationResult{}, fmt.Errorf("Prompt Optimization response exceeds 2 MiB")
+	}
+	return optimizationResult(completed, text), nil
+}
+
+func optimizationResult(raw responsesPayload, streamedText string) application.OptimizationResult {
+	text := streamedText
+	if text == "" {
+		for _, output := range raw.Output {
+			for _, content := range output.Content {
+				if content.Type == "output_text" {
+					text += content.Text
+				}
 			}
 		}
 	}
@@ -105,5 +169,5 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 	if output == 0 {
 		output = raw.Usage.CompletionTokens
 	}
-	return application.OptimizationResult{Prompt: strings.TrimSpace(text), InputTokens: input, OutputTokens: output}, nil
+	return application.OptimizationResult{Prompt: strings.TrimSpace(text), InputTokens: input, OutputTokens: output}
 }

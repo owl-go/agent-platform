@@ -40,6 +40,10 @@ const preferenceKey = computed(() => auth.session.state.value.kind === "authenti
 const adminForm = reactive({ endpoint: "", api_key: "", provider_model_id: "gpt-image-1" });
 const promptAdminForm = reactive({ provider_model_id: "", endpoint: "", api_key: "", instruction: "请将用户输入扩展为清晰、具体、适合图片生成模型理解的提示词，保留原始意图，只返回优化后的提示词。" });
 
+function normalizeRecord(record: ImageGenerationRecord): ImageGenerationRecord {
+  return { ...record, images: record.images ?? [] };
+}
+
 watch(selectedModel, (model) => {
   if (!model) return;
   if (!model.modes.includes(form.mode)) form.mode = model.modes[0] ?? "generate";
@@ -56,7 +60,7 @@ async function load() {
   loading.value = true;
   try {
     const [options, records] = await Promise.all([api.getImageGenerationOptions(), api.listImageGenerations()]);
-    models.value = options.image_models; promptModels.value = options.prompt_optimization_models; history.value = records;
+    models.value = options.image_models ?? []; promptModels.value = options.prompt_optimization_models ?? []; history.value = (records ?? []).map(normalizeRecord);
     active.value = history.value.find((record) => ["pending", "running"].includes(record.state)) ?? history.value[0];
     if (!form.image_model_id && preferenceKey.value) {
       try { Object.assign(form, JSON.parse(localStorage.getItem(preferenceKey.value) ?? "{}")); } catch { /* Ignore obsolete local preferences. */ }
@@ -81,7 +85,7 @@ function undoOptimization() { if (previousPrompt.value) { form.prompt = previous
 
 async function refreshActive(recordID: string) {
   if (active.value?.id !== recordID) return;
-  active.value = await api.getImageGeneration(recordID);
+  active.value = normalizeRecord(await api.getImageGeneration(recordID));
   const index = history.value.findIndex((item) => item.id === recordID);
   if (index >= 0) history.value[index] = active.value;
   await loadImages(active.value);
@@ -107,7 +111,7 @@ async function submit() {
   try {
     submitRequestID ||= crypto.randomUUID();
     const submittedReferences = [...references.value];
-    active.value = await api.submitImageGeneration({ ...form, request_id: submitRequestID, original_prompt: originalPrompt.value || form.prompt, reference_upload_ids: submittedReferences.map((item) => item.id) });
+    active.value = normalizeRecord(await api.submitImageGeneration({ ...form, request_id: submitRequestID, original_prompt: originalPrompt.value || form.prompt, reference_upload_ids: submittedReferences.map((item) => item.id) }));
     submitRequestID = "";
     history.value.unshift(active.value);
     form.prompt = ""; previousPrompt.value = ""; originalPrompt.value = ""; references.value = [];
@@ -141,7 +145,7 @@ function moveReference(index: number, offset: number) {
 
 async function stop() {
   if (!active.value) return;
-  try { active.value = await api.stopImageGeneration(active.value.id); window.dispatchEvent(new Event("credits-updated")); }
+  try { active.value = normalizeRecord(await api.stopImageGeneration(active.value.id)); window.dispatchEvent(new Event("credits-updated")); }
   catch { error.value = t("imageGeneration.requestFailed"); }
 }
 
@@ -150,7 +154,7 @@ async function regenerate() {
   const currentModel = models.value.find((model) => model.id === active.value?.image_model_id);
   const currentRate = currentModel?.rates.find((rate) => rate.size === active.value?.size && rate.quality === active.value?.quality)?.amount_hundredths;
   if (currentRate === undefined || !window.confirm(t("imageGeneration.regenerateEstimate", { value: ((currentRate * active.value.requested_count) / 100).toFixed(2) }))) return;
-  try { regenerationRequestID ||= crypto.randomUUID(); active.value = await api.regenerateImageGeneration(active.value.id, regenerationRequestID); regenerationRequestID = ""; history.value.unshift(active.value); window.dispatchEvent(new Event("credits-updated")); lastEventID = 0; startStream(); }
+  try { regenerationRequestID ||= crypto.randomUUID(); active.value = normalizeRecord(await api.regenerateImageGeneration(active.value.id, regenerationRequestID)); regenerationRequestID = ""; history.value.unshift(active.value); window.dispatchEvent(new Event("credits-updated")); lastEventID = 0; startStream(); }
   catch { error.value = t("imageGeneration.requestFailed"); }
 }
 

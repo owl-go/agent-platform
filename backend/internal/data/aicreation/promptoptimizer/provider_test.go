@@ -18,7 +18,26 @@ func TestOptimizerUsesIndependentResponsesConfiguration(t *testing.T) {
 		if request.URL.Path != "/v1/responses" || request.Header.Get("Authorization") != "Bearer secret" {
 			t.Fatalf("request = %s %q", request.URL.Path, request.Header.Get("Authorization"))
 		}
-		_ = json.NewEncoder(writer).Encode(map[string]any{"output": []any{map[string]any{"content": []any{map[string]any{"type": "output_text", "text": "Detailed prompt"}}}}, "usage": map[string]any{"input_tokens": 7, "output_tokens": 11}})
+		var body struct {
+			Input []struct {
+				Role    string `json:"role"`
+				Content []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				} `json:"content"`
+			} `json:"input"`
+			Stream bool `json:"stream"`
+		}
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if !body.Stream || len(body.Input) != 1 || body.Input[0].Role != "user" || len(body.Input[0].Content) != 1 || body.Input[0].Content[0].Type != "input_text" || body.Input[0].Content[0].Text != "cat" {
+			t.Fatalf("body = %#v", body)
+		}
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = writer.Write([]byte("event: response.output_text.delta\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"Detailed \"}\n\n"))
+		_, _ = writer.Write([]byte("event: response.output_text.delta\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"prompt\"}\n\n"))
+		_, _ = writer.Write([]byte("event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":7,\"output_tokens\":11}}}\n\n"))
 	}))
 	defer server.Close()
 	provider := mustOptimizer(t, resolver{openaiimages.Connection{Endpoint: server.URL + "/v1", APIKey: []byte("secret")}})

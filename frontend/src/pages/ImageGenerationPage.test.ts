@@ -25,6 +25,22 @@ function mountPage(api: PlatformApi, administrator = false) {
 }
 
 describe("ImageGenerationPage", () => {
+	it("keeps rendering when an empty generation omits repeated JSON fields", async () => {
+		const record = {
+			id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,
+			prompt: "a circle", mode: "generate", size: "1024x1024", quality: "high", format: "png", background: "opaque",
+			requested_count: 1, validated_count: 0, reservation_hundredths: 5000, consumption_hundredths: 0,
+			state: "outcome_unknown", created_at: "2026-09-09T00:00:00Z", version: 1,
+		} as unknown as Awaited<ReturnType<PlatformApi["listImageGenerations"]>>[number];
+		const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [model] })), listImageGenerations: vi.fn(async () => [record]) } as unknown as PlatformApi;
+		const wrapper = mountPage(api);
+		await flushPromises();
+		expect(wrapper.text()).toContain("生成结果");
+		expect(wrapper.text()).toContain("a circle");
+		expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+		wrapper.unmount();
+	});
+
   it("keeps the workbench visible and explains an empty Image Model catalog", async () => {
     const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [], prompt_optimization_models: [] })), listImageGenerations: vi.fn(async () => []) } as unknown as PlatformApi;
     const wrapper = mountPage(api);
