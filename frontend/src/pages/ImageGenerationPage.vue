@@ -315,7 +315,14 @@ onBeforeUnmount(() => {
         <div class="image-card-title"><el-icon><Picture /></el-icon><h2>{{ t('imageGeneration.results') }}</h2></div>
         <div v-if="active" class="image-result-meta"><el-tag>{{ t(`imageGeneration.${active.state}`) }}</el-tag><span>{{ active.image_model_name }} · {{ active.size }} · {{ (active.consumption_hundredths / 100).toFixed(2) }} Credits</span><span class="result-actions"><el-button v-if="active.images.length > 1" text @click="downloadAll">ZIP</el-button><el-button text :disabled="locked" @click="reuseSettings">Reuse settings</el-button><el-button text :disabled="locked" @click="regenerate">{{ t('common.retry') }}</el-button><el-button text type="danger" :disabled="locked" @click="deleteRecord">{{ t('common.delete') }}</el-button></span></div>
         <div v-if="active?.images?.length" class="generated-image-grid" :class="{ single: active.images.length === 1 }"><figure v-for="image in active.images" :key="image.position"><button v-if="imageURLs[image.position]" class="image-preview-trigger" :aria-label="`Preview result ${image.position}`" @click="previewPosition = image.position"><img :src="imageURLs[image.position]" :alt="`${active.image_model_name} result ${image.position}`"></button><div v-else class="image-loading-tile" /><figcaption><span>{{ image.width }} × {{ image.height }}</span><span><el-button text :disabled="locked || references.length >= 10" @click="reuseImageAsReference(image.position)">{{ t('imageGeneration.useAsReference') }}</el-button><el-button text :icon="Download" @click="downloadImage(image.position)">{{ t('imageGeneration.download') }}</el-button></span></figcaption></figure></div>
-        <div v-else class="image-result-empty"><el-icon><MagicStick /></el-icon><p>{{ active ? t(`imageGeneration.${active.state}`) : t('imageGeneration.empty') }}</p></div>
+        <div v-else class="image-result-empty">
+          <div v-if="locked" class="image-generation-motion" role="status" aria-live="polite">
+            <span class="image-generation-orbit" aria-hidden="true"><i /><i /><i /></span>
+            <p>{{ t(`imageGeneration.${active?.state}`) }}</p>
+            <small>{{ active?.image_model_name }} · {{ active?.size }}</small>
+          </div>
+          <template v-else><el-icon><MagicStick /></el-icon><p>{{ active ? t(`imageGeneration.${active.state}`) : t('imageGeneration.empty') }}</p></template>
+        </div>
         <details v-if="history.length" class="image-history"><summary>{{ t('imageGeneration.history') }} · {{ history.length }}</summary><button v-for="record in history" :key="record.id" :class="{ active: active?.id === record.id }" @click="selectRecord(record)"><span>{{ record.prompt }}</span><small>{{ t(`imageGeneration.${record.state}`) }} · {{ new Date(record.created_at).toLocaleString() }}</small></button></details>
       </section>
     </section>

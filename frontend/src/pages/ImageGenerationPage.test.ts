@@ -44,6 +44,8 @@ describe("ImageGenerationPage", () => {
     await flushPromises();
 
     expect(streamImageGeneration).toHaveBeenCalledTimes(1);
+    expect(wrapper.find(".image-generation-motion").exists()).toBe(true);
+    expect(wrapper.find("[role='status']").text()).toContain("Studio · 1024x1024");
     await vi.advanceTimersByTimeAsync(1_600);
     expect(streamImageGeneration).toHaveBeenCalledTimes(2);
 
