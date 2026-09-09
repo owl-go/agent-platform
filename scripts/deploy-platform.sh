@@ -15,6 +15,7 @@ identity_database_container="${IDENTITY_DATABASE_CONTAINER:-agent-platform-ident
 api_container="${API_CONTAINER:-agent-platform-api-1}"
 worker_container="${WORKER_CONTAINER:-agent-platform-worker-1}"
 egress_controller_container="${EGRESS_CONTROLLER_CONTAINER:-agent-platform-egress-controller-1}"
+caddy_container="${CADDY_CONTAINER:-agent-platform-caddy-1}"
 skip_gates="${SKIP_DEPLOY_GATES:-0}"
 
 usage() {
@@ -74,6 +75,7 @@ done
 [[ "$api_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "API_CONTAINER contains unsupported characters"
 [[ "$worker_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "WORKER_CONTAINER contains unsupported characters"
 [[ "$egress_controller_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "EGRESS_CONTROLLER_CONTAINER contains unsupported characters"
+[[ "$caddy_container" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "CADDY_CONTAINER contains unsupported characters"
 [[ "$skip_gates" == "0" || "$skip_gates" == "1" ]] || fail "SKIP_DEPLOY_GATES must be 0 or 1"
 validate_remote_path "$deploy_root" PLATFORM_DEPLOY_ROOT
 validate_remote_path "$remote_env_file" PLATFORM_ENV_FILE
@@ -271,7 +273,7 @@ PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" build ap
 REMOTE_BUILD
 
 stage "Activate source, migrate, and replace services"
-if ! ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" "$latest_migration" "$business_database_container" "$api_container" "$worker_container" "$egress_controller_container" <<'REMOTE_CUTOVER'
+if ! ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" "$latest_migration" "$business_database_container" "$api_container" "$worker_container" "$egress_controller_container" "$caddy_container" <<'REMOTE_CUTOVER'
 set -euo pipefail
 deploy_root=$1
 release_dir=$2
@@ -283,6 +285,7 @@ business_database_container=$7
 api_container=$8
 worker_container=$9
 egress_controller_container=${10}
+caddy_container=${11}
 
 wait_healthy() {
   container=$1
@@ -336,6 +339,9 @@ PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --
 wait_healthy "$egress_controller_container"
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --no-deps --force-recreate worker
 wait_healthy "$worker_container"
+PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" up -d --no-deps --force-recreate caddy
+test "$(docker inspect --format '{{.State.Status}}' "$caddy_container")" = running
+docker exec "$caddy_container" caddy validate --config /etc/caddy/Caddyfile >/dev/null
 REMOTE_CUTOVER
 then
   echo "cutover stopped; Worker may be intentionally stopped to protect the migrated database" >&2
@@ -355,7 +361,7 @@ VITE_OIDC_POST_LOGOUT_REDIRECT_URI="$oidc_post_logout_redirect_uri" \
 "$repo_root/scripts/deploy-web.sh"
 
 stage "Verify deployed release"
-ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$web_release_root" "$release_id" "$public_origin" "$api_container" "$worker_container" "$egress_controller_container" <<'REMOTE_VERIFY'
+ssh "$deploy_host" bash -s -- "$deploy_root" "$release_dir" "$web_release_root" "$release_id" "$public_origin" "$api_container" "$worker_container" "$egress_controller_container" "$caddy_container" <<'REMOTE_VERIFY'
 set -euo pipefail
 deploy_root=$1
 release_dir=$2
@@ -365,14 +371,17 @@ public_origin=$5
 api_container=$6
 worker_container=$7
 egress_controller_container=$8
+caddy_container=$9
 test "$(readlink -f "$deploy_root/src")" = "$release_dir"
 test "$(readlink -f "$web_release_root/current")" = "$web_release_root/releases/$release_id"
 test "$(docker inspect --format '{{.State.Health.Status}}' "$api_container")" = healthy
 test "$(docker inspect --format '{{.State.Health.Status}}' "$worker_container")" = healthy
 test "$(docker inspect --format '{{.State.Health.Status}}' "$egress_controller_container")" = healthy
+test "$(docker inspect --format '{{.State.Status}}' "$caddy_container")" = running
 test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$api_container")" = "$release_dir/deploy/platform"
 test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$worker_container")" = "$release_dir/deploy/platform"
 test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$egress_controller_container")" = "$release_dir/deploy/platform"
+test "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$caddy_container")" = "$release_dir/deploy/platform"
 curl --fail --silent --show-error "$public_origin/" >/dev/null
 test "$(curl --fail --silent --show-error -o /dev/null -w '%{http_code}' "$public_origin/api/healthz")" = 200
 test "$(curl --fail --silent --show-error -o /dev/null -w '%{http_code}' "$public_origin/api/readyz")" = 200
@@ -387,6 +396,7 @@ test "$egress_controller_errors" = 0
 printf 'api_image=%s\n' "$(docker inspect --format '{{.Image}}' "$api_container")"
 printf 'worker_image=%s\n' "$(docker inspect --format '{{.Image}}' "$worker_container")"
 printf 'egress_controller_image=%s\n' "$(docker inspect --format '{{.Image}}' "$egress_controller_container")"
+printf 'caddy_image=%s\n' "$(docker inspect --format '{{.Image}}' "$caddy_container")"
 REMOTE_VERIFY
 
 printf '\nDeployment complete\n'

@@ -129,6 +129,24 @@ func TestCaddyAllowsLongRunningAPIResponses(t *testing.T) {
 	}
 }
 
+func TestPlatformDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	for _, required := range []string{
+		`--force-recreate caddy`,
+		`caddy_container="${CADDY_CONTAINER:-agent-platform-caddy-1}"`,
+		`"$caddy_container")" = "$release_dir/deploy/platform"`,
+	} {
+		if !strings.Contains(script, required) {
+			t.Errorf("deploy-platform.sh does not enforce %q", required)
+		}
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))
