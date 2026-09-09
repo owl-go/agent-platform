@@ -112,6 +112,23 @@ func TestWorkerCapabilitiesSupportWorkspaceOwnershipNormalization(t *testing.T) 
 	}
 }
 
+func TestCaddyAllowsLongRunningAPIResponses(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "Caddyfile")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration := string(contents)
+	apiStart := strings.Index(configuration, "    handle /api/* {")
+	identityStart := strings.Index(configuration, "    handle /identity/* {")
+	if apiStart < 0 || identityStart <= apiStart {
+		t.Fatal("Caddyfile API proxy block is missing")
+	}
+	if apiBlock := configuration[apiStart:identityStart]; !strings.Contains(apiBlock, "response_header_timeout 5m") {
+		t.Error("Caddyfile API proxy must allow long-running Image Model verification responses")
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))

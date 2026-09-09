@@ -66,7 +66,7 @@ Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/
 
 Derived Expertise Tag 后台任务与 Session、Run 共用执行阶段的版本化 Model Provider 凭证加载逻辑：Worker 领取任务时按 Connection ID 和 Version 读取密文及凭证归属，再交给 Runtime Executor 解密，不将凭证写入普通 Snapshot。凭证不可用时将标签任务标为失败并保留旧标签，不向 Runtime 提交缺失凭证的任务。
 
-AI Creation Worker 按冻结的 Image Model revision 读取该模型自己的 Endpoint 和加密 API Key，并在调用后清理明文。Prompt Optimization 从自己的单一设置读取 Endpoint 和加密 API Key；两者都不回退到 Model Provider Connection。`ImageProvider` Adapter 只接收结构化生成或编辑参数和流式图片输入，返回结构化图片结果与安全错误，不管理 Repository、Credits、Object Storage 或权限。Adapter 默认使用 OpenAI Images；当 Endpoint 精确指向阿里云百炼同步 multimodal-generation 路径时自动使用百炼原生消息协议，不向管理员暴露额外的供应商或协议设置。Prompt Optimization 通过独立直接调用 Adapter 使用 OpenAI Responses。普通日志和审计不保存提示词、图片、Base64、原始供应商响应、Object Key、签名 URL 或明文 API Key。
+AI Creation Worker 按冻结的 Image Model revision 读取该模型自己的 Endpoint 和加密 API Key，并在调用后清理明文。Prompt Optimization 从自己的单一设置读取 Endpoint 和加密 API Key；两者都不回退到 Model Provider Connection。`ImageProvider` Adapter 只接收结构化生成或编辑参数和流式图片输入，返回结构化图片结果与安全错误，不管理 Repository、Credits、Object Storage 或权限。Adapter 默认使用 OpenAI Images；当 Endpoint 精确指向阿里云百炼同步 multimodal-generation 路径时自动使用百炼原生消息协议，不向管理员暴露额外的供应商或协议设置。管理员的真实图片模型验证复用同一 Adapter，并以应用四分钟、反向代理五分钟的专用边界容纳供应商生成时延。Prompt Optimization 通过独立直接调用 Adapter 使用 OpenAI Responses。普通日志和审计不保存提示词、图片、Base64、原始供应商响应、Object Key、签名 URL 或明文 API Key。
 
 ## 数据库
 

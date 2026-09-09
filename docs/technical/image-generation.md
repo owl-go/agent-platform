@@ -165,7 +165,7 @@ type PromptOptimizer interface {
 
 The interface accepts the configured model and instruction, current prompt, locale, and 10,000-character output limit. The Responses Adapter resolves the setting's independent Endpoint and encrypted API Key behind this seam. Success returns only expanded text and normalized token usage. Over-limit output fails without changing the editable prompt.
 
-Live Image Model verification calls the same `ImageProvider.Create` seam with one platform-owned minimal prompt and the configured default options. It validates actual returned bytes. Tests use the fake Adapter at this interface rather than testing through provider-specific helpers.
+Live Image Model verification calls the same `ImageProvider.Create` seam with one platform-owned minimal prompt and the configured default options. It validates actual returned bytes. Because image providers commonly take longer than ordinary control-plane requests, this one route receives a four-minute application deadline and the deployment proxy permits five minutes for its response headers; ordinary unary and streaming timeout policies remain unchanged. Tests use the fake Adapter at this interface rather than testing through provider-specific helpers.
 
 ## Application Use Cases
 
