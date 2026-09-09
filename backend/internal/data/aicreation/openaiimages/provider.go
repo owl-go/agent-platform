@@ -34,16 +34,19 @@ type Provider struct {
 	connections ImageModelConnectionResolver
 	sources     ImageSources
 	client      *http.Client
+	imageClient *http.Client
 }
 
 func New(connections ImageModelConnectionResolver, sources ImageSources, client *http.Client) (*Provider, error) {
 	if connections == nil || sources == nil {
 		return nil, fmt.Errorf("Image Provider connection resolver and image sources are required")
 	}
+	imageClient := client
 	if client == nil {
 		client = http.DefaultClient
+		imageClient = newPublicImageClient()
 	}
-	return &Provider{connections: connections, sources: sources, client: client}, nil
+	return &Provider{connections: connections, sources: sources, client: client, imageClient: imageClient}, nil
 }
 
 var _ application.ImageProvider = (*Provider)(nil)
@@ -112,8 +115,16 @@ func (provider *Provider) Create(ctx context.Context, request application.Provid
 	}
 	result := application.ProviderResult{Images: make([][]byte, 0, len(payload.Data))}
 	for _, item := range payload.Data {
-		if item.Base64 == "" || item.URL != "" {
-			return application.ProviderResult{}, &application.ProviderFailure{Code: "image_output_invalid", Cause: fmt.Errorf("Images API did not return inline image bytes")}
+		if (item.Base64 == "") == (item.URL == "") {
+			return application.ProviderResult{}, &application.ProviderFailure{Code: "image_output_invalid", Cause: fmt.Errorf("Images API returned an ambiguous image result")}
+		}
+		if item.URL != "" {
+			downloaded, err := provider.downloadImageURL(ctx, item.URL)
+			if err != nil {
+				return application.ProviderResult{}, err
+			}
+			result.Images = append(result.Images, downloaded)
+			continue
 		}
 		decoded, err := base64.StdEncoding.DecodeString(item.Base64)
 		if err != nil || len(decoded) > 25*1024*1024 {

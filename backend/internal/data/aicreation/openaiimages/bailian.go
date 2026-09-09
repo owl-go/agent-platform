@@ -119,23 +119,7 @@ func (provider *Provider) downloadBailianImage(ctx context.Context, value string
 	if err != nil || parsed.Scheme != "https" || (parsed.Hostname() != "aliyuncs.com" && !strings.HasSuffix(parsed.Hostname(), ".aliyuncs.com")) || parsed.User != nil {
 		return nil, &application.ProviderFailure{Code: "image_output_invalid", Cause: fmt.Errorf("Bailian returned an untrusted image URL")}
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, value, nil)
-	if err != nil {
-		return nil, &application.ProviderFailure{Code: "image_output_invalid", Cause: err}
-	}
-	response, err := provider.client.Do(request)
-	if err != nil {
-		return nil, &application.ProviderFailure{Code: "image_outcome_unknown", OutcomeUnknown: true, Cause: err}
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, &application.ProviderFailure{Code: "image_provider_unavailable", Cause: fmt.Errorf("Bailian image download returned status %d", response.StatusCode)}
-	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, 25*1024*1024+1))
-	if err != nil || len(data) > 25*1024*1024 {
-		return nil, &application.ProviderFailure{Code: "image_output_invalid", Cause: fmt.Errorf("Bailian image download is invalid")}
-	}
-	return data, nil
+	return provider.downloadImageURL(ctx, value)
 }
 
 func bailianFailure(status int) error {

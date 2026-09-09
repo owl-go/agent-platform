@@ -49,6 +49,33 @@ func TestProviderGeneratesImagesWithJSON(t *testing.T) {
 	}
 }
 
+func TestProviderDownloadsHTTPSURLImages(t *testing.T) {
+	want := []byte("downloaded-image")
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		switch request.URL.String() {
+		case "https://images.example.test/v1/images/generations":
+			return jsonResponse(http.StatusOK, `{"data":[{"url":"https://cdn.example.test/result.png"}]}`), nil
+		case "https://cdn.example.test/result.png":
+			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(want))}, nil
+		default:
+			t.Fatalf("unexpected URL %q", request.URL.String())
+			return nil, nil
+		}
+	})}
+	provider := mustProviderWithClient(t, "https://images.example.test/v1", nil, client)
+
+	result, err := provider.Create(context.Background(), application.ProviderRequest{
+		ModelRevisionID: "revision-1", ModelID: "gpt-image-2", Prompt: "a red kite",
+		Size: "1024x1024", Quality: "auto", Format: "png", Background: "opaque", Count: 1,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if len(result.Images) != 1 || !bytes.Equal(result.Images[0], want) {
+		t.Fatalf("Images = %q", result.Images)
+	}
+}
+
 func TestProviderEditsWithOrderedMultipartImages(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/images/edits" {
@@ -136,9 +163,14 @@ func TestProviderUsesBailianNativeGenerationEndpoint(t *testing.T) {
 
 func mustProvider(t *testing.T, endpoint string, objects map[string][]byte) *openaiimages.Provider {
 	t.Helper()
+	return mustProviderWithClient(t, endpoint, objects, http.DefaultClient)
+}
+
+func mustProviderWithClient(t *testing.T, endpoint string, objects map[string][]byte, client *http.Client) *openaiimages.Provider {
+	t.Helper()
 	provider, err := openaiimages.New(
 		resolver{connection: openaiimages.Connection{Endpoint: endpoint, APIKey: []byte("secret")}},
-		sources{objects: objects}, http.DefaultClient,
+		sources{objects: objects}, client,
 	)
 	if err != nil {
 		t.Fatal(err)

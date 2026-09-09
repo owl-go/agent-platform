@@ -112,6 +112,28 @@ func TestWorkerCapabilitiesSupportWorkspaceOwnershipNormalization(t *testing.T) 
 	}
 }
 
+func TestWorkerHasDedicatedProviderEgressNetwork(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "compose.yaml")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration := string(contents)
+	workerStart := strings.Index(configuration, "  worker:\n")
+	networksStart := strings.Index(configuration, "\nnetworks:\n")
+	if workerStart < 0 || networksStart <= workerStart {
+		t.Fatal("compose worker or top-level networks block is missing")
+	}
+	workerBlock := configuration[workerStart:networksStart]
+	if !strings.Contains(workerBlock, "      - provider-egress") {
+		t.Error("Worker must have a dedicated network for AI Creation provider calls")
+	}
+	topLevelNetworks := configuration[networksStart:]
+	if !strings.Contains(topLevelNetworks, "  provider-egress:\n  edge:") {
+		t.Error("compose provider-egress network must provide external egress without joining the edge network")
+	}
+}
+
 func TestCaddyAllowsLongRunningAPIResponses(t *testing.T) {
 	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "Caddyfile")
 	contents, err := os.ReadFile(path)
