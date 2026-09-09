@@ -25,6 +25,32 @@ function mountPage(api: PlatformApi, administrator = false) {
 }
 
 describe("ImageGenerationPage", () => {
+  it("reuses an already loaded Generated Image when switching history", async () => {
+    const record = (id: string, prompt: string) => ({
+      id, image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,
+      prompt, mode: "generate", size: "1024x1024", quality: "high", format: "png", background: "opaque",
+      requested_count: 1, validated_count: 1, reservation_hundredths: 5000, consumption_hundredths: 5000,
+      state: "succeeded", images: [{ position: 1, media_type: "image/png", encoded_size: 5, width: 1024, height: 1024, expires_at: "2026-12-08T00:00:00Z" }], created_at: "2026-09-09T00:00:00Z", version: 2,
+    }) as Awaited<ReturnType<PlatformApi["listImageGenerations"]>>[number];
+    const records = [record("record-a", "orange cat"), record("record-b", "blue bird")];
+    const getGeneratedImage = vi.fn(async () => new Blob(["image"], { type: "image/png" }));
+    const api = {
+      getImageGenerationOptions: vi.fn(async () => ({ image_models: [model], prompt_optimization_models: [] })),
+      listImageGenerations: vi.fn(async () => records),
+      getGeneratedImage,
+    } as unknown as PlatformApi;
+    const wrapper = mountPage(api);
+    await flushPromises();
+
+    await wrapper.findAll(".image-history button").find((button) => button.text().includes("blue bird"))!.trigger("click");
+    await flushPromises();
+    await wrapper.findAll(".image-history button").find((button) => button.text().includes("orange cat"))!.trigger("click");
+
+    expect(getGeneratedImage).toHaveBeenCalledTimes(2);
+    expect(wrapper.find(".image-preview-trigger img").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("reconnects a cleanly closed event stream while the generation is still active", async () => {
     vi.useFakeTimers();
     const running = {

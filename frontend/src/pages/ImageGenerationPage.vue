@@ -12,6 +12,10 @@ const models = ref<ImageModel[]>([]);
 const history = ref<ImageGenerationRecord[]>([]);
 const active = ref<ImageGenerationRecord>();
 const imageURLs = ref<Record<number, string>>({});
+const imageURLCache = new Map<string, Record<number, string>>();
+const imageLoads = new Map<string, Promise<string>>();
+const discardedImageRecords = new Set<string>();
+const maxCachedImageRecords = 6;
 const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
@@ -30,6 +34,7 @@ let streamReconnect: number | undefined;
 let lastEventID = 0;
 let submitRequestID = "";
 let regenerationRequestID = "";
+let disposed = false;
 
 const form = reactive<ImageGenerationInput>({ image_model_id: "", mode: "generate", prompt: "", size: "", quality: "", format: "png", background: "opaque", count: 1 });
 const selectedModel = computed(() => models.value.find((model) => model.id === form.image_model_id));
@@ -187,7 +192,7 @@ function reuseSettings() {
 async function deleteRecord() {
   if (!active.value || locked.value || !window.confirm(`${t('common.delete')}?`)) return;
   const id = active.value.id;
-  try { await api.deleteImageGeneration(id); history.value = history.value.filter((item) => item.id !== id); active.value = history.value[0]; await loadImages(active.value); }
+  try { await api.deleteImageGeneration(id); discardedImageRecords.add(id); revokeCachedImages(id); history.value = history.value.filter((item) => item.id !== id); active.value = history.value[0]; await loadImages(active.value); }
   catch { error.value = t("imageGeneration.requestFailed"); }
 }
 
@@ -207,12 +212,55 @@ async function selectRecord(record: ImageGenerationRecord) {
 }
 
 async function loadImages(record?: ImageGenerationRecord) {
-  for (const url of Object.values(imageURLs.value)) URL.revokeObjectURL(url);
-  imageURLs.value = {};
-  if (!record) return;
-  for (const image of record.images ?? []) {
-    try { imageURLs.value[image.position] = URL.createObjectURL(await api.getGeneratedImage(record.id, image.position)); } catch { /* Keep other valid results visible. */ }
+  if (!record) { imageURLs.value = {}; return; }
+  imageURLs.value = touchCachedImages(record.id);
+  await Promise.all((record.images ?? []).map(async (image) => {
+    if (imageURLCache.get(record.id)?.[image.position]) return;
+    const key = `${record.id}:${image.position}`;
+    let pending = imageLoads.get(key);
+    if (!pending) {
+      pending = api.getGeneratedImage(record.id, image.position).then((blob) => URL.createObjectURL(blob));
+      imageLoads.set(key, pending);
+    }
+    try {
+      const url = await pending;
+      if (disposed || discardedImageRecords.has(record.id)) { URL.revokeObjectURL(url); return; }
+      const urls = { ...(imageURLCache.get(record.id) ?? {}), [image.position]: url };
+      cacheImages(record.id, urls);
+      if (active.value?.id === record.id) imageURLs.value = urls;
+    } catch { /* Keep other valid results visible. */ }
+    finally { if (imageLoads.get(key) === pending) imageLoads.delete(key); }
+  }));
+}
+
+function touchCachedImages(recordID: string): Record<number, string> {
+  const urls = imageURLCache.get(recordID) ?? {};
+  if (imageURLCache.has(recordID)) {
+    imageURLCache.delete(recordID);
+    imageURLCache.set(recordID, urls);
   }
+  return urls;
+}
+
+function cacheImages(recordID: string, urls: Record<number, string>) {
+  imageURLCache.delete(recordID);
+  imageURLCache.set(recordID, urls);
+  while (imageURLCache.size > maxCachedImageRecords) {
+    const oldest = imageURLCache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    if (oldest === active.value?.id) {
+      const current = imageURLCache.get(oldest)!;
+      imageURLCache.delete(oldest);
+      imageURLCache.set(oldest, current);
+      continue;
+    }
+    revokeCachedImages(oldest);
+  }
+}
+
+function revokeCachedImages(recordID: string) {
+  for (const url of Object.values(imageURLCache.get(recordID) ?? {})) URL.revokeObjectURL(url);
+  imageURLCache.delete(recordID);
 }
 
 function downloadImage(position: number) {
@@ -274,10 +322,11 @@ async function savePromptCandidates() {
 
 onMounted(load);
 onBeforeUnmount(() => {
+  disposed = true;
   streamAbort?.abort();
   if (streamReconnect !== undefined) window.clearTimeout(streamReconnect);
   for (const reference of references.value) void api.deleteReferenceImage(reference.id).catch(() => undefined);
-  for (const url of Object.values(imageURLs.value)) URL.revokeObjectURL(url);
+  for (const recordID of [...imageURLCache.keys()]) revokeCachedImages(recordID);
 });
 </script>
 
