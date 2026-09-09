@@ -37,6 +37,8 @@ describe("ImageGenerationPage", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("生成结果");
 		expect(wrapper.text()).toContain("a circle");
+		expect(wrapper.text()).toContain("0.00 Credits");
+		expect(wrapper.text()).not.toContain("NaN");
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false);
 		wrapper.unmount();
 	});

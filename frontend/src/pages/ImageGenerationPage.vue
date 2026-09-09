@@ -41,7 +41,15 @@ const adminForm = reactive({ endpoint: "", api_key: "", provider_model_id: "gpt-
 const promptAdminForm = reactive({ provider_model_id: "", endpoint: "", api_key: "", instruction: "请将用户输入扩展为清晰、具体、适合图片生成模型理解的提示词，保留原始意图，只返回优化后的提示词。" });
 
 function normalizeRecord(record: ImageGenerationRecord): ImageGenerationRecord {
-  return { ...record, images: record.images ?? [] };
+  return {
+    ...record,
+    images: record.images ?? [],
+    requested_count: record.requested_count ?? 0,
+    validated_count: record.validated_count ?? 0,
+    reservation_hundredths: record.reservation_hundredths ?? 0,
+    consumption_hundredths: record.consumption_hundredths ?? 0,
+    version: record.version ?? 0,
+  };
 }
 
 watch(selectedModel, (model) => {
