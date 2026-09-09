@@ -75,7 +75,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AgentWorkspaceService_ListPromptOptimizationCandidates"];
         put: operations["AgentWorkspaceService_ReplacePromptOptimizationCandidates"];
         post?: never;
         delete?: never;
@@ -1373,10 +1373,6 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
             display_name?: string;
-            connection_id?: string;
-            /** Format: int64 */
-            connection_version?: number;
-            connection_name?: string;
             provider_model_id?: string;
             modes?: string[];
             sizes?: string[];
@@ -1388,6 +1384,8 @@ export interface components {
             default_format?: string;
             default_background?: string;
             rates?: components["schemas"]["v1ImageCreditRate"][];
+            endpoint?: string;
+            replacement_api_key?: string;
         };
         AgentWorkspaceServiceRunWorkflowBody: {
             text_input?: string;
@@ -1691,10 +1689,6 @@ export interface components {
         };
         v1CreateImageModelRequest: {
             display_name?: string;
-            connection_id?: string;
-            /** Format: int64 */
-            connection_version?: number;
-            connection_name?: string;
             provider_model_id?: string;
             modes?: string[];
             sizes?: string[];
@@ -1706,6 +1700,8 @@ export interface components {
             default_format?: string;
             default_background?: string;
             rates?: components["schemas"]["v1ImageCreditRate"][];
+            endpoint?: string;
+            api_key?: string;
         };
         v1CreateMCPConnectorRequest: {
             mcp_connector?: components["schemas"]["v1MCPConnectorInput"];
@@ -2017,7 +2013,6 @@ export interface components {
             image_model_id?: string;
             image_model_revision_id?: string;
             image_model_name?: string;
-            connection_name?: string;
             prompt?: string;
             mode?: string;
             size?: string;
@@ -2048,10 +2043,6 @@ export interface components {
             id?: string;
             revision_id?: string;
             display_name?: string;
-            connection_id?: string;
-            /** Format: int64 */
-            connection_version?: number;
-            connection_name?: string;
             provider_model_id?: string;
             api_protocol?: string;
             modes?: string[];
@@ -2073,6 +2064,8 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            endpoint?: string;
+            api_key_configured?: boolean;
         };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
@@ -2271,12 +2264,16 @@ export interface components {
         v1PromptOptimizationCandidate: {
             provider_model_id?: string;
             display_name?: string;
-            connection_name?: string;
             api_protocol?: string;
+            endpoint?: string;
+            api_key_configured?: boolean;
+            instruction?: string;
         };
         v1PromptOptimizationCandidateInput: {
             provider_model_id?: string;
-            api_protocol?: string;
+            endpoint?: string;
+            api_key?: string;
+            instruction?: string;
         };
         v1ProviderModel: {
             id?: string;
@@ -2790,6 +2787,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ImageModel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListPromptOptimizationCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListPromptOptimizationCandidatesResponse"];
                 };
             };
             /** @description An unexpected error response. */

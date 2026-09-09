@@ -14,11 +14,15 @@ import (
 )
 
 type Provider struct {
-	connections openaiimages.ConnectionResolver
+	connections ConnectionResolver
 	client      *http.Client
 }
 
-func New(connections openaiimages.ConnectionResolver, client *http.Client) (*Provider, error) {
+type ConnectionResolver interface {
+	ResolvePromptOptimization(context.Context) (openaiimages.Connection, error)
+}
+
+func New(connections ConnectionResolver, client *http.Client) (*Provider, error) {
 	if connections == nil {
 		return nil, fmt.Errorf("Prompt Optimization connection resolver is required")
 	}
@@ -29,21 +33,18 @@ func New(connections openaiimages.ConnectionResolver, client *http.Client) (*Pro
 }
 
 func (provider *Provider) Optimize(ctx context.Context, request application.OptimizationRequest) (application.OptimizationResult, error) {
-	connection, err := provider.connections.Resolve(ctx, request.Candidate.ConnectionID, request.Candidate.ConnectionVersion)
+	connection, err := provider.connections.ResolvePromptOptimization(ctx)
 	if err != nil {
 		return application.OptimizationResult{}, err
 	}
 	defer clear(connection.APIKey)
-	instruction := "Expand the user's image-generation prompt with concrete visual composition, subject, lighting, materials, camera, and style details. Preserve intent and return only the improved prompt, at most 10000 Unicode characters. Reply in " + request.Locale + "."
+	instruction := request.Candidate.Instruction
 	var path string
 	var payload any
 	switch request.Candidate.Protocol {
 	case "openai_responses":
 		path = "responses"
 		payload = map[string]any{"model": request.Candidate.ModelID, "instructions": instruction, "input": request.Prompt}
-	case "openai_chat_completions":
-		path = "chat/completions"
-		payload = map[string]any{"model": request.Candidate.ModelID, "messages": []map[string]string{{"role": "system", "content": instruction}, {"role": "user", "content": request.Prompt}}}
 	default:
 		return application.OptimizationResult{}, fmt.Errorf("unsupported Prompt Optimization protocol")
 	}

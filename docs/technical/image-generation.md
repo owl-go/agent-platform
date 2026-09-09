@@ -10,13 +10,13 @@ The first release provides an authenticated Web workbench for:
 
 - text-to-image generation;
 - image-to-image generation with one to ten ordered Reference Images;
-- explicit Prompt Optimization with a User-selected, Administrator-approved text model;
-- Administrator management and verification of Image Models and Image Credit Rates;
+- explicit Prompt Optimization with one Administrator-configured text model;
+- Administrator management and verification of independent Image Model and Prompt Optimization credentials;
 - durable progress, cancellation, results, history, regeneration, download, and deletion.
 
 The first release does not provide conversational image editing, Workflow or Scheduled Trigger integration, Workflow credential access, an external image-generation API, public sharing, cross-User galleries, or Administrator access to User content.
 
-The OpenAI Image API is the first image protocol because the official guidance identifies it as the direct generate/edit interface for a single prompt. The Adapter must not use the Responses image-generation tool as a hidden substitute. Prompt Optimization separately supports direct OpenAI Responses and OpenAI Chat Completions protocols.
+The OpenAI Image API is the first image protocol because it is the direct generate/edit interface for a single prompt. The Adapter must not use the Responses image-generation tool as a hidden substitute. Prompt Optimization separately uses the OpenAI Responses protocol.
 
 ## Context And Dependencies
 
@@ -27,21 +27,19 @@ Authenticated HTTP/SSE
         |
         v
 AI Creation Application
-   |          |           |            |
-   v          v           v            v
-Catalog     Credits    Object Store   Provider ports
-port        port       Provider       |-- OpenAI Images Adapter
-   |          |                        |-- Fake Image Adapter
-   v          v                        |-- OpenAI text Adapters
-Workspace   Credits                    `-- Fake Prompt Adapter
-context     context
+   |              |                    |
+   v              v                    v
+Credits       Object Store         Provider ports
+port          Provider             |-- OpenAI Images Adapter
+   |                               |-- Fake Image Adapter
+   v                               |-- OpenAI text Adapter
+Credits context                    `-- Fake Prompt Adapter
 ```
 
 The external AI Creation module interface contains use cases and observable invariants, not provider transport details. Provider request encoding, multipart construction, Base64 decoding, retry classification, and vendor errors remain behind injected ports. This gives the production and fake Adapters the same test surface.
 
 AI Creation depends on:
 
-- Workspace through a narrow catalog port for immutable Model Provider Connection and Provider Model revisions;
 - Credits through reservation, text-admission, and settlement ports;
 - `objectstore.Provider` for private bytes under logical Object Keys;
 - PostgreSQL for aggregate state, durable work claims, progress events, preferences, and lifecycle metadata.
@@ -70,22 +68,22 @@ The API and Worker binaries explicitly assemble the same Application module with
 
 An Image Model has a stable identity and immutable revisions. A revision freezes:
 
-- display name;
-- Model Provider Connection identity and version;
+- exact model identifier;
+- independent API Endpoint and write-only encrypted API Key;
 - exact provider model identifier;
 - `openai_images` protocol;
 - supported mode: generate, edit, or both;
-- allowlisted sizes, qualities, formats, backgrounds, and default values;
+- platform-supported sizes, qualities, formats, backgrounds, and default values presented as User request choices;
 - verification status and evidence timestamp;
-- one Image Credit Rate revision for every allowed size and quality pair.
+- a fixed first-release rate of 1.00 Credit for every allowed size and quality pair.
 
 Lifecycle states are `unverified`, `available`, `disabled`, and `deleted`. Creation and every material edit produce `unverified`; only a successful live test of the same revision permits transition to `available`. Endpoint, API Key version, model identifier, or option changes invalidate verification. Disable and delete immediately remove the model from User selection. Active records retain their frozen revision.
 
-Known OpenAI models use versioned platform capability templates. An Administrator may narrow a template. A template update never expands an existing Image Model automatically. A custom compatible model requires explicit allowlists and the same live test.
+The Administrator settings form contains only model identifier, Endpoint, and API Key. Supported output parameters are maintained by the platform and selected by the User. Changing any of the three Administrator fields creates an unverified revision that requires a new live test.
 
-### Prompt Optimization Candidate
+### Prompt Optimization Setting
 
-A candidate binds an existing Provider Model revision to either `openai_responses` or `openai_chat_completions`. Only the Administrator changes the candidate set. A disabled or deleted Provider Model disappears from new User selection without changing completed Credit Ledger entries.
+One singleton setting stores an exact model identifier, independent API Endpoint, write-only encrypted API Key, and Administrator-authored optimization instruction. It does not reference a Model Provider Connection or Provider Model. Only the Administrator changes it; Users invoke the configured model rather than selecting a second catalog entry.
 
 ### Image Generation Record
 
@@ -165,7 +163,7 @@ type PromptOptimizer interface {
 }
 ```
 
-The interface accepts the frozen connection revision, Provider Model, current prompt, locale, and 10,000-character output limit. Responses and Chat Completions are separate Adapters behind this seam. Success returns only expanded text and normalized token usage. Over-limit output fails without changing the editable prompt.
+The interface accepts the configured model and instruction, current prompt, locale, and 10,000-character output limit. The Responses Adapter resolves the setting's independent Endpoint and encrypted API Key behind this seam. Success returns only expanded text and normalized token usage. Over-limit output fails without changing the editable prompt.
 
 Live Image Model verification calls the same `ImageProvider.Create` seam with one platform-owned minimal prompt and the configured default options. It validates actual returned bytes. Tests use the fake Adapter at this interface rather than testing through provider-specific helpers.
 
@@ -179,13 +177,13 @@ The Application module exposes cohesive methods for these caller intents:
 - create or revise an Image Model;
 - test the current unverified revision;
 - enable, disable, or delete an Image Model;
-- replace the Prompt Optimization candidate set.
+- read or replace the singleton Prompt Optimization setting.
 
-Enable validates complete capability defaults, all option combinations, complete Image Credit Rates, current connection credentials, and matching verification evidence. Delete rejects a model with a non-terminal record. Historical record snapshots never block deletion.
+Enable validates platform capability defaults, fixed rates, the Image Model's own credential, and matching verification evidence. Delete rejects a model with a non-terminal record. Historical record snapshots never block deletion.
 
 ### User
 
-- read available Image Models, optimization candidates, and lightweight preferences;
+- read available Image Models, the configured optimization model, and lightweight preferences;
 - update recent valid model and option preferences;
 - upload or delete an unbound temporary Reference Image;
 - optimize the current prompt;
@@ -221,7 +219,7 @@ Ordinary JSON operations are added to the authoritative Proto contract. Names ma
 | Test model revision | `POST /api/v1/admin/ai-creation/image-models/{model_id}/test` | Administrator |
 | Enable or disable model | `PATCH /api/v1/admin/ai-creation/image-models/{model_id}/availability` | Administrator |
 | Delete model | `DELETE /api/v1/admin/ai-creation/image-models/{model_id}` | Administrator |
-| Replace optimization candidates | `PUT /api/v1/admin/ai-creation/prompt-optimization-models` | Administrator |
+| Read/replace Prompt Optimization setting | `GET/PUT /api/v1/admin/ai-creation/prompt-optimization-models` | Administrator |
 
 Binary operations use explicit authenticated HTTP handlers because they stream bytes:
 
@@ -247,7 +245,7 @@ Application validation is fail closed:
 - selected size, quality, format, and background form an allowed model combination;
 - JPEG cannot request transparent background;
 - every selected temporary or historical image is owned, unexpired, checksum-valid, and unbound or safely copyable;
-- the Image Model is currently available and its connection revision remains usable;
+- the Image Model is currently available and its independent credential remains usable;
 - the User has no other non-terminal image record;
 - Available Credit covers the complete reservation.
 
@@ -326,7 +324,7 @@ While a record is non-terminal, every generation control and Prompt Optimization
 
 The result view supports individual preview/download, download-all ZIP, and using an unexpired result as a new Reference Image. Regenerate uses original content and visible options but resolves current model and rate revisions and shows the current estimate before submission. Reuse settings removes expired inputs and invalid options.
 
-The UI has no content-review selector and no model-group editor. It displays mandatory content-safety failures as safe errors and groups selectable Image Models by Model Provider Connection.
+The UI has no content-review selector, model-group editor, capability editor, or rate editor. It displays mandatory content-safety failures as safe errors and lists selectable Image Models directly.
 
 ## Public Errors
 
@@ -353,7 +351,7 @@ Use new immutable, additive migrations for:
 
 - stable Image Models and immutable model revisions;
 - Image Credit Rate revisions;
-- Prompt Optimization candidates;
+- one independent Prompt Optimization setting;
 - per-User lightweight preferences;
 - temporary Reference Image uploads;
 - Image Generation Records and progress events;
@@ -385,16 +383,16 @@ A separate opt-in gate uses a protected OpenAI-compatible connection and verifie
 - one image edit with a Reference Image;
 - every platform-advertised default option used by the enabled test model;
 - actual output decoding, format, dimensions, checksums, and object persistence;
-- one Responses and one Chat Completions Prompt Optimization when configured;
+- one Responses Prompt Optimization when configured;
 - secret and User-content canaries are absent from logs, events, errors, and ordinary database fields.
 
-The gate records provider, exact model identifier, connection revision, test time, and safe outcome but never credentials, prompts, or image bytes. Missing credentials, provider organization verification, or network access causes an explicit skip and remains missing production evidence.
+The gate records exact model identifier, Image Model revision, test time, and safe outcome but never credentials, prompts, or image bytes. Missing credentials, provider organization verification, or network access causes an explicit skip and remains missing production evidence.
 
 ## Implementation Order
 
 1. Add Domain types, state-transition tests, Credits reservation, and migrations.
-2. Add catalog ports, deep provider interfaces, fake Adapters, and contract tests.
-3. Add Administrator Image Model, verification, candidate, and rate use cases.
+2. Add independent credential resolvers, deep provider interfaces, fake Adapters, and contract tests.
+3. Add Administrator Image Model, verification, and Prompt Optimization setting use cases.
 4. Add temporary uploads, submission, durable Worker execution, output validation, settlement, and lifecycle cleanup.
 5. Add owner APIs, SSE, preview/download/ZIP, regeneration, and deletion.
 6. Add the responsive AI Creation navigation, workbench, history, settings, and Credit UI.

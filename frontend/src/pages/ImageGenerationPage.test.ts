@@ -8,8 +8,8 @@ import { createAppI18n } from "../i18n";
 import ImageGenerationPage from "./ImageGenerationPage.vue";
 
 const model: ImageModel = {
-  id: "image-model-1", revision_id: "revision-1", display_name: "Studio", connection_id: "connection-1",
-  connection_version: 1, connection_name: "OpenAI", provider_model_id: "gpt-image-1", api_protocol: "openai_images",
+  id: "image-model-1", revision_id: "revision-1", display_name: "Studio", api_key_configured: true,
+  provider_model_id: "gpt-image-1", api_protocol: "openai_images",
   modes: ["generate"], sizes: ["1024x1024"], qualities: ["high"], formats: ["png"], backgrounds: ["opaque"],
   default_size: "1024x1024", default_quality: "high", default_format: "png", default_background: "opaque",
   rates: [{ size: "1024x1024", quality: "high", amount_hundredths: 125 }], state: "available",
@@ -35,7 +35,7 @@ describe("ImageGenerationPage", () => {
   });
 
   it("submits the selected compatible options and shows the reservation estimate", async () => {
-    const submit = vi.fn(async (input) => ({ id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name, connection_name: model.connection_name, prompt: input.prompt, mode: input.mode, size: input.size, quality: input.quality, format: input.format, background: input.background, requested_count: input.count, validated_count: 0, reservation_hundredths: 250, consumption_hundredths: 0, state: "pending", images: [], created_at: "2026-09-08T00:00:00Z", version: 1 }));
+    const submit = vi.fn(async (input) => ({ id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name, prompt: input.prompt, mode: input.mode, size: input.size, quality: input.quality, format: input.format, background: input.background, requested_count: input.count, validated_count: 0, reservation_hundredths: 250, consumption_hundredths: 0, state: "pending", images: [], created_at: "2026-09-08T00:00:00Z", version: 1 }));
     const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [model], prompt_optimization_models: [] })), listImageGenerations: vi.fn(async () => []), submitImageGeneration: submit } as unknown as PlatformApi;
     const wrapper = mountPage(api);
     await flushPromises();
@@ -47,6 +47,30 @@ describe("ImageGenerationPage", () => {
     await wrapper.get(".image-primary-action").trigger("click");
     await flushPromises();
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ image_model_id: model.id, prompt: "一艘黄铜飞船", count: 2, size: "1024x1024" }));
+    wrapper.unmount();
+  });
+
+  it("keeps Image Model credentials separate from Model Provider Connections", async () => {
+    const unverified = { ...model, endpoint: "https://images.example.test/v1", state: "unverified" as const, verified_at: undefined };
+    const api = {
+      getImageGenerationOptions: vi.fn(async () => ({ image_models: [], prompt_optimization_models: [] })),
+      listImageGenerations: vi.fn(async () => []),
+      listImageModels: vi.fn(async () => [unverified]),
+      listPromptOptimizationCandidates: vi.fn(async () => []),
+      verifyImageModel: vi.fn(async () => ({ ...unverified, state: "disabled" as const, verified_at: "2026-09-09T00:00:00Z", version: 2 })),
+    } as unknown as PlatformApi;
+    const wrapper = mountPage(api, true);
+    await flushPromises();
+    await wrapper.findAll("button").find((button) => button.text().includes("配置图片模型"))!.trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain("API 地址");
+    expect(wrapper.text()).toContain("API Key");
+    expect(wrapper.text()).toContain("提示词优化 Prompt");
+    expect(wrapper.text()).not.toContain("模型供应商连接");
+    expect(wrapper.text()).not.toContain("modes");
+    await wrapper.findAll("button").find((button) => button.text() === "测试")!.trigger("click");
+    await flushPromises();
+    expect(wrapper.findAll<HTMLButtonElement>("button").find((button) => button.text() === "启用")!.element.disabled).toBe(false);
     wrapper.unmount();
   });
 });

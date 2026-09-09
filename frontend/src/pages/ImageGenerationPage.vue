@@ -2,7 +2,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { ArrowLeft, ArrowRight, Download, MagicStick, Picture, Plus, Setting, VideoPause } from "@element-plus/icons-vue";
-import { platformApiKey, type ImageGenerationInput, type ImageGenerationRecord, type ImageModel, type ModelProviderConnection, type PromptOptimizationCandidate, type ReferenceImageUpload } from "../api/client";
+import { platformApiKey, type ImageGenerationInput, type ImageGenerationRecord, type ImageModel, type PromptOptimizationCandidate, type ReferenceImageUpload } from "../api/client";
 import { authContextKey } from "../auth/session";
 
 const api = inject(platformApiKey)!;
@@ -18,11 +18,9 @@ const error = ref("");
 const adminOpen = ref(false);
 const adminModels = ref<ImageModel[]>([]);
 const editingModel = ref<ImageModel>();
-const connections = ref<ModelProviderConnection[]>([]);
 const references = ref<Array<ReferenceImageUpload & { name: string }>>([]);
 const promptModels = ref<PromptOptimizationCandidate[]>([]);
 const promptModelID = ref("");
-const adminPromptIDs = ref<string[]>([]);
 const previousPrompt = ref("");
 const originalPrompt = ref("");
 const optimizing = ref(false);
@@ -39,7 +37,8 @@ const estimate = computed(() => selectedModel.value?.rates.find((rate) => rate.s
 const administrator = computed(() => auth.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const preferenceKey = computed(() => auth.session.state.value.kind === "authenticated" ? `image-generation-options:${auth.session.state.value.currentUser.id}` : "");
 
-const adminForm = reactive({ display_name: "", connection_id: "", provider_model_id: "gpt-image-1", modes: "generate,edit", sizes: "1024x1024", qualities: "auto", formats: "png,jpeg,webp", backgrounds: "opaque,transparent", rate: 100 });
+const adminForm = reactive({ endpoint: "", api_key: "", provider_model_id: "gpt-image-1" });
+const promptAdminForm = reactive({ provider_model_id: "", endpoint: "", api_key: "", instruction: "请将用户输入扩展为清晰、具体、适合图片生成模型理解的提示词，保留原始意图，只返回优化后的提示词。" });
 
 watch(selectedModel, (model) => {
   if (!model) return;
@@ -224,36 +223,33 @@ function movePreview(offset: number) {
 
 async function openAdmin() {
   adminOpen.value = true;
-  [adminModels.value, connections.value] = await Promise.all([api.listImageModels(), api.listModelProviderConnections()]);
-  adminPromptIDs.value = promptModels.value.map((item) => item.provider_model_id);
-  if (!adminForm.connection_id && connections.value[0]) adminForm.connection_id = connections.value[0].id;
+  const [imageModels, promptSettings] = await Promise.all([api.listImageModels(), api.listPromptOptimizationCandidates()]);
+  adminModels.value = imageModels;
+  const configured = promptSettings[0];
+  if (configured) Object.assign(promptAdminForm, { provider_model_id: configured.provider_model_id, endpoint: configured.endpoint ?? "", api_key: "", instruction: configured.instruction });
 }
 
-const split = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 async function createModel() {
-  const connection = connections.value.find((item) => item.id === adminForm.connection_id);
-  if (!connection) return;
-  const sizes = split(adminForm.sizes), qualities = split(adminForm.qualities);
   try {
-    const input = { display_name: adminForm.display_name, connection_id: connection.id, connection_version: connection.version, connection_name: connection.name, provider_model_id: adminForm.provider_model_id, modes: split(adminForm.modes) as Array<"generate" | "edit">, sizes, qualities, formats: split(adminForm.formats) as Array<"png" | "jpeg" | "webp">, backgrounds: split(adminForm.backgrounds) as Array<"opaque" | "transparent">, default_size: sizes[0] ?? "", default_quality: qualities[0] ?? "", default_format: (split(adminForm.formats)[0] ?? "png") as "png", default_background: (split(adminForm.backgrounds)[0] ?? "opaque") as "opaque", rates: sizes.flatMap((size) => qualities.map((quality) => ({ size, quality, amount_hundredths: adminForm.rate }))) };
-    const model = editingModel.value ? await api.reviseImageModel(editingModel.value.id, editingModel.value.version, input) : await api.createImageModel(input);
-    adminModels.value = [model, ...adminModels.value.filter((item) => item.id !== model.id)]; editingModel.value = undefined;
+    const input = { endpoint: adminForm.endpoint, provider_model_id: adminForm.provider_model_id };
+    const model = editingModel.value
+      ? await api.reviseImageModel(editingModel.value.id, editingModel.value.version, { ...input, ...(adminForm.api_key ? { replacement_api_key: adminForm.api_key } : {}) })
+      : await api.createImageModel({ ...input, api_key: adminForm.api_key });
+    adminModels.value = [model, ...adminModels.value.filter((item) => item.id !== model.id)]; editingModel.value = undefined; adminForm.api_key = "";
   } catch { error.value = t("imageGeneration.requestFailed"); }
 }
 
-async function verify(model: ImageModel) { Object.assign(model, await api.verifyImageModel(model.id)); }
-async function toggle(model: ImageModel) { Object.assign(model, await api.setImageModelAvailability(model.id, model.state !== "available")); await load(); }
-function editModel(model: ImageModel) { editingModel.value = model; Object.assign(adminForm, { display_name: model.display_name, connection_id: model.connection_id, provider_model_id: model.provider_model_id, modes: model.modes.join(","), sizes: model.sizes.join(","), qualities: model.qualities.join(","), formats: model.formats.join(","), backgrounds: model.backgrounds.join(","), rate: model.rates[0]?.amount_hundredths ?? 0 }); }
+async function verify(model: ImageModel) { error.value = ""; try { Object.assign(model, await api.verifyImageModel(model.id)); } catch { error.value = t("imageGeneration.verifyFailed"); } }
+async function toggle(model: ImageModel) { error.value = ""; try { Object.assign(model, await api.setImageModelAvailability(model.id, model.state !== "available")); await load(); } catch { error.value = t("imageGeneration.requestFailed"); } }
+function editModel(model: ImageModel) { editingModel.value = model; Object.assign(adminForm, { endpoint: model.endpoint ?? "", api_key: "", provider_model_id: model.provider_model_id }); }
 async function deleteModel(model: ImageModel) { if (!window.confirm(`${t('common.delete')}?`)) return; await api.deleteImageModel(model.id, model.version); adminModels.value = adminModels.value.filter((item) => item.id !== model.id); await load(); }
 async function savePromptCandidates() {
-  const items = adminPromptIDs.value.flatMap((id) => {
-    const connection = connections.value.find((item) => item.models.some((model) => model.id === id));
-    if (!connection) return [];
-    const protocol = connection.protocols.includes("openai_responses") ? "openai_responses" : connection.protocols.includes("openai_chat") ? "openai_chat_completions" : "";
-    return protocol ? [{ provider_model_id: id, api_protocol: protocol }] : [];
-  });
-  promptModels.value = await api.replacePromptOptimizationCandidates(items);
-  if (!promptModels.value.some((item) => item.provider_model_id === promptModelID.value)) promptModelID.value = promptModels.value[0]?.provider_model_id ?? "";
+  error.value = "";
+  try {
+    promptModels.value = await api.replacePromptOptimizationCandidates([{ ...promptAdminForm }]);
+    promptAdminForm.api_key = "";
+    promptModelID.value = promptModels.value[0]?.provider_model_id ?? "";
+  } catch { error.value = t("imageGeneration.requestFailed"); }
 }
 
 onMounted(load);
@@ -277,10 +273,10 @@ onBeforeUnmount(() => {
         <el-segmented v-model="form.mode" :options="[{ label: t('imageGeneration.textToImage'), value: 'generate' }, { label: t('imageGeneration.imageToImage'), value: 'edit', disabled: !selectedModel?.modes.includes('edit') }]" :disabled="locked" />
         <div v-if="models.length === 0" class="image-no-model"><el-icon><Picture /></el-icon><p>{{ t('imageGeneration.noModel') }}</p><el-button v-if="administrator" text @click="openAdmin">{{ t('imageGeneration.configure') }}</el-button></div>
         <el-form v-else label-position="top">
-          <el-form-item :label="t('imageGeneration.model')"><el-select v-model="form.image_model_id" :disabled="locked"><el-option-group v-for="connection in [...new Set(models.map((item) => item.connection_name))]" :key="connection" :label="connection"><el-option v-for="model in models.filter((item) => item.connection_name === connection)" :key="model.id" :label="model.display_name" :value="model.id" /></el-option-group></el-select></el-form-item>
+          <el-form-item :label="t('imageGeneration.model')"><el-select v-model="form.image_model_id" :disabled="locked"><el-option v-for="model in models" :key="model.id" :label="model.display_name" :value="model.id" /></el-select></el-form-item>
           <div v-if="form.mode === 'edit'" class="reference-uploader"><label><input type="file" accept="image/png,image/jpeg,image/webp" multiple :disabled="locked || references.length >= 10" @change="uploadReferences"><span>{{ t('common.upload') }} Reference Images</span></label><div v-for="(reference,index) in references" :key="reference.id"><span>{{ index + 1 }} · {{ reference.name }} · {{ reference.width }}×{{ reference.height }}</span><span class="reference-actions"><button type="button" :disabled="locked || index === 0" aria-label="Move up" @click="moveReference(index,-1)">↑</button><button type="button" :disabled="locked || index === references.length - 1" aria-label="Move down" @click="moveReference(index,1)">↓</button><button type="button" :disabled="locked" aria-label="Remove" @click="removeReference(index)">×</button></span></div><small>PNG / JPEG / WebP · 20 MiB · metadata is sent to the selected provider</small></div>
           <el-form-item :label="t('imageGeneration.prompt')"><template #label><span class="prompt-label"><span>{{ t('imageGeneration.prompt') }}</span><span><el-button v-if="previousPrompt" text size="small" :disabled="locked" @click="undoOptimization">Undo</el-button><el-button text size="small" :loading="optimizing" :disabled="locked || !promptModelID || !form.prompt.trim()" @click="optimizePrompt">{{ t('imageGeneration.optimize') }}</el-button></span></span></template><el-input v-model="form.prompt" type="textarea" :rows="7" maxlength="10000" show-word-limit :placeholder="t('imageGeneration.promptPlaceholder')" :disabled="locked" /></el-form-item>
-          <el-form-item v-if="promptModels.length" :label="t('imageGeneration.optimizationModel')"><el-select v-model="promptModelID" :disabled="locked || optimizing"><el-option v-for="item in promptModels" :key="item.provider_model_id" :label="`${item.connection_name} / ${item.display_name}`" :value="item.provider_model_id" /></el-select></el-form-item>
+          <p v-if="promptModels.length" class="image-optimization-model">{{ t('imageGeneration.optimizationModel') }} · {{ promptModels[0]?.display_name }}</p>
           <div class="image-option-grid">
             <el-form-item :label="t('imageGeneration.size')"><el-select v-model="form.size" :disabled="locked"><el-option v-for="value in selectedModel?.sizes" :key="value" :label="value" :value="value" /></el-select></el-form-item>
             <el-form-item :label="t('imageGeneration.count')"><el-input-number v-model="form.count" :min="1" :max="4" :disabled="locked" /></el-form-item>
@@ -307,16 +303,20 @@ onBeforeUnmount(() => {
 
     <el-dialog v-model="adminOpen" :title="t('imageGeneration.adminTitle')" width="min(760px, 94vw)">
       <el-form label-position="top" class="image-admin-form">
-        <el-form-item :label="t('common.name')"><el-input v-model="adminForm.display_name" /></el-form-item>
-        <el-form-item :label="t('imageGeneration.connection')"><el-select v-model="adminForm.connection_id"><el-option v-for="item in connections" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
+        <el-form-item :label="t('imageGeneration.endpoint')"><el-input v-model="adminForm.endpoint" placeholder="https://api.openai.com/v1" /></el-form-item>
+        <el-form-item :label="t('imageGeneration.apiKey')"><el-input v-model="adminForm.api_key" type="password" show-password autocomplete="new-password" /><small>{{ editingModel && editingModel.api_key_configured ? t('imageGeneration.keepApiKey') : t('imageGeneration.apiKeyRequired') }}</small></el-form-item>
         <el-form-item :label="t('imageGeneration.providerModelId')"><el-input v-model="adminForm.provider_model_id" /></el-form-item>
-        <el-form-item v-for="field in ['modes','sizes','qualities','formats','backgrounds'] as const" :key="field" :label="field"><el-input v-model="adminForm[field]" /></el-form-item>
-        <el-form-item :label="t('imageGeneration.rate')"><el-input-number v-model="adminForm.rate" :min="0" /></el-form-item>
         <el-button type="primary" :icon="Plus" @click="createModel">{{ t('imageGeneration.addModel') }}</el-button>
       </el-form>
-      <div class="image-admin-list"><div v-for="model in adminModels" :key="model.id"><div><strong>{{ model.display_name }}</strong><small>{{ model.provider_model_id }} · {{ model.state }}</small></div><el-button @click="editModel(model)">{{ t('common.edit') }}</el-button><el-button :disabled="model.state !== 'unverified'" @click="verify(model)">{{ t('imageGeneration.verify') }}</el-button><el-button :disabled="model.state === 'unverified'" @click="toggle(model)">{{ t(model.state === 'available' ? 'imageGeneration.disable' : 'imageGeneration.enable') }}</el-button><el-button type="danger" text @click="deleteModel(model)">{{ t('common.delete') }}</el-button></div></div>
+      <div class="image-admin-list"><div v-for="model in adminModels" :key="model.id"><div><strong>{{ model.display_name }}</strong><small>{{ model.provider_model_id }} · {{ model.state }} · {{ model.api_key_configured ? t('imageGeneration.secretSet') : t('imageGeneration.secretMissing') }}</small></div><el-button @click="editModel(model)">{{ t('common.edit') }}</el-button><el-button :disabled="model.state !== 'unverified' || !model.api_key_configured" @click="verify(model)">{{ t('imageGeneration.verify') }}</el-button><el-button :disabled="!model.verified_at" @click="toggle(model)">{{ t(model.state === 'available' ? 'imageGeneration.disable' : 'imageGeneration.enable') }}</el-button><el-button type="danger" text @click="deleteModel(model)">{{ t('common.delete') }}</el-button></div></div>
       <el-divider>{{ t('imageGeneration.optimizationModel') }}</el-divider>
-      <div class="prompt-candidate-editor"><el-select v-model="adminPromptIDs" multiple filterable><el-option-group v-for="connection in connections" :key="connection.id" :label="connection.name"><el-option v-for="model in connection.models.filter((item) => item.available)" :key="model.id" :label="model.display_name" :value="model.id" /></el-option-group></el-select><el-button @click="savePromptCandidates">{{ t('common.save') }}</el-button></div>
+      <el-form label-position="top" class="prompt-candidate-editor">
+        <el-form-item :label="t('imageGeneration.providerModelId')"><el-input v-model="promptAdminForm.provider_model_id" /></el-form-item>
+        <el-form-item :label="t('imageGeneration.endpoint')"><el-input v-model="promptAdminForm.endpoint" placeholder="https://api.openai.com/v1" /></el-form-item>
+        <el-form-item :label="t('imageGeneration.apiKey')"><el-input v-model="promptAdminForm.api_key" type="password" show-password autocomplete="new-password" /><small>{{ promptModels[0]?.api_key_configured ? t('imageGeneration.keepApiKey') : t('imageGeneration.apiKeyRequired') }}</small></el-form-item>
+        <el-form-item :label="t('imageGeneration.optimizationPrompt')"><el-input v-model="promptAdminForm.instruction" type="textarea" :rows="4" /></el-form-item>
+        <el-button @click="savePromptCandidates">{{ t('common.save') }}</el-button>
+      </el-form>
     </el-dialog>
   </main>
 </template>

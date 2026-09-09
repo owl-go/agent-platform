@@ -86,6 +86,7 @@ const OperationAgentWorkspaceServiceListMCPConnectors = "/workspace.v1.AgentWork
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
+const OperationAgentWorkspaceServiceListPromptOptimizationCandidates = "/workspace.v1.AgentWorkspaceService/ListPromptOptimizationCandidates"
 const OperationAgentWorkspaceServiceListRedemptionCodes = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
 const OperationAgentWorkspaceServiceListRunTurns = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
 const OperationAgentWorkspaceServiceListRuns = "/workspace.v1.AgentWorkspaceService/ListRuns"
@@ -198,6 +199,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
+	ListPromptOptimizationCandidates(context.Context, *ListPromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
 	ListRedemptionCodes(context.Context, *ListRedemptionCodesRequest) (*ListRedemptionCodesResponse, error)
 	ListRunTurns(context.Context, *ListRunTurnsRequest) (*ListRunsResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
@@ -277,6 +279,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/admin/ai-creation/image-models/{image_model_id}/test", _AgentWorkspaceService_VerifyImageModel0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability", _AgentWorkspaceService_SetImageModelAvailability0_HTTP_Handler(srv))
 	r.Handle("PUT", "/api/v1/admin/ai-creation/prompt-optimization-models", _AgentWorkspaceService_ReplacePromptOptimizationCandidates0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/ai-creation/prompt-optimization-models", _AgentWorkspaceService_ListPromptOptimizationCandidates0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions", _AgentWorkspaceService_ListSessions0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions", _AgentWorkspaceService_CreateSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}", _AgentWorkspaceService_GetSession0_HTTP_Handler(srv))
@@ -1033,6 +1036,25 @@ func _AgentWorkspaceService_ReplacePromptOptimizationCandidates0_HTTP_Handler(sr
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceReplacePromptOptimizationCandidates)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.ReplacePromptOptimizationCandidates(ctx, req.(*ReplacePromptOptimizationCandidatesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListPromptOptimizationCandidatesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListPromptOptimizationCandidates0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListPromptOptimizationCandidatesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListPromptOptimizationCandidates)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListPromptOptimizationCandidates(ctx, req.(*ListPromptOptimizationCandidatesRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -2716,6 +2738,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
+	ListPromptOptimizationCandidates(ctx context.Context, req *ListPromptOptimizationCandidatesRequest, opts ...http.CallOption) (rsp *ListPromptOptimizationCandidatesResponse, err error)
 	ListRedemptionCodes(ctx context.Context, req *ListRedemptionCodesRequest, opts ...http.CallOption) (rsp *ListRedemptionCodesResponse, err error)
 	ListRunTurns(ctx context.Context, req *ListRunTurnsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuns(ctx context.Context, req *ListRunsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
@@ -3890,6 +3913,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListModelProviderPresets(ctx conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListModelProviderPresets),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListPromptOptimizationCandidates(ctx context.Context, in *ListPromptOptimizationCandidatesRequest, opts ...http.CallOption) (*ListPromptOptimizationCandidatesResponse, error) {
+	var out ListPromptOptimizationCandidatesResponse
+	pattern := "/api/v1/admin/ai-creation/prompt-optimization-models"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListPromptOptimizationCandidates),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -39,9 +40,8 @@ type ImageModelRevision struct {
 	PredecessorID      string
 	PredecessorVersion int64
 	DisplayName        string
-	ConnectionID       string
-	ConnectionVersion  int64
-	ConnectionName     string
+	Endpoint           string
+	APIKeyConfigured   bool
 	ModelID            string
 	Protocol           string
 	Modes              []Mode
@@ -107,8 +107,11 @@ func (model ImageModelRevision) MaximumReservation(size, quality string, count i
 }
 
 func (model ImageModelRevision) ValidateConfiguration() error {
-	if strings.TrimSpace(model.DisplayName) == "" || strings.TrimSpace(model.ConnectionID) == "" || model.ConnectionVersion < 1 || strings.TrimSpace(model.ModelID) == "" || model.Protocol != ProtocolOpenAIImages {
+	if strings.TrimSpace(model.DisplayName) == "" || strings.TrimSpace(model.ModelID) == "" || model.Protocol != ProtocolOpenAIImages || !model.APIKeyConfigured {
 		return fmt.Errorf("%w: incomplete Image Model identity", ErrInvalid)
+	}
+	if err := ValidateAPIEndpoint(model.Endpoint); err != nil {
+		return err
 	}
 	if len(model.Modes) == 0 || len(model.Sizes) == 0 || len(model.Qualities) == 0 || len(model.Formats) == 0 || len(model.Backgrounds) == 0 {
 		return fmt.Errorf("%w: Image Model capabilities are incomplete", ErrInvalid)
@@ -122,6 +125,18 @@ func (model ImageModelRevision) ValidateConfiguration() error {
 				return fmt.Errorf("%w: Image Credit Rates are incomplete", ErrInvalid)
 			}
 		}
+	}
+	return nil
+}
+
+func ValidateAPIEndpoint(value string) error {
+	endpoint, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || endpoint == nil {
+		return fmt.Errorf("%w: API Endpoint must be an absolute HTTP or HTTPS URL", ErrInvalid)
+	}
+	scheme := strings.ToLower(endpoint.Scheme)
+	if (scheme != "http" && scheme != "https") || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return fmt.Errorf("%w: API Endpoint must be an absolute HTTP or HTTPS URL", ErrInvalid)
 	}
 	return nil
 }
@@ -183,14 +198,14 @@ type ReferenceUpload struct {
 }
 
 type PromptOptimizationCandidate struct {
-	ProviderModelID   string
-	DisplayName       string
-	ConnectionID      string
-	ConnectionVersion int64
-	ConnectionName    string
-	ProviderType      string
-	ModelID           string
-	Protocol          string
+	ProviderModelID  string
+	DisplayName      string
+	ProviderType     string
+	ModelID          string
+	Protocol         string
+	Endpoint         string
+	APIKeyConfigured bool
+	Instruction      string
 }
 
 type GeneratedImage struct {

@@ -137,8 +137,8 @@ The product area in which a User uses task-specific generative tools outside a c
 _Avoid_: Session, Workflow, generic AI tools
 
 **Image Model**:
-An Administrator-managed image-generation configuration that binds one exact provider model to an Images protocol and its supported request options. A User may select an available Image Model for an Image Generation Record, but cannot modify its configuration.
-_Avoid_: Runtime Engine default, Provider Model type, User-owned model
+An Administrator-managed image-generation configuration containing one exact model identifier, independent API Endpoint, and write-only API Key. A User selects an available Image Model and supplies the size, quality, format, background, and output count for an Image Generation Record.
+_Avoid_: Model Provider Connection, Runtime Engine default, Provider Model type, User-owned model
 
 **Image Generation Record**:
 An immutable, User-owned record of one submitted text-to-image or image-to-image request and its generated results. Regeneration creates another Image Generation Record for the full original output count instead of replacing any original result.
@@ -149,8 +149,8 @@ An image supplied as an ordered input to an image-to-image request, either by ne
 _Avoid_: prompt-only input, mutable external URL, cross-User image
 
 **Prompt Optimization**:
-An explicit, separately charged AI Creation action that expands the current editable image prompt with a User-selected, Administrator-approved Provider Model. It replaces the draft prompt after success but does not submit an Image Generation Record.
-_Avoid_: automatic image generation, hidden prompt rewrite, Runtime Engine default
+An explicit, separately charged AI Creation action that expands the current editable image prompt using the Administrator-configured model identifier, independent API Endpoint, write-only API Key, and optimization instruction. It replaces the draft prompt after success but does not submit an Image Generation Record.
+_Avoid_: Model Provider Connection, automatic image generation, hidden prompt rewrite, Runtime Engine default
 
 **Generated Image**:
 An immutable image produced as one result of an Image Generation Record and retained with that record for 90 days.

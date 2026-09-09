@@ -44,6 +44,7 @@ service AgentWorkspaceService {
   rpc VerifyImageModel(VerifyImageModelRequest) returns (ImageModel) { option (google.api.http) = {post: "/api/v1/admin/ai-creation/image-models/{image_model_id}/test" body: "*"}; }
   rpc SetImageModelAvailability(SetImageModelAvailabilityRequest) returns (ImageModel) { option (google.api.http) = {patch: "/api/v1/admin/ai-creation/image-models/{image_model_id}/availability" body: "*"}; }
   rpc ReplacePromptOptimizationCandidates(ReplacePromptOptimizationCandidatesRequest) returns (ListPromptOptimizationCandidatesResponse) { option (google.api.http) = {put: "/api/v1/admin/ai-creation/prompt-optimization-models" body: "*"}; }
+  rpc ListPromptOptimizationCandidates(ListPromptOptimizationCandidatesRequest) returns (ListPromptOptimizationCandidatesResponse) { option (google.api.http) = {get: "/api/v1/admin/ai-creation/prompt-optimization-models"}; }
 
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) { option (google.api.http) = {get: "/api/v1/sessions"}; }
   rpc CreateSession(CreateSessionRequest) returns (Session) { option (google.api.http) = {post: "/api/v1/sessions" body: "*"}; }
@@ -157,9 +158,8 @@ message ImageModel {
   string id = 1;
   string revision_id = 2;
   string display_name = 3;
-  string connection_id = 4;
-  int64 connection_version = 5;
-  string connection_name = 6;
+  reserved 4, 5, 6;
+  reserved "connection_id", "connection_version", "connection_name";
   string provider_model_id = 7;
   string api_protocol = 8;
   repeated string modes = 9;
@@ -177,17 +177,27 @@ message ImageModel {
   google.protobuf.Timestamp created_at = 21;
   google.protobuf.Timestamp updated_at = 22;
   int64 version = 23;
+  optional string endpoint = 24;
+  bool api_key_configured = 25;
 }
 message ListImageGenerationOptionsRequest {}
-message PromptOptimizationCandidate { string provider_model_id = 1; string display_name = 2; string connection_name = 3; string api_protocol = 4; }
+message PromptOptimizationCandidate {
+  string provider_model_id = 1;
+  string display_name = 2;
+  reserved 3;
+  reserved "connection_name";
+  string api_protocol = 4;
+  optional string endpoint = 5;
+  bool api_key_configured = 6;
+  string instruction = 7;
+}
 message ListImageGenerationOptionsResponse { repeated ImageModel image_models = 1; repeated PromptOptimizationCandidate prompt_optimization_models = 2; }
 message ListImageModelsRequest {}
 message ListImageModelsResponse { repeated ImageModel items = 1; }
 message CreateImageModelRequest {
   string display_name = 1;
-  string connection_id = 2;
-  int64 connection_version = 3;
-  string connection_name = 4;
+  reserved 2, 3, 4;
+  reserved "connection_id", "connection_version", "connection_name";
   string provider_model_id = 5;
   repeated string modes = 6;
   repeated string sizes = 7;
@@ -199,14 +209,15 @@ message CreateImageModelRequest {
   string default_format = 13;
   string default_background = 14;
   repeated ImageCreditRate rates = 15;
+  string endpoint = 16;
+  string api_key = 17;
 }
 message ReviseImageModelRequest {
   string image_model_id = 1;
   int64 expected_version = 2;
   string display_name = 3;
-  string connection_id = 4;
-  int64 connection_version = 5;
-  string connection_name = 6;
+  reserved 4, 5, 6;
+  reserved "connection_id", "connection_version", "connection_name";
   string provider_model_id = 7;
   repeated string modes = 8;
   repeated string sizes = 9;
@@ -218,6 +229,8 @@ message ReviseImageModelRequest {
   string default_format = 15;
   string default_background = 16;
   repeated ImageCreditRate rates = 17;
+  string endpoint = 18;
+  optional string replacement_api_key = 19;
 }
 message DeleteImageModelRequest { string image_model_id = 1; int64 expected_version = 2; }
 message VerifyImageModelRequest { string image_model_id = 1; }
@@ -248,7 +261,8 @@ message ImageGenerationRecord {
   string image_model_id = 2;
   string image_model_revision_id = 3;
   string image_model_name = 4;
-  string connection_name = 5;
+  reserved 5;
+  reserved "connection_name";
   string prompt = 6;
   string mode = 7;
   string size = 8;
@@ -275,8 +289,16 @@ message RegenerateImageGenerationRequest { string record_id = 1; string request_
 message DeleteImageGenerationRequest { string record_id = 1; }
 message OptimizeImagePromptRequest { string provider_model_id = 1; string prompt = 2; string locale = 3; }
 message OptimizeImagePromptResponse { string prompt = 1; int64 input_tokens = 2; int64 output_tokens = 3; }
-message PromptOptimizationCandidateInput { string provider_model_id = 1; string api_protocol = 2; }
+message PromptOptimizationCandidateInput {
+  string provider_model_id = 1;
+  reserved 2;
+  reserved "api_protocol";
+  string endpoint = 3;
+  string api_key = 4;
+  string instruction = 5;
+}
 message ReplacePromptOptimizationCandidatesRequest { repeated PromptOptimizationCandidateInput items = 1; }
+message ListPromptOptimizationCandidatesRequest {}
 message ListPromptOptimizationCandidatesResponse { repeated PromptOptimizationCandidate items = 1; }
 message CreateRedemptionCodeBatchRequest { int32 count = 1; int64 value_hundredths = 2; optional google.protobuf.Timestamp expires_at = 3; }
 message RedemptionCodeBatch { string id = 1; int32 count = 2; int64 value_hundredths = 3; optional google.protobuf.Timestamp expires_at = 4; google.protobuf.Timestamp created_at = 5; repeated RedemptionCode codes = 6; }

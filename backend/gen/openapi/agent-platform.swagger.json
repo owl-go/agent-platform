@@ -221,6 +221,26 @@
       }
     },
     "/api/v1/admin/ai-creation/prompt-optimization-models": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListPromptOptimizationCandidates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPromptOptimizationCandidatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
       "put": {
         "operationId": "AgentWorkspaceService_ReplacePromptOptimizationCandidates",
         "responses": {
@@ -3860,16 +3880,6 @@
         "display_name": {
           "type": "string"
         },
-        "connection_id": {
-          "type": "string"
-        },
-        "connection_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "connection_name": {
-          "type": "string"
-        },
         "provider_model_id": {
           "type": "string"
         },
@@ -3921,6 +3931,12 @@
             "type": "object",
             "$ref": "#/definitions/v1ImageCreditRate"
           }
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "replacement_api_key": {
+          "type": "string"
         }
       }
     },
@@ -4785,16 +4801,6 @@
         "display_name": {
           "type": "string"
         },
-        "connection_id": {
-          "type": "string"
-        },
-        "connection_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "connection_name": {
-          "type": "string"
-        },
         "provider_model_id": {
           "type": "string"
         },
@@ -4846,6 +4852,12 @@
             "type": "object",
             "$ref": "#/definitions/v1ImageCreditRate"
           }
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "api_key": {
+          "type": "string"
         }
       }
     },
@@ -5723,9 +5735,6 @@
         "image_model_name": {
           "type": "string"
         },
-        "connection_name": {
-          "type": "string"
-        },
         "prompt": {
           "type": "string"
         },
@@ -5803,16 +5812,6 @@
         "display_name": {
           "type": "string"
         },
-        "connection_id": {
-          "type": "string"
-        },
-        "connection_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "connection_name": {
-          "type": "string"
-        },
         "provider_model_id": {
           "type": "string"
         },
@@ -5886,6 +5885,12 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "api_key_configured": {
+          "type": "boolean"
         }
       }
     },
@@ -6553,10 +6558,16 @@
         "display_name": {
           "type": "string"
         },
-        "connection_name": {
+        "api_protocol": {
           "type": "string"
         },
-        "api_protocol": {
+        "endpoint": {
+          "type": "string"
+        },
+        "api_key_configured": {
+          "type": "boolean"
+        },
+        "instruction": {
           "type": "string"
         }
       }
@@ -6567,7 +6578,13 @@
         "provider_model_id": {
           "type": "string"
         },
-        "api_protocol": {
+        "endpoint": {
+          "type": "string"
+        },
+        "api_key": {
+          "type": "string"
+        },
+        "instruction": {
           "type": "string"
         }
       }

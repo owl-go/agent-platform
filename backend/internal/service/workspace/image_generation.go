@@ -24,7 +24,7 @@ func (service *Service) ListImageGenerationOptions(ctx context.Context, _ *works
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return &workspacev1.ListImageGenerationOptionsResponse{ImageModels: imageModelResponses(models), PromptOptimizationModels: promptCandidateResponses(candidates)}, nil
+	return &workspacev1.ListImageGenerationOptionsResponse{ImageModels: imageModelResponses(models, false), PromptOptimizationModels: promptCandidateResponses(candidates, false)}, nil
 }
 
 func (service *Service) OptimizeImagePrompt(ctx context.Context, request *workspacev1.OptimizeImagePromptRequest) (*workspacev1.OptimizeImagePromptResponse, error) {
@@ -49,23 +49,48 @@ func (service *Service) ReplacePromptOptimizationCandidates(ctx context.Context,
 		return nil, err
 	}
 	candidates := make([]aicreationdomain.PromptOptimizationCandidate, 0, len(request.Items))
+	var apiKey []byte
 	for _, item := range request.Items {
-		candidates = append(candidates, aicreationdomain.PromptOptimizationCandidate{ProviderModelID: item.ProviderModelId, Protocol: item.ApiProtocol})
+		apiKey = []byte(item.ApiKey)
+		candidates = append(candidates, aicreationdomain.PromptOptimizationCandidate{ProviderModelID: item.ProviderModelId, DisplayName: item.ProviderModelId, ProviderType: "openai", ModelID: item.ProviderModelId, Protocol: "openai_responses", Endpoint: item.Endpoint, APIKeyConfigured: len(apiKey) > 0, Instruction: item.Instruction})
 	}
-	if err := service.aicreation.ReplacePromptCandidates(ctx, administrator.UserID, candidates); err != nil {
+	defer clear(apiKey)
+	if len(candidates) == 1 && len(apiKey) == 0 {
+		current, listErr := service.aicreation.ListPromptCandidates(ctx)
+		if listErr != nil {
+			return nil, publicError(listErr)
+		}
+		candidates[0].APIKeyConfigured = len(current) == 1 && current[0].APIKeyConfigured
+	}
+	if err := service.aicreation.ReplacePromptCandidates(ctx, administrator.UserID, candidates, apiKey); err != nil {
 		return nil, publicError(err)
 	}
 	items, err := service.aicreation.ListPromptCandidates(ctx)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return &workspacev1.ListPromptOptimizationCandidatesResponse{Items: promptCandidateResponses(items)}, nil
+	return &workspacev1.ListPromptOptimizationCandidatesResponse{Items: promptCandidateResponses(items, true)}, nil
 }
 
-func promptCandidateResponses(items []aicreationdomain.PromptOptimizationCandidate) []*workspacev1.PromptOptimizationCandidate {
+func (service *Service) ListPromptOptimizationCandidates(ctx context.Context, _ *workspacev1.ListPromptOptimizationCandidatesRequest) (*workspacev1.ListPromptOptimizationCandidatesResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	items, err := service.aicreation.ListPromptCandidates(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.ListPromptOptimizationCandidatesResponse{Items: promptCandidateResponses(items, true)}, nil
+}
+
+func promptCandidateResponses(items []aicreationdomain.PromptOptimizationCandidate, includeEndpoint bool) []*workspacev1.PromptOptimizationCandidate {
 	result := make([]*workspacev1.PromptOptimizationCandidate, 0, len(items))
 	for _, item := range items {
-		result = append(result, &workspacev1.PromptOptimizationCandidate{ProviderModelId: item.ProviderModelID, DisplayName: item.DisplayName, ConnectionName: item.ConnectionName, ApiProtocol: item.Protocol})
+		response := &workspacev1.PromptOptimizationCandidate{ProviderModelId: item.ProviderModelID, DisplayName: item.DisplayName, ApiProtocol: item.Protocol, ApiKeyConfigured: item.APIKeyConfigured, Instruction: item.Instruction}
+		if includeEndpoint {
+			response.Endpoint = &item.Endpoint
+		}
+		result = append(result, response)
 	}
 	return result
 }
@@ -78,7 +103,7 @@ func (service *Service) ListImageModels(ctx context.Context, _ *workspacev1.List
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return &workspacev1.ListImageModelsResponse{Items: imageModelResponses(models)}, nil
+	return &workspacev1.ListImageModelsResponse{Items: imageModelResponses(models, true)}, nil
 }
 
 func (service *Service) CreateImageModel(ctx context.Context, request *workspacev1.CreateImageModelRequest) (*workspacev1.ImageModel, error) {
@@ -86,39 +111,33 @@ func (service *Service) CreateImageModel(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, err
 	}
-	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	connectionVersion, connectionName := int64(0), ""
-	for _, connection := range connections {
-		if connection.ID == request.ConnectionId {
-			connectionVersion, connectionName = connection.Version, connection.Name
-			break
-		}
-	}
-	if connectionVersion == 0 {
-		return nil, publicError(aicreationdomain.ErrNotFound)
-	}
-	rates := make(map[string]int64, len(request.Rates))
-	for _, rate := range request.Rates {
-		rates[aicreationdomain.RateKey(rate.Size, rate.Quality)] = rate.AmountHundredths
-	}
-	modes := make([]aicreationdomain.Mode, 0, len(request.Modes))
-	for _, mode := range request.Modes {
-		modes = append(modes, aicreationdomain.Mode(mode))
-	}
+	apiKey := []byte(request.ApiKey)
+	defer clear(apiKey)
+	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions()
 	model, err := service.aicreation.CreateImageModel(ctx, aicreationapplication.CreateImageModelRequest{
-		AdministratorID: administrator.UserID, DisplayName: request.DisplayName, ConnectionID: request.ConnectionId,
-		ConnectionVersion: connectionVersion, ConnectionName: connectionName, ModelID: request.ProviderModelId,
-		Modes: modes, Sizes: request.Sizes, Qualities: request.Qualities, Formats: request.Formats, Backgrounds: request.Backgrounds,
-		DefaultSize: request.DefaultSize, DefaultQuality: request.DefaultQuality, DefaultFormat: request.DefaultFormat,
-		DefaultBackground: request.DefaultBackground, Rates: rates,
+		AdministratorID: administrator.UserID, DisplayName: request.ProviderModelId, Endpoint: request.Endpoint, APIKey: apiKey, ModelID: request.ProviderModelId,
+		Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds,
+		DefaultSize: sizes[0], DefaultQuality: qualities[0], DefaultFormat: formats[0], DefaultBackground: backgrounds[0], Rates: rates,
 	})
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return imageModelResponse(model), nil
+	return imageModelResponse(model, true), nil
+}
+
+func platformImageOptions() ([]aicreationdomain.Mode, []string, []string, []string, []string, map[string]int64) {
+	modes := []aicreationdomain.Mode{aicreationdomain.ModeGenerate, aicreationdomain.ModeEdit}
+	sizes := []string{"1024x1024", "1536x1024", "1024x1536"}
+	qualities := []string{"auto", "low", "medium", "high"}
+	formats := []string{"png", "jpeg", "webp"}
+	backgrounds := []string{"opaque", "transparent"}
+	rates := make(map[string]int64, len(sizes)*len(qualities))
+	for _, size := range sizes {
+		for _, quality := range qualities {
+			rates[aicreationdomain.RateKey(size, quality)] = 100
+		}
+	}
+	return modes, sizes, qualities, formats, backgrounds, rates
 }
 
 func (service *Service) ReviseImageModel(ctx context.Context, request *workspacev1.ReviseImageModelRequest) (*workspacev1.ImageModel, error) {
@@ -126,39 +145,21 @@ func (service *Service) ReviseImageModel(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, err
 	}
-	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
-	if err != nil {
-		return nil, publicError(err)
+	var apiKey []byte
+	if request.ReplacementApiKey != nil {
+		apiKey = []byte(*request.ReplacementApiKey)
+		defer clear(apiKey)
 	}
-	connectionVersion, connectionName := int64(0), ""
-	for _, connection := range connections {
-		if connection.ID == request.ConnectionId {
-			connectionVersion, connectionName = connection.Version, connection.Name
-			break
-		}
-	}
-	if connectionVersion == 0 {
-		return nil, publicError(aicreationdomain.ErrNotFound)
-	}
-	rates := make(map[string]int64, len(request.Rates))
-	for _, rate := range request.Rates {
-		rates[aicreationdomain.RateKey(rate.Size, rate.Quality)] = rate.AmountHundredths
-	}
-	modes := make([]aicreationdomain.Mode, 0, len(request.Modes))
-	for _, mode := range request.Modes {
-		modes = append(modes, aicreationdomain.Mode(mode))
-	}
+	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions()
 	model, err := service.aicreation.ReviseImageModel(ctx, request.ImageModelId, request.ExpectedVersion, aicreationapplication.CreateImageModelRequest{
-		AdministratorID: administrator.UserID, DisplayName: request.DisplayName, ConnectionID: request.ConnectionId,
-		ConnectionVersion: connectionVersion, ConnectionName: connectionName, ModelID: request.ProviderModelId,
-		Modes: modes, Sizes: request.Sizes, Qualities: request.Qualities, Formats: request.Formats, Backgrounds: request.Backgrounds,
-		DefaultSize: request.DefaultSize, DefaultQuality: request.DefaultQuality, DefaultFormat: request.DefaultFormat,
-		DefaultBackground: request.DefaultBackground, Rates: rates,
+		AdministratorID: administrator.UserID, DisplayName: request.ProviderModelId, Endpoint: request.Endpoint, APIKey: apiKey, ModelID: request.ProviderModelId,
+		Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds,
+		DefaultSize: sizes[0], DefaultQuality: qualities[0], DefaultFormat: formats[0], DefaultBackground: backgrounds[0], Rates: rates,
 	})
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return imageModelResponse(model), nil
+	return imageModelResponse(model, true), nil
 }
 
 func (service *Service) DeleteImageModel(ctx context.Context, request *workspacev1.DeleteImageModelRequest) (*workspacev1.DeleteResponse, error) {
@@ -181,7 +182,7 @@ func (service *Service) VerifyImageModel(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return imageModelResponse(model), nil
+	return imageModelResponse(model, true), nil
 }
 
 func (service *Service) SetImageModelAvailability(ctx context.Context, request *workspacev1.SetImageModelAvailabilityRequest) (*workspacev1.ImageModel, error) {
@@ -193,7 +194,7 @@ func (service *Service) SetImageModelAvailability(ctx context.Context, request *
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return imageModelResponse(model), nil
+	return imageModelResponse(model, true), nil
 }
 
 func (service *Service) SubmitImageGeneration(ctx context.Context, request *workspacev1.SubmitImageGenerationRequest) (*workspacev1.ImageGenerationRecord, error) {
@@ -285,15 +286,15 @@ func (service *Service) DeleteImageGeneration(ctx context.Context, request *work
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
 }
 
-func imageModelResponses(models []aicreationdomain.ImageModelRevision) []*workspacev1.ImageModel {
+func imageModelResponses(models []aicreationdomain.ImageModelRevision, includeEndpoint bool) []*workspacev1.ImageModel {
 	result := make([]*workspacev1.ImageModel, 0, len(models))
 	for _, model := range models {
-		result = append(result, imageModelResponse(model))
+		result = append(result, imageModelResponse(model, includeEndpoint))
 	}
 	return result
 }
 
-func imageModelResponse(model aicreationdomain.ImageModelRevision) *workspacev1.ImageModel {
+func imageModelResponse(model aicreationdomain.ImageModelRevision, includeEndpoint bool) *workspacev1.ImageModel {
 	rates := make([]*workspacev1.ImageCreditRate, 0, len(model.Rates))
 	for _, size := range model.Sizes {
 		for _, quality := range model.Qualities {
@@ -307,7 +308,10 @@ func imageModelResponse(model aicreationdomain.ImageModelRevision) *workspacev1.
 	for _, mode := range model.Modes {
 		modes = append(modes, string(mode))
 	}
-	response := &workspacev1.ImageModel{Id: model.ID, RevisionId: model.RevisionID, DisplayName: model.DisplayName, ConnectionId: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ProviderModelId: model.ModelID, ApiProtocol: model.Protocol, Modes: modes, Sizes: model.Sizes, Qualities: model.Qualities, Formats: model.Formats, Backgrounds: model.Backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: rates, State: string(model.State), CreatedAt: timestamppb.New(model.CreatedAt), UpdatedAt: timestamppb.New(model.UpdatedAt), Version: model.Version}
+	response := &workspacev1.ImageModel{Id: model.ID, RevisionId: model.RevisionID, DisplayName: model.DisplayName, ProviderModelId: model.ModelID, ApiProtocol: model.Protocol, Modes: modes, Sizes: model.Sizes, Qualities: model.Qualities, Formats: model.Formats, Backgrounds: model.Backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: rates, State: string(model.State), ApiKeyConfigured: model.APIKeyConfigured, CreatedAt: timestamppb.New(model.CreatedAt), UpdatedAt: timestamppb.New(model.UpdatedAt), Version: model.Version}
+	if includeEndpoint {
+		response.Endpoint = &model.Endpoint
+	}
 	if !model.VerifiedAt.IsZero() {
 		response.VerifiedAt = timestamppb.New(model.VerifiedAt)
 	}
@@ -319,7 +323,7 @@ func imageGenerationResponse(record aicreationdomain.ImageGenerationRecord) *wor
 	for _, image := range record.Images {
 		images = append(images, &workspacev1.GeneratedImage{Position: int32(image.Position), MediaType: image.MediaType, EncodedSize: image.Size, Width: int32(image.Width), Height: int32(image.Height), ExpiresAt: timestamppb.New(image.ExpiresAt)})
 	}
-	response := &workspacev1.ImageGenerationRecord{Id: record.ID, ImageModelId: record.Model.ID, ImageModelRevisionId: record.Model.RevisionID, ImageModelName: record.Model.DisplayName, ConnectionName: record.Model.ConnectionName, Prompt: record.Prompt, Mode: string(record.Request.Mode), Size: record.Request.Size, Quality: record.Request.Quality, Format: record.Request.Format, Background: record.Request.Background, RequestedCount: int32(record.RequestedCount), ValidatedCount: int32(record.ValidatedCount), ReservationHundredths: record.ReservationAmount, ConsumptionHundredths: record.ConsumptionAmount, State: string(record.State), Images: images, CreatedAt: timestamppb.New(record.CreatedAt), Version: record.Version}
+	response := &workspacev1.ImageGenerationRecord{Id: record.ID, ImageModelId: record.Model.ID, ImageModelRevisionId: record.Model.RevisionID, ImageModelName: record.Model.DisplayName, Prompt: record.Prompt, Mode: string(record.Request.Mode), Size: record.Request.Size, Quality: record.Request.Quality, Format: record.Request.Format, Background: record.Request.Background, RequestedCount: int32(record.RequestedCount), ValidatedCount: int32(record.ValidatedCount), ReservationHundredths: record.ReservationAmount, ConsumptionHundredths: record.ConsumptionAmount, State: string(record.State), Images: images, CreatedAt: timestamppb.New(record.CreatedAt), Version: record.Version}
 	if record.SafeError != "" {
 		response.SafeError = &record.SafeError
 	}

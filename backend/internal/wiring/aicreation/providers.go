@@ -19,19 +19,23 @@ import (
 )
 
 func NewApplication(database *gormdb.Database, creditsRepository *creditsrepo.Repository, credits *creditsapplication.Service, box *secretcrypto.Box, objects objectstore.Provider) (*aicreationapplication.Service, error) {
-	resolver, err := openaiimages.NewDatabaseConnectionResolver(database.ORM(), box)
+	imageResolver, err := openaiimages.NewImageModelDatabaseConnectionResolver(database.ORM(), box)
 	if err != nil {
 		return nil, err
 	}
-	provider, err := openaiimages.New(resolver, openaiimages.NewObjectSources(objects), nil)
+	provider, err := openaiimages.New(imageResolver, openaiimages.NewObjectSources(objects), nil)
 	if err != nil {
 		return nil, err
 	}
-	service, err := aicreationapplication.New(aicreationrepo.New(database.ORM(), creditsRepository), provider, objectPort{objects}, nil)
+	service, err := aicreationapplication.New(aicreationrepo.New(database.ORM(), creditsRepository, box), provider, objectPort{objects}, nil)
 	if err != nil {
 		return nil, err
 	}
-	optimizer, err := promptoptimizer.New(resolver, nil)
+	textResolver, err := promptoptimizer.NewDatabaseConnectionResolver(database.ORM(), box)
+	if err != nil {
+		return nil, err
+	}
+	optimizer, err := promptoptimizer.New(textResolver, nil)
 	if err != nil {
 		return nil, err
 	}

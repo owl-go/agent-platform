@@ -38,7 +38,7 @@ func TestProviderGeneratesImagesWithJSON(t *testing.T) {
 
 	provider := mustProvider(t, server.URL+"/v1", nil)
 	result, err := provider.Create(context.Background(), application.ProviderRequest{
-		ConnectionID: "connection-1", ConnectionVersion: 2, ModelID: "gpt-image-1", Prompt: "a red kite",
+		ModelRevisionID: "revision-1", ModelID: "gpt-image-1", Prompt: "a red kite",
 		Size: "1024x1024", Quality: "high", Format: "png", Background: "opaque", Count: 2,
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ func TestProviderEditsWithOrderedMultipartImages(t *testing.T) {
 
 	provider := mustProvider(t, server.URL, map[string][]byte{"first": []byte("one"), "second": []byte("two")})
 	_, err := provider.Create(context.Background(), application.ProviderRequest{
-		ConnectionID: "connection-1", ConnectionVersion: 2, ModelID: "gpt-image-1", Prompt: "combine",
+		ModelRevisionID: "revision-1", ModelID: "gpt-image-1", Prompt: "combine",
 		Inputs: []domain.ReferenceImage{{Position: 1, ObjectKey: "first", MediaType: "image/png"}, {Position: 2, ObjectKey: "second", MediaType: "image/png"}},
 		Size:   "1024x1024", Quality: "high", Format: "png", Background: "opaque", Count: 1,
 	})
@@ -93,7 +93,7 @@ func mustProvider(t *testing.T, endpoint string, objects map[string][]byte) *ope
 
 type resolver struct{ connection openaiimages.Connection }
 
-func (resolver resolver) Resolve(context.Context, string, int64) (openaiimages.Connection, error) {
+func (resolver resolver) ResolveImageModel(context.Context, string) (openaiimages.Connection, error) {
 	return resolver.connection, nil
 }
 

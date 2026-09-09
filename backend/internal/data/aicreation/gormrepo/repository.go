@@ -10,6 +10,7 @@ import (
 	"agent-platform/backend/internal/biz/aicreation/application"
 	"agent-platform/backend/internal/biz/aicreation/domain"
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
+	"agent-platform/backend/internal/secretcrypto"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -23,10 +24,11 @@ type creditReservations interface {
 type Repository struct {
 	db      *gorm.DB
 	credits creditReservations
+	box     *secretcrypto.Box
 }
 
-func New(db *gorm.DB, credits creditReservations) *Repository {
-	return &Repository{db: db, credits: credits}
+func New(db *gorm.DB, credits creditReservations, box *secretcrypto.Box) *Repository {
+	return &Repository{db: db, credits: credits, box: box}
 }
 
 var _ application.Repository = (*Repository)(nil)
@@ -36,9 +38,8 @@ type modelRecord struct {
 	ModelID           string     `gorm:"column:image_model_id"`
 	PredecessorID     *string    `gorm:"column:predecessor_id"`
 	DisplayName       string     `gorm:"column:display_name"`
-	ConnectionID      string     `gorm:"column:connection_id"`
-	ConnectionVersion int64      `gorm:"column:connection_version"`
-	ConnectionName    string     `gorm:"column:connection_name"`
+	Endpoint          string     `gorm:"column:endpoint"`
+	APIKeyCiphertext  []byte     `gorm:"column:api_key_ciphertext"`
 	ProviderModelID   string     `gorm:"column:provider_model_id"`
 	Protocol          string     `gorm:"column:api_protocol"`
 	Modes             []byte     `gorm:"column:modes;type:jsonb"`
@@ -68,10 +69,31 @@ type stableModelRecord struct {
 
 func (stableModelRecord) TableName() string { return "image_models" }
 
-func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageModelRevision) (domain.ImageModelRevision, error) {
+func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageModelRevision, replacementAPIKey []byte) (domain.ImageModelRevision, error) {
 	row, err := fromModel(model)
 	if err != nil {
 		return model, err
+	}
+	if len(replacementAPIKey) > 0 {
+		row.APIKeyCiphertext, err = repository.box.Encrypt(replacementAPIKey, "image-model:"+model.ID)
+		if err != nil {
+			return model, fmt.Errorf("encrypt Image Model API Key: %w", err)
+		}
+	} else {
+		credentialSourceID := model.RevisionID
+		if model.PredecessorID != "" {
+			credentialSourceID = model.PredecessorID
+		}
+		var previous struct {
+			APIKeyCiphertext []byte `gorm:"column:api_key_ciphertext"`
+		}
+		if err := repository.db.WithContext(ctx).Table("image_model_revisions").Select("api_key_ciphertext").Where("id = ?", credentialSourceID).Take(&previous).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return model, fmt.Errorf("read previous Image Model API Key: %w", err)
+		}
+		row.APIKeyCiphertext = previous.APIKeyCiphertext
+	}
+	if len(row.APIKeyCiphertext) == 0 {
+		return model, fmt.Errorf("%w: Image Model API Key is required", domain.ErrInvalid)
 	}
 	err = repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		stable := stableModelRecord{ID: model.ID, CreatedAt: model.CreatedAt}
@@ -240,46 +262,53 @@ func (repository *Repository) DeleteReferenceUpload(ctx context.Context, ownerID
 }
 
 type promptCandidateRecord struct {
-	ProviderModelID string    `gorm:"column:provider_model_id;primaryKey"`
-	Protocol        string    `gorm:"column:api_protocol"`
-	CreatedBy       string    `gorm:"column:created_by_user_id"`
-	CreatedAt       time.Time `gorm:"column:created_at"`
+	ID               bool      `gorm:"column:singleton;primaryKey"`
+	ModelID          string    `gorm:"column:model_id"`
+	Endpoint         string    `gorm:"column:endpoint"`
+	APIKeyCiphertext []byte    `gorm:"column:api_key_ciphertext"`
+	Instruction      string    `gorm:"column:instruction"`
+	UpdatedBy        string    `gorm:"column:updated_by_user_id"`
+	CreatedAt        time.Time `gorm:"column:created_at"`
+	UpdatedAt        time.Time `gorm:"column:updated_at"`
 }
 
-func (promptCandidateRecord) TableName() string { return "prompt_optimization_candidates" }
+func (promptCandidateRecord) TableName() string { return "prompt_optimization_settings" }
 
 func (repository *Repository) ListPromptCandidates(ctx context.Context) ([]domain.PromptOptimizationCandidate, error) {
-	var rows []struct {
-		ProviderModelID, DisplayName, ConnectionID, ConnectionName, ProviderType, ModelID, Protocol string
-		ConnectionVersion                                                                           int64
+	var row promptCandidateRecord
+	err := repository.db.WithContext(ctx).Take(&row, "singleton = ?", true).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return []domain.PromptOptimizationCandidate{}, nil
 	}
-	err := repository.db.WithContext(ctx).Table("prompt_optimization_candidates candidate").
-		Select("candidate.provider_model_id, model.display_name, connection.id AS connection_id, connection.version AS connection_version, connection.name AS connection_name, connection.provider_type, model.model_id, candidate.api_protocol AS protocol").
-		Joins("JOIN provider_models model ON model.id = candidate.provider_model_id AND model.available").
-		Joins("JOIN model_provider_connections connection ON connection.id = model.connection_id").
-		Order("connection.name, model.display_name, model.id").Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
-	result := make([]domain.PromptOptimizationCandidate, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, domain.PromptOptimizationCandidate{ProviderModelID: row.ProviderModelID, DisplayName: row.DisplayName, ConnectionID: row.ConnectionID, ConnectionVersion: row.ConnectionVersion, ConnectionName: row.ConnectionName, ProviderType: row.ProviderType, ModelID: row.ModelID, Protocol: row.Protocol})
-	}
-	return result, nil
+	return []domain.PromptOptimizationCandidate{{ProviderModelID: row.ModelID, DisplayName: row.ModelID, ProviderType: "openai", ModelID: row.ModelID, Protocol: "openai_responses", Endpoint: row.Endpoint, APIKeyConfigured: len(row.APIKeyCiphertext) > 0, Instruction: row.Instruction}}, nil
 }
 
-func (repository *Repository) ReplacePromptCandidates(ctx context.Context, administratorID string, candidates []domain.PromptOptimizationCandidate) error {
+func (repository *Repository) ReplacePromptCandidates(ctx context.Context, administratorID string, candidates []domain.PromptOptimizationCandidate, replacementAPIKey []byte) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&promptCandidateRecord{}).Error; err != nil {
+		var current promptCandidateRecord
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Take(&current, "singleton = ?", true).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		for _, candidate := range candidates {
-			row := promptCandidateRecord{ProviderModelID: candidate.ProviderModelID, Protocol: candidate.Protocol, CreatedBy: administratorID, CreatedAt: time.Now().UTC()}
-			if err := tx.Create(&row).Error; err != nil {
-				return err
+		ciphertext := current.APIKeyCiphertext
+		if len(replacementAPIKey) > 0 {
+			ciphertext, err = repository.box.Encrypt(replacementAPIKey, "prompt-optimization")
+			if err != nil {
+				return fmt.Errorf("encrypt Prompt Optimization API Key: %w", err)
 			}
 		}
-		return nil
+		if len(ciphertext) == 0 {
+			return fmt.Errorf("%w: Prompt Optimization API Key is required", domain.ErrInvalid)
+		}
+		now := time.Now().UTC()
+		row := promptCandidateRecord{ID: true, ModelID: candidates[0].ModelID, Endpoint: candidates[0].Endpoint, APIKeyCiphertext: ciphertext, Instruction: candidates[0].Instruction, UpdatedBy: administratorID, CreatedAt: current.CreatedAt, UpdatedAt: now}
+		if row.CreatedAt.IsZero() {
+			row.CreatedAt = now
+		}
+		return tx.Save(&row).Error
 	})
 }
 
@@ -839,11 +868,11 @@ func fromModel(model domain.ImageModelRevision) (modelRecord, error) {
 	if model.PredecessorID != "" {
 		predecessor = &model.PredecessorID
 	}
-	return modelRecord{ID: model.RevisionID, ModelID: model.ID, PredecessorID: predecessor, DisplayName: model.DisplayName, ConnectionID: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ProviderModelID: model.ModelID, Protocol: model.Protocol, Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: rates, State: string(model.State), VerifiedAt: verifiedAt, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt, Version: model.Version}, nil
+	return modelRecord{ID: model.RevisionID, ModelID: model.ID, PredecessorID: predecessor, DisplayName: model.DisplayName, Endpoint: model.Endpoint, ProviderModelID: model.ModelID, Protocol: model.Protocol, Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: rates, State: string(model.State), VerifiedAt: verifiedAt, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt, Version: model.Version}, nil
 }
 
 func toModel(row modelRecord) (domain.ImageModelRevision, error) {
-	model := domain.ImageModelRevision{ID: row.ModelID, RevisionID: row.ID, DisplayName: row.DisplayName, ConnectionID: row.ConnectionID, ConnectionVersion: row.ConnectionVersion, ConnectionName: row.ConnectionName, ModelID: row.ProviderModelID, Protocol: row.Protocol, DefaultSize: row.DefaultSize, DefaultQuality: row.DefaultQuality, DefaultFormat: row.DefaultFormat, DefaultBackground: row.DefaultBackground, State: domain.ModelState(row.State), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	model := domain.ImageModelRevision{ID: row.ModelID, RevisionID: row.ID, DisplayName: row.DisplayName, Endpoint: row.Endpoint, APIKeyConfigured: len(row.APIKeyCiphertext) > 0, ModelID: row.ProviderModelID, Protocol: row.Protocol, DefaultSize: row.DefaultSize, DefaultQuality: row.DefaultQuality, DefaultFormat: row.DefaultFormat, DefaultBackground: row.DefaultBackground, State: domain.ModelState(row.State), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.PredecessorID != nil {
 		model.PredecessorID = *row.PredecessorID
 	}

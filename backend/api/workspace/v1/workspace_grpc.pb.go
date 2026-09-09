@@ -53,6 +53,7 @@ const (
 	AgentWorkspaceService_VerifyImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/VerifyImageModel"
 	AgentWorkspaceService_SetImageModelAvailability_FullMethodName           = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
 	AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName = "/workspace.v1.AgentWorkspaceService/ReplacePromptOptimizationCandidates"
+	AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ListPromptOptimizationCandidates"
 	AgentWorkspaceService_ListSessions_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListSessions"
 	AgentWorkspaceService_CreateSession_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/CreateSession"
 	AgentWorkspaceService_GetSession_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -169,6 +170,7 @@ type AgentWorkspaceServiceClient interface {
 	VerifyImageModel(ctx context.Context, in *VerifyImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error)
 	SetImageModelAvailability(ctx context.Context, in *SetImageModelAvailabilityRequest, opts ...grpc.CallOption) (*ImageModel, error)
 	ReplacePromptOptimizationCandidates(ctx context.Context, in *ReplacePromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error)
+	ListPromptOptimizationCandidates(ctx context.Context, in *ListPromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error)
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
@@ -589,6 +591,16 @@ func (c *agentWorkspaceServiceClient) ReplacePromptOptimizationCandidates(ctx co
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListPromptOptimizationCandidatesResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListPromptOptimizationCandidates(ctx context.Context, in *ListPromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPromptOptimizationCandidatesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1393,6 +1405,7 @@ type AgentWorkspaceServiceServer interface {
 	VerifyImageModel(context.Context, *VerifyImageModelRequest) (*ImageModel, error)
 	SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error)
 	ReplacePromptOptimizationCandidates(context.Context, *ReplacePromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
+	ListPromptOptimizationCandidates(context.Context, *ListPromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	CreateSession(context.Context, *CreateSessionRequest) (*Session, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -1580,6 +1593,9 @@ func (UnimplementedAgentWorkspaceServiceServer) SetImageModelAvailability(contex
 }
 func (UnimplementedAgentWorkspaceServiceServer) ReplacePromptOptimizationCandidates(context.Context, *ReplacePromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReplacePromptOptimizationCandidates not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListPromptOptimizationCandidates(context.Context, *ListPromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPromptOptimizationCandidates not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
@@ -2438,6 +2454,24 @@ func _AgentWorkspaceService_ReplacePromptOptimizationCandidates_Handler(srv inte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).ReplacePromptOptimizationCandidates(ctx, req.(*ReplacePromptOptimizationCandidatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListPromptOptimizationCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPromptOptimizationCandidatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListPromptOptimizationCandidates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListPromptOptimizationCandidates(ctx, req.(*ListPromptOptimizationCandidatesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3952,6 +3986,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReplacePromptOptimizationCandidates",
 			Handler:    _AgentWorkspaceService_ReplacePromptOptimizationCandidates_Handler,
+		},
+		{
+			MethodName: "ListPromptOptimizationCandidates",
+			Handler:    _AgentWorkspaceService_ListPromptOptimizationCandidates_Handler,
 		},
 		{
 			MethodName: "ListSessions",

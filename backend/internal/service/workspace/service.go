@@ -130,6 +130,7 @@ func (service *Service) validateExpertInputAvailability(ctx context.Context, inp
 }
 
 func publicError(err error) error {
+	var providerFailure *aicreationapplication.ProviderFailure
 	switch {
 	case errors.Is(err, accountdomain.ErrUnauthenticated):
 		return kratoserrors.New(http.StatusUnauthorized, "authentication_required", "authentication required")
@@ -167,6 +168,12 @@ func publicError(err error) error {
 		return kratoserrors.New(http.StatusTooManyRequests, "insufficient_credits", "Available Credit is insufficient")
 	case errors.Is(err, aicreationdomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
+	case errors.As(err, &providerFailure):
+		status := http.StatusUnprocessableEntity
+		if providerFailure.Code == "image_provider_unavailable" || providerFailure.Code == "image_provider_rate_limited" || providerFailure.Code == "image_outcome_unknown" {
+			status = http.StatusServiceUnavailable
+		}
+		return kratoserrors.New(status, providerFailure.Code, providerFailure.Code)
 	default:
 		return kratoserrors.New(http.StatusInternalServerError, "request_failed", "request failed")
 	}

@@ -26,7 +26,7 @@ import (
 var ErrInsufficientCredits = errors.New("Available Credit is insufficient")
 
 type Repository interface {
-	SaveModel(context.Context, domain.ImageModelRevision) (domain.ImageModelRevision, error)
+	SaveModel(context.Context, domain.ImageModelRevision, []byte) (domain.ImageModelRevision, error)
 	GetModel(context.Context, string) (domain.ImageModelRevision, error)
 	ListModels(context.Context, bool) ([]domain.ImageModelRevision, error)
 	DeleteModel(context.Context, string, int64, time.Time) error
@@ -34,7 +34,7 @@ type Repository interface {
 	GetReferenceUploads(context.Context, string, []string) ([]domain.ReferenceUpload, error)
 	DeleteReferenceUpload(context.Context, string, string) (domain.ReferenceUpload, error)
 	ListPromptCandidates(context.Context) ([]domain.PromptOptimizationCandidate, error)
-	ReplacePromptCandidates(context.Context, string, []domain.PromptOptimizationCandidate) error
+	ReplacePromptCandidates(context.Context, string, []domain.PromptOptimizationCandidate, []byte) error
 	SubmitRecord(context.Context, domain.ImageGenerationRecord, string) (domain.ImageGenerationRecord, error)
 	SettleRecord(context.Context, domain.ImageGenerationRecord) (domain.ImageGenerationRecord, error)
 	GetRecord(context.Context, string, string) (domain.ImageGenerationRecord, error)
@@ -67,16 +67,15 @@ type GenerationEvent struct {
 }
 
 type ProviderRequest struct {
-	ConnectionID      string
-	ConnectionVersion int64
-	ModelID           string
-	Prompt            string
-	Inputs            []domain.ReferenceImage
-	Size              string
-	Quality           string
-	Format            string
-	Background        string
-	Count             int
+	ModelRevisionID string
+	ModelID         string
+	Prompt          string
+	Inputs          []domain.ReferenceImage
+	Size            string
+	Quality         string
+	Format          string
+	Background      string
+	Count           int
 }
 
 type ProviderResult struct{ Images [][]byte }
@@ -153,16 +152,23 @@ func (service *Service) ListPromptCandidates(ctx context.Context) ([]domain.Prom
 	return service.repository.ListPromptCandidates(ctx)
 }
 
-func (service *Service) ReplacePromptCandidates(ctx context.Context, administratorID string, candidates []domain.PromptOptimizationCandidate) error {
+func (service *Service) ReplacePromptCandidates(ctx context.Context, administratorID string, candidates []domain.PromptOptimizationCandidate, replacementAPIKey []byte) error {
 	if strings.TrimSpace(administratorID) == "" {
 		return fmt.Errorf("%w: Administrator is required", domain.ErrInvalid)
 	}
+	if len(candidates) != 1 {
+		return fmt.Errorf("%w: exactly one Prompt Optimization model is required", domain.ErrInvalid)
+	}
 	for _, candidate := range candidates {
-		if candidate.ProviderModelID == "" || (candidate.Protocol != "openai_responses" && candidate.Protocol != "openai_chat_completions") {
+		candidate.APIKeyConfigured = candidate.APIKeyConfigured || len(replacementAPIKey) > 0
+		if candidate.ModelID == "" || strings.TrimSpace(candidate.Instruction) == "" || len([]rune(candidate.Instruction)) > 10_000 || !candidate.APIKeyConfigured || candidate.Protocol != "openai_responses" {
 			return fmt.Errorf("%w: Prompt Optimization candidate is invalid", domain.ErrInvalid)
 		}
+		if err := domain.ValidateAPIEndpoint(candidate.Endpoint); err != nil {
+			return err
+		}
 	}
-	return service.repository.ReplacePromptCandidates(ctx, administratorID, candidates)
+	return service.repository.ReplacePromptCandidates(ctx, administratorID, candidates, replacementAPIKey)
 }
 
 func (service *Service) OptimizePrompt(ctx context.Context, ownerID, timezone, candidateID, prompt, locale string) (OptimizationResult, error) {
@@ -228,9 +234,8 @@ func New(repository Repository, provider ImageProvider, objects ObjectStore, now
 type CreateImageModelRequest struct {
 	AdministratorID   string
 	DisplayName       string
-	ConnectionID      string
-	ConnectionVersion int64
-	ConnectionName    string
+	Endpoint          string
+	APIKey            []byte
 	ModelID           string
 	Modes             []domain.Mode
 	Sizes             []string
@@ -251,7 +256,7 @@ func (service *Service) CreateImageModel(ctx context.Context, request CreateImag
 	now := service.now().UTC()
 	model := domain.ImageModelRevision{
 		ID: uuid.NewString(), RevisionID: uuid.NewString(), DisplayName: strings.TrimSpace(request.DisplayName),
-		ConnectionID: request.ConnectionID, ConnectionVersion: request.ConnectionVersion, ConnectionName: request.ConnectionName,
+		Endpoint: strings.TrimSpace(request.Endpoint), APIKeyConfigured: len(request.APIKey) > 0,
 		ModelID: request.ModelID, Protocol: domain.ProtocolOpenAIImages, Modes: request.Modes, Sizes: request.Sizes,
 		Qualities: request.Qualities, Formats: request.Formats, Backgrounds: request.Backgrounds,
 		DefaultSize: request.DefaultSize, DefaultQuality: request.DefaultQuality, DefaultFormat: request.DefaultFormat,
@@ -261,7 +266,7 @@ func (service *Service) CreateImageModel(ctx context.Context, request CreateImag
 	if err := model.ValidateConfiguration(); err != nil {
 		return domain.ImageModelRevision{}, err
 	}
-	return service.repository.SaveModel(ctx, model)
+	return service.repository.SaveModel(ctx, model, request.APIKey)
 }
 
 func (service *Service) ReviseImageModel(ctx context.Context, modelID string, expectedVersion int64, request CreateImageModelRequest) (domain.ImageModelRevision, error) {
@@ -278,7 +283,7 @@ func (service *Service) ReviseImageModel(ctx context.Context, modelID string, ex
 	now := service.now().UTC()
 	model := domain.ImageModelRevision{
 		ID: modelID, RevisionID: uuid.NewString(), PredecessorID: current.RevisionID, PredecessorVersion: current.Version, DisplayName: strings.TrimSpace(request.DisplayName),
-		ConnectionID: request.ConnectionID, ConnectionVersion: request.ConnectionVersion, ConnectionName: request.ConnectionName,
+		Endpoint: strings.TrimSpace(request.Endpoint), APIKeyConfigured: current.APIKeyConfigured || len(request.APIKey) > 0,
 		ModelID: request.ModelID, Protocol: domain.ProtocolOpenAIImages, Modes: request.Modes, Sizes: request.Sizes,
 		Qualities: request.Qualities, Formats: request.Formats, Backgrounds: request.Backgrounds,
 		DefaultSize: request.DefaultSize, DefaultQuality: request.DefaultQuality, DefaultFormat: request.DefaultFormat,
@@ -288,7 +293,7 @@ func (service *Service) ReviseImageModel(ctx context.Context, modelID string, ex
 	if err := model.ValidateConfiguration(); err != nil {
 		return domain.ImageModelRevision{}, err
 	}
-	return service.repository.SaveModel(ctx, model)
+	return service.repository.SaveModel(ctx, model, request.APIKey)
 }
 
 func (service *Service) DeleteImageModel(ctx context.Context, administratorID, modelID string, expectedVersion int64) error {
@@ -346,9 +351,10 @@ func (service *Service) VerifyImageModel(ctx context.Context, administratorID, m
 		return model, fmt.Errorf("verify Image Model: %w", err)
 	}
 	model.VerifiedAt = service.now().UTC()
+	model.State = domain.ModelDisabled
 	model.UpdatedAt = model.VerifiedAt
 	model.Version++
-	return service.repository.SaveModel(ctx, model)
+	return service.repository.SaveModel(ctx, model, nil)
 }
 
 func containsMode(modes []domain.Mode, wanted domain.Mode) bool {
@@ -381,7 +387,7 @@ func (service *Service) SetImageModelAvailability(ctx context.Context, administr
 	}
 	model.UpdatedAt = service.now().UTC()
 	model.Version++
-	return service.repository.SaveModel(ctx, model)
+	return service.repository.SaveModel(ctx, model, nil)
 }
 
 func (service *Service) ListImageModels(ctx context.Context, availableOnly bool) ([]domain.ImageModelRevision, error) {
@@ -803,7 +809,7 @@ func (service *Service) CleanupExpired(ctx context.Context) (int, error) {
 
 func providerRequest(model domain.ImageModelRevision, request domain.GenerationRequest) ProviderRequest {
 	return ProviderRequest{
-		ConnectionID: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ModelID: model.ModelID,
+		ModelRevisionID: model.RevisionID, ModelID: model.ModelID,
 		Prompt: request.Prompt, Inputs: request.References, Size: request.Size, Quality: request.Quality,
 		Format: request.Format, Background: request.Background, Count: request.Count,
 	}

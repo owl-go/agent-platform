@@ -22,8 +22,8 @@ type Connection struct {
 	APIKey   []byte
 }
 
-type ConnectionResolver interface {
-	Resolve(context.Context, string, int64) (Connection, error)
+type ImageModelConnectionResolver interface {
+	ResolveImageModel(context.Context, string) (Connection, error)
 }
 
 type ImageSources interface {
@@ -31,12 +31,12 @@ type ImageSources interface {
 }
 
 type Provider struct {
-	connections ConnectionResolver
+	connections ImageModelConnectionResolver
 	sources     ImageSources
 	client      *http.Client
 }
 
-func New(connections ConnectionResolver, sources ImageSources, client *http.Client) (*Provider, error) {
+func New(connections ImageModelConnectionResolver, sources ImageSources, client *http.Client) (*Provider, error) {
 	if connections == nil || sources == nil {
 		return nil, fmt.Errorf("Image Provider connection resolver and image sources are required")
 	}
@@ -49,7 +49,7 @@ func New(connections ConnectionResolver, sources ImageSources, client *http.Clie
 var _ application.ImageProvider = (*Provider)(nil)
 
 func (provider *Provider) Create(ctx context.Context, request application.ProviderRequest) (application.ProviderResult, error) {
-	connection, err := provider.connections.Resolve(ctx, request.ConnectionID, request.ConnectionVersion)
+	connection, err := provider.connections.ResolveImageModel(ctx, request.ModelRevisionID)
 	if err != nil {
 		return application.ProviderResult{}, fmt.Errorf("resolve Image Model connection: %w", err)
 	}

@@ -83,7 +83,7 @@ func TestImageCreditReservationUsesFullRequestedBatch(t *testing.T) {
 func availableModel() domain.ImageModelRevision {
 	return domain.ImageModelRevision{
 		ID: "model-1", RevisionID: "revision-1", State: domain.ModelAvailable,
-		ConnectionID: "connection-1", ConnectionVersion: 2, ConnectionName: "OpenAI",
+		Endpoint: "https://images.example.test/v1", APIKeyConfigured: true,
 		ModelID: "gpt-image-1", Protocol: domain.ProtocolOpenAIImages,
 		Modes: []domain.Mode{domain.ModeGenerate}, Sizes: []string{"1024x1024"},
 		Qualities: []string{"high"}, Formats: []string{"png", "jpeg"},

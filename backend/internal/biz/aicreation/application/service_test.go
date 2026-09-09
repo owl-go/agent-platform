@@ -23,8 +23,8 @@ func TestAdministratorPublishesModelAndUserGeneratesImage(t *testing.T) {
 	service := mustService(t, repository, credits, provider, objects)
 
 	model, err := service.CreateImageModel(ctx, application.CreateImageModelRequest{
-		AdministratorID: "admin-1", DisplayName: "Studio", ConnectionID: "connection-1", ConnectionVersion: 1,
-		ConnectionName: "OpenAI", ModelID: "gpt-image-1", Modes: []domain.Mode{domain.ModeGenerate},
+		AdministratorID: "admin-1", DisplayName: "Studio", Endpoint: "https://images.example.test/v1", APIKey: []byte("image-secret"),
+		ModelID: "gpt-image-1", Modes: []domain.Mode{domain.ModeGenerate},
 		Sizes: []string{"1x1"}, Qualities: []string{"high"}, Formats: []string{"png"}, Backgrounds: []string{"opaque"},
 		DefaultSize: "1x1", DefaultQuality: "high", DefaultFormat: "png", DefaultBackground: "opaque",
 		Rates: map[string]int64{domain.RateKey("1x1", "high"): 125},
@@ -35,8 +35,12 @@ func TestAdministratorPublishesModelAndUserGeneratesImage(t *testing.T) {
 	if model.State != domain.ModelUnverified {
 		t.Fatalf("State = %q, want unverified", model.State)
 	}
-	if _, err := service.VerifyImageModel(ctx, "admin-1", model.ID); err != nil {
+	model, err = service.VerifyImageModel(ctx, "admin-1", model.ID)
+	if err != nil {
 		t.Fatalf("VerifyImageModel() error = %v", err)
+	}
+	if model.State != domain.ModelDisabled || model.VerifiedAt.IsZero() {
+		t.Fatalf("verified model = %+v, want disabled with verification time", model)
 	}
 	model, err = service.SetImageModelAvailability(ctx, "admin-1", model.ID, true)
 	if err != nil {
@@ -140,8 +144,8 @@ func TestMaterialImageModelRevisionRequiresNewVerification(t *testing.T) {
 	current.Version = 3
 	repository.models[current.ID] = current
 	revised, err := service.ReviseImageModel(context.Background(), current.ID, current.Version, application.CreateImageModelRequest{
-		AdministratorID: "admin-1", DisplayName: "Studio 2", ConnectionID: current.ConnectionID, ConnectionVersion: current.ConnectionVersion,
-		ConnectionName: current.ConnectionName, ModelID: current.ModelID, Modes: current.Modes, Sizes: current.Sizes, Qualities: current.Qualities,
+		AdministratorID: "admin-1", DisplayName: "Studio 2", Endpoint: current.Endpoint,
+		ModelID: current.ModelID, Modes: current.Modes, Sizes: current.Sizes, Qualities: current.Qualities,
 		Formats: current.Formats, Backgrounds: current.Backgrounds, DefaultSize: current.DefaultSize, DefaultQuality: current.DefaultQuality,
 		DefaultFormat: current.DefaultFormat, DefaultBackground: current.DefaultBackground, Rates: current.Rates,
 	})
@@ -159,7 +163,7 @@ func TestDeletedImageModelCannotBeRevisedVerifiedOrEnabled(t *testing.T) {
 	model := publishedModel()
 	model.State = domain.ModelDeleted
 	repository.models[model.ID] = model
-	request := application.CreateImageModelRequest{AdministratorID: "admin-1", DisplayName: model.DisplayName, ConnectionID: model.ConnectionID, ConnectionVersion: model.ConnectionVersion, ConnectionName: model.ConnectionName, ModelID: model.ModelID, Modes: model.Modes, Sizes: model.Sizes, Qualities: model.Qualities, Formats: model.Formats, Backgrounds: model.Backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: model.Rates}
+	request := application.CreateImageModelRequest{AdministratorID: "admin-1", DisplayName: model.DisplayName, Endpoint: model.Endpoint, ModelID: model.ModelID, Modes: model.Modes, Sizes: model.Sizes, Qualities: model.Qualities, Formats: model.Formats, Backgrounds: model.Backgrounds, DefaultSize: model.DefaultSize, DefaultQuality: model.DefaultQuality, DefaultFormat: model.DefaultFormat, DefaultBackground: model.DefaultBackground, Rates: model.Rates}
 	if _, err := service.ReviseImageModel(context.Background(), model.ID, model.Version, request); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("ReviseImageModel() error = %v, want conflict", err)
 	}
@@ -372,7 +376,7 @@ func (repo *memoryRepository) SaveReferenceUpload(_ context.Context, upload doma
 func (repo *memoryRepository) ListPromptCandidates(context.Context) ([]domain.PromptOptimizationCandidate, error) {
 	return nil, nil
 }
-func (repo *memoryRepository) ReplacePromptCandidates(context.Context, string, []domain.PromptOptimizationCandidate) error {
+func (repo *memoryRepository) ReplacePromptCandidates(context.Context, string, []domain.PromptOptimizationCandidate, []byte) error {
 	return nil
 }
 func (repo *memoryRepository) GetReferenceUploads(_ context.Context, ownerID string, ids []string) ([]domain.ReferenceUpload, error) {
@@ -394,9 +398,12 @@ func (repo *memoryRepository) DeleteReferenceUpload(_ context.Context, ownerID, 
 	return upload, nil
 }
 
-func (repo *memoryRepository) SaveModel(_ context.Context, model domain.ImageModelRevision) (domain.ImageModelRevision, error) {
+func (repo *memoryRepository) SaveModel(_ context.Context, model domain.ImageModelRevision, replacementAPIKey []byte) (domain.ImageModelRevision, error) {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
+	if len(replacementAPIKey) > 0 {
+		model.APIKeyConfigured = true
+	}
 	repo.next++
 	if model.ID == "" {
 		model.ID = "model-" + string(rune('0'+repo.next))
@@ -675,7 +682,7 @@ func onePixelPNG(t *testing.T) []byte {
 func publishedModel() domain.ImageModelRevision {
 	return domain.ImageModelRevision{
 		ID: "model-1", RevisionID: "revision-1", DisplayName: "Studio", State: domain.ModelAvailable,
-		ConnectionID: "connection-1", ConnectionVersion: 1, ConnectionName: "OpenAI", ModelID: "gpt-image-1", Protocol: domain.ProtocolOpenAIImages,
+		Endpoint: "https://images.example.test/v1", APIKeyConfigured: true, ModelID: "gpt-image-1", Protocol: domain.ProtocolOpenAIImages,
 		Modes: []domain.Mode{domain.ModeGenerate}, Sizes: []string{"1x1"}, Qualities: []string{"high"}, Formats: []string{"png"}, Backgrounds: []string{"opaque"},
 		DefaultSize: "1x1", DefaultQuality: "high", DefaultFormat: "png", DefaultBackground: "opaque",
 		Rates: map[string]int64{domain.RateKey("1x1", "high"): 125}, VerifiedAt: time.Unix(1, 0),
