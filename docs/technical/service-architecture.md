@@ -66,7 +66,7 @@ Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/
 
 Derived Expertise Tag 后台任务与 Session、Run 共用执行阶段的版本化 Model Provider 凭证加载逻辑：Worker 领取任务时按 Connection ID 和 Version 读取密文及凭证归属，再交给 Runtime Executor 解密，不将凭证写入普通 Snapshot。凭证不可用时将标签任务标为失败并保留旧标签，不向 Runtime 提交缺失凭证的任务。
 
-AI Creation Worker 按冻结的 Image Model revision 读取该模型自己的 Endpoint 和加密 API Key，并在调用后清理明文。Prompt Optimization 从自己的单一设置读取 Endpoint 和加密 API Key；两者都不回退到 Model Provider Connection。`ImageProvider` Adapter 只接收结构化生成或编辑参数和流式图片输入，返回结构化图片结果与安全错误，不管理 Repository、Credits、Object Storage 或权限。首个实现使用 OpenAI Images；Prompt Optimization 通过独立直接调用 Adapter 使用 OpenAI Responses。普通日志和审计不保存提示词、图片、Base64、原始供应商响应、Object Key、签名 URL 或明文 API Key。
+AI Creation Worker 按冻结的 Image Model revision 读取该模型自己的 Endpoint 和加密 API Key，并在调用后清理明文。Prompt Optimization 从自己的单一设置读取 Endpoint 和加密 API Key；两者都不回退到 Model Provider Connection。`ImageProvider` Adapter 只接收结构化生成或编辑参数和流式图片输入，返回结构化图片结果与安全错误，不管理 Repository、Credits、Object Storage 或权限。Adapter 默认使用 OpenAI Images；当 Endpoint 精确指向阿里云百炼同步 multimodal-generation 路径时自动使用百炼原生消息协议，不向管理员暴露额外的供应商或协议设置。Prompt Optimization 通过独立直接调用 Adapter 使用 OpenAI Responses。普通日志和审计不保存提示词、图片、Base64、原始供应商响应、Object Key、签名 URL 或明文 API Key。
 
 ## 数据库
 
@@ -76,7 +76,7 @@ CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_c
 
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
 
-AI Creation 通过新的追加式 Migration 引入 Image Model revisions、独立 Prompt Optimization 设置、Image Credit Rate revisions、Image Credit Reservations、Image Generation Records、Reference Images、Generated Images 和每 User 最近选择；后续追加式 Migration 将 Image Model 和 Prompt Optimization 从 Model Provider Connection 解耦，旧凭证不复制，需由 Administrator 重新填写。对象内容保留在私有 Object Storage，数据库只保存经过校验的逻辑 Object Key、SHA-256、大小、格式和像素尺寸。
+AI Creation 通过新的追加式 Migration 引入 Image Model revisions、独立 Prompt Optimization 设置、Image Credit Rate revisions、Image Credit Reservations、Image Generation Records、Reference Images、Generated Images 和每 User 最近选择；后续追加式 Migration 将 Image Model 和 Prompt Optimization 从 Model Provider Connection 解耦，旧凭证不复制，需由 Administrator 重新填写。固定图片价格变更通过新的 Image Model revision 将所有当前模型费率设为每张 50 Credits，并将已配置百炼原生 Endpoint 的输出选项归一为其支持的自动质量、PNG 和不透明背景；既有 Image Generation Record 的冻结快照保持不变。对象内容保留在私有 Object Storage，数据库只保存经过校验的逻辑 Object Key、SHA-256、大小、格式和像素尺寸。
 
 Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。CLI Definition、bundle、Enablement、Authorization、Feishu Application 与 Approval 分表表达平台资源和 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个 Feishu CLI Application。启用飞书 CLI Connector 时，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Feishu Application 并销毁临时设备码。历史 Snapshot JSON 不回写。
 

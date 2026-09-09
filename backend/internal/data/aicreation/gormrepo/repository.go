@@ -195,6 +195,8 @@ func (repository *Repository) ListModels(ctx context.Context, availableOnly bool
 	query := repository.db.WithContext(ctx).Table("image_model_revisions revision").Joins("JOIN image_models model ON model.current_revision_id = revision.id")
 	if availableOnly {
 		query = query.Where("revision.state = ?", domain.ModelAvailable)
+	} else {
+		query = query.Where("revision.state <> ?", domain.ModelDeleted)
 	}
 	var rows []modelRecord
 	if err := query.Order("revision.updated_at DESC, revision.id DESC").Find(&rows).Error; err != nil {

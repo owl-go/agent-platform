@@ -54,6 +54,9 @@ func (provider *Provider) Create(ctx context.Context, request application.Provid
 		return application.ProviderResult{}, fmt.Errorf("resolve Image Model connection: %w", err)
 	}
 	defer clear(connection.APIKey)
+	if isBailianEndpoint(connection.Endpoint) {
+		return provider.createBailian(ctx, connection, request)
+	}
 	var httpRequest *http.Request
 	if len(request.Inputs) == 0 {
 		httpRequest, err = provider.generationRequest(ctx, connection.Endpoint, request)

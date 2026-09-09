@@ -149,7 +149,7 @@ An image supplied as an ordered input to an image-to-image request, either by ne
 _Avoid_: prompt-only input, mutable external URL, cross-User image
 
 **Prompt Optimization**:
-An explicit, separately charged AI Creation action that expands the current editable image prompt using the Administrator-configured model identifier, independent API Endpoint, write-only API Key, and optimization instruction. It replaces the draft prompt after success but does not submit an Image Generation Record.
+An explicit AI Creation action that expands the current editable image prompt using the Administrator-configured model identifier, independent API Endpoint, write-only API Key, and optimization instruction. It is charged from measured input and output Tokens, replaces the draft prompt after success, and does not submit an Image Generation Record.
 _Avoid_: Model Provider Connection, automatic image generation, hidden prompt rewrite, Runtime Engine default
 
 **Generated Image**:
@@ -157,7 +157,7 @@ An immutable image produced as one result of an Image Generation Record and reta
 _Avoid_: Artifact, attachment, temporary preview
 
 **Image Credit Rate**:
-The Administrator-managed Credit amount charged for one successfully Generated Image under an exact Image Model, size, and quality combination.
+The platform-fixed 50 Credit amount charged for one successfully Generated Image, independent of Image Model, size, quality, format, or background.
 _Avoid_: Model Credit Rate, Provider price, batch price
 
 **Image Credit Reservation**:

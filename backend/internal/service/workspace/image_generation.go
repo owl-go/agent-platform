@@ -3,7 +3,9 @@ package workspace
 import (
 	"context"
 	"errors"
+	"net/url"
 	"sort"
+	"strings"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	aicreationapplication "agent-platform/backend/internal/biz/aicreation/application"
@@ -11,6 +13,8 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+const fixedImageRateHundredths int64 = 5_000
 
 func (service *Service) ListImageGenerationOptions(ctx context.Context, _ *workspacev1.ListImageGenerationOptionsRequest) (*workspacev1.ListImageGenerationOptionsResponse, error) {
 	if _, err := service.owner(ctx); err != nil {
@@ -113,7 +117,7 @@ func (service *Service) CreateImageModel(ctx context.Context, request *workspace
 	}
 	apiKey := []byte(request.ApiKey)
 	defer clear(apiKey)
-	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions()
+	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions(request.Endpoint)
 	model, err := service.aicreation.CreateImageModel(ctx, aicreationapplication.CreateImageModelRequest{
 		AdministratorID: administrator.UserID, DisplayName: request.ProviderModelId, Endpoint: request.Endpoint, APIKey: apiKey, ModelID: request.ProviderModelId,
 		Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds,
@@ -125,19 +129,29 @@ func (service *Service) CreateImageModel(ctx context.Context, request *workspace
 	return imageModelResponse(model, true), nil
 }
 
-func platformImageOptions() ([]aicreationdomain.Mode, []string, []string, []string, []string, map[string]int64) {
+func platformImageOptions(endpoint string) ([]aicreationdomain.Mode, []string, []string, []string, []string, map[string]int64) {
 	modes := []aicreationdomain.Mode{aicreationdomain.ModeGenerate, aicreationdomain.ModeEdit}
 	sizes := []string{"1024x1024", "1536x1024", "1024x1536"}
 	qualities := []string{"auto", "low", "medium", "high"}
 	formats := []string{"png", "jpeg", "webp"}
 	backgrounds := []string{"opaque", "transparent"}
+	if isBailianImageEndpoint(endpoint) {
+		qualities = []string{"auto"}
+		formats = []string{"png"}
+		backgrounds = []string{"opaque"}
+	}
 	rates := make(map[string]int64, len(sizes)*len(qualities))
 	for _, size := range sizes {
 		for _, quality := range qualities {
-			rates[aicreationdomain.RateKey(size, quality)] = 100
+			rates[aicreationdomain.RateKey(size, quality)] = fixedImageRateHundredths
 		}
 	}
 	return modes, sizes, qualities, formats, backgrounds, rates
+}
+
+func isBailianImageEndpoint(endpoint string) bool {
+	parsed, err := url.Parse(endpoint)
+	return err == nil && strings.TrimRight(parsed.Path, "/") == "/api/v1/services/aigc/multimodal-generation/generation"
 }
 
 func (service *Service) ReviseImageModel(ctx context.Context, request *workspacev1.ReviseImageModelRequest) (*workspacev1.ImageModel, error) {
@@ -150,7 +164,7 @@ func (service *Service) ReviseImageModel(ctx context.Context, request *workspace
 		apiKey = []byte(*request.ReplacementApiKey)
 		defer clear(apiKey)
 	}
-	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions()
+	modes, sizes, qualities, formats, backgrounds, rates := platformImageOptions(request.Endpoint)
 	model, err := service.aicreation.ReviseImageModel(ctx, request.ImageModelId, request.ExpectedVersion, aicreationapplication.CreateImageModelRequest{
 		AdministratorID: administrator.UserID, DisplayName: request.ProviderModelId, Endpoint: request.Endpoint, APIKey: apiKey, ModelID: request.ProviderModelId,
 		Modes: modes, Sizes: sizes, Qualities: qualities, Formats: formats, Backgrounds: backgrounds,

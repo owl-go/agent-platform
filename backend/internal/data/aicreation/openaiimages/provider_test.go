@@ -79,6 +79,61 @@ func TestProviderEditsWithOrderedMultipartImages(t *testing.T) {
 	}
 }
 
+func TestProviderUsesBailianNativeGenerationEndpoint(t *testing.T) {
+	want := []byte("bailian-image")
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		switch request.URL.String() {
+		case "https://workspace.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation":
+			if request.Method != http.MethodPost || request.Header.Get("Authorization") != "Bearer secret" {
+				t.Fatalf("request = %s, authorization = %q", request.Method, request.Header.Get("Authorization"))
+			}
+			var body struct {
+				Model string `json:"model"`
+				Input struct {
+					Messages []struct {
+						Content []map[string]string `json:"content"`
+					} `json:"messages"`
+				} `json:"input"`
+				Parameters struct {
+					Size string `json:"size"`
+					N    int    `json:"n"`
+				} `json:"parameters"`
+			}
+			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			content := body.Input.Messages[0].Content
+			if body.Model != "qwen-image-3.0-pro" || body.Parameters.Size != "1024*1024" || body.Parameters.N != 1 || !strings.HasPrefix(content[0]["image"], "data:image/png;base64,") || content[1]["text"] != "make it warmer" {
+				t.Fatalf("body = %#v", body)
+			}
+			return jsonResponse(http.StatusOK, `{"output":{"choices":[{"message":{"content":[{"image":"https://result.aliyuncs.com/result.png"}]}}]}}`), nil
+		case "https://result.aliyuncs.com/result.png":
+			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(want))}, nil
+		default:
+			t.Fatalf("unexpected URL %q", request.URL.String())
+			return nil, nil
+		}
+	})}
+	provider, err := openaiimages.New(
+		resolver{connection: openaiimages.Connection{Endpoint: "https://workspace.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation", APIKey: []byte("secret")}},
+		sources{objects: map[string][]byte{"reference": []byte("source-image")}}, client,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Create(context.Background(), application.ProviderRequest{
+		ModelRevisionID: "revision-1", ModelID: "qwen-image-3.0-pro", Prompt: "make it warmer",
+		Inputs: []domain.ReferenceImage{{Position: 1, ObjectKey: "reference", MediaType: "image/png"}},
+		Size:   "1024x1024", Quality: "auto", Format: "png", Background: "opaque", Count: 1,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if len(result.Images) != 1 || !bytes.Equal(result.Images[0], want) {
+		t.Fatalf("Images = %q", result.Images)
+	}
+}
+
 func mustProvider(t *testing.T, endpoint string, objects map[string][]byte) *openaiimages.Provider {
 	t.Helper()
 	provider, err := openaiimages.New(
@@ -101,4 +156,12 @@ type sources struct{ objects map[string][]byte }
 
 func (source sources) Get(_ context.Context, key string) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(string(source.objects[key]))), nil
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) { return fn(request) }
+
+func jsonResponse(status int, body string) *http.Response {
+	return &http.Response{StatusCode: status, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(body))}
 }

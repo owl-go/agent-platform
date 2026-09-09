@@ -30,7 +30,7 @@ AI Creation Application
    |              |                    |
    v              v                    v
 Credits       Object Store         Provider ports
-port          Provider             |-- OpenAI Images Adapter
+port          Provider             |-- Direct Image Adapter (OpenAI Images / Alibaba Model Studio)
    |                               |-- Fake Image Adapter
    v                               |-- OpenAI text Adapter
 Credits context                    `-- Fake Prompt Adapter
@@ -75,7 +75,7 @@ An Image Model has a stable identity and immutable revisions. A revision freezes
 - supported mode: generate, edit, or both;
 - platform-supported sizes, qualities, formats, backgrounds, and default values presented as User request choices;
 - verification status and evidence timestamp;
-- a fixed first-release rate of 1.00 Credit for every allowed size and quality pair.
+- a platform-fixed rate of 50 Credits per successfully Generated Image for every allowed size and quality pair.
 
 Lifecycle states are `unverified`, `available`, `disabled`, and `deleted`. Creation and every material edit produce `unverified`; only a successful live test of the same revision permits transition to `available`. Endpoint, API Key version, model identifier, or option changes invalidate verification. Disable and delete immediately remove the model from User selection. Active records retain their frozen revision.
 
@@ -139,7 +139,7 @@ type ProviderRequest struct {
 }
 ```
 
-`ModelConnectionRef` contains only the frozen connection identity and version. The production Adapter receives a private credential-resolver dependency and loads the Endpoint and API Key just in time; credentials never cross the AI Creation Application interface. `Create` selects provider generate or edit transport from whether `Inputs` is empty. `ProviderResult` returns ordered encoded images plus safe request metadata; it never returns a provider URL for later unbounded fetching. The initial OpenAI Images Adapter accepts `b64_json`, decodes with explicit encoded and decoded limits, and rejects missing, duplicate, excessive, or malformed outputs.
+`ModelConnectionRef` contains only the frozen connection identity and version. The production Adapter receives a private credential-resolver dependency and loads the Endpoint and API Key just in time; credentials never cross the AI Creation Application interface. `Create` selects provider generate or edit transport from whether `Inputs` is empty. `ProviderResult` returns ordered encoded images plus safe request metadata; it never returns a provider URL for later unbounded fetching. OpenAI-compatible Endpoints use OpenAI Images, accept `b64_json`, decode with explicit encoded and decoded limits, and reject missing, duplicate, excessive, or malformed outputs. An Endpoint whose normalized path is exactly `/api/v1/services/aigc/multimodal-generation/generation` uses Alibaba Model Studio's native synchronous message payload; Reference Images are bounded data URLs, result downloads are limited to trusted HTTPS `aliyuncs.com` hosts and the same encoded-size ceiling, and the User options are restricted to auto quality, PNG, and opaque background. The transport is inferred from Endpoint shape so Administrator settings remain limited to model ID, Endpoint, and write-only API Key.
 
 The Application validates product and frozen-model allowlists before calling the port. The Adapter independently validates transport constraints and maps errors into stable classes:
 
@@ -408,3 +408,4 @@ The gate records exact model identifier, Image Model revision, test time, and sa
 - `docs/adr/0030-reserve-credits-for-concurrent-image-generation.md`
 - [OpenAI image generation guide](https://developers.openai.com/api/docs/guides/image-generation)
 - [OpenAI Images API reference](https://developers.openai.com/api/reference/resources/images)
+- [Alibaba Model Studio Qwen Image API reference](https://help.aliyun.com/zh/model-studio/qwen-image-generation-and-editing-api-reference)

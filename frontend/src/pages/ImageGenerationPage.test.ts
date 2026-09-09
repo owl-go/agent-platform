@@ -12,7 +12,7 @@ const model: ImageModel = {
   provider_model_id: "gpt-image-1", api_protocol: "openai_images",
   modes: ["generate"], sizes: ["1024x1024"], qualities: ["high"], formats: ["png"], backgrounds: ["opaque"],
   default_size: "1024x1024", default_quality: "high", default_format: "png", default_background: "opaque",
-  rates: [{ size: "1024x1024", quality: "high", amount_hundredths: 125 }], state: "available",
+  rates: [{ size: "1024x1024", quality: "high", amount_hundredths: 5000 }], state: "available",
   verified_at: "2026-09-08T00:00:00Z", created_at: "2026-09-08T00:00:00Z", updated_at: "2026-09-08T00:00:00Z", version: 2,
 };
 
@@ -35,7 +35,7 @@ describe("ImageGenerationPage", () => {
   });
 
   it("submits the selected compatible options and shows the reservation estimate", async () => {
-    const submit = vi.fn(async (input) => ({ id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name, prompt: input.prompt, mode: input.mode, size: input.size, quality: input.quality, format: input.format, background: input.background, requested_count: input.count, validated_count: 0, reservation_hundredths: 250, consumption_hundredths: 0, state: "pending", images: [], created_at: "2026-09-08T00:00:00Z", version: 1 }));
+    const submit = vi.fn(async (input) => ({ id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name, prompt: input.prompt, mode: input.mode, size: input.size, quality: input.quality, format: input.format, background: input.background, requested_count: input.count, validated_count: 0, reservation_hundredths: 10000, consumption_hundredths: 0, state: "pending", images: [], created_at: "2026-09-08T00:00:00Z", version: 1 }));
     const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [model], prompt_optimization_models: [] })), listImageGenerations: vi.fn(async () => []), submitImageGeneration: submit } as unknown as PlatformApi;
     const wrapper = mountPage(api);
     await flushPromises();
@@ -43,7 +43,7 @@ describe("ImageGenerationPage", () => {
     const count = wrapper.findComponent({ name: "ElInputNumber" });
     count.vm.$emit("update:modelValue", 2);
     await flushPromises();
-    expect(wrapper.text()).toContain("2.50");
+    expect(wrapper.text()).toContain("100.00");
     await wrapper.get(".image-primary-action").trigger("click");
     await flushPromises();
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ image_model_id: model.id, prompt: "一艘黄铜飞船", count: 2, size: "1024x1024" }));
