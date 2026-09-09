@@ -105,6 +105,7 @@ func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageM
 		}
 		var existing modelRecord
 		err := tx.Select("id", "version").Where("id = ?", row.ID).Take(&existing).Error
+		revisionExists := false
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			if model.PredecessorID != "" {
@@ -122,6 +123,7 @@ func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageM
 		case err != nil:
 			return err
 		default:
+			revisionExists = true
 			result := tx.Model(&modelRecord{}).Where("id = ? AND version = ?", row.ID, row.Version-1).Updates(map[string]any{"state": row.State, "verified_at": row.VerifiedAt, "updated_at": row.UpdatedAt, "version": row.Version})
 			if result.Error != nil {
 				return result.Error
@@ -131,11 +133,8 @@ func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageM
 			}
 		}
 		current := tx.Model(&stableModelRecord{}).Where("id = ?", model.ID)
-		if model.PredecessorID != "" {
-			current = current.Where("current_revision_id = ?", model.PredecessorID)
-		} else {
-			current = current.Where("current_revision_id IS NULL OR current_revision_id = ?", model.RevisionID)
-		}
+		guard, arguments := currentImageModelRevisionGuard(model, revisionExists)
+		current = current.Where(guard, arguments...)
 		result := current.Update("current_revision_id", model.RevisionID)
 		if result.Error != nil {
 			return result.Error
@@ -146,6 +145,16 @@ func (repository *Repository) SaveModel(ctx context.Context, model domain.ImageM
 		return nil
 	})
 	return model, err
+}
+
+func currentImageModelRevisionGuard(model domain.ImageModelRevision, revisionExists bool) (string, []any) {
+	if revisionExists {
+		return "current_revision_id = ?", []any{model.RevisionID}
+	}
+	if model.PredecessorID != "" {
+		return "current_revision_id = ?", []any{model.PredecessorID}
+	}
+	return "current_revision_id IS NULL OR current_revision_id = ?", []any{model.RevisionID}
 }
 
 func (repository *Repository) DeleteModel(ctx context.Context, id string, expectedVersion int64, at time.Time) error {
