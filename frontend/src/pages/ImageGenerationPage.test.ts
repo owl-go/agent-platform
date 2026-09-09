@@ -122,6 +122,26 @@ describe("ImageGenerationPage", () => {
     wrapper.unmount();
   });
 
+  it("submits a valid custom image size and keeps the fixed image estimate", async () => {
+    const submit = vi.fn(async (input) => ({ id: "record-1", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name, prompt: input.prompt, mode: input.mode, size: input.size, quality: input.quality, format: input.format, background: input.background, requested_count: input.count, validated_count: 0, reservation_hundredths: 5000, consumption_hundredths: 0, state: "pending", images: [], created_at: "2026-09-08T00:00:00Z", version: 1 }));
+    const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [model], prompt_optimization_models: [] })), listImageGenerations: vi.fn(async () => []), submitImageGeneration: submit } as unknown as PlatformApi;
+    const wrapper = mountPage(api);
+    await flushPromises();
+
+    wrapper.findAllComponents({ name: "ElSelect" })[1]!.vm.$emit("update:modelValue", "__custom__");
+    await flushPromises();
+    await wrapper.get(".custom-image-size input").setValue("1920x1080");
+    wrapper.findComponent({ name: "ElInputNumber" }).vm.$emit("update:modelValue", 1);
+    await wrapper.get("textarea").setValue("宽屏城市天际线");
+    await flushPromises();
+    expect(wrapper.text()).toContain("50.00");
+    await wrapper.get(".image-primary-action").trigger("click");
+    await flushPromises();
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ size: "1920x1080", count: 1 }));
+    wrapper.unmount();
+  });
+
   it("keeps Image Model credentials separate from Model Provider Connections", async () => {
     const unverified = { ...model, endpoint: "https://images.example.test/v1", state: "unverified" as const, verified_at: undefined };
     const api = {

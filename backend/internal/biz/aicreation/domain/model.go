@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -80,7 +81,7 @@ func (model ImageModelRevision) ValidateRequest(request GenerationRequest) error
 	if prompt == "" || len([]rune(request.Prompt)) > 10_000 || request.Count < 1 || request.Count > 4 {
 		return fmt.Errorf("%w: prompt and output count are invalid", ErrInvalid)
 	}
-	if !contains(model.Modes, request.Mode) || !contains(model.Sizes, request.Size) || !contains(model.Qualities, request.Quality) || !contains(model.Formats, request.Format) || !contains(model.Backgrounds, request.Background) {
+	if !contains(model.Modes, request.Mode) || !validImageSize(request.Size) || !contains(model.Qualities, request.Quality) || !contains(model.Formats, request.Format) || !contains(model.Backgrounds, request.Background) {
 		return fmt.Errorf("%w: unsupported Image Model option", ErrInvalid)
 	}
 	if request.Format == "jpeg" && request.Background == "transparent" {
@@ -100,6 +101,9 @@ func (model ImageModelRevision) MaximumReservation(size, quality string, count i
 		return 0, fmt.Errorf("%w: output count is invalid", ErrInvalid)
 	}
 	rate, ok := model.Rates[rateKey(size, quality)]
+	if !ok && validImageSize(size) {
+		rate, ok = model.Rates[rateKey(model.DefaultSize, quality)]
+	}
 	if !ok || rate < 0 {
 		return 0, fmt.Errorf("%w: Image Credit Rate is missing", ErrInvalid)
 	}
@@ -144,6 +148,16 @@ func ValidateAPIEndpoint(value string) error {
 func RateKey(size, quality string) string { return rateKey(size, quality) }
 func rateKey(size, quality string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(size)) + "." + base64.RawURLEncoding.EncodeToString([]byte(quality))
+}
+
+func validImageSize(size string) bool {
+	parts := strings.Split(size, "x")
+	if len(parts) != 2 {
+		return false
+	}
+	width, widthErr := strconv.ParseInt(parts[0], 10, 32)
+	height, heightErr := strconv.ParseInt(parts[1], 10, 32)
+	return widthErr == nil && heightErr == nil && width > 0 && height > 0 && width <= 64_000_000 && height <= 64_000_000 && width*height <= 64_000_000
 }
 
 func contains[T comparable](values []T, wanted T) bool {

@@ -192,6 +192,8 @@ Object.assign((zh as unknown as { imageGeneration: Record<string,string> }).imag
 Object.assign((en as unknown as { imageGeneration: Record<string,string> }).imageGeneration, { useAsReference: "Use as reference", noEditModel: "No available model supports image editing", endpoint: "API endpoint", apiKey: "API Key", keepApiKey: "Leave blank to keep the current independent API Key", apiKeyRequired: "A separate API Key is required", secretSet: "Key configured", secretMissing: "Key missing", verifyFailed: "Image Model test failed. Check the Image API endpoint, API Key, and model ID.", optimizationPrompt: "Prompt optimization instruction" });
 Object.assign((zh as unknown as { imageGeneration: Record<string,string> }).imageGeneration, { regenerateEstimate: "将按当前模型和费率重新生成整批图片，最多预留 {value} 积分。继续吗？" });
 Object.assign((en as unknown as { imageGeneration: Record<string,string> }).imageGeneration, { regenerateEstimate: "Regenerate the full batch with the current model and rate, reserving up to {value} Credits?" });
+Object.assign((zh as unknown as { imageGeneration: Record<string,string> }).imageGeneration, { customSize: "自定义尺寸", customSizePlaceholder: "例如 1280x720", customSizeHelp: "请输入宽x高，总像素不超过 6400 万", customSizeInvalid: "尺寸格式无效或超过 6400 万像素" });
+Object.assign((en as unknown as { imageGeneration: Record<string,string> }).imageGeneration, { customSize: "Custom size", customSizePlaceholder: "For example, 1280x720", customSizeHelp: "Enter widthxheight, up to 64 million pixels", customSizeInvalid: "Invalid size or more than 64 million pixels" });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;

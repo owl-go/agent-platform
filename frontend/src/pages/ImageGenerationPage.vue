@@ -27,6 +27,8 @@ const promptModels = ref<PromptOptimizationCandidate[]>([]);
 const promptModelID = ref("");
 const previousPrompt = ref("");
 const originalPrompt = ref("");
+const customSize = ref("");
+const customSizeMode = ref(false);
 const optimizing = ref(false);
 const previewPosition = ref<number>();
 let streamAbort: AbortController | undefined;
@@ -39,7 +41,8 @@ let disposed = false;
 const form = reactive<ImageGenerationInput>({ image_model_id: "", mode: "generate", prompt: "", size: "", quality: "", format: "png", background: "opaque", count: 1 });
 const selectedModel = computed(() => models.value.find((model) => model.id === form.image_model_id));
 const locked = computed(() => active.value && ["pending", "running"].includes(active.value.state));
-const estimate = computed(() => selectedModel.value?.rates.find((rate) => rate.size === form.size && rate.quality === form.quality)?.amount_hundredths ?? 0);
+const validSize = computed(() => isValidImageSize(form.size));
+const estimate = computed(() => imageRate(selectedModel.value, form.size, form.quality) ?? 0);
 const administrator = computed(() => auth.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const preferenceKey = computed(() => auth.session.state.value.kind === "authenticated" ? `image-generation-options:${auth.session.state.value.currentUser.id}` : "");
 
@@ -61,11 +64,21 @@ function normalizeRecord(record: ImageGenerationRecord): ImageGenerationRecord {
 watch(selectedModel, (model) => {
   if (!model) return;
   if (!model.modes.includes(form.mode)) form.mode = model.modes[0] ?? "generate";
-  if (!model.sizes.includes(form.size)) form.size = model.default_size;
+  if (!model.sizes.includes(form.size) && !isValidImageSize(form.size)) form.size = model.default_size;
+  customSizeMode.value = !model.sizes.includes(form.size);
+  if (customSizeMode.value) customSize.value = form.size;
   if (!model.qualities.includes(form.quality)) form.quality = model.default_quality;
   if (!model.formats.includes(form.format)) form.format = model.default_format;
   if (!model.backgrounds.includes(form.background)) form.background = model.default_background;
 });
+watch(() => form.size, (size) => {
+  const model = selectedModel.value;
+  if (model && size && !model.sizes.includes(size)) {
+    customSizeMode.value = true;
+    customSize.value = size;
+  }
+});
+watch(customSize, (size) => { if (customSizeMode.value) form.size = normalizeImageSize(size); });
 watch(() => ({ image_model_id: form.image_model_id, mode: form.mode, size: form.size, quality: form.quality, format: form.format, background: form.background, count: form.count }), (options) => {
   if (preferenceKey.value) localStorage.setItem(preferenceKey.value, JSON.stringify(options));
 }, { deep: true });
@@ -125,7 +138,7 @@ function startStream() {
 }
 
 async function submit() {
-  if (locked.value || !form.prompt.trim()) return;
+  if (locked.value || !form.prompt.trim() || !validSize.value) return;
   submitting.value = true; error.value = "";
   try {
     submitRequestID ||= crypto.randomUUID();
@@ -171,7 +184,7 @@ async function stop() {
 async function regenerate() {
   if (!active.value || locked.value) return;
   const currentModel = models.value.find((model) => model.id === active.value?.image_model_id);
-  const currentRate = currentModel?.rates.find((rate) => rate.size === active.value?.size && rate.quality === active.value?.quality)?.amount_hundredths;
+  const currentRate = imageRate(currentModel, active.value.size, active.value.quality);
   if (currentRate === undefined || !window.confirm(t("imageGeneration.regenerateEstimate", { value: ((currentRate * active.value.requested_count) / 100).toFixed(2) }))) return;
   try { regenerationRequestID ||= crypto.randomUUID(); active.value = normalizeRecord(await api.regenerateImageGeneration(active.value.id, regenerationRequestID)); regenerationRequestID = ""; history.value.unshift(active.value); window.dispatchEvent(new Event("credits-updated")); lastEventID = 0; startStream(); }
   catch { error.value = t("imageGeneration.requestFailed"); }
@@ -182,11 +195,42 @@ function reuseSettings() {
   const model = models.value.find((item) => item.id === active.value?.image_model_id);
   if (!model) return;
   form.image_model_id = model.id; form.mode = active.value.mode; form.prompt = active.value.prompt;
-  form.size = model.sizes.includes(active.value.size) ? active.value.size : model.default_size;
+  form.size = isValidImageSize(active.value.size) ? active.value.size : model.default_size;
+  customSizeMode.value = !model.sizes.includes(form.size);
+  customSize.value = customSizeMode.value ? form.size : "";
   form.quality = model.qualities.includes(active.value.quality) ? active.value.quality : model.default_quality;
   form.format = model.formats.includes(active.value.format) ? active.value.format : model.default_format;
   form.background = model.backgrounds.includes(active.value.background) ? active.value.background : model.default_background;
   form.count = active.value.requested_count;
+}
+
+function selectSize(value: string) {
+  if (value === "__custom__") {
+    customSizeMode.value = true;
+    form.size = normalizeImageSize(customSize.value);
+    return;
+  }
+  customSizeMode.value = false;
+  form.size = value;
+}
+
+function normalizeImageSize(size: string): string {
+  return size.trim().toLowerCase().replaceAll("×", "x").replace(/\s+/g, "");
+}
+
+function isValidImageSize(size: string): boolean {
+  const match = /^([1-9]\d*)x([1-9]\d*)$/.exec(size);
+  if (!match) return false;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  return Number.isSafeInteger(width) && Number.isSafeInteger(height) && width <= 64_000_000 && height <= 64_000_000 && width * height <= 64_000_000;
+}
+
+function imageRate(model: ImageModel | undefined, size: string, quality: string): number | undefined {
+  if (!model) return undefined;
+  return model.rates.find((rate) => rate.size === size && rate.quality === quality)?.amount_hundredths
+    ?? model.rates.find((rate) => rate.size === model.default_size && rate.quality === quality)?.amount_hundredths
+    ?? undefined;
 }
 
 async function deleteRecord() {
@@ -348,7 +392,7 @@ onBeforeUnmount(() => {
           <el-form-item :label="t('imageGeneration.prompt')"><template #label><span class="prompt-label"><span>{{ t('imageGeneration.prompt') }}</span><span><el-button v-if="previousPrompt" text size="small" :disabled="locked" @click="undoOptimization">Undo</el-button><el-button text size="small" :loading="optimizing" :disabled="locked || !promptModelID || !form.prompt.trim()" @click="optimizePrompt">{{ t('imageGeneration.optimize') }}</el-button></span></span></template><el-input v-model="form.prompt" type="textarea" :rows="7" maxlength="10000" show-word-limit :placeholder="t('imageGeneration.promptPlaceholder')" :disabled="locked" /></el-form-item>
           <p v-if="promptModels.length" class="image-optimization-model">{{ t('imageGeneration.optimizationModel') }} · {{ promptModels[0]?.display_name }}</p>
           <div class="image-option-grid">
-            <el-form-item :label="t('imageGeneration.size')"><el-select v-model="form.size" :disabled="locked"><el-option v-for="value in selectedModel?.sizes" :key="value" :label="value" :value="value" /></el-select></el-form-item>
+            <el-form-item :label="t('imageGeneration.size')"><el-select :model-value="customSizeMode ? '__custom__' : form.size" :disabled="locked" @update:model-value="selectSize"><el-option v-for="value in selectedModel?.sizes" :key="value" :label="value" :value="value" /><el-option :label="t('imageGeneration.customSize')" value="__custom__" /></el-select><el-input v-if="customSizeMode" v-model="customSize" class="custom-image-size" :disabled="locked" :placeholder="t('imageGeneration.customSizePlaceholder')" /><small v-if="customSizeMode" :class="{ 'image-size-invalid': customSize && !validSize }">{{ customSize && !validSize ? t('imageGeneration.customSizeInvalid') : t('imageGeneration.customSizeHelp') }}</small></el-form-item>
             <el-form-item :label="t('imageGeneration.count')"><el-input-number v-model="form.count" :min="1" :max="4" :disabled="locked" /></el-form-item>
             <el-form-item :label="t('imageGeneration.quality')"><el-select v-model="form.quality" :disabled="locked"><el-option v-for="value in selectedModel?.qualities" :key="value" :label="value" :value="value" /></el-select></el-form-item>
             <el-form-item :label="t('imageGeneration.format')"><el-select v-model="form.format" :disabled="locked"><el-option v-for="value in selectedModel?.formats" :key="value" :label="value.toUpperCase()" :value="value" /></el-select></el-form-item>
@@ -356,7 +400,7 @@ onBeforeUnmount(() => {
           </div>
           <p class="image-credit-estimate">{{ t('imageGeneration.estimate', { value: ((estimate * form.count) / 100).toFixed(2) }) }}</p>
           <el-button v-if="locked" class="image-primary-action" type="danger" :icon="VideoPause" @click="stop">{{ t('imageGeneration.stop') }}</el-button>
-          <el-button v-else class="image-primary-action" type="primary" :icon="MagicStick" :loading="submitting" :disabled="!form.prompt.trim() || (form.mode === 'edit' && references.length === 0)" @click="submit">{{ t('imageGeneration.generate') }}</el-button>
+          <el-button v-else class="image-primary-action" type="primary" :icon="MagicStick" :loading="submitting" :disabled="!form.prompt.trim() || !validSize || (form.mode === 'edit' && references.length === 0)" @click="submit">{{ t('imageGeneration.generate') }}</el-button>
         </el-form>
       </aside>
 

@@ -20,7 +20,7 @@ func TestRateKeyCanBeStoredInPostgresJSONB(t *testing.T) {
 	}
 }
 
-func TestAvailableImageModelAcceptsOnlyPublishedCapabilities(t *testing.T) {
+func TestAvailableImageModelAcceptsPublishedCapabilitiesAndCustomSize(t *testing.T) {
 	model := availableModel()
 
 	if err := model.ValidateRequest(domain.GenerationRequest{
@@ -29,10 +29,17 @@ func TestAvailableImageModelAcceptsOnlyPublishedCapabilities(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("ValidateRequest() error = %v", err)
 	}
+	if err := model.ValidateRequest(domain.GenerationRequest{
+		Mode: domain.ModeGenerate, Prompt: "a widescreen landscape", Size: "1920x1080",
+		Quality: "high", Format: "png", Background: "opaque", Count: 1,
+	}); err != nil {
+		t.Fatalf("ValidateRequest(custom size) error = %v", err)
+	}
 
 	invalid := []domain.GenerationRequest{
 		{Mode: domain.ModeEdit, Prompt: "change the sky", Size: "1024x1024", Quality: "high", Format: "png", Background: "opaque", Count: 1},
-		{Mode: domain.ModeGenerate, Prompt: "x", Size: "512x512", Quality: "high", Format: "png", Background: "opaque", Count: 1},
+		{Mode: domain.ModeGenerate, Prompt: "x", Size: "1920*1080", Quality: "high", Format: "png", Background: "opaque", Count: 1},
+		{Mode: domain.ModeGenerate, Prompt: "x", Size: "8001x8000", Quality: "high", Format: "png", Background: "opaque", Count: 1},
 		{Mode: domain.ModeGenerate, Prompt: "x", Size: "1024x1024", Quality: "high", Format: "jpeg", Background: "transparent", Count: 1},
 		{Mode: domain.ModeGenerate, Prompt: "x", Size: "1024x1024", Quality: "high", Format: "png", Background: "opaque", Count: 5},
 	}
@@ -77,6 +84,17 @@ func TestImageCreditReservationUsesFullRequestedBatch(t *testing.T) {
 	}
 	if got != 500 {
 		t.Fatalf("MaximumReservation() = %d, want 500 hundredths", got)
+	}
+}
+
+func TestCustomImageSizeUsesTheDefaultSizeRate(t *testing.T) {
+	model := availableModel()
+	got, err := model.MaximumReservation("1920x1080", "high", 2)
+	if err != nil {
+		t.Fatalf("MaximumReservation() error = %v", err)
+	}
+	if got != 250 {
+		t.Fatalf("MaximumReservation() = %d, want 250 hundredths", got)
 	}
 }
 
