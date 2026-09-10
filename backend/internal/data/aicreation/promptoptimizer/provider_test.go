@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/biz/aicreation/application"
@@ -13,35 +14,36 @@ import (
 	"agent-platform/backend/internal/data/aicreation/promptoptimizer"
 )
 
-func TestOptimizerUsesIndependentResponsesConfiguration(t *testing.T) {
+func TestOptimizerUsesIndependentChatCompletionsConfiguration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != "/v1/responses" || request.Header.Get("Authorization") != "Bearer secret" {
+		if request.URL.Path != "/v1/chat/completions" || request.Header.Get("Authorization") != "Bearer secret" {
 			t.Fatalf("request = %s %q", request.URL.Path, request.Header.Get("Authorization"))
 		}
 		var body struct {
-			Input []struct {
+			Messages []struct {
 				Role    string `json:"role"`
-				Content []struct {
-					Type string `json:"type"`
-					Text string `json:"text"`
-				} `json:"content"`
-			} `json:"input"`
-			Stream bool `json:"stream"`
+				Content string `json:"content"`
+			} `json:"messages"`
+			Stream        bool `json:"stream"`
+			StreamOptions struct {
+				IncludeUsage bool `json:"include_usage"`
+			} `json:"stream_options"`
 		}
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
 			t.Fatal(err)
 		}
-		if !body.Stream || len(body.Input) != 1 || body.Input[0].Role != "user" || len(body.Input[0].Content) != 1 || body.Input[0].Content[0].Type != "input_text" || body.Input[0].Content[0].Text != "cat" {
+		if !body.Stream || !body.StreamOptions.IncludeUsage || len(body.Messages) != 2 || body.Messages[0].Role != "system" || !strings.Contains(body.Messages[0].Content, "Improve the image prompt.") || body.Messages[1].Role != "user" || body.Messages[1].Content != "cat" {
 			t.Fatalf("body = %#v", body)
 		}
 		writer.Header().Set("Content-Type", "text/event-stream")
-		_, _ = writer.Write([]byte("event: response.output_text.delta\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"Detailed \"}\n\n"))
-		_, _ = writer.Write([]byte("event: response.output_text.delta\ndata: {\"type\":\"response.output_text.delta\",\"delta\":\"prompt\"}\n\n"))
-		_, _ = writer.Write([]byte("event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":7,\"output_tokens\":11}}}\n\n"))
+		_, _ = writer.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"Detailed \"}}]}\n\n"))
+		_, _ = writer.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"prompt\"}}]}\n\n"))
+		_, _ = writer.Write([]byte("data: {\"choices\":[],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":11}}\n\n"))
+		_, _ = writer.Write([]byte("data: [DONE]\n\n"))
 	}))
 	defer server.Close()
 	provider := mustOptimizer(t, resolver{openaiimages.Connection{Endpoint: server.URL + "/v1", APIKey: []byte("secret")}})
-	result, err := provider.Optimize(context.Background(), application.OptimizationRequest{Candidate: domain.PromptOptimizationCandidate{ModelID: "gpt-5-mini", Protocol: "openai_responses", Instruction: "Improve the image prompt."}, Prompt: "cat", Locale: "en-US"})
+	result, err := provider.Optimize(context.Background(), application.OptimizationRequest{Candidate: domain.PromptOptimizationCandidate{ModelID: "gpt-5-mini", Protocol: "openai_chat", Instruction: "Improve the image prompt."}, Prompt: "cat", Locale: "en-US"})
 	if err != nil || result.Prompt != "Detailed prompt" || result.InputTokens != 7 || result.OutputTokens != 11 {
 		t.Fatalf("result = %+v, error = %v", result, err)
 	}

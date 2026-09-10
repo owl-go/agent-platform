@@ -16,7 +16,7 @@ The first release provides an authenticated Web workbench for:
 
 The first release does not provide conversational image editing, Workflow or Scheduled Trigger integration, Workflow credential access, an external image-generation API, public sharing, cross-User galleries, or Administrator access to User content.
 
-The OpenAI Image API is the first image protocol because it is the direct generate/edit interface for a single prompt. The Adapter must not use the Responses image-generation tool as a hidden substitute. Prompt Optimization separately uses the OpenAI Responses protocol.
+The OpenAI Image API is the first image protocol because it is the direct generate/edit interface for a single prompt. The Adapter must not use the Responses image-generation tool as a hidden substitute. Prompt Optimization separately uses the configured OpenAI-compatible Chat Completions protocol.
 
 ## Context And Dependencies
 
@@ -165,7 +165,7 @@ type PromptOptimizer interface {
 }
 ```
 
-The interface accepts the configured model and instruction, current prompt, locale, and 10,000-character output limit. The Responses Adapter resolves the setting's independent Endpoint and encrypted API Key behind this seam. Success returns only expanded text and normalized token usage. Over-limit output fails without changing the editable prompt.
+The interface accepts the configured model and instruction, current prompt, locale, and 10,000-character output limit. The Chat Completions Adapter resolves the setting's independent Endpoint and encrypted API Key behind this seam. Success returns only expanded text and normalized token usage. Prompt optimization is not charged. Over-limit output fails without changing the editable prompt.
 
 Live Image Model verification calls the same `ImageProvider.Create` seam with one platform-owned minimal prompt and the configured default options. It validates actual returned bytes. Because image providers commonly take longer than ordinary control-plane requests, this one route receives a four-minute application deadline and the deployment proxy permits five minutes for its response headers; ordinary unary and streaming timeout policies remain unchanged. Tests use the fake Adapter at this interface rather than testing through provider-specific helpers.
 
@@ -279,7 +279,7 @@ Deleting a record never refunds Credits. It removes all private execution linkag
 
 The avatar shows Available Credit. The Credit panel separately shows Credit Balance, Available Credit, active reserved amount, daily remaining, and redeemed balance.
 
-Prompt Optimization uses normal text Model Credit Rate admission and settlement and joins the existing serialized text invocation queue. Each accepted click is independently charged. The workbench disables image submission while optimization is in flight and disables Prompt Optimization while an image record is active, so it never creates an ambiguous prompt or batch snapshot.
+Prompt Optimization is a direct, free Chat Completions request and does not enter the text Model Credit Rate admission or settlement path. The workbench disables image submission while optimization is in flight and disables Prompt Optimization while an image record is active, so it never creates an ambiguous prompt or batch snapshot.
 
 ## Durable Execution
 
@@ -387,7 +387,7 @@ A separate opt-in gate uses a protected OpenAI-compatible connection and verifie
 - one image edit with a Reference Image;
 - every platform-advertised default option used by the enabled test model;
 - actual output decoding, format, dimensions, checksums, and object persistence;
-- one Responses Prompt Optimization when configured;
+- one Chat Completions Prompt Optimization when configured;
 - secret and User-content canaries are absent from logs, events, errors, and ordinary database fields.
 
 The gate records exact model identifier, Image Model revision, test time, and safe outcome but never credentials, prompts, or image bytes. Missing credentials, provider organization verification, or network access causes an explicit skip and remains missing production evidence.

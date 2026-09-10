@@ -294,7 +294,7 @@ func (repository *Repository) ListPromptCandidates(ctx context.Context) ([]domai
 	if err != nil {
 		return nil, err
 	}
-	return []domain.PromptOptimizationCandidate{{ProviderModelID: row.ModelID, DisplayName: row.ModelID, ProviderType: "openai", ModelID: row.ModelID, Protocol: "openai_responses", Endpoint: row.Endpoint, APIKeyConfigured: len(row.APIKeyCiphertext) > 0, Instruction: row.Instruction}}, nil
+	return []domain.PromptOptimizationCandidate{{ProviderModelID: row.ModelID, DisplayName: row.ModelID, ProviderType: "openai", ModelID: row.ModelID, Protocol: "openai_chat", Endpoint: row.Endpoint, APIKeyConfigured: len(row.APIKeyCiphertext) > 0, Instruction: row.Instruction}}, nil
 }
 
 func (repository *Repository) ReplacePromptCandidates(ctx context.Context, administratorID string, candidates []domain.PromptOptimizationCandidate, replacementAPIKey []byte) error {

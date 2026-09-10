@@ -56,7 +56,7 @@ func (service *Service) ReplacePromptOptimizationCandidates(ctx context.Context,
 	var apiKey []byte
 	for _, item := range request.Items {
 		apiKey = []byte(item.ApiKey)
-		candidates = append(candidates, aicreationdomain.PromptOptimizationCandidate{ProviderModelID: item.ProviderModelId, DisplayName: item.ProviderModelId, ProviderType: "openai", ModelID: item.ProviderModelId, Protocol: "openai_responses", Endpoint: item.Endpoint, APIKeyConfigured: len(apiKey) > 0, Instruction: item.Instruction})
+		candidates = append(candidates, aicreationdomain.PromptOptimizationCandidate{ProviderModelID: item.ProviderModelId, DisplayName: item.ProviderModelId, ProviderType: "openai", ModelID: item.ProviderModelId, Protocol: "openai_chat", Endpoint: item.Endpoint, APIKeyConfigured: len(apiKey) > 0, Instruction: item.Instruction})
 	}
 	defer clear(apiKey)
 	if len(candidates) == 1 && len(apiKey) == 0 {

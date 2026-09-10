@@ -141,8 +141,8 @@ type Service struct {
 }
 
 func (service *Service) EnablePromptOptimization(optimizer PromptOptimizer, credits TextCredits) error {
-	if optimizer == nil || credits == nil {
-		return fmt.Errorf("Prompt Optimizer and text Credits are required")
+	if optimizer == nil {
+		return fmt.Errorf("Prompt Optimizer is required")
 	}
 	service.optimizer, service.textCredits = optimizer, credits
 	return nil
@@ -161,7 +161,7 @@ func (service *Service) ReplacePromptCandidates(ctx context.Context, administrat
 	}
 	for _, candidate := range candidates {
 		candidate.APIKeyConfigured = candidate.APIKeyConfigured || len(replacementAPIKey) > 0
-		if candidate.ModelID == "" || strings.TrimSpace(candidate.Instruction) == "" || len([]rune(candidate.Instruction)) > 10_000 || !candidate.APIKeyConfigured || candidate.Protocol != "openai_responses" {
+		if candidate.ModelID == "" || strings.TrimSpace(candidate.Instruction) == "" || len([]rune(candidate.Instruction)) > 10_000 || !candidate.APIKeyConfigured || candidate.Protocol != "openai_chat" {
 			return fmt.Errorf("%w: Prompt Optimization candidate is invalid", domain.ErrInvalid)
 		}
 		if err := domain.ValidateAPIEndpoint(candidate.Endpoint); err != nil {
@@ -172,7 +172,7 @@ func (service *Service) ReplacePromptCandidates(ctx context.Context, administrat
 }
 
 func (service *Service) OptimizePrompt(ctx context.Context, ownerID, timezone, candidateID, prompt, locale string) (OptimizationResult, error) {
-	if service.optimizer == nil || service.textCredits == nil {
+	if service.optimizer == nil {
 		return OptimizationResult{}, fmt.Errorf("Prompt Optimization is unavailable")
 	}
 	if strings.TrimSpace(prompt) == "" || len([]rune(prompt)) > 10_000 {
@@ -201,22 +201,12 @@ func (service *Service) OptimizePrompt(ctx context.Context, ownerID, timezone, c
 	if candidate.ProviderModelID == "" {
 		return OptimizationResult{}, domain.ErrNotFound
 	}
-	executionID := "prompt-optimization-" + uuid.NewString()
-	admission, err := service.textCredits.Admit(ctx, ownerID, executionID, timezone, candidate)
-	if err != nil {
-		return OptimizationResult{}, err
-	}
 	result, err := service.optimizer.Optimize(ctx, OptimizationRequest{Candidate: candidate, Prompt: prompt, Locale: locale})
 	if err != nil {
-		_ = service.textCredits.Abort(ctx, admission)
 		return OptimizationResult{}, err
 	}
 	if strings.TrimSpace(result.Prompt) == "" || len([]rune(result.Prompt)) > 10_000 {
-		_ = service.textCredits.Abort(ctx, admission)
 		return OptimizationResult{}, fmt.Errorf("%w: optimized prompt is invalid", domain.ErrInvalid)
-	}
-	if err := service.textCredits.SettleText(ctx, admission, result.InputTokens, result.OutputTokens); err != nil {
-		return OptimizationResult{}, err
 	}
 	return result, nil
 }

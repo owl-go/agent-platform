@@ -57,7 +57,7 @@ Show results in the right pane on desktop and below settings on mobile. Users ca
 37. As a User, I want Prompt Optimization to replace the editable prompt only after success, so that a failed optimization does not destroy my text.
 38. As a User, I want optimizing a prompt not to generate images, so that I can review and edit the result before spending Image Credits.
 39. As a User, I want one-step undo after Prompt Optimization, so that I can restore the immediately preceding prompt.
-40. As a User, I want every accepted Prompt Optimization click charged as its own text invocation, so that its Credit Consumption is explicit and auditable.
+40. As a User, I want Prompt Optimization to be free of Image Generation Credits, so that I can refine a prompt before deciding whether to submit an image request.
 41. As a User, I want over-limit optimized text rejected without changing my prompt, so that the form remains valid.
 42. As a User, I want to select only size, quality, format, and background combinations supported by the chosen Image Model, so that invalid requests fail before provider work.
 43. As a User, I want to request one to four images, so that I can choose between a single result and a small batch.
@@ -117,7 +117,7 @@ Show results in the right pane on desktop and below settings on mobile. Users ca
 - Make the AI Creation Application the highest shared testing and integration seam. HTTP, SSE, Worker, Provider, Credits, and Object Storage details remain behind injected ports.
 - Use a minimal `ImageProvider.Create` interface for both generation and editing. A request with no Reference Images uses the provider's generation operation; a request with ordered inputs uses its edit operation.
 - Implement the first production adapter against the direct OpenAI Images API. Do not route image creation through a Runtime Engine or silently substitute the Responses image-generation tool.
-- Use a separate `PromptOptimizer.Optimize` interface with direct OpenAI Responses and OpenAI Chat Completions adapters plus a fake adapter. Prompt Optimization joins the existing serialized text-model admission path and is independent of image submission.
+- Use a separate `PromptOptimizer.Optimize` interface with a direct OpenAI-compatible Chat Completions adapter plus a fake adapter. Prompt Optimization is independent of image submission and is not charged.
 - Resolve endpoint and API Key from the frozen Model Provider Connection revision just in time inside the production adapter. Credentials do not cross the AI Creation Application interface.
 - Give each Image Model a stable identity and immutable revisions containing display metadata, connection revision, exact model identifier, protocol, supported modes, option allowlists, defaults, verification evidence, and complete Image Credit Rate revisions.
 - Use lifecycle states `unverified`, `available`, `disabled`, and `deleted`. A material revision is unverified until the same revision passes a live output test; only available revisions appear in User selection.
@@ -127,7 +127,7 @@ Show results in the right pane on desktop and below settings on mobile. Users ca
 - Persist aggregate transitions, public progress events, accepted output metadata, reservation settlement, and Credit Consumption atomically when those facts change together.
 - Enforce one non-terminal Image Generation Record and one active Image Credit Reservation per User with database constraints in addition to application validation.
 - Reserve the maximum batch cost before record admission while preserving how much came from Daily Credit Allocation and Redeemed Credit Balance. Settlement charges only validated outputs and returns only amounts still valid under the original source rules.
-- Keep Image Generation outside the existing per-User serialized Runtime-backed model queue, allowing one image batch to overlap Session or Workflow work. Prompt Optimization remains in the text invocation queue.
+- Keep Image Generation outside the existing per-User serialized Runtime-backed model queue, allowing one image batch to overlap Session or Workflow work. Prompt Optimization is a direct free request and does not enter that queue.
 - Claim durable pending work with a bounded database lease and a persisted provider-dispatch marker. Reclaim only work proven not to have reached the provider; terminate expired post-dispatch work as outcome unknown without a blind retry.
 - Propagate cancellation through context, close request bodies, stop local decoding, retain already committed valid outputs, and discard any output crossing the accepted Stop boundary.
 - Accept one to ten ordered PNG, JPEG, or WebP Reference Images, each no larger than 20 MiB or 64 million decoded pixels. Identify media from decoded bytes and preserve accepted input bytes and metadata exactly.

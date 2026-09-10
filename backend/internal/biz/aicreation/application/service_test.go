@@ -80,6 +80,19 @@ func TestAdministratorPublishesModelAndUserGeneratesImage(t *testing.T) {
 	}
 }
 
+func TestPromptOptimizationDoesNotUseCredits(t *testing.T) {
+	repository := newMemoryRepository()
+	repository.promptCandidates = []domain.PromptOptimizationCandidate{{ProviderModelID: "optimizer-1", ModelID: "gpt-test", Protocol: "openai_chat", APIKeyConfigured: true, Instruction: "Improve it."}}
+	service := mustService(t, repository, &fakeCredits{available: 0}, &fakeProvider{}, newMemoryObjects())
+	if err := service.EnablePromptOptimization(fakeOptimizer{}, nil); err != nil {
+		t.Fatal(err)
+	}
+	result, err := service.OptimizePrompt(context.Background(), "user-1", "UTC", "optimizer-1", "cat", "en-US")
+	if err != nil || result.Prompt != "detailed cat" {
+		t.Fatalf("OptimizePrompt() = %+v, %v", result, err)
+	}
+}
+
 func TestStopPendingRecordReleasesReservation(t *testing.T) {
 	repository := newMemoryRepository()
 	credits := &fakeCredits{available: 1_000}
@@ -356,13 +369,14 @@ func mustService(t *testing.T, repository *memoryRepository, credits *fakeCredit
 }
 
 type memoryRepository struct {
-	mu      sync.Mutex
-	models  map[string]domain.ImageModelRevision
-	records map[string]domain.ImageGenerationRecord
-	uploads map[string]domain.ReferenceUpload
-	credits *fakeCredits
-	expired []application.ExpiredObject
-	next    int
+	mu               sync.Mutex
+	models           map[string]domain.ImageModelRevision
+	records          map[string]domain.ImageGenerationRecord
+	uploads          map[string]domain.ReferenceUpload
+	credits          *fakeCredits
+	expired          []application.ExpiredObject
+	next             int
+	promptCandidates []domain.PromptOptimizationCandidate
 }
 
 func newMemoryRepository() *memoryRepository {
@@ -374,7 +388,13 @@ func (repo *memoryRepository) SaveReferenceUpload(_ context.Context, upload doma
 	return upload, nil
 }
 func (repo *memoryRepository) ListPromptCandidates(context.Context) ([]domain.PromptOptimizationCandidate, error) {
-	return nil, nil
+	return repo.promptCandidates, nil
+}
+
+type fakeOptimizer struct{}
+
+func (fakeOptimizer) Optimize(context.Context, application.OptimizationRequest) (application.OptimizationResult, error) {
+	return application.OptimizationResult{Prompt: "detailed cat", InputTokens: 10, OutputTokens: 20}, nil
 }
 func (repo *memoryRepository) ReplacePromptCandidates(context.Context, string, []domain.PromptOptimizationCandidate, []byte) error {
 	return nil
