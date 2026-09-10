@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"agent-platform/backend/internal/biz/aicreation/application"
@@ -48,7 +49,6 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 		path = "chat/completions"
 		payload = map[string]any{
 			"model": request.Candidate.ModelID, "stream": true,
-			"stream_options": map[string]bool{"include_usage": true},
 			"messages": []any{
 				map[string]string{"role": "system", "content": instruction},
 				map[string]string{"role": "user", "content": request.Prompt},
@@ -79,9 +79,9 @@ func (provider *Provider) Optimize(ctx context.Context, request application.Opti
 		return application.OptimizationResult{}, fmt.Errorf("Prompt Optimization returned status %d", response.StatusCode)
 	}
 	if strings.Contains(response.Header.Get("Content-Type"), "text/event-stream") {
-		return decodeChatStream(response.Body, request.Locale)
+		return decodeChatStream(response.Body, request.Prompt, request.Locale)
 	}
-	return decodeChatJSON(response.Body, request.Locale)
+	return decodeChatJSON(response.Body, request.Prompt, request.Locale)
 }
 
 const outputContractInstruction = "只输出最终图片生成提示词正文，不输出解释、标题、编号、引号、Markdown、代码、文件名、多个版本、英文翻译、后续建议或问题。保留用户输入语言；中文输入只输出中文，英文输入只输出英文。"
@@ -103,15 +103,15 @@ type chatPayload struct {
 	} `json:"usage"`
 }
 
-func decodeChatJSON(reader io.Reader, locale string) (application.OptimizationResult, error) {
+func decodeChatJSON(reader io.Reader, originalPrompt, locale string) (application.OptimizationResult, error) {
 	var raw chatPayload
 	if err := json.NewDecoder(io.LimitReader(reader, 2*1024*1024)).Decode(&raw); err != nil {
 		return application.OptimizationResult{}, err
 	}
-	return chatResult(raw, "", locale), nil
+	return chatResult(raw, "", originalPrompt, locale), nil
 }
 
-func decodeChatStream(reader io.Reader, locale string) (application.OptimizationResult, error) {
+func decodeChatStream(reader io.Reader, originalPrompt, locale string) (application.OptimizationResult, error) {
 	limited := &io.LimitedReader{R: reader, N: 2*1024*1024 + 1}
 	scanner := bufio.NewScanner(limited)
 	scanner.Buffer(make([]byte, 64*1024), 2*1024*1024)
@@ -143,10 +143,10 @@ func decodeChatStream(reader io.Reader, locale string) (application.Optimization
 	if limited.N <= 0 {
 		return application.OptimizationResult{}, fmt.Errorf("Prompt Optimization response exceeds 2 MiB")
 	}
-	return chatResult(completed, text, locale), nil
+	return chatResult(completed, text, originalPrompt, locale), nil
 }
 
-func chatResult(raw chatPayload, streamedText, locale string) application.OptimizationResult {
+func chatResult(raw chatPayload, streamedText, originalPrompt, locale string) application.OptimizationResult {
 	text := streamedText
 	if text == "" && len(raw.Choices) > 0 {
 		text = raw.Choices[0].Message.Content
@@ -158,19 +158,20 @@ func chatResult(raw chatPayload, streamedText, locale string) application.Optimi
 	if output == 0 {
 		output = raw.Usage.CompletionTokens
 	}
-	return application.OptimizationResult{Prompt: sanitizePrompt(text, locale), InputTokens: input, OutputTokens: output}
+	return application.OptimizationResult{Prompt: sanitizePrompt(text, originalPrompt, locale), InputTokens: input, OutputTokens: output}
 }
 
-func sanitizePrompt(text, locale string) string {
+func sanitizePrompt(text, originalPrompt, locale string) string {
 	text = stripCodeFence(text)
 	text = strings.TrimSpace(strings.Trim(text, "\"'"))
 	lines := strings.Split(text, "\n")
 	selected := make([]string, 0, len(lines))
-	wantChinese := strings.HasPrefix(strings.ToLower(locale), "zh")
+	wantChinese := promptUsesChinese(originalPrompt, locale)
 	variant := ""
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "如果") || strings.HasPrefix(trimmed, "如需") || strings.HasPrefix(trimmed, "if you need") {
+		lower := strings.ToLower(trimmed)
+		if strings.HasPrefix(trimmed, "如果") || strings.HasPrefix(trimmed, "如需") || strings.HasPrefix(lower, "if you need") {
 			break
 		}
 		if isChineseVariantLabel(trimmed) {
@@ -194,6 +195,32 @@ func sanitizePrompt(text, locale string) string {
 		}
 	}
 	return strings.TrimSpace(strings.Join(selected, "\n"))
+}
+
+func promptUsesChinese(prompt, locale string) bool {
+	hanCount, latinWords := 0, 0
+	inLatinWord := false
+	for _, runeValue := range prompt {
+		switch {
+		case unicode.Is(unicode.Han, runeValue):
+			hanCount++
+			inLatinWord = false
+		case unicode.Is(unicode.Latin, runeValue):
+			if !inLatinWord {
+				latinWords++
+			}
+			inLatinWord = true
+		default:
+			inLatinWord = false
+		}
+	}
+	if hanCount > latinWords {
+		return true
+	}
+	if latinWords > 0 {
+		return false
+	}
+	return strings.HasPrefix(strings.ToLower(locale), "zh")
 }
 
 func stripCodeFence(text string) string {
@@ -256,5 +283,5 @@ func stripVariantPrefix(line string) string {
 		_, size := utf8.DecodeRuneInString(line[index:])
 		return line[index+size:]
 	}
-	return line
+	return ""
 }

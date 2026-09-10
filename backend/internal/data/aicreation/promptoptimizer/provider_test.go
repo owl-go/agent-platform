@@ -24,15 +24,12 @@ func TestOptimizerUsesIndependentChatCompletionsConfiguration(t *testing.T) {
 				Role    string `json:"role"`
 				Content string `json:"content"`
 			} `json:"messages"`
-			Stream        bool `json:"stream"`
-			StreamOptions struct {
-				IncludeUsage bool `json:"include_usage"`
-			} `json:"stream_options"`
+			Stream bool `json:"stream"`
 		}
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
 			t.Fatal(err)
 		}
-		if !body.Stream || !body.StreamOptions.IncludeUsage || len(body.Messages) != 2 || body.Messages[0].Role != "system" || !strings.Contains(body.Messages[0].Content, "Improve the image prompt.") || body.Messages[1].Role != "user" || body.Messages[1].Content != "cat" {
+		if !body.Stream || len(body.Messages) != 2 || body.Messages[0].Role != "system" || !strings.Contains(body.Messages[0].Content, "Improve the image prompt.") || body.Messages[1].Role != "user" || body.Messages[1].Content != "cat" {
 			t.Fatalf("body = %#v", body)
 		}
 		writer.Header().Set("Content-Type", "text/event-stream")

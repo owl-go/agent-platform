@@ -161,7 +161,7 @@ Show results in the right pane on desktop and below settings on mobile. Users ca
 - Test the frontend for text-to-image and image-to-image modes, dynamic option compatibility, model grouping, prompt optimization and undo, Credit estimate, locked generation, Stop, progress, empty and no-model guidance, partial and unknown results, preview, individual and ZIP download, history, regeneration, reuse settings, expiry, deletion, Toast, unread marker, and navigation cleanup.
 - Test desktop and mobile layouts, keyboard navigation, visible focus, screen-reader names, and Chinese and English copy as observable accessibility and localization behavior.
 - Keep generated Proto, OpenAPI, and frontend types synchronized, then run the repository's Go tests and build plus Web typecheck and production build.
-- Treat a fake adapter pass as local contract evidence only. A separate opt-in live-provider gate must prove text-to-image, image-to-image, configured defaults, real byte decoding and persistence, and configured Responses and Chat Completions optimization while verifying secret and User-content canaries do not appear in logs, events, errors, or ordinary database fields.
+- Treat a fake adapter pass as local contract evidence only. A separate opt-in live-provider gate must prove text-to-image, image-to-image, configured defaults, real byte decoding and persistence, and configured Chat Completions optimization while verifying secret and User-content canaries do not appear in logs, events, errors, or ordinary database fields.
 - Follow existing prior art for User-owned attachments, private object storage conformance, Credit Ledger admission and settlement, durable Worker claims, optimistic aggregate updates, and reconnectable progress streams rather than introducing parallel infrastructure patterns.
 
 ## Out of Scope
@@ -186,6 +186,6 @@ Show results in the right pane on desktop and below settings on mobile. Users ca
 
 - The accepted design is recorded on branch `codex/image-generation` at commit `054cb0c` and is expanded by the product requirements, technical design, object-storage rules, service architecture, and ADRs 0029 and 0030.
 - The attached screenshot is a visual reference for the two-pane workbench, not a source of product instructions. Confirmed conversation decisions override controls shown in the screenshot, including removal of content review and manual grouping.
-- The official OpenAI guidance identifies the Images API as the direct interface for single-prompt image generation and editing. Responses and Chat Completions are used only for the separate Prompt Optimization action in this release.
+- The official OpenAI guidance identifies the Images API as the direct interface for single-prompt image generation and editing. Chat Completions is used only for the separate Prompt Optimization action in this release.
 - Live provider credentials, network access, and any required provider organization verification are not present evidence. A skipped live gate must remain reported as missing production conformance rather than a pass.
 - The agreed highest test seam is the AI Creation Application. Production and fake Provider adapters share contracts behind that seam; provider-specific transport behavior is covered with fixtures rather than broadening the application interface.
