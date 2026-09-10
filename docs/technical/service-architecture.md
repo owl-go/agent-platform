@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权与管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 
@@ -39,7 +39,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 - Image Generation Record 由 Worker 通过 `FOR UPDATE SKIP LOCKED` 和租约领取。未发给供应商的工作可在进程重启后恢复；已发出但结果不确定的工作进入 `outcome_unknown`，不盲目重试。User 停止后拒收迟到输出，且只对停止前已验证持久化的图片结算。
 - 跨零点调用归属开始时的 Credit Day。次日额度通过首次余额读取或执行准入惰性物化，不依赖零点批处理；Personal Settings 时区变更只能从下一个 Credit Day 生效。
 - 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
-- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务。进程崩溃后的悬挂任务由运行超时和后续对账收口，不暴露为产品控制。
+- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务，并在专用数据库连接上持有进程级 Advisory Lock，保证同一数据库只有一个执行 Worker 能够领取和恢复任务；连接或进程退出会自动释放该锁。每个 Worker 进程的第一次领取会在同一 PostgreSQL 事务中对账上一个进程遗留的 `generating`、`running` 和 `waiting_for_user`：已请求取消或所属资源已停用的执行直接收口为 `cancelled`，其余执行清除未完成输出后重新进入队列。对账同时释放该执行遗留的 Credit lease，并关闭尚未消费的 Connector Approval；已经消费 Approval 的外部命令结果无法安全确认，因此对应执行 fail closed 而不盲目重放。恢复只改变非终态执行，不重开或改写终态 Session response 或 Run。
 
 ## API
 
