@@ -102,7 +102,7 @@ func TestBeginCLIConnectorAuthorizationReusesPendingAttempt(t *testing.T) {
 	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Exec("INSERT INTO cli_connector_definitions(id,owner_user_id,name,description,installation_type,npm_package,npm_version,state,authentication_driver) VALUES(?,?,?,'Test','npm','@larksuite/cli','1.0.93','available','feishu')", definition, owner, "Feishu CLI").Error; err != nil {
+	if err := db.Exec("INSERT INTO cli_connector_definitions(id,name,description,installation_type,npm_package,npm_version,npm_integrity,executable,state,authentication_driver,created_by_user_id) VALUES(?,?,?,'npm','@larksuite/cli','1.0.93','sha512-test','lark','available','feishu',?)", definition, "Feishu CLI", "Test", owner).Error; err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Exec("INSERT INTO cli_connector_enablements(id,owner_user_id,definition_id,state) VALUES(?,?,?,'enabled')", enablement, owner, definition).Error; err != nil {

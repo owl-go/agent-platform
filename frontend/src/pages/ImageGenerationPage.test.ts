@@ -51,6 +51,27 @@ describe("ImageGenerationPage", () => {
     wrapper.unmount();
   });
 
+  it("uses a constrained preview and opens the original image in the lightbox", async () => {
+    const record = {
+      id: "record-preview", image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,
+      prompt: "a red vase", mode: "generate", size: "1024x1024", quality: "high", format: "png", background: "opaque",
+      requested_count: 1, validated_count: 1, reservation_hundredths: 5000, consumption_hundredths: 5000,
+      state: "succeeded", images: [{ position: 1, media_type: "image/png", encoded_size: 5, width: 1024, height: 1024, expires_at: "2026-12-08T00:00:00Z" }], created_at: "2026-09-09T00:00:00Z", version: 2,
+    } as Awaited<ReturnType<PlatformApi["listImageGenerations"]>>[number];
+    const api = {
+      getImageGenerationOptions: vi.fn(async () => ({ image_models: [model], prompt_optimization_models: [] })),
+      listImageGenerations: vi.fn(async () => [record]),
+      getGeneratedImage: vi.fn(async () => new Blob(["image"], { type: "image/png" })),
+    } as unknown as PlatformApi;
+    const wrapper = mountPage(api);
+    await flushPromises();
+
+    expect(wrapper.find(".generated-image-preview").exists()).toBe(true);
+    await wrapper.find(".image-preview-trigger").trigger("click");
+    expect(wrapper.find(".image-lightbox-image").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("reconnects a cleanly closed event stream while the generation is still active", async () => {
     vi.useFakeTimers();
     const running = {
