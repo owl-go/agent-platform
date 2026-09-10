@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/agentruntime/containerprocess"
+	aicreationapplication "agent-platform/backend/internal/biz/aicreation/application"
 	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/cliconnector"
@@ -21,6 +22,7 @@ import (
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
 	workerserver "agent-platform/backend/internal/server/worker"
+	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
 
 	kratos "github.com/go-kratos/kratos/v3"
 	"github.com/go-kratos/kratos/v3/transport"
@@ -33,7 +35,25 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 	return containerprocess.NewWarmManager("docker", config.Worker.RuntimeIdleTimeout.Value())
 }
 
-func NewWorker(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider, warm *containerprocess.WarmManager) (*workspaceapplication.Worker, error) {
+type Worker struct {
+	workspace  *workspaceapplication.Worker
+	aicreation *aicreationapplication.Service
+}
+
+func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
+	worked, err := worker.workspace.ProcessNext(ctx)
+	if err != nil || worked {
+		return worked, err
+	}
+	return worker.aicreation.ProcessNext(ctx)
+}
+
+func (worker *Worker) CleanupExpiredAIContent(ctx context.Context) (bool, error) {
+	removed, err := worker.aicreation.CleanupExpired(ctx)
+	return removed > 0, err
+}
+
+func NewWorker(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider, warm *containerprocess.WarmManager) (*Worker, error) {
 	box, err := secretcrypto.New(config.Security.DataEncryptionKey)
 	if err != nil {
 		return nil, err
@@ -71,7 +91,15 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return workspaceapplication.NewWorker(repository, executor, connectorBuilder)
+	workspaceWorker, err := workspaceapplication.NewWorker(repository, executor, connectorBuilder)
+	if err != nil {
+		return nil, err
+	}
+	aicreation, err := aicreationwiring.NewApplication(database, creditsRepository, credits, box, objects)
+	if err != nil {
+		return nil, err
+	}
+	return &Worker{workspace: workspaceWorker, aicreation: aicreation}, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {
@@ -122,7 +150,7 @@ func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Pr
 	return &cliconnector.Builder{Packages: packages, Uploads: cliconnector.ZIPPackageBuilder{}, Store: store, Sources: store, Conformance: conformance, RuntimeDigests: runtimeDigests}, nil
 }
 
-func NewServers(database *gormdb.Database, worker *workspaceapplication.Worker, warm *containerprocess.WarmManager, config platformconfig.Config) ([]transport.Server, error) {
+func NewServers(database *gormdb.Database, worker *Worker, warm *containerprocess.WarmManager, config platformconfig.Config) ([]transport.Server, error) {
 	state := workerserver.NewState()
 	interval := config.Worker.PollInterval.Value()
 	if interval <= 0 {
@@ -139,11 +167,15 @@ func NewServers(database *gormdb.Database, worker *workspaceapplication.Worker, 
 	if err != nil {
 		return nil, err
 	}
+	contentReaper, err := workerserver.NewLoopWithState("ai-creation-content-reaper", time.Minute, workerserver.FatalAfterConsecutiveFailures(worker.CleanupExpiredAIContent, 10), state)
+	if err != nil {
+		return nil, err
+	}
 	management, err := workerserver.NewManagementServer(config.Worker.ManagementAddress, database, state)
 	if err != nil {
 		return nil, err
 	}
-	return []transport.Server{management, loop, reaper}, nil
+	return []transport.Server{management, loop, reaper, contentReaper}, nil
 }
 
 func NewApp(ctx context.Context, config platformconfig.Config, logger *slog.Logger, servers []transport.Server) *kratos.App {

@@ -27,6 +27,8 @@ type Repository interface {
 	VoidRedemptionCode(context.Context, string, time.Time) (domain.RedemptionCodeStatus, error)
 	ListRates(context.Context) ([]domain.RateRevision, error)
 	CreateRateRevision(context.Context, string, domain.ModelCreditRate, string, time.Time) (domain.ModelCreditRate, error)
+	ReserveImage(context.Context, domain.ImageReservation) (domain.ImageReservation, error)
+	SettleImage(context.Context, string, domain.Amount, time.Time) error
 }
 
 type RedemptionSecret struct {
@@ -216,4 +218,26 @@ func (service *Service) CreateRateRevision(ctx context.Context, administratorID 
 		}
 	}
 	return service.repository.CreateRateRevision(ctx, administratorID, rate, expectedRevision, service.now().UTC())
+}
+
+func (service *Service) ReserveImage(ctx context.Context, userID, recordID, timezone string, amount domain.Amount) (domain.ImageReservation, error) {
+	if strings.TrimSpace(userID) == "" || strings.TrimSpace(recordID) == "" || amount < 0 {
+		return domain.ImageReservation{}, fmt.Errorf("%w: Image Credit Reservation is invalid", domain.ErrInvalid)
+	}
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		return domain.ImageReservation{}, fmt.Errorf("%w: invalid Credit time zone", domain.ErrInvalid)
+	}
+	now := service.now().UTC()
+	return service.repository.ReserveImage(ctx, domain.ImageReservation{
+		RecordID: recordID, UserID: userID, Timezone: timezone, Amount: amount,
+		CreditDay: now.In(location).Format(time.DateOnly), CreatedAt: now,
+	})
+}
+
+func (service *Service) SettleImage(ctx context.Context, recordID string, consumed domain.Amount) error {
+	if strings.TrimSpace(recordID) == "" || consumed < 0 {
+		return fmt.Errorf("%w: Image Credit settlement is invalid", domain.ErrInvalid)
+	}
+	return service.repository.SettleImage(ctx, recordID, consumed, service.now().UTC())
 }

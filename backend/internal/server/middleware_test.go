@@ -7,16 +7,21 @@ import (
 	"time"
 )
 
-func TestRequestTimeoutAllowsLongLivedEventStreams(t *testing.T) {
+func TestRequestTimeoutSelection(t *testing.T) {
 	tests := []struct {
 		name        string
+		method      string
 		path        string
 		wantTimeout time.Duration
 	}{
 		{name: "unary", path: "/api/v1/sessions", wantTimeout: time.Second},
+		{name: "Image Model verification", method: http.MethodPost, path: "/api/v1/admin/ai-creation/image-models/00000000-0000-4000-8000-000000000001/test", wantTimeout: 4 * time.Minute},
+		{name: "Image Model read", method: http.MethodGet, path: "/api/v1/admin/ai-creation/image-models/00000000-0000-4000-8000-000000000001/test", wantTimeout: time.Second},
+		{name: "similar Image Model path", method: http.MethodPost, path: "/api/v1/admin/ai-creation/image-models/00000000-0000-4000-8000-000000000001/test/extra", wantTimeout: time.Second},
 		{name: "legacy Run SSE", path: "/v1/runs/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
 		{name: "Session message SSE", path: "/api/v1/sessions/00000000-0000-4000-8000-000000000001/messages/2/events", wantTimeout: 30 * time.Minute},
 		{name: "Workflow Run SSE", path: "/api/v1/workflows/00000000-0000-4000-8000-000000000001/runs/00000000-0000-4000-8000-000000000002/events", wantTimeout: 30 * time.Minute},
+		{name: "Image Generation SSE", path: "/api/v1/ai-creation/image-generations/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -28,7 +33,11 @@ func TestRequestTimeoutAllowsLongLivedEventStreams(t *testing.T) {
 				}
 				remaining = time.Until(deadline)
 			}))
-			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, test.path, nil))
+			method := test.method
+			if method == "" {
+				method = http.MethodGet
+			}
+			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(method, test.path, nil))
 			if remaining < test.wantTimeout-time.Second || remaining > test.wantTimeout {
 				t.Fatalf("remaining timeout=%s, want approximately %s", remaining, test.wantTimeout)
 			}

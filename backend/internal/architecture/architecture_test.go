@@ -112,6 +112,63 @@ func TestWorkerCapabilitiesSupportWorkspaceOwnershipNormalization(t *testing.T) 
 	}
 }
 
+func TestWorkerHasDedicatedProviderEgressNetwork(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "compose.yaml")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration := string(contents)
+	workerStart := strings.Index(configuration, "  worker:\n")
+	networksStart := strings.Index(configuration, "\nnetworks:\n")
+	if workerStart < 0 || networksStart <= workerStart {
+		t.Fatal("compose worker or top-level networks block is missing")
+	}
+	workerBlock := configuration[workerStart:networksStart]
+	if !strings.Contains(workerBlock, "      - provider-egress") {
+		t.Error("Worker must have a dedicated network for AI Creation provider calls")
+	}
+	topLevelNetworks := configuration[networksStart:]
+	if !strings.Contains(topLevelNetworks, "  provider-egress:\n  edge:") {
+		t.Error("compose provider-egress network must provide external egress without joining the edge network")
+	}
+}
+
+func TestCaddyAllowsLongRunningAPIResponses(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "deploy", "platform", "Caddyfile")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration := string(contents)
+	apiStart := strings.Index(configuration, "    handle /api/* {")
+	identityStart := strings.Index(configuration, "    handle /identity/* {")
+	if apiStart < 0 || identityStart <= apiStart {
+		t.Fatal("Caddyfile API proxy block is missing")
+	}
+	if apiBlock := configuration[apiStart:identityStart]; !strings.Contains(apiBlock, "response_header_timeout 5m") {
+		t.Error("Caddyfile API proxy must allow long-running Image Model verification responses")
+	}
+}
+
+func TestPlatformDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	for _, required := range []string{
+		`--force-recreate caddy`,
+		`caddy_container="${CADDY_CONTAINER:-agent-platform-caddy-1}"`,
+		`"$caddy_container")" = "$release_dir/deploy/platform"`,
+	} {
+		if !strings.Contains(script, required) {
+			t.Errorf("deploy-platform.sh does not enforce %q", required)
+		}
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))

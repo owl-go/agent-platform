@@ -167,6 +167,7 @@ services:
         condition: service_completed_successfully
     networks:
       - control
+      - provider-egress
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=64m
@@ -183,6 +184,7 @@ services:
 networks:
   control:
     internal: true
+  provider-egress:
   edge:
 
 volumes:

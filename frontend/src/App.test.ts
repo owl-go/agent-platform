@@ -2,8 +2,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App.vue";
+import { platformApiKey, type PlatformApi } from "./api/client";
 import { authContextKey, type AuthContext, type AuthState } from "./auth/session";
 import { createAppI18n } from "./i18n";
 import { createAppRouter } from "./router";
@@ -38,20 +39,24 @@ function authContext(): AuthContext {
   };
 }
 
-async function mountAt(path: string) {
+const defaultApi = { listImageGenerations: vi.fn(async () => []) } as unknown as PlatformApi;
+
+async function mountAt(path: string, api: PlatformApi = defaultApi) {
   const router = createAppRouter(createMemoryHistory());
   await router.push(path);
   await router.isReady();
   const wrapper = mount(App, {
     global: {
       plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-      provide: { [authContextKey as symbol]: authContext() },
+      provide: { [authContextKey as symbol]: authContext(), [platformApiKey as symbol]: api },
       stubs: { RouterView: true },
     },
   });
   await flushPromises();
   return wrapper;
 }
+
+afterEach(() => vi.useRealTimers());
 
 describe("App navigation", () => {
   it.each([
@@ -67,6 +72,46 @@ describe("App navigation", () => {
     expect(selected.classes()).toContain("router-link-active");
     expect(selected.attributes("aria-current")).toBe("page");
     expect(wrapper.findAll(".sidebar nav a.router-link-active")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("does not keep polling image history when no generation is active", async () => {
+    vi.useFakeTimers();
+    const listImageGenerations = vi.fn(async () => []);
+    const wrapper = await mountAt("/sessions", { listImageGenerations } as unknown as PlatformApi);
+
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(9_100);
+
+    expect(listImageGenerations).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
+  it("polls while an image generation is active and stops after completion", async () => {
+    vi.useFakeTimers();
+    const pending = { id: "record-1", state: "running" };
+    const completed = { id: "record-1", state: "succeeded" };
+    const listImageGenerations = vi.fn().mockResolvedValueOnce([pending]).mockResolvedValueOnce([completed]);
+    const wrapper = await mountAt("/sessions", { listImageGenerations } as unknown as PlatformApi);
+
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(3_100);
+    await vi.advanceTimersByTimeAsync(9_100);
+
+    expect(listImageGenerations).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it("starts monitoring when image generation updates Credits", async () => {
+    vi.useFakeTimers();
+    const listImageGenerations = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: "record-1", state: "pending" }]);
+    const wrapper = await mountAt("/sessions", { listImageGenerations } as unknown as PlatformApi);
+    await flushPromises();
+
+    window.dispatchEvent(new Event("credits-updated"));
+    await flushPromises();
+
+    expect(listImageGenerations).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 });

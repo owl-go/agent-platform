@@ -87,6 +87,20 @@ type ledgerRecord struct {
 	CreatedAt        time.Time     `gorm:"column:created_at"`
 }
 
+type imageReservationRecord struct {
+	RecordID           string        `gorm:"column:record_id;primaryKey"`
+	UserID             string        `gorm:"column:user_id"`
+	CreditDay          time.Time     `gorm:"column:credit_day;type:date"`
+	Timezone           string        `gorm:"column:credit_day_timezone"`
+	Amount             domain.Amount `gorm:"column:amount_hundredths"`
+	DailyReserved      domain.Amount `gorm:"column:daily_reserved_hundredths"`
+	PersistentReserved domain.Amount `gorm:"column:persistent_reserved_hundredths"`
+	CreatedAt          time.Time     `gorm:"column:created_at"`
+	SettledAt          *time.Time    `gorm:"column:settled_at"`
+}
+
+func (imageReservationRecord) TableName() string { return "image_credit_reservations" }
+
 func (ledgerRecord) TableName() string { return "credit_ledger" }
 
 func (repository *Repository) ResolveRate(ctx context.Context, key domain.ModelRateKey) (domain.ModelCreditRate, error) {
@@ -119,7 +133,13 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if err != nil {
 			return err
 		}
-		if account.DailyRemaining+account.Persistent <= 0 {
+		var imageReserved domain.Amount
+		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", admission.UserID).
+			Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END + persistent_reserved_hundredths), 0)", account.CreditDay).
+			Scan(&imageReserved).Error; err != nil {
+			return err
+		}
+		if account.DailyRemaining+account.Persistent-imageReserved <= 0 {
 			return domain.ErrInsufficientCredits
 		}
 		row, err := fromAdmission(admission)
@@ -221,9 +241,129 @@ func (repository *Repository) Balance(ctx context.Context, userID, timezone stri
 			return err
 		}
 		balance, err = toBalance(account, now)
+		if err == nil {
+			var reserved domain.Amount
+			err = tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", userID).Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END + persistent_reserved_hundredths), 0)", account.CreditDay).Scan(&reserved).Error
+			balance.Reserved = reserved
+			balance.Available = balance.Total - reserved
+		}
 		return err
 	})
 	return balance, err
+}
+
+func (repository *Repository) ReserveImage(ctx context.Context, reservation domain.ImageReservation) (domain.ImageReservation, error) {
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		reservation, err = repository.ReserveImageTx(tx, reservation)
+		return err
+	})
+	return reservation, mapConflict(err)
+}
+
+func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.ImageReservation) (domain.ImageReservation, error) {
+	err := func() error {
+		var existing imageReservationRecord
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("record_id = ?", reservation.RecordID).Take(&existing).Error
+		if err == nil {
+			reservation = toImageReservation(existing)
+			return nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		account, err := repository.ensureAccountTx(tx, reservation.UserID, reservation.Timezone, reservation.CreatedAt)
+		if err != nil {
+			return err
+		}
+		var dailyReserved, persistentReserved domain.Amount
+		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL AND credit_day = ?", reservation.UserID, account.CreditDay).Select("COALESCE(SUM(daily_reserved_hundredths), 0)").Scan(&dailyReserved).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", reservation.UserID).Select("COALESCE(SUM(persistent_reserved_hundredths), 0)").Scan(&persistentReserved).Error; err != nil {
+			return err
+		}
+		dailyAvailable := account.DailyRemaining - dailyReserved
+		persistentAvailable := account.Persistent - persistentReserved
+		if dailyAvailable+persistentAvailable < reservation.Amount {
+			return domain.ErrInsufficientCredits
+		}
+		reservation.DailyReserved = reservation.Amount
+		if reservation.DailyReserved > dailyAvailable {
+			reservation.DailyReserved = dailyAvailable
+		}
+		reservation.PersistentReserved = reservation.Amount - reservation.DailyReserved
+		day, err := time.Parse(time.DateOnly, reservation.CreditDay)
+		if err != nil {
+			return err
+		}
+		return tx.Create(&imageReservationRecord{
+			RecordID: reservation.RecordID, UserID: reservation.UserID, CreditDay: day, Timezone: reservation.Timezone,
+			Amount: reservation.Amount, DailyReserved: reservation.DailyReserved,
+			PersistentReserved: reservation.PersistentReserved, CreatedAt: reservation.CreatedAt,
+		}).Error
+	}()
+	return reservation, mapConflict(err)
+}
+
+func (repository *Repository) SettleImage(ctx context.Context, recordID string, consumed domain.Amount, now time.Time) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return repository.SettleImageTx(tx, recordID, consumed, now)
+	})
+}
+
+func (repository *Repository) SettleImageTx(tx *gorm.DB, recordID string, consumed domain.Amount, now time.Time) error {
+	return func() error {
+		var reservation imageReservationRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("record_id = ?", recordID).Take(&reservation).Error; err != nil {
+			return err
+		}
+		if reservation.SettledAt != nil {
+			return nil
+		}
+		if consumed < 0 || consumed > reservation.Amount {
+			return domain.ErrInvalid
+		}
+		account, err := repository.ensureAccountTx(tx, reservation.UserID, reservation.Timezone, now)
+		if err != nil {
+			return err
+		}
+		dailyConsumed := consumed
+		if dailyConsumed > reservation.DailyReserved {
+			dailyConsumed = reservation.DailyReserved
+		}
+		persistentConsumed := consumed - dailyConsumed
+		if account.CreditDay.Equal(reservation.CreditDay) {
+			account.DailyRemaining -= dailyConsumed
+			account.TodayConsumed += consumed
+		}
+		account.Persistent -= persistentConsumed
+		account.UpdatedAt, account.Version = now, account.Version+1
+		if consumed > 0 {
+			source := "image:" + recordID
+			reason := "Image Generation"
+			entry := ledgerRecord{ID: uuid.NewString(), UserID: reservation.UserID, Type: "consumption", Amount: -consumed, DailyDelta: -dailyConsumed, PersistentDelta: -persistentConsumed, ResultingBalance: account.DailyRemaining + account.Persistent, CreditDay: reservation.CreditDay, Source: &source, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+			if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&entry).Error; err != nil {
+				return err
+			}
+		}
+		if !account.CreditDay.Equal(reservation.CreditDay) && reservation.DailyReserved > dailyConsumed {
+			expired := reservation.DailyReserved - dailyConsumed
+			reason := "unused reserved Daily Credits expired"
+			entry := ledgerRecord{ID: uuid.NewString(), UserID: reservation.UserID, Type: "daily_expiry", Amount: -expired, DailyDelta: -expired, ResultingBalance: account.DailyRemaining + account.Persistent, CreditDay: reservation.CreditDay, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+			if err := tx.Create(&entry).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Save(&account).Error; err != nil {
+			return err
+		}
+		return tx.Model(&reservation).Update("settled_at", now).Error
+	}()
+}
+
+func toImageReservation(row imageReservationRecord) domain.ImageReservation {
+	return domain.ImageReservation{RecordID: row.RecordID, UserID: row.UserID, CreditDay: row.CreditDay.Format(time.DateOnly), Timezone: row.Timezone, Amount: row.Amount, DailyReserved: row.DailyReserved, PersistentReserved: row.PersistentReserved, CreatedAt: row.CreatedAt}
 }
 
 func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTimezone string, now time.Time) (accountRecord, error) {
@@ -269,9 +409,19 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 		allocation = *account.PendingAllocation
 		account.PendingAllocation, account.PendingEffective = nil, nil
 	}
-	if account.DailyRemaining != 0 {
+	var activeDailyReserved domain.Amount
+	if err := tx.Model(&imageReservationRecord{}).
+		Where("user_id = ? AND credit_day = ? AND settled_at IS NULL", userID, account.CreditDay).
+		Select("COALESCE(SUM(daily_reserved_hundredths), 0)").Scan(&activeDailyReserved).Error; err != nil {
+		return accountRecord{}, err
+	}
+	expiringDaily := account.DailyRemaining - activeDailyReserved
+	if expiringDaily < 0 {
+		expiringDaily = 0
+	}
+	if expiringDaily != 0 {
 		reason := "unused Daily Credits expired"
-		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_expiry", Amount: -account.DailyRemaining, DailyDelta: -account.DailyRemaining, ResultingBalance: account.Persistent, CreditDay: account.CreditDay, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_expiry", Amount: -expiringDaily, DailyDelta: -expiringDaily, ResultingBalance: account.Persistent, CreditDay: account.CreditDay, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
 		if err := tx.Create(&entry).Error; err != nil {
 			return accountRecord{}, err
 		}
@@ -597,7 +747,7 @@ func toBalance(row accountRecord, now time.Time) (domain.Balance, error) {
 	if err != nil {
 		return domain.Balance{}, err
 	}
-	balance := domain.Balance{UserID: row.UserID, CreditDay: row.CreditDay.Format(time.DateOnly), Timezone: row.Timezone, DailyAllocation: row.DailyAllocation, DailyRemaining: row.DailyRemaining, Persistent: row.Persistent, TodayConsumed: row.TodayConsumed, Total: row.DailyRemaining + row.Persistent, PendingDailyAllocation: row.PendingAllocation, Version: row.Version, NextAllocationAt: nextMidnight(now, location)}
+	balance := domain.Balance{UserID: row.UserID, CreditDay: row.CreditDay.Format(time.DateOnly), Timezone: row.Timezone, DailyAllocation: row.DailyAllocation, DailyRemaining: row.DailyRemaining, Persistent: row.Persistent, TodayConsumed: row.TodayConsumed, Total: row.DailyRemaining + row.Persistent, Available: row.DailyRemaining + row.Persistent, PendingDailyAllocation: row.PendingAllocation, Version: row.Version, NextAllocationAt: nextMidnight(now, location)}
 	if row.PendingEffective != nil {
 		balance.PendingEffectiveDay = row.PendingEffective.Format(time.DateOnly)
 	}

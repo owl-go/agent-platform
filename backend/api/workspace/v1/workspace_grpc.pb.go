@@ -38,6 +38,22 @@ const (
 	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName           = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
 	AgentWorkspaceService_ListRedemptionCodes_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
 	AgentWorkspaceService_VoidRedemptionCode_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
+	AgentWorkspaceService_ListImageGenerationOptions_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
+	AgentWorkspaceService_SubmitImageGeneration_FullMethodName               = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
+	AgentWorkspaceService_ListImageGenerations_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
+	AgentWorkspaceService_GetImageGeneration_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
+	AgentWorkspaceService_StopImageGeneration_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
+	AgentWorkspaceService_RegenerateImageGeneration_FullMethodName           = "/workspace.v1.AgentWorkspaceService/RegenerateImageGeneration"
+	AgentWorkspaceService_DeleteImageGeneration_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DeleteImageGeneration"
+	AgentWorkspaceService_OptimizeImagePrompt_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
+	AgentWorkspaceService_ListImageModels_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListImageModels"
+	AgentWorkspaceService_CreateImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateImageModel"
+	AgentWorkspaceService_ReviseImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
+	AgentWorkspaceService_DeleteImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DeleteImageModel"
+	AgentWorkspaceService_VerifyImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/VerifyImageModel"
+	AgentWorkspaceService_SetImageModelAvailability_FullMethodName           = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
+	AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName = "/workspace.v1.AgentWorkspaceService/ReplacePromptOptimizationCandidates"
+	AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ListPromptOptimizationCandidates"
 	AgentWorkspaceService_ListSessions_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListSessions"
 	AgentWorkspaceService_CreateSession_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/CreateSession"
 	AgentWorkspaceService_GetSession_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -139,6 +155,22 @@ type AgentWorkspaceServiceClient interface {
 	CreateRedemptionCodeBatch(ctx context.Context, in *CreateRedemptionCodeBatchRequest, opts ...grpc.CallOption) (*RedemptionCodeBatch, error)
 	ListRedemptionCodes(ctx context.Context, in *ListRedemptionCodesRequest, opts ...grpc.CallOption) (*ListRedemptionCodesResponse, error)
 	VoidRedemptionCode(ctx context.Context, in *VoidRedemptionCodeRequest, opts ...grpc.CallOption) (*RedemptionCodeStatus, error)
+	ListImageGenerationOptions(ctx context.Context, in *ListImageGenerationOptionsRequest, opts ...grpc.CallOption) (*ListImageGenerationOptionsResponse, error)
+	SubmitImageGeneration(ctx context.Context, in *SubmitImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error)
+	ListImageGenerations(ctx context.Context, in *ListImageGenerationsRequest, opts ...grpc.CallOption) (*ListImageGenerationsResponse, error)
+	GetImageGeneration(ctx context.Context, in *GetImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error)
+	StopImageGeneration(ctx context.Context, in *StopImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error)
+	RegenerateImageGeneration(ctx context.Context, in *RegenerateImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error)
+	DeleteImageGeneration(ctx context.Context, in *DeleteImageGenerationRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	OptimizeImagePrompt(ctx context.Context, in *OptimizeImagePromptRequest, opts ...grpc.CallOption) (*OptimizeImagePromptResponse, error)
+	ListImageModels(ctx context.Context, in *ListImageModelsRequest, opts ...grpc.CallOption) (*ListImageModelsResponse, error)
+	CreateImageModel(ctx context.Context, in *CreateImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error)
+	ReviseImageModel(ctx context.Context, in *ReviseImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error)
+	DeleteImageModel(ctx context.Context, in *DeleteImageModelRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	VerifyImageModel(ctx context.Context, in *VerifyImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error)
+	SetImageModelAvailability(ctx context.Context, in *SetImageModelAvailabilityRequest, opts ...grpc.CallOption) (*ImageModel, error)
+	ReplacePromptOptimizationCandidates(ctx context.Context, in *ReplacePromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error)
+	ListPromptOptimizationCandidates(ctx context.Context, in *ListPromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error)
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*Session, error)
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*Session, error)
@@ -409,6 +441,166 @@ func (c *agentWorkspaceServiceClient) VoidRedemptionCode(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RedemptionCodeStatus)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_VoidRedemptionCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListImageGenerationOptions(ctx context.Context, in *ListImageGenerationOptionsRequest, opts ...grpc.CallOption) (*ListImageGenerationOptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListImageGenerationOptionsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListImageGenerationOptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SubmitImageGeneration(ctx context.Context, in *SubmitImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageGenerationRecord)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SubmitImageGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListImageGenerations(ctx context.Context, in *ListImageGenerationsRequest, opts ...grpc.CallOption) (*ListImageGenerationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListImageGenerationsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListImageGenerations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetImageGeneration(ctx context.Context, in *GetImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageGenerationRecord)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetImageGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StopImageGeneration(ctx context.Context, in *StopImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageGenerationRecord)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StopImageGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) RegenerateImageGeneration(ctx context.Context, in *RegenerateImageGenerationRequest, opts ...grpc.CallOption) (*ImageGenerationRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageGenerationRecord)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_RegenerateImageGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DeleteImageGeneration(ctx context.Context, in *DeleteImageGenerationRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteImageGeneration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) OptimizeImagePrompt(ctx context.Context, in *OptimizeImagePromptRequest, opts ...grpc.CallOption) (*OptimizeImagePromptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OptimizeImagePromptResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_OptimizeImagePrompt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListImageModels(ctx context.Context, in *ListImageModelsRequest, opts ...grpc.CallOption) (*ListImageModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListImageModelsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListImageModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateImageModel(ctx context.Context, in *CreateImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageModel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateImageModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ReviseImageModel(ctx context.Context, in *ReviseImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageModel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ReviseImageModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DeleteImageModel(ctx context.Context, in *DeleteImageModelRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteImageModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) VerifyImageModel(ctx context.Context, in *VerifyImageModelRequest, opts ...grpc.CallOption) (*ImageModel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageModel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_VerifyImageModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SetImageModelAvailability(ctx context.Context, in *SetImageModelAvailabilityRequest, opts ...grpc.CallOption) (*ImageModel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImageModel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetImageModelAvailability_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ReplacePromptOptimizationCandidates(ctx context.Context, in *ReplacePromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPromptOptimizationCandidatesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListPromptOptimizationCandidates(ctx context.Context, in *ListPromptOptimizationCandidatesRequest, opts ...grpc.CallOption) (*ListPromptOptimizationCandidatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPromptOptimizationCandidatesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1198,6 +1390,22 @@ type AgentWorkspaceServiceServer interface {
 	CreateRedemptionCodeBatch(context.Context, *CreateRedemptionCodeBatchRequest) (*RedemptionCodeBatch, error)
 	ListRedemptionCodes(context.Context, *ListRedemptionCodesRequest) (*ListRedemptionCodesResponse, error)
 	VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error)
+	ListImageGenerationOptions(context.Context, *ListImageGenerationOptionsRequest) (*ListImageGenerationOptionsResponse, error)
+	SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error)
+	ListImageGenerations(context.Context, *ListImageGenerationsRequest) (*ListImageGenerationsResponse, error)
+	GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error)
+	StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error)
+	RegenerateImageGeneration(context.Context, *RegenerateImageGenerationRequest) (*ImageGenerationRecord, error)
+	DeleteImageGeneration(context.Context, *DeleteImageGenerationRequest) (*DeleteResponse, error)
+	OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error)
+	ListImageModels(context.Context, *ListImageModelsRequest) (*ListImageModelsResponse, error)
+	CreateImageModel(context.Context, *CreateImageModelRequest) (*ImageModel, error)
+	ReviseImageModel(context.Context, *ReviseImageModelRequest) (*ImageModel, error)
+	DeleteImageModel(context.Context, *DeleteImageModelRequest) (*DeleteResponse, error)
+	VerifyImageModel(context.Context, *VerifyImageModelRequest) (*ImageModel, error)
+	SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error)
+	ReplacePromptOptimizationCandidates(context.Context, *ReplacePromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
+	ListPromptOptimizationCandidates(context.Context, *ListPromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	CreateSession(context.Context, *CreateSessionRequest) (*Session, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -1340,6 +1548,54 @@ func (UnimplementedAgentWorkspaceServiceServer) ListRedemptionCodes(context.Cont
 }
 func (UnimplementedAgentWorkspaceServiceServer) VoidRedemptionCode(context.Context, *VoidRedemptionCodeRequest) (*RedemptionCodeStatus, error) {
 	return nil, status.Error(codes.Unimplemented, "method VoidRedemptionCode not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListImageGenerationOptions(context.Context, *ListImageGenerationOptionsRequest) (*ListImageGenerationOptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListImageGenerationOptions not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitImageGeneration not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListImageGenerations(context.Context, *ListImageGenerationsRequest) (*ListImageGenerationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListImageGenerations not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetImageGeneration not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopImageGeneration not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) RegenerateImageGeneration(context.Context, *RegenerateImageGenerationRequest) (*ImageGenerationRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegenerateImageGeneration not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DeleteImageGeneration(context.Context, *DeleteImageGenerationRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteImageGeneration not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OptimizeImagePrompt not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListImageModels(context.Context, *ListImageModelsRequest) (*ListImageModelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListImageModels not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateImageModel(context.Context, *CreateImageModelRequest) (*ImageModel, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateImageModel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ReviseImageModel(context.Context, *ReviseImageModelRequest) (*ImageModel, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReviseImageModel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DeleteImageModel(context.Context, *DeleteImageModelRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteImageModel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) VerifyImageModel(context.Context, *VerifyImageModelRequest) (*ImageModel, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyImageModel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetImageModelAvailability not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ReplacePromptOptimizationCandidates(context.Context, *ReplacePromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplacePromptOptimizationCandidates not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListPromptOptimizationCandidates(context.Context, *ListPromptOptimizationCandidatesRequest) (*ListPromptOptimizationCandidatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPromptOptimizationCandidates not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
@@ -1928,6 +2184,294 @@ func _AgentWorkspaceService_VoidRedemptionCode_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).VoidRedemptionCode(ctx, req.(*VoidRedemptionCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListImageGenerationOptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListImageGenerationOptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListImageGenerationOptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListImageGenerationOptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListImageGenerationOptions(ctx, req.(*ListImageGenerationOptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SubmitImageGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitImageGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SubmitImageGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SubmitImageGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SubmitImageGeneration(ctx, req.(*SubmitImageGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListImageGenerations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListImageGenerationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListImageGenerations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListImageGenerations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListImageGenerations(ctx, req.(*ListImageGenerationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetImageGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetImageGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetImageGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetImageGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetImageGeneration(ctx, req.(*GetImageGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StopImageGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopImageGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StopImageGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StopImageGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StopImageGeneration(ctx, req.(*StopImageGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_RegenerateImageGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateImageGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).RegenerateImageGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_RegenerateImageGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).RegenerateImageGeneration(ctx, req.(*RegenerateImageGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DeleteImageGeneration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteImageGenerationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DeleteImageGeneration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DeleteImageGeneration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DeleteImageGeneration(ctx, req.(*DeleteImageGenerationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_OptimizeImagePrompt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OptimizeImagePromptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).OptimizeImagePrompt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_OptimizeImagePrompt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).OptimizeImagePrompt(ctx, req.(*OptimizeImagePromptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListImageModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListImageModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListImageModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListImageModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListImageModels(ctx, req.(*ListImageModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateImageModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateImageModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateImageModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateImageModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateImageModel(ctx, req.(*CreateImageModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ReviseImageModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReviseImageModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ReviseImageModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ReviseImageModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ReviseImageModel(ctx, req.(*ReviseImageModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DeleteImageModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteImageModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DeleteImageModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DeleteImageModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DeleteImageModel(ctx, req.(*DeleteImageModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_VerifyImageModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyImageModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).VerifyImageModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_VerifyImageModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).VerifyImageModel(ctx, req.(*VerifyImageModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SetImageModelAvailability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetImageModelAvailabilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetImageModelAvailability(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetImageModelAvailability_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetImageModelAvailability(ctx, req.(*SetImageModelAvailabilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ReplacePromptOptimizationCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplacePromptOptimizationCandidatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ReplacePromptOptimizationCandidates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ReplacePromptOptimizationCandidates(ctx, req.(*ReplacePromptOptimizationCandidatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListPromptOptimizationCandidates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPromptOptimizationCandidatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListPromptOptimizationCandidates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListPromptOptimizationCandidates(ctx, req.(*ListPromptOptimizationCandidatesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3382,6 +3926,70 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VoidRedemptionCode",
 			Handler:    _AgentWorkspaceService_VoidRedemptionCode_Handler,
+		},
+		{
+			MethodName: "ListImageGenerationOptions",
+			Handler:    _AgentWorkspaceService_ListImageGenerationOptions_Handler,
+		},
+		{
+			MethodName: "SubmitImageGeneration",
+			Handler:    _AgentWorkspaceService_SubmitImageGeneration_Handler,
+		},
+		{
+			MethodName: "ListImageGenerations",
+			Handler:    _AgentWorkspaceService_ListImageGenerations_Handler,
+		},
+		{
+			MethodName: "GetImageGeneration",
+			Handler:    _AgentWorkspaceService_GetImageGeneration_Handler,
+		},
+		{
+			MethodName: "StopImageGeneration",
+			Handler:    _AgentWorkspaceService_StopImageGeneration_Handler,
+		},
+		{
+			MethodName: "RegenerateImageGeneration",
+			Handler:    _AgentWorkspaceService_RegenerateImageGeneration_Handler,
+		},
+		{
+			MethodName: "DeleteImageGeneration",
+			Handler:    _AgentWorkspaceService_DeleteImageGeneration_Handler,
+		},
+		{
+			MethodName: "OptimizeImagePrompt",
+			Handler:    _AgentWorkspaceService_OptimizeImagePrompt_Handler,
+		},
+		{
+			MethodName: "ListImageModels",
+			Handler:    _AgentWorkspaceService_ListImageModels_Handler,
+		},
+		{
+			MethodName: "CreateImageModel",
+			Handler:    _AgentWorkspaceService_CreateImageModel_Handler,
+		},
+		{
+			MethodName: "ReviseImageModel",
+			Handler:    _AgentWorkspaceService_ReviseImageModel_Handler,
+		},
+		{
+			MethodName: "DeleteImageModel",
+			Handler:    _AgentWorkspaceService_DeleteImageModel_Handler,
+		},
+		{
+			MethodName: "VerifyImageModel",
+			Handler:    _AgentWorkspaceService_VerifyImageModel_Handler,
+		},
+		{
+			MethodName: "SetImageModelAvailability",
+			Handler:    _AgentWorkspaceService_SetImageModelAvailability_Handler,
+		},
+		{
+			MethodName: "ReplacePromptOptimizationCandidates",
+			Handler:    _AgentWorkspaceService_ReplacePromptOptimizationCandidates_Handler,
+		},
+		{
+			MethodName: "ListPromptOptimizationCandidates",
+			Handler:    _AgentWorkspaceService_ListPromptOptimizationCandidates_Handler,
 		},
 		{
 			MethodName: "ListSessions",

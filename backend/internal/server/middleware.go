@@ -24,6 +24,7 @@ var routeIDPattern = regexp.MustCompile(`(?i)/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a
 const (
 	defaultUnaryTimeout       = 30 * time.Second
 	defaultEventStreamTimeout = 30 * time.Minute
+	imageModelTestTimeout     = 4 * time.Minute
 )
 
 type httpMetrics struct {
@@ -60,7 +61,9 @@ func unaryTimeoutFilter(timeout time.Duration) kratoshttp.FilterFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			requestTimeout := timeout
-			if isEventStreamRequest(request) {
+			if isImageModelTestRequest(request) {
+				requestTimeout = imageModelTestTimeout
+			} else if isEventStreamRequest(request) {
 				requestTimeout = defaultEventStreamTimeout
 			}
 			ctx, cancel := context.WithTimeout(request.Context(), requestTimeout)
@@ -70,6 +73,14 @@ func unaryTimeoutFilter(timeout time.Duration) kratoshttp.FilterFunc {
 	}
 }
 
+func isImageModelTestRequest(request *http.Request) bool {
+	if request.Method != http.MethodPost {
+		return false
+	}
+	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
+	return len(parts) == 7 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "admin" && parts[3] == "ai-creation" && parts[4] == "image-models" && parts[5] != "" && parts[6] == "test"
+}
+
 func isEventStreamRequest(request *http.Request) bool {
 	if request.Method != http.MethodGet {
 		return false
@@ -77,6 +88,10 @@ func isEventStreamRequest(request *http.Request) bool {
 	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
 	if len(parts) == 4 {
 		return parts[0] == "v1" && parts[1] == "runs" && parts[3] == "events"
+	}
+	if len(parts) == 6 {
+		return parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-creation" &&
+			parts[3] == "image-generations" && parts[4] != "" && parts[5] == "events"
 	}
 	if len(parts) != 7 || parts[0] != "api" || parts[1] != "v1" || parts[6] != "events" {
 		return false
