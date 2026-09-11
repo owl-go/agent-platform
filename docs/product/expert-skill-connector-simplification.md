@@ -61,6 +61,7 @@ High-risk CLI commands require a time-bounded, one-use approval from the owning 
 35. As a User, I want a Skill update to affect only future Session and Run Conversation snapshots, so that history remains reproducible.
 36. As a User, I want to create, test, edit, and delete private MCP Connectors, so that external MCP tools remain under my ownership.
 37. As a User, I want an MCP Connector to pass its isolated test before selection, so that invalid configurations fail before execution.
+37a. As a User, I want to upload an image icon for an MCP or CLI Connector, so that the same recognizable icon appears in the catalog, details, Expert bindings, and conversation composer.
 38. As a User, I want resource deletion to show affected Experts and detach only mutable references, so that I understand the impact while historical snapshots remain intact.
 39. As an Administrator, I want to create a CLI Connector Definition from an exact npm package and version, so that Users can access governed third-party CLIs.
 40. As an Administrator, I want CLI packages built and verified outside User Runs, so that Runtime execution never performs an unbounded network installation.
@@ -123,6 +124,7 @@ High-risk CLI commands require a time-bounded, one-use approval from the owning 
 - Inject Team Member name and labels as visible role context before that member's Expert guidance. Keep team Introduction and team Core Capability display-only.
 - Reject deletion of an Expert referenced by any mutable Expert Team. Immutable snapshots do not block deletion.
 - Rename MCP Server to MCP Connector at User-visible and new public API boundaries. User ownership, isolated testing, fixed stdio package version, Streamable HTTP restrictions, and snapshot behavior remain fail closed.
+- MCP and CLI Connectors accept either a preset icon identifier or a validated PNG, JPEG, WebP, or GIF data URL (up to 512 KiB); the icon is carried through catalog, selection, and immutable execution responses for consistent display.
 - Move public Skill and MCP routes to `/api/v1/skills` and `/api/v1/connectors/mcp`. Do not keep deprecated `/extensions` aliases.
 - Continue selecting Skill and MCP Connector identities from mutable Experts. New Session and Run Conversation snapshots freeze their latest exact revisions; existing snapshots do not change.
 - On Skill or MCP Connector deletion, show affected mutable Experts, detach those references transactionally after confirmation, and preserve immutable snapshots.

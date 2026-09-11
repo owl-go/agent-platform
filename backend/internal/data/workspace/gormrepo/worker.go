@@ -441,7 +441,7 @@ func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
 		OwnerID:     row.OwnerID,
 		MCPServerID: row.ID,
 		MCPServer: domain.MCPServerSnapshot{
-			ID: row.ID, Name: row.Name, Transport: row.Transport,
+			ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport,
 			Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext,
 		},
 	}, nil

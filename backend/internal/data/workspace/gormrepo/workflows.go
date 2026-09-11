@@ -676,7 +676,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		if err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
 		}
-		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
@@ -701,7 +701,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		if len(runtimeDigests) == 0 {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no passing Runtime conformance", domain.ErrInvalid)
 		}
-		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
+		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
 	}
 	return member, nil
 }

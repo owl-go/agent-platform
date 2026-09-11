@@ -901,7 +901,7 @@ func (repository *Repository) CreateMCPServer(ctx context.Context, ownerID strin
 	if err != nil {
 		return domain.MCPServer{}, err
 	}
-	row := mcpRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(server.Name), Transport: server.Transport, Configuration: configuration, SecretCiphertext: secretCiphertext, Version: 1}
+	row := mcpRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(server.Name), Icon: defaultString(server.Icon, "terminal"), Transport: server.Transport, Configuration: configuration, SecretCiphertext: secretCiphertext, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.MCPServer{}, fmt.Errorf("create MCP Server: %w", err)
 	}
@@ -917,7 +917,7 @@ func (repository *Repository) UpdateMCPServer(ctx context.Context, ownerID, serv
 		return domain.MCPServer{}, err
 	}
 	updates := map[string]any{
-		"name": strings.TrimSpace(server.Name), "transport": server.Transport, "configuration": configuration,
+		"name": strings.TrimSpace(server.Name), "icon": defaultString(server.Icon, "terminal"), "transport": server.Transport, "configuration": configuration,
 		"test_requested_at": nil, "tested_at": nil, "test_error": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 	}
 	if secretCiphertext != nil {
@@ -1072,7 +1072,7 @@ func mcpDomain(row mcpRecord) (domain.MCPServer, error) {
 	if err := json.Unmarshal(row.Configuration, &configuration); err != nil {
 		return domain.MCPServer{}, fmt.Errorf("decode MCP configuration: %w", err)
 	}
-	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: defaultString(row.Icon, "terminal"), Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.TestError != nil {
 		item.TestError = *row.TestError
 	}

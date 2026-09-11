@@ -189,6 +189,7 @@ type ExpertMemberSnapshot struct {
 type MCPServerSnapshot struct {
 	ID               string          `json:"id"`
 	Name             string          `json:"name"`
+	Icon             string          `json:"icon,omitempty"`
 	Transport        string          `json:"transport"`
 	Configuration    json.RawMessage `json:"configuration"`
 	SecretCiphertext []byte          `json:"secret_ciphertext,omitempty"`
@@ -206,6 +207,7 @@ type SkillSnapshot struct {
 type CLIConnectorSnapshot struct {
 	ID                   string          `json:"id"`
 	Name                 string          `json:"name"`
+	Icon                 string          `json:"icon,omitempty"`
 	Executable           string          `json:"executable"`
 	AuthenticationDriver string          `json:"authentication_driver"`
 	BundleObjectKey      string          `json:"bundle_object_key"`

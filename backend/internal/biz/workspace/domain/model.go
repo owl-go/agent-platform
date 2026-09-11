@@ -18,6 +18,21 @@ var (
 	ErrQueueFull = errors.New("workflow queue is full")
 )
 
+var connectorIconPattern = regexp.MustCompile(`^(?:[a-z][a-z0-9-]{0,31}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$`)
+
+// ValidateConnectorIcon accepts a small preset identifier or an inline image.
+// Inline images are kept as data URLs so catalog reads remain self-contained.
+func ValidateConnectorIcon(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	if len(value) > 512*1024 || !connectorIconPattern.MatchString(value) {
+		return fmt.Errorf("%w: connector icon is invalid", ErrInvalid)
+	}
+	return nil
+}
+
 type RuntimeEngine string
 
 const (
@@ -106,6 +121,7 @@ type MCPServer struct {
 	OwnerID         string
 	Platform        bool
 	Name            string
+	Icon            string
 	Transport       string
 	URL             *string
 	Runner          *string
@@ -124,6 +140,9 @@ type MCPServer struct {
 func (server MCPServer) Validate() error {
 	if name := strings.TrimSpace(server.Name); name == "" || len(name) > 100 {
 		return fmt.Errorf("%w: MCP Server name must contain 1-100 characters", ErrInvalid)
+	}
+	if err := ValidateConnectorIcon(server.Icon); err != nil {
+		return err
 	}
 	switch server.Transport {
 	case "streamable_http":

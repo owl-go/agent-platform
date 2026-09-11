@@ -6,6 +6,7 @@ import { platformApiKey, type Expert, type ExpertTeam, type Skill } from "../api
 import { authContextKey } from "../auth/session";
 import { renderMarkdown } from "../markdown";
 import ProfileIcon from "./ProfileIcon.vue";
+import ConnectorIcon from "./ConnectorIcon.vue";
 
 const props = defineProps<{ skill?: Skill; expert?: Expert; team?: ExpertTeam }>();
 const emit = defineEmits<{ close: []; editSkill: [skill: Skill] }>();
@@ -15,7 +16,7 @@ const router = useRouter();
 const { t } = useI18n();
 const content = ref("");
 const loading = ref(false), error = ref("");
-const resourceNames = ref<Record<string, string>>({});
+const resourceMeta = ref<Record<string, { name: string; icon?: string }>>({});
 const item = computed(() => props.skill ?? props.expert ?? props.team);
 const open = computed(() => Boolean(item.value));
 const administrator = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
@@ -34,7 +35,7 @@ watch(item, async (value) => {
       if (current === generation) content.value = document.content;
     } else {
       const [skills, mcp, cli] = await Promise.all([api.listSkills(), api.listMCPServers(), api.listCLIConnectorDefinitions()]);
-      if (current === generation) resourceNames.value = Object.fromEntries([...skills, ...mcp, ...cli].map((entry) => [entry.id, entry.name]));
+      if (current === generation) resourceMeta.value = Object.fromEntries([...skills, ...mcp, ...cli].map((entry) => [entry.id, { name: entry.name, icon: "icon" in entry ? entry.icon : undefined }]));
     }
   } catch { if (current === generation) error.value = t("errors.generic"); }
   finally { if (current === generation) loading.value = false; }
@@ -63,8 +64,8 @@ function edit() {
         <h3 v-if="team">{{ index + 1 }}. {{ member.name }} · {{ member.expert.name }}</h3>
         <div v-if="member.labels.length" class="tag-row"><el-tag v-for="label in member.labels" :key="label" size="small">{{ label }}</el-tag></div>
         <template v-for="field in fields" :key="field"><section v-if="member.expert[field]"><h3>{{ t(fieldLabels[field]) }}</h3><div class="markdown-body" v-html="renderMarkdown(member.expert[field])"></div></section></template>
-        <h3>{{ t('composer.skills') }}</h3><div class="tag-row"><el-tag v-for="id in member.expert.skill_ids" :key="id">{{ resourceNames[id] || t('composer.resourceUnavailable') }}</el-tag><span v-if="!member.expert.skill_ids.length" class="muted">{{ t('common.empty') }}</span></div>
-        <h3>{{ t('composer.connectors') }}</h3><div class="tag-row"><el-tag v-for="id in [...member.expert.mcp_server_ids, ...(member.expert.cli_connector_definition_ids ?? [])]" :key="id">{{ resourceNames[id] || t('composer.resourceUnavailable') }}</el-tag><span v-if="!member.expert.mcp_server_ids.length && !member.expert.cli_connector_definition_ids?.length" class="muted">{{ t('common.empty') }}</span></div>
+        <h3>{{ t('composer.skills') }}</h3><div class="tag-row"><el-tag v-for="id in member.expert.skill_ids" :key="id">{{ resourceMeta[id]?.name || t('composer.resourceUnavailable') }}</el-tag><span v-if="!member.expert.skill_ids.length" class="muted">{{ t('common.empty') }}</span></div>
+        <h3>{{ t('composer.connectors') }}</h3><div class="tag-row connector-detail-tags"><el-tag v-for="id in [...member.expert.mcp_server_ids, ...(member.expert.cli_connector_definition_ids ?? [])]" :key="id"><ConnectorIcon :icon="resourceMeta[id]?.icon" :size="18" />{{ resourceMeta[id]?.name || t('composer.resourceUnavailable') }}</el-tag><span v-if="!member.expert.mcp_server_ids.length && !member.expert.cli_connector_definition_ids?.length" class="muted">{{ t('common.empty') }}</span></div>
       </section>
     </template>
     <template #footer><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" :disabled="Boolean(expert && !expert.available || team && !team.available)" @click="launch">{{ skill ? t('composer.useSkill') : t('composer.summon') }}</el-button></template>

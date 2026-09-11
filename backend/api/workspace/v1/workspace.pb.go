@@ -5370,6 +5370,7 @@ type MCPServerSnapshot struct {
 	Package        *string                `protobuf:"bytes,6,opt,name=package,proto3,oneof" json:"package,omitempty"`
 	PackageVersion *string                `protobuf:"bytes,7,opt,name=package_version,json=packageVersion,proto3,oneof" json:"package_version,omitempty"`
 	Arguments      []string               `protobuf:"bytes,8,rep,name=arguments,proto3" json:"arguments,omitempty"`
+	Icon           string                 `protobuf:"bytes,9,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -5460,6 +5461,13 @@ func (x *MCPServerSnapshot) GetArguments() []string {
 	return nil
 }
 
+func (x *MCPServerSnapshot) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
 type SkillSnapshot struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -5537,6 +5545,7 @@ type CLIConnectorSnapshot struct {
 	BundleSha256         string                 `protobuf:"bytes,5,opt,name=bundle_sha256,json=bundleSha256,proto3" json:"bundle_sha256,omitempty"`
 	RuntimeDigests       []string               `protobuf:"bytes,6,rep,name=runtime_digests,json=runtimeDigests,proto3" json:"runtime_digests,omitempty"`
 	Version              int64                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
+	Icon                 string                 `protobuf:"bytes,8,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -5618,6 +5627,13 @@ func (x *CLIConnectorSnapshot) GetVersion() int64 {
 		return x.Version
 	}
 	return 0
+}
+
+func (x *CLIConnectorSnapshot) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
 }
 
 type ListWorkflowsRequest struct {
@@ -11190,6 +11206,7 @@ type MCPConnectorInput struct {
 	PackageVersion *string                `protobuf:"bytes,6,opt,name=package_version,json=packageVersion,proto3,oneof" json:"package_version,omitempty"`
 	Arguments      []string               `protobuf:"bytes,7,rep,name=arguments,proto3" json:"arguments,omitempty"`
 	Environment    []*EnvironmentVariable `protobuf:"bytes,8,rep,name=environment,proto3" json:"environment,omitempty"`
+	Icon           string                 `protobuf:"bytes,9,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -11280,6 +11297,13 @@ func (x *MCPConnectorInput) GetEnvironment() []*EnvironmentVariable {
 	return nil
 }
 
+func (x *MCPConnectorInput) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
 type MCPConnector struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -11298,6 +11322,7 @@ type MCPConnector struct {
 	Version        int64                  `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
 	TestPending    bool                   `protobuf:"varint,15,opt,name=test_pending,json=testPending,proto3" json:"test_pending,omitempty"`
 	Platform       bool                   `protobuf:"varint,16,opt,name=platform,proto3" json:"platform,omitempty"`
+	Icon           string                 `protobuf:"bytes,17,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -11442,6 +11467,13 @@ func (x *MCPConnector) GetPlatform() bool {
 		return x.Platform
 	}
 	return false
+}
+
+func (x *MCPConnector) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
 }
 
 type ListSkillsRequest struct {
@@ -14581,6 +14613,7 @@ type SelectedResource struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Revision      string                 `protobuf:"bytes,3,opt,name=revision,proto3" json:"revision,omitempty"`
+	Icon          string                 `protobuf:"bytes,4,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14632,6 +14665,13 @@ func (x *SelectedResource) GetName() string {
 func (x *SelectedResource) GetRevision() string {
 	if x != nil {
 		return x.Revision
+	}
+	return ""
+}
+
+func (x *SelectedResource) GetIcon() string {
+	if x != nil {
+		return x.Icon
 	}
 	return ""
 }
@@ -15516,7 +15556,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bendpoint\x18\b \x01(\tR\bendpoint\x12\x1c\n" +
 	"\tprotocols\x18\t \x03(\tR\tprotocols\x12$\n" +
 	"\rcompatibility\x18\n" +
-	" \x01(\tR\rcompatibility\"\xa7\x02\n" +
+	" \x01(\tR\rcompatibility\"\xbb\x02\n" +
 	"\x11MCPServerSnapshot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -15525,7 +15565,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x06runner\x18\x05 \x01(\tH\x01R\x06runner\x88\x01\x01\x12\x1d\n" +
 	"\apackage\x18\x06 \x01(\tH\x02R\apackage\x88\x01\x01\x12,\n" +
 	"\x0fpackage_version\x18\a \x01(\tH\x03R\x0epackageVersion\x88\x01\x01\x12\x1c\n" +
-	"\targuments\x18\b \x03(\tR\targumentsB\x06\n" +
+	"\targuments\x18\b \x03(\tR\targuments\x12\x12\n" +
+	"\x04icon\x18\t \x01(\tR\x04iconB\x06\n" +
 	"\x04_urlB\t\n" +
 	"\a_runnerB\n" +
 	"\n" +
@@ -15536,7 +15577,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"object_key\x18\x03 \x01(\tR\tobjectKey\x12\x16\n" +
-	"\x06sha256\x18\x04 \x01(\tR\x06sha256\"\xf7\x01\n" +
+	"\x06sha256\x18\x04 \x01(\tR\x06sha256\"\x8b\x02\n" +
 	"\x14CLIConnectorSnapshot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1e\n" +
@@ -15546,7 +15587,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x15authentication_driver\x18\x04 \x01(\tR\x14authenticationDriver\x12#\n" +
 	"\rbundle_sha256\x18\x05 \x01(\tR\fbundleSha256\x12'\n" +
 	"\x0fruntime_digests\x18\x06 \x03(\tR\x0eruntimeDigests\x12\x18\n" +
-	"\aversion\x18\a \x01(\x03R\aversion\"0\n" +
+	"\aversion\x18\a \x01(\x03R\aversion\x12\x12\n" +
+	"\x04icon\x18\b \x01(\tR\x04icon\"0\n" +
 	"\x14ListWorkflowsRequest\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted\"E\n" +
 	"\x15ListWorkflowsResponse\x12,\n" +
@@ -16058,7 +16100,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\"t\n" +
 	"\x19DeleteMCPConnectorRequest\x12(\n" +
 	"\x10mcp_connector_id\x18\x01 \x01(\tR\x0emcpConnectorId\x12-\n" +
-	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xdc\x02\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xf0\x02\n" +
 	"\x11MCPConnectorInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\ttransport\x18\x02 \x01(\tR\ttransport\x12\x15\n" +
@@ -16067,12 +16109,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\apackage\x18\x05 \x01(\tH\x02R\apackage\x88\x01\x01\x12,\n" +
 	"\x0fpackage_version\x18\x06 \x01(\tH\x03R\x0epackageVersion\x88\x01\x01\x12\x1c\n" +
 	"\targuments\x18\a \x03(\tR\targuments\x12C\n" +
-	"\venvironment\x18\b \x03(\v2!.workspace.v1.EnvironmentVariableR\venvironmentB\x06\n" +
+	"\venvironment\x18\b \x03(\v2!.workspace.v1.EnvironmentVariableR\venvironment\x12\x12\n" +
+	"\x04icon\x18\t \x01(\tR\x04iconB\x06\n" +
 	"\x04_urlB\t\n" +
 	"\a_runnerB\n" +
 	"\n" +
 	"\b_packageB\x12\n" +
-	"\x10_package_version\"\x81\x05\n" +
+	"\x10_package_version\"\x95\x05\n" +
 	"\fMCPConnector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -16093,7 +16136,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\x0e \x01(\x03R\aversion\x12!\n" +
 	"\ftest_pending\x18\x0f \x01(\bR\vtestPending\x12\x1a\n" +
-	"\bplatform\x18\x10 \x01(\bR\bplatformB\x06\n" +
+	"\bplatform\x18\x10 \x01(\bR\bplatform\x12\x12\n" +
+	"\x04icon\x18\x11 \x01(\tR\x04iconB\x06\n" +
 	"\x04_urlB\t\n" +
 	"\a_runnerB\n" +
 	"\n" +
@@ -16394,11 +16438,12 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x15inherited_mcp_servers\x18\v \x03(\v2\x1e.workspace.v1.SelectedResourceR\x13inheritedMcpServers\x12X\n" +
 	"\x18inherited_cli_connectors\x18\f \x03(\v2\x1e.workspace.v1.SelectedResourceR\x16inheritedCliConnectors\x12/\n" +
 	"\x13disabled_connectors\x18\r \x03(\tR\x12disabledConnectors\x12!\n" +
-	"\fmember_count\x18\x0e \x01(\x05R\vmemberCount\"R\n" +
+	"\fmember_count\x18\x0e \x01(\x05R\vmemberCount\"f\n" +
 	"\x10SelectedResource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
-	"\brevision\x18\x03 \x01(\tR\brevision\"\x9c\x01\n" +
+	"\brevision\x18\x03 \x01(\tR\brevision\x12\x12\n" +
+	"\x04icon\x18\x04 \x01(\tR\x04icon\"\x9c\x01\n" +
 	"\x1cListConversationFilesRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +

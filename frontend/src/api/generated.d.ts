@@ -1630,6 +1630,7 @@ export interface components {
             runtime_digests?: string[];
             /** Format: int64 */
             version?: number;
+            icon?: string;
         };
         v1CLIRecommendedSkill: {
             name?: string;
@@ -2175,6 +2176,7 @@ export interface components {
             version?: number;
             test_pending?: boolean;
             platform?: boolean;
+            icon?: string;
         };
         v1MCPConnectorInput: {
             name?: string;
@@ -2185,6 +2187,7 @@ export interface components {
             package_version?: string;
             arguments?: string[];
             environment?: components["schemas"]["v1EnvironmentVariable"][];
+            icon?: string;
         };
         v1MCPServerSnapshot: {
             id?: string;
@@ -2195,6 +2198,7 @@ export interface components {
             package?: string;
             package_version?: string;
             arguments?: string[];
+            icon?: string;
         };
         v1ModelCreditRate: {
             revision_id?: string;
@@ -2437,6 +2441,7 @@ export interface components {
             id?: string;
             name?: string;
             revision?: string;
+            icon?: string;
         };
         v1SendSessionMessageResponse: {
             user_message?: components["schemas"]["v1SessionMessage"];

@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { CLIConnectorDefinition, CLIConnectorEnablement, MCPServer } from "../api/client";
-import ProfileIcon from "./ProfileIcon.vue";
+import ConnectorIcon from "./ConnectorIcon.vue";
 
 const props = defineProps<{ mcp?: MCPServer; cli?: CLIConnectorDefinition; enablement?: CLIConnectorEnablement; canEdit?: boolean }>();
 const emit = defineEmits<{ close: []; "edit-mcp": [item: MCPServer]; "edit-cli": [item: CLIConnectorDefinition] }>();
@@ -21,7 +21,7 @@ function edit() {
   <el-drawer :model-value="open" class="catalog-details connector-details" :title="title" size="min(620px, 100vw)" destroy-on-close @close="emit('close')">
     <template v-if="mcp">
       <div class="catalog-detail-intro">
-        <span class="extension-card-mark">{{ mcp.name.slice(0, 1).toUpperCase() }}</span>
+        <ConnectorIcon :icon="mcp.icon" :size="42" />
         <div><el-tag :type="mcp.tested ? 'success' : 'warning'" size="small">{{ mcp.test_pending ? t('settings.testPending') : mcp.tested ? t('settings.tested') : t('settings.testRequired') }}</el-tag><p>{{ t('resources.mcpDetailDescription') }}</p></div>
       </div>
       <dl class="connector-detail-fields">
@@ -33,7 +33,7 @@ function edit() {
     </template>
     <template v-else-if="cli">
       <div class="catalog-detail-intro">
-        <ProfileIcon :icon="cli.icon || 'terminal'" />
+        <ConnectorIcon :icon="cli.icon || 'terminal'" :size="42" />
         <div><el-tag size="small">{{ t(`resources.state.${cli.state}`) }}</el-tag><p>{{ cli.description || (cli.npm_package === '@larksuite/cli' ? t('resources.feishuCapability') : t('resources.noCapabilityDescription')) }}</p></div>
       </div>
       <dl class="connector-detail-fields">

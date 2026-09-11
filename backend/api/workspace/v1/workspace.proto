@@ -328,9 +328,9 @@ message ResponseSnapshot { string provider_model_id = 1; string connection_id = 
 message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; optional string team_member_id = 7; optional string team_member_name = 8; repeated string team_member_labels = 9; repeated CLIConnectorSnapshot cli_connectors = 10; }
 message ExpertSnapshot { string id = 1; string name = 2; string execution_instruction = 3; int64 version = 4; string icon = 5; string icon_background = 6; string introduction = 7; string core_capability = 8; string operating_procedure = 9; string output_standard = 10; string cautions = 11; }
 message ProviderModelSnapshot { string id = 1; string connection_id = 2; int64 connection_version = 3; string connection_name = 4; string provider_type = 5; string model_id = 6; string name = 7; string endpoint = 8; repeated string protocols = 9; string compatibility = 10; }
-message MCPServerSnapshot { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; }
+message MCPServerSnapshot { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; string icon = 9; }
 message SkillSnapshot { string id = 1; string name = 2; string object_key = 3; string sha256 = 4; }
-message CLIConnectorSnapshot { string id = 1; string name = 2; string executable = 3; string authentication_driver = 4; string bundle_sha256 = 5; repeated string runtime_digests = 6; int64 version = 7; }
+message CLIConnectorSnapshot { string id = 1; string name = 2; string executable = 3; string authentication_driver = 4; string bundle_sha256 = 5; repeated string runtime_digests = 6; int64 version = 7; string icon = 8; }
 
 message ListWorkflowsRequest { bool deleted = 1; }
 message ListWorkflowsResponse { repeated Workflow items = 1; }
@@ -423,8 +423,8 @@ message UpdateMCPConnectorRequest { string mcp_connector_id = 1; MCPConnectorInp
 message TestMCPConnectorRequest { string mcp_connector_id = 1; }
 message GetMCPConnectorDeletionImpactRequest { string mcp_connector_id = 1; }
 message DeleteMCPConnectorRequest { string mcp_connector_id = 1; string confirmation_token = 2; }
-message MCPConnectorInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; }
-message MCPConnector { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; bool platform = 16; }
+message MCPConnectorInput { string name = 1; string transport = 2; optional string url = 3; optional string runner = 4; optional string package = 5; optional string package_version = 6; repeated string arguments = 7; repeated EnvironmentVariable environment = 8; string icon = 9; }
+message MCPConnector { string id = 1; string name = 2; string transport = 3; optional string url = 4; optional string runner = 5; optional string package = 6; optional string package_version = 7; repeated string arguments = 8; repeated EnvironmentVariable environment = 9; bool tested = 10; optional string test_error = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; bool test_pending = 15; bool platform = 16; string icon = 17; }
 
 message ListSkillsRequest {}
 message ListSkillsResponse { repeated Skill items = 1; }
@@ -475,7 +475,7 @@ message CompleteCLIConnectorEnablementRequest { string enablement_id = 1; }
 message GetConversationSelectionRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; }
 message ResolveConversationSelectionRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; string previous_id = 4; bool change_expert = 5; string expert_id = 6; string expert_team_id = 7; repeated string skill_ids = 8; repeated string mcp_server_ids = 9; repeated string cli_connector_ids = 10; repeated string disabled_connectors = 11; repeated string refresh_ids = 12; }
 message ConversationSelection { string id = 1; string expert_id = 2; string expert_team_id = 3; string name = 4; string icon = 5; string icon_background = 6; repeated SelectedResource skills = 7; repeated SelectedResource mcp_servers = 8; repeated SelectedResource cli_connectors = 9; repeated SelectedResource inherited_skills = 10; repeated SelectedResource inherited_mcp_servers = 11; repeated SelectedResource inherited_cli_connectors = 12; repeated string disabled_connectors = 13; int32 member_count = 14; }
-message SelectedResource { string id = 1; string name = 2; string revision = 3; }
+message SelectedResource { string id = 1; string name = 2; string revision = 3; string icon = 4; }
 message ListConversationFilesRequest { string session_id = 1; string workflow_id = 2; string run_id = 3; string workspace_path = 4; }
 message ListConversationFilesResponse { repeated ConversationFile items = 1; }
 message ConversationFile { string kind = 1; string id = 2; string name = 3; string path = 4; int64 size = 5; bool available = 6; string unavailable_reason = 7; }
