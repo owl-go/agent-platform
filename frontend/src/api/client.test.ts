@@ -80,6 +80,18 @@ describe("Agent Workspace API client", () => {
     });
   });
 
+  it("uses the MCP connector field required by the protobuf HTTP contract", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({ id: "mcp-1" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+
+    await api.createMCPServer({ name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" });
+    await api.updateMCPServer("mcp-1", { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" }, 1);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ mcp_connector: { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" } });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mcp_connector: { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" }, expected_version: 1 });
+  });
+
   it("configures Git separately from the read-only Workspace", async () => {
     const fetchMock = vi.fn(async (_path: string, init?: RequestInit) => {
       expect(JSON.parse(String(init?.body))).toEqual({ url: "https://git.example.com/team/project.git", branch: "main", authentication: "basic", username: "developer", password: "secret", config: [{ key: "user.name", value: "Agent" }] });

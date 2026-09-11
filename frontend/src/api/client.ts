@@ -461,8 +461,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     refreshProviderModels(id, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}/refresh`, json("POST", {}, signal)); },
     createProviderModel(connectionID, input, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(connectionID)}/models`, json("POST", input, signal)); },
     async listMCPServers(signal) { return (await call<{ items: MCPServer[] }>("/api/v1/connectors/mcp", { signal })).items ?? []; },
-    createMCPServer(input, signal) { return call("/api/v1/connectors/mcp", json("POST", { mcp_server: input }, signal)); },
-    updateMCPServer(id, input, version, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_server: input, expected_version: version }, signal)); },
+    createMCPServer(input, signal) { return call("/api/v1/connectors/mcp", json("POST", { mcp_connector: input }, signal)); },
+    updateMCPServer(id, input, version, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_connector: input, expected_version: version }, signal)); },
     testMCPServer(id, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
     async getMCPConnectorDeletionImpact(id, signal) {
       const impact = await call<ResourceDeletionImpact>(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/deletion-impact`, { signal });
