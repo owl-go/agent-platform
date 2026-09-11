@@ -6,7 +6,7 @@ Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前
 
 Session 与 Run Conversation 的每个 Execution Stage 按 Owner、资源 ID、冻结 Team Member 身份（无成员时使用 Expert 或匿名 Stage）、Runtime Engine 和镜像 Digest 使用稳定且彼此隔离的 Warm Container。一次 Stage 中的版本探测与正式调用通过 `docker exec` 进入同一 Container；Expert Team 的不同成员不共享执行上下文，即使引用同一 Expert，也只按顺序挂载同一轮 Workflow 临时 Workspace。Stage 结束后立即停止 Container 以终止所有子进程并清理单次 Secret，但保留不可变 Container 定义。30 分钟内同一 Stage 身份再次使用时直接启动，连续空闲 30 分钟后由 Worker Reaper 销毁。复用前必须校验 Container 配置指纹，漂移时 fail closed。
 
-进入 `waiting_for_user` 时不结束 Stage：保留 Container、临时 Workspace、Workflow 串行锁与 Credit lease，暂停普通执行超时，仅运行最长十五分钟的 User Action Wait deadline，并持续接受取消。Worker 重启后的 Reconcile 只能从已持久化的批准状态恢复；过期、拒绝、Definition disabled 或 Authorization revoked 均关闭尚未启动的命令。批准后由公共 CLI Connector Wrapper 在真实进程启动前再次校验不可变 argv 摘要和全部当前授权。
+进入 `waiting_for_user` 时不结束 Stage：保留 Container、临时 Workspace、Workflow Queue slot 与 Execution Credit Reservation，暂停普通执行超时，仅运行最长十五分钟的 User Action Wait deadline，并持续接受取消。Worker 重启后的 Reconcile 只能从已持久化的批准状态恢复；过期、拒绝、Definition disabled 或 Authorization revoked 均关闭尚未启动的命令。批准后由公共 CLI Connector Wrapper 在真实进程启动前再次校验不可变 argv 摘要和全部当前授权。
 
 Workspace Run 在临时副本工作；挂载前整棵临时文件树必须归固定 Runtime 用户 `65532:65532` 独占，目录为 `0700`、普通文件为 `0600`，已有所有者执行位的文件保持可执行。Runtime 不依赖宿主机用户手工修改权限。仅成功执行才安全合并到 Workflow 的持久 Workspace。路径穿越、符号链接、特殊文件和超过 1 GiB 配额均 fail closed。失败或取消不会污染持久 Workspace。
 

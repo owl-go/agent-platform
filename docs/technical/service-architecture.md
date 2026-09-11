@@ -28,18 +28,19 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## 事务与并发
 
-- Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务。
+- Session 发消息在一个事务中创建 User Message 和排队中的 Assistant Message；同一 Session 同时只有一个生成任务，不同 Session 之间不共享该执行槽位并可并行。
+- Workflow 以 `workflow_id` 为并发边界维护持久 FIFO Queue；同一 Workflow 同时最多一个 Run 处于 `running` 或 `waiting_for_user`，不同 Workflow（包括同一 User 的 Workflow）可并行。首版每个 Workflow 最多五个 `queued` Run；队列位置按 `queued_at + id` 动态计算，取消 queued Run 后立即推进后继任务。
 - Session 首次发送消息、Run Conversation 首个 Run 创建时从 Personal Settings 解析并冻结一个 Provider Model 与 Runtime Engine。Snapshot 的每个 Stage 共用该配置，同时独立包含可选 Expert/Team Member 身份、四段结构化 guidance、Model Provider Connection 版本、Model API Protocol、Endpoint，以及 exact Skill/Connector revisions；环境变量和共享 Workspace 配置保留在公共快照层。后续消息或 Run 复用冻结的执行配置；每轮按 owning User 与 Session / Run Conversation 隔离的不可变 Conversation Selection 合并专家默认和显式资源，在该轮 Response Snapshot / Run Snapshot 中保留实际执行计划。成功提交在同一事务内清空 retained selection 的显式 Skills，保留专家与 Connector 选择。API Key 与 Connector Secret 通过版本化凭证引用在 Worker 领取或命令启动前加载，不进入普通 Snapshot JSON。
 - Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）、Runtime Engine 和实际资源集合摘要维护隔离的 Warm Runtime Container 租约。动态资源选择的轮次关闭 Native Resume，始终使用平台消息与摘要续接，避免旧上下文保留已移除的指导与工具。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
 - CLI Connector bundle 在无 User 凭证的 Builder 中生成并通过 Object Storage 发布；Definition 状态与 exact bundle/Runtime Digest Conformance 控制 availability。公共 Wrapper 是所有 Runtime 的唯一 direct CLI 入口，负责 argv 与权限策略。`waiting_for_user`、一次性 Approval、nonce consumption 和执行前重校验由 Workspace Application 协调并持久化；每个 Stage 同时只有一个 active Approval。
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
 - Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
-- 每个 User 的积分模型调用串行。调用开始前事务性物化当日额度并检查正余额；每个 Execution Stage 冻结 Model Credit Rate 修订，完成后以本次输入和输出 Token 增量结算。Stage 终态、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交；单 Stage 或团队最后一个 Stage 同事务提交 Assistant Message 或 Run 终态，结算后的负余额会阻止下一次调用。
+- Runtime-backed text invocation 按 Workflow 串行而非按 User 串行。Stage 开始前在 Credits 事务中锁定 User 余额并创建等于冻结 Model Credit Rate fallback 的 Execution Credit Reservation；实际输入/输出 Token 用量在终态精确结算，超出预留时沿用负余额语义。Expert Team 成员逐个 reservation/settlement，未启动成员不收费；Stage 终态、Reservation、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交。不同 Workflow 的 Stage 可并行，互不共享执行锁。
 - Image Generation 是上述串行规则的受控例外：提交时在 Credits 上下文按 User 锁定余额，为完整输出数量创建归属提交 Credit Day 的 Image Credit Reservation，并分别记录来自当日额度与兑换余额的来源；同一 User 最多一个非终态图片批次，但可与一个 Runtime-backed 调用并行。后续任何准入都使用扣除未结算预留的 Available Credit。图片终态、成功输出元数据、Credit Consumption 和预留释放在一个事务提交；释放时已过期的旧 Daily Credit Allocation 不带入次日，未使用的 Redeemed Credit Balance 回到原余额。删除私有记录不退款，只留下不含执行内容的通用账本金额与时间。
 - Image Generation Record 由 Worker 通过 `FOR UPDATE SKIP LOCKED` 和租约领取。未发给供应商的工作可在进程重启后恢复；已发出但结果不确定的工作进入 `outcome_unknown`，不盲目重试。User 停止后拒收迟到输出，且只对停止前已验证持久化的图片结算。
 - 跨零点调用归属开始时的 Credit Day。次日额度通过首次余额读取或执行准入惰性物化，不依赖零点批处理；Personal Settings 时区变更只能从下一个 Credit Day 生效。
 - 更新使用 Version 乐观锁；外部 Workflow API 创建 Run 还使用 `Idempotency-Key` 保存响应。
-- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务，并在专用数据库连接上持有进程级 Advisory Lock，保证同一数据库只有一个执行 Worker 能够领取和恢复任务；连接或进程退出会自动释放该锁。每个 Worker 进程的第一次领取会在同一 PostgreSQL 事务中对账上一个进程遗留的 `generating`、`running` 和 `waiting_for_user`：已请求取消或所属资源已停用的执行直接收口为 `cancelled`，其余执行清除未完成输出后重新进入队列。对账同时释放该执行遗留的 Credit lease，并关闭尚未消费的 Connector Approval；已经消费 Approval 的外部命令结果无法安全确认，因此对应执行 fail closed 而不盲目重放。恢复只改变非终态执行，不重开或改写终态 Session response 或 Run。
+- Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务，并在专用数据库连接上持有进程级 Advisory Lock，保证同一数据库只有一个执行 Worker 能够领取和恢复任务；连接或进程退出会自动释放该锁。每个 Worker 进程的第一次领取会在同一 PostgreSQL 事务中对账上一个进程遗留的 `generating`、`running` 和 `waiting_for_user`：已请求取消或所属资源已停用的执行直接收口为 `cancelled`，其余执行清除未完成输出后重新进入对应 Workflow Queue。对账同时释放该执行遗留的 Execution Credit Reservation，并关闭尚未消费的 Connector Approval；已经消费 Approval 的外部命令结果无法安全确认，因此对应执行 fail closed 而不盲目重放。恢复只改变非终态执行，不重开或改写终态 Session response 或 Run。
 
 ## API
 
@@ -47,7 +48,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、图片预留汇总和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前 Available Credit、预留汇总与下一次每日额度时间，不返回其他 User 或内部费率数据。
 
-工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
+工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run，即使同一 Conversation 已有 queued/running turn 也不返回冲突。创建请求立即返回 `202` 和稳定 Run ID；GET/SSE 返回权威状态与动态 queue position，API 继续使用 `Idempotency-Key`。队列超过五个 queued Run 时手动/API 返回 `429 queue_full` 且不创建 Run，定时触发记录失败历史 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
 
 AI Creation 使用普通 Proto/HTTP API 管理 Image Model、Prompt Optimization 设置、临时 Reference Image、Image Generation Record、历史和下载。当前记录另有手写 SSE Handler，只发布有界产品进度；断线后客户端先读取权威记录再续接。首期不向 Workflow Credential 或外部调用方开放图片生成接口。
 

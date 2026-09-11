@@ -198,7 +198,7 @@ Enable validates platform capability defaults, fixed rates, the Image Model's ow
 
 Every User method requires the authenticated owner. Cross-owner and missing identities use the same not-found behavior. Administrator status does not bypass ownership.
 
-The workbench permits one non-terminal Image Generation Record per User. A second submission fails with conflict and creates neither a record nor a Credit reservation. Prompt Optimization is rejected while a record is non-terminal. Sessions and Workflows retain their existing serialized Runtime-backed queue and may run concurrently with the image record.
+The workbench permits one non-terminal Image Generation Record per User. A second submission fails with conflict and creates neither a record nor a Credit reservation. Prompt Optimization is rejected while a record is non-terminal. Sessions and Workflow-scoped Runtime-backed queues may run concurrently with the image record, and different Workflows may run concurrently with one another.
 
 ## HTTP Contract
 
