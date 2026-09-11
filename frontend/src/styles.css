@@ -457,6 +457,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .connector-kind-options span { color: var(--muted); font-size: .72rem; line-height: 1.6; }
 .cli-install-card { width: min(560px,calc(100vw - 40px)); }
 .cli-icon-field { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 10px; }
+.connector-icon-upload { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .cli-install-card label > small { color: var(--muted); font-size: .68rem; line-height: 1.5; }
 .recommended-skill-offers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
 .recommended-skill-offers > span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 8px; background: #f2f5f1; }

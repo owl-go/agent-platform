@@ -350,6 +350,7 @@ type mcpRecord struct {
 	OwnerID          string     `gorm:"column:owner_user_id"`
 	Platform         bool       `gorm:"->;column:platform"`
 	Name             string     `gorm:"column:name"`
+	Icon             string     `gorm:"column:icon"`
 	Transport        string     `gorm:"column:transport"`
 	Configuration    []byte     `gorm:"column:configuration;type:jsonb"`
 	SecretCiphertext []byte     `gorm:"column:secret_ciphertext"`

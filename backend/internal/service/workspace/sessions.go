@@ -262,13 +262,13 @@ func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot)
 		response.Expert = &workspacev1.ExpertSnapshot{Id: item.Expert.ID, Name: item.Expert.Name, ExecutionInstruction: item.Expert.ExecutionInstruction, Version: item.Expert.Version}
 	}
 	for _, server := range item.MCPServers {
-		response.McpServers = append(response.McpServers, &workspacev1.MCPServerSnapshot{Id: server.ID, Name: server.Name, Transport: server.Transport})
+		response.McpServers = append(response.McpServers, &workspacev1.MCPServerSnapshot{Id: server.ID, Name: server.Name, Icon: server.Icon, Transport: server.Transport})
 	}
 	for _, skill := range item.Skills {
 		response.Skills = append(response.Skills, &workspacev1.SkillSnapshot{Id: skill.ID, Name: skill.Name, ObjectKey: skill.ObjectKey, Sha256: skill.SHA256})
 	}
 	for _, connector := range item.CLIConnectors {
-		response.CliConnectors = append(response.CliConnectors, &workspacev1.CLIConnectorSnapshot{Id: connector.ID, Name: connector.Name, Executable: connector.Executable, AuthenticationDriver: connector.AuthenticationDriver, BundleSha256: connector.BundleSHA256, RuntimeDigests: connector.RuntimeDigests, Version: connector.Version})
+		response.CliConnectors = append(response.CliConnectors, &workspacev1.CLIConnectorSnapshot{Id: connector.ID, Name: connector.Name, Icon: connector.Icon, Executable: connector.Executable, AuthenticationDriver: connector.AuthenticationDriver, BundleSha256: connector.BundleSHA256, RuntimeDigests: connector.RuntimeDigests, Version: connector.Version})
 	}
 	return response
 }

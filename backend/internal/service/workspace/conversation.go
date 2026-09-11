@@ -56,10 +56,10 @@ func conversationSelectionResponse(item domain.ConversationSelection) *workspace
 		response.Skills = append(response.Skills, &workspacev1.SelectedResource{Id: skill.ID, Name: skill.Name, Revision: skill.SHA256})
 	}
 	for _, server := range item.MCPServers {
-		response.McpServers = append(response.McpServers, &workspacev1.SelectedResource{Id: server.ID, Name: server.Name})
+		response.McpServers = append(response.McpServers, &workspacev1.SelectedResource{Id: server.ID, Name: server.Name, Icon: server.Icon})
 	}
 	for _, connector := range item.CLIConnectors {
-		response.CliConnectors = append(response.CliConnectors, &workspacev1.SelectedResource{Id: connector.ID, Name: connector.Name, Revision: strconv.FormatInt(connector.Version, 10)})
+		response.CliConnectors = append(response.CliConnectors, &workspacev1.SelectedResource{Id: connector.ID, Name: connector.Name, Icon: connector.Icon, Revision: strconv.FormatInt(connector.Version, 10)})
 	}
 	seen := map[string]bool{}
 	for _, stage := range item.Defaults {
@@ -74,14 +74,14 @@ func conversationSelectionResponse(item domain.ConversationSelection) *workspace
 			key := "mcp:" + server.ID
 			if !seen[key] {
 				seen[key] = true
-				response.InheritedMcpServers = append(response.InheritedMcpServers, &workspacev1.SelectedResource{Id: server.ID, Name: server.Name})
+				response.InheritedMcpServers = append(response.InheritedMcpServers, &workspacev1.SelectedResource{Id: server.ID, Name: server.Name, Icon: server.Icon})
 			}
 		}
 		for _, connector := range stage.CLIConnectors {
 			key := "cli:" + connector.ID
 			if !seen[key] {
 				seen[key] = true
-				response.InheritedCliConnectors = append(response.InheritedCliConnectors, &workspacev1.SelectedResource{Id: connector.ID, Name: connector.Name, Revision: strconv.FormatInt(connector.Version, 10)})
+				response.InheritedCliConnectors = append(response.InheritedCliConnectors, &workspacev1.SelectedResource{Id: connector.ID, Name: connector.Name, Icon: connector.Icon, Revision: strconv.FormatInt(connector.Version, 10)})
 			}
 		}
 	}

@@ -4612,6 +4612,9 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "icon": {
+          "type": "string"
         }
       }
     },
@@ -6299,6 +6302,9 @@
         },
         "platform": {
           "type": "boolean"
+        },
+        "icon": {
+          "type": "string"
         }
       }
     },
@@ -6335,6 +6341,9 @@
             "type": "object",
             "$ref": "#/definitions/v1EnvironmentVariable"
           }
+        },
+        "icon": {
+          "type": "string"
         }
       }
     },
@@ -6367,6 +6376,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "icon": {
+          "type": "string"
         }
       }
     },
@@ -7059,6 +7071,9 @@
           "type": "string"
         },
         "revision": {
+          "type": "string"
+        },
+        "icon": {
           "type": "string"
         }
       }

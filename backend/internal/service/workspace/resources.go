@@ -861,7 +861,7 @@ func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspac
 	if input == nil {
 		return workspacedomain.MCPServer{}, nil, fmt.Errorf("%w: MCP input is required", workspacedomain.ErrInvalid)
 	}
-	item := workspacedomain.MCPServer{Name: input.Name, Transport: input.Transport, URL: input.Url, Runner: input.Runner, Package: input.Package, PackageVersion: input.PackageVersion, Arguments: append([]string(nil), input.Arguments...)}
+	item := workspacedomain.MCPServer{Name: input.Name, Icon: input.Icon, Transport: input.Transport, URL: input.Url, Runner: input.Runner, Package: input.Package, PackageVersion: input.PackageVersion, Arguments: append([]string(nil), input.Arguments...)}
 	secretValues := make(map[string]string)
 	for _, value := range input.Environment {
 		if value == nil {
@@ -884,7 +884,7 @@ func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspac
 }
 
 func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
-	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
+	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Icon: item.Icon, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
 	if item.TestError != "" {
 		response.TestError = &item.TestError
 	}

@@ -133,7 +133,7 @@ type EncryptedExecutionCredentials struct {
 
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)
 var npmPackage = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-var connectorIcon = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
+var connectorIcon = regexp.MustCompile(`^(?:[a-z][a-z0-9-]{0,31}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$`)
 var policyToken = regexp.MustCompile(`^[A-Za-z0-9._:/-]+$`)
 var egressHost = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$`)
 
@@ -168,7 +168,7 @@ func (definition Definition) ValidateDraft() error {
 	if strings.TrimSpace(definition.Name) == "" {
 		return errors.New("CLI Connector name is required")
 	}
-	if definition.Icon != "" && !connectorIcon.MatchString(definition.Icon) {
+	if definition.Icon != "" && (len(definition.Icon) > 512*1024 || !connectorIcon.MatchString(definition.Icon)) {
 		return errors.New("CLI Connector icon is invalid")
 	}
 	if definition.InstallationType != "" && strings.TrimSpace(definition.Description) == "" {
