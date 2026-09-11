@@ -502,12 +502,32 @@ describe("ExtensionManager", () => {
     await form.findAll("select")[0]!.setValue("code");
     await form.findAll("input")[0]!.setValue(draft.name);
     await form.get("textarea").setValue(draft.description);
-    await form.findAll("input")[1]!.setValue("npm install example-cli@1.2.3");
+    await form.findAll("input")[1]!.setValue("npm install -g example-cli@1.2.3");
     await form.trigger("submit");
     await flushPromises();
 
     expect(createCLIConnectorDefinition).toHaveBeenCalledWith({ name: draft.name, icon: "code", description: draft.description, installation_type: "npm", npm_package: "example-cli", npm_version: "1.2.3", archive: undefined });
     expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(draft.id, draft.version);
+    wrapper.unmount();
+  });
+
+  it("explains that a pasted npm install command still needs an exact package version", async () => {
+    const createCLIConnectorDefinition = vi.fn();
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createCLIConnectorDefinition } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
+    await form.findAll("input")[0]!.setValue("钉钉");
+    await form.get("textarea").setValue("管理钉钉产品能力");
+    await form.findAll("input")[1]!.setValue("npm install -g dingtalk-workspace-cli");
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(createCLIConnectorDefinition).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".app-toast")?.textContent).toContain("必须指定精确版本");
+    expect(document.body.querySelector(".cli-install-card")).not.toBeNull();
     wrapper.unmount();
   });
 
