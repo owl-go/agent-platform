@@ -51,6 +51,15 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
+  it("normalizes omitted MCP repeated fields before editing a connector", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "mcp-1", name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/", tested: false, test_pending: false, version: 1 }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const item = (await createPlatformApi(() => "token").listMCPServers())[0];
+
+    expect(item?.arguments).toEqual([]);
+    expect(item?.environment).toEqual([]);
+  });
+
   it("normalizes an omitted deletion impact list from protobuf JSON", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ confirmation_token: "confirmation" }), { status: 200, headers: { "Content-Type": "application/json" } })));
 

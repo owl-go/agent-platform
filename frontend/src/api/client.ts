@@ -460,10 +460,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteModelProviderConnection(id, signal) { return remove(`/api/v1/model-provider-connections/${encodeURIComponent(id)}`, signal); },
     refreshProviderModels(id, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(id)}/refresh`, json("POST", {}, signal)); },
     createProviderModel(connectionID, input, signal) { return call(`/api/v1/model-provider-connections/${encodeURIComponent(connectionID)}/models`, json("POST", input, signal)); },
-    async listMCPServers(signal) { return (await call<{ items: MCPServer[] }>("/api/v1/connectors/mcp", { signal })).items ?? []; },
-    createMCPServer(input, signal) { return call("/api/v1/connectors/mcp", json("POST", { mcp_connector: input }, signal)); },
-    updateMCPServer(id, input, version, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_connector: input, expected_version: version }, signal)); },
-    testMCPServer(id, signal) { return call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal)); },
+    async listMCPServers(signal) { return (await call<{ items: MCPServer[] }>("/api/v1/connectors/mcp", { signal })).items?.map(normalizeMCPServer) ?? []; },
+    async createMCPServer(input, signal) { return normalizeMCPServer(await call("/api/v1/connectors/mcp", json("POST", { mcp_connector: input }, signal))); },
+    async updateMCPServer(id, input, version, signal) { return normalizeMCPServer(await call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}`, json("PATCH", { mcp_connector: input, expected_version: version }, signal))); },
+    async testMCPServer(id, signal) { return normalizeMCPServer(await call(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/test`, json("POST", {}, signal))); },
     async getMCPConnectorDeletionImpact(id, signal) {
       const impact = await call<ResourceDeletionImpact>(`/api/v1/connectors/mcp/${encodeURIComponent(id)}/deletion-impact`, { signal });
       return { ...impact, affected_experts: impact.affected_experts ?? [] };
@@ -503,6 +503,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
 
 function normalizeExpert(expert: Expert): Expert {
   return { ...expert, expertise_tags: expert.expertise_tags ?? [], mcp_server_ids: expert.mcp_server_ids ?? [], skill_ids: expert.skill_ids ?? [], cli_connector_definition_ids: expert.cli_connector_definition_ids ?? [] };
+}
+
+function normalizeMCPServer(server: MCPServer): MCPServer {
+  return { ...server, arguments: server.arguments ?? [], environment: server.environment ?? [] };
 }
 
 function scopeQuery(scope: ConversationScope): string { return new URLSearchParams(Object.entries(scope).filter((entry): entry is [string, string] => Boolean(entry[1]))).toString(); }
