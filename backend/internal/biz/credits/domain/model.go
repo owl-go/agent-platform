@@ -68,14 +68,18 @@ func (rate ModelCreditRate) Validate() error {
 }
 
 type Admission struct {
-	UserID        string
-	ExecutionID   string
-	StagePosition int
-	Source        string
-	Timezone      string
-	CreditDay     string
-	StartedAt     time.Time
-	Rate          ModelCreditRate
+	UserID             string
+	ExecutionID        string
+	StagePosition      int
+	Source             string
+	Timezone           string
+	CreditDay          string
+	StartedAt          time.Time
+	Rate               ModelCreditRate
+	Reserved           Amount
+	DailyReserved      Amount
+	PersistentReserved Amount
+	Settled            bool
 }
 
 type Settlement struct {

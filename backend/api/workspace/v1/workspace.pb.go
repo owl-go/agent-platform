@@ -7090,6 +7090,7 @@ type Run struct {
 	Attachments       []*Attachment          `protobuf:"bytes,18,rep,name=attachments,proto3" json:"attachments,omitempty"`
 	ExpertStages      []*ExpertStage         `protobuf:"bytes,19,rep,name=expert_stages,json=expertStages,proto3" json:"expert_stages,omitempty"`
 	CreditConsumption *CreditConsumption     `protobuf:"bytes,20,opt,name=credit_consumption,json=creditConsumption,proto3,oneof" json:"credit_consumption,omitempty"`
+	QueuePosition     int32                  `protobuf:"varint,21,opt,name=queue_position,json=queuePosition,proto3" json:"queue_position,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -7262,6 +7263,13 @@ func (x *Run) GetCreditConsumption() *CreditConsumption {
 		return x.CreditConsumption
 	}
 	return nil
+}
+
+func (x *Run) GetQueuePosition() int32 {
+	if x != nil {
+		return x.QueuePosition
+	}
+	return 0
 }
 
 type ListArtifactsRequest struct {
@@ -15673,7 +15681,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x14RerunWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\xb1\b\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\xd8\b\n" +
 	"\x03Run\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -15703,7 +15711,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"turnNumber\x12:\n" +
 	"\vattachments\x18\x12 \x03(\v2\x18.workspace.v1.AttachmentR\vattachments\x12>\n" +
 	"\rexpert_stages\x18\x13 \x03(\v2\x19.workspace.v1.ExpertStageR\fexpertStages\x12S\n" +
-	"\x12credit_consumption\x18\x14 \x01(\v2\x1f.workspace.v1.CreditConsumptionH\bR\x11creditConsumption\x88\x01\x01B\r\n" +
+	"\x12credit_consumption\x18\x14 \x01(\v2\x1f.workspace.v1.CreditConsumptionH\bR\x11creditConsumption\x88\x01\x01\x12%\n" +
+	"\x0equeue_position\x18\x15 \x01(\x05R\rqueuePositionB\r\n" +
 	"\v_text_inputB\r\n" +
 	"\v_json_inputB\r\n" +
 	"\v_final_textB\r\n" +

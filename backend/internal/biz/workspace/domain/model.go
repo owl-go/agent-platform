@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("resource not found")
-	ErrConflict = errors.New("resource conflicts with current state")
-	ErrInvalid  = errors.New("resource is invalid")
+	ErrNotFound  = errors.New("resource not found")
+	ErrConflict  = errors.New("resource conflicts with current state")
+	ErrInvalid   = errors.New("resource is invalid")
+	ErrQueueFull = errors.New("workflow queue is full")
 )
 
 type RuntimeEngine string
@@ -953,6 +954,7 @@ type Run struct {
 	Error             string
 	WorkflowSnapshot  map[string]any
 	QueuedAt          time.Time
+	QueuePosition     int
 	StartedAt         *time.Time
 	EndedAt           *time.Time
 	CreditConsumption *CreditConsumption
