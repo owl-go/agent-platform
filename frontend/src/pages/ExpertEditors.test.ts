@@ -28,16 +28,17 @@ describe("Expert editors", () => {
     const wrapper = mount(ExpertEditorPage, mountOptions(api, router));
     await flushPromises();
     expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
-    const inputs = wrapper.findAll("input");
+    const inputs = wrapper.findAll('input[type="text"]');
     const textareas = wrapper.findAll("textarea");
     await inputs[0]!.setValue("架构专家");
+    await wrapper.get('button[aria-label="code"]').trigger("click");
     await textareas[0]!.setValue("展示用简介");
     await textareas[1]!.setValue("架构设计与边界治理");
     await textareas[2]!.setValue("先分析约束，再提出方案");
     await textareas[3]!.setValue("输出决策、理由和验证计划");
     await wrapper.get("form").trigger("submit");
     await flushPromises();
-    expect(createExpert).toHaveBeenCalledWith(expect.objectContaining({ introduction: "展示用简介", core_capability: "架构设计与边界治理", operating_procedure: "先分析约束，再提出方案", output_standard: "输出决策、理由和验证计划" }));
+    expect(createExpert).toHaveBeenCalledWith(expect.objectContaining({ icon: "code", introduction: "展示用简介", core_capability: "架构设计与边界治理", operating_procedure: "先分析约束，再提出方案", output_standard: "输出决策、理由和验证计划" }));
     expect(wrapper.text()).not.toContain("运行引擎");
     wrapper.unmount();
   });
@@ -50,6 +51,7 @@ describe("Expert editors", () => {
     const wrapper = mount(ExpertTeamEditorPage, mountOptions(api, router));
     await flushPromises();
     expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
+    await wrapper.get('button[aria-label="compass"]').trigger("click");
     const select = wrapper.get(".member-picker select");
     for (const expert of experts) {
       await select.setValue(expert.id);
@@ -57,6 +59,9 @@ describe("Expert editors", () => {
     }
     await wrapper.get('[aria-label="上移 测试工程师"]').trigger("click");
     expect(wrapper.findAll<HTMLInputElement>('.member-fields input[aria-label="成员名称"]').map((item) => item.element.value)).toEqual(["架构师", "测试工程师", "开发工程师"]);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(createExpertTeam).toHaveBeenCalledWith(expect.objectContaining({ icon: "compass" }));
     wrapper.unmount();
   });
 });

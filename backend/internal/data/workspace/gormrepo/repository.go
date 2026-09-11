@@ -369,6 +369,7 @@ type skillRecord struct {
 	OwnerID   string    `gorm:"column:owner_user_id"`
 	Platform  bool      `gorm:"->;column:platform"`
 	Name      string    `gorm:"column:name"`
+	Icon      string    `gorm:"column:icon"`
 	Source    string    `gorm:"column:source"`
 	GitURL    *string   `gorm:"column:git_url"`
 	GitRef    *string   `gorm:"column:git_ref"`

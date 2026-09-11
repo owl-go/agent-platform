@@ -41,7 +41,7 @@ func (repository *skillUploadRepository) ListSkills(_ context.Context, owner str
 	return []domain.Skill{repository.item}, nil
 }
 
-func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id, name string, ref *string, key, digest string, version int64) (domain.Skill, error) {
+func (repository *skillUploadRepository) UpdateSkill(_ context.Context, owner, id, name, _ string, ref *string, key, digest string, version int64) (domain.Skill, error) {
 	if owner != repository.owner || id != repository.item.ID || version != repository.item.Version {
 		return domain.Skill{}, domain.ErrNotFound
 	}

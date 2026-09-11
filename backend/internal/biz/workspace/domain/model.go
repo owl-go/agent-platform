@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"agent-platform/backend/internal/icon"
 )
 
 var (
@@ -185,6 +187,7 @@ type Skill struct {
 	OwnerID   string
 	Platform  bool
 	Name      string
+	Icon      string
 	Source    string
 	GitURL    *string
 	GitRef    *string
@@ -541,6 +544,9 @@ func (input ExpertInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert name must contain 1-100 characters", ErrInvalid)
 	}
+	if err := icon.Validate(input.Icon); err != nil {
+		return fmt.Errorf("%w: invalid Expert icon", ErrInvalid)
+	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || strings.TrimSpace(input.OperatingProcedure) != "" || strings.TrimSpace(input.OutputStandard) != "" || strings.TrimSpace(input.Cautions) != ""
 	if structured {
 		for _, field := range []struct {
@@ -675,6 +681,9 @@ var teamMemberID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 func (input ExpertTeamInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert Team name must contain 1-100 characters", ErrInvalid)
+	}
+	if err := icon.Validate(input.Icon); err != nil {
+		return fmt.Errorf("%w: invalid Expert Team icon", ErrInvalid)
 	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || len(input.Members) > 0
 	introduction := input.CapabilityIntroduction

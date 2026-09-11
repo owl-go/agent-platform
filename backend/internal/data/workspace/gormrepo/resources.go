@@ -1093,15 +1093,15 @@ func (repository *Repository) ListSkills(ctx context.Context, ownerID string) ([
 }
 
 func (repository *Repository) CreateSkill(ctx context.Context, ownerID string, skill domain.Skill) (domain.Skill, error) {
-	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(skill.Name), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
+	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(skill.Name), Icon: defaultString(skill.Icon, "sparkles"), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.Skill{}, fmt.Errorf("create Skill: %w", err)
 	}
 	return repository.getSkill(ctx, ownerID, row.ID)
 }
 
-func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
-	updates := map[string]any{"name": strings.TrimSpace(name), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name, icon string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
+	updates := map[string]any{"name": strings.TrimSpace(name), "icon": defaultString(icon, "sparkles"), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	if gitRef != nil {
 		updates["git_ref"] = gitRef
 	}
@@ -1186,7 +1186,7 @@ func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID,
 }
 
 func skillDomain(row skillRecord) domain.Skill {
-	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: row.Icon, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 
 func (repository *Repository) getSkill(ctx context.Context, ownerID, skillID string) (domain.Skill, error) {

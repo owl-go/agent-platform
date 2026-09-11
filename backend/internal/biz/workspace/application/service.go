@@ -76,7 +76,7 @@ type Repository interface {
 	DeleteMCPServer(context.Context, string, string) error
 	ListSkills(context.Context, string) ([]domain.Skill, error)
 	CreateSkill(context.Context, string, domain.Skill) (domain.Skill, error)
-	UpdateSkill(context.Context, string, string, string, *string, string, string, int64) (domain.Skill, error)
+	UpdateSkill(context.Context, string, string, string, string, *string, string, string, int64) (domain.Skill, error)
 	DeleteSkill(context.Context, string, string) error
 }
 

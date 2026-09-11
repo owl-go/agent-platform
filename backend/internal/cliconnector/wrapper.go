@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"agent-platform/backend/internal/icon"
 )
 
 type State string
@@ -133,7 +135,6 @@ type EncryptedExecutionCredentials struct {
 
 var exactVersion = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$`)
 var npmPackage = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-var connectorIcon = regexp.MustCompile(`^(?:[a-z][a-z0-9-]{0,31}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$`)
 var policyToken = regexp.MustCompile(`^[A-Za-z0-9._:/-]+$`)
 var egressHost = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$`)
 
@@ -168,8 +169,8 @@ func (definition Definition) ValidateDraft() error {
 	if strings.TrimSpace(definition.Name) == "" {
 		return errors.New("CLI Connector name is required")
 	}
-	if definition.Icon != "" && (len(definition.Icon) > 512*1024 || !connectorIcon.MatchString(definition.Icon)) {
-		return errors.New("CLI Connector icon is invalid")
+	if err := icon.Validate(definition.Icon); err != nil {
+		return fmt.Errorf("CLI Connector icon is invalid: %w", err)
 	}
 	if definition.InstallationType != "" && strings.TrimSpace(definition.Description) == "" {
 		return errors.New("CLI Connector capability description is required")

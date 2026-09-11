@@ -1457,6 +1457,7 @@ export interface components {
             archive?: string;
             /** Format: int64 */
             expected_version?: number;
+            icon?: string;
         };
         AgentWorkspaceServiceUpdateWorkflowBody: {
             workflow?: components["schemas"]["v1WorkflowInput"];
@@ -1745,6 +1746,7 @@ export interface components {
             git_ref?: string;
             /** Format: byte */
             archive?: string;
+            icon?: string;
         };
         v1CreateUserRequest: {
             username?: string;
@@ -2493,6 +2495,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             platform?: boolean;
+            icon?: string;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];

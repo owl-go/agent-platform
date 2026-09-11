@@ -11563,6 +11563,7 @@ type CreateSkillRequest struct {
 	GitUrl        *string                `protobuf:"bytes,3,opt,name=git_url,json=gitUrl,proto3,oneof" json:"git_url,omitempty"`
 	GitRef        *string                `protobuf:"bytes,4,opt,name=git_ref,json=gitRef,proto3,oneof" json:"git_ref,omitempty"`
 	Archive       []byte                 `protobuf:"bytes,5,opt,name=archive,proto3,oneof" json:"archive,omitempty"`
+	Icon          string                 `protobuf:"bytes,6,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11632,12 +11633,20 @@ func (x *CreateSkillRequest) GetArchive() []byte {
 	return nil
 }
 
+func (x *CreateSkillRequest) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
+}
+
 type UpdateSkillRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	SkillId         string                 `protobuf:"bytes,1,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
 	GitRef          *string                `protobuf:"bytes,2,opt,name=git_ref,json=gitRef,proto3,oneof" json:"git_ref,omitempty"`
 	Archive         []byte                 `protobuf:"bytes,3,opt,name=archive,proto3,oneof" json:"archive,omitempty"`
 	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Icon            string                 `protobuf:"bytes,5,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -11698,6 +11707,13 @@ func (x *UpdateSkillRequest) GetExpectedVersion() int64 {
 		return x.ExpectedVersion
 	}
 	return 0
+}
+
+func (x *UpdateSkillRequest) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
 }
 
 type GetSkillDeletionImpactRequest struct {
@@ -11808,6 +11824,7 @@ type Skill struct {
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Version       int64                  `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
 	Platform      bool                   `protobuf:"varint,10,opt,name=platform,proto3" json:"platform,omitempty"`
+	Icon          string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11910,6 +11927,13 @@ func (x *Skill) GetPlatform() bool {
 		return x.Platform
 	}
 	return false
+}
+
+func (x *Skill) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
 }
 
 type AffectedExpert struct {
@@ -16146,24 +16170,26 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\v_test_error\"\x13\n" +
 	"\x11ListSkillsRequest\"?\n" +
 	"\x12ListSkillsResponse\x12)\n" +
-	"\x05items\x18\x01 \x03(\v2\x13.workspace.v1.SkillR\x05items\"\xbf\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x13.workspace.v1.SkillR\x05items\"\xd3\x01\n" +
 	"\x12CreateSkillRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x1c\n" +
 	"\agit_url\x18\x03 \x01(\tH\x00R\x06gitUrl\x88\x01\x01\x12\x1c\n" +
 	"\agit_ref\x18\x04 \x01(\tH\x01R\x06gitRef\x88\x01\x01\x12\x1d\n" +
-	"\aarchive\x18\x05 \x01(\fH\x02R\aarchive\x88\x01\x01B\n" +
+	"\aarchive\x18\x05 \x01(\fH\x02R\aarchive\x88\x01\x01\x12\x12\n" +
+	"\x04icon\x18\x06 \x01(\tR\x04iconB\n" +
 	"\n" +
 	"\b_git_urlB\n" +
 	"\n" +
 	"\b_git_refB\n" +
 	"\n" +
-	"\b_archive\"\xaf\x01\n" +
+	"\b_archive\"\xc3\x01\n" +
 	"\x12UpdateSkillRequest\x12\x19\n" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\x12\x1c\n" +
 	"\agit_ref\x18\x02 \x01(\tH\x00R\x06gitRef\x88\x01\x01\x12\x1d\n" +
 	"\aarchive\x18\x03 \x01(\fH\x01R\aarchive\x88\x01\x01\x12)\n" +
-	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersionB\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x12\x12\n" +
+	"\x04icon\x18\x05 \x01(\tR\x04iconB\n" +
 	"\n" +
 	"\b_git_refB\n" +
 	"\n" +
@@ -16172,7 +16198,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\"^\n" +
 	"\x12DeleteSkillRequest\x12\x19\n" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\x12-\n" +
-	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xdb\x02\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xef\x02\n" +
 	"\x05Skill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -16186,7 +16212,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\t \x01(\x03R\aversion\x12\x1a\n" +
 	"\bplatform\x18\n" +
-	" \x01(\bR\bplatformB\n" +
+	" \x01(\bR\bplatform\x12\x12\n" +
+	"\x04icon\x18\v \x01(\tR\x04iconB\n" +
 	"\n" +
 	"\b_git_urlB\n" +
 	"\n" +

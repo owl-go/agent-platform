@@ -428,11 +428,11 @@ message MCPConnector { string id = 1; string name = 2; string transport = 3; opt
 
 message ListSkillsRequest {}
 message ListSkillsResponse { repeated Skill items = 1; }
-message CreateSkillRequest { string name = 1; string source = 2; optional string git_url = 3; optional string git_ref = 4; optional bytes archive = 5; }
-message UpdateSkillRequest { string skill_id = 1; optional string git_ref = 2; optional bytes archive = 3; int64 expected_version = 4; }
+message CreateSkillRequest { string name = 1; string source = 2; optional string git_url = 3; optional string git_ref = 4; optional bytes archive = 5; string icon = 6; }
+message UpdateSkillRequest { string skill_id = 1; optional string git_ref = 2; optional bytes archive = 3; int64 expected_version = 4; string icon = 5; }
 message GetSkillDeletionImpactRequest { string skill_id = 1; }
 message DeleteSkillRequest { string skill_id = 1; string confirmation_token = 2; }
-message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; bool platform = 10; }
+message Skill { string id = 1; string name = 2; string source = 3; optional string git_url = 4; optional string git_ref = 5; string sha256 = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp updated_at = 8; int64 version = 9; bool platform = 10; string icon = 11; }
 message AffectedExpert { string id = 1; string name = 2; int64 version = 3; }
 message ResourceDeletionImpact { repeated AffectedExpert affected_experts = 1; string confirmation_token = 2; }
 
