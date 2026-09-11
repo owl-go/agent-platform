@@ -8086,6 +8086,10 @@
           },
           "credit_consumption": {
             "$ref": "#/components/schemas/v1CreditConsumption"
+          },
+          "queue_position": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

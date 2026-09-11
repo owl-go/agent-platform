@@ -179,6 +179,7 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 	if err != nil {
 		return nil, publicError(err)
 	}
+	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }
 
@@ -277,6 +278,7 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 		return nil, publicError(err)
 	}
 	accepted = true
+	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }
 
@@ -289,6 +291,7 @@ func (service *Service) CancelRun(ctx context.Context, request *workspacev1.Canc
 	if err != nil {
 		return nil, publicError(err)
 	}
+	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }
 
@@ -304,6 +307,7 @@ func (service *Service) RerunWorkflow(ctx context.Context, request *workspacev1.
 	if err != nil {
 		return nil, publicError(err)
 	}
+	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }
 
@@ -375,7 +379,7 @@ func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
 }
 
 func runResponse(item workspacedomain.Run) *workspacev1.Run {
-	response := &workspacev1.Run{Id: item.ID, ConversationId: item.ConversationID, TurnNumber: int32(item.TurnNumber), WorkflowId: item.WorkflowID, WorkflowName: item.WorkflowName, Trigger: item.Trigger, State: item.State, TextInput: item.TextInput, FinalText: item.FinalText, QueuedAt: timestamppb.New(item.QueuedAt)}
+	response := &workspacev1.Run{Id: item.ID, ConversationId: item.ConversationID, TurnNumber: int32(item.TurnNumber), WorkflowId: item.WorkflowID, WorkflowName: item.WorkflowName, Trigger: item.Trigger, State: item.State, TextInput: item.TextInput, FinalText: item.FinalText, QueuedAt: timestamppb.New(item.QueuedAt), QueuePosition: int32(item.QueuePosition)}
 	if item.JSONInput != nil {
 		response.JsonInput, _ = structpb.NewStruct(item.JSONInput)
 	}

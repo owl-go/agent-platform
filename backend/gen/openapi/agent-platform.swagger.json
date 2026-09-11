@@ -6978,6 +6978,10 @@
         },
         "credit_consumption": {
           "$ref": "#/definitions/v1CreditConsumption"
+        },
+        "queue_position": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },

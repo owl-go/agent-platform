@@ -382,6 +382,7 @@ func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
 	SelectionID       *string    `gorm:"column:selection_id"`
+	QueuePositionID   string     `gorm:"-"`
 	ID                string     `gorm:"column:id"`
 	ConversationID    string     `gorm:"column:conversation_id"`
 	TurnNumber        int        `gorm:"column:turn_number"`

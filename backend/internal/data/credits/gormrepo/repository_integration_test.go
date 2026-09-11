@@ -124,15 +124,12 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.ORM().Exec("UPDATE credit_execution_leases SET acquired_at = ? WHERE user_id = ?", now.Add(-2*time.Minute), userID).Error; err != nil {
+	if err := service.Abort(ctx, staleAdmission); err != nil {
 		t.Fatal(err)
 	}
 	recoveredAdmission, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "recovered-worker", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"})
 	if err != nil {
-		t.Fatalf("take over stale execution lease: %v", err)
-	}
-	if recoveredAdmission.Source == staleAdmission.Source {
-		t.Fatalf("stale lease was not replaced: %+v", recoveredAdmission)
+		t.Fatalf("admit after aborted execution: %v", err)
 	}
 	if err := service.Abort(ctx, recoveredAdmission); err != nil {
 		t.Fatal(err)

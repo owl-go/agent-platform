@@ -135,8 +135,8 @@ func (service *Service) RequirePositiveBalance(ctx context.Context, userID, time
 	if err != nil {
 		return err
 	}
-	if balance.Total <= 0 {
-		return &domain.InsufficientCreditsError{Balance: balance.Total, NextAllocationAt: balance.NextAllocationAt}
+	if balance.Available <= 0 {
+		return &domain.InsufficientCreditsError{Balance: balance.Available, NextAllocationAt: balance.NextAllocationAt}
 	}
 	return nil
 }

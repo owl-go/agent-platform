@@ -2404,6 +2404,8 @@ export interface components {
             attachments?: components["schemas"]["v1Attachment"][];
             expert_stages?: components["schemas"]["v1ExpertStage"][];
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
+            /** Format: int32 */
+            queue_position?: number;
         };
         v1RuntimeEngineStatus: {
             name?: string;

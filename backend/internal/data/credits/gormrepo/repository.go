@@ -55,18 +55,21 @@ type rateRecord struct {
 func (rateRecord) TableName() string { return "model_credit_rate_revisions" }
 
 type admissionRecord struct {
-	Source           string        `gorm:"column:source;primaryKey"`
-	UserID           string        `gorm:"column:user_id"`
-	ExecutionID      string        `gorm:"column:execution_id"`
-	StagePosition    int           `gorm:"column:stage_position"`
-	CreditDay        time.Time     `gorm:"column:credit_day;type:date"`
-	Timezone         string        `gorm:"column:credit_day_timezone"`
-	RateRevisionID   string        `gorm:"column:rate_revision_id"`
-	InputMultiplier  int64         `gorm:"column:input_multiplier_micros"`
-	OutputMultiplier int64         `gorm:"column:output_multiplier_micros"`
-	Fallback         domain.Amount `gorm:"column:fallback_hundredths"`
-	StartedAt        time.Time     `gorm:"column:started_at"`
-	SettledAt        *time.Time    `gorm:"column:settled_at"`
+	Source             string        `gorm:"column:source;primaryKey"`
+	UserID             string        `gorm:"column:user_id"`
+	ExecutionID        string        `gorm:"column:execution_id"`
+	StagePosition      int           `gorm:"column:stage_position"`
+	CreditDay          time.Time     `gorm:"column:credit_day;type:date"`
+	Timezone           string        `gorm:"column:credit_day_timezone"`
+	RateRevisionID     string        `gorm:"column:rate_revision_id"`
+	InputMultiplier    int64         `gorm:"column:input_multiplier_micros"`
+	OutputMultiplier   int64         `gorm:"column:output_multiplier_micros"`
+	Fallback           domain.Amount `gorm:"column:fallback_hundredths"`
+	Reserved           domain.Amount `gorm:"column:reserved_hundredths"`
+	DailyReserved      domain.Amount `gorm:"column:daily_reserved_hundredths"`
+	PersistentReserved domain.Amount `gorm:"column:persistent_reserved_hundredths"`
+	StartedAt          time.Time     `gorm:"column:started_at"`
+	SettledAt          *time.Time    `gorm:"column:settled_at"`
 }
 
 func (admissionRecord) TableName() string { return "credit_stage_admissions" }
@@ -121,10 +124,7 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("source = ?", admission.Source).Take(&existing).Error
 		if err == nil {
 			admission = toAdmission(existing)
-			if existing.SettledAt != nil {
-				return nil
-			}
-			return acquireLease(tx, admission.UserID, admission.Source, admission.StartedAt)
+			return nil
 		}
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -133,15 +133,31 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if err != nil {
 			return err
 		}
-		var imageReserved domain.Amount
-		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", admission.UserID).
-			Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END + persistent_reserved_hundredths), 0)", account.CreditDay).
-			Scan(&imageReserved).Error; err != nil {
+		imageDaily, imagePersistent, err := activeImageReservations(tx, admission.UserID, account.CreditDay)
+		if err != nil {
 			return err
 		}
-		if account.DailyRemaining+account.Persistent-imageReserved <= 0 {
+		stageDaily, stagePersistent, err := activeStageReservations(tx, admission.UserID, account.CreditDay)
+		if err != nil {
+			return err
+		}
+		dailyAvailable := account.DailyRemaining - imageDaily - stageDaily
+		persistentAvailable := account.Persistent - imagePersistent - stagePersistent
+		if dailyAvailable < 0 {
+			dailyAvailable = 0
+		}
+		if persistentAvailable < 0 {
+			persistentAvailable = 0
+		}
+		if dailyAvailable+persistentAvailable < admission.Rate.Fallback {
 			return domain.ErrInsufficientCredits
 		}
+		admission.Reserved = admission.Rate.Fallback
+		admission.DailyReserved = admission.Reserved
+		if admission.DailyReserved > dailyAvailable {
+			admission.DailyReserved = dailyAvailable
+		}
+		admission.PersistentReserved = admission.Reserved - admission.DailyReserved
 		row, err := fromAdmission(admission)
 		if err != nil {
 			return err
@@ -149,32 +165,13 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
-		return acquireLease(tx, admission.UserID, admission.Source, admission.StartedAt)
+		return nil
 	})
 	return admission, mapConflict(err)
 }
 
-func acquireLease(tx *gorm.DB, userID, source string, now time.Time) error {
-	result := tx.Exec(`
-		INSERT INTO credit_execution_leases (user_id, source, acquired_at) VALUES (?, ?, ?)
-		ON CONFLICT (user_id) DO UPDATE
-		SET source = EXCLUDED.source, acquired_at = EXCLUDED.acquired_at
-		WHERE credit_execution_leases.acquired_at < EXCLUDED.acquired_at - INTERVAL '1 minute'`, userID, source, now)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected != 1 {
-		var current string
-		if err := tx.Table("credit_execution_leases").Select("source").Where("user_id = ?", userID).Scan(&current).Error; err == nil && current == source {
-			return nil
-		}
-		return domain.ErrConflict
-	}
-	return nil
-}
-
 func (repository *Repository) Abort(ctx context.Context, admission domain.Admission) error {
-	return repository.db.WithContext(ctx).Exec("DELETE FROM credit_execution_leases WHERE user_id = ? AND source = ?", admission.UserID, admission.Source).Error
+	return repository.db.WithContext(ctx).Where("user_id = ? AND source = ? AND settled_at IS NULL", admission.UserID, admission.Source).Delete(&admissionRecord{}).Error
 }
 
 func (repository *Repository) Settle(ctx context.Context, settlement domain.Settlement) (domain.Consumption, error) {
@@ -230,7 +227,7 @@ func (repository *Repository) SettleTx(tx *gorm.DB, settlement domain.Settlement
 	if err := tx.Model(&admission).Update("settled_at", settlement.SettledAt).Error; err != nil {
 		return result, err
 	}
-	return result, tx.Exec("DELETE FROM credit_execution_leases WHERE user_id = ? AND source = ?", admission.UserID, admission.Source).Error
+	return result, nil
 }
 
 func (repository *Repository) Balance(ctx context.Context, userID, timezone string, now time.Time) (domain.Balance, error) {
@@ -242,14 +239,45 @@ func (repository *Repository) Balance(ctx context.Context, userID, timezone stri
 		}
 		balance, err = toBalance(account, now)
 		if err == nil {
-			var reserved domain.Amount
-			err = tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", userID).Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END + persistent_reserved_hundredths), 0)", account.CreditDay).Scan(&reserved).Error
+			imageDaily, imagePersistent, reservationErr := activeImageReservations(tx, userID, account.CreditDay)
+			if reservationErr != nil {
+				return reservationErr
+			}
+			stageDaily, stagePersistent, reservationErr := activeStageReservations(tx, userID, account.CreditDay)
+			if reservationErr != nil {
+				return reservationErr
+			}
+			reserved := imageDaily + imagePersistent + stageDaily + stagePersistent
 			balance.Reserved = reserved
 			balance.Available = balance.Total - reserved
 		}
 		return err
 	})
 	return balance, err
+}
+
+func activeImageReservations(tx *gorm.DB, userID string, creditDay time.Time) (domain.Amount, domain.Amount, error) {
+	var result struct {
+		Daily      domain.Amount
+		Persistent domain.Amount
+	}
+	err := tx.Model(&imageReservationRecord{}).
+		Where("user_id = ? AND settled_at IS NULL", userID).
+		Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END), 0) AS daily, COALESCE(SUM(persistent_reserved_hundredths), 0) AS persistent", creditDay).
+		Scan(&result).Error
+	return result.Daily, result.Persistent, err
+}
+
+func activeStageReservations(tx *gorm.DB, userID string, creditDay time.Time) (domain.Amount, domain.Amount, error) {
+	var result struct {
+		Daily      domain.Amount
+		Persistent domain.Amount
+	}
+	err := tx.Model(&admissionRecord{}).
+		Where("user_id = ? AND settled_at IS NULL", userID).
+		Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END), 0) AS daily, COALESCE(SUM(persistent_reserved_hundredths), 0) AS persistent", creditDay).
+		Scan(&result).Error
+	return result.Daily, result.Persistent, err
 }
 
 func (repository *Repository) ReserveImage(ctx context.Context, reservation domain.ImageReservation) (domain.ImageReservation, error) {
@@ -276,15 +304,24 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		if err != nil {
 			return err
 		}
-		var dailyReserved, persistentReserved domain.Amount
-		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL AND credit_day = ?", reservation.UserID, account.CreditDay).Select("COALESCE(SUM(daily_reserved_hundredths), 0)").Scan(&dailyReserved).Error; err != nil {
+		imageDaily, imagePersistent, err := activeImageReservations(tx, reservation.UserID, account.CreditDay)
+		if err != nil {
 			return err
 		}
-		if err := tx.Model(&imageReservationRecord{}).Where("user_id = ? AND settled_at IS NULL", reservation.UserID).Select("COALESCE(SUM(persistent_reserved_hundredths), 0)").Scan(&persistentReserved).Error; err != nil {
+		stageDaily, stagePersistent, err := activeStageReservations(tx, reservation.UserID, account.CreditDay)
+		if err != nil {
 			return err
 		}
+		dailyReserved := imageDaily + stageDaily
+		persistentReserved := imagePersistent + stagePersistent
 		dailyAvailable := account.DailyRemaining - dailyReserved
 		persistentAvailable := account.Persistent - persistentReserved
+		if dailyAvailable < 0 {
+			dailyAvailable = 0
+		}
+		if persistentAvailable < 0 {
+			persistentAvailable = 0
+		}
 		if dailyAvailable+persistentAvailable < reservation.Amount {
 			return domain.ErrInsufficientCredits
 		}
@@ -415,6 +452,13 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 		Select("COALESCE(SUM(daily_reserved_hundredths), 0)").Scan(&activeDailyReserved).Error; err != nil {
 		return accountRecord{}, err
 	}
+	var activeStageDailyReserved domain.Amount
+	if err := tx.Model(&admissionRecord{}).
+		Where("user_id = ? AND credit_day = ? AND settled_at IS NULL", userID, account.CreditDay).
+		Select("COALESCE(SUM(daily_reserved_hundredths), 0)").Scan(&activeStageDailyReserved).Error; err != nil {
+		return accountRecord{}, err
+	}
+	activeDailyReserved += activeStageDailyReserved
 	expiringDaily := account.DailyRemaining - activeDailyReserved
 	if expiringDaily < 0 {
 		expiringDaily = 0
@@ -727,11 +771,11 @@ func fromAdmission(value domain.Admission) (admissionRecord, error) {
 	if err != nil {
 		return admissionRecord{}, err
 	}
-	return admissionRecord{Source: value.Source, UserID: value.UserID, ExecutionID: value.ExecutionID, StagePosition: value.StagePosition, CreditDay: day, Timezone: value.Timezone, RateRevisionID: value.Rate.RevisionID, InputMultiplier: value.Rate.InputMultiplierMicros, OutputMultiplier: value.Rate.OutputMultiplierMicros, Fallback: value.Rate.Fallback, StartedAt: value.StartedAt}, nil
+	return admissionRecord{Source: value.Source, UserID: value.UserID, ExecutionID: value.ExecutionID, StagePosition: value.StagePosition, CreditDay: day, Timezone: value.Timezone, RateRevisionID: value.Rate.RevisionID, InputMultiplier: value.Rate.InputMultiplierMicros, OutputMultiplier: value.Rate.OutputMultiplierMicros, Fallback: value.Rate.Fallback, Reserved: value.Reserved, DailyReserved: value.DailyReserved, PersistentReserved: value.PersistentReserved, StartedAt: value.StartedAt}, nil
 }
 
 func toAdmission(row admissionRecord) domain.Admission {
-	return domain.Admission{UserID: row.UserID, ExecutionID: row.ExecutionID, StagePosition: row.StagePosition, Source: row.Source, Timezone: row.Timezone, CreditDay: row.CreditDay.Format(time.DateOnly), StartedAt: row.StartedAt, Rate: domain.ModelCreditRate{RevisionID: row.RateRevisionID, InputMultiplierMicros: row.InputMultiplier, OutputMultiplierMicros: row.OutputMultiplier, Fallback: row.Fallback}}
+	return domain.Admission{UserID: row.UserID, ExecutionID: row.ExecutionID, StagePosition: row.StagePosition, Source: row.Source, Timezone: row.Timezone, CreditDay: row.CreditDay.Format(time.DateOnly), StartedAt: row.StartedAt, Reserved: row.Reserved, DailyReserved: row.DailyReserved, PersistentReserved: row.PersistentReserved, Settled: row.SettledAt != nil, Rate: domain.ModelCreditRate{RevisionID: row.RateRevisionID, InputMultiplierMicros: row.InputMultiplier, OutputMultiplierMicros: row.OutputMultiplier, Fallback: row.Fallback}}
 }
 
 func toRate(row rateRecord) domain.ModelCreditRate {

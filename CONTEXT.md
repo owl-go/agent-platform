@@ -62,6 +62,10 @@ _Avoid_: Rolling 24-hour window, UTC day, billing cycle
 The immutable two-decimal Credit amount charged to one model execution, calculated from measured text Tokens and a frozen Model Credit Rate or from successfully Generated Images and frozen Image Credit Rates.
 _Avoid_: Token Usage, Provider cost, Session total
 
+**Execution Credit Reservation**:
+The temporary amount withheld from one User's Available Credit when a text Execution Stage starts, using that stage's frozen Model Credit Rate fallback. It limits concurrent Workflow admission and is released or settled with the stage; measured usage may exceed it and produce the existing negative Credit Balance.
+_Avoid_: Image Credit Reservation, Credit Consumption, Provider prepayment
+
 ## Conversations
 
 **Session**:
@@ -97,6 +101,10 @@ _Avoid_: Agent Memory, user-authored note, Runtime checkpoint
 **Workflow**:
 A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
 _Avoid_: Pipeline, visual DAG
+
+**Workflow Queue**:
+The persistent FIFO of queued Runs for one Workflow. It serializes access to that Workflow's Workspace while allowing Runs belonging to other Workflows to execute concurrently; its first-version limit is five queued Runs.
+_Avoid_: User-wide execution queue, Run Conversation, Workspace lock
 
 **Workflow Snapshot**:
 The immutable copy of a Workflow's goal, initial execution stages, environment, and other initiating inputs used by one Run Conversation. Follow-up Response Snapshots preserve that context while recording each turn's specialist and resource selection. API Keys are referenced through protected versioned credentials rather than copied into the ordinary snapshot.
@@ -167,7 +175,7 @@ _Avoid_: Credit Consumption, provider prepayment, daily allocation
 ## Files And Results
 
 **Workspace**:
-The persistent directory and file tree owned by one Workflow and reused across serialized Runs. A Run changes a temporary copy and merges it only on success.
+The persistent directory and file tree owned by one Workflow and reused across Runs serialized by its Workflow Queue. A Run changes a temporary copy and merges it only on success.
 _Avoid_: Session, Artifact, per-Run sandbox
 
 **Git Source**:
@@ -237,7 +245,7 @@ A platform-managed execution of one Team Member in its own isolated execution co
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
-A fail-fast collaboration in which every Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes in Team Member order using the shared frozen execution configuration. The final member produces the official response and retry restarts the whole collaboration.
+A fail-fast collaboration in which the platform schedules every Subagent in Team Member order. Each Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes using the shared frozen execution configuration. The final member produces the official response and retry restarts the whole collaboration.
 _Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
 
 **Expert Snapshot**:
