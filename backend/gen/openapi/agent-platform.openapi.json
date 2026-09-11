@@ -5294,6 +5294,9 @@
           "expected_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "icon": {
+            "type": "string"
           }
         }
       },
@@ -6124,6 +6127,9 @@
           "archive": {
             "type": "string",
             "format": "byte"
+          },
+          "icon": {
+            "type": "string"
           }
         }
       },
@@ -8311,6 +8317,9 @@
           },
           "platform": {
             "type": "boolean"
+          },
+          "icon": {
+            "type": "string"
           }
         }
       },

@@ -8,6 +8,7 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/icon"
 	"agent-platform/backend/internal/skillstore"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -558,6 +559,9 @@ func (service *Service) CreateSkill(ctx context.Context, request *workspacev1.Cr
 	if err != nil {
 		return nil, err
 	}
+	if err := icon.Validate(request.Icon); err != nil {
+		return nil, publicError(fmt.Errorf("%w: invalid Skill icon: %w", workspacedomain.ErrInvalid, err))
+	}
 	var objectKey, digest string
 	var gitRef *string
 	var metadata skillstore.Metadata
@@ -584,7 +588,7 @@ func (service *Service) CreateSkill(ctx context.Context, request *workspacev1.Cr
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
 	}
-	item, err := service.workspace.Repository().CreateSkill(ctx, owner, workspacedomain.Skill{Name: metadata.DisplayName, Source: request.Source, GitURL: request.GitUrl, GitRef: gitRef, ObjectKey: objectKey, SHA256: digest})
+	item, err := service.workspace.Repository().CreateSkill(ctx, owner, workspacedomain.Skill{Name: metadata.DisplayName, Icon: request.Icon, Source: request.Source, GitURL: request.GitUrl, GitRef: gitRef, ObjectKey: objectKey, SHA256: digest})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -595,6 +599,9 @@ func (service *Service) UpdateSkill(ctx context.Context, request *workspacev1.Up
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if err := icon.Validate(request.Icon); err != nil {
+		return nil, publicError(fmt.Errorf("%w: invalid Skill icon: %w", workspacedomain.ErrInvalid, err))
 	}
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
@@ -631,7 +638,7 @@ func (service *Service) UpdateSkill(ctx context.Context, request *workspacev1.Up
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err))
 	}
-	item, err := service.workspace.Repository().UpdateSkill(ctx, owner, request.SkillId, metadata.DisplayName, resolvedRef, objectKey, digest, request.ExpectedVersion)
+	item, err := service.workspace.Repository().UpdateSkill(ctx, owner, request.SkillId, metadata.DisplayName, request.Icon, resolvedRef, objectKey, digest, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -899,5 +906,5 @@ func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
 }
 
 func skillResponse(item workspacedomain.Skill) *workspacev1.Skill {
-	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
+	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform, Icon: item.Icon}
 }
