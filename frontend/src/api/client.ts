@@ -411,7 +411,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     getArtifactDownload(workflowID, artifactID, signal) { return download(`/api/v1/workflows/${encodeURIComponent(workflowID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkspace(id, path = "", signal) {
-      const result = await call<{ items?: WorkspaceEntry[]; used_bytes?: number | string; limit_bytes?: number | string; usedBytes?: number | string; limitBytes?: number | string }>(`/api/v1/workflows/${encodeURIComponent(id)}/workspace?path=${encodeURIComponent(path)}`, { signal });
+      const workspacePath = path === "" ? "" : `?path=${encodeURIComponent(path)}`;
+      const result = await call<{ items?: WorkspaceEntry[]; used_bytes?: number | string; limit_bytes?: number | string; usedBytes?: number | string; limitBytes?: number | string }>(`/api/v1/workflows/${encodeURIComponent(id)}/workspace${workspacePath}`, { signal });
       return {
         items: result.items ?? [],
         used_bytes: Number(result.used_bytes ?? result.usedBytes ?? 0),

@@ -178,6 +178,24 @@ describe("Agent Workspace API client", () => {
     expect(result.limit_bytes).toBe(1073741824);
   });
 
+  it("omits the optional Workspace path query for the root directory", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").listWorkspace("workflow-1");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace");
+  });
+
+  it("includes the Workspace path query for nested directories", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").listWorkspace("workflow-1", "src/reports");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace?path=src%2Freports");
+  });
+
   it("filters legacy final-result records from file Artifacts", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "artifact-1", run_id: "run-1", kind: "result", name: "Final result", path: "", text_preview: "done", expired: false, created_at: "2026-08-25T00:00:00Z" }, { id: "artifact-2", run_id: "run-1", kind: "file", name: "report.md", path: "report.md", expired: false, created_at: "2026-08-25T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
