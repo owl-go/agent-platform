@@ -347,6 +347,11 @@ describe("WorkflowDetailPage", () => {
     const sections = wrapper.findAll(".settings-section");
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.every((section) => section.attributes("open") !== undefined)).toBe(true);
+    expect(wrapper.find(".section-heading-actions").exists()).toBe(false);
+    expect(wrapper.find(".danger-zone").exists()).toBe(false);
+    const bottomActions = wrapper.get(".settings-actions-bottom");
+    expect(bottomActions.find("button[type='submit']").exists()).toBe(true);
+    expect(bottomActions.findAll("button")).toHaveLength(2);
     wrapper.unmount();
   });
 
