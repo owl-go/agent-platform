@@ -105,9 +105,13 @@ func (service *Service) DeleteSession(ctx context.Context, request *workspacev1.
 	if err := service.workspace.Repository().DeleteSession(ctx, owner, request.SessionId); err != nil {
 		return nil, publicError(err)
 	}
-	if err := workspacefs.RemoveNativeSessionState(service.config.Workspace.Root, owner, request.SessionId); err != nil {
-		return nil, publicError(err)
+	removeNativeSessionState := service.removeNativeSessionState
+	if removeNativeSessionState == nil {
+		removeNativeSessionState = workspacefs.RemoveNativeSessionState
 	}
+	// The database deletion is authoritative. Native state is best-effort so a
+	// cleanup failure cannot make an already-deleted Session look undeleted.
+	_ = removeNativeSessionState(service.config.Workspace.Root, owner, request.SessionId)
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
 }
 

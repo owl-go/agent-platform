@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
@@ -444,11 +444,21 @@ async function confirmRemove() {
   if (!item || deleting.value) return;
   deleting.value = true;
   try {
-    await api.deleteSession(item.id);
+    try {
+      await api.deleteSession(item.id);
+    } catch (cause) {
+      // DELETE is idempotent from the UI perspective: another tab may have
+      // removed the Session after this list was loaded.
+      if (!(cause instanceof ApiError) || cause.kind !== "not_found") {
+        error.value = t("errors.generic");
+        return;
+      }
+    }
     pendingDelete.value = undefined;
     if (selected.value?.id === item.id) selected.value = undefined;
-    await refresh();
-  } catch { error.value = t("errors.generic"); }
+    try { await refresh(); }
+    catch { error.value = t("errors.generic"); }
+  }
   finally { deleting.value = false; }
 }
 onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
