@@ -15,14 +15,14 @@ const { t } = useI18n();
 const experts = ref<Expert[]>([]);
 const teams = ref<ExpertTeam[]>([]);
 const query = ref("");
-const tag = ref("");
+const category = ref("");
 const error = ref("");
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const mineOnly = computed(() => route.query.scope === "mine");
-const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
+const activeCategories = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).map((item) => item.expertise_tags[0]).filter(Boolean))).sort());
 const visibleExperts = computed(() => filter(experts.value));
 const visibleTeams = computed(() => filter(teams.value));
 const expertSections = computed(() => [
@@ -31,7 +31,7 @@ const expertSections = computed(() => [
 ]);
 
 onMounted(refresh);
-watch(activeTab, () => { query.value = ""; tag.value = ""; });
+watch(activeTab, () => { query.value = ""; category.value = ""; });
 
 async function refresh() {
   try {
@@ -43,7 +43,7 @@ async function refresh() {
 
 function filter<T extends { name: string; introduction?: string; capability_introduction?: string; expertise_tags: string[] }>(items: T[]): T[] {
   const needle = query.value.trim().toLocaleLowerCase();
-  return items.filter((item) => (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)) && (!tag.value || item.expertise_tags.includes(tag.value)));
+  return items.filter((item) => (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)) && (!category.value || item.expertise_tags[0] === category.value));
 }
 
 function selectTab(tab: string | number) {
@@ -70,9 +70,10 @@ function toggleMine() {
 
     <div class="catalog-tools">
       <el-input v-model="query" class="catalog-search" clearable :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"><template #prefix><Search :size="17" /></template></el-input>
-      <div class="tag-filter" :aria-label="t('experts.expertiseFilter')">
-        <el-check-tag :checked="!tag" @change="tag = ''">{{ t('experts.all') }}</el-check-tag>
-        <el-check-tag v-for="item in activeTags" :key="item" :checked="tag === item" @change="tag = item">{{ item }}</el-check-tag>
+      <div class="tag-filter" :aria-label="t('experts.categoryFilter')">
+        <span class="filter-label">{{ t('experts.category') }}</span>
+        <el-check-tag :checked="!category" @change="category = ''">{{ t('experts.all') }}</el-check-tag>
+        <el-check-tag v-for="item in activeCategories" :key="item" :checked="category === item" @change="category = item">{{ item }}</el-check-tag>
       </div>
     </div>
 
@@ -87,10 +88,10 @@ function toggleMine() {
           <div class="expert-card-layout">
             <ProfileIcon :icon="expert.icon" :background="expert.icon_background" />
             <div class="expert-card-copy">
-              <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
+              <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="expert.expertise_tags[0]" class="expert-category" effect="light" round size="small">{{ expert.expertise_tags[0] }}</el-tag><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
               <p>{{ expert.introduction }}</p>
               <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) }) }}</small>
-              <div v-if="expert.expertise_tags.length" class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div>
+              <div v-if="expert.expertise_tags.length > 1" class="tag-row expert-tags"><el-tag v-for="item in expert.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="expert.expertise_tags.length > 5" class="expert-tag-more">+{{ expert.expertise_tags.length - 5 }}</span></div>
             </div>
           </div>
         </el-card>
@@ -106,10 +107,10 @@ function toggleMine() {
           <div class="expert-card-layout">
             <ProfileIcon :icon="team.icon" :background="team.icon_background" team />
             <div class="expert-card-copy">
-              <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
+              <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="team.expertise_tags[0]" class="expert-category" effect="light" round size="small">{{ team.expertise_tags[0] }}</el-tag><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
               <p>{{ team.introduction }}</p>
               <ol class="member-preview"><li v-for="member in (team.members.length ? team.members : team.experts.map((expert) => ({ id: expert.id, name: expert.name, expert })))" :key="member.id"><span>{{ member.name }}</span><small>{{ member.expert.introduction }}</small></li></ol>
-              <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
+              <div class="card-footer"><div class="tag-row expert-tags"><el-tag v-for="item in team.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="team.expertise_tags.length > 5" class="expert-tag-more">+{{ team.expertise_tags.length - 5 }}</span></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
             </div>
           </div>
         </el-card>
