@@ -19,9 +19,10 @@ type ResourceTab = "mcp" | "skills";
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
-const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
+const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
   selectable: false,
   initialTab: "mcp",
+  mineOnly: false,
   mcpServerIds: () => [],
   skillIds: () => [],
   cliConnectorDefinitionIds: () => [],
@@ -86,14 +87,14 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
-const connectorSections = computed(() => [
+const connectorSections = computed(() => (props.mineOnly ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }] : [
   { key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value },
   { key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] },
-]);
-const skillSections = computed(() => [
+]));
+const skillSections = computed(() => (props.mineOnly ? [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }] : [
   { key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) },
   { key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) },
-]);
+]));
 
 onMounted(() => {
   void refresh();
