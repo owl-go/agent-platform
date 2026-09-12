@@ -961,6 +961,26 @@ func TestSessionExecutionCapturesOnlyFinalFilesAsArtifacts(t *testing.T) {
 	}
 }
 
+func TestPersistChangedFilesSeparatesFinalArtifactFromWorkspace(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	workspace := t.TempDir()
+	path := filepath.Join(workspace, "report.md")
+	if err := os.WriteFile(path, []byte("generated report"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	artifacts, err := executor.persistChangedFiles(context.Background(), job, workspace, map[string]string{}, "Created `/workspace/report.md`.", credentials.NewRedactor())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(artifacts) != 1 || artifacts[0].Name != "report.md" {
+		t.Fatalf("artifacts = %#v", artifacts)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("final Artifact remains in project Workspace: %v", err)
+	}
+}
+
 func newTeamTestExecutor(t *testing.T) (*Executor, application.ExecutionJob, string) {
 	t.Helper()
 	root, credentialsRoot := t.TempDir(), t.TempDir()
