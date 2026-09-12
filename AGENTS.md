@@ -118,6 +118,7 @@ make web-build
 
 ## 分支、提交与推送
 
+- 集成与发布统一经过 `main_temp`：功能分支完成后先合并到 `main_temp`，完成适用的测试、构建和发布前检查，再从 `main_temp` 发布到线上环境；不得绕过 `main_temp` 直接从功能分支发布。
 - `main` 是保护分支。每个新开发任务都从最新 `origin/main` 创建开发分支，默认使用 `codex/<task-name>`；同一任务的后续工作继续使用已有开发分支。
 - 工作区干净且可切换到 `main` 时，依次执行 `git switch main`、`git pull --ff-only origin main`、`git switch -c codex/<task-name>`。拉取失败或本地 `main` 分叉时，先解决阻塞，再开始开发，不以过期基线创建分支。
 - 工作区有未提交改动或 `main` 被其他 worktree 占用时，保留原工作区，执行 `git fetch origin main` 后，通过 `git worktree add -b codex/<task-name> <new-worktree-path> origin/main` 在独立 worktree 开发。
