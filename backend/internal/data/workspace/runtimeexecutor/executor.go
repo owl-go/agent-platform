@@ -1447,6 +1447,10 @@ func (executor *Executor) persistChangedFiles(ctx context.Context, job applicati
 			}
 		}
 		artifacts = append(artifacts, artifact)
+		// Final deliverables live in Object Storage, not in the mutable project Workspace.
+		if err := os.Remove(path); err != nil {
+			return nil, fmt.Errorf("remove final Artifact from staged Workspace %q: %w", relative, err)
+		}
 	}
 	return artifacts, nil
 }
