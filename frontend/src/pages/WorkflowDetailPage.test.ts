@@ -205,6 +205,33 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("renders a failed Run error once when its expert stage repeats it", async () => {
+    const error = "command_failed: runtime command failed: PI Agent stopped with error: OpenAI API error (502)";
+    const failedRun: Run = {
+      ...run,
+      state: "failed",
+      final_text: undefined,
+      error,
+      expert_stages: [{
+        expert_id: "expert-1",
+        expert_name: "PI Agent",
+        position: 1,
+        total: 1,
+        state: "failed",
+        elapsed_ms: 27_000,
+        error,
+      }],
+    };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [failedRun]), listRunTurns: vi.fn(async () => [failedRun]) }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll(".message.assistant p").filter((item) => item.text() === error)).toHaveLength(1);
+    expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("shows a finite live accumulated duration while the latest turn is running", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-02T07:15:03Z"));

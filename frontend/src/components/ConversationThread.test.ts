@@ -41,4 +41,21 @@ describe("ConversationThread", () => {
     expect(wrapper.get(".stage-copy").text()).toBe("已复制");
     wrapper.unmount();
   });
+
+  it("does not render a failed stage twice when its error is the assistant error", () => {
+    const error = "PI Agent stopped with error: OpenAI API error (502)";
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "",
+      error,
+      state: "failed",
+      timestamp: "2026-08-25T12:00:01Z",
+      stages: [{ ...stage, state: "failed", final_text: undefined, error }],
+    }]);
+
+    expect(wrapper.findAll(".message.assistant p").filter((item) => item.text() === error)).toHaveLength(1);
+    expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
+    wrapper.unmount();
+  });
 });

@@ -25,11 +25,11 @@ const { t, locale } = useI18n();
 const pendingStates = new Set(["queued", "running", "generating", "waiting_for_user"]);
 
 const visibleStages = (message: ConversationMessage) => {
-  const stages = message.stages ?? [];
-  if (stages.length !== 1) return stages;
-  const stageText = stages[0]?.final_text?.replace(/\r\n/g, "\n").trim();
-  const messageText = message.content.replace(/\r\n/g, "\n").trim();
-  return stageText && stageText === messageText ? [] : stages;
+  const messageText = (message.content || message.error || "").replace(/\r\n/g, "\n").trim();
+  return (message.stages ?? []).filter((stage) => {
+    const stageText = (stage.final_text || stage.error || "").replace(/\r\n/g, "\n").trim();
+    return !stageText || stageText !== messageText;
+  });
 };
 
 const copiedID = ref("");

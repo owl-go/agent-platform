@@ -283,7 +283,7 @@ async function sendFollowUp(message: ComposerSubmission) {
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
 function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
-function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
+function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
 function runtimeActivity(event: RunEvent) {
 	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "" };
