@@ -183,6 +183,26 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 }
 
 .expert-catalog { max-width: 1500px; margin: 0 auto; }
+
+.api-credential-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.credential-row { display: grid; grid-template-columns: 110px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 8px 0; }
+.credential-row strong { color: #6f642d; font-size: .73rem; }
+.credential-row code { min-width: 0; padding: 8px 10px; border: 1px solid #e5d79b; border-radius: 7px; background: rgba(255,255,255,.62); }
+.credential-copy-all { justify-self: start; margin-top: 4px; }
+.integration-guide { display: grid; gap: 20px; }
+.integration-guide section { display: grid; gap: 8px; }
+.integration-guide h3 { margin: 0; font-size: .88rem; }
+.integration-guide p { margin: 0; }
+.integration-code { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: start; padding: 13px; border: 1px solid #dfe5df; border-radius: 10px; background: #f4f7f3; }
+.integration-code pre { min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #26332d; font: .73rem/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.integration-code .text-button { margin-top: 1px; white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .credential-row { grid-template-columns: 1fr auto; }
+  .credential-row code { grid-column: 1 / -1; grid-row: 2; }
+  .integration-code { grid-template-columns: 1fr; }
+  .integration-code .text-button { justify-self: start; }
+}
 .expert-catalog-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .catalog-tabs { width: min(420px,60vw); }
 .catalog-tabs .el-tabs__header { margin: 0; }

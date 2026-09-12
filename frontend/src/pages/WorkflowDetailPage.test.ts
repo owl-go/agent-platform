@@ -306,6 +306,31 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("shows copyable generated credentials and opens the integration guide", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const api = apiStub({
+      generateWorkflowCredential: vi.fn(async () => ({ api_key: "awk_test", api_secret: "aws_test", created_at: "2026-09-12T00:00:00Z" })),
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.get(".api-credential-actions .button").trigger("click");
+    await flushPromises();
+
+    const rows = wrapper.findAll(".credential-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.text()).toContain("awk_test");
+    expect(rows[1]!.text()).toContain("aws_test");
+    await rows[0]!.get(".text-button").trigger("click");
+    expect(writeText).toHaveBeenCalledWith("awk_test");
+
+    await wrapper.get(".api-credential-actions .button:nth-child(2)").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/api-token");
+    wrapper.unmount();
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+  });
+
   it("keeps Workflow settings usable when a migrated Expert has no Runtime Engine", async () => {
     const incompleteExpert = {
       id: "expert-incomplete",
