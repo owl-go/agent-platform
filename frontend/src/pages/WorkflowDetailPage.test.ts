@@ -371,6 +371,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".api-credential-actions .button:nth-child(2)").trigger("click");
     await wrapper.vm.$nextTick();
     expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/api-token");
+    expect(wrapper.get(".integration-guide").text()).toContain("RUN_ID=$(curl");
     expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID/events");
     expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID");
     wrapper.unmount();
