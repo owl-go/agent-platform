@@ -139,6 +139,9 @@ describe("WorkflowDetailPage", () => {
     const wrapper = await mountPage();
 
     expect(wrapper.find(".detail-hero .eyebrow").exists()).toBe(false);
+    expect(wrapper.get(".detail-hero h2").text()).toBe(workflow.name);
+    expect(wrapper.find(".detail-hero h1").exists()).toBe(false);
+    expect(wrapper.find(".detail-hero").text()).not.toContain(workflow.goal);
 
     for (const tabButton of wrapper.findAll(".tabs button")) {
       await tabButton.trigger("click");

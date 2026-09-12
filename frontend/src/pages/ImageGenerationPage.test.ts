@@ -122,6 +122,7 @@ describe("ImageGenerationPage", () => {
     const api = { getImageGenerationOptions: vi.fn(async () => ({ image_models: [], prompt_optimization_models: [] })), listImageGenerations: vi.fn(async () => []) } as unknown as PlatformApi;
     const wrapper = mountPage(api);
     await flushPromises();
+    expect(wrapper.find(".image-generation-head").exists()).toBe(false);
     expect(wrapper.text()).toContain("管理员尚未配置可用的图片模型");
     expect(wrapper.text()).toContain("生成结果");
     wrapper.unmount();

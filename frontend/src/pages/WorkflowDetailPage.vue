@@ -388,7 +388,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
-      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h1>{{ workflow.name }}</h1><p>{{ workflow.goal }}</p></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
+      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
       <el-skeleton v-if="loading" :rows="10" animated class="page-loading" />
       <template v-else-if="workflow">
       <nav class="tabs"><el-button v-for="item in tabs" :key="item" text :class="{ active: tab === item }" @click="tab = item">{{ t(`workflows.${item}`) }}</el-button></nav>
