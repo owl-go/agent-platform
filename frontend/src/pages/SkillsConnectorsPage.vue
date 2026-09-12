@@ -21,7 +21,8 @@ function toggleMine() {
 
 <template>
   <section class="page-surface resource-catalog">
-    <header class="page-header"><div><h1>{{ t("resources.title") }}</h1><p>{{ t("resources.subtitle") }}</p></div><el-button class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></header>
-    <ExtensionManager :initial-tab="initialTab" :mine-only="mineOnly" @tab-change="router.replace({ query: $event === 'skills' ? {} : { tab: 'connectors' } })" />
+    <ExtensionManager :initial-tab="initialTab" :mine-only="mineOnly" @tab-change="router.replace({ query: $event === 'skills' ? {} : { tab: 'connectors' } })">
+      <template #tab-actions><el-button class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
+    </ExtensionManager>
   </section>
 </template>
