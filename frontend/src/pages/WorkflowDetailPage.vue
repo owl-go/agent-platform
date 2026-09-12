@@ -25,7 +25,7 @@ const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = 
 const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const integrationGuideOpen = ref(false);
-type CopyTarget = "api_key" | "api_secret" | "all" | "token" | "run";
+type CopyTarget = "api_key" | "api_secret" | "all" | "token" | "run" | "stream" | "full";
 const copiedTarget = ref<CopyTarget>();
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 const gitForm = ref<GitSourceInput>({ url: "", branch: "main", authentication: "none", ssh_config: "", config: [] });
@@ -200,6 +200,8 @@ async function saveSettings() { if (!workflow.value) return; try { workflow.valu
 async function generateCredential() { try { credential.value = await api.generateWorkflowCredential(workflowID.value); copiedTarget.value = undefined; } catch { error.value = t("errors.generic"); } }
 const tokenCommand = computed(() => `JWT_TOKEN=$(curl -sS -u "$API_KEY:$API_SECRET" -X POST ${origin}/api/v1/workflows/${workflowID.value}/api-token | jq -r '.jwt_token')`);
 const runCommand = computed(() => `curl -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' ${origin}/api/v1/workflows/${workflowID.value}/runs`);
+const streamCommand = computed(() => `curl -N -H "Authorization: Bearer $JWT_TOKEN" -H "Accept: text/event-stream" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID/events`);
+const fullOutputCommand = computed(() => `curl -sS -H "Authorization: Bearer $JWT_TOKEN" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID`);
 async function copyValue(value: string, target: CopyTarget) {
   try {
     await navigator.clipboard.writeText(value);
@@ -213,7 +215,7 @@ function copyCredential(target: "api_key" | "api_secret" | "all") {
   const value = target === "api_key" ? credential.value.api_key : target === "api_secret" ? credential.value.api_secret : `API_KEY=${credential.value.api_key}\nAPI_SECRET=${credential.value.api_secret}`;
   void copyValue(value, target);
 }
-function copyIntegrationCommand(value: string, target: "token" | "run") { void copyValue(value, target); }
+function copyIntegrationCommand(value: string, target: "token" | "run" | "stream" | "full") { void copyValue(value, target); }
 async function removeWorkflow() { if (!workflow.value) return; await api.deleteWorkflow(workflowID.value); confirmWorkflowDelete.value = false; await router.push("/workflows"); }
 async function cancelRun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
 async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const latest = turns.at(-1); if (latest) await api.rerunWorkflow(workflowID.value, latest.id); runs.value = await api.listRuns(workflowID.value); }
@@ -387,6 +389,6 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     </template>
   </section>
   <el-dialog :model-value="Boolean(preview)" width="min(820px, calc(100vw - 32px))" align-center @close="preview = undefined"><template #header><h2>{{ preview?.path }}</h2></template><pre class="preview-content">{{ preview?.content }}</pre></el-dialog>
-  <el-dialog v-model="integrationGuideOpen" class="integration-guide-dialog" width="min(720px, calc(100vw - 32px))" align-center><template #header><h2>{{ t('workflows.integrationGuideTitle') }}</h2></template><div class="integration-guide"><section><h3>{{ t('workflows.integrationStepToken') }}</h3><p class="muted">{{ t('workflows.integrationTokenHint') }}</p><div class="integration-code"><pre><code>{{ tokenCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(tokenCommand, 'token')">{{ copiedTarget === 'token' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepInvoke') }}</h3><p class="muted">{{ t('workflows.integrationIdempotencyHint') }}</p><div class="integration-code"><pre><code>{{ runCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(runCommand, 'run')">{{ copiedTarget === 'run' ? t('common.copied') : t('common.copy') }}</button></div></section></div><template #footer><el-button @click="integrationGuideOpen = false">{{ t('common.close') }}</el-button></template></el-dialog>
+  <el-dialog v-model="integrationGuideOpen" class="integration-guide-dialog" width="min(720px, calc(100vw - 32px))" align-center><template #header><h2>{{ t('workflows.integrationGuideTitle') }}</h2></template><div class="integration-guide"><section><h3>{{ t('workflows.integrationStepToken') }}</h3><p class="muted">{{ t('workflows.integrationTokenHint') }}</p><div class="integration-code"><pre><code>{{ tokenCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(tokenCommand, 'token')">{{ copiedTarget === 'token' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepInvoke') }}</h3><p class="muted">{{ t('workflows.integrationRunHint') }} {{ t('workflows.integrationIdempotencyHint') }}</p><div class="integration-code"><pre><code>{{ runCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(runCommand, 'run')">{{ copiedTarget === 'run' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepStream') }}</h3><p class="muted">{{ t('workflows.integrationStreamHint') }}</p><div class="integration-code"><pre><code>{{ streamCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(streamCommand, 'stream')">{{ copiedTarget === 'stream' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepFullOutput') }}</h3><p class="muted">{{ t('workflows.integrationFullOutputHint') }}</p><div class="integration-code"><pre><code>{{ fullOutputCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(fullOutputCommand, 'full')">{{ copiedTarget === 'full' ? t('common.copied') : t('common.copy') }}</button></div></section></div><template #footer><el-button @click="integrationGuideOpen = false">{{ t('common.close') }}</el-button></template></el-dialog>
   <ConfirmDialog :open="confirmWorkflowDelete" :title="t('workflows.deleteTitle')" :message="workflow ? `${t('common.delete')} “${workflow.name}”?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger @cancel="confirmWorkflowDelete = false" @confirm="removeWorkflow" />
 </template>
