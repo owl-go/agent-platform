@@ -352,6 +352,7 @@ describe("WorkflowDetailPage", () => {
     const bottomActions = wrapper.get(".settings-actions-bottom");
     expect(bottomActions.find("button[type='submit']").exists()).toBe(true);
     expect(bottomActions.findAll("button")).toHaveLength(2);
+    expect(bottomActions.findAll("button").map((button) => button.text())).toEqual(["删除", "保存"]);
     wrapper.unmount();
   });
 
