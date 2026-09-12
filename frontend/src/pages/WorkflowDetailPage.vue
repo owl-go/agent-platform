@@ -21,7 +21,7 @@ const origin = window.location.origin;
 const runConversationElement = ref<HTMLElement>();
 const runComposerLayer = ref<HTMLElement>();
 const runComposerClearance = ref(154);
-const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const runEventsByID = ref<Record<string, RunEvent[]>>({}); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const gitForm = ref<GitSourceInput>({ url: "", branch: "main", authentication: "none", ssh_config: "", config: [] });
@@ -42,9 +42,9 @@ const conversationElapsed = computed(() => conversationRuns.value.reduce((total,
 }, 0));
 const currentExpertStage = computed(() => [...runEvents.value].reverse().find((event) => event.type === "expert.stage.updated")?.payload);
 const cliAuthorizationRequest = computed(() => cliAuthorizationRequestFromEvents(runEvents.value));
-const runtimeActivities = computed(() => {
+function summarizeRuntimeActivities(events: RunEvent[]) {
   const activities: Array<{ sequence: number; label: string; historyLabel: string; detail: string }> = [];
-  for (const event of runEvents.value) {
+  for (const event of events) {
     const activity = runtimeActivity(event);
     if (!activity) continue;
     const previous = activities.at(-1);
@@ -52,13 +52,14 @@ const runtimeActivities = computed(() => {
     else activities.push({ sequence: event.sequence, ...activity });
   }
   return activities.slice(-8);
-});
+}
 const conversationMessages = computed<ConversationMessage[]>(() => conversationRuns.value.flatMap((turn, index) => {
   const input = runInputText(turn, index);
   const output = runOutput(turn);
   const pending = isActiveRun(turn);
   const streaming = turn.id === streamingRunID.value;
-  const activity = streaming && turn.id === eventRunID.value ? runtimeActivities.value.at(-1) : undefined;
+  const turnActivities = summarizeRuntimeActivities(runEventsByID.value[turn.id] ?? (turn.id === eventRunID.value ? runEvents.value : []));
+  const activity = streaming ? turnActivities.at(-1) : undefined;
   return [
     { id: `${turn.id}:user`, role: "user", content: input, copyText: input, state: "succeeded", timestamp: turn.queued_at, attachments: turn.attachments },
     {
@@ -76,7 +77,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       progressTitle: pending ? (turn.state === "waiting_for_user" ? t("common.waitingForUser") : t("sessions.thinking")) : undefined,
       progressDetail: pending ? (turn.state === "queued" && turn.queue_position ? `${t("workflows.queuePosition")}: ${turn.queue_position}` : streaming && currentExpertStage.value ? `${currentExpertStage.value.position}/${currentExpertStage.value.total || ""} · ${currentExpertStage.value.expert_name}` : t("sessions.progress.thinking")) : undefined,
       currentActivity: activity ? { id: activity.sequence, label: activity.label, detail: activity.detail } : undefined,
-      activities: turn.id === eventRunID.value ? runtimeActivities.value.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })) : undefined,
+      activities: turnActivities.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })),
       stages: turn.expert_stages,
       creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
@@ -201,10 +202,24 @@ async function openRun(item: Run) {
 	selectedRun.value = item;
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
 	runEvents.value = [];
+	runEventsByID.value = Object.fromEntries(conversationRuns.value.map((turn) => [turn.id, []]));
 	eventRunID.value = "";
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
 	if (active) void streamConversationTurn(active);
+	void loadRunHistoryEvents(conversationRuns.value, item.id);
+}
+async function loadRunHistoryEvents(turns: Run[], conversationID: string) {
+	await Promise.all(turns.filter((turn) => !isActiveRun(turn)).map(async (turn) => {
+		const events: RunEvent[] = [];
+		try {
+			await api.streamRunEvents(workflowID.value, turn.id, (event) => events.push(event));
+		} catch {
+			return;
+		}
+		if (selectedRun.value?.id !== conversationID) return;
+		runEventsByID.value = { ...runEventsByID.value, [turn.id]: events };
+	}));
 }
 async function streamConversationTurn(item: Run) {
 	eventController?.abort();
@@ -212,6 +227,7 @@ async function streamConversationTurn(item: Run) {
 	streamingRunID.value = item.id;
 	eventRunID.value = item.id;
 	runEvents.value = [];
+	runEventsByID.value = { ...runEventsByID.value, [item.id]: [] };
 	stopRunReveal();
 	revealedRunOutput.value = "";
 	try {
@@ -231,6 +247,8 @@ async function streamConversationTurn(item: Run) {
 }
 function handleRunEvent(event: RunEvent) {
 	runEvents.value.push(event);
+	const runID = streamingRunID.value;
+	if (runID) runEventsByID.value = { ...runEventsByID.value, [runID]: [...(runEventsByID.value[runID] ?? []), event] };
 	if (event.type === "expert.stage.updated" && event.payload.state === "running") {
 		stopRunReveal();
 		revealedRunOutput.value = "";
@@ -281,7 +299,7 @@ async function sendFollowUp(message: ComposerSubmission) {
 }
 
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }

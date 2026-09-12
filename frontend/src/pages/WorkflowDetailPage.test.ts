@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -162,6 +162,23 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find(".run-conversation-head .eyebrow").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
+    wrapper.unmount();
+  });
+
+  it("replays persisted Run activity into the shared conversation thread after completion", async () => {
+    const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void) => {
+      onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+      onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+    });
+    const wrapper = await mountPage(apiStub({ streamRunEvents }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(streamRunEvents).toHaveBeenCalledWith("workflow-1", "run-1", expect.any(Function));
+    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity details").text()).toContain("git status");
     wrapper.unmount();
   });
 
