@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("resource not found")
-	ErrConflict  = errors.New("resource conflicts with current state")
-	ErrInvalid   = errors.New("resource is invalid")
-	ErrQueueFull = errors.New("workflow queue is full")
+	ErrNotFound                      = errors.New("resource not found")
+	ErrConflict                      = errors.New("resource conflicts with current state")
+	ErrInvalid                       = errors.New("resource is invalid")
+	ErrQueueFull                     = errors.New("workflow queue is full")
+	ErrWorkflowCredentialUnavailable = errors.New("workflow credential secret is unavailable")
 )
 
 var connectorIconPattern = regexp.MustCompile(`^(?:[a-z][a-z0-9-]{0,31}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$`)

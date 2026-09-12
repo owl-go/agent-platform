@@ -182,7 +182,7 @@ func (repository *Repository) DeleteWorkflow(ctx context.Context, ownerID, workf
 				"deleted_at": now, "updated_at": now, "version": gorm.Expr("version + 1"),
 				"goal": "", "expert_id": nil, "expert_team_id": nil, "provider_model_id": nil, "runtime_engine": nil,
 				"environment": []byte(`[]`), "environment_secret_ciphertext": nil,
-				"api_key": nil, "api_secret_hash": nil, "schedule": nil, "next_scheduled_at": nil,
+				"api_key": nil, "api_secret_hash": nil, "api_secret_ciphertext": nil, "schedule": nil, "next_scheduled_at": nil,
 				"git_source": nil, "git_secret_ciphertext": nil,
 			})
 		if result.Error != nil {
@@ -209,10 +209,10 @@ func (repository *Repository) DeleteWorkflow(ctx context.Context, ownerID, workf
 	})
 }
 
-func (repository *Repository) SetWorkflowCredential(ctx context.Context, ownerID, workflowID, apiKey, secretHash string) (domain.Workflow, error) {
+func (repository *Repository) SetWorkflowCredential(ctx context.Context, ownerID, workflowID, apiKey, secretHash string, secretCiphertext []byte) (domain.Workflow, error) {
 	result := repository.db.WithContext(ctx).Model(&workflowRecord{}).
 		Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).
-		Updates(map[string]any{"api_key": apiKey, "api_secret_hash": secretHash, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		Updates(map[string]any{"api_key": apiKey, "api_secret_hash": secretHash, "api_secret_ciphertext": secretCiphertext, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 	if result.Error != nil {
 		return domain.Workflow{}, fmt.Errorf("set Workflow API credential: %w", result.Error)
 	}
@@ -220,6 +220,20 @@ func (repository *Repository) SetWorkflowCredential(ctx context.Context, ownerID
 		return domain.Workflow{}, domain.ErrNotFound
 	}
 	return repository.GetWorkflow(ctx, ownerID, workflowID, false)
+}
+
+func (repository *Repository) GetWorkflowCredential(ctx context.Context, ownerID, workflowID string) (string, []byte, error) {
+	var row struct {
+		APIKey              string `gorm:"column:api_key"`
+		APISecretCiphertext []byte `gorm:"column:api_secret_ciphertext"`
+	}
+	if err := repository.db.WithContext(ctx).Table("workflows").
+		Select("api_key, api_secret_ciphertext").
+		Where("owner_user_id = ? AND id = ? AND api_key IS NOT NULL AND deleted_at IS NULL", ownerID, workflowID).
+		Take(&row).Error; err != nil {
+		return "", nil, mapNotFound(err)
+	}
+	return row.APIKey, append([]byte(nil), row.APISecretCiphertext...), nil
 }
 
 func (repository *Repository) ResolveWorkflowCredential(ctx context.Context, workflowID, apiKey string) (string, string, error) {

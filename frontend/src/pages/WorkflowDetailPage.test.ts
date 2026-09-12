@@ -378,6 +378,23 @@ describe("WorkflowDetailPage", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
   });
 
+  it("loads and displays persisted credentials when reopening settings", async () => {
+    const savedWorkflow = { ...workflow, api_credential_configured: true };
+    const getWorkflowCredential = vi.fn(async () => ({ api_key: "awk_saved", api_secret: "aws_saved", created_at: "2026-09-12T00:00:00Z" }));
+    const api = apiStub({ getWorkflow: vi.fn(async () => savedWorkflow), getWorkflowCredential });
+    const wrapper = await mountPage(api);
+
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await flushPromises();
+
+    expect(getWorkflowCredential).toHaveBeenCalledWith(workflow.id);
+    const rows = wrapper.findAll(".credential-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.text()).toContain("awk_saved");
+    expect(rows[1]!.text()).toContain("aws_saved");
+    wrapper.unmount();
+  });
+
   it("keeps Workflow settings usable when a migrated Expert has no Runtime Engine", async () => {
     const incompleteExpert = {
       id: "expert-incomplete",

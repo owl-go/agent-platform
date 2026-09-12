@@ -71,6 +71,7 @@ const (
 	AgentWorkspaceService_UpdateWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
 	AgentWorkspaceService_DeleteWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
 	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
+	AgentWorkspaceService_GetWorkflowCredential_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
 	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
 	AgentWorkspaceService_RunWorkflow_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 	AgentWorkspaceService_ListRuns_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/ListRuns"
@@ -188,6 +189,7 @@ type AgentWorkspaceServiceClient interface {
 	UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GenerateWorkflowCredential(ctx context.Context, in *GenerateWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error)
+	GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error)
 	ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowAccessToken, error)
 	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
@@ -771,6 +773,16 @@ func (c *agentWorkspaceServiceClient) GenerateWorkflowCredential(ctx context.Con
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WorkflowCredential)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WorkflowCredential)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetWorkflowCredential_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1423,6 +1435,7 @@ type AgentWorkspaceServiceServer interface {
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
 	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteResponse, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
+	GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error)
 	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
@@ -1647,6 +1660,9 @@ func (UnimplementedAgentWorkspaceServiceServer) DeleteWorkflow(context.Context, 
 }
 func (UnimplementedAgentWorkspaceServiceServer) GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateWorkflowCredential not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkflowCredential not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeWorkflowCredential not implemented")
@@ -2778,6 +2794,24 @@ func _AgentWorkspaceService_GenerateWorkflowCredential_Handler(srv interface{}, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).GenerateWorkflowCredential(ctx, req.(*GenerateWorkflowCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetWorkflowCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetWorkflowCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetWorkflowCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetWorkflowCredential(ctx, req.(*GetWorkflowCredentialRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4058,6 +4092,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateWorkflowCredential",
 			Handler:    _AgentWorkspaceService_GenerateWorkflowCredential_Handler,
+		},
+		{
+			MethodName: "GetWorkflowCredential",
+			Handler:    _AgentWorkspaceService_GetWorkflowCredential_Handler,
 		},
 		{
 			MethodName: "ExchangeWorkflowCredential",

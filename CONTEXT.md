@@ -115,7 +115,7 @@ The immutable execution identity for one model invocation within a Response Snap
 _Avoid_: Expert Stage result, mutable Expert, team Runtime Engine
 
 **Workflow API Credential**:
-The single API Key and write-only API Secret pair used only to exchange for a short-lived Workflow Access Token. Regeneration immediately invalidates the previous pair and every token derived from it.
+The single API Key and encrypted, owner-viewable API Secret pair used only to exchange for a 72-hour Workflow Access Token. Regeneration immediately invalidates the previous pair and every token derived from it.
 _Avoid_: User Token, Idempotency Key, model credential
 
 **Scheduled Trigger**:

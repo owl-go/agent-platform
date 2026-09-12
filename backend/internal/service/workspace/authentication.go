@@ -118,7 +118,7 @@ func workflowTokenRoute(method, path string) (string, bool) {
 }
 
 func issueWorkflowToken(access workflowCredentialContext, now time.Time) (string, time.Time, error) {
-	expires := now.Add(15 * time.Minute)
+	expires := now.Add(72 * time.Hour)
 	header, _ := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
 	claims, err := json.Marshal(workflowTokenClaims{Audience: "agent-platform-workflow", WorkflowID: access.WorkflowID, OwnerID: access.OwnerID, APIKey: access.APIKey, IssuedAt: now.Unix(), ExpiresAt: expires.Unix()})
 	if err != nil {

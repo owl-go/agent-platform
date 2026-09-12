@@ -44,7 +44,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## API
 
-`backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；返回的 15 分钟 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
+`backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
 Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、图片预留汇总和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前 Available Credit、预留汇总与下一次每日额度时间，不返回其他 User 或内部费率数据。
 

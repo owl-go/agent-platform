@@ -3155,6 +3155,34 @@
       }
     },
     "/api/v1/workflows/{workflow_id}/api-credential": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetWorkflowCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WorkflowCredential"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
       "post": {
         "operationId": "AgentWorkspaceService_GenerateWorkflowCredential",
         "responses": {

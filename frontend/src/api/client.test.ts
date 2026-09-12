@@ -9,6 +9,17 @@ describe("Agent Workspace API client", () => {
     await expect(createPlatformApi(() => "token").createUploadSkill({ archive: "YQ==" })).rejects.toMatchObject({ kind: "validation", status: 413 });
   });
 
+  it("loads the owner-visible Workflow API credential", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ api_key: "awk_saved", api_secret: "aws_saved" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const credential = await createPlatformApi(() => "token").getWorkflowCredential("workflow-1");
+
+    expect(credential).toMatchObject({ api_key: "awk_saved", api_secret: "aws_saved" });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/api-credential");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBeUndefined();
+  });
+
   it("projects Runtime availability from the authenticated API", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ items: [{ name: "codex", available: true, native_resume: false, cli_version: "0.147.0" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
