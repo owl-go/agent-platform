@@ -75,7 +75,7 @@ async function remove() {
     <form class="editor-form" @submit.prevent="save">
       <section class="editor-section"><div><h2>{{ t('experts.basic') }}</h2><p>{{ t('experts.basicHint') }}</p></div><div class="form-grid">
         <label>{{ t('experts.name') }}<el-input v-model="form.name" maxlength="100" show-word-limit /></label>
-        <label>{{ t('experts.icon') }}<IconPicker v-model="form.icon" fallback="sparkles" /></label>
+        <div class="form-field"><span>{{ t('experts.icon') }}</span><IconPicker v-model="form.icon" fallback="sparkles" /></div>
         <label>{{ t('experts.iconBackground') }}<el-select v-model="form.icon_background"><el-option value="sage" :label="t('experts.sage')" /><el-option value="sand" :label="t('experts.sand')" /><el-option value="sky" :label="t('experts.sky')" /><el-option value="coral" :label="t('experts.coral')" /></el-select></label>
         <label class="full">{{ t('experts.introduction') }}<el-input v-model="form.introduction" type="textarea" :rows="3" maxlength="2000" show-word-limit /><small>{{ t('experts.descriptionHint') }}</small></label>
         <label class="full">{{ t('experts.coreCapability') }}<el-input v-model="form.core_capability" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
