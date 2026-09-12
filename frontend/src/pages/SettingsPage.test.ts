@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, platformApiKey, type ModelProviderConnection, type PersonalSettings, type PlatformApi } from "../api/client";
+import { ApiError, platformApiKey, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type RuntimeEngineStatus } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { authContextKey, type AuthContext } from "../auth/session";
 import SettingsPage from "./SettingsPage.vue";
@@ -180,6 +180,47 @@ describe("SettingsPage model provider feedback", () => {
     expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性"]);
     expect(wrapper.find('.runtime-defaults option[value="model-1"]').exists()).toBe(true);
     expect(wrapper.find(".provider-actions").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("uses the localized Runtime Engine labels and omits OpenClaw", async () => {
+    const api = apiStub();
+    api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({
+      personality: "direct_efficient",
+      personality_instructions: "",
+      runtime_model_defaults: [
+        { runtime_engine: "openclaw", provider_model_id: "model-openclaw" },
+        { runtime_engine: "codex", provider_model_id: "model-codex" },
+      ],
+      default_runtime_engine: "openclaw",
+      language: "zh-CN",
+      timezone: "Asia/Shanghai",
+      version: 1,
+    }));
+    api.listRuntimeEngines = vi.fn(async (): Promise<RuntimeEngineStatus[]> => [
+      { name: "openclaw", available: true, native_resume: false, cli_version: "1.0.0" },
+      { name: "codex", available: true, native_resume: true, cli_version: "1.0.0" },
+    ]);
+    api.updateSettings = vi.fn(async (settings) => settings);
+    const wrapper = mount(SettingsPage, {
+      global: {
+        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+        provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(false) },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.get(".form-grid > label").text()).toContain("运行引擎");
+    expect(wrapper.get(".runtime-defaults legend").text()).toBe("各运行引擎默认模型");
+    expect(wrapper.find('option[value="openclaw"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("OpenClaw");
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(api.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      default_runtime_engine: "codex",
+      runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-codex" }],
+    }));
     wrapper.unmount();
   });
 });
