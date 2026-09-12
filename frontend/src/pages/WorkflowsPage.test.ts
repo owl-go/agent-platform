@@ -42,6 +42,11 @@ describe("WorkflowsPage", () => {
     expect(listWorkflows).toHaveBeenCalledTimes(1);
     expect(listWorkflows).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("每周报告");
+    expect(wrapper.get(".workflow-card h2").text()).toBe("每周报告");
+    expect(wrapper.get(".workflow-created-at").text()).toContain("2026");
+    expect(wrapper.text()).not.toContain("整理本周进展");
+    expect(wrapper.find(".workflow-card .workflow-more").exists()).toBe(true);
+    expect(wrapper.find(".workflow-card").text()).not.toContain("打开工作流");
     expect(wrapper.text()).not.toContain("已删除记录");
     expect(wrapper.text()).not.toContain("已删除工作流");
     wrapper.unmount();

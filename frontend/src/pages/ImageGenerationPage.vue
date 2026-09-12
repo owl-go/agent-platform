@@ -376,14 +376,10 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="image-generation-page">
-    <header class="image-generation-head">
-      <div><p class="eyebrow">AI Creation</p><h1>{{ t('imageGeneration.title') }}</h1><p>{{ t('imageGeneration.subtitle') }}</p></div>
-      <el-button v-if="administrator" :icon="Setting" @click="openAdmin">{{ t('imageGeneration.configure') }}</el-button>
-    </header>
     <div v-if="error" class="image-generation-error" role="alert">{{ error }}</div>
     <section v-loading="loading" class="image-workbench">
       <aside class="image-settings-card">
-        <div class="image-card-title"><el-icon><MagicStick /></el-icon><h2>{{ t('imageGeneration.settings') }}</h2></div>
+        <div class="image-card-title"><el-icon><MagicStick /></el-icon><h2>{{ t('imageGeneration.settings') }}</h2><el-button v-if="administrator" class="image-admin-trigger" :icon="Setting" @click="openAdmin">{{ t('imageGeneration.configure') }}</el-button></div>
         <el-segmented v-model="form.mode" :options="[{ label: t('imageGeneration.textToImage'), value: 'generate' }, { label: t('imageGeneration.imageToImage'), value: 'edit', disabled: !selectedModel?.modes.includes('edit') }]" :disabled="locked" />
         <div v-if="models.length === 0" class="image-no-model"><el-icon><Picture /></el-icon><p>{{ t('imageGeneration.noModel') }}</p><el-button v-if="administrator" text @click="openAdmin">{{ t('imageGeneration.configure') }}</el-button></div>
         <el-form v-else label-position="top">
