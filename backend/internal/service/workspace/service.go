@@ -33,16 +33,17 @@ import (
 
 type Service struct {
 	workspacev1.UnimplementedAgentWorkspaceServiceServer
-	accounts   *accountapplication.Service
-	credits    *creditsapplication.Service
-	aicreation *aicreationapplication.Service
-	workspace  *workspaceapplication.Service
-	box        *secretcrypto.Box
-	files      *workspacefs.Store
-	skills     *skillstore.Store
-	objects    objectstore.Provider
-	config     platformconfig.Config
-	feishu     feishuApplicationRegistrar
+	accounts                 *accountapplication.Service
+	credits                  *creditsapplication.Service
+	aicreation               *aicreationapplication.Service
+	workspace                *workspaceapplication.Service
+	box                      *secretcrypto.Box
+	files                    *workspacefs.Store
+	skills                   *skillstore.Store
+	objects                  objectstore.Provider
+	config                   platformconfig.Config
+	feishu                   feishuApplicationRegistrar
+	removeNativeSessionState func(string, string, string) error
 }
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
@@ -65,7 +66,7 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 	if accounts == nil || credits == nil || aicreation == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil)}, nil
+	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {

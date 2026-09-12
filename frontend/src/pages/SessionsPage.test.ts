@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -266,6 +266,26 @@ describe("SessionsPage conversation layout", () => {
     await flushPromises();
     expect(api.deleteSession).toHaveBeenCalledWith(session.id);
     expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("treats a not-found delete as success when the Session was removed elsewhere", async () => {
+    const api = apiStub();
+    let removed = false;
+    api.deleteSession = vi.fn(async () => {
+      removed = true;
+      throw new ApiError("not_found", 404, "resource_not_found");
+    });
+    api.listSessions = vi.fn(async (archived = false) => archived ? [] : removed ? [] : [session]);
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get('button[aria-label="删除会话 布局验收"]').trigger("click");
+    await wrapper.get(".delete-actions .button.danger").trigger("click");
+    await flushPromises();
+
+    expect(api.deleteSession).toHaveBeenCalledWith(session.id);
+    expect(wrapper.find('[role="alertdialog"]').exists()).toBe(false);
+    expect(wrapper.find(".session-row").exists()).toBe(false);
     wrapper.unmount();
   });
 
