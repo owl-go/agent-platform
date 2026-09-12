@@ -58,4 +58,20 @@ describe("ConversationThread", () => {
     expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
+
+  it("does not expose runtime cancellation details as a failed response", () => {
+    const internalCancellation = "context canceled\ninterrupted: runtime interrupted: context canceled\nruntime event stream closed without a terminal event";
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "",
+      error: internalCancellation,
+      state: "cancelled",
+      timestamp: "2026-08-25T12:00:01Z",
+    }]);
+
+    expect(wrapper.get(".message.assistant").text()).toContain("已中止生成");
+    expect(wrapper.get(".message.assistant").text()).not.toContain("runtime event stream closed");
+    wrapper.unmount();
+  });
 });

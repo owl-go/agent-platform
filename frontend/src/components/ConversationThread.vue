@@ -27,6 +27,7 @@ const pendingStates = new Set(["queued", "running", "generating", "waiting_for_u
 const visibleStages = (message: ConversationMessage) => {
   const messageText = (message.content || message.error || "").replace(/\r\n/g, "\n").trim();
   return (message.stages ?? []).filter((stage) => {
+    if (message.state === "cancelled" && !stage.final_text) return false;
     const stageText = (stage.final_text || stage.error || "").replace(/\r\n/g, "\n").trim();
     return !stageText || stageText !== messageText;
   });
@@ -96,7 +97,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
         <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.streaming }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
         <p v-else-if="message.content">{{ message.content }}</p>
-        <p v-else-if="message.error || message.state === 'failed'">{{ message.error || stateLabel(message) }}</p>
+        <p v-else-if="message.state !== 'cancelled' && (message.error || message.state === 'failed')">{{ message.error || stateLabel(message) }}</p>
         <p v-else-if="!isPending(message) && message.stateLabel" class="muted">{{ message.stateLabel }}</p>
 
         <div v-if="message.role === 'user' && message.skills?.length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')">
