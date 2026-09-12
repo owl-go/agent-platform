@@ -12,6 +12,7 @@ import (
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/workspacefs"
 
+	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -96,11 +97,26 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 	privateKey := []byte(request.GetSshPrivateKey())
 	defer clear(password)
 	defer clear(privateKey)
-	if source.Authentication == "basic" && len(password) == 0 {
-		return nil, gitSourceError("git_credentials_required")
-	}
-	if source.Authentication == "ssh" && len(privateKey) == 0 {
-		return nil, gitSourceError("git_credentials_required")
+	if (source.Authentication == "basic" && len(password) == 0) || (source.Authentication == "ssh" && len(privateKey) == 0) {
+		// Credential fields are write-only in the UI. Reuse the existing secret
+		// when the user is only changing Git metadata such as branch or config.
+		if workflow.GitSource == nil || workflow.GitSource.Authentication != source.Authentication || !workflow.GitSource.CredentialConfigured {
+			return nil, gitSourceError("git_credentials_required")
+		}
+		storedPassword, storedPrivateKey, err := service.loadWorkflowGitCredentials(ctx, owner, request.WorkflowId)
+		if err != nil {
+			if kratoserrors.FromError(err) != nil {
+				return nil, err
+			}
+			return nil, publicError(err)
+		}
+		password = storedPassword
+		privateKey = storedPrivateKey
+		defer clear(password)
+		defer clear(privateKey)
+		if (source.Authentication == "basic" && len(password) == 0) || (source.Authentication == "ssh" && len(privateKey) == 0) {
+			return nil, gitSourceError("git_credentials_required")
+		}
 	}
 	secretPayload, err := json.Marshal(map[string]string{"password": string(password), "ssh_private_key": string(privateKey)})
 	if err != nil {
@@ -114,7 +130,11 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 			return nil, publicError(err)
 		}
 	}
-	err = service.files.Clone(ctx, workflow.WorkspacePath, workspacefs.GitCloneOptions{RepositoryURL: request.Url, Branch: request.Branch, Username: request.GetUsername(), Password: password, PrivateKey: privateKey, Config: config, SSHConfig: request.SshConfig})
+	clone := service.cloneGitSource
+	if clone == nil {
+		clone = service.files.Clone
+	}
+	err = clone(ctx, workflow.WorkspacePath, workspacefs.GitCloneOptions{RepositoryURL: request.Url, Branch: request.Branch, Username: request.GetUsername(), Password: password, PrivateKey: privateKey, Config: config, SSHConfig: request.SshConfig})
 	if err != nil {
 		return nil, gitCloneError(err)
 	}
@@ -124,6 +144,29 @@ func (service *Service) ConfigureWorkflowGitSource(ctx context.Context, request 
 		return nil, publicError(err)
 	}
 	return workflowResponse(updated), nil
+}
+
+func (service *Service) loadWorkflowGitCredentials(ctx context.Context, owner, workflowID string) ([]byte, []byte, error) {
+	ciphertext, err := service.workspace.Repository().GetWorkflowGitSecret(ctx, owner, workflowID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load existing Git credentials: %w", err)
+	}
+	if len(ciphertext) == 0 {
+		return nil, nil, gitSourceError("git_credentials_required")
+	}
+	plaintext, err := service.box.Decrypt(ciphertext, "workflow-git:"+owner)
+	if err != nil {
+		return nil, nil, fmt.Errorf("decrypt existing Git credentials: %w", err)
+	}
+	defer clear(plaintext)
+	var payload struct {
+		Password      string `json:"password"`
+		SSHPrivateKey string `json:"ssh_private_key"`
+	}
+	if err := json.Unmarshal(plaintext, &payload); err != nil {
+		return nil, nil, fmt.Errorf("decode existing Git credentials: %w", err)
+	}
+	return []byte(payload.Password), []byte(payload.SSHPrivateKey), nil
 }
 
 func (service *Service) workspaceForRequest(ctx context.Context, workflowID string) (string, workspacedomain.Workflow, error) {
