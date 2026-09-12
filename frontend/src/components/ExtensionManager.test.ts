@@ -12,11 +12,11 @@ const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30
 beforeEach(() => { vi.spyOn(window, "open").mockReturnValue(null); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); document.body.innerHTML = ""; });
 
-function mountManager(api: PlatformApi, administrator = false, language = "zh-CN") {
+function mountManager(api: PlatformApi, administrator = false, language = "zh-CN", mineOnly = false) {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
   return mount(ExtensionManager, {
     attachTo: document.body,
-    props: { selectable: true, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
+    props: { selectable: true, mineOnly, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
     global: {
       plugins: [createAppI18n({ getItem: () => language }, language)],
       provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
@@ -253,21 +253,33 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     const connectorGroups = wrapper.findAll(".catalog-group");
+    expect(connectorGroups).toHaveLength(1);
     expect(connectorGroups[0]!.text()).toContain("平台连接器");
     expect(connectorGroups[0]!.text()).toContain(platformMCP.name);
     expect(connectorGroups[0]!.find('button[aria-label="编辑"]').exists()).toBe(false);
-    expect(connectorGroups[1]!.text()).toContain("我的连接器");
-    expect(connectorGroups[1]!.text()).toContain(myMCP.name);
-    expect(connectorGroups[1]!.find('button[aria-label="编辑"]').exists()).toBe(true);
+    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的连接器");
 
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     const skillGroups = wrapper.findAll(".catalog-group");
+    expect(skillGroups).toHaveLength(1);
     expect(skillGroups[0]!.text()).toContain("平台技能");
     expect(skillGroups[0]!.text()).toContain(platformSkill.name);
     expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
-    expect(skillGroups[1]!.text()).toContain("我的技能");
-    expect(skillGroups[1]!.text()).toContain(mySkill.name);
-    expect(skillGroups[1]!.find('button[aria-label="删除"]').exists()).toBe(true);
+    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的技能");
+
+    await wrapper.setProps({ mineOnly: true });
+    await flushPromises();
+    const mineGroups = wrapper.findAll(".catalog-group");
+    expect(mineGroups).toHaveLength(1);
+    expect(mineGroups[0]!.text()).toContain("我的技能");
+    expect(mineGroups[0]!.text()).toContain(mySkill.name);
+    expect(mineGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(true);
+    await wrapper.findAll(".subtabs button")[1]!.trigger("click");
+    await flushPromises();
+    const mineConnectorGroups = wrapper.findAll(".catalog-group");
+    expect(mineConnectorGroups).toHaveLength(1);
+    expect(mineConnectorGroups[0]!.text()).toContain("我的连接器");
+    expect(mineConnectorGroups[0]!.text()).toContain(myMCP.name);
     wrapper.unmount();
   });
 
@@ -320,7 +332,7 @@ describe("ExtensionManager", () => {
       listSkills: vi.fn(async () => [saved]),
       getSkillDeletionImpact: vi.fn(async () => ({ affected_experts: [{ id: "expert-1", name: "审查专家", version: 2 }], confirmation_token: "confirmation" })),
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api);
+    const wrapper = mountManager(api, false, "zh-CN", true);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.findAll(".resource-list article button").at(-1)!.trigger("click");
@@ -337,7 +349,7 @@ describe("ExtensionManager", () => {
       listSkills: vi.fn(async () => [saved]),
       getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndisplay_name: PDF 文档处理\ndescription: Process PDFs.\ndescription_zh: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api);
+    const wrapper = mountManager(api, false, "zh-CN", true);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
 
@@ -356,7 +368,7 @@ describe("ExtensionManager", () => {
       getSkillDeletionImpact: vi.fn(async () => ({ confirmation_token: "confirmation" })),
       deleteSkill,
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api);
+    const wrapper = mountManager(api, false, "zh-CN", true);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.get('button[aria-label="删除"]').trigger("click");
@@ -432,7 +444,7 @@ describe("ExtensionManager", () => {
   });
 
   it("shows MCP and CLI Connectors in one catalog", async () => {
-    const mcp: MCPServer = { id: "mcp-1", name: "行情查询", transport: "streamable_http", url: "https://quotes.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
+    const mcp: MCPServer = { id: "mcp-1", name: "行情查询", platform: true, transport: "streamable_http", url: "https://quotes.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
     const cli = { id: "cli-1", name: "飞书", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "sha512-test", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], state: "available", mutable: false, version: 1 } as const;
     const api = { listMCPServers: vi.fn(async () => [mcp]), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [cli]), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
     const wrapper = mountManager(api);
