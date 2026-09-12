@@ -246,6 +246,14 @@ func (repository *Repository) GetWorkflowEnvironmentSecret(ctx context.Context, 
 	return append([]byte(nil), row.EnvironmentSecret...), nil
 }
 
+func (repository *Repository) GetWorkflowGitSecret(ctx context.Context, ownerID, workflowID string) ([]byte, error) {
+	var row workflowRecord
+	if err := repository.db.WithContext(ctx).Select("git_secret_ciphertext").Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&row).Error; err != nil {
+		return nil, mapNotFound(err)
+	}
+	return append([]byte(nil), row.GitSecret...), nil
+}
+
 func (repository *Repository) SetWorkflowGitSource(ctx context.Context, ownerID, workflowID string, source domain.GitSource, secretCiphertext []byte) (domain.Workflow, error) {
 	if err := domain.ValidateGitSource(source); err != nil {
 		return domain.Workflow{}, err

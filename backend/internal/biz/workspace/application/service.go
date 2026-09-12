@@ -33,6 +33,7 @@ type Repository interface {
 	SetWorkflowCredential(context.Context, string, string, string, string) (domain.Workflow, error)
 	ResolveWorkflowCredential(context.Context, string, string) (string, string, error)
 	SetWorkflowGitSource(context.Context, string, string, domain.GitSource, []byte) (domain.Workflow, error)
+	GetWorkflowGitSecret(context.Context, string, string) ([]byte, error)
 	GetWorkflowEnvironmentSecret(context.Context, string, string) ([]byte, error)
 	ListRuns(context.Context, string, string) ([]domain.Run, error)
 	ListRunTurns(context.Context, string, string, string) ([]domain.Run, error)

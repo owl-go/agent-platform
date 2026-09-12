@@ -44,6 +44,7 @@ type Service struct {
 	config                   platformconfig.Config
 	feishu                   feishuApplicationRegistrar
 	removeNativeSessionState func(string, string, string) error
+	cloneGitSource           func(context.Context, string, workspacefs.GitCloneOptions) error
 }
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
@@ -66,7 +67,7 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 	if accounts == nil || credits == nil || aicreation == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState}, nil
+	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {
