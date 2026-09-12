@@ -206,7 +206,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .credential-icon-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .credential-icon-button svg { width: 15px; height: 15px; }
 .credential-warning { color: #a04b32; }
-.credential-copy-all { justify-self: start; margin-top: 4px; }
 .integration-guide { display: grid; gap: 20px; }
 .integration-guide-dialog .el-dialog__body { max-height: min(70vh, 620px); overflow: auto; }
 .integration-guide section { display: grid; gap: 8px; }
