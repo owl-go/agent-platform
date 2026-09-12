@@ -204,6 +204,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 }
 
 .expert-catalog { max-width: 1500px; margin: 0 auto; }
+.filter-label { color: var(--muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.expert-category { --el-tag-bg-color: #e5f0e8; --el-tag-border-color: #c8ddce; --el-tag-text-color: #236247; }
+.expert-tags { align-items: center; }
+.expert-tag-more { color: var(--muted); font-size: .7rem; font-weight: 700; }
 .catalog-head-actions { display: flex; align-items: center; gap: 8px; }
 .my-resource-toggle { white-space: nowrap; }
 

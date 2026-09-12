@@ -69,7 +69,7 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
 Object.assign(zh.experts, { platformExperts: "平台专家", myExperts: "我的专家" });
 Object.assign(zh.experts, {
   teams: "专家团", catalog: "专家目录", createTeam: "创建专家团", editExpert: "编辑专家", editTeam: "编辑专家团",
-  searchExperts: "搜索专家名称或能力介绍", searchTeams: "搜索专家团名称或能力介绍", expertiseFilter: "擅长领域筛选", all: "全部",
+  searchExperts: "搜索专家名称或能力介绍", searchTeams: "搜索专家团名称或能力介绍", expertiseFilter: "分类筛选", categoryFilter: "分类筛选", category: "分类", all: "全部",
   loadFailed: "加载专家目录失败", loadExpertFailed: "加载专家失败", loadTeamFailed: "加载专家团失败", incomplete: "待完善",
   teamUnavailable: "至少需要 2 位可用专家", noExperts: "没有匹配的专家", noTeams: "没有匹配的专家团", perRound: "{count} 位专家 / 每轮",
   backCatalog: "返回专家目录", backTeams: "返回专家团", capability: "能力介绍", instruction: "执行指令", expertise: "擅长领域",
@@ -122,7 +122,7 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign(en.experts, { platformExperts: "Platform Experts", myExperts: "My Experts" });
 Object.assign(en.experts, {
   teams: "Expert Teams", catalog: "Expert catalog", createTeam: "Create Expert Team", editExpert: "Edit Expert", editTeam: "Edit Expert Team",
-  searchExperts: "Search Experts by name or capability", searchTeams: "Search teams by name or capability", expertiseFilter: "Filter by expertise", all: "All",
+  searchExperts: "Search Experts by name or capability", searchTeams: "Search teams by name or capability", expertiseFilter: "Filter by category", categoryFilter: "Filter by category", category: "Category", all: "All",
   loadFailed: "Could not load the Expert catalog", loadExpertFailed: "Could not load the Expert", loadTeamFailed: "Could not load the Expert Team", incomplete: "Incomplete",
   teamUnavailable: "At least two available Experts required", noExperts: "No matching Experts", noTeams: "No matching Expert Teams", perRound: "{count} Experts / round",
   backCatalog: "Back to Expert catalog", backTeams: "Back to Expert Teams", capability: "Capability introduction", instruction: "Execution instruction", expertise: "Expertise",

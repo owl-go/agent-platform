@@ -417,7 +417,7 @@ func claimExpertTagProjection(tx *gorm.DB) (*application.ExecutionJob, error) {
 		}
 		return nil, nil
 	}
-	return &application.ExecutionJob{Kind: application.JobExpertTagProjection, ID: "expert-tags-" + row.ID, OwnerID: row.OwnerID, ExpertID: row.ID, Instruction: "Generate up to five concise discovery tags for this Expert's core capability. Return only a JSON array of strings, each at most 20 characters.\n\nCore capability:\n" + row.CoreCapability, Snapshot: snapshot}, nil
+	return &application.ExecutionJob{Kind: application.JobExpertTagProjection, ID: "expert-tags-" + row.ID, OwnerID: row.OwnerID, ExpertID: row.ID, Instruction: "Generate a broad category first, followed by up to four concise discovery tags for this Expert's core capability. Return only a JSON array of strings: the first string is the category and the remaining strings are tags; each string must be at most 20 characters.\n\nCore capability:\n" + row.CoreCapability, Snapshot: snapshot}, nil
 }
 
 func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
