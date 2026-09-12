@@ -364,8 +364,15 @@ describe("WorkflowDetailPage", () => {
     const rows = wrapper.findAll(".credential-row");
     expect(rows).toHaveLength(2);
     expect(rows[0]!.text()).toContain("awk_test");
+    expect(rows[1]!.text()).not.toContain("aws_test");
+    expect(rows[1]!.text()).toContain("****");
+    const secretActions = rows[1]!.findAll(".credential-icon-button");
+    expect(secretActions).toHaveLength(2);
+    await secretActions[0]!.trigger("click");
     expect(rows[1]!.text()).toContain("aws_test");
-    await rows[0]!.get(".text-button").trigger("click");
+    await secretActions[1]!.trigger("click");
+    expect(writeText).toHaveBeenCalledWith("aws_test");
+    await rows[0]!.get(".credential-icon-button").trigger("click");
     expect(writeText).toHaveBeenCalledWith("awk_test");
 
     await wrapper.get(".api-credential-actions .button:nth-child(2)").trigger("click");
@@ -391,7 +398,7 @@ describe("WorkflowDetailPage", () => {
     const rows = wrapper.findAll(".credential-row");
     expect(rows).toHaveLength(2);
     expect(rows[0]!.text()).toContain("awk_saved");
-    expect(rows[1]!.text()).toContain("aws_saved");
+    expect(rows[1]!.text()).not.toContain("aws_saved");
     wrapper.unmount();
   });
 
