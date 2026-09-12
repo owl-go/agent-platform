@@ -143,6 +143,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .expert-resource-option.selected .expert-resource-check { border-color: var(--green); background: var(--green); }
 .expert-resource-check svg { width: 13px; height: 13px; stroke-width: 3; }
 .expert-resource-empty { margin: 0; padding: 20px; border: 1px dashed #d7ddd7; border-radius: 10px; text-align: center; }
+.form-field { min-width: 0; display: grid; gap: .48rem; font-size: .83rem; font-weight: 650; color: #3c4843; }
 
 .composer { grid-template-columns: auto minmax(0,1fr) auto; }
 .composer textarea,.composer .pending-attachments { grid-column: 1/-1; }

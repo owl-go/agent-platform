@@ -30,6 +30,7 @@ describe("Expert editors", () => {
     expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
     expect(wrapper.find(".extension-manager").exists()).toBe(false);
     expect(wrapper.find(".expert-resource-selector").exists()).toBe(true);
+    expect(wrapper.find(".form-grid > label .icon-picker-upload").exists()).toBe(false);
     const inputs = wrapper.findAll('input[type="text"]');
     const textareas = wrapper.findAll("textarea");
     await inputs[0]!.setValue("架构专家");
