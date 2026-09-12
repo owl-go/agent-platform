@@ -68,6 +68,7 @@ const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceGetSkillDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 const OperationAgentWorkspaceServiceGetSkillDocument = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
+const OperationAgentWorkspaceServiceGetWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 const OperationAgentWorkspaceServiceListCLIConnectorAuthorizations = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
@@ -181,6 +182,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetSkillDocument(context.Context, *GetSkillDocumentRequest) (*SkillDocument, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
+	GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	ListCLIConnectorAuthorizations(context.Context, *ListCLIConnectorAuthorizationsRequest) (*ListCLIConnectorAuthorizationsResponse, error)
@@ -297,6 +299,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_DeleteWorkflow0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-token", _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_ListRuns0_HTTP_Handler(srv))
@@ -1417,6 +1420,28 @@ func _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv AgentWo
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceGenerateWorkflowCredential)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.GenerateWorkflowCredential(ctx, req.(*GenerateWorkflowCredentialRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*WorkflowCredential)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetWorkflowCredentialRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetWorkflowCredential)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetWorkflowCredential(ctx, req.(*GetWorkflowCredentialRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -2720,6 +2745,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetSkillDeletionImpact(ctx context.Context, req *GetSkillDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetSkillDocument(ctx context.Context, req *GetSkillDocumentRequest, opts ...http.CallOption) (rsp *SkillDocument, err error)
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	GetWorkflowCredential(ctx context.Context, req *GetWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
 	ListCLIConnectorAuthorizations(ctx context.Context, req *ListCLIConnectorAuthorizationsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorAuthorizationsResponse, err error)
@@ -3625,6 +3651,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetWorkflow(ctx context.Context, i
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetWorkflow),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...http.CallOption) (*WorkflowCredential, error) {
+	var out WorkflowCredential
+	pattern := "/api/v1/workflows/{workflow_id}/api-credential"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetWorkflowCredential),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

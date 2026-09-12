@@ -30,7 +30,8 @@ type Repository interface {
 	GetWorkflow(context.Context, string, string, bool) (domain.Workflow, error)
 	UpdateWorkflow(context.Context, string, string, domain.WorkflowInput, []byte, int64) (domain.Workflow, error)
 	DeleteWorkflow(context.Context, string, string) error
-	SetWorkflowCredential(context.Context, string, string, string, string) (domain.Workflow, error)
+	SetWorkflowCredential(context.Context, string, string, string, string, []byte) (domain.Workflow, error)
+	GetWorkflowCredential(context.Context, string, string) (string, []byte, error)
 	ResolveWorkflowCredential(context.Context, string, string) (string, string, error)
 	SetWorkflowGitSource(context.Context, string, string, domain.GitSource, []byte) (domain.Workflow, error)
 	GetWorkflowGitSecret(context.Context, string, string) ([]byte, error)

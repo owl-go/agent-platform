@@ -1099,7 +1099,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AgentWorkspaceService_GetWorkflowCredential"];
         put?: never;
         post: operations["AgentWorkspaceService_GenerateWorkflowCredential"];
         delete?: never;
@@ -5789,6 +5789,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetWorkflowCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1WorkflowCredential"];
                 };
             };
             /** @description An unexpected error response. */

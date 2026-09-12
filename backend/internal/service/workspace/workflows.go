@@ -121,10 +121,37 @@ func (service *Service) GenerateWorkflowCredential(ctx context.Context, request 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if _, err := service.workspace.Repository().SetWorkflowCredential(ctx, owner, request.WorkflowId, key, hash); err != nil {
+	ciphertext, err := service.box.Encrypt([]byte(secret), workflowCredentialAAD(owner, request.WorkflowId))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if _, err := service.workspace.Repository().SetWorkflowCredential(ctx, owner, request.WorkflowId, key, hash, ciphertext); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: secret, CreatedAt: timestamppb.Now()}, nil
+}
+
+func (service *Service) GetWorkflowCredential(ctx context.Context, request *workspacev1.GetWorkflowCredentialRequest) (*workspacev1.WorkflowCredential, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	key, ciphertext, err := service.workspace.Repository().GetWorkflowCredential(ctx, owner, request.WorkflowId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if len(ciphertext) == 0 {
+		return nil, publicError(workspacedomain.ErrWorkflowCredentialUnavailable)
+	}
+	secret, err := service.box.Decrypt(ciphertext, workflowCredentialAAD(owner, request.WorkflowId))
+	if err != nil {
+		return nil, publicError(fmt.Errorf("%w: decrypt API Secret", workspacedomain.ErrWorkflowCredentialUnavailable))
+	}
+	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: string(secret)}, nil
+}
+
+func workflowCredentialAAD(owner, workflowID string) string {
+	return "workflow-api-credential:" + owner + ":" + workflowID
 }
 
 func (service *Service) ExchangeWorkflowCredential(ctx context.Context, request *workspacev1.ExchangeWorkflowCredentialRequest) (*workspacev1.WorkflowAccessToken, error) {
