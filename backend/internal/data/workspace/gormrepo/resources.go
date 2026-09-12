@@ -901,7 +901,7 @@ func (repository *Repository) CreateMCPServer(ctx context.Context, ownerID strin
 	if err != nil {
 		return domain.MCPServer{}, err
 	}
-	row := mcpRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(server.Name), Transport: server.Transport, Configuration: configuration, SecretCiphertext: secretCiphertext, Version: 1}
+	row := mcpRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(server.Name), Icon: defaultString(server.Icon, "terminal"), Transport: server.Transport, Configuration: configuration, SecretCiphertext: secretCiphertext, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.MCPServer{}, fmt.Errorf("create MCP Server: %w", err)
 	}
@@ -917,7 +917,7 @@ func (repository *Repository) UpdateMCPServer(ctx context.Context, ownerID, serv
 		return domain.MCPServer{}, err
 	}
 	updates := map[string]any{
-		"name": strings.TrimSpace(server.Name), "transport": server.Transport, "configuration": configuration,
+		"name": strings.TrimSpace(server.Name), "icon": defaultString(server.Icon, "terminal"), "transport": server.Transport, "configuration": configuration,
 		"test_requested_at": nil, "tested_at": nil, "test_error": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 	}
 	if secretCiphertext != nil {
@@ -1072,7 +1072,7 @@ func mcpDomain(row mcpRecord) (domain.MCPServer, error) {
 	if err := json.Unmarshal(row.Configuration, &configuration); err != nil {
 		return domain.MCPServer{}, fmt.Errorf("decode MCP configuration: %w", err)
 	}
-	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.MCPServer{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: defaultString(row.Icon, "terminal"), Transport: row.Transport, URL: configuration.URL, Runner: configuration.Runner, Package: configuration.Package, PackageVersion: configuration.PackageVersion, Arguments: configuration.Arguments, Environment: configuration.Environment, TestRequestedAt: row.TestRequestedAt, TestedAt: row.TestedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.TestError != nil {
 		item.TestError = *row.TestError
 	}
@@ -1093,15 +1093,15 @@ func (repository *Repository) ListSkills(ctx context.Context, ownerID string) ([
 }
 
 func (repository *Repository) CreateSkill(ctx context.Context, ownerID string, skill domain.Skill) (domain.Skill, error) {
-	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(skill.Name), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
+	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(skill.Name), Icon: defaultString(skill.Icon, "sparkles"), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.Skill{}, fmt.Errorf("create Skill: %w", err)
 	}
 	return repository.getSkill(ctx, ownerID, row.ID)
 }
 
-func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
-	updates := map[string]any{"name": strings.TrimSpace(name), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name, icon string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
+	updates := map[string]any{"name": strings.TrimSpace(name), "icon": defaultString(icon, "sparkles"), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	if gitRef != nil {
 		updates["git_ref"] = gitRef
 	}
@@ -1186,7 +1186,7 @@ func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID,
 }
 
 func skillDomain(row skillRecord) domain.Skill {
-	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: row.Icon, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 
 func (repository *Repository) getSkill(ctx context.Context, ownerID, skillID string) (domain.Skill, error) {

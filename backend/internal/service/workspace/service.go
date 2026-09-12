@@ -140,6 +140,8 @@ func publicError(err error) error {
 		return kratoserrors.New(http.StatusNotFound, "resource_not_found", "resource not found")
 	case errors.Is(err, accountdomain.ErrConflict), errors.Is(err, workspacedomain.ErrConflict):
 		return kratoserrors.New(http.StatusPreconditionFailed, "version_conflict", "resource version changed")
+	case errors.Is(err, workspacedomain.ErrQueueFull):
+		return kratoserrors.New(http.StatusTooManyRequests, "queue_full", "workflow queue is full")
 	case errors.Is(err, workspacedomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, creditsdomain.ErrInsufficientCredits):

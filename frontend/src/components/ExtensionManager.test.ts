@@ -304,11 +304,11 @@ describe("ExtensionManager", () => {
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.get(".compact-action").trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    await form.findAll("input")[0]!.setValue(saved.git_url);
+    await form.get('input[placeholder="https://github.com/owner/skill.git"]').setValue(saved.git_url);
     await form.trigger("submit");
     await flushPromises();
 
-    expect(createGitSkill).toHaveBeenCalledWith({ git_url: saved.git_url, git_ref: undefined });
+    expect(createGitSkill).toHaveBeenCalledWith({ git_url: saved.git_url, git_ref: undefined, icon: "sparkles" });
     expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
     wrapper.unmount();
   });
@@ -452,15 +452,15 @@ describe("ExtensionManager", () => {
     await wrapper.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
-    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get('input[maxlength="100"]').setValue(draft.name);
     await form.get("textarea").setValue("读取示例服务数据");
-    await form.findAll("input")[1]!.setValue("example-cli@1.2.3");
+    await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("example-cli@1.2.3");
     await form.trigger("submit");
     await flushPromises();
     expect(document.body.querySelector(".app-toast")?.textContent).toContain("服务暂时不可用");
     expect(document.body.querySelector(".cli-install-card")).not.toBeNull();
-    expect((form.findAll("input")[0]!.element as HTMLInputElement).value).toBe(draft.name);
-    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli@1.2.3");
+    expect((form.get('input[maxlength="100"]').element as HTMLInputElement).value).toBe(draft.name);
+    expect((form.get('input[placeholder="@scope/package@1.2.3"]').element as HTMLInputElement).value).toBe("example-cli@1.2.3");
     expect(form.find('button.is-loading').exists()).toBe(false);
     await form.trigger("submit");
     await flushPromises();
@@ -499,15 +499,35 @@ describe("ExtensionManager", () => {
     await wrapper.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
-    await form.findAll("select")[0]!.setValue("code");
-    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get('button[aria-label="code"]').trigger("click");
+    await form.get('input[maxlength="100"]').setValue(draft.name);
     await form.get("textarea").setValue(draft.description);
-    await form.findAll("input")[1]!.setValue("npm install example-cli@1.2.3");
+    await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("npm install -g example-cli@1.2.3");
     await form.trigger("submit");
     await flushPromises();
 
     expect(createCLIConnectorDefinition).toHaveBeenCalledWith({ name: draft.name, icon: "code", description: draft.description, installation_type: "npm", npm_package: "example-cli", npm_version: "1.2.3", archive: undefined });
     expect(publishCLIConnectorDefinition).toHaveBeenCalledWith(draft.id, draft.version);
+    wrapper.unmount();
+  });
+
+  it("explains that a pasted npm install command still needs an exact package version", async () => {
+    const createCLIConnectorDefinition = vi.fn();
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createCLIConnectorDefinition } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+    await wrapper.get(".compact-action").trigger("click");
+    await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
+    await form.get('input[maxlength="100"]').setValue("钉钉");
+    await form.get("textarea").setValue("管理钉钉产品能力");
+    await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("npm install -g dingtalk-workspace-cli");
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(createCLIConnectorDefinition).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".app-toast")?.textContent).toContain("必须指定精确版本");
+    expect(document.body.querySelector(".cli-install-card")).not.toBeNull();
     wrapper.unmount();
   });
 
@@ -520,13 +540,13 @@ describe("ExtensionManager", () => {
     await wrapper.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-cli"]')!).trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".cli-install-card")!);
-    await form.findAll("input")[0]!.setValue(draft.name);
+    await form.get('input[maxlength="100"]').setValue(draft.name);
     await form.get("textarea").setValue(draft.description);
-    await form.findAll("select")[1]!.setValue("upload");
+    await form.findAll("select")[0]!.setValue("upload");
     await flushPromises();
     const file = new File(["zip-content"], "connector.zip", { type: "application/zip" });
     Object.defineProperty(file, "arrayBuffer", { value: vi.fn(async () => new TextEncoder().encode("zip-content").buffer) });
-    const input = form.get('input[type="file"]');
+    const input = form.get('input[type="file"][accept=".zip,application/zip"]');
     Object.defineProperty(input.element, "files", { value: [file] });
     await input.trigger("change");
     await flushPromises();
@@ -577,8 +597,8 @@ describe("ExtensionManager", () => {
 
     await wrapper.get('button[aria-label="编辑"]').trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    expect((form.findAll("input")[1]!.element as HTMLInputElement).value).toBe("example-cli@1.0.0");
-    await form.findAll("input")[1]!.setValue("example-cli@1.0.1");
+    expect((form.get('input[placeholder="@scope/package@1.2.3"]').element as HTMLInputElement).value).toBe("example-cli@1.0.0");
+    await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("example-cli@1.0.1");
     await form.trigger("submit");
     await flushPromises();
 

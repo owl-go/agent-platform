@@ -51,6 +51,15 @@ describe("Agent Workspace API client", () => {
     expect(result[0]?.models).toEqual([]);
   });
 
+  it("normalizes omitted MCP repeated fields before editing a connector", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "mcp-1", name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/", tested: false, test_pending: false, version: 1 }] }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    const item = (await createPlatformApi(() => "token").listMCPServers())[0];
+
+    expect(item?.arguments).toEqual([]);
+    expect(item?.environment).toEqual([]);
+  });
+
   it("normalizes an omitted deletion impact list from protobuf JSON", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ confirmation_token: "confirmation" }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
@@ -78,6 +87,18 @@ describe("Agent Workspace API client", () => {
       protocols: ["openai_responses", "openai_chat"],
       expected_version: 12,
     });
+  });
+
+  it("uses the MCP connector field required by the protobuf HTTP contract", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify({ id: "mcp-1" }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+
+    await api.createMCPServer({ name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" });
+    await api.updateMCPServer("mcp-1", { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" }, 1);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ mcp_connector: { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" } });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ mcp_connector: { name: "GitHub MCP", transport: "streamable_http", url: "https://api.githubcopilot.com/mcp/" }, expected_version: 1 });
   });
 
   it("configures Git separately from the read-only Workspace", async () => {
@@ -155,6 +176,24 @@ describe("Agent Workspace API client", () => {
     expect(result.items[0]?.name).toBe("verification.txt");
     expect(result.used_bytes).toBe(22);
     expect(result.limit_bytes).toBe(1073741824);
+  });
+
+  it("omits the optional Workspace path query for the root directory", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").listWorkspace("workflow-1");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace");
+  });
+
+  it("includes the Workspace path query for nested directories", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").listWorkspace("workflow-1", "src/reports");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/workspace?path=src%2Freports");
   });
 
   it("filters legacy final-result records from file Artifacts", async () => {

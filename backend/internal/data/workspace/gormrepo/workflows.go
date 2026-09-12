@@ -19,6 +19,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+const maxQueuedWorkflowRuns = 5
+
 func (repository *Repository) ListWorkflows(ctx context.Context, ownerID string, deleted bool) ([]domain.Workflow, error) {
 	query := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID)
 	if deleted {
@@ -280,7 +282,13 @@ func (repository *Repository) CreateRun(ctx context.Context, ownerID, workflowID
 	if err != nil {
 		return domain.Run{}, fmt.Errorf("create Workflow Run: %w", err)
 	}
-	return runDomain(created), nil
+	item := runDomain(created)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	if positionErr != nil {
+		return domain.Run{}, positionErr
+	}
+	return item, nil
 }
 
 func (repository *Repository) CreateRunIdempotent(ctx context.Context, ownerID, workflowID, trigger, key string, textInput *string, jsonInput map[string]any) (domain.Run, bool, error) {
@@ -338,7 +346,13 @@ func (repository *Repository) CreateRunIdempotent(ctx context.Context, ownerID, 
 	if err != nil {
 		return domain.Run{}, false, fmt.Errorf("create idempotent Workflow Run: %w", err)
 	}
-	return runDomain(created), replayed, nil
+	item := runDomain(created)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	if positionErr != nil {
+		return domain.Run{}, false, positionErr
+	}
+	return item, replayed, nil
 }
 
 func validateRunInput(textInput *string, jsonInput map[string]any) error {
@@ -357,8 +371,15 @@ func validateRunInput(textInput *string, jsonInput map[string]any) error {
 
 func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *string, jsonInput map[string]any) (runRecord, error) {
 	var workflow workflowRecord
-	if err := tx.Clauses(clause.Locking{Strength: "SHARE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
 		return runRecord{}, mapNotFound(err)
+	}
+	if err := ensureWorkflowQueueCapacity(tx, workflowID); err != nil {
+		return runRecord{}, err
+	}
+	var queued int64
+	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+		return runRecord{}, err
 	}
 	input, err := marshal(map[string]any{"text": textInput, "json": jsonInput})
 	if err != nil {
@@ -374,7 +395,10 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	}
 	id := uuid.NewString()
 	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
-	return created, tx.Create(&created).Error
+	if err := tx.Create(&created).Error; err != nil {
+		return runRecord{}, err
+	}
+	return created, appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
 }
 
 func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment) (domain.Run, error) {
@@ -389,19 +413,19 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 	var created runRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var workflow workflowRecord
-		if err := tx.Clauses(clause.Locking{Strength: "SHARE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
 			return mapNotFound(err)
+		}
+		if err := ensureWorkflowQueueCapacity(tx, workflowID); err != nil {
+			return err
+		}
+		var queued int64
+		if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+			return err
 		}
 		var root runRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND conversation_id = id", ownerID, workflowID, runID).Take(&root).Error; err != nil {
 			return mapNotFound(err)
-		}
-		var active int64
-		if err := tx.Model(&runRecord{}).Where("conversation_id = ? AND state IN ('queued','running','waiting_for_user')", root.ID).Count(&active).Error; err != nil {
-			return err
-		}
-		if active > 0 {
-			return domain.ErrConflict
 		}
 		var lastTurn int
 		if err := tx.Model(&runRecord{}).Select("COALESCE(MAX(turn_number), 0)").Where("conversation_id = ?", root.ID).Scan(&lastTurn).Error; err != nil {
@@ -453,12 +477,21 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 				return err
 			}
 		}
-		return tx.Create(&created).Error
+		if err := tx.Create(&created).Error; err != nil {
+			return err
+		}
+		return appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
 	})
 	if err != nil {
 		return domain.Run{}, fmt.Errorf("continue Run Conversation: %w", err)
 	}
-	return runDomain(created), nil
+	item := runDomain(created)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	if positionErr != nil {
+		return domain.Run{}, positionErr
+	}
+	return item, nil
 }
 
 func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.ExecutionSnapshot, error) {
@@ -643,7 +676,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		if err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
 		}
-		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
@@ -668,7 +701,7 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 		if len(runtimeDigests) == 0 {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no passing Runtime conformance", domain.ErrInvalid)
 		}
-		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
+		member.CLIConnectors = append(member.CLIConnectors, domain.CLIConnectorSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Executable: row.Executable, AuthenticationDriver: row.AuthenticationDriver, BundleObjectKey: *row.BundleObjectKey, BundleSHA256: *row.BundleSHA256, RuntimeDigests: runtimeDigests, Capabilities: json.RawMessage(row.Capabilities), Version: row.Version})
 	}
 	return member, nil
 }
@@ -684,7 +717,13 @@ func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID 
 	summaries := summarizeRunConversations(rows)
 	items := make([]domain.Run, 0, len(summaries))
 	for _, row := range summaries {
-		items = append(items, runDomain(row))
+		item := runDomain(row)
+		var positionErr error
+		item.QueuePosition, positionErr = repository.runQueuePositionForRecord(ctx, row)
+		if positionErr != nil {
+			return nil, positionErr
+		}
+		items = append(items, item)
 	}
 	return items, nil
 }
@@ -710,6 +749,7 @@ func summarizeRunConversations(rows []runRecord) []runRecord {
 		root.QueuedAt = turn.QueuedAt
 		root.StartedAt = turn.StartedAt
 		root.EndedAt = turn.EndedAt
+		root.QueuePositionID = turn.ID
 		summaries = append(summaries, root)
 	}
 	sort.Slice(summaries, func(left, right int) bool {
@@ -732,7 +772,13 @@ func (repository *Repository) ListRunTurns(ctx context.Context, ownerID, workflo
 	}
 	items := make([]domain.Run, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, runDomain(row))
+		item := runDomain(row)
+		var positionErr error
+		item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+		if positionErr != nil {
+			return nil, positionErr
+		}
+		items = append(items, item)
 	}
 	return items, nil
 }
@@ -742,7 +788,13 @@ func (repository *Repository) GetRun(ctx context.Context, ownerID, workflowID, r
 	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id = ? AND id = ?", ownerID, workflowID, runID).Take(&row).Error; err != nil {
 		return domain.Run{}, mapNotFound(err)
 	}
-	return runDomain(row), nil
+	item := runDomain(row)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	if positionErr != nil {
+		return domain.Run{}, positionErr
+	}
+	return item, nil
 }
 
 func (repository *Repository) ListRunEvents(ctx context.Context, ownerID, workflowID, runID string, after int64, limit int) ([]domain.RunEvent, error) {
@@ -811,10 +863,82 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 	}
 	created.ConversationID = created.ID
 	created.TurnNumber = 1
-	if err := repository.db.WithContext(ctx).Create(&created).Error; err != nil {
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var workflow workflowRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if err := ensureWorkflowQueueCapacity(tx, workflowID); err != nil {
+			return err
+		}
+		var queued int64
+		if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&created).Error; err != nil {
+			return err
+		}
+		return appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
+	})
+	if err != nil {
 		return domain.Run{}, fmt.Errorf("rerun Workflow: %w", err)
 	}
-	return runDomain(created), nil
+	item := runDomain(created)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	if positionErr != nil {
+		return domain.Run{}, positionErr
+	}
+	return item, nil
+}
+
+func ensureWorkflowQueueCapacity(tx *gorm.DB, workflowID string) error {
+	var queued int64
+	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+		return err
+	}
+	if queued >= maxQueuedWorkflowRuns {
+		return domain.ErrQueueFull
+	}
+	return nil
+}
+
+func appendQueuedRunEvent(tx *gorm.DB, runID string, position int, occurredAt time.Time) error {
+	payload, err := marshal(map[string]any{"state": "queued", "queue_position": position})
+	if err != nil {
+		return err
+	}
+	return tx.Table("run_events").Create(map[string]any{"run_id": runID, "sequence": 1, "event_type": "run.queued", "payload": payload, "occurred_at": occurredAt}).Error
+}
+
+func (repository *Repository) runQueuePosition(ctx context.Context, item domain.Run) (int, error) {
+	if item.State != "queued" || item.WorkflowID == "" {
+		return 0, nil
+	}
+	var position int64
+	if err := repository.db.WithContext(ctx).Model(&runRecord{}).
+		Where("owner_user_id = ? AND workflow_id = ? AND state = 'queued' AND (queued_at, id) <= (?, ?)", item.OwnerID, item.WorkflowID, item.QueuedAt, item.ID).
+		Count(&position).Error; err != nil {
+		return 0, err
+	}
+	return int(position), nil
+}
+
+func (repository *Repository) runQueuePositionForRecord(ctx context.Context, row runRecord) (int, error) {
+	if row.State != "queued" || row.WorkflowID == nil {
+		return 0, nil
+	}
+	id := row.ID
+	if row.QueuePositionID != "" {
+		id = row.QueuePositionID
+	}
+	var position int64
+	if err := repository.db.WithContext(ctx).Model(&runRecord{}).
+		Where("owner_user_id = ? AND workflow_id = ? AND state = 'queued' AND (queued_at, id) <= (?, ?)", row.OwnerID, *row.WorkflowID, row.QueuedAt, id).
+		Count(&position).Error; err != nil {
+		return 0, err
+	}
+	return int(position), nil
 }
 
 func (repository *Repository) ListArtifacts(ctx context.Context, ownerID, workflowID string) ([]domain.Artifact, error) {

@@ -161,13 +161,14 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 		ID               int64  `gorm:"column:id"`
 		SessionID        string `gorm:"column:session_id"`
 		OwnerID          string `gorm:"column:owner_user_id"`
+		State            string `gorm:"column:state"`
 		ExpertStages     []byte `gorm:"column:expert_stages"`
 		CancelRequested  bool   `gorm:"column:cancel_requested"`
 		Unavailable      bool   `gorm:"column:unavailable"`
 		ConsumedApproval bool   `gorm:"column:consumed_approval"`
 	}
 	if err := tx.Raw(`
-		SELECT message.id, message.session_id, session.owner_user_id, message.expert_stages,
+		SELECT message.id, message.session_id, session.owner_user_id, message.state, message.expert_stages,
 		       message.cancel_requested_at IS NOT NULL AS cancel_requested,
 		       session.archived_at IS NOT NULL OR owner.disabled_at IS NOT NULL AS unavailable,
 		       EXISTS (
@@ -185,8 +186,10 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 	}
 	for _, message := range messages {
 		jobID := fmt.Sprintf("session-%s-%d", message.SessionID, message.ID)
-		if err := deleteExecutionCreditLease(tx, message.OwnerID, jobID); err != nil {
-			return err
+		if message.State != "waiting_for_user" {
+			if err := deleteExecutionCreditLease(tx, message.OwnerID, jobID); err != nil {
+				return err
+			}
 		}
 		if err := closeInterruptedApprovals(tx, "session", fmt.Sprintf("%d", message.ID)); err != nil {
 			return err
@@ -234,13 +237,14 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 	var runs []struct {
 		ID               string `gorm:"column:id"`
 		OwnerID          string `gorm:"column:owner_user_id"`
+		State            string `gorm:"column:state"`
 		ExpertStages     []byte `gorm:"column:expert_stages"`
 		CancelRequested  bool   `gorm:"column:cancel_requested"`
 		Unavailable      bool   `gorm:"column:unavailable"`
 		ConsumedApproval bool   `gorm:"column:consumed_approval"`
 	}
 	if err := tx.Raw(`
-		SELECT run.id, run.owner_user_id, run.expert_stages,
+		SELECT run.id, run.owner_user_id, run.state, run.expert_stages,
 		       run.cancel_requested_at IS NOT NULL AS cancel_requested,
 		       owner.disabled_at IS NOT NULL OR workflow.id IS NULL OR workflow.deleted_at IS NOT NULL AS unavailable,
 		       EXISTS (
@@ -257,8 +261,10 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 		return err
 	}
 	for _, run := range runs {
-		if err := deleteExecutionCreditLease(tx, run.OwnerID, run.ID); err != nil {
-			return err
+		if run.State != "waiting_for_user" {
+			if err := deleteExecutionCreditLease(tx, run.OwnerID, run.ID); err != nil {
+				return err
+			}
 		}
 		if err := closeInterruptedApprovals(tx, "run", run.ID); err != nil {
 			return err
@@ -312,9 +318,11 @@ func closeInterruptedApprovals(tx *gorm.DB, executionKind, executionID string) e
 }
 
 func deleteExecutionCreditLease(tx *gorm.DB, ownerID, executionID string) error {
+	// Unsettled stage admissions are the durable reservation; remove them when
+	// recovery decides that the interrupted execution will not resume.
 	return tx.Exec(`
-		DELETE FROM credit_execution_leases
-		WHERE user_id = ? AND source LIKE ?`, ownerID, executionID+":%").Error
+		DELETE FROM credit_stage_admissions
+		WHERE user_id = ? AND execution_id = ? AND settled_at IS NULL`, ownerID, executionID).Error
 }
 
 func claimCLIConnectorBuild(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -433,7 +441,7 @@ func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
 		OwnerID:     row.OwnerID,
 		MCPServerID: row.ID,
 		MCPServer: domain.MCPServerSnapshot{
-			ID: row.ID, Name: row.Name, Transport: row.Transport,
+			ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport,
 			Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext,
 		},
 	}, nil
@@ -477,7 +485,7 @@ func enqueueDueSchedule(tx *gorm.DB, now time.Time) error {
 		return fmt.Errorf("decode due Workflow schedule: %w", err)
 	}
 	if _, err := createRunOnTx(tx, workflow.OwnerID, workflow.ID, "scheduled", nil, nil); err != nil {
-		if !errors.Is(err, domain.ErrInvalid) && !errors.Is(err, domain.ErrNotFound) {
+		if !errors.Is(err, domain.ErrInvalid) && !errors.Is(err, domain.ErrNotFound) && !errors.Is(err, domain.ErrQueueFull) {
 			return err
 		}
 		if failureErr := createFailedScheduledRun(tx, workflow, err, now); failureErr != nil {
@@ -516,7 +524,6 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		JOIN users owner ON owner.id = candidate.owner_user_id AND owner.disabled_at IS NULL
 		JOIN workflows workflow ON workflow.id = candidate.workflow_id AND workflow.deleted_at IS NULL
 		WHERE candidate.state = 'queued'
-		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = candidate.owner_user_id)
 		  AND NOT EXISTS (SELECT 1 FROM runs active WHERE active.workflow_id = candidate.workflow_id AND active.state IN ('running', 'waiting_for_user'))
 		ORDER BY candidate.queued_at, candidate.id
 		FOR UPDATE OF candidate, workflow SKIP LOCKED LIMIT 1`).Scan(&row).Error
@@ -644,7 +651,6 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 		JOIN users owner ON owner.id = session.owner_user_id
 		WHERE message.role = 'assistant' AND message.state = 'queued'
 		  AND session.archived_at IS NULL AND owner.disabled_at IS NULL
-		  AND NOT EXISTS (SELECT 1 FROM credit_execution_leases lease WHERE lease.user_id = session.owner_user_id)
 		  AND NOT EXISTS (
 			SELECT 1 FROM session_messages active
 			WHERE active.session_id = message.session_id AND active.state IN ('generating', 'waiting_for_user')
@@ -1490,13 +1496,6 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 func (repository *Repository) CancellationRequested(ctx context.Context, job application.ExecutionJob) (bool, error) {
 	if job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection {
 		return false, nil
-	}
-	// The cancellation monitor doubles as the Credit execution-lease heartbeat.
-	// A crashed Worker stops refreshing it, allowing a later admission to recover.
-	if err := repository.db.WithContext(ctx).Table("credit_execution_leases").
-		Where("user_id = ? AND source LIKE ?", job.OwnerID, job.ID+":%").
-		Update("acquired_at", time.Now().UTC()).Error; err != nil {
-		return false, err
 	}
 	var count int64
 	if job.Kind == application.JobSession {

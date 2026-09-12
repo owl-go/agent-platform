@@ -156,9 +156,18 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 	if interval <= 0 {
 		interval = 2 * time.Second
 	}
-	loop, err := workerserver.NewLoopWithState("agent-workspace-execution", interval, workerserver.FatalAfterConsecutiveFailures(worker.ProcessNext, 10), state)
-	if err != nil {
-		return nil, err
+	const executionConcurrency = 5
+	loops := make([]*workerserver.Loop, 0, executionConcurrency)
+	for index := 0; index < executionConcurrency; index++ {
+		name := "agent-workspace-execution"
+		if index > 0 {
+			name = fmt.Sprintf("agent-workspace-execution-%d", index+1)
+		}
+		loop, loopErr := workerserver.NewLoopWithState(name, interval, workerserver.FatalAfterConsecutiveFailures(worker.ProcessNext, 10), state)
+		if loopErr != nil {
+			return nil, loopErr
+		}
+		loops = append(loops, loop)
 	}
 	reaper, err := workerserver.NewLoopWithState("warm-runtime-container-reaper", time.Minute, func(ctx context.Context) (bool, error) {
 		removed, reapErr := warm.Reap(ctx)
@@ -175,7 +184,11 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 	if err != nil {
 		return nil, err
 	}
-	return []transport.Server{management, loop, reaper, contentReaper}, nil
+	servers := make([]transport.Server, 0, len(loops)+3)
+	for _, loop := range loops {
+		servers = append(servers, loop)
+	}
+	return append(servers, management, reaper, contentReaper), nil
 }
 
 func NewApp(ctx context.Context, config platformconfig.Config, logger *slog.Logger, servers []transport.Server) *kratos.App {

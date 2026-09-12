@@ -350,6 +350,7 @@ type mcpRecord struct {
 	OwnerID          string     `gorm:"column:owner_user_id"`
 	Platform         bool       `gorm:"->;column:platform"`
 	Name             string     `gorm:"column:name"`
+	Icon             string     `gorm:"column:icon"`
 	Transport        string     `gorm:"column:transport"`
 	Configuration    []byte     `gorm:"column:configuration;type:jsonb"`
 	SecretCiphertext []byte     `gorm:"column:secret_ciphertext"`
@@ -368,6 +369,7 @@ type skillRecord struct {
 	OwnerID   string    `gorm:"column:owner_user_id"`
 	Platform  bool      `gorm:"->;column:platform"`
 	Name      string    `gorm:"column:name"`
+	Icon      string    `gorm:"column:icon"`
 	Source    string    `gorm:"column:source"`
 	GitURL    *string   `gorm:"column:git_url"`
 	GitRef    *string   `gorm:"column:git_ref"`
@@ -382,6 +384,7 @@ func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
 	SelectionID       *string    `gorm:"column:selection_id"`
+	QueuePositionID   string     `gorm:"-"`
 	ID                string     `gorm:"column:id"`
 	ConversationID    string     `gorm:"column:conversation_id"`
 	TurnNumber        int        `gorm:"column:turn_number"`

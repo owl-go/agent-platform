@@ -9,13 +9,31 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"agent-platform/backend/internal/icon"
 )
 
 var (
-	ErrNotFound = errors.New("resource not found")
-	ErrConflict = errors.New("resource conflicts with current state")
-	ErrInvalid  = errors.New("resource is invalid")
+	ErrNotFound  = errors.New("resource not found")
+	ErrConflict  = errors.New("resource conflicts with current state")
+	ErrInvalid   = errors.New("resource is invalid")
+	ErrQueueFull = errors.New("workflow queue is full")
 )
+
+var connectorIconPattern = regexp.MustCompile(`^(?:[a-z][a-z0-9-]{0,31}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+)$`)
+
+// ValidateConnectorIcon accepts a small preset identifier or an inline image.
+// Inline images are kept as data URLs so catalog reads remain self-contained.
+func ValidateConnectorIcon(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	if len(value) > 512*1024 || !connectorIconPattern.MatchString(value) {
+		return fmt.Errorf("%w: connector icon is invalid", ErrInvalid)
+	}
+	return nil
+}
 
 type RuntimeEngine string
 
@@ -105,6 +123,7 @@ type MCPServer struct {
 	OwnerID         string
 	Platform        bool
 	Name            string
+	Icon            string
 	Transport       string
 	URL             *string
 	Runner          *string
@@ -123,6 +142,9 @@ type MCPServer struct {
 func (server MCPServer) Validate() error {
 	if name := strings.TrimSpace(server.Name); name == "" || len(name) > 100 {
 		return fmt.Errorf("%w: MCP Server name must contain 1-100 characters", ErrInvalid)
+	}
+	if err := ValidateConnectorIcon(server.Icon); err != nil {
+		return err
 	}
 	switch server.Transport {
 	case "streamable_http":
@@ -165,6 +187,7 @@ type Skill struct {
 	OwnerID   string
 	Platform  bool
 	Name      string
+	Icon      string
 	Source    string
 	GitURL    *string
 	GitRef    *string
@@ -521,6 +544,9 @@ func (input ExpertInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert name must contain 1-100 characters", ErrInvalid)
 	}
+	if err := icon.Validate(input.Icon); err != nil {
+		return fmt.Errorf("%w: invalid Expert icon", ErrInvalid)
+	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || strings.TrimSpace(input.OperatingProcedure) != "" || strings.TrimSpace(input.OutputStandard) != "" || strings.TrimSpace(input.Cautions) != ""
 	if structured {
 		for _, field := range []struct {
@@ -655,6 +681,9 @@ var teamMemberID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 func (input ExpertTeamInput) Validate() error {
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert Team name must contain 1-100 characters", ErrInvalid)
+	}
+	if err := icon.Validate(input.Icon); err != nil {
+		return fmt.Errorf("%w: invalid Expert Team icon", ErrInvalid)
 	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || len(input.Members) > 0
 	introduction := input.CapabilityIntroduction
@@ -953,6 +982,7 @@ type Run struct {
 	Error             string
 	WorkflowSnapshot  map[string]any
 	QueuedAt          time.Time
+	QueuePosition     int
 	StartedAt         *time.Time
 	EndedAt           *time.Time
 	CreditConsumption *CreditConsumption

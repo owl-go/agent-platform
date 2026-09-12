@@ -436,6 +436,11 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				_ = environment.Cleanup()
 				return result, failStage(err)
 			}
+			if creditAdmission.Settled {
+				_ = releaseWarmLease(ctx, lease)
+				_ = environment.Cleanup()
+				return result, failStage(fmt.Errorf("Credit admission was already settled; refusing to replay provider execution"))
+			}
 		}
 		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
 		runtimeFinishedAt = time.Now()
@@ -1562,6 +1567,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 }
 
 func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertMemberSnapshot, completed []workspacedomain.ExpertStage) application.ExecutionJob {
+	const maxHandoffChars = 8_000
 	job := base
 	job.StageIdentity = member.MemberID
 	job.CheckpointRef = ""
@@ -1580,7 +1586,11 @@ func teamMemberJob(base application.ExecutionJob, member workspacedomain.ExpertM
 	if len(completed) > 0 {
 		var prior []string
 		for _, stage := range completed {
-			prior = append(prior, stage.ExpertName+":\n"+stage.FinalText)
+			text := stage.FinalText
+			if len(text) > maxHandoffChars {
+				text = text[:maxHandoffChars] + "\n[preceding Expert result truncated]"
+			}
+			prior = append(prior, stage.ExpertName+":\n"+text)
 		}
 		job.Instruction += "\n\nFinal results from preceding Experts (use as collaboration context; do not repeat blindly):\n\n" + strings.Join(prior, "\n\n")
 	}

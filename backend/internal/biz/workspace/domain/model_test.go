@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+func TestValidateConnectorIcon(t *testing.T) {
+	validImage := "data:image/png;base64," + strings.Repeat("A", 32)
+	for _, value := range []string{"terminal", "custom-icon", validImage, ""} {
+		if err := ValidateConnectorIcon(value); err != nil {
+			t.Errorf("ValidateConnectorIcon(%q) error = %v", value, err)
+		}
+	}
+	for _, value := range []string{"../icon", "data:text/plain;base64,QQ==", "data:image/png;base64,not valid"} {
+		if err := ValidateConnectorIcon(value); !errors.Is(err, ErrInvalid) {
+			t.Errorf("ValidateConnectorIcon(%q) error = %v, want ErrInvalid", value, err)
+		}
+	}
+}
+
 func TestExpertInputRequiresIntroductionInstructionAndValidTags(t *testing.T) {
 	valid := ExpertInput{
 		Name:                   "Architecture Expert",

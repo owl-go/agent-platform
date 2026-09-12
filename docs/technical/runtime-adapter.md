@@ -22,6 +22,8 @@ Session 连续性优先使用平台保存的最近消息与有界 Rolling Summar
 
 Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 Run，Worker 将同一 Conversation 的既有 User/Assistant 轮次和当前输入通过公共 Instruction seam 交给 Runtime；原生 Resume 只作为优化。Codex 的匿名 Workflow Conversation 与 Expert Conversation 都按 Conversation 隔离并持久化脱敏后的 `sessions/`；如果 Worker 或容器重建后只有数据库 Checkpoint 而本地原生状态缺失，Worker 在执行前放弃该 Checkpoint，并依靠完整公共 Instruction 启动新原生会话。该恢复不会重开或改写已经终态的 Run。
 
+同一 Workflow 的所有 Run（包括手动、定时、API、follow-up 和 rerun）进入持久 FIFO Queue；同一 Conversation 的并发 follow-up 也接受并按入队顺序分配 turn。一个 Workflow 同时只允许一个 Run 占用其 Workspace Queue slot，`waiting_for_user` 继续占用该 slot；不同 Workflow 可并行。首版每个 Workflow 最多五个 queued Run，位置按权威 `queued_at + id` 动态计算。Worker 重启按原顺序恢复 queued Run，删除或停用 Workflow 时取消尚未开始的 Run。
+
 当前部署固定的 Codex CLI `0.147.0` 已验证 `thread_id` 的保存与 `codex exec resume <thread_id>` 续接，允许开启 `native_resume`。每个 Run 只把用户与 Session 双重隔离的临时副本挂载到容器 `$CODEX_HOME`，成功后仅将经过精确 Secret 脱敏的 `sessions/` 原子写回；插件缓存、日志、认证文件和 MCP 配置均不持久化。MCP 配置从单 Run Credential 目录建立临时符号链接。API 删除 Session 时同步清理状态目录。其他 Runtime 保持关闭，直到各自固定镜像完成同等黑盒验证。
 
 会话输入框直接选择资源的轮次使用独立的资源集合摘要隔离 Warm Runtime Container，并关闭 Native Resume。Worker 必须构建完整的平台摘要与最近消息上下文，不能因为存在旧 checkpoint 而省略上下文；Runtime 的全局 `native_resume` 设置不会覆盖此限制。该动态选择路径尚无指定镜像的 Linux + runsc Conformance 证据。
@@ -34,7 +36,7 @@ Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wra
 
 会话快照继续冻结 Connector Definition、bundle Digest、Capabilities 和策略。若旧快照的 Runtime RepoDigest 列表早于当前镜像，Worker 只可查询与该冻结 Definition ID、bundle SHA-256 和当前 Runtime RepoDigest 完全匹配且 `passed` 的最新 Conformance 记录作为补充证据；查询失败、记录缺失或任一键不匹配都必须 fail closed。补充证据只用于当前执行内的镜像兼容判断，不修改历史快照，也不刷新其命令或权限策略。
 
-高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime 和临时 Workspace、暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
+高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime、临时 Workspace、Workflow Queue slot 和当前 Execution Credit Reservation，暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
 
 Worker 重启后的第一次任务领取会先对账遗留的非终态 Session response 和 Run。未消费 Connector Approval 的执行关闭旧 Approval、丢弃旧进程的部分输出与暂存 Stage 状态并从冻结快照重新排队；已请求取消的执行直接提交取消终态。已经消费 Approval 的外部命令可能已经产生副作用，平台无法从旧进程确认结果，因此该执行以明确失败收口，不自动重放命令。Workflow Run 保留重启前的非终态事件并以新的递增 Sequence 追加再次启动及最终终态事件。
 

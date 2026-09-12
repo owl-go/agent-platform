@@ -1457,6 +1457,7 @@ export interface components {
             archive?: string;
             /** Format: int64 */
             expected_version?: number;
+            icon?: string;
         };
         AgentWorkspaceServiceUpdateWorkflowBody: {
             workflow?: components["schemas"]["v1WorkflowInput"];
@@ -1630,6 +1631,7 @@ export interface components {
             runtime_digests?: string[];
             /** Format: int64 */
             version?: number;
+            icon?: string;
         };
         v1CLIRecommendedSkill: {
             name?: string;
@@ -1744,6 +1746,7 @@ export interface components {
             git_ref?: string;
             /** Format: byte */
             archive?: string;
+            icon?: string;
         };
         v1CreateUserRequest: {
             username?: string;
@@ -2175,6 +2178,7 @@ export interface components {
             version?: number;
             test_pending?: boolean;
             platform?: boolean;
+            icon?: string;
         };
         v1MCPConnectorInput: {
             name?: string;
@@ -2185,6 +2189,7 @@ export interface components {
             package_version?: string;
             arguments?: string[];
             environment?: components["schemas"]["v1EnvironmentVariable"][];
+            icon?: string;
         };
         v1MCPServerSnapshot: {
             id?: string;
@@ -2195,6 +2200,7 @@ export interface components {
             package?: string;
             package_version?: string;
             arguments?: string[];
+            icon?: string;
         };
         v1ModelCreditRate: {
             revision_id?: string;
@@ -2404,6 +2410,8 @@ export interface components {
             attachments?: components["schemas"]["v1Attachment"][];
             expert_stages?: components["schemas"]["v1ExpertStage"][];
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
+            /** Format: int32 */
+            queue_position?: number;
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -2435,6 +2443,7 @@ export interface components {
             id?: string;
             name?: string;
             revision?: string;
+            icon?: string;
         };
         v1SendSessionMessageResponse: {
             user_message?: components["schemas"]["v1SessionMessage"];
@@ -2486,6 +2495,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             platform?: boolean;
+            icon?: string;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];

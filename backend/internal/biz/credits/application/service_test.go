@@ -2,6 +2,7 @@ package application_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -66,10 +67,24 @@ func TestAdmissionUsesFrozenStageRate(t *testing.T) {
 	}
 }
 
+func TestRequirePositiveBalanceUsesAvailableCredit(t *testing.T) {
+	repository := &recordingRepository{balance: domain.Balance{Total: 10_000, Available: 0}}
+	service, err := application.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = service.RequirePositiveBalance(context.Background(), "user-1", "Asia/Shanghai")
+	if !errors.Is(err, domain.ErrInsufficientCredits) {
+		t.Fatalf("RequirePositiveBalance error = %v", err)
+	}
+}
+
 type recordingRepository struct {
 	rate         domain.ModelCreditRate
 	resolveCalls int
 	settlement   domain.Settlement
+	balance      domain.Balance
 }
 
 func (repository *recordingRepository) ResolveRate(context.Context, domain.ModelRateKey) (domain.ModelCreditRate, error) {
@@ -89,7 +104,7 @@ func (repository *recordingRepository) Settle(_ context.Context, settlement doma
 func (repository *recordingRepository) Abort(context.Context, domain.Admission) error { return nil }
 
 func (repository *recordingRepository) Balance(context.Context, string, string, time.Time) (domain.Balance, error) {
-	return domain.Balance{}, nil
+	return repository.balance, nil
 }
 
 func (repository *recordingRepository) Ledger(context.Context, string, string, int) (domain.LedgerPage, error) {

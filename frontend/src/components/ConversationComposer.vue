@@ -7,6 +7,7 @@ import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type C
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
+import ConnectorIcon from "./ConnectorIcon.vue";
 import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPlacement";
 
 import ProfileIcon from "./ProfileIcon.vue";
@@ -53,8 +54,8 @@ const filteredExperts = computed(() => experts.value.filter((item) => matches(`$
 const filteredTeams = computed(() => teams.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredFiles = computed(() => files.value.filter((item) => matches(`${item.name} ${item.path}`)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)));
 const connectorRows = computed(() => [
-  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, available: item.tested && !item.test_error })),
-  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, available: item.state === "available" && enablements.value.some((entry) => entry.definition_id === item.id && entry.state === "enabled") })),
+  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, icon: item.icon, available: item.tested && !item.test_error })),
+  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, icon: item.icon, available: item.state === "available" && enablements.value.some((entry) => entry.definition_id === item.id && entry.state === "enabled") })),
 ]);
 const visibleConnectors = computed(() => {
   const value = selection.value; if (!value) return [];
@@ -321,7 +322,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
       <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
       <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
-        <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><Link :size="18" /></el-button></template>
+        <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
         <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="connectorEnabled(item.key)" :disabled="locked" :aria-label="item.name" @change="toggleConnector(item.kind, item.id)" /></div>
         <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
       </el-popover>
@@ -346,7 +347,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
             <small>{{ t('experts.teams') }}</small><button v-for="item in filteredTeams" :key="item.id" type="button" :disabled="locked || !item.available" @click="chooseExpert('team', item.id)"><Users /><span>{{ item.name }}<small>{{ item.introduction }}</small></span><Check v-if="selection?.expert_team_id === item.id" /></button>
           </template>
           <template v-if="menu === 'skills'"><button v-for="(item, index) in filteredSkills" :key="item.id" type="button" role="option" :aria-selected="highlighted === index" :class="{ highlighted: highlighted === index }" :disabled="locked" @click="chooseSkill(item)"><Sparkles /><span>{{ item.name }}</span><Check v-if="parts.some((part) => part.kind === 'skill' && part.id === item.id)" /></button><p v-if="!filteredSkills.length">{{ t('composer.empty') }}</p></template>
-          <template v-if="menu === 'connectors'"><button v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" type="button" :disabled="locked || !item.available" @click="toggleConnector(item.kind, item.id)"><Link /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button></template>
+          <template v-if="menu === 'connectors'"><button v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" type="button" :disabled="locked || !item.available" @click="toggleConnector(item.kind, item.id)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button></template>
           <template v-if="menu === 'files'">
             <button type="button" @click="fileInput?.click()"><FilePlus2 />{{ t('composer.localFiles') }}</button>
             <button v-if="workspacePath" type="button" @click="loadFiles(workspacePath.split('/').slice(0, -1).join('/'))"><Folder />{{ t('composer.parentFolder') }}</button>
