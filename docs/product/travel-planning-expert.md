@@ -65,7 +65,7 @@ sample_prompts:
 
 ## Resource bindings
 
-Install the three Skill packages under `testdata/travel-planning/skills/` as private Skills first. Bind only read-only MCP capabilities for the first Session:
+Install the single Skill package under `testdata/travel-planning/skills/travel-planning/` as a private Skill first. It combines requirements intake, itinerary optimization, and source verification. Bind only read-only MCP capabilities for the first Session:
 
 - place search, place details, and route estimates;
 - weather forecasts;
@@ -88,7 +88,7 @@ Keep the original plan and each refresh in the Workflow Workspace. Do not overwr
 ## Acceptance checklist
 
 - The Expert is complete and selectable with no Provider Model or Runtime fields in its definition.
-- Each Skill package has valid frontmatter with `display_name` and a bounded, observable procedure.
+- The combined Skill package has valid frontmatter with `display_name` and bounded, observable procedures for intake, optimization, and verification.
 - A missing or stale Connector result is shown as unavailable or stale, never silently replaced with invented data.
 - A generated itinerary has no obvious time overlap, impossible transfer, or unlabelled price claim.
 - External writes remain drafts until the User explicitly approves the exact action.
