@@ -21,11 +21,12 @@ const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
+const mineOnly = computed(() => route.query.scope === "mine");
 const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
 const visibleExperts = computed(() => filter(experts.value));
 const visibleTeams = computed(() => filter(teams.value));
 const expertSections = computed(() => [
-  { key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) },
+  ...(mineOnly.value ? [] : [{ key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) }]),
   { key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) },
 ]);
 
@@ -48,6 +49,13 @@ function filter<T extends { name: string; introduction?: string; capability_intr
 function selectTab(tab: string | number) {
   void router.replace({ query: tab === "teams" ? { tab: "teams" } : {} });
 }
+
+function toggleMine() {
+  const query = { ...route.query };
+  if (mineOnly.value) delete query.scope;
+  else query.scope = "mine";
+  void router.replace({ query });
+}
 </script>
 
 <template>
@@ -57,7 +65,7 @@ function selectTab(tab: string | number) {
         <el-tab-pane :label="t('experts.title')" name="experts" />
         <el-tab-pane :label="t('experts.teams')" name="teams" />
       </el-tabs>
-      <RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink>
+      <div class="catalog-head-actions"><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink></div>
     </header>
 
     <div class="catalog-tools">

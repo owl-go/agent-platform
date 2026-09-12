@@ -57,6 +57,22 @@ describe("ExpertsPage", () => {
     expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
   });
 
+  it("reveals only my Experts from the header action", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/experts");
+    const platformExpert = { ...expert, id: "platform-expert", name: "平台研究专家", platform: true };
+    const testApi = api();
+    testApi.listExperts = vi.fn(async () => [platformExpert, expert]);
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: testApi } } });
+    await flushPromises();
+    await wrapper.get(".my-resource-toggle").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query.scope).toBe("mine");
+    expect(wrapper.findAll(".catalog-group")).toHaveLength(1);
+    expect(wrapper.get(".catalog-group").text()).toContain("架构专家");
+    expect(wrapper.get(".catalog-group").text()).not.toContain("平台研究专家");
+  });
+
   it("switches to Expert Teams and discloses ordered per-turn members", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts?tab=teams");

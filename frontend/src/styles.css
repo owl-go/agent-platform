@@ -204,6 +204,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 }
 
 .expert-catalog { max-width: 1500px; margin: 0 auto; }
+.catalog-head-actions { display: flex; align-items: center; gap: 8px; }
+.my-resource-toggle { white-space: nowrap; }
 
 /* Session and Workflow conversations share one transcript seam. */
 .conversation-thread { width: 100%; }
