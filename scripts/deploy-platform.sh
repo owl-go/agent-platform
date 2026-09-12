@@ -318,6 +318,20 @@ mv -Tf "$next_source" "$deploy_root/src"
 
 cd "$release_dir"
 compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
+# API and Worker run as UID 65532 and must be able to traverse every existing
+# Workspace directory before the new API is started.
+set -a
+. "$env_file"
+set +a
+workspace_root=${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
+[[ "$workspace_root" =~ ^/[A-Za-z0-9._/-]+$ && "$workspace_root" != "/" && "$workspace_root" != *".."* && "$workspace_root" != *"//"* ]] || {
+  echo "WORKSPACE_ROOT is not a safe absolute path" >&2
+  exit 1
+}
+test ! -L "$workspace_root"
+install -d -m 0700 "$workspace_root"
+find "$workspace_root" -xdev -exec chown -h 65532:65532 {} +
+chmod 0700 "$workspace_root"
 PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" stop worker
 # Warm containers are disposable definitions tied to the previous release's
 # mount/config schema. Purge only explicitly managed warm caches at cutover.
