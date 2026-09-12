@@ -34,7 +34,9 @@ API 和 Worker 只读取 YAML 配置。默认 Compose 配置使用 `config/platf
 首次启动前创建 Workspace 绑定目录并交给 API/Worker 的非 root 用户。若目录保持 `root:root 0755`，服务虽然可以读取配置，但新增工作流的首次目录或文件写入会失败。
 
 ```bash
-install -d -o 65532 -g 65532 -m 0700 "${WORKSPACE_ROOT}"
+install -d -m 0700 "${WORKSPACE_ROOT}"
+find "${WORKSPACE_ROOT}" -xdev -exec chown -h 65532:65532 {} +
+chmod 0700 "${WORKSPACE_ROOT}"
 ```
 
 The execution overlay gives the Worker only `CHOWN`, `DAC_OVERRIDE`, and `FOWNER` in addition to its Docker socket. Staging switches directories to Runtime UID `65532` before the Worker finishes writing them; `FOWNER` is required to normalize the modes of files created by that Runtime UID before merging a successful Workspace. Runtime containers remain non-root and drop every capability.
