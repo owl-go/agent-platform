@@ -87,14 +87,12 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
-const connectorSections = computed(() => (props.mineOnly ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }] : [
-  { key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value },
-  { key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] },
-]));
-const skillSections = computed(() => (props.mineOnly ? [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }] : [
-  { key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) },
-  { key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) },
-]));
+const connectorSections = computed(() => props.mineOnly
+  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }]
+  : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value }]);
+const skillSections = computed(() => props.mineOnly
+  ? [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }]
+  : [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }]);
 
 onMounted(() => {
   void refresh();

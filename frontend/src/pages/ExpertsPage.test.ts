@@ -33,17 +33,16 @@ describe("ExpertsPage", () => {
     await flushPromises();
 
     const groups = wrapper.findAll(".catalog-group");
-    expect(groups).toHaveLength(2);
+    expect(groups).toHaveLength(1);
     expect(groups[0]!.text()).toContain("平台专家");
     expect(groups[0]!.text()).toContain("平台研究专家");
     expect(groups[0]!.text()).not.toContain("架构专家");
-    expect(groups[1]!.text()).toContain("我的专家");
-    expect(groups[1]!.text()).toContain("架构专家");
+    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的专家");
   });
 
   it("shows searchable Expert cards with capability and expertise tags", async () => {
     const router = createAppRouter(createMemoryHistory());
-    await router.push("/experts");
+    await router.push("/experts?scope=mine");
     const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });
     await flushPromises();
 
@@ -89,7 +88,7 @@ describe("ExpertsPage", () => {
   });
 });
 
-for (const [path, field, id] of [["/experts", "expert_id", "expert-1"], ["/experts?tab=teams", "expert_team_id", "team-1"]]) {
+for (const [path, field, id] of [["/experts?scope=mine", "expert_id", "expert-1"], ["/experts?tab=teams", "expert_team_id", "team-1"]]) {
   it(`summons from ${path} without also opening card details`, async () => {
     const router = createAppRouter(createMemoryHistory()); await router.push(path!);
     const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });

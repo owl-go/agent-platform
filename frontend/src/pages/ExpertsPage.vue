@@ -25,10 +25,9 @@ const mineOnly = computed(() => route.query.scope === "mine");
 const activeCategories = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).map((item) => item.expertise_tags[0]).filter(Boolean))).sort());
 const visibleExperts = computed(() => filter(experts.value));
 const visibleTeams = computed(() => filter(teams.value));
-const expertSections = computed(() => [
-  ...(mineOnly.value ? [] : [{ key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) }]),
-  { key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) },
-]);
+const expertSections = computed(() => mineOnly.value
+  ? [{ key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) }]
+  : [{ key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) }]);
 
 onMounted(refresh);
 watch(activeTab, () => { query.value = ""; category.value = ""; });
