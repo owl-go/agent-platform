@@ -3,8 +3,8 @@ import { inject, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type Expert, type ExpertInput, type MCPServer, type Skill } from "../api/client";
-import ExtensionManager from "../components/ExtensionManager.vue";
+import { platformApiKey, type CLIConnectorDefinition, type CLIConnectorEnablement, type Expert, type ExpertInput, type MCPServer, type Skill } from "../api/client";
+import ExpertResourceSelector from "../components/ExpertResourceSelector.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import IconPicker from "../components/IconPicker.vue";
@@ -16,6 +16,8 @@ const { t } = useI18n();
 const expert = ref<Expert>();
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
+const cliConnectors = ref<CLIConnectorDefinition[]>([]);
+const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const saving = ref(false);
 const confirmDelete = ref(false);
 const toast = ref<{ kind: "success" | "error"; message: string }>();
@@ -24,9 +26,11 @@ const isNew = route.name === "expert-new" || route.params.expertId === "new";
 
 onMounted(async () => {
   try {
-    const [mcpItems, skillItems] = await Promise.all([api.listMCPServers(), api.listSkills()]);
+    const [mcpItems, skillItems, cliItems, enablementItems] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]);
     mcp.value = mcpItems;
     skills.value = skillItems;
+    cliConnectors.value = cliItems;
+    cliEnablements.value = enablementItems;
     if (!isNew) {
       expert.value = await api.getExpert(String(route.params.expertId));
       form.value = { name: expert.value.name, icon: expert.value.icon || "sparkles", icon_background: expert.value.icon_background || "sage", introduction: expert.value.introduction, core_capability: expert.value.core_capability, operating_procedure: expert.value.operating_procedure, output_standard: expert.value.output_standard, cautions: expert.value.cautions || "", mcp_server_ids: [...expert.value.mcp_server_ids], skill_ids: [...expert.value.skill_ids], cli_connector_definition_ids: [...expert.value.cli_connector_definition_ids] };
@@ -60,10 +64,6 @@ async function remove() {
   }
 }
 
-function syncExtensions(value: { mcp: MCPServer[]; skills: Skill[] }) {
-  mcp.value = value.mcp;
-  skills.value = value.skills;
-}
 </script>
 
 <template>
@@ -83,7 +83,7 @@ function syncExtensions(value: { mcp: MCPServer[]; skills: Skill[] }) {
         <label class="full">{{ t('experts.outputStandard') }}<el-input v-model="form.output_standard" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
         <label class="full">{{ t('experts.cautions') }}<el-input v-model="form.cautions" type="textarea" :rows="3" maxlength="20000" show-word-limit /></label>
       </div></section>
-      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExtensionManager selectable :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" @resources="syncExtensions" /></section>
+      <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExpertResourceSelector :mcp-servers="mcp" :skills="skills" :cli-connectors="cliConnectors" :cli-enablements="cliEnablements" :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" /></section>
     </form>
   </section>
 

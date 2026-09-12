@@ -142,6 +142,8 @@ Object.assign(zh.settings, { subtitle: "定义你的默认个性、模型与 Run
 Object.assign(en.settings, { subtitle: "Choose your default personality, model, and Runtime" });
 Object.assign(zh.experts, { extensions: "技能与连接器", extensionsHint: "绑定此专家可以使用的技能与连接器。", extensionFailed: "技能或连接器操作失败" });
 Object.assign(en.experts, { extensions: "Skills & Connectors", extensionsHint: "Bind the Skills and Connectors this Expert may use.", extensionFailed: "Skill or Connector operation failed" });
+Object.assign(zh.experts, { selectSkillsHint: "选择要提供给此专家的技能。", selectConnectorsHint: "选择已就绪的 MCP 或 CLI 连接器。", selectedCount: "已选 {count}" });
+Object.assign(en.experts, { selectSkillsHint: "Choose the Skills available to this Expert.", selectConnectorsHint: "Choose ready MCP or CLI Connectors.", selectedCount: "{count} selected" });
 Object.assign(zh.experts, { iconTeam: "团队", iconSparkles: "闪光", iconCompass: "指南针" });
 Object.assign(en.experts, { iconTeam: "Team", iconSparkles: "Sparkles", iconCompass: "Compass" });
 Object.assign(zh.experts, { deleteExpertHint: "被专家团引用的专家不允许删除；请先移除对应成员。历史快照不会改变。" });
