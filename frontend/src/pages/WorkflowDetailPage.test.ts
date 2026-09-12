@@ -363,6 +363,8 @@ describe("WorkflowDetailPage", () => {
 
     const rows = wrapper.findAll(".credential-row");
     expect(rows).toHaveLength(2);
+    expect(wrapper.find(".secret-reveal > p").exists()).toBe(false);
+    expect(wrapper.find(".credential-copy-all").exists()).toBe(false);
     expect(rows[0]!.text()).toContain("awk_test");
     expect(rows[1]!.text()).not.toContain("aws_test");
     expect(rows[1]!.text()).toContain("****");
