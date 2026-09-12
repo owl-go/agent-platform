@@ -200,6 +200,11 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .credential-row { display: grid; grid-template-columns: 110px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 8px 0; }
 .credential-row strong { color: #6f642d; font-size: .73rem; }
 .credential-row code { min-width: 0; padding: 8px 10px; border: 1px solid #e5d79b; border-radius: 7px; background: rgba(255,255,255,.62); }
+.credential-row-actions { display: flex; align-items: center; gap: 6px; }
+.credential-icon-button { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); cursor: pointer; }
+.credential-icon-button:hover { border-color: var(--green); background: #edf4ee; color: var(--green); }
+.credential-icon-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.credential-icon-button svg { width: 15px; height: 15px; }
 .credential-warning { color: #a04b32; }
 .credential-copy-all { justify-self: start; margin-top: 4px; }
 .integration-guide { display: grid; gap: 20px; }
@@ -214,6 +219,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 @media (max-width: 560px) {
   .credential-row { grid-template-columns: 1fr auto; }
   .credential-row code { grid-column: 1 / -1; grid-row: 2; }
+  .credential-row-actions { grid-column: 2; grid-row: 1; }
   .integration-code { grid-template-columns: 1fr; }
   .integration-code .text-button { justify-self: start; }
 }
