@@ -177,7 +177,8 @@ Settings contains five collapsed sections:
 - Workflow invocation and inspection use `Authorization: Bearer <jwt_token>`. Regenerating the credential invalidates outstanding tokens because their signature key derives from the current credential verifier.
 - `POST /api/v1/workflows/{workflowId}/runs` accepts text or JSON input and returns `202` with a Run ID.
 - `GET /api/v1/workflows/{workflowId}/runs/{runId}` returns status and final result.
-- SSE provides live Run events.
+- `GET /api/v1/workflows/{workflowId}/runs/{runId}/events` provides live Run events through SSE; clients can use `Last-Event-ID` to resume from the last received event.
+- The one-shot result read uses the same `GET /runs/{runId}` endpoint after the Run reaches a terminal state and returns the complete `final_text` or `final_json`.
 - `Idempotency-Key` prevents external retries from creating duplicate Runs.
 - A Workflow credential authorizes only starting and inspecting that Workflow. It cannot access Settings, Workspace mutation, another Workflow, or User APIs.
 
