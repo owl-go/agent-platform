@@ -19,6 +19,8 @@ describe("SkillsConnectorsPage", () => {
     await flushPromises();
     expect(router.currentRoute.value.query.scope).toBe("mine");
     expect(wrapper.get(".my-resource-toggle").text()).toContain("我的技能");
+    expect(wrapper.find(".page-header").exists()).toBe(false);
+    expect(wrapper.get(".resource-tabs-items").text()).toContain("技能");
     wrapper.unmount();
   });
 
