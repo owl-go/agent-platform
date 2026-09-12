@@ -199,7 +199,7 @@ async function saveGitSource() {
 async function saveSettings() { if (!workflow.value) return; try { workflow.value = await api.updateWorkflow(workflowID.value, settingsForm.value, workflow.value.version); await refresh(); } catch { error.value = t("errors.conflict"); } }
 async function generateCredential() { try { credential.value = await api.generateWorkflowCredential(workflowID.value); copiedTarget.value = undefined; } catch { error.value = t("errors.generic"); } }
 const tokenCommand = computed(() => `JWT_TOKEN=$(curl -sS -u "$API_KEY:$API_SECRET" -X POST ${origin}/api/v1/workflows/${workflowID.value}/api-token | jq -r '.jwt_token')`);
-const runCommand = computed(() => `curl -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' ${origin}/api/v1/workflows/${workflowID.value}/runs`);
+const runCommand = computed(() => `RUN_ID=$(curl -sS -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' ${origin}/api/v1/workflows/${workflowID.value}/runs | jq -r '.id')`);
 const streamCommand = computed(() => `curl -N -H "Authorization: Bearer $JWT_TOKEN" -H "Accept: text/event-stream" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID/events`);
 const fullOutputCommand = computed(() => `curl -sS -H "Authorization: Bearer $JWT_TOKEN" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID`);
 async function copyValue(value: string, target: CopyTarget) {
