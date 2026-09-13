@@ -204,7 +204,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 }
 
 .expert-catalog { max-width: 1500px; margin: 0 auto; }
-.expert-category { --el-tag-bg-color: #e5f0e8; --el-tag-border-color: #c8ddce; --el-tag-text-color: #236247; }
 .expert-tags { align-items: center; }
 .expert-tag-more { color: var(--muted); font-size: .7rem; font-weight: 700; }
 .catalog-head-actions { display: flex; align-items: center; gap: 8px; }
@@ -278,7 +277,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .catalog-avatar { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: #e8efe9; color: var(--green); }
 .catalog-avatar.team { background: #e7edf1; color: #315d6b; }
 .card-title-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.card-title-line h2 { margin: 2px 0 10px; font-size: 1.08rem; }
+.card-title-line h2 { min-width: 0; flex: 1 1 auto; overflow: hidden; margin: 2px 0 10px; font-size: 1.08rem; text-overflow: ellipsis; white-space: nowrap; }
 .card-title-line .el-tag { flex: 0 0 auto; }
 .expert-execution-profile { margin-bottom: 14px; color: #4d5a54; font-size: .75rem; font-weight: 650; }
 .catalog-grid .tag-row { margin-top: auto; padding-top: 4px; }

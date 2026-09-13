@@ -53,7 +53,7 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-card").text()).not.toContain("Codex");
     expect(wrapper.find(".expert-card > .el-card__body").exists()).toBe(true);
     expect(wrapper.get(".tag-row .el-tag").classes()).toContain("is-round");
-    expect(wrapper.get(".expert-category").text()).toBe("架构");
+    expect(wrapper.find(".expert-category").exists()).toBe(false);
     expect(wrapper.find(".filter-label").exists()).toBe(false);
     expect(wrapper.get(".tag-filter").text()).not.toContain("Go");
     expect(wrapper.get(".expert-tags").text()).toContain("Go");
