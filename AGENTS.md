@@ -86,6 +86,7 @@
 ### Web 变更
 
 沿用 Vue Composition API 和 `<script setup lang="ts">`，保持桌面与移动端布局可用。组件行为放在 `.vue` 文件，当前全局视觉规则位于 `frontend/src/styles.css`；完成前至少运行 typecheck 和生产构建。
+界面文案与交互以用户明确提出或规格要求为准，保持信息精简；每个新增标签、分类提示或其他 UI 元素都必须有明确需求依据。
 
 ## 代码与测试约定
 
