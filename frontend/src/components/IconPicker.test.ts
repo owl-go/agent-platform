@@ -10,6 +10,7 @@ describe("IconPicker", () => {
     expect(wrapper.find(".icon-picker-help").exists()).toBe(false);
     expect(wrapper.find('[data-testid="icon-picker-upload"] span').exists()).toBe(false);
     expect(wrapper.get('[data-testid="icon-picker-upload"]').classes()).toContain("icon-picker-option");
+    expect(wrapper.get('[data-testid="icon-picker-upload"] > svg').classes()).toContain("icon-picker-upload-icon");
     wrapper.unmount();
   });
 
