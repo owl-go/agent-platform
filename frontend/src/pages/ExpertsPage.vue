@@ -70,7 +70,6 @@ function toggleMine() {
     <div class="catalog-tools">
       <el-input v-model="query" class="catalog-search" clearable :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"><template #prefix><Search :size="17" /></template></el-input>
       <div class="tag-filter" :aria-label="t('experts.categoryFilter')">
-        <span class="filter-label">{{ t('experts.category') }}</span>
         <el-check-tag :checked="!category" @change="category = ''">{{ t('experts.all') }}</el-check-tag>
         <el-check-tag v-for="item in activeCategories" :key="item" :checked="category === item" @change="category = item">{{ item }}</el-check-tag>
       </div>
