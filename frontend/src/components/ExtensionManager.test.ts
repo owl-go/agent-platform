@@ -317,6 +317,8 @@ describe("ExtensionManager", () => {
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     await wrapper.get(".compact-action").trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
+    expect(form.text()).not.toContain("技能名称将直接读取");
+    expect(form.text()).not.toContain("Skill 根目录必须包含");
     await form.get('input[placeholder="https://github.com/owner/skill.git"]').setValue(saved.git_url);
     await form.trigger("submit");
     await flushPromises();
