@@ -51,4 +51,34 @@ describe("WorkflowsPage", () => {
     expect(wrapper.text()).not.toContain("已删除工作流");
     wrapper.unmount();
   });
+
+  it("does not open the workflow when the more menu is clicked", async () => {
+    const api = {
+      listWorkflows: vi.fn(async () => [workflow]),
+      listExperts: vi.fn(async () => []),
+      listExpertTeams: vi.fn(async () => []),
+    } as unknown as PlatformApi;
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/workflows");
+    const push = vi.spyOn(router, "push");
+    const wrapper = mount(WorkflowsPage, {
+      global: {
+        plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+        provide: { [platformApiKey as symbol]: api },
+      },
+    });
+    await flushPromises();
+
+    wrapper.get(".workflow-more").element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushPromises();
+
+    expect(push).not.toHaveBeenCalledWith("/workflows/workflow-1");
+    expect(router.currentRoute.value.fullPath).toBe("/workflows");
+
+    wrapper.get(".workflow-card").element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await flushPromises();
+
+    expect(push).toHaveBeenCalledWith("/workflows/workflow-1");
+    wrapper.unmount();
+  });
 });
