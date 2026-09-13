@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type CLIConnectorDefinition, type PlatformApi, type Skill } from "../api/client";
+import { platformApiKey, type CLIConnectorDefinition, type ConversationScope, type PlatformApi, type Skill } from "../api/client";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
 import { authContextKey } from "../auth/session";
 import { createAppI18n } from "../i18n";
@@ -12,7 +12,7 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; owner?: string; authorization?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
  const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: "feishu", name: "飞书 CLI", revision: "3" }] : [] };
  const definition = { id: "feishu", name: "飞书 CLI", state: "available", authentication_driver: "feishu", capabilities: [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] } as CLIConnectorDefinition;
  const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]), ...(options.authorization ? {
@@ -21,10 +21,10 @@ async function setup(options: { fail?: boolean; initial?: boolean; session?: str
   listCLIConnectorAuthorizations: vi.fn(async () => []),
   beginCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
   completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
- } : {}) } as unknown as PlatformApi;
+ } : {}), uploadAttachment: vi.fn(async (file: File) => ({ id: `attachment-${file.name}`, name: file.name, content_type: file.type, size: file.size, sha256: "sha256", image: file.type.startsWith("image/") })) } as unknown as PlatformApi;
  const submit = options.fail ? vi.fn(async () => { throw new Error("offline"); }) : vi.fn(async () => {});
  const router = createAppRouter(createMemoryHistory()); await router.push("/sessions"); await router.isReady();
- const wrapper = mount(ConversationComposer, { attachTo: document.body, props: { scope: { session_id: options.session ?? "session-1" }, submit, initialSkillId: options.initial ? "pdf" : undefined, authorizationRequest: options.authorizationRequest }, global: {
+ const wrapper = mount(ConversationComposer, { attachTo: document.body, props: { scope: options.scope ?? { session_id: options.session ?? "session-1" }, submit, initialSkillId: options.initial ? "pdf" : undefined, authorizationRequest: options.authorizationRequest }, global: {
   plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
   provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: { session: { state: ref({ kind: "authenticated", currentUser: { id: options.owner ?? "owner-1" } }) } } } },
  }); await flushPromises(); return { wrapper, api, submit };
@@ -91,6 +91,30 @@ describe("ConversationComposer", () => {
  it("does not submit when Enter is pressed in the Expert picker", async () => {
   const { wrapper, submit } = await setup({ initial: true }); await wrapper.get(".composer-specialist").trigger("click");
   await wrapper.get(".composer-menu-search input").trigger("keydown", { key: "Enter" }); await flushPromises(); expect(submit).not.toHaveBeenCalled(); wrapper.unmount();
+ });
+ it.each([
+  ["Session", { session_id: "session-1" }],
+  ["Workflow Run Conversation", { workflow_id: "workflow-1", run_id: "run-1" }],
+ ])("pastes clipboard images and files into the %s composer", async (_label, scope) => {
+  const { wrapper, api, submit } = await setup({ scope });
+  const image = new File(["image"], "diagram.png", { type: "image/png" });
+  const documentFile = new File(["notes"], "notes.txt", { type: "text/plain" });
+  const paste = new Event("paste", { bubbles: true, cancelable: true });
+  Object.defineProperty(paste, "clipboardData", { value: { files: [image, documentFile], items: [], getData: () => "" } });
+
+  wrapper.get(".composer-editor").element.dispatchEvent(paste);
+  await flushPromises();
+
+  expect(paste.defaultPrevented).toBe(true);
+  expect(wrapper.findAll(".pending-attachments > span").map((item) => item.text())).toEqual(expect.arrayContaining([expect.stringContaining("diagram.png"), expect.stringContaining("notes.txt")]));
+
+  await wrapper.get('[aria-label="发送"]').trigger("click");
+  await flushPromises();
+
+  expect(api.uploadAttachment).toHaveBeenNthCalledWith(1, image);
+  expect(api.uploadAttachment).toHaveBeenNthCalledWith(2, documentFile);
+  expect(submit).toHaveBeenCalledWith({ content: "", attachmentIDs: ["attachment-diagram.png", "attachment-notes.txt"], input: { selection_id: "selection-1", file_references: [] } });
+  wrapper.unmount();
  });
  it("waits for an attempted operation before showing Feishu authorization and keeps a direct recovery link", async () => {
   vi.spyOn(window, "open").mockReturnValue(null);

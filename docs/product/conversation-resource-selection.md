@@ -43,7 +43,7 @@ Status: implemented with local validation. Production and exact-image conformanc
 
 ## Interaction Details
 
-- In both composers, toolbar icon buttons keep equal width and height on desktop and mobile. Send and stop each show one centered icon; a loading indicator replaces that icon while the action is pending without changing the button's shape.
+- In both composers, toolbar icon buttons keep equal width and height on desktop and mobile. Send and stop each show one centered icon; a loading indicator replaces that icon while the action is pending without changing the button's shape. Pasting clipboard images or files into the editor adds them to the current message through the same pending-attachment flow and limits as the local file picker; ordinary text paste remains text.
 - Use the exact Chinese catalog actions from the request: Skill `去使用`, Expert and Expert Team `召唤`. Card activation opens details; action-button activation launches a Session without also opening details. Actions remain available to keyboard and touch users without hover.
 - `+` and `/` select from the same available Skill catalog. Multiple distinct Skill tokens and file references may appear at the cursor in the same message; tokens are individually removable without rewriting surrounding text.
 - Open `/` and `@` suggestions at a token boundary, filter by the typed query, and allow arrow navigation, Enter to select, and Escape to dismiss. A selection-confirming Enter does not also send the message; IME composition never triggers send. URLs and email addresses typed as ordinary text remain intact.
