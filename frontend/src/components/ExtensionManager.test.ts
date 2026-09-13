@@ -295,8 +295,9 @@ describe("ExtensionManager", () => {
     await wrapper.get(".compact-action").trigger("click");
     await new DOMWrapper(document.body.querySelector<HTMLElement>('[data-testid="connector-kind-mcp"]')!).trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
-    await form.findAll("input")[0]!.setValue(saved.name);
-    await form.findAll("input")[1]!.setValue(saved.url);
+    const textInputs = form.findAll("input").filter((input) => input.attributes("type") !== "file");
+    await textInputs[0]!.setValue(saved.name);
+    await textInputs[1]!.setValue(saved.url);
     await form.trigger("submit");
     await flushPromises();
 

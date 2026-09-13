@@ -4,6 +4,15 @@ import { describe, expect, it } from "vitest";
 import IconPicker from "./IconPicker.vue";
 
 describe("IconPicker", () => {
+  it("keeps the upload control compact without a redundant help panel", () => {
+    const wrapper = mount(IconPicker, { props: { modelValue: "sparkles", fallback: "sparkles" } });
+
+    expect(wrapper.find(".icon-picker-help").exists()).toBe(false);
+    expect(wrapper.find('[data-testid="icon-picker-upload"] span').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="icon-picker-upload"]').classes()).toContain("icon-picker-option");
+    wrapper.unmount();
+  });
+
   it("selects a preset icon", async () => {
     const wrapper = mount(IconPicker, { props: { modelValue: "sparkles", fallback: "sparkles" } });
 
