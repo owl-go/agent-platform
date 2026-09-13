@@ -90,7 +90,7 @@ The detailed conversation specialist/resource selection rules and accepted revis
 - The title is derived locally from the first User message and remains editable; title generation does not invoke a model.
 - Archived Sessions are hidden from the active list and read-only until archive is cancelled.
 - Deleting a Session requires confirmation, cancels active generation, and permanently deletes messages and Session execution data.
-- A Session message may contain text, up to ten distinct new attachments and referenced files in total, or both. Each file is at most 100 MiB. File References preserve content accepted with the message. Sessions do not own a persistent Workspace; the Runtime receives checksum-verified, read-only copies for that turn.
+- A Session message may contain text, up to ten distinct new attachments and referenced files in total, or both. Each file is at most 100 MiB. In both the Session composer and Workflow Run Conversation composer, a User may select local images and files or paste them directly from the clipboard; pasted files follow the same limits, draft preservation, and upload lifecycle. File References preserve content accepted with the message. Sessions do not own a persistent Workspace; the Runtime receives checksum-verified, read-only copies for that turn.
 - Selecting an attached image opens an in-product preview instead of starting a browser download. A message with multiple images supports previous and next navigation in the preview; non-image attachments remain explicit downloads.
 
 ### 4.2 Conversation Execution
@@ -152,7 +152,7 @@ Settings contains five collapsed sections:
 ### 5.3 Triggers And Input
 
 - Manual Runs launched from the Workflow interface execute the fixed Workflow goal directly; the detail header does not expose a separate input or input-type control. After creation, the interface immediately opens that Run Conversation and streams the active Run instead of requiring another click in Run History.
-- The existing Run Conversation follow-up composer supports the same `+`, Skill tokens, File References, and retained specialist/Connector selections as Sessions. It additionally offers the Workflow's Workspace files in the file picker. These controls do not extend to goal editing or initial trigger input and do not update the Workflow definition.
+- The existing Run Conversation follow-up composer supports the same `+`, Skill tokens, File References, clipboard image/file paste, and retained specialist/Connector selections as Sessions. It additionally offers the Workflow's Workspace files in the file picker. These controls do not extend to goal editing or initial trigger input and do not update the Workflow definition.
 - API Runs accept optional text or JSON input.
 - Scheduled Runs execute only the fixed Workflow goal and do not have a separate default input.
 - Run trigger types shown to Users are manual, scheduled, and API.
