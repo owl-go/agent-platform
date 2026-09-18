@@ -36,7 +36,11 @@ export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "w
 export interface GitConfigEntry { key: string; value: string }
 export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; ssh_config?: string; credential_configured: boolean }
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[]; ssh_config?: string }
-export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; environment: EnvironmentVariable[]; schedule?: Schedule }
+export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
+export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
+export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
+export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
+export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
@@ -159,6 +163,17 @@ export interface PlatformApi {
   getWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<WorkspaceFile>;
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
   configureWorkflowGitSource(id: string, input: GitSourceInput, signal?: AbortSignal): Promise<Workflow>;
+  listKnowledgeBases(deleted?: boolean, signal?: AbortSignal): Promise<KnowledgeBase[]>;
+  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, signal?: AbortSignal): Promise<KnowledgeBase>;
+  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
+  deleteKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
+  listKnowledgeCategories(id: string, signal?: AbortSignal): Promise<KnowledgeCategory[]>;
+  createKnowledgeCategory(id: string, name: string, signal?: AbortSignal): Promise<KnowledgeCategory>;
+  deleteKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
+  listKnowledgeDocuments(id: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
+  uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
+  importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
+  downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
   getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
   createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
@@ -422,6 +437,24 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     getWorkspaceFile(id, path, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/file?path=${encodeURIComponent(path)}`, { signal }); },
     downloadWorkspaceFile(id, path, signal) { return download(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/download?path=${encodeURIComponent(path)}`, signal); },
     configureWorkflowGitSource(id, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/git-source`, json("PUT", input, signal)); },
+    async listKnowledgeBases(deleted = false, signal) { return (await call<{ items: KnowledgeBase[] }>(`/api/v1/knowledge-bases?deleted=${deleted}`, { signal })).items ?? []; },
+    createKnowledgeBase(input, signal) { return call("/api/v1/knowledge-bases", json("POST", { knowledge_base: input }, signal)); },
+    updateKnowledgeBase(id, input, version, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, json("PATCH", { knowledge_base: input, expected_version: version }, signal)); },
+    deleteKnowledgeBase(id, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, signal); },
+    async listKnowledgeCategories(id, signal) { return (await call<{ items: KnowledgeCategory[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, { signal })).items ?? []; },
+    createKnowledgeCategory(id, name, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, json("POST", { knowledge_base_id: id, name }, signal)); },
+    deleteKnowledgeCategory(knowledgeBaseID, categoryID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}`, signal); },
+    async listKnowledgeDocuments(id, signal) { return (await call<{ items: KnowledgeDocument[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents`, { signal })).items ?? []; },
+    async uploadKnowledgeDocument(id, file, categoryID, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const form = new FormData(); form.append("file", file); if (categoryID) form.append("category_id", categoryID);
+      const response = await fetch(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/upload`, { method: "POST", body: form, signal, headers: { Authorization: `Bearer ${token}`, "Idempotency-Key": crypto.randomUUID() } });
+      if (!response.ok) throw new ApiError(response.status === 413 || response.status === 422 ? "validation" : "unknown", response.status, "knowledge_document_upload_failed");
+      return response.json() as Promise<KnowledgeDocument>;
+    },
+    importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
+    downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
     async listExperts(signal) {
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);

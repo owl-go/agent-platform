@@ -2104,6 +2104,292 @@
         ]
       }
     },
+    "/api/v1/knowledge-bases": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeBases",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListKnowledgeBasesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KnowledgeBase"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateKnowledgeBaseRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KnowledgeBase"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KnowledgeBase"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateKnowledgeBaseBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeCategories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListKnowledgeCategoriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateKnowledgeCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KnowledgeCategory"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCreateKnowledgeCategoryBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteKnowledgeCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/documents": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeDocuments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListKnowledgeDocumentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "AgentWorkspaceService_GetCurrentUser",
@@ -3791,6 +4077,14 @@
         }
       }
     },
+    "AgentWorkspaceServiceCreateKnowledgeCategoryBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
     "AgentWorkspaceServiceCreateProviderModelBody": {
       "type": "object",
       "properties": {
@@ -4057,6 +4351,18 @@
       "properties": {
         "expert_team": {
           "$ref": "#/definitions/v1ExpertTeamInput"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateKnowledgeBaseBody": {
+      "type": "object",
+      "properties": {
+        "knowledge_base": {
+          "$ref": "#/definitions/v1KnowledgeBaseInput"
         },
         "expected_version": {
           "type": "string",
@@ -4864,6 +5170,14 @@
         },
         "api_key": {
           "type": "string"
+        }
+      }
+    },
+    "v1CreateKnowledgeBaseRequest": {
+      "type": "object",
+      "properties": {
+        "knowledge_base": {
+          "$ref": "#/definitions/v1KnowledgeBaseInput"
         }
       }
     },
@@ -5903,6 +6217,179 @@
         }
       }
     },
+    "v1KnowledgeBase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1KnowledgeBaseInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1KnowledgeCategory": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "knowledge_base_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1KnowledgeDocument": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "knowledge_base_id": {
+          "type": "string"
+        },
+        "category_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "source_uri": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "latest_revision": {
+          "$ref": "#/definitions/v1KnowledgeDocumentRevision"
+        }
+      }
+    },
+    "v1KnowledgeDocumentRevision": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "document_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "object_key": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ready_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1ListArtifactsResponse": {
       "type": "object",
       "properties": {
@@ -6065,6 +6552,42 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ImageModel"
+          }
+        }
+      }
+    },
+    "v1ListKnowledgeBasesResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1KnowledgeBase"
+          }
+        }
+      }
+    },
+    "v1ListKnowledgeCategoriesResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1KnowledgeCategory"
+          }
+        }
+      }
+    },
+    "v1ListKnowledgeDocumentsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1KnowledgeDocument"
           }
         }
       }
@@ -7421,6 +7944,12 @@
         },
         "expert_team_id": {
           "type": "string"
+        },
+        "knowledge_base_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -7478,6 +8007,12 @@
         },
         "expert_team_id": {
           "type": "string"
+        },
+        "knowledge_base_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

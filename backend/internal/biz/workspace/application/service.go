@@ -79,6 +79,17 @@ type Repository interface {
 	CreateSkill(context.Context, string, domain.Skill) (domain.Skill, error)
 	UpdateSkill(context.Context, string, string, string, string, *string, string, string, int64) (domain.Skill, error)
 	DeleteSkill(context.Context, string, string) error
+
+	ListKnowledgeBases(context.Context, string, bool, bool) ([]domain.KnowledgeBase, error)
+	GetKnowledgeBase(context.Context, string, string, bool, bool) (domain.KnowledgeBase, error)
+	CreateKnowledgeBase(context.Context, string, bool, domain.KnowledgeBaseInput) (domain.KnowledgeBase, error)
+	UpdateKnowledgeBase(context.Context, string, string, bool, domain.KnowledgeBaseInput, int64) (domain.KnowledgeBase, error)
+	DeleteKnowledgeBase(context.Context, string, string, bool) error
+	ListKnowledgeCategories(context.Context, string, string, bool) ([]domain.KnowledgeCategory, error)
+	CreateKnowledgeCategory(context.Context, string, string, bool, string) (domain.KnowledgeCategory, error)
+	DeleteKnowledgeCategory(context.Context, string, string, string, bool) error
+	ListKnowledgeDocuments(context.Context, string, string, bool) ([]domain.KnowledgeDocument, error)
+	CreateKnowledgeDocument(context.Context, string, bool, domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
 }
 
 type ModelCatalog interface {

@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElNotification } from "element-plus";
-import { Box, ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { Box, ChatDotRound, Connection, Folder, Loading, MagicStick, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -26,7 +26,7 @@ const creditBalance = ref<CreditBalance>();
 const aiCreationUnread = ref(localStorage.getItem("ai-creation-unread") === "1");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 const nav = [
-  { id: "sessions", icon: ChatDotRound, path: "/sessions" }, { id: "workflows", icon: Connection, path: "/workflows" }, { id: "experts", icon: MagicStick, path: "/experts" }, { id: "resources", icon: Box, path: "/resources" }, { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" }, { id: "settings", icon: Setting, path: "/settings" },
+  { id: "sessions", icon: ChatDotRound, path: "/sessions" }, { id: "workflows", icon: Connection, path: "/workflows" }, { id: "experts", icon: MagicStick, path: "/experts" }, { id: "resources", icon: Box, path: "/resources" }, { id: "knowledge-bases", icon: Folder, path: "/knowledge-bases" }, { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" }, { id: "settings", icon: Setting, path: "/settings" },
 ] as const;
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;

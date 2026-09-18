@@ -102,6 +102,157 @@ type Attachment struct {
 	Image       bool   `json:"image"`
 }
 
+type KnowledgeVisibility string
+
+const (
+	KnowledgePrivate KnowledgeVisibility = "private"
+	KnowledgePublic  KnowledgeVisibility = "public"
+)
+
+type KnowledgeDocumentState string
+
+const (
+	KnowledgeAccepted   KnowledgeDocumentState = "accepted"
+	KnowledgeProcessing KnowledgeDocumentState = "processing"
+	KnowledgeReady      KnowledgeDocumentState = "ready"
+	KnowledgeFailed     KnowledgeDocumentState = "failed"
+	KnowledgeBlocked    KnowledgeDocumentState = "blocked"
+)
+
+type KnowledgeSourceType string
+
+const (
+	KnowledgeUpload KnowledgeSourceType = "upload"
+	KnowledgeURL    KnowledgeSourceType = "url"
+)
+
+type KnowledgeBaseInput struct {
+	Name        string
+	Description string
+	Visibility  KnowledgeVisibility
+	Platform    bool
+}
+
+func (input KnowledgeBaseInput) Validate(administrator bool) error {
+	name := strings.TrimSpace(input.Name)
+	if len(name) < 1 || len(name) > 100 {
+		return fmt.Errorf("%w: Knowledge Base name must contain 1-100 characters", ErrInvalid)
+	}
+	if len(strings.TrimSpace(input.Description)) > 2_000 {
+		return fmt.Errorf("%w: Knowledge Base description must contain at most 2000 characters", ErrInvalid)
+	}
+	if input.Visibility != KnowledgePrivate && input.Visibility != KnowledgePublic {
+		return fmt.Errorf("%w: Knowledge Base visibility must be private or public", ErrInvalid)
+	}
+	if input.Platform && !administrator {
+		return fmt.Errorf("%w: only the Administrator may create a Platform Knowledge Base", ErrInvalid)
+	}
+	if !input.Platform && input.Visibility == KnowledgePublic {
+		return fmt.Errorf("%w: User-owned Knowledge Bases must be private", ErrInvalid)
+	}
+	return nil
+}
+
+type KnowledgeBase struct {
+	ID          string
+	OwnerID     string
+	Platform    bool
+	Name        string
+	Description string
+	Visibility  KnowledgeVisibility
+	DeletedAt   *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Version     int64
+}
+
+type KnowledgeCategory struct {
+	ID              string
+	KnowledgeBaseID string
+	Name            string
+	DeletedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Version         int64
+}
+
+type KnowledgeDocument struct {
+	ID              string
+	KnowledgeBaseID string
+	CategoryID      *string
+	Name            string
+	SourceType      KnowledgeSourceType
+	SourceURI       *string
+	State           KnowledgeDocumentState
+	Error           string
+	DeletedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Version         int64
+	LatestRevision  *KnowledgeDocumentRevision
+}
+
+type KnowledgeDocumentRevision struct {
+	ID          string
+	DocumentID  string
+	Revision    int
+	ObjectKey   string
+	SHA256      string
+	Size        int64
+	ContentType string
+	State       KnowledgeDocumentState
+	Error       string
+	CreatedAt   time.Time
+	ReadyAt     *time.Time
+}
+
+type KnowledgeDocumentInput struct {
+	KnowledgeBaseID  string
+	CategoryID       *string
+	Name             string
+	SourceType       KnowledgeSourceType
+	SourceURI        *string
+	NormalizedSource string
+	ObjectKey        string
+	SHA256           string
+	Size             int64
+	ContentType      string
+}
+
+func ValidateKnowledgeCategoryName(name string) error {
+	name = strings.TrimSpace(name)
+	if len(name) < 1 || len(name) > 100 {
+		return fmt.Errorf("%w: Knowledge Category name must contain 1-100 characters", ErrInvalid)
+	}
+	return nil
+}
+
+func ValidateKnowledgeSource(sourceType KnowledgeSourceType, sourceURI string) error {
+	switch sourceType {
+	case KnowledgeUpload:
+		if strings.TrimSpace(sourceURI) != "" {
+			return fmt.Errorf("%w: uploaded Knowledge Document cannot have a source URL", ErrInvalid)
+		}
+	case KnowledgeURL:
+		parsed, err := url.Parse(strings.TrimSpace(sourceURI))
+		if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.Host == "" || parsed.User != nil {
+			return fmt.Errorf("%w: Knowledge URL must be a public HTTP(S) URL", ErrInvalid)
+		}
+	default:
+		return fmt.Errorf("%w: unsupported Knowledge Document source type", ErrInvalid)
+	}
+	return nil
+}
+
+func ValidateKnowledgeDocumentState(state KnowledgeDocumentState) error {
+	switch state {
+	case KnowledgeAccepted, KnowledgeProcessing, KnowledgeReady, KnowledgeFailed, KnowledgeBlocked:
+		return nil
+	default:
+		return fmt.Errorf("%w: unsupported Knowledge Document state", ErrInvalid)
+	}
+}
+
 type ResponseSnapshot struct {
 	SchemaVersion     int                      `json:"schema_version,omitempty"`
 	Stages            []ExecutionStageSnapshot `json:"stages,omitempty"`
@@ -469,14 +620,15 @@ func ValidateGitConfig(config []GitConfigEntry) error {
 }
 
 type WorkflowInput struct {
-	Name            string
-	Goal            string
-	ExpertID        *string
-	ExpertTeamID    *string
-	ProviderModelID *string
-	RuntimeEngine   *RuntimeEngine
-	Environment     []EnvironmentVariable
-	Schedule        *Schedule
+	Name             string
+	Goal             string
+	ExpertID         *string
+	ExpertTeamID     *string
+	KnowledgeBaseIDs []string
+	ProviderModelID  *string
+	RuntimeEngine    *RuntimeEngine
+	Environment      []EnvironmentVariable
+	Schedule         *Schedule
 }
 
 func (input WorkflowInput) Validate() error {
@@ -488,6 +640,20 @@ func (input WorkflowInput) Validate() error {
 	}
 	if input.ExpertID != nil && input.ExpertTeamID != nil {
 		return fmt.Errorf("%w: choose either an Expert or an Expert Team", ErrInvalid)
+	}
+	if len(input.KnowledgeBaseIDs) > 50 {
+		return fmt.Errorf("%w: Workflow may bind at most 50 Knowledge Bases", ErrInvalid)
+	}
+	seenKnowledgeBases := make(map[string]struct{}, len(input.KnowledgeBaseIDs))
+	for _, id := range input.KnowledgeBaseIDs {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			return fmt.Errorf("%w: Knowledge Base identifier cannot be empty", ErrInvalid)
+		}
+		if _, exists := seenKnowledgeBases[id]; exists {
+			return fmt.Errorf("%w: Workflow Knowledge Base selection contains duplicates", ErrInvalid)
+		}
+		seenKnowledgeBases[id] = struct{}{}
 	}
 	if input.ProviderModelID != nil || input.RuntimeEngine != nil {
 		return fmt.Errorf("%w: Workflow model and Runtime overrides are no longer supported", ErrInvalid)
@@ -508,6 +674,7 @@ type Workflow struct {
 	Goal                    string
 	ExpertID                *string
 	ExpertTeamID            *string
+	KnowledgeBaseIDs        []string
 	ProviderModelID         *string
 	RuntimeEngine           *RuntimeEngine
 	Environment             []EnvironmentVariable

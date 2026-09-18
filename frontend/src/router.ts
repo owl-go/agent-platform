@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
 
-export type Surface = "sessions" | "workflows" | "experts" | "resources" | "ai-creation" | "settings";
+export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -24,6 +24,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "experts" } },
       { path: "/resources", name: "resources", component: () => import("./pages/SkillsConnectorsPage.vue"), meta: { surface: "resources" } },
       { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
+      { path: "/knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "knowledge-bases" } },
       { path: "/ai-creation", redirect: "/ai-creation/image-generation" },
       { path: "/ai-creation/image-generation", name: "image-generation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-creation" } },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },

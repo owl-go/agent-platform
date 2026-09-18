@@ -87,10 +87,14 @@ func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workf
 	if err != nil {
 		return domain.Workflow{}, err
 	}
+	knowledgeBaseIDs, err := marshal(input.KnowledgeBaseIDs)
+	if err != nil {
+		return domain.Workflow{}, err
+	}
 	updates := map[string]any{
 		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID, "expert_team_id": input.ExpertTeamID,
 		"provider_model_id": nil, "runtime_engine": nil, "environment": environment,
-		"schedule": schedule, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+		"schedule": schedule, "knowledge_base_ids": knowledgeBaseIDs, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 	}
 	if secretCiphertext != nil {
 		updates["environment_secret_ciphertext"] = secretCiphertext
@@ -168,6 +172,15 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 		}
 		if available != int64(len(ids)) {
 			return fmt.Errorf("%w: selected Expert Team contains an unavailable Expert", domain.ErrInvalid)
+		}
+	}
+	if len(input.KnowledgeBaseIDs) > 0 {
+		var available int64
+		if err := tx.Table("knowledge_bases").Where("id IN ? AND deleted_at IS NULL AND (owner_user_id = ? OR (platform = true AND visibility = 'public'))", input.KnowledgeBaseIDs, ownerID).Count(&available).Error; err != nil {
+			return err
+		}
+		if available != int64(len(input.KnowledgeBaseIDs)) {
+			return fmt.Errorf("%w: selected Knowledge Base does not belong to the User", domain.ErrInvalid)
 		}
 	}
 	return nil
@@ -507,8 +520,14 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	if err := tx.Where("user_id = ?", workflow.OwnerID).Take(&settings).Error; err != nil {
 		return domain.ExecutionSnapshot{}, fmt.Errorf("load Personal Settings for Run: %w", err)
 	}
+	var knowledgeBaseIDs []string
+	if len(workflow.KnowledgeBaseIDs) > 0 && string(workflow.KnowledgeBaseIDs) != "null" {
+		if err := json.Unmarshal(workflow.KnowledgeBaseIDs, &knowledgeBaseIDs); err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow Knowledge Base selection: %w", err)
+		}
+	}
 	snapshot := domain.ExecutionSnapshot{
-		SchemaVersion: 2, WorkflowName: workflow.Name, Goal: workflow.Goal,
+		SchemaVersion: 2, WorkflowName: workflow.Name, Goal: workflow.Goal, KnowledgeBaseIDs: knowledgeBaseIDs,
 		Personality: settings.Personality, PersonalityInstructions: settings.PersonalityInstructions,
 		EnvironmentSecretCiphertext: workflow.EnvironmentSecret, GitSecretCiphertext: workflow.GitSecret,
 		WorkspacePath: workflow.WorkspacePath,
@@ -1007,7 +1026,11 @@ func workflowRecordForInput(id, ownerID, workspacePath string, input domain.Work
 	if err != nil {
 		return workflowRecord{}, err
 	}
-	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ExpertTeamID: input.ExpertTeamID, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
+	knowledgeBaseIDs, err := marshal(input.KnowledgeBaseIDs)
+	if err != nil {
+		return workflowRecord{}, err
+	}
+	return workflowRecord{ID: id, OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Goal: strings.TrimSpace(input.Goal), ExpertID: input.ExpertID, ExpertTeamID: input.ExpertTeamID, Environment: environment, EnvironmentSecret: secrets, Schedule: schedule, KnowledgeBaseIDs: knowledgeBaseIDs, NextScheduledAt: nextScheduledAt(input.Schedule, time.Now().UTC()), WorkspacePath: workspacePath, Version: 1}, nil
 }
 
 func nextScheduledAt(schedule *domain.Schedule, after time.Time) *time.Time {
@@ -1052,7 +1075,13 @@ func marshalNullable(value any) ([]byte, error) {
 }
 
 func workflowDomain(row workflowRecord) (domain.Workflow, error) {
-	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, ProviderModelID: row.ProviderModelID, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	var knowledgeBaseIDs []string
+	if len(row.KnowledgeBaseIDs) > 0 && string(row.KnowledgeBaseIDs) != "null" {
+		if err := json.Unmarshal(row.KnowledgeBaseIDs, &knowledgeBaseIDs); err != nil {
+			return domain.Workflow{}, fmt.Errorf("decode Workflow Knowledge Selection: %w", err)
+		}
+	}
+	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, KnowledgeBaseIDs: knowledgeBaseIDs, ProviderModelID: row.ProviderModelID, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.RuntimeEngine != nil {
 		runtime, err := domain.ParseRuntime(*row.RuntimeEngine)
 		if err != nil {
