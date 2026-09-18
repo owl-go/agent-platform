@@ -310,6 +310,29 @@ describe("ExtensionManager", () => {
 
     expect(createGitSkill).toHaveBeenCalledWith({ git_url: saved.git_url, git_ref: undefined, icon: "sparkles" });
     expect(wrapper.emitted("update:skillIds")?.at(-1)).toEqual([[saved.id]]);
+    expect(wrapper.find(`.skill-catalog-card[aria-label="${saved.name}"]`).exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("keeps a newly created platform Skill visible when the catalog read is stale", async () => {
+    const saved: Skill = { id: "platform-skill", platform: true, name: "平台技能", source: "git", git_url: "https://example.test/skill.git", sha256: "a".repeat(64), ...timestamps };
+    const createGitSkill = vi.fn(async () => saved);
+    const api = {
+      listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), createGitSkill,
+    } as unknown as PlatformApi;
+    const wrapper = mountManager(api, true);
+    await flushPromises();
+
+    await wrapper.findAll(".subtabs button")[0]!.trigger("click");
+    await wrapper.get(".compact-action").trigger("click");
+    const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
+    await form.get('input[placeholder="https://github.com/owner/skill.git"]').setValue(saved.git_url);
+    await form.trigger("submit");
+    await flushPromises();
+
+    expect(createGitSkill).toHaveBeenCalled();
+    expect(wrapper.find(`.skill-catalog-card[aria-label="${saved.name}"]`).exists()).toBe(true);
+    expect(wrapper.findAll(".catalog-group")[0]!.text()).toContain(saved.name);
     wrapper.unmount();
   });
 
