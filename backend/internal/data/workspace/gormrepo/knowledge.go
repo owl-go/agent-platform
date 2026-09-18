@@ -152,8 +152,8 @@ func (repository *Repository) DeleteKnowledgeCategory(ctx context.Context, owner
 }
 
 func (repository *Repository) ListKnowledgeDocuments(ctx context.Context, ownerID, knowledgeBaseID string, administrator bool) ([]domain.KnowledgeDocument, error) {
-	query := repository.db.WithContext(ctx).Table("knowledge_documents").Joins("JOIN knowledge_bases ON knowledge_bases.id = knowledge_documents.knowledge_base_id")
-	query = knowledgeBaseAccess(query, ownerID, false).Where("knowledge_documents.knowledge_base_id = ? AND knowledge_documents.deleted_at IS NULL", knowledgeBaseID)
+	query := repository.db.WithContext(ctx).Table("knowledge_documents").Joins("JOIN knowledge_bases ON knowledge_bases.id = knowledge_documents.knowledge_base_id").Joins("LEFT JOIN knowledge_categories ON knowledge_categories.id = knowledge_documents.category_id")
+	query = knowledgeBaseAccess(query, ownerID, false).Where("knowledge_documents.knowledge_base_id = ? AND knowledge_documents.deleted_at IS NULL AND (knowledge_documents.category_id IS NULL OR knowledge_categories.deleted_at IS NULL)", knowledgeBaseID)
 	if !administrator {
 		query = query.Where("knowledge_bases.platform = false OR knowledge_bases.visibility = 'public'")
 	}

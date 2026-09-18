@@ -292,13 +292,22 @@ func validateKnowledgeUpload(header *multipart.FileHeader, content []byte) (stri
 		return "", "", fmt.Errorf("unsupported Knowledge Document format")
 	}
 	contentType := strings.ToLower(strings.TrimSpace(header.Header.Get("Content-Type")))
+	detectedType := strings.ToLower(http.DetectContentType(content))
 	if contentType == "" || contentType == "application/octet-stream" {
-		contentType = strings.ToLower(http.DetectContentType(content))
+		contentType = detectedType
 	}
+	declaredAllowed := false
+	detectedAllowed := false
 	for _, value := range allowed {
 		if contentType == value {
-			return name, contentType, nil
+			declaredAllowed = true
 		}
+		if detectedType == value {
+			detectedAllowed = true
+		}
+	}
+	if declaredAllowed && detectedAllowed {
+		return name, contentType, nil
 	}
 	return "", "", fmt.Errorf("Knowledge Document MIME does not match extension")
 }
