@@ -73,7 +73,7 @@ onMounted(() => void refresh());
 <template>
   <section class="knowledge-page">
     <header class="page-heading">
-      <div><p class="eyebrow">{{ t("knowledgeBases.eyebrow") }}</p><h1>{{ t("knowledgeBases.title") }}</h1><p>{{ t("knowledgeBases.subtitle") }}</p></div>
+      <div><h1>{{ t("knowledgeBases.title") }}</h1><p>{{ t("knowledgeBases.subtitle") }}</p></div>
       <el-button type="primary" :icon="Plus" @click="showCreate = true">{{ t("knowledgeBases.new") }}</el-button>
     </header>
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="feedback" />
@@ -87,7 +87,7 @@ onMounted(() => void refresh());
         <div v-if="!bases.length" class="empty-state compact">{{ t("knowledgeBases.empty") }}</div>
       </el-card>
       <el-card v-if="selected" class="base-detail" shadow="never">
-        <div class="detail-heading"><div><p class="eyebrow">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</p><h2>{{ selected.name }}</h2><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><label class="upload-button"><el-icon><Upload /></el-icon>{{ t("knowledgeBases.upload") }}<input type="file" hidden @change="upload" /></label></div>
+        <div class="detail-heading"><div><h2>{{ selected.name }} <el-tag size="small" effect="plain">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></h2><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><label class="upload-button"><el-icon><Upload /></el-icon>{{ t("knowledgeBases.upload") }}<input type="file" hidden @change="upload" /></label></div>
         <div class="category-bar"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div>
         <div class="category-chips"><el-tag v-for="category in categories" :key="category.id" effect="plain">{{ category.name }}</el-tag><el-tag v-if="documents.some((item) => !item.category_id)" type="info" effect="plain">{{ t("knowledgeBases.unclassified") }}</el-tag></div>
         <div class="source-controls"><el-select v-model="selectedCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL">{{ t("knowledgeBases.importURL") }}</el-button></div>
