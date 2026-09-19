@@ -95,6 +95,9 @@ The minimum editable configuration is:
 - Optional Knowledge Selection containing one or more Knowledge Bases
 - Optional Expert or Expert Team selection
 - Optional Digital Human selection
+- Zero or more configured Frequently Asked Questions (FAQs)
+- An Answer Safety Policy defining the assistant's service scope and non-overridable platform safety rules
+- Optional public Share Configuration for the authenticated Web UI and iframe embedding
 - Enabled or disabled state
 
 The configuration must not contain hidden, unreviewable instructions. User-authored service rules remain visible in the editor and are included in the application snapshot used by a conversation.
@@ -135,6 +138,79 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 - Historical conversations retain the immutable snapshot needed to render their identity and results.
 - Deletion does not delete referenced Experts, Knowledge Bases, Skills, Connectors, or Digital Humans.
 - If a future external channel or active session prevents deletion, the API returns an explicit conflict instead of silently detaching live work.
+
+### 4.7 Frequently Asked Questions
+
+A Smart Assistant may contain any number of ordered Frequently Asked Questions. Each FAQ contains question text, a Markdown answer, display order, enabled state, and optional category, tag, or icon. The first version does not generate FAQs automatically, import FAQ batches, or expose semantic FAQ editing.
+
+An external or authenticated User can select an enabled FAQ and receive its stored answer directly. A direct FAQ answer does not invoke a Provider Model, retrieve a Knowledge Base, or consume Credits. FAQ Markdown is rendered through the existing safe Markdown boundary; raw HTML, scripts, and unsafe external content are not executable.
+
+Free-text input follows the same ordered decision pipeline for every access surface:
+
+```text
+Safety pre-check
+  -> deterministic FAQ matching
+  -> lightweight FAQ classifier when deterministic matching is uncertain
+  -> direct FAQ answer when confidence reaches the configured threshold
+  -> Knowledge Base retrieval when no FAQ matches
+  -> grounded answer or safe refusal
+```
+
+FAQ matching returns a stable FAQ identity and confidence. It never rewrites a matched FAQ answer. If an enabled Assistant changes an FAQ, the change affects new requests immediately; a response already returned to a User is not rewritten.
+
+### 4.8 Answer Scope And Safety
+
+Every Smart Assistant has an editable Answer Safety Policy containing a visible service scope, optional allowed business topics, optional user-defined blocked topics, and a fixed refusal message. The User may narrow the Assistant's service scope but cannot weaken platform-level safety rules.
+
+Platform-level rules always reject requests involving sensitive political or military content, weapon construction, violent crime, dangerous operations, security bypasses, or other configured safety categories. The policy is evaluated before FAQ matching, Knowledge Base retrieval, or answer generation. A rejected request returns exactly the localized fixed message:
+
+```text
+暂时无法回答此类问题
+```
+
+The English equivalent is `I'm unable to answer that type of question at the moment.` The response does not identify the matched safety category, expose the rule, or return the sensitive source text.
+
+Safety enforcement uses deterministic rule matching first and a lightweight safety classifier when needed. Deterministic checks do not consume Credits; a classifier invocation is a real model call and is charged to the Smart Assistant owner under the existing Credit contract. FAQ clicks that passed publication checks do not run a second classifier.
+
+FAQ answers are safety-checked before they can be enabled. Knowledge Documents are safety-checked before indexing; a blocked source never enters a Ready retrieval generation. A later policy revision can disable an FAQ or remove a source from the active index without deleting its audit metadata.
+
+The platform retains only a minimum safety audit record: Smart Assistant, time, access source, classification result, policy version, and Credit outcome. It does not retain the complete sensitive input in ordinary application logs or expose it to the Administrator as User content.
+
+### 4.9 External Sharing And Iframe Embedding
+
+A User may enable a Smart Assistant for anonymous public use through a Share Configuration. Sharing is independent per Assistant and exposes only the rendered Assistant UI, FAQ answers, grounded answers, and the Digital Human presentation when configured.
+
+Share Configuration contains:
+
+- Enabled or disabled state
+- Unpredictable share Token and Token revision
+- Optional HTTPS allowed-Origin list
+- iframe width, defaulting to `100%`
+- iframe height, defaulting to `600px`
+- Generated iframe snippet
+- Token regeneration and immediate revocation actions
+
+Width accepts `100%` or a fixed pixel value from 320px through 1920px. Height accepts a fixed pixel value from 400px through 1600px. These values affect the generated snippet only; the public page remains responsive. Updating the values does not mutate already-copied snippets.
+
+The generated embed resembles:
+
+```html
+<iframe
+  src="https://example.com/embed/assistant/{share-token}"
+  width="100%"
+  height="600px"
+  frameborder="0"
+  allow="microphone"
+></iframe>
+```
+
+The iframe provides FAQ shortcut buttons and free-text conversation. It never exposes Provider Model, Runtime Engine, Expert, Knowledge Base internals, User Access Tokens, API Keys, internal Session IDs, Object Keys, signed URLs, or private application settings.
+
+External visitors are anonymous and receive a short-lived Visitor ID represented only by a one-way hash in platform records. Each public interaction creates or continues an `External Conversation`, which is not shown in the owner's private Session list. It retains the Assistant, Share Token revision, Assistant and Digital Human snapshots, FAQ or retrieval source, and Credit settlement needed for audit.
+
+Free-text external model calls consume the Smart Assistant owner's Credits. The owner may disable free-text questions or set an Assistant-level daily call limit; direct FAQ clicks do not consume model Credits. Platform-wide concurrency, IP, Visitor ID, and Share Token rate limits always apply and cannot be disabled by the owner.
+
+Share Token validation is server-side. HTTPS embedding is required outside local development. The server emits an appropriate CSP `frame-ancestors` policy and validates `postMessage` origins; public access never relies on a client-only visibility flag. Disabling sharing or regenerating the Token immediately invalidates the old iframe.
 
 ## 5. Digital Humans
 
@@ -242,20 +318,33 @@ Image Creation = a separate tool for creating images
 - Secrets are materialized only for the single execution that needs them and pass through the existing exact-value redaction boundary.
 - Assistant conversations use the existing Session execution and Credit contracts. The product does not add an untracked model invocation path.
 - Resource revisions and Digital Human identity are frozen in the conversation snapshot. Later edits do not rewrite history.
+- The FAQ, safety, and retrieval pipeline executes before any model invocation and records its source decision in the External Conversation or Session response snapshot.
 - APIs return safe structured errors and do not expose raw provider responses, private prompts, credentials, signed URLs, or internal object keys.
 - Mobile layouts provide the same list, editor, preview, and conversation actions without requiring hover-only controls.
+
+### 8.1 Knowledge Retrieval
+
+The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry.
+
+Retrieval uses PostgreSQL full-text/keyword matching plus the PostgreSQL `pgvector` extension. Embedding configuration is versioned and supplied through an `EmbeddingProvider` boundary; the first provider is an Administrator-configured OpenAI-compatible embedding endpoint and model. Embedding API Keys are encrypted and never enter ordinary snapshots, browser payloads, logs, or artifacts.
+
+The application owns Knowledge Base, Document, Document Revision, Chunk provenance, permissions, Assistant binding, and retained Knowledge Citation records. A replaceable `RetrievalProvider` owns indexing and recall only. A future Ragflow or other RAG adapter can replace the PostgreSQL implementation without changing Assistant permissions, conversation snapshots, or citation semantics.
+
+Changing the embedding model or vector dimension creates a new index generation. The current Ready generation remains live until the replacement generation is complete; activation is atomic and a failed rebuild leaves the previous generation serving queries.
+
+When retrieval does not produce a bounded set of excerpts above the configured relevance threshold, the Assistant returns a safe no-grounding response instead of inventing an answer. A grounded response stores bounded citation metadata identifying the Knowledge Base, Document Revision, source location, relevance, and safe display text.
 
 ## 9. Out Of Scope For The First Version
 
 - Public application marketplace or cross-User sharing
-- External web embedding, public links, WeChat, DingTalk, Feishu, or other channel adapters
-- Multi-channel unified conversation history
+- WeChat, DingTalk, Feishu, or other channel adapters beyond the authenticated Web UI and iframe embed
+- Multi-channel unified conversation history across different external adapters
 - Human-agent queues, ticketing, SLA rules, or agent seats
 - Live-streaming Digital Human broadcasts
 - Multiple Digital Humans collaborating in one conversation
 - Custom Digital Human training or user-uploaded model weights
 - Assistant-level independent Provider Model or Runtime Engine policies
-- Application analytics beyond the existing conversation and execution history
+- Detailed product analytics beyond basic share usage, safety audit, and existing conversation/execution history
 
 ## 10. Acceptance Boundary
 
@@ -265,8 +354,12 @@ Completion requires real browser-to-API closure for both ordinary User and Admin
 - Smart Assistant create, edit, copy, list, search, scenario classification, enable, disable, delete, owner isolation, and incomplete-state handling
 - Smart Assistant Knowledge Base, Expert, Expert Team, and Digital Human selection with validation and explicit unavailable-resource errors
 - Smart Assistant conversation entry, configuration snapshot, resource revision snapshot, credit admission, cancellation, history, and later-edit isolation
+- Smart Assistant FAQ CRUD, ordering, safe Markdown rendering, direct-answer no-Credit behavior, deterministic and classifier-based FAQ matching, confidence thresholding, and immediate publication behavior
+- Smart Assistant Answer Safety Policy, non-overridable platform categories, fixed localized refusal, FAQ/Knowledge Document publication checks, classifier charging, minimum safety audit, and no sensitive-content leakage
+- Smart Assistant Share Configuration, unpredictable Token, Token rotation/revocation, allowed Origins, iframe width/height validation, generated snippet, anonymous Visitor ID, External Conversation isolation, owner Credit charging, and platform rate limits
 - Digital Human create, edit, copy, preview, list, enable, disable, delete conflict, reuse across multiple Assistants, protected provider configuration, and snapshot behavior
 - Image Creation route, old-route redirect, existing Image Generation behavior, existing Image Model administration, history, notifications, owner isolation, and credit settlement
+- Knowledge Base text/Markdown ingestion, asynchronous lifecycle, safety gating, PostgreSQL full-text and pgvector retrieval, versioned embedding generations, atomic index activation, RetrievalProvider substitution seam, bounded citations, grounded answers, and safe no-grounding responses
 - historical conversations remain readable after an Assistant or Digital Human is disabled or deleted, subject to existing retention and artifact rules
 - no Assistant, Digital Human, or Image Creation API leaks credentials, private content, provider responses, internal object keys, or signed URLs
 
@@ -278,5 +371,5 @@ The following decisions must be made before implementing external delivery or li
 
 1. Which initial Digital Human provider and protocol are supported?
 2. Is live voice/video interaction part of the first release, or is the first release configuration and preview only?
-3. Which external channels, if any, receive a Smart Assistant after the authenticated Web conversation is complete?
+3. Which external channels, if any, receive a Smart Assistant after the authenticated Web and iframe surfaces are complete?
 4. Does a Smart Assistant later need an explicit model policy independent of Personal Settings?

@@ -145,16 +145,36 @@ The product area in which a User creates and uses durable AI capabilities and ta
 _Avoid_: AI Creation as a top-level area, Session, Workflow, generic AI tools
 
 **Smart Assistant**:
-A reusable, User-owned AI application for one scenario, combining visible service rules with optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
+A reusable, User-owned AI application for one scenario, combining visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
 _Avoid_: AI Customer Service, Expert, Session, Workflow
+
+**Smart Assistant FAQ**:
+An ordered, User-authored question and Markdown answer attached to one Smart Assistant. A direct selection returns its safety-checked answer without a model invocation; uncertain free-text questions may be classified against enabled FAQs before Knowledge Base retrieval.
+_Avoid_: Knowledge Document, canned Session message, generated answer
 
 **Digital Human**:
 A reusable, User-owned presentation identity describing an AI interaction's avatar, voice, language, and supported expression or scene settings. A Digital Human does not own business knowledge or answer logic and may be referenced by multiple Smart Assistants.
 _Avoid_: Smart Assistant, Avatar-only upload, Expert
 
+**Answer Safety Policy**:
+The ordered, platform-enforced and Assistant-configurable boundary that decides whether a request may proceed to FAQ matching, Knowledge Base retrieval, or model answering. Platform safety categories cannot be disabled, and a rejected request receives the fixed localized refusal without exposing the matched category or sensitive source text.
+_Avoid_: Prompt instruction, content filter toggle, moderation note
+
+**Share Configuration**:
+The per-Smart-Assistant public-use configuration containing an unpredictable share Token, optional allowed Origins, iframe dimensions, rate limits, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
+_Avoid_: Public Session, API Key, User Access Token
+
+**External Conversation**:
+An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Digital Human, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.
+_Avoid_: Session, visitor account, public chat transcript
+
 **Image Creation**:
 The task-specific image-generation tool nested under AI Applications. It owns no Smart Assistant or Digital Human and uses Image Generation Records for its submitted requests and results.
 _Avoid_: AI Creation, Smart Assistant, Image Artifact
+
+**Retrieval Provider**:
+The replaceable indexing and recall boundary used by a Knowledge Base, initially backed by PostgreSQL full-text and `pgvector` search. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations.
+_Avoid_: Knowledge Base, RAG application, Provider Model
 
 **Image Model**:
 An Administrator-managed image-generation configuration containing one exact model identifier, independent API Endpoint, and write-only API Key. A User selects an available Image Model and supplies the size, quality, format, background, and output count for an Image Generation Record.
