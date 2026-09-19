@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type KnowledgeBase, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -356,6 +356,30 @@ describe("WorkflowDetailPage", () => {
     expect(bottomActions.find("button[type='submit']").exists()).toBe(true);
     expect(bottomActions.findAll("button")).toHaveLength(2);
     expect(bottomActions.findAll("button").map((button) => button.text())).toEqual(["删除", "保存"]);
+    wrapper.unmount();
+  });
+
+  it("lets a Workflow explicitly choose zero or more Knowledge Bases without a default", async () => {
+    const knowledgeBases: KnowledgeBase[] = [
+      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+    ];
+    const updateWorkflow = vi.fn(async (_id: string, input: Parameters<PlatformApi["updateWorkflow"]>[1], _version: number) => ({ ...workflow, ...input }));
+    const api = apiStub({ listKnowledgeBases: vi.fn(async () => knowledgeBases), updateWorkflow });
+    const wrapper = await mountPage(api);
+
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
+    expect(choices).toHaveLength(2);
+    expect(choices.every((choice) => !choice.element.checked)).toBe(true);
+
+    await choices[0]!.setValue(true);
+    expect(choices[0]!.element.checked).toBe(true);
+    await wrapper.get(".settings-form").trigger("submit");
+    await flushPromises();
+    expect(updateWorkflow).toHaveBeenCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: ["kb-1"] }), workflow.version);
     wrapper.unmount();
   });
 
