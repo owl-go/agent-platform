@@ -59,6 +59,18 @@ async function mountAt(path: string, api: PlatformApi = defaultApi) {
 afterEach(() => vi.useRealTimers());
 
 describe("App navigation", () => {
+  it("groups primary navigation by product area", async () => {
+    const wrapper = await mountAt("/sessions");
+
+    expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
+    expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
+      ["/sessions", "/workflows", "/ai-creation/image-generation", "/knowledge-bases"],
+      ["/experts", "/resources"],
+      ["/settings"],
+    ]);
+    wrapper.unmount();
+  });
+
   it.each([
     ["/workflows/workflow-1", "/workflows"],
     ["/experts/expert-1", "/experts"],

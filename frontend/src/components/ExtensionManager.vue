@@ -116,6 +116,10 @@ onBeforeUnmount(() => {
 function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
+function upsertSkill(item: Skill) {
+  skills.value = [item, ...skills.value.filter((entry) => entry.id !== item.id)];
+  notifyResources();
+}
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
   try {
@@ -410,6 +414,8 @@ async function saveSkill() {
     if (props.selectable && !editingSkill.value) emit("update:skillIds", [...new Set([...props.skillIds, saved.id])]);
     showSkill.value = false;
     await refresh();
+    // Keep a successful creation visible even if the catalog read is briefly stale.
+    upsertSkill(saved);
   } catch (cause) { reportError(cause); }
 }
 async function removeSkill(item: Skill) {
