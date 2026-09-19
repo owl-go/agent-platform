@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import CreditConsumption from "../components/CreditConsumption.vue";
@@ -42,6 +42,7 @@ const launchPrompt = ref<{ sessionID: string; text: string }>();
 const loading = ref(true);
 const sending = ref(false);
 const cancellingMessageID = ref<number>();
+const resourceActionBusy = ref<string>();
 const creating = ref(false);
 const showArchived = ref(false);
 const error = ref("");
@@ -262,6 +263,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
+  message.resource_action = snapshot.resource_action ?? message.resource_action;
   if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
@@ -386,6 +388,19 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
 }
 function activitySummaries(message: SessionMessage) {
   return summarizeExecutionActivities(message.activities ?? []);
+}
+async function decideResourceAction(message: SessionMessage, decision: "confirm" | "cancel") {
+  const action = message.resource_action;
+  if (!action || action.state !== "pending" || resourceActionBusy.value) return;
+  resourceActionBusy.value = action.id;
+  try {
+    const updated = await api.decideResourceCreationAction(action.id, decision);
+    message.resource_action = updated as ResourceCreationAction;
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : t("errors.generic");
+  } finally {
+    resourceActionBusy.value = undefined;
+  }
 }
 function activitySummaryLabel(summary: ExecutionActivitySummary) {
   if (summary.kind === "reasoning" && summary.detail) return summary.detail;
@@ -519,6 +534,15 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
               <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
               <div v-if="message.role === 'user' && messageSkills(index).length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')"><span v-for="skill in messageSkills(index)" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span></div>
               <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="downloadSessionArtifact" />
+              <section v-if="message.role === 'assistant' && message.resource_action" class="resource-action-card" :class="`resource-action-${message.resource_action.state}`" aria-live="polite">
+                <div class="resource-action-heading"><strong>{{ message.resource_action.kind === 'skill' ? t('sessions.resourceActionSkill') : t('sessions.resourceActionExpert') }}</strong><span>{{ message.resource_action.name }}</span></div>
+                <p v-if="message.resource_action.description">{{ message.resource_action.description }}</p>
+                <div v-if="message.resource_action.state === 'pending'" class="resource-action-actions"><el-button type="primary" :loading="resourceActionBusy === message.resource_action.id" @click="decideResourceAction(message, 'confirm')">{{ t('sessions.resourceActionConfirm') }}</el-button><el-button :disabled="Boolean(resourceActionBusy)" @click="decideResourceAction(message, 'cancel')">{{ t('common.cancel') }}</el-button></div>
+                <small v-else-if="message.resource_action.state === 'confirmed'">{{ t('sessions.resourceActionConfirmed') }}</small>
+                <small v-else-if="message.resource_action.state === 'cancelled'">{{ t('sessions.resourceActionCancelled') }}</small>
+                <small v-else-if="message.resource_action.error" class="resource-action-error">{{ message.resource_action.error }}</small>
+                <small v-else>{{ t('sessions.resourceActionExpired') }}</small>
+              </section>
               <ConversationAttachments v-if="message.attachments?.length" :attachments="message.attachments" :load-attachment="api.getAttachmentDownload" @error="error = t('errors.generic')" />
               <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
               <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">

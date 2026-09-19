@@ -425,6 +425,12 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .approval-card p, .approval-card small { margin: 0; }
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resource-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.resource-action-card { margin: 14px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #f6faf6; }
+.resource-action-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--green); }
+.resource-action-heading span { color: var(--ink); font-weight: 700; }
+.resource-action-card p { margin: 8px 0; color: var(--muted); }
+.resource-action-actions { display: flex; gap: 8px; margin-top: 12px; }
+.resource-action-error { color: #a04b32; }
 .skill-add-actions { gap: 2px; }
 .skill-add-menu-button.el-button { padding-inline: 9px; }
 .resource-toolbar .compact-action.el-button { display: inline-flex; gap: 6px; margin: 0; }

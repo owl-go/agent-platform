@@ -83,6 +83,19 @@ type Message struct {
 	CreditConsumption *CreditConsumption
 	Activities        []ExecutionActivity
 	Artifacts         []Artifact
+	ResourceAction    *ResourceCreationAction
+}
+
+type ResourceCreationAction struct {
+	ID          string
+	Kind        string
+	State       string
+	Name        string
+	Description string
+	ResourceID  string
+	Error       string
+	ExpiresAt   time.Time
+	Version     int64
 }
 
 // ExecutionActivity is a redacted, user-visible summary rather than raw Runtime output.

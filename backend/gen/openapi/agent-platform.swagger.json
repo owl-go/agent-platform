@@ -6859,6 +6859,40 @@
         }
       }
     },
+    "v1ResourceCreationAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "resource_id": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1ResourceDeletionImpact": {
       "type": "object",
       "properties": {
@@ -7200,6 +7234,9 @@
             "type": "object",
             "$ref": "#/definitions/v1Artifact"
           }
+        },
+        "resource_action": {
+          "$ref": "#/definitions/v1ResourceCreationAction"
         }
       }
     },
