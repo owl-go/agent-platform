@@ -99,7 +99,7 @@ _Avoid_: Agent Memory, user-authored note, Runtime checkpoint
 ## Workflows And Execution
 
 **Workflow**:
-A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
+A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, an optional Knowledge Selection, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
 _Avoid_: Pipeline, visual DAG
 
 **Workflow Queue**:
@@ -189,6 +189,46 @@ _Avoid_: Run result, Workspace file, Run Event, temporary output
 **File Reference**:
 A message's explicit reference to an attachment or Artifact from its own conversation, or to a file in its Workflow's Workspace. An accepted reference preserves the file content supplied with that message independently of later source changes or expiry.
 _Avoid_: Mutable Workspace path, signed download URL, filename mention
+
+**Knowledge Base**:
+A logical collection of knowledge documents owned by one User or created by the Administrator as a Platform Resource. A User-owned Knowledge Base is private; an Administrator-created Knowledge Base is explicitly private to the Administrator or public, and a public one is readable, searchable, and downloadable by every authenticated User without mutation rights.
+_Avoid_: Workspace, Artifact collection, shared file folder
+
+**Knowledge Category**:
+An optional first-level grouping inside one Knowledge Base. A Knowledge Document belongs to at most one Category, and may instead remain unclassified; Categories are not nested.
+_Avoid_: Directory, tag, multi-parent folder
+
+**Knowledge Document**:
+A source supplied to a Knowledge Base as uploaded bytes or a captured web source. Within one Category, a normalized source identifies one logical document whose later uploads or refreshes create new revisions; the same source in another Category is a separate Knowledge Document rather than a multi-category assignment.
+_Avoid_: Attachment, Workspace file, Artifact
+
+**Document Revision**:
+An immutable accepted source snapshot of a Knowledge Document. A later replacement creates a new revision; only the latest successfully ingested revision participates in retrieval while older revisions remain part of the document's history.
+_Avoid_: Mutable file, overwrite, Runtime Snapshot
+
+**Ingestion**:
+The asynchronous processing of an accepted Knowledge Document Revision into searchable knowledge. Upload acceptance is independent of Ingestion completion; a revision moves through accepted, processing, ready, failed, or blocked, and only a ready revision is eligible for retrieval while failures retain the source for retry.
+_Avoid_: Upload, synchronous import, Runtime execution
+
+**Ingestion Job**:
+A durable, idempotent task that performs one Knowledge Document Revision's extraction, OCR, chunking, and indexing outside the Runtime execution queue. It has a lease, retry history, and terminal failure state independent of the source bytes.
+_Avoid_: Run, background goroutine, upload request
+
+**Knowledge Selection**:
+The set of one or more Knowledge Bases configured on a Workflow for retrieval. A Run freezes the selection in its Workflow Snapshot so later Workflow edits do not change that Run's intended knowledge scope.
+_Avoid_: Runtime Engine setting, Conversation Selection, dynamic folder lookup
+
+**Retrieval Context**:
+A bounded set of source excerpts returned for one Run from its frozen Knowledge Selection, including provenance such as Knowledge Base, Category, document, source location, and a relevance score. Its redacted citation summary is retained in Run history, but it is not an Artifact or a replacement for the original document.
+_Avoid_: Model memory, full document dump, Artifact
+
+**Knowledge Index Generation**:
+The coherent searchable generation produced from the ready revisions in a Knowledge Base at a point in time. A queued Run freezes the generation it is allowed to query, while a later generation affects only later Runs or an explicit retry.
+_Avoid_: AnythingLLM workspace, mutable search state, Workflow Snapshot
+
+**Knowledge Citation**:
+A bounded, permission-checked provenance record for a Retrieval Context excerpt, identifying its Knowledge Base, Category, Document Revision, source location, relevance, and safe display text. It remains auditable in Run history without becoming an Artifact or granting unconditional source access.
+_Avoid_: Raw provider response, full document copy, download URL
 
 ## Experts, Skills, And Connectors
 

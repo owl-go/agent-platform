@@ -358,7 +358,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 	if input == nil {
 		return workspacedomain.WorkflowInput{}, nil, fmt.Errorf("%w: Workflow input is required", workspacedomain.ErrInvalid)
 	}
-	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId}
+	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId, KnowledgeBaseIDs: append([]string(nil), input.KnowledgeBaseIds...)}
 	secrets := make(map[string]string)
 	for _, value := range input.Environment {
 		if value == nil {
@@ -384,7 +384,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 }
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
-	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, KnowledgeBaseIds: append([]string(nil), item.KnowledgeBaseIDs...), ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	for _, value := range item.Environment {
 		environment := &workspacev1.EnvironmentVariable{Name: value.Name, Secret: value.Secret, Configured: value.Configured}
 		if !value.Secret && value.Value != "" {

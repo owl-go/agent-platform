@@ -35,6 +35,7 @@ import (
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/credentials"
+	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/runworker"
@@ -59,6 +60,7 @@ type Executor struct {
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
 	executionTTL   time.Duration
 	credits        *creditsapplication.Service
+	knowledge      anythingllm.Adapter
 }
 
 type cliExecutionRepository interface {
@@ -95,6 +97,14 @@ func (executor *Executor) EnableCLICredentials(repository cliExecutionRepository
 		return fmt.Errorf("CLI Connector credential repository is required")
 	}
 	executor.cliCredentials = repository
+	return nil
+}
+
+func (executor *Executor) EnableKnowledgeRetrieval(provider anythingllm.Adapter) error {
+	if provider == nil {
+		return fmt.Errorf("AnythingLLM adapter is required")
+	}
+	executor.knowledge = provider
 	return nil
 }
 
@@ -385,6 +395,12 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(describeErr)
 		}
 		instruction := buildInstruction(memberJob, stageAttachments)
+		instruction, err = executor.injectKnowledgeContext(executionCtx, memberJob.Snapshot, instruction)
+		if err != nil {
+			_ = releaseWarmLease(ctx, lease)
+			_ = environment.Cleanup()
+			return result, failStage(err)
+		}
 		checkpoint := memberJob.CheckpointRef
 		if job.Snapshot.ExpertTeam != nil {
 			checkpoint = job.StageCheckpointRefs[executionStage.Position]

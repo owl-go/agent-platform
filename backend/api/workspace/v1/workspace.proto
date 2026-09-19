@@ -79,6 +79,16 @@ service AgentWorkspaceService {
   rpc GetWorkspaceFile(GetWorkspaceFileRequest) returns (WorkspaceFile) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace/file"}; }
   rpc ConfigureWorkflowGitSource(ConfigureWorkflowGitSourceRequest) returns (Workflow) { option (google.api.http) = {put: "/api/v1/workflows/{workflow_id}/git-source" body: "*"}; }
 
+  rpc ListKnowledgeBases(ListKnowledgeBasesRequest) returns (ListKnowledgeBasesResponse) { option (google.api.http) = {get: "/api/v1/knowledge-bases"}; }
+  rpc CreateKnowledgeBase(CreateKnowledgeBaseRequest) returns (KnowledgeBase) { option (google.api.http) = {post: "/api/v1/knowledge-bases" body: "*"}; }
+  rpc GetKnowledgeBase(GetKnowledgeBaseRequest) returns (KnowledgeBase) { option (google.api.http) = {get: "/api/v1/knowledge-bases/{knowledge_base_id}"}; }
+  rpc UpdateKnowledgeBase(UpdateKnowledgeBaseRequest) returns (KnowledgeBase) { option (google.api.http) = {patch: "/api/v1/knowledge-bases/{knowledge_base_id}" body: "*"}; }
+  rpc DeleteKnowledgeBase(DeleteKnowledgeBaseRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/knowledge-bases/{knowledge_base_id}"}; }
+  rpc ListKnowledgeCategories(ListKnowledgeCategoriesRequest) returns (ListKnowledgeCategoriesResponse) { option (google.api.http) = {get: "/api/v1/knowledge-bases/{knowledge_base_id}/categories"}; }
+  rpc CreateKnowledgeCategory(CreateKnowledgeCategoryRequest) returns (KnowledgeCategory) { option (google.api.http) = {post: "/api/v1/knowledge-bases/{knowledge_base_id}/categories" body: "*"}; }
+  rpc DeleteKnowledgeCategory(DeleteKnowledgeCategoryRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}"}; }
+  rpc ListKnowledgeDocuments(ListKnowledgeDocumentsRequest) returns (ListKnowledgeDocumentsResponse) { option (google.api.http) = {get: "/api/v1/knowledge-bases/{knowledge_base_id}/documents"}; }
+
   rpc ListExperts(ListExpertsRequest) returns (ListExpertsResponse) { option (google.api.http) = {get: "/api/v1/experts"}; }
   rpc GetExpert(GetExpertRequest) returns (Expert) { option (google.api.http) = {get: "/api/v1/experts/{expert_id}"}; }
   rpc CreateExpert(CreateExpertRequest) returns (Expert) { option (google.api.http) = {post: "/api/v1/experts" body: "*"}; }
@@ -339,12 +349,29 @@ message CreateWorkflowRequest { WorkflowInput workflow = 1; }
 message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
-message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; }
+message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; repeated string knowledge_base_ids = 9; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }
 message GitSource { string url = 1; string branch = 2; string authentication = 3; bool credential_configured = 4; optional string username = 5; repeated GitConfigEntry config = 6; string ssh_config = 7; }
+message ListKnowledgeBasesRequest { bool deleted = 1; }
+message ListKnowledgeBasesResponse { repeated KnowledgeBase items = 1; }
+message CreateKnowledgeBaseRequest { KnowledgeBaseInput knowledge_base = 1; }
+message GetKnowledgeBaseRequest { string knowledge_base_id = 1; }
+message UpdateKnowledgeBaseRequest { string knowledge_base_id = 1; KnowledgeBaseInput knowledge_base = 2; int64 expected_version = 3; }
+message DeleteKnowledgeBaseRequest { string knowledge_base_id = 1; }
+message KnowledgeBaseInput { string name = 1; string description = 2; string visibility = 3; bool platform = 4; }
+message KnowledgeBase { string id = 1; string owner_id = 2; string name = 3; string description = 4; string visibility = 5; bool platform = 6; bool deleted = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; int64 version = 10; }
+message ListKnowledgeCategoriesRequest { string knowledge_base_id = 1; }
+message ListKnowledgeCategoriesResponse { repeated KnowledgeCategory items = 1; }
+message CreateKnowledgeCategoryRequest { string knowledge_base_id = 1; string name = 2; }
+message DeleteKnowledgeCategoryRequest { string knowledge_base_id = 1; string category_id = 2; }
+message KnowledgeCategory { string id = 1; string knowledge_base_id = 2; string name = 3; bool deleted = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; }
+message ListKnowledgeDocumentsRequest { string knowledge_base_id = 1; }
+message ListKnowledgeDocumentsResponse { repeated KnowledgeDocument items = 1; }
+message KnowledgeDocumentRevision { string id = 1; string document_id = 2; int32 revision = 3; string object_key = 4; string sha256 = 5; int64 size = 6; string content_type = 7; string state = 8; optional string error = 9; google.protobuf.Timestamp created_at = 10; optional google.protobuf.Timestamp ready_at = 11; }
+message KnowledgeDocument { string id = 1; string knowledge_base_id = 2; optional string category_id = 3; string name = 4; string source_type = 5; optional string source_uri = 6; string state = 7; optional string error = 8; bool deleted = 9; google.protobuf.Timestamp created_at = 10; google.protobuf.Timestamp updated_at = 11; int64 version = 12; optional KnowledgeDocumentRevision latest_revision = 13; }
 message GenerateWorkflowCredentialRequest { string workflow_id = 1; }
 message GetWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowCredential { string api_key = 1; string api_secret = 2; google.protobuf.Timestamp created_at = 3; }

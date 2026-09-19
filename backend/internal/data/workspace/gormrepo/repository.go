@@ -104,6 +104,7 @@ type workflowRecord struct {
 	Environment         []byte     `gorm:"column:environment;type:jsonb"`
 	EnvironmentSecret   []byte     `gorm:"column:environment_secret_ciphertext"`
 	Schedule            []byte     `gorm:"column:schedule;type:jsonb"`
+	KnowledgeBaseIDs    []byte     `gorm:"column:knowledge_base_ids;type:jsonb"`
 	NextScheduledAt     *time.Time `gorm:"column:next_scheduled_at"`
 	GitSource           []byte     `gorm:"column:git_source;type:jsonb"`
 	GitSecret           []byte     `gorm:"column:git_secret_ciphertext"`
@@ -118,6 +119,66 @@ type workflowRecord struct {
 }
 
 func (workflowRecord) TableName() string { return "workflows" }
+
+type knowledgeBaseRecord struct {
+	ID          string     `gorm:"column:id"`
+	OwnerID     string     `gorm:"column:owner_user_id"`
+	Platform    bool       `gorm:"column:platform"`
+	Name        string     `gorm:"column:name"`
+	Description string     `gorm:"column:description"`
+	Visibility  string     `gorm:"column:visibility"`
+	DeletedAt   *time.Time `gorm:"column:deleted_at"`
+	CreatedAt   time.Time  `gorm:"column:created_at"`
+	UpdatedAt   time.Time  `gorm:"column:updated_at"`
+	Version     int64      `gorm:"column:version"`
+}
+
+func (knowledgeBaseRecord) TableName() string { return "knowledge_bases" }
+
+type knowledgeCategoryRecord struct {
+	ID              string     `gorm:"column:id"`
+	KnowledgeBaseID string     `gorm:"column:knowledge_base_id"`
+	Name            string     `gorm:"column:name"`
+	DeletedAt       *time.Time `gorm:"column:deleted_at"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at"`
+	Version         int64      `gorm:"column:version"`
+}
+
+func (knowledgeCategoryRecord) TableName() string { return "knowledge_categories" }
+
+type knowledgeDocumentRecord struct {
+	ID              string     `gorm:"column:id"`
+	KnowledgeBaseID string     `gorm:"column:knowledge_base_id"`
+	CategoryID      *string    `gorm:"column:category_id"`
+	Name            string     `gorm:"column:name"`
+	SourceType      string     `gorm:"column:source_type"`
+	SourceURI       *string    `gorm:"column:source_uri"`
+	State           string     `gorm:"column:state"`
+	Error           string     `gorm:"column:error"`
+	DeletedAt       *time.Time `gorm:"column:deleted_at"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at"`
+	Version         int64      `gorm:"column:version"`
+}
+
+func (knowledgeDocumentRecord) TableName() string { return "knowledge_documents" }
+
+type knowledgeRevisionRecord struct {
+	ID          string     `gorm:"column:id"`
+	DocumentID  string     `gorm:"column:document_id"`
+	Revision    int        `gorm:"column:revision"`
+	ObjectKey   string     `gorm:"column:object_key"`
+	SHA256      string     `gorm:"column:sha256"`
+	Size        int64      `gorm:"column:size_bytes"`
+	ContentType string     `gorm:"column:content_type"`
+	State       string     `gorm:"column:state"`
+	Error       string     `gorm:"column:error"`
+	CreatedAt   time.Time  `gorm:"column:created_at"`
+	ReadyAt     *time.Time `gorm:"column:ready_at"`
+}
+
+func (knowledgeRevisionRecord) TableName() string { return "knowledge_document_revisions" }
 
 type expertRecord struct {
 	ID                        string     `gorm:"column:id"`
