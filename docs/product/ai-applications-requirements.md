@@ -280,4 +280,3 @@ The following decisions must be made before implementing external delivery or li
 2. Is live voice/video interaction part of the first release, or is the first release configuration and preview only?
 3. Which external channels, if any, receive a Smart Assistant after the authenticated Web conversation is complete?
 4. Does a Smart Assistant later need an explicit model policy independent of Personal Settings?
-
