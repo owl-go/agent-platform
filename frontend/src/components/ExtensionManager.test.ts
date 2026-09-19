@@ -311,7 +311,7 @@ describe("ExtensionManager", () => {
     const api = {
       listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), createGitSkill,
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api);
+    const wrapper = mountManager(api, false, "zh-CN", true);
     await flushPromises();
 
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
