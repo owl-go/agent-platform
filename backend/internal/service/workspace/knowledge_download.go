@@ -89,6 +89,14 @@ func knowledgeDocumentDownloadPath(value string) (string, string, bool) {
 
 func knowledgeDocumentActionPath(value, action string) (string, string, bool) {
 	parts := strings.Split(strings.Trim(value, "/"), "/")
+	if action == "" {
+		if len(parts) != 6 || parts[0] != "api" || parts[1] != "v1" || parts[2] != "knowledge-bases" || parts[4] != "documents" {
+			return "", "", false
+		}
+		baseID, baseOK := parseKnowledgeUUID(parts[3])
+		documentID, documentOK := parseKnowledgeUUID(parts[5])
+		return baseID, documentID, baseOK && documentOK
+	}
 	if len(parts) != 7 || parts[0] != "api" || parts[1] != "v1" || parts[2] != "knowledge-bases" || parts[4] != "documents" || parts[6] != action {
 		return "", "", false
 	}

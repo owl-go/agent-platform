@@ -10,6 +10,7 @@ import (
 
 func TestKnowledgeDocumentActionPaths(t *testing.T) {
 	baseID := uuid.NewString()
+	categoryID := uuid.NewString()
 	documentID := uuid.NewString()
 	if value, ok := knowledgeBaseIDFromUploadPath("/api/v1/knowledge-bases/" + baseID + "/documents/upload"); !ok || value != baseID {
 		t.Fatalf("upload path = %q, %t", value, ok)
@@ -22,6 +23,18 @@ func TestKnowledgeDocumentActionPaths(t *testing.T) {
 	}
 	if actualBase, actualDocument, ok := knowledgeDocumentActionPath("/api/v1/knowledge-bases/"+baseID+"/documents/"+documentID+"/retry", "retry"); !ok || actualBase != baseID || actualDocument != documentID {
 		t.Fatalf("retry path = %q/%q, %t", actualBase, actualDocument, ok)
+	}
+	if actualBase, actualDocument, ok := knowledgeDocumentActionPath("/api/v1/knowledge-bases/"+baseID+"/documents/"+documentID, ""); !ok || actualBase != baseID || actualDocument != documentID {
+		t.Fatalf("delete path = %q/%q, %t", actualBase, actualDocument, ok)
+	}
+	if actualBase, ok := knowledgeBaseActionPath("/api/v1/knowledge-bases/"+baseID+"/restore", "restore"); !ok || actualBase != baseID {
+		t.Fatalf("base restore path = %q, %t", actualBase, ok)
+	}
+	if actualBase, actualCategory, ok := knowledgeCategoryActionPath("/api/v1/knowledge-bases/"+baseID+"/categories/"+categoryID+"/restore", "restore"); !ok || actualBase != baseID || actualCategory != categoryID {
+		t.Fatalf("category restore path = %q/%q, %t", actualBase, actualCategory, ok)
+	}
+	if actualBase, actualDocument, ok := knowledgeDocumentActionPath("/api/v1/knowledge-bases/"+baseID+"/documents/"+documentID+"/restore", "restore"); !ok || actualBase != baseID || actualDocument != documentID {
+		t.Fatalf("document restore path = %q/%q, %t", actualBase, actualDocument, ok)
 	}
 }
 

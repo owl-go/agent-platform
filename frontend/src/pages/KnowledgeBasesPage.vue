@@ -72,6 +72,17 @@ async function retryDocument(document: KnowledgeDocument) {
   try { await api.retryKnowledgeDocument(selected.value.id, document.id); await selectBase(selected.value); ElMessage.success(t("knowledgeBases.retryAccepted")); }
   catch { error.value = t("knowledgeBases.retryFailed"); }
 }
+async function deleteDocument(document: KnowledgeDocument) {
+  if (!selected.value || !window.confirm(`${t("knowledgeBases.deleteDocument")}?`)) return;
+  try { await api.deleteKnowledgeDocument(selected.value.id, document.id); await selectBase(selected.value); ElMessage.success(t("knowledgeBases.deleteAccepted")); }
+  catch { error.value = t("knowledgeBases.deleteFailed"); }
+}
+async function deleteBase() {
+  if (!selected.value || !window.confirm(`${t("knowledgeBases.deleteBase")}?`)) return;
+  const deletedID = selected.value.id;
+  try { await api.deleteKnowledgeBase(deletedID); selected.value = undefined; categories.value = []; documents.value = []; await refresh(); ElMessage.success(t("knowledgeBases.deleteAccepted")); }
+  catch { error.value = t("knowledgeBases.deleteFailed"); }
+}
 onMounted(() => void refresh());
 </script>
 
@@ -92,11 +103,11 @@ onMounted(() => void refresh());
         <div v-if="!bases.length" class="empty-state compact">{{ t("knowledgeBases.empty") }}</div>
       </el-card>
       <el-card v-if="selected" class="base-detail" shadow="never">
-        <div class="detail-heading"><div><h2>{{ selected.name }} <el-tag size="small" effect="plain">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></h2><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><label class="upload-button"><el-icon><Upload /></el-icon>{{ t("knowledgeBases.upload") }}<input type="file" hidden @change="upload" /></label></div>
+        <div class="detail-heading"><div><h2>{{ selected.name }} <el-tag size="small" effect="plain">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></h2><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><div class="detail-actions"><el-button type="danger" plain @click="deleteBase">{{ t("common.delete") }}</el-button><label class="upload-button"><el-icon><Upload /></el-icon>{{ t("knowledgeBases.upload") }}<input type="file" hidden @change="upload" /></label></div></div>
         <div class="category-bar"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div>
         <div class="category-chips"><el-tag v-for="category in categories" :key="category.id" effect="plain">{{ category.name }}</el-tag><el-tag v-if="documents.some((item) => !item.category_id)" type="info" effect="plain">{{ t("knowledgeBases.unclassified") }}</el-tag></div>
         <div class="source-controls"><el-select v-model="selectedCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL">{{ t("knowledgeBases.importURL") }}</el-button></div>
-        <el-table :data="documents" class="document-table"><el-table-column prop="name" :label="t('knowledgeBases.document')" /><el-table-column prop="state" :label="t('knowledgeBases.state')" width="140" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="120" /><el-table-column prop="updated_at" :label="t('knowledgeBases.updated')" width="190" /><el-table-column width="180"><template #default="scope"><el-button v-if="(scope.row as KnowledgeDocument).state === 'failed'" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ t("knowledgeBases.retry") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)">{{ t("common.download") }}</el-button></template></el-table-column></el-table>
+        <el-table :data="documents" class="document-table"><el-table-column prop="name" :label="t('knowledgeBases.document')" /><el-table-column prop="state" :label="t('knowledgeBases.state')" width="140" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="120" /><el-table-column prop="updated_at" :label="t('knowledgeBases.updated')" width="190" /><el-table-column width="230"><template #default="scope"><el-button v-if="(scope.row as KnowledgeDocument).state === 'failed'" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ t("knowledgeBases.retry") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)">{{ t("common.download") }}</el-button><el-button type="danger" text @click="deleteDocument(scope.row as KnowledgeDocument)">{{ t("common.delete") }}</el-button></template></el-table-column></el-table>
         <div v-if="!documents.length" class="empty-state compact">{{ t("knowledgeBases.noDocuments") }}</div>
       </el-card>
       <el-card v-else class="base-detail" shadow="never"><div class="empty-state">{{ t("knowledgeBases.select") }}</div></el-card>
@@ -111,6 +122,7 @@ onMounted(() => void refresh());
 <style scoped>
 .knowledge-page { max-width: 1180px; margin: 0 auto; padding: 28px clamp(18px, 4vw, 52px) 56px; }
 .page-heading, .detail-heading, .section-title, .category-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.detail-actions { display: flex; align-items: center; gap: 10px; }
 .page-heading { margin-bottom: 24px; } h1, h2 { margin: 4px 0; } h1 { font-size: clamp(28px, 4vw, 42px); } h2 { font-size: 24px; } p { color: var(--text-muted); margin: 8px 0 0; }
 .eyebrow { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .feedback { margin-bottom: 18px; }
@@ -123,5 +135,5 @@ onMounted(() => void refresh());
 .category-bar { margin: 24px 0 12px; } .category-bar .el-input { max-width: 320px; } .category-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .source-controls { display: grid; grid-template-columns: minmax(160px, 220px) 1fr auto; gap: 10px; margin: 12px 0 18px; }
 .empty-state { display: grid; place-items: center; min-height: 220px; color: var(--text-muted); } .empty-state.compact { min-height: 100px; }
-@media (max-width: 760px) { .knowledge-layout { grid-template-columns: 1fr; } .page-heading, .detail-heading { align-items: flex-start; flex-direction: column; } .upload-button { width: 100%; justify-content: center; } .source-controls { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .knowledge-layout { grid-template-columns: 1fr; } .page-heading, .detail-heading { align-items: flex-start; flex-direction: column; } .detail-actions { width: 100%; } .upload-button { width: 100%; justify-content: center; } .source-controls { grid-template-columns: 1fr; } }
 </style>

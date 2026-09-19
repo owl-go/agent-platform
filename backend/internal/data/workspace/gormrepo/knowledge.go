@@ -382,6 +382,75 @@ func (repository *Repository) RetryKnowledgeDocument(ctx context.Context, ownerI
 	})
 }
 
+func (repository *Repository) DeleteKnowledgeDocument(ctx context.Context, ownerID, knowledgeBaseID, documentID string, administrator bool) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var document knowledgeDocumentRecord
+		query := knowledgeMutationAccess(tx.Table("knowledge_bases"), ownerID, administrator).
+			Joins("JOIN knowledge_documents ON knowledge_documents.knowledge_base_id = knowledge_bases.id").
+			Where("knowledge_bases.id = ? AND knowledge_documents.id = ? AND knowledge_documents.deleted_at IS NULL", knowledgeBaseID, documentID)
+		if err := query.Select("knowledge_documents.*").Take(&document).Error; err != nil {
+			return mapNotFound(err)
+		}
+		result := tx.Model(&document).Where("id = ? AND deleted_at IS NULL", documentID).Updates(map[string]any{"deleted_at": time.Now().UTC(), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrNotFound
+		}
+		return tx.Table("knowledge_ingestion_jobs").Where("revision_id IN (SELECT id FROM knowledge_document_revisions WHERE document_id = ?) AND state IN ('queued', 'running')", documentID).Updates(map[string]any{"state": "cancelled", "error": "Knowledge Document deleted", "lease_expires_at": nil, "updated_at": gorm.Expr("now()")}).Error
+	})
+}
+
+func (repository *Repository) RestoreKnowledgeBase(ctx context.Context, ownerID, knowledgeBaseID string, administrator bool) error {
+	result := knowledgeMutationAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, administrator).
+		Where("knowledge_bases.id = ? AND knowledge_bases.deleted_at IS NOT NULL", knowledgeBaseID).
+		Updates(map[string]any{"deleted_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (repository *Repository) RestoreKnowledgeCategory(ctx context.Context, ownerID, knowledgeBaseID, categoryID string, administrator bool) error {
+	query := knowledgeMutationAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, administrator).
+		Joins("JOIN knowledge_categories ON knowledge_categories.knowledge_base_id = knowledge_bases.id").
+		Where("knowledge_bases.id = ? AND knowledge_bases.deleted_at IS NULL AND knowledge_categories.id = ? AND knowledge_categories.deleted_at IS NOT NULL", knowledgeBaseID, categoryID)
+	var category knowledgeCategoryRecord
+	if err := query.Select("knowledge_categories.*").Take(&category).Error; err != nil {
+		return mapNotFound(err)
+	}
+	result := repository.db.WithContext(ctx).Model(&category).Where("id = ? AND deleted_at IS NOT NULL", categoryID).Updates(map[string]any{"deleted_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (repository *Repository) RestoreKnowledgeDocument(ctx context.Context, ownerID, knowledgeBaseID, documentID string, administrator bool) error {
+	query := knowledgeMutationAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, administrator).
+		Joins("JOIN knowledge_documents ON knowledge_documents.knowledge_base_id = knowledge_bases.id").
+		Where("knowledge_bases.id = ? AND knowledge_bases.deleted_at IS NULL AND knowledge_documents.id = ? AND knowledge_documents.deleted_at IS NOT NULL", knowledgeBaseID, documentID)
+	var document knowledgeDocumentRecord
+	if err := query.Select("knowledge_documents.*").Take(&document).Error; err != nil {
+		return mapNotFound(err)
+	}
+	result := repository.db.WithContext(ctx).Model(&document).Where("id = ? AND deleted_at IS NOT NULL", documentID).Updates(map[string]any{"deleted_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func knowledgeBaseDomain(row knowledgeBaseRecord) (domain.KnowledgeBase, error) {
 	visibility := domain.KnowledgeVisibility(row.Visibility)
 	if visibility != domain.KnowledgePrivate && visibility != domain.KnowledgePublic {

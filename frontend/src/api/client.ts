@@ -167,14 +167,18 @@ export interface PlatformApi {
   createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, signal?: AbortSignal): Promise<KnowledgeBase>;
   updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
   deleteKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeCategories(id: string, signal?: AbortSignal): Promise<KnowledgeCategory[]>;
   createKnowledgeCategory(id: string, name: string, signal?: AbortSignal): Promise<KnowledgeCategory>;
   deleteKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeDocuments(id: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
   uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
   retryKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
   getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
   createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
@@ -442,9 +446,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createKnowledgeBase(input, signal) { return call("/api/v1/knowledge-bases", json("POST", { knowledge_base: input }, signal)); },
     updateKnowledgeBase(id, input, version, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, json("PATCH", { knowledge_base: input, expected_version: version }, signal)); },
     deleteKnowledgeBase(id, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, signal); },
+    async restoreKnowledgeBase(id, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/restore`, json("POST", {}, signal)); },
     async listKnowledgeCategories(id, signal) { return (await call<{ items: KnowledgeCategory[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, { signal })).items ?? []; },
     createKnowledgeCategory(id, name, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, json("POST", { knowledge_base_id: id, name }, signal)); },
     deleteKnowledgeCategory(knowledgeBaseID, categoryID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}`, signal); },
+    async restoreKnowledgeCategory(knowledgeBaseID, categoryID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}/restore`, json("POST", {}, signal)); },
     async listKnowledgeDocuments(id, signal) { return (await call<{ items: KnowledgeDocument[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents`, { signal })).items ?? []; },
     async uploadKnowledgeDocument(id, file, categoryID, signal) {
       const token = getAccessToken();
@@ -457,6 +463,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
     downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
     async retryKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/retry`, json("POST", {}, signal)); },
+    deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
+    async restoreKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/restore`, json("POST", {}, signal)); },
     async listExperts(signal) {
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);
