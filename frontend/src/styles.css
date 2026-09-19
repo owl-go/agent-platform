@@ -264,7 +264,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .detail-hero h2 { margin: .2rem 0 .35rem; font-family: "Iowan Old Style", "Palatino Linotype", serif; font-size: clamp(1.8rem,2.4vw,2.35rem); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
 .catalog-tabs { width: min(420px,60vw); }
 .catalog-tabs .el-tabs__header { margin: 0; }
-.catalog-tabs .el-tabs__item { height: 46px; padding: 0 22px; color: var(--muted); font-size: 1.1rem; font-weight: 700; }
+.catalog-tabs .el-tabs__item { height: 46px; padding: 0 22px; color: var(--muted); font-size: 1rem; font-weight: 700; }
 .catalog-tabs .el-tabs__item.is-active { color: var(--ink); }
 .catalog-tabs .el-tabs__nav-wrap::after { height: 1px; background: var(--line); }
 .catalog-tabs .el-tabs__content { display: none; }
@@ -328,7 +328,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .stage-copy { margin: 0 12px 10px; border: 0; background: transparent; color: var(--green); font: inherit; font-size: .7rem; cursor: pointer; }
 
 @media (max-width: 1050px) { .catalog-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (max-width: 720px) { .catalog-grid { grid-template-columns: 1fr; }.expert-catalog-head,.editor-header { align-items: flex-start; }.catalog-tabs { width: min(100%,320px); }.catalog-tabs .el-tabs__item { padding: 0 14px; font-size: 0.93rem; }.resource-tabs { align-items: flex-start; }.resource-tabs-items .el-button { padding: 0 14px; font-size: 1.05rem; }.resource-tabs-actions { flex-shrink: 0; }.editor-section { grid-template-columns: 1fr; gap: 14px; padding: 18px; }.editor-actions { flex-shrink: 0; }.ordered-members li { grid-template-columns: 18px 26px minmax(0,1fr) 28px 28px 28px; } }
+@media (max-width: 720px) { .catalog-grid { grid-template-columns: 1fr; }.expert-catalog-head,.editor-header { align-items: flex-start; }.catalog-tabs { width: min(100%,320px); }.catalog-tabs .el-tabs__item { padding: 0 14px; font-size: 0.87rem; }.resource-tabs { align-items: flex-start; }.resource-tabs-items .el-button { padding: 0 14px; font-size: 1.05rem; }.resource-tabs-actions { flex-shrink: 0; }.editor-section { grid-template-columns: 1fr; gap: 14px; padding: 18px; }.editor-actions { flex-shrink: 0; }.ordered-members li { grid-template-columns: 18px 26px minmax(0,1fr) 28px 28px 28px; } }
 
 /* Element Plus is the UI contract; these overrides carry the Agent Workspace brand. */
 .image-generation-page { min-height: 100%; padding: clamp(20px,3vw,38px); background: radial-gradient(circle at 14% 3%,rgba(74,175,163,.16),transparent 26rem),linear-gradient(145deg,#f3f8f5 0%,#f8f7f1 58%,#eef5f3 100%); }
