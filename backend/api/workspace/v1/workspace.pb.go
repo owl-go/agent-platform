@@ -8457,6 +8457,8 @@ type Expert struct {
 	TagProjectionError        *string                `protobuf:"bytes,26,opt,name=tag_projection_error,json=tagProjectionError,proto3,oneof" json:"tag_projection_error,omitempty"`
 	CliConnectorDefinitionIds []string               `protobuf:"bytes,27,rep,name=cli_connector_definition_ids,json=cliConnectorDefinitionIds,proto3" json:"cli_connector_definition_ids,omitempty"`
 	Platform                  bool                   `protobuf:"varint,28,opt,name=platform,proto3" json:"platform,omitempty"`
+	SystemKey                 string                 `protobuf:"bytes,29,opt,name=system_key,json=systemKey,proto3" json:"system_key,omitempty"`
+	Immutable                 bool                   `protobuf:"varint,30,opt,name=immutable,proto3" json:"immutable,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -8648,6 +8650,20 @@ func (x *Expert) GetCliConnectorDefinitionIds() []string {
 func (x *Expert) GetPlatform() bool {
 	if x != nil {
 		return x.Platform
+	}
+	return false
+}
+
+func (x *Expert) GetSystemKey() string {
+	if x != nil {
+		return x.SystemKey
+	}
+	return ""
+}
+
+func (x *Expert) GetImmutable() bool {
+	if x != nil {
+		return x.Immutable
 	}
 	return false
 }
@@ -11825,6 +11841,8 @@ type Skill struct {
 	Version       int64                  `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
 	Platform      bool                   `protobuf:"varint,10,opt,name=platform,proto3" json:"platform,omitempty"`
 	Icon          string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
+	SystemKey     string                 `protobuf:"bytes,12,opt,name=system_key,json=systemKey,proto3" json:"system_key,omitempty"`
+	Immutable     bool                   `protobuf:"varint,13,opt,name=immutable,proto3" json:"immutable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11934,6 +11952,20 @@ func (x *Skill) GetIcon() string {
 		return x.Icon
 	}
 	return ""
+}
+
+func (x *Skill) GetSystemKey() string {
+	if x != nil {
+		return x.SystemKey
+	}
+	return ""
+}
+
+func (x *Skill) GetImmutable() bool {
+	if x != nil {
+		return x.Immutable
+	}
+	return false
 }
 
 type AffectedExpert struct {
@@ -15890,7 +15922,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13operating_procedure\x18\r \x01(\tR\x12operatingProcedure\x12'\n" +
 	"\x0foutput_standard\x18\x0e \x01(\tR\x0eoutputStandard\x12\x1a\n" +
 	"\bcautions\x18\x0f \x01(\tR\bcautions\x12?\n" +
-	"\x1ccli_connector_definition_ids\x18\x10 \x03(\tR\x19cliConnectorDefinitionIdsJ\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x17capability_introductionR\x15execution_instructionR\x0eexpertise_tagsR\x11provider_model_idR\x0eruntime_engine\"\xbb\b\n" +
+	"\x1ccli_connector_definition_ids\x18\x10 \x03(\tR\x19cliConnectorDefinitionIdsJ\x04\b\x02\x10\x03J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x17capability_introductionR\x15execution_instructionR\x0eexpertise_tagsR\x11provider_model_idR\x0eruntime_engine\"\xf8\b\n" +
 	"\x06Expert\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
@@ -15917,7 +15949,10 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x15tag_projection_status\x18\x19 \x01(\tR\x13tagProjectionStatus\x125\n" +
 	"\x14tag_projection_error\x18\x1a \x01(\tH\x01R\x12tagProjectionError\x88\x01\x01\x12?\n" +
 	"\x1ccli_connector_definition_ids\x18\x1b \x03(\tR\x19cliConnectorDefinitionIds\x12\x1a\n" +
-	"\bplatform\x18\x1c \x01(\bR\bplatformB\x16\n" +
+	"\bplatform\x18\x1c \x01(\bR\bplatform\x12\x1d\n" +
+	"\n" +
+	"system_key\x18\x1d \x01(\tR\tsystemKey\x12\x1c\n" +
+	"\timmutable\x18\x1e \x01(\bR\timmutableB\x16\n" +
 	"\x14_availability_reasonB\x17\n" +
 	"\x15_tag_projection_errorJ\x04\b\x03\x10\x04J\x04\b\t\x10\n" +
 	"J\x04\b\f\x10\rJ\x04\b\r\x10\x0eJ\x04\b\x11\x10\x12R\x17capability_introductionR\x15execution_instructionR\x11provider_model_idR\x0eruntime_engineR\x13provider_model_name\"\x18\n" +
@@ -16198,7 +16233,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\"^\n" +
 	"\x12DeleteSkillRequest\x12\x19\n" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\x12-\n" +
-	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xef\x02\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken\"\xac\x03\n" +
 	"\x05Skill\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -16213,7 +16248,10 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\aversion\x18\t \x01(\x03R\aversion\x12\x1a\n" +
 	"\bplatform\x18\n" +
 	" \x01(\bR\bplatform\x12\x12\n" +
-	"\x04icon\x18\v \x01(\tR\x04iconB\n" +
+	"\x04icon\x18\v \x01(\tR\x04icon\x12\x1d\n" +
+	"\n" +
+	"system_key\x18\f \x01(\tR\tsystemKey\x12\x1c\n" +
+	"\timmutable\x18\r \x01(\bR\timmutableB\n" +
 	"\n" +
 	"\b_git_urlB\n" +
 	"\n" +

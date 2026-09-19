@@ -1885,6 +1885,8 @@ export interface components {
             tag_projection_error?: string;
             cli_connector_definition_ids?: string[];
             platform?: boolean;
+            system_key?: string;
+            immutable?: boolean;
         };
         v1ExpertInput: {
             name?: string;
@@ -2496,6 +2498,8 @@ export interface components {
             version?: number;
             platform?: boolean;
             icon?: string;
+            system_key?: string;
+            immutable?: boolean;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];

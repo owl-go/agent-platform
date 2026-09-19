@@ -38,6 +38,7 @@ const pendingDelete = ref<Session>();
 const deleting = ref(false);
 const deleteDialog = ref<HTMLElement>();
 const launchSkill = ref<{ sessionID: string; skillID: string }>();
+const launchPrompt = ref<{ sessionID: string; text: string }>();
 const loading = ref(true);
 const sending = ref(false);
 const cancellingMessageID = ref<number>();
@@ -156,9 +157,15 @@ async function create() {
   try {
     const expertID = typeof route.query.expert_id === "string" ? route.query.expert_id : undefined;
     const teamID = typeof route.query.expert_team_id === "string" ? route.query.expert_team_id : undefined;
-    const skillID = typeof route.query.skill_id === "string" ? route.query.skill_id : undefined;
+    let skillID = typeof route.query.skill_id === "string" ? route.query.skill_id : undefined;
+    if (!skillID && route.query.create_expert === "true") {
+      const systemSkills = await api.listSkills();
+      skillID = systemSkills.find((skill) => skill.system_key === "system.create_expert" || (skill.platform && skill.name === "Create Expert"))?.id;
+    }
+    const prompt = typeof route.query.draft === "string" ? route.query.draft : undefined;
     const item = expertID || teamID ? await api.createSession({ expert_id: expertID, expert_team_id: teamID }) : await api.createSession();
     launchSkill.value = skillID ? { sessionID: item.id, skillID } : undefined;
+    launchPrompt.value = prompt ? { sessionID: item.id, text: prompt } : undefined;
     sessions.value.unshift(item);
     await router.replace({ path: "/sessions" }); await open(item);
   } catch {
@@ -528,7 +535,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>

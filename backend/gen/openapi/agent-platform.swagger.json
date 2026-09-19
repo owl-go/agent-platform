@@ -5358,6 +5358,12 @@
         },
         "platform": {
           "type": "boolean"
+        },
+        "system_key": {
+          "type": "string"
+        },
+        "immutable": {
+          "type": "boolean"
         }
       }
     },
@@ -7235,6 +7241,12 @@
         },
         "icon": {
           "type": "string"
+        },
+        "system_key": {
+          "type": "string"
+        },
+        "immutable": {
+          "type": "boolean"
         }
       }
     },

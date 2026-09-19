@@ -425,6 +425,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .approval-card p, .approval-card small { margin: 0; }
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resource-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.skill-add-actions { gap: 2px; }
+.skill-add-menu-button.el-button { padding-inline: 9px; }
 .resource-toolbar .compact-action.el-button { display: inline-flex; gap: 6px; margin: 0; }
 .resource-toolbar .compact-action svg { width: 16px; height: 16px; }
 .extension-catalog-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }

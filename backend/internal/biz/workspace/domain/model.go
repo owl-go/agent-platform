@@ -186,6 +186,8 @@ type Skill struct {
 	ID        string
 	OwnerID   string
 	Platform  bool
+	SystemKey string
+	Immutable bool
 	Name      string
 	Icon      string
 	Source    string
@@ -596,6 +598,8 @@ type Expert struct {
 	ID                        string
 	OwnerID                   string
 	Platform                  bool
+	SystemKey                 string
+	Immutable                 bool
 	Name                      string
 	Icon                      string
 	IconBackground            string

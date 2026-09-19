@@ -20,6 +20,7 @@ const error = ref("");
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
+function createExpertSession() { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), create_expert: "true", draft: "帮我创建一个 XXX 专家，擅长 XXXXX。我的经验是：[请补充你的行业背景、相关经验]" } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
 const visibleExperts = computed(() => filter(experts.value));
@@ -57,7 +58,7 @@ function selectTab(tab: string | number) {
         <el-tab-pane :label="t('experts.title')" name="experts" />
         <el-tab-pane :label="t('experts.teams')" name="teams" />
       </el-tabs>
-      <RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink>
+      <RouterLink v-if="activeTab === 'experts'" class="el-button el-button--primary" to="/experts/new" @click.prevent="createExpertSession">＋ {{ t('experts.new') }}</RouterLink><RouterLink v-else class="el-button el-button--primary" to="/expert-teams/new">＋ {{ t('experts.createTeam') }}</RouterLink>
     </header>
 
     <div class="catalog-tools">
