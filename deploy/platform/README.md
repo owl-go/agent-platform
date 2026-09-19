@@ -1,6 +1,6 @@
 # Agent Workspace Single-Worker Deployment
 
-This deployment runs API, Worker, PostgreSQL, MinIO, Caddy, and Keycloak on one Linux Worker. The Vue application is built on the release workstation and uploaded as a versioned `dist` directory; it does not run in a separate container. Caddy is the only public entrypoint, while PostgreSQL and MinIO remain on internal Docker networks.
+This deployment runs API, Worker, PostgreSQL, MinIO, AnythingLLM, Caddy, and Keycloak on one Linux Worker. The Vue application is built on the release workstation and uploaded as a versioned `dist` directory; it does not run in a separate container. Caddy is the only public entrypoint, while PostgreSQL, MinIO, and AnythingLLM remain on private Docker networks.
 
 ## One-command release
 
@@ -10,7 +10,7 @@ For an already provisioned Worker, run the complete guarded deployment from the 
 make deploy
 ```
 
-`scripts/deploy-platform.sh` runs the backend and frontend gates, reads only the public Web/OIDC values from the remote env file, creates and verifies business-database, identity-database, and configuration backups, uploads an immutable source release, prebuilds API, Worker, and Egress Controller images, stops the old Worker, starts the new API to apply append-only migrations, verifies the latest migration ledger entry, starts the Egress Controller and new Worker, recreates and validates Caddy against the same immutable release, atomically deploys the Web release, and checks public Health, Readiness, OIDC, HTTPS redirect, container health, release identity, and error logs.
+`scripts/deploy-platform.sh` runs the backend and frontend gates, reads only the public Web/OIDC values from the remote env file, creates and verifies business-database, identity-database, and configuration backups, uploads an immutable source release, pulls the pinned AnythingLLM image, prebuilds API, Worker, and Egress Controller images, stops the old Worker, starts and health-checks AnythingLLM, starts the new API to apply append-only migrations, verifies the latest migration ledger entry, starts the Egress Controller and new Worker, recreates and validates Caddy against the same immutable release, atomically deploys the Web release, and checks public Health, Readiness, OIDC, HTTPS redirect, container health, release identity, and error logs.
 
 The defaults match the production layout:
 
@@ -22,6 +22,8 @@ PLATFORM_DEPLOY_ROOT=/opt/agent-platform
 Override `PLATFORM_RELEASE_ID` when a caller needs a predetermined immutable release name. `SKIP_DEPLOY_GATES=1` exists only for an explicitly approved emergency release; normal deployments must keep the gates enabled. The script deliberately does not automatically start an old binary after migrations. If the new API fails after the schema changes, it leaves recovery evidence and the pre-deployment backup in place and reports that the Worker may remain stopped. Restore a schema-compatible release or the verified database backup before resuming execution.
 
 The one-shot `minio-init` service idempotently creates the configured private Bucket after MinIO becomes healthy. API and Worker wait for that initialization to succeed, so a missing Bucket fails during startup instead of after a completed Runtime execution.
+
+The `compose.anythingllm.yaml` overlay keeps AnythingLLM private on the control and provider-egress networks. It persists the provider's SQLite database, source documents, vector index, and native embedding model in `anythingllm-data`; no host port or Caddy route is published. Pin `ANYTHINGLLM_IMAGE` to the amd64 image digest recorded in `.env.example`, and set separate `ANYTHINGLLM_JWT_SECRET` and `ANYTHINGLLM_AUTH_TOKEN` values in the external env file. The platform API key is generated after the first healthy start and then stored only in that root-owned env file.
 
 The base stack contains the private control and storage services. `compose.https.yaml` adds automatic TLS, static Web hosting, same-origin API/SSE routing, and a PostgreSQL-backed Keycloak OIDC issuer. Runtime availability is reported separately and remains disabled until its image has passed the target Linux + gVisor checks.
 
@@ -48,9 +50,11 @@ The same overlay starts a dedicated `egress-controller` in the host Network Name
 
 ```bash
 docker compose --env-file /opt/agent-platform/config/platform.env \
-  -f deploy/platform/compose.yaml config
+  -f deploy/platform/compose.yaml \
+  -f deploy/platform/compose.anythingllm.yaml config
 docker compose --env-file /opt/agent-platform/config/platform.env \
-  -f deploy/platform/compose.yaml up -d --build
+  -f deploy/platform/compose.yaml \
+  -f deploy/platform/compose.anythingllm.yaml up -d --build
 ```
 
 部署文件可以明确覆盖 YAML 路径：
@@ -58,14 +62,16 @@ docker compose --env-file /opt/agent-platform/config/platform.env \
 ```bash
 PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.yaml \
 docker compose --env-file /opt/agent-platform/config/platform.env \
-  -f deploy/platform/compose.yaml up -d --build
+  -f deploy/platform/compose.yaml \
+  -f deploy/platform/compose.anythingllm.yaml up -d --build
 ```
 
 Verify the base API from inside its private container network:
 
 ```bash
 docker compose --env-file /opt/agent-platform/config/platform.env \
-  -f deploy/platform/compose.yaml exec -T api \
+  -f deploy/platform/compose.yaml \
+  -f deploy/platform/compose.anythingllm.yaml exec -T api \
   wget -qO- http://127.0.0.1:8080/readyz
 ```
 

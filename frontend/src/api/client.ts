@@ -29,14 +29,19 @@ export interface ConversationFile { kind: FileReference["kind"] | "directory"; i
 export interface ConversationInput { selection_id?: string; file_references?: FileReference[] }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; artifacts?: Artifact[] }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[] }
+export interface ResourceCreationAction { id: string; kind: "skill" | "expert"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; resource_action?: ResourceCreationAction }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
 export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; ssh_config?: string; credential_configured: boolean }
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[]; ssh_config?: string }
-export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; environment: EnvironmentVariable[]; schedule?: Schedule }
+export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
+export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
+export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
+export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
+export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
@@ -44,7 +49,7 @@ export interface Artifact { id: string; run_id?: string; message_id?: number; ki
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
 export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[]; cli_connector_definition_ids: string[] }
-export interface Expert extends ExpertInput { id: string; platform?: boolean; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
+export interface Expert extends ExpertInput { id: string; platform?: boolean; system_key?: string; immutable?: boolean; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
 export interface ExpertTeamMemberInput { id: string; name: string; expert_id: string; labels: string[] }
 export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert; position: number }
 export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
@@ -58,7 +63,7 @@ export interface ProviderModel { id: string; connection_id: string; model_id: st
 export interface ModelProviderConnection { id: string; name: string; provider_type: string; endpoint: string; protocols: string[]; api_key_configured: boolean; verification_status: "verified" | "unverified" | "failed"; verification_error?: string; custom_endpoint: boolean; last_synced_at?: string; last_sync_error?: string; models: ProviderModel[]; created_at: string; updated_at: string; version: number }
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; platform?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
-export interface Skill { id: string; platform?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
+export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
 export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: string }
@@ -138,6 +143,7 @@ export interface PlatformApi {
   sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
+  decideResourceCreationAction(actionID: string, decision: "confirm" | "cancel", signal?: AbortSignal): Promise<ResourceCreationAction>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
   createWorkflow(workflow: WorkflowInput, signal?: AbortSignal): Promise<Workflow>;
@@ -145,6 +151,7 @@ export interface PlatformApi {
   updateWorkflow(id: string, workflow: WorkflowInput, version: number, signal?: AbortSignal): Promise<Workflow>;
   deleteWorkflow(id: string, signal?: AbortSignal): Promise<void>;
   generateWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at: string }>;
+  getWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at?: string }>;
   runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown> }, signal?: AbortSignal): Promise<Run>;
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
@@ -159,6 +166,22 @@ export interface PlatformApi {
   getWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<WorkspaceFile>;
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
   configureWorkflowGitSource(id: string, input: GitSourceInput, signal?: AbortSignal): Promise<Workflow>;
+  listKnowledgeBases(deleted?: boolean, signal?: AbortSignal): Promise<KnowledgeBase[]>;
+  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, signal?: AbortSignal): Promise<KnowledgeBase>;
+  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
+  deleteKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
+  listKnowledgeCategories(id: string, signal?: AbortSignal): Promise<KnowledgeCategory[]>;
+  createKnowledgeCategory(id: string, name: string, signal?: AbortSignal): Promise<KnowledgeCategory>;
+  deleteKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
+  listKnowledgeDocuments(id: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
+  uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
+  importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
+  downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
+  retryKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  restoreKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
   getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
   createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
@@ -365,6 +388,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     sendSessionMessage(id, content, attachmentIDs = [], signal, input) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
+    decideResourceCreationAction(actionID, decision, signal) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`, json("POST", { decision }, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
     createWorkflow(workflow, signal) { return call("/api/v1/workflows", json("POST", { workflow }, signal)); },
@@ -372,6 +396,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     updateWorkflow(id, workflow, version, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}`, json("PATCH", { workflow, expected_version: version }, signal)); },
     deleteWorkflow(id, signal) { return remove(`/api/v1/workflows/${encodeURIComponent(id)}`, signal); },
     generateWorkflowCredential(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, json("POST", {}, signal)); },
+    getWorkflowCredential(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, { signal }); },
     async runWorkflow(id, input, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, json("POST", input ?? {}, signal))); },
     async listRuns(id, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, { signal })).items ?? []).map(normalizeRun); },
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
@@ -422,6 +447,29 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     getWorkspaceFile(id, path, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/file?path=${encodeURIComponent(path)}`, { signal }); },
     downloadWorkspaceFile(id, path, signal) { return download(`/api/v1/workflows/${encodeURIComponent(id)}/workspace/download?path=${encodeURIComponent(path)}`, signal); },
     configureWorkflowGitSource(id, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/git-source`, json("PUT", input, signal)); },
+    async listKnowledgeBases(deleted = false, signal) { return (await call<{ items: KnowledgeBase[] }>(`/api/v1/knowledge-bases?deleted=${deleted}`, { signal })).items ?? []; },
+    createKnowledgeBase(input, signal) { return call("/api/v1/knowledge-bases", json("POST", { knowledge_base: input }, signal)); },
+    updateKnowledgeBase(id, input, version, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, json("PATCH", { knowledge_base: input, expected_version: version }, signal)); },
+    deleteKnowledgeBase(id, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(id)}`, signal); },
+    async restoreKnowledgeBase(id, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/restore`, json("POST", {}, signal)); },
+    async listKnowledgeCategories(id, signal) { return (await call<{ items: KnowledgeCategory[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, { signal })).items ?? []; },
+    createKnowledgeCategory(id, name, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/categories`, json("POST", { knowledge_base_id: id, name }, signal)); },
+    deleteKnowledgeCategory(knowledgeBaseID, categoryID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}`, signal); },
+    async restoreKnowledgeCategory(knowledgeBaseID, categoryID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}/restore`, json("POST", {}, signal)); },
+    async listKnowledgeDocuments(id, signal) { return (await call<{ items: KnowledgeDocument[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents`, { signal })).items ?? []; },
+    async uploadKnowledgeDocument(id, file, categoryID, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const form = new FormData(); form.append("file", file); if (categoryID) form.append("category_id", categoryID);
+      const response = await fetch(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/upload`, { method: "POST", body: form, signal, headers: { Authorization: `Bearer ${token}`, "Idempotency-Key": crypto.randomUUID() } });
+      if (!response.ok) throw new ApiError(response.status === 413 || response.status === 422 ? "validation" : "unknown", response.status, "knowledge_document_upload_failed");
+      return response.json() as Promise<KnowledgeDocument>;
+    },
+    importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
+    downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
+    async retryKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/retry`, json("POST", {}, signal)); },
+    deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
+    async restoreKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/restore`, json("POST", {}, signal)); },
     async listExperts(signal) {
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);

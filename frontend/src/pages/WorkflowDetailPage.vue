@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ArrowUp, FileText, Folder } from "@lucide/vue";
+import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
-import { renderMarkdown } from "../markdown";
-import { displayArtifactNames } from "../artifactDisplay";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Expert, type ExpertTeam, type GitSourceInput, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Expert, type ExpertTeam, type GitSourceInput, type KnowledgeBase, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
-import CreditConsumption from "../components/CreditConsumption.vue";
-import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
-import ConversationAttachments from "../components/ConversationAttachments.vue";
+import ConversationThread from "../components/ConversationThread.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromEvents } from "../cliAuthorization";
+import type { ConversationMessage } from "../conversationThread";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
 const api = inject(platformApiKey)!;
@@ -24,16 +21,25 @@ const origin = window.location.origin;
 const runConversationElement = ref<HTMLElement>();
 const runComposerLayer = ref<HTMLElement>();
 const runComposerClearance = ref(154);
-const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
-const copiedStageKey = ref("");
+const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const knowledgeBases = ref<KnowledgeBase[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const runEventsByID = ref<Record<string, RunEvent[]>>({}); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
+const credentialError = ref("");
+const revealApiSecret = ref(false);
 const nowMS = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
+const integrationGuideOpen = ref(false);
+type CopyTarget = "api_key" | "api_secret" | "token" | "run" | "stream" | "full";
+const copiedTarget = ref<CopyTarget>();
+let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
 const gitForm = ref<GitSourceInput>({ url: "", branch: "main", authentication: "none", ssh_config: "", config: [] });
 const editingGitCredential = ref(false);
 const gitCredentialSaved = computed(() => Boolean(workflow.value?.git_source?.credential_configured && workflow.value.git_source.authentication === gitForm.value.authentication));
 const showGitCredentialInput = computed(() => !gitCredentialSaved.value || editingGitCredential.value);
 const gitError = ref(""); const gitNotice = ref(""); const gitFeedback = ref<HTMLElement>();
-const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
+const settingsForm = ref<WorkflowInput>({ name: "", goal: "", environment: [], knowledge_base_ids: [] });
+const selectedKnowledgeBaseIDs = computed<string[]>({
+  get: () => settingsForm.value.knowledge_base_ids ?? [],
+  set: (value) => { settingsForm.value.knowledge_base_ids = [...new Set(value)]; },
+});
 const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
@@ -46,9 +52,9 @@ const conversationElapsed = computed(() => conversationRuns.value.reduce((total,
 }, 0));
 const currentExpertStage = computed(() => [...runEvents.value].reverse().find((event) => event.type === "expert.stage.updated")?.payload);
 const cliAuthorizationRequest = computed(() => cliAuthorizationRequestFromEvents(runEvents.value));
-const runtimeActivities = computed(() => {
+function summarizeRuntimeActivities(events: RunEvent[]) {
   const activities: Array<{ sequence: number; label: string; historyLabel: string; detail: string }> = [];
-  for (const event of runEvents.value) {
+  for (const event of events) {
     const activity = runtimeActivity(event);
     if (!activity) continue;
     const previous = activities.at(-1);
@@ -56,10 +62,42 @@ const runtimeActivities = computed(() => {
     else activities.push({ sequence: event.sequence, ...activity });
   }
   return activities.slice(-8);
-});
+}
+const conversationMessages = computed<ConversationMessage[]>(() => conversationRuns.value.flatMap((turn, index) => {
+  const input = runInputText(turn, index);
+  const output = runOutput(turn);
+  const pending = isActiveRun(turn);
+  const streaming = turn.id === streamingRunID.value;
+  const turnActivities = summarizeRuntimeActivities(runEventsByID.value[turn.id] ?? (turn.id === eventRunID.value ? runEvents.value : []));
+  const activity = streaming ? turnActivities.at(-1) : undefined;
+  return [
+    { id: `${turn.id}:user`, role: "user", content: input, copyText: input, state: "succeeded", timestamp: turn.queued_at, attachments: turn.attachments },
+    {
+      id: turn.id,
+      role: "assistant",
+      content: output,
+      copyText: output,
+      state: turn.state,
+      stateLabel: stateLabel(turn.state),
+      timestamp: turn.ended_at || turn.queued_at,
+      elapsedMs: turn.elapsed_ms,
+      error: turn.error,
+      pending,
+      streaming,
+      progressTitle: pending ? (turn.state === "waiting_for_user" ? t("common.waitingForUser") : t("sessions.thinking")) : undefined,
+      progressDetail: pending ? (turn.state === "queued" && turn.queue_position ? `${t("workflows.queuePosition")}: ${turn.queue_position}` : streaming && currentExpertStage.value ? `${currentExpertStage.value.position}/${currentExpertStage.value.total || ""} · ${currentExpertStage.value.expert_name}` : t("sessions.progress.thinking")) : undefined,
+      currentActivity: activity ? { id: activity.sequence, label: activity.label, detail: activity.detail } : undefined,
+      activities: turnActivities.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })),
+      stages: turn.expert_stages,
+      creditConsumption: turn.credit_consumption,
+      artifacts: runArtifacts(turn),
+    },
+  ];
+}));
 watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
+  if (value === "settings" && workflow.value && !workflow.value.deleted) void loadCredential();
   if (!loading.value && (value === "history" || value === "artifacts")) void refreshRuns(value === "artifacts");
 });
 watch(() => gitForm.value.authentication, () => { clearGitCredential(); editingGitCredential.value = false; });
@@ -78,6 +116,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", resumeRunPolling);
   await refresh();
   if (disposed) return;
+  if (tab.value === "settings" && workflow.value && !workflow.value.deleted) await loadCredential();
   lastRunRefresh = Date.now();
   runTimer = setInterval(() => {
     if (!canRefreshRuns()) return;
@@ -94,6 +133,7 @@ watch(runComposerLayer, (current, previous) => {
 onBeforeUnmount(() => {
   disposed = true;
   clearGitCredential();
+  if (copyResetTimer) clearTimeout(copyResetTimer);
   if (runTimer) clearInterval(runTimer);
   eventController?.abort();
   stopRunReveal();
@@ -107,7 +147,18 @@ function measureRunComposer() {
   runComposerClearance.value = Math.ceil(height) + 16;
   void scrollConversationToEnd("auto");
 }
-async function refresh() { loading.value = true; error.value = ""; try { workflow.value = await api.getWorkflow(workflowID.value); settingsForm.value = { name: workflow.value.name, goal: workflow.value.goal, expert_id: workflow.value.expert_id, expert_team_id: workflow.value.expert_team_id, environment: workflow.value.environment ?? [], schedule: workflow.value.schedule }; editingGitCredential.value = false; const source = workflow.value.git_source; gitForm.value = source ? { url: source.url, branch: source.branch, authentication: source.authentication || "none", username: source.username, ssh_config: source.ssh_config ?? "", config: source.config ?? [] } : { url: "", branch: "main", authentication: "none", ssh_config: "", config: [] }; [experts.value, expertTeams.value, runs.value, artifacts.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listRuns(workflowID.value), api.listArtifacts(workflowID.value)]); if (!workflow.value.deleted) await loadDirectory(""); else if (tab.value === "workspace" || tab.value === "settings") tab.value = "history"; } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
+async function refresh() { loading.value = true; error.value = ""; try { workflow.value = await api.getWorkflow(workflowID.value); settingsForm.value = { name: workflow.value.name, goal: workflow.value.goal, expert_id: workflow.value.expert_id, expert_team_id: workflow.value.expert_team_id, knowledge_base_ids: Array.isArray(workflow.value.knowledge_base_ids) ? [...workflow.value.knowledge_base_ids] : [], environment: workflow.value.environment ?? [], schedule: workflow.value.schedule }; editingGitCredential.value = false; const source = workflow.value.git_source; gitForm.value = source ? { url: source.url, branch: source.branch, authentication: source.authentication || "none", username: source.username, ssh_config: source.ssh_config ?? "", config: source.config ?? [] } : { url: "", branch: "main", authentication: "none", ssh_config: "", config: [] }; const knowledgeBasesRequest = typeof api.listKnowledgeBases === "function" ? api.listKnowledgeBases() : Promise.resolve([]); [experts.value, expertTeams.value, knowledgeBases.value, runs.value, artifacts.value] = await Promise.all([api.listExperts(), api.listExpertTeams(), knowledgeBasesRequest, api.listRuns(workflowID.value), api.listArtifacts(workflowID.value)]); if (!workflow.value.deleted) await loadDirectory(""); else if (tab.value === "workspace" || tab.value === "settings") tab.value = "history"; } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
+async function loadCredential() {
+  credential.value = undefined;
+  credentialError.value = "";
+  revealApiSecret.value = false;
+  if (!workflow.value?.api_credential_configured) return;
+  try {
+    credential.value = await api.getWorkflowCredential(workflowID.value);
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.code === "workflow_credential_secret_unavailable") credentialError.value = t("workflows.credentialUnavailable");
+  }
+}
 function isActiveRun(item: Run) { return item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"; }
 function canRefreshRuns() { return !disposed && !loading.value && document.visibilityState !== "hidden" && (Boolean(selectedRun.value) || tab.value === "history" || tab.value === "artifacts"); }
 function resumeRunPolling() { if (canRefreshRuns()) void refreshRuns(tab.value === "artifacts"); }
@@ -165,7 +216,29 @@ async function saveGitSource() {
   }
 }
 async function saveSettings() { if (!workflow.value) return; try { workflow.value = await api.updateWorkflow(workflowID.value, settingsForm.value, workflow.value.version); await refresh(); } catch { error.value = t("errors.conflict"); } }
-async function generateCredential() { try { credential.value = await api.generateWorkflowCredential(workflowID.value); } catch { error.value = t("errors.generic"); } }
+async function generateCredential() { try { credential.value = await api.generateWorkflowCredential(workflowID.value); credentialError.value = ""; copiedTarget.value = undefined; revealApiSecret.value = false; } catch { error.value = t("errors.generic"); } }
+const tokenCommand = computed(() => `JWT_TOKEN=$(curl -sS -u "$API_KEY:$API_SECRET" -X POST ${origin}/api/v1/workflows/${workflowID.value}/api-token | jq -r '.jwt_token')`);
+const runCommand = computed(() => `RUN_ID=$(curl -sS -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' ${origin}/api/v1/workflows/${workflowID.value}/runs | jq -r '.id')`);
+const streamCommand = computed(() => `curl -N -H "Authorization: Bearer $JWT_TOKEN" -H "Accept: text/event-stream" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID/events`);
+const fullOutputCommand = computed(() => `curl -sS -H "Authorization: Bearer $JWT_TOKEN" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID`);
+async function copyValue(value: string, target: CopyTarget) {
+  try {
+    await navigator.clipboard.writeText(value);
+    copiedTarget.value = target;
+    if (copyResetTimer) clearTimeout(copyResetTimer);
+    copyResetTimer = setTimeout(() => { copiedTarget.value = undefined; }, 1800);
+  } catch { error.value = t("errors.copy"); }
+}
+function copyCredential(target: "api_key" | "api_secret") {
+  if (!credential.value) return;
+  const value = target === "api_key" ? credential.value.api_key : credential.value.api_secret;
+  void copyValue(value, target);
+}
+function maskCredential(value: string) {
+  if (value.length <= 8) return "*".repeat(value.length);
+  return `${value.slice(0, 4)}${"*".repeat(Math.max(4, value.length - 8))}${value.slice(-4)}`;
+}
+function copyIntegrationCommand(value: string, target: "token" | "run" | "stream" | "full") { void copyValue(value, target); }
 async function removeWorkflow() { if (!workflow.value) return; await api.deleteWorkflow(workflowID.value); confirmWorkflowDelete.value = false; await router.push("/workflows"); }
 async function cancelRun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
 async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const latest = turns.at(-1); if (latest) await api.rerunWorkflow(workflowID.value, latest.id); runs.value = await api.listRuns(workflowID.value); }
@@ -175,10 +248,24 @@ async function openRun(item: Run) {
 	selectedRun.value = item;
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
 	runEvents.value = [];
+	runEventsByID.value = Object.fromEntries(conversationRuns.value.map((turn) => [turn.id, []]));
 	eventRunID.value = "";
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
 	if (active) void streamConversationTurn(active);
+	void loadRunHistoryEvents(conversationRuns.value, item.id);
+}
+async function loadRunHistoryEvents(turns: Run[], conversationID: string) {
+	await Promise.all(turns.filter((turn) => !isActiveRun(turn)).map(async (turn) => {
+		const events: RunEvent[] = [];
+		try {
+			await api.streamRunEvents(workflowID.value, turn.id, (event) => events.push(event));
+		} catch {
+			return;
+		}
+		if (selectedRun.value?.id !== conversationID) return;
+		runEventsByID.value = { ...runEventsByID.value, [turn.id]: events };
+	}));
 }
 async function streamConversationTurn(item: Run) {
 	eventController?.abort();
@@ -186,6 +273,7 @@ async function streamConversationTurn(item: Run) {
 	streamingRunID.value = item.id;
 	eventRunID.value = item.id;
 	runEvents.value = [];
+	runEventsByID.value = { ...runEventsByID.value, [item.id]: [] };
 	stopRunReveal();
 	revealedRunOutput.value = "";
 	try {
@@ -205,6 +293,8 @@ async function streamConversationTurn(item: Run) {
 }
 function handleRunEvent(event: RunEvent) {
 	runEvents.value.push(event);
+	const runID = streamingRunID.value;
+	if (runID) runEventsByID.value = { ...runEventsByID.value, [runID]: [...(runEventsByID.value[runID] ?? []), event] };
 	if (event.type === "expert.stage.updated" && event.payload.state === "running") {
 		stopRunReveal();
 		revealedRunOutput.value = "";
@@ -254,11 +344,10 @@ async function sendFollowUp(message: ComposerSubmission) {
   } finally { sendingFollowUp.value = false; }
 }
 
-async function copyStage(runID: string, position: number, value: string) { try { await navigator.clipboard.writeText(value); copiedStageKey.value = `${runID}:${position}`; window.setTimeout(() => { copiedStageKey.value = ""; }, 1600); } catch { error.value = t("errors.copy"); } }
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
-function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || item.error || ""; }
+function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
 function runtimeActivity(event: RunEvent) {
 	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "" };
@@ -275,7 +364,6 @@ function runtimeCommandDetail(event: RunEvent) {
 	if (typeof event.payload.tool === "string") return event.payload.tool;
 	return t("workflows.command");
 }
-function visibleStages(item: Run) { return item.expert_stages ?? []; }
 async function scrollConversationToEnd(behavior: ScrollBehavior = "smooth") { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior }); }
 function addEnvironment() { settingsForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }
 function removeEnvironment(index: number) { settingsForm.value.environment.splice(index, 1); }
@@ -299,15 +387,12 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     <div v-if="selectedRun" class="run-page">
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><el-tag :type="latestConversationRun.state === 'succeeded' ? 'success' : latestConversationRun.state === 'failed' ? 'danger' : 'primary'" size="small">{{ stateLabel(latestConversationRun.state) }}</el-tag><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(conversationElapsed, locale as SupportedLocale) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
-        <template v-for="(turn, index) in conversationRuns" :key="turn.id">
-          <article class="message user"><div class="message-content"><p v-if="runInputText(turn, index)">{{ runInputText(turn, index) }}</p><ConversationAttachments v-if="turn.attachments?.length" :attachments="turn.attachments" :load-attachment="api.getAttachmentDownload" @error="error = t('errors.generic')" /><small>{{ new Date(turn.queued_at).toLocaleString() }}</small></div></article>
-          <article class="message assistant"><div class="message-content"><div v-if="turn.id === eventRunID && runtimeActivities.length" class="runtime-activity" aria-live="polite"><div v-if="turn.id === streamingRunID" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ runtimeActivities.at(-1)?.label }}</strong><small v-if="runtimeActivities.at(-1)?.detail">{{ runtimeActivities.at(-1)?.detail }}</small></div><details v-if="runtimeActivities.length > 1 || turn.id !== streamingRunID"><summary>{{ t('workflows.activityDetails') }}</summary><ol><li v-for="activity in runtimeActivities" :key="activity.sequence"><span></span><div><strong>{{ activity.historyLabel }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div><div v-if="runOutput(turn)" class="markdown-body" :class="{ streaming: turn.id === streamingRunID }" v-html="renderMarkdown(displayArtifactNames(runOutput(turn), runArtifacts(turn)))"></div><div v-else-if="turn.state === 'queued' || turn.state === 'running' || turn.state === 'waiting_for_user'" class="thinking-state"><span class="thinking-dots"><i></i><i></i><i></i></span><strong>{{ turn.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small v-if="turn.state === 'queued' && turn.queue_position">{{ t('workflows.queuePosition') }}: {{ turn.queue_position }}</small><small v-else-if="turn.id === streamingRunID && currentExpertStage">{{ currentExpertStage.position }}/{{ currentExpertStage.total || '' }} · {{ currentExpertStage.expert_name }}</small><small v-else>{{ t('sessions.progress.thinking') }}</small></div><p v-else class="muted">{{ stateLabel(turn.state) }}</p><div v-if="visibleStages(turn).length" class="expert-stage-list"><details v-for="stage in visibleStages(turn)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || turn.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, runArtifacts(turn)))"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(turn.id, stage.position, stage.final_text)">{{ copiedStageKey === `${turn.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details></div><CreditConsumption :value="turn.credit_consumption" /><ArtifactDisclosure v-if="runArtifacts(turn).length" :artifacts="runArtifacts(turn)" @download="openArtifact" /><small>{{ turn.ended_at ? new Date(turn.ended_at).toLocaleString() : stateLabel(turn.state) }}</small></div></article>
-        </template>
+        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
-      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h1>{{ workflow.name }}</h1><p>{{ workflow.goal }}</p></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
+      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
       <el-skeleton v-if="loading" :rows="10" animated class="page-loading" />
       <template v-else-if="workflow">
       <nav class="tabs"><el-button v-for="item in tabs" :key="item" text :class="{ active: tab === item }" @click="tab = item">{{ t(`workflows.${item}`) }}</el-button></nav>
@@ -315,17 +400,18 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div v-if="tab === 'workspace'" class="tab-content"><div class="file-browser"><button v-if="workspacePath" class="file-row" @click="loadDirectory(parentPath())"><span class="file-icon" aria-hidden="true"><ArrowUp /></span><strong>..</strong></button><div v-for="entry in entries" :key="entry.path" class="file-row" role="button" tabindex="0" @click="openEntry(entry)" @keydown.enter="openEntry(entry)"><span class="file-icon" aria-hidden="true"><Folder v-if="entry.directory" /><FileText v-else /></span><strong>{{ entry.name }}</strong><small>{{ entry.directory ? '—' : `${entry.size} B` }}</small><time>{{ new Date(entry.modified_at).toLocaleString() }}</time><button v-if="!entry.directory" class="text-button" :aria-label="t('common.download')" @click.stop="downloadEntry(entry)">↓</button></div><div v-if="!entries.length" class="empty-inline"><span>□</span><p>{{ t('common.empty') }}</p></div></div></div>
       <div v-if="tab === 'history'" class="tab-content"><el-empty v-if="!runs.length" :description="t('workflows.noRuns')" /><div v-else class="run-table"><div class="run-row run-head"><span>{{ t('workflows.started') }}</span><span>{{ t('workflows.trigger') }}</span><span>{{ t('workflows.state') }}</span><span>{{ t('workflows.duration') }}</span><span></span></div><div v-for="item in runs" :key="item.id" class="run-row" role="button" tabindex="0" @click="openRun(item)" @keydown.enter="openRun(item)"><span><strong>{{ new Date(item.started_at || item.queued_at).toLocaleString() }}</strong><small>{{ item.id.slice(0, 8) }}</small></span><span>{{ triggerLabel(item.trigger) }}</span><span><el-tag :type="item.state === 'succeeded' ? 'success' : item.state === 'failed' ? 'danger' : 'primary'" size="small">{{ stateLabel(item.state) }}</el-tag><small v-if="item.state === 'queued' && item.queue_position">{{ t('workflows.queuePosition') }}: {{ item.queue_position }}</small></span><span>{{ formatDuration(item.elapsed_ms, locale as SupportedLocale) }}</span><span class="run-actions"><el-button v-if="item.state === 'queued' || item.state === 'running' || item.state === 'waiting_for_user'" size="small" @click.stop="cancelRun(item)">{{ t('common.cancel') }}</el-button><el-button v-else-if="!workflow.deleted" circle size="small" @click.stop="rerun(item)">↻</el-button></span></div></div></div>
       <form v-if="tab === 'settings' && !workflow.deleted" class="tab-content settings-form" @submit.prevent="saveSettings">
-        <div class="section-heading section-heading-actions"><el-button native-type="submit" type="primary">{{ t('common.save') }}</el-button></div>
         <details class="settings-section" open><summary><h3>{{ t('workflows.basic') }}</h3></summary><div class="form-grid"><label>{{ t('workflows.name') }}<input v-model="settingsForm.name" required></label><label>{{ t('workflows.expert') }}<select :value="settingsForm.expert_team_id ? `team:${settingsForm.expert_team_id}` : settingsForm.expert_id ? `expert:${settingsForm.expert_id}` : 'none'" @change="setWorkflowSpecialist(($event.target as HTMLSelectElement).value)"><option value="none">{{ t('sessions.noExpert') }}</option><optgroup :label="t('experts.title')"><option v-for="expert in experts" :key="expert.id" :value="`expert:${expert.id}`" :disabled="!expert.available">{{ expert.name }}</option></optgroup><optgroup :label="t('experts.teams')"><option v-for="team in expertTeams" :key="team.id" :value="`team:${team.id}`" :disabled="!team.available">{{ teamSelectionLabel(team) }}</option></optgroup></select></label><label class="full">{{ t('workflows.goal') }}<textarea v-model="settingsForm.goal" rows="7" required></textarea></label></div></details>
+        <details class="settings-section" open><summary><h3>{{ t('workflows.knowledgeBases') }}</h3></summary><div class="form-grid"><fieldset class="full knowledge-base-picker"><legend>{{ t('workflows.knowledgeBases') }}</legend><div v-if="knowledgeBases.length" class="knowledge-base-options" role="group" :aria-label="t('workflows.knowledgeBases')"><label v-for="knowledgeBase in knowledgeBases" :key="knowledgeBase.id" class="knowledge-base-option" :class="{ selected: selectedKnowledgeBaseIDs.includes(knowledgeBase.id) }"><input v-model="selectedKnowledgeBaseIDs" type="checkbox" :value="knowledgeBase.id"><span><strong>{{ knowledgeBase.name }}</strong><small>{{ knowledgeBase.visibility === 'public' ? t('knowledgeBases.public') : t('knowledgeBases.private') }}</small></span></label></div><p v-else class="muted knowledge-base-empty">{{ t('common.empty') }}</p><small class="muted">{{ t('workflows.knowledgeBasesHint') }}</small></fieldset></div></details>
         <details class="settings-section" open><summary><h3>{{ t('workflows.execution') }}</h3></summary><div class="form-grid"><div class="full"><div v-for="(variable, index) in settingsForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><button type="button" class="text-button" @click="removeEnvironment(index)">×</button></div><button type="button" class="button ghost" @click="addEnvironment">＋ {{ t('workflows.environment') }}</button></div></div></details>
         <details class="settings-section" open><summary><h3>{{ t('workflows.schedule') }}</h3></summary><button v-if="!settingsForm.schedule" type="button" class="button ghost" @click="enableSchedule">{{ t('workflows.enableSchedule') }}</button><div v-else class="form-grid"><label><input v-model="settingsForm.schedule.enabled" type="checkbox"> {{ t('common.enabled') }}</label><label>{{ t('workflows.frequency') }}<select v-model="settingsForm.schedule.frequency"><option value="hourly">{{ t('workflows.hourly') }}</option><option value="daily">{{ t('workflows.daily') }}</option><option value="weekly">{{ t('workflows.weekly') }}</option></select></label><label>{{ t('workflows.hour') }}<input v-model.number="settingsForm.schedule.hour" type="number" min="0" max="23"></label><label>{{ t('workflows.minute') }}<input v-model.number="settingsForm.schedule.minute" type="number" min="0" max="59"></label><label v-if="settingsForm.schedule.frequency === 'weekly'">{{ t('workflows.weekday') }}<input v-model.number="settingsForm.schedule.weekday" type="number" min="0" max="6"></label><label>{{ t('workflows.timezone') }}<input v-model="settingsForm.schedule.timezone"></label></div></details>
-        <details class="settings-section" open><summary><h3>{{ t('workflows.apiCredential') }}</h3></summary><p class="muted">{{ t('workflows.apiTokenDescription') }}</p><button type="button" class="button ghost" @click="generateCredential">{{ workflow.api_credential_configured ? t('workflows.regenerate') : t('workflows.generate') }}</button><div v-if="credential" class="secret-reveal"><p>{{ t('workflows.copySecret') }}</p><code>API_KEY={{ credential.api_key }}</code><code>API_SECRET={{ credential.api_secret }}</code><code>JWT_TOKEN=$(curl -sS -u "$API_KEY:$API_SECRET" -X POST {{ origin }}/api/v1/workflows/{{ workflow.id }}/api-token | jq -r '.jwt_token')</code><code>curl -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' {{ origin }}/api/v1/workflows/{{ workflow.id }}/runs</code></div></details>
+        <details class="settings-section" open><summary><h3>{{ t('workflows.apiCredential') }}</h3></summary><p class="muted">{{ t('workflows.apiTokenDescription') }}</p><div class="api-credential-actions"><button type="button" class="button ghost" @click="generateCredential">{{ workflow.api_credential_configured ? t('workflows.regenerate') : t('workflows.generate') }}</button><button type="button" class="button ghost" @click="integrationGuideOpen = true">{{ t('workflows.howToIntegrate') }}</button></div><p v-if="credentialError" class="muted credential-warning">{{ credentialError }}</p><div v-if="credential" class="secret-reveal"><div class="credential-row"><strong>{{ t('workflows.apiKeyLabel') }}</strong><code>{{ credential.api_key }}</code><div class="credential-row-actions"><button type="button" class="credential-icon-button" :aria-label="copiedTarget === 'api_key' ? t('common.copied') : t('common.copy')" :title="copiedTarget === 'api_key' ? t('common.copied') : t('common.copy')" @click="copyCredential('api_key')"><Copy :size="16" :stroke-width="1.8" aria-hidden="true" /></button></div></div><div class="credential-row"><strong>{{ t('workflows.apiSecretLabel') }}</strong><code>{{ revealApiSecret ? credential.api_secret : maskCredential(credential.api_secret) }}</code><div class="credential-row-actions"><button type="button" class="credential-icon-button" :aria-label="revealApiSecret ? t('workflows.hideSecret') : t('workflows.showSecret')" :title="revealApiSecret ? t('workflows.hideSecret') : t('workflows.showSecret')" @click="revealApiSecret = !revealApiSecret"><EyeOff v-if="revealApiSecret" :size="16" :stroke-width="1.8" aria-hidden="true" /><Eye v-else :size="16" :stroke-width="1.8" aria-hidden="true" /></button><button type="button" class="credential-icon-button" :aria-label="copiedTarget === 'api_secret' ? t('common.copied') : t('common.copy')" :title="copiedTarget === 'api_secret' ? t('common.copied') : t('common.copy')" @click="copyCredential('api_secret')"><Copy :size="16" :stroke-width="1.8" aria-hidden="true" /></button></div></div></div></details>
         <details class="settings-section" open><summary><h3>{{ t('workflows.gitSource') }}</h3></summary><div class="form-grid git-settings"><label class="full">{{ t('workflows.gitURL') }}<input v-model="gitForm.url" type="text" required spellcheck="false" autocapitalize="off" placeholder="git@github.com:team/project.git"><small class="muted">{{ t('workflows.gitURLHelp') }}</small></label><label>{{ t('workflows.branch') }}<input v-model="gitForm.branch" required></label><label>{{ t('workflows.gitAuthentication') }}<select v-model="gitForm.authentication"><option value="none">{{ t('workflows.gitPublic') }}</option><option value="basic">{{ t('workflows.gitAccount') }}</option><option value="ssh">SSH Private Key</option></select></label><template v-if="gitForm.authentication === 'basic'"><label>{{ t('workflows.gitUsername') }}<input v-model="gitForm.username" required autocomplete="username"></label><label v-if="showGitCredentialInput">{{ t(editingGitCredential ? 'workflows.gitPasswordDraft' : 'workflows.gitPassword') }}<input v-model="gitForm.password" type="password" :disabled="savingGit" required autocomplete="new-password"></label></template><template v-if="gitForm.authentication === 'ssh'"><label v-if="showGitCredentialInput" class="full">{{ t(editingGitCredential ? 'workflows.gitPrivateKeyDraft' : 'workflows.privateKey') }}<textarea v-model="gitForm.ssh_private_key" rows="6" :disabled="savingGit" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label><label class="full">{{ t('workflows.sshConfig') }}<textarea v-model="gitForm.ssh_config" name="ssh-config" rows="8" :placeholder="t('workflows.sshConfigPlaceholder')"></textarea><small class="muted">{{ t('workflows.sshConfigHelp') }}</small></label></template><div v-if="gitForm.authentication !== 'none' && !showGitCredentialInput" class="full git-credential-status"><p class="muted" role="status">{{ t('workflows.gitCredentialSaved') }}</p><el-button :disabled="savingGit" @click="editGitCredential">{{ t('workflows.replaceGitCredential') }}</el-button></div><div class="full git-config-list"><div class="section-heading"><strong>Git config</strong><button type="button" class="button ghost" @click="addGitConfig">＋ {{ t('common.new') }}</button></div><div v-for="(entry, index) in gitForm.config" :key="index" class="inline-fields"><input v-model="entry.key" placeholder="user.name" required><input v-model="entry.value" :placeholder="t('settings.value')" required><button type="button" class="text-button" @click="removeGitConfig(index)">×</button></div><small class="muted">user.name, user.email, core.autocrlf, core.filemode, pull.rebase, init.defaultBranch</small></div><div v-if="gitError || gitNotice" ref="gitFeedback" class="full git-feedback"><el-alert v-if="gitError" :title="gitError" type="error" show-icon :closable="false" /><el-alert v-else :title="gitNotice" type="success" show-icon :closable="false" /></div><button type="button" class="button primary" :disabled="savingGit" @click="saveGitSource">{{ savingGit ? t('common.saving') : t('workflows.cloneRepository') }}</button></div></details>
-        <section class="danger-zone"><h3>{{ t('workflows.deleteTitle') }}</h3><p>{{ t('workflows.deleteDescription') }}</p><el-button type="danger" @click="confirmWorkflowDelete = true">{{ t('common.delete') }}</el-button></section>
+        <div class="settings-actions-bottom"><el-button type="danger" @click="confirmWorkflowDelete = true">{{ t('common.delete') }}</el-button><el-button native-type="submit" type="primary">{{ t('common.save') }}</el-button></div>
       </form>
       </template>
     </template>
   </section>
   <el-dialog :model-value="Boolean(preview)" width="min(820px, calc(100vw - 32px))" align-center @close="preview = undefined"><template #header><h2>{{ preview?.path }}</h2></template><pre class="preview-content">{{ preview?.content }}</pre></el-dialog>
+  <el-dialog v-model="integrationGuideOpen" class="integration-guide-dialog" width="min(720px, calc(100vw - 32px))" align-center><template #header><h2>{{ t('workflows.integrationGuideTitle') }}</h2></template><div class="integration-guide"><section><h3>{{ t('workflows.integrationStepToken') }}</h3><p class="muted">{{ t('workflows.integrationTokenHint') }}</p><div class="integration-code"><pre><code>{{ tokenCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(tokenCommand, 'token')">{{ copiedTarget === 'token' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepInvoke') }}</h3><p class="muted">{{ t('workflows.integrationRunHint') }} {{ t('workflows.integrationIdempotencyHint') }}</p><div class="integration-code"><pre><code>{{ runCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(runCommand, 'run')">{{ copiedTarget === 'run' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepStream') }}</h3><p class="muted">{{ t('workflows.integrationStreamHint') }}</p><div class="integration-code"><pre><code>{{ streamCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(streamCommand, 'stream')">{{ copiedTarget === 'stream' ? t('common.copied') : t('common.copy') }}</button></div></section><section><h3>{{ t('workflows.integrationStepFullOutput') }}</h3><p class="muted">{{ t('workflows.integrationFullOutputHint') }}</p><div class="integration-code"><pre><code>{{ fullOutputCommand }}</code></pre><button type="button" class="text-button" @click="copyIntegrationCommand(fullOutputCommand, 'full')">{{ copiedTarget === 'full' ? t('common.copied') : t('common.copy') }}</button></div></section></div><template #footer><el-button @click="integrationGuideOpen = false">{{ t('common.close') }}</el-button></template></el-dialog>
   <ConfirmDialog :open="confirmWorkflowDelete" :title="t('workflows.deleteTitle')" :message="workflow ? `${t('common.delete')} “${workflow.name}”?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger @cancel="confirmWorkflowDelete = false" @confirm="removeWorkflow" />
 </template>

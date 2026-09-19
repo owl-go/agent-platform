@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
-import { Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
+import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -19,9 +19,11 @@ type ResourceTab = "mcp" | "skills";
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
-const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
+const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; showTabs?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
   selectable: false,
   initialTab: "mcp",
+  mineOnly: false,
+  showTabs: true,
   mcpServerIds: () => [],
   skillIds: () => [],
   cliConnectorDefinitionIds: () => [],
@@ -39,6 +41,14 @@ const router = useRouter();
 const detailSkill = ref<Skill>();
 const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
+const createSkillPrompt = "请帮我创建一个可以实现「……」的技能";
+function systemSkill(systemKey: string, fallback: string) { return skills.value.find((item) => item.system_key === systemKey) ?? skills.value.find((item) => item.platform && item.name === fallback); }
+function createSkillSession() {
+  const skill = systemSkill("system.create_skill", "Create Skill");
+  if (!skill) { reportError(undefined, "systemSkillUnavailable"); return; }
+  void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: skill.id, draft: createSkillPrompt } });
+}
+function handleSkillAction(command: "create" | "upload") { if (command === "create") createSkillSession(); else openNewSkill(); }
 const auth = inject(authContextKey, undefined);
 const { locale, t } = useI18n();
 const { nextZIndex } = useZIndex();
@@ -58,6 +68,7 @@ const canManageCLI = computed(() => auth?.session.state.value.kind === "authenti
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
+const createdSkillIDs = ref(new Set<string>());
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
@@ -86,14 +97,16 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
-const connectorSections = computed(() => [
-  { key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value },
-  { key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] },
-]);
-const skillSections = computed(() => [
-  { key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) },
-  { key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) },
-]);
+const connectorSections = computed(() => props.mineOnly
+  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }]
+  : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value }]);
+const skillSections = computed(() => {
+  if (props.mineOnly) return [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }];
+  const sections = [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }];
+  const created = skills.value.filter((item) => !item.platform && createdSkillIDs.value.has(item.id));
+  if (created.length) sections.push({ key: "created", title: t("resources.mySkills"), items: created });
+  return sections;
+});
 
 onMounted(() => {
   void refresh();
@@ -117,6 +130,11 @@ onBeforeUnmount(() => {
 function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
+function upsertSkill(item: Skill) {
+  if (!item.platform) createdSkillIDs.value = new Set(createdSkillIDs.value).add(item.id);
+  skills.value = [item, ...skills.value.filter((entry) => entry.id !== item.id)];
+  notifyResources();
+}
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
   try {
@@ -325,19 +343,6 @@ async function selectCLIArchive(event: Event) {
   if (!file || file.size > 50 * 1024 * 1024) { if (file) reportError(new ApiError("validation", 413, "file_too_large")); return; }
   try { cliForm.value.archive = await fileToBase64(file); } catch (cause) { reportError(cause); }
 }
-async function selectConnectorIcon(event: Event, target: "mcp" | "cli") {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type) || file.size > 384 * 1024) {
-    reportError(new ApiError("validation", 422, "invalid_icon"));
-    return;
-  }
-  try {
-    const icon = `data:${file.type};base64,${await fileToBase64(file)}`;
-    if (target === "mcp") mcpForm.value.icon = icon;
-    else cliForm.value.icon = icon;
-  } catch (cause) { reportError(cause); }
-}
 async function saveCLI() {
   operationError.value = undefined;
   if (cliSaveBusy.value) return;
@@ -424,6 +429,8 @@ async function saveSkill() {
     if (props.selectable && !editingSkill.value) emit("update:skillIds", [...new Set([...props.skillIds, saved.id])]);
     showSkill.value = false;
     await refresh();
+    // Keep a successful creation visible even if the catalog read is briefly stale.
+    upsertSkill(saved);
   } catch (cause) { reportError(cause); }
 }
 async function removeSkill(item: Skill) {
@@ -460,7 +467,7 @@ async function fileToBase64(file: File): Promise<string> {
 <template>
   <div class="extension-manager" :class="{ selectable }">
     <el-alert v-if="statusErrors.length" :title="t('resources.statusUpdateFailed')" type="warning" :closable="false" data-testid="resource-status-error" />
-    <nav class="subtabs" :aria-label="t('resources.title')"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></nav>
+    <nav v-if="showTabs" class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
       <div class="catalog-groups">
@@ -512,7 +519,7 @@ async function fileToBase64(file: File): Promise<string> {
       </div>
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
-      <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button></div>
+      <div class="resource-toolbar skill-add-actions"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button><el-dropdown trigger="click" @command="handleSkillAction"><el-button type="primary" class="skill-add-menu-button"><ChevronDown :size="15" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="create">{{ t('resources.createSkill') }}</el-dropdown-item><el-dropdown-item command="upload">{{ t('resources.uploadSkill') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
       <div class="catalog-groups">
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
@@ -523,8 +530,8 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
@@ -538,9 +545,9 @@ async function fileToBase64(file: File): Promise<string> {
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
-    <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><label for="mcp-icon-upload">{{ t("resources.icon") }}<span class="cli-icon-field"><ConnectorIcon :icon="mcpForm.icon" /></span><small>{{ t('resources.iconUploadHint') }}</small></label><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form><input id="mcp-icon-upload" class="connector-icon-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="selectConnectorIcon($event, 'mcp')"></div>
-    <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><label>{{ t('resources.icon') }}<IconPicker v-model="skillForm.icon" fallback="sparkles" /></label><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><p class="muted">{{ t('resources.skillDisplayNameHint') }}</p><p class="muted">{{ t("settings.skillHint") }}</p><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>
-    <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><label>{{ t('resources.icon') }}<IconPicker v-model="cliForm.icon" fallback="terminal" /></label><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmPackageSpec') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="cliSaveBusy">{{ t('resources.install') }}</el-button></div></form></div>
+    <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><div class="form-field"><span>{{ t("resources.icon") }}</span><IconPicker v-model="mcpForm.icon" fallback="terminal" /></div><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
+    <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><div class="form-field"><span>{{ t('resources.icon') }}</span><IconPicker v-model="skillForm.icon" fallback="sparkles" /></div><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>
+    <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><div class="form-field"><span>{{ t('resources.icon') }}</span><IconPicker v-model="cliForm.icon" fallback="terminal" /></div><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmPackageSpec') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="cliSaveBusy">{{ t('resources.install') }}</el-button></div></form></div>
   </Teleport>
   <ConfirmDialog :open="Boolean(pendingDelete)" :title="t('common.delete')" :message="pendingDelete ? pendingDelete.impact.affected_experts.length ? t('resources.deleteAffected', { resource: pendingDelete.item.name, experts: pendingDelete.impact.affected_experts.map((expert) => expert.name).join('、') }) : t('resources.deleteUnaffected', { resource: pendingDelete.item.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="deleteBusy" danger @cancel="pendingDelete = undefined" @confirm="confirmRemove" />
   <ConfirmDialog :open="Boolean(deletingCLI)" :title="t('common.delete')" :message="deletingCLI ? t('resources.deleteCLI', { resource: deletingCLI.name }) : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" :busy="cliDeleteBusy" danger @cancel="deletingCLI = undefined" @confirm="removeCLI" />

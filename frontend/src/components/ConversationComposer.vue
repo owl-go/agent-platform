@@ -12,7 +12,7 @@ import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPl
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -233,9 +233,23 @@ async function chooseFile(file: ConversationFile) {
 }
 function chooseLocal(event: Event) {
   const input = event.target as HTMLInputElement, chosen = [...(input.files ?? [])];
+  queueLocalFiles(chosen);
+  input.value = "";
+}
+function queueLocalFiles(chosen: File[]) {
+  if (!chosen.length || locked.value) return;
   if (chosen.some((file) => file.size > 100 * 1024 * 1024) || chosen.length + pending.value.length + uploaded.value.length + new Set(referencedFiles.value.map((file) => `${file.kind}:${file.id}:${file.path}`)).size > 10) error.value = t("sessions.attachmentLimits");
   else pending.value.push(...chosen);
-  input.value = ""; menu.value = ""; persist();
+  menu.value = ""; persist();
+}
+function clipboardFiles(data: DataTransfer | null): File[] {
+  if (!data) return [];
+  const files = [...data.files];
+  if (files.length) return files;
+  return [...data.items].flatMap((item) => {
+    const file = item.kind === "file" ? item.getAsFile() : null;
+    return file ? [file] : [];
+  });
 }
 function keydown(event: KeyboardEvent) {
   if (event.isComposing) return;
@@ -249,7 +263,12 @@ function keydown(event: KeyboardEvent) {
   }
   if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); if (!menu.value) void send(); }
 }
-function paste(event: ClipboardEvent) { event.preventDefault(); rememberCaret(); insertPart({ kind: "text", text: event.clipboardData?.getData("text/plain") ?? "" }); }
+function paste(event: ClipboardEvent) {
+  event.preventDefault(); rememberCaret();
+  const files = clipboardFiles(event.clipboardData);
+  if (files.length) { queueLocalFiles(files); return; }
+  insertPart({ kind: "text", text: event.clipboardData?.getData("text/plain") ?? "" });
+}
 async function send() {
   if (!canSend.value || !selection.value) return;
   sending.value = true; error.value = "";
@@ -292,6 +311,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", handleAuthorizationReturn);
   const saved = storageKey.value ? loadConversationDraft(storageKey.value) : undefined;
   if (saved) { parts.value = saved.parts; selection.value = saved.selection; uploaded.value = saved.attachments; missingFiles.value = saved.pendingFileNames; }
+  else if (props.initialPrompt) parts.value = [{ kind: "text", text: props.initialPrompt }];
   await nextTick(); renderEditor();
   await initialize();
 });

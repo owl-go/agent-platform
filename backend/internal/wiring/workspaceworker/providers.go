@@ -18,6 +18,8 @@ import (
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
 	"agent-platform/backend/internal/infrastructure/gormdb"
+	"agent-platform/backend/internal/knowledgebase/anythingllm"
+	"agent-platform/backend/internal/knowledgebase/ingestion"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
@@ -38,9 +40,16 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 type Worker struct {
 	workspace  *workspaceapplication.Worker
 	aicreation *aicreationapplication.Service
+	ingestion  *ingestion.Processor
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
+	if worker.ingestion != nil {
+		worked, err := worker.ingestion.ProcessNext(ctx)
+		if err != nil || worked {
+			return worked, err
+		}
+	}
 	worked, err := worker.workspace.ProcessNext(ctx)
 	if err != nil || worked {
 		return worked, err
@@ -60,6 +69,9 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	}
 	creditsRepository := creditsrepo.New(database.ORM())
 	repository := workspacerepo.New(database.ORM(), creditsRepository)
+	if err := repository.EnsureSystemSkills(context.Background(), objects); err != nil {
+		return nil, err
+	}
 	executor, err := runtimeexecutor.New(config, box, objects, warm)
 	if err != nil {
 		return nil, err
@@ -80,6 +92,20 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err := executor.EnableCLICredentials(repository); err != nil {
 		return nil, err
 	}
+	var knowledgeProcessor *ingestion.Processor
+	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
+		provider, providerErr := anythingllm.NewClient(config.AnythingLLM.Endpoint, config.AnythingLLM.APIKey, config.AnythingLLM.Timeout.Value())
+		if providerErr != nil {
+			return nil, providerErr
+		}
+		if err := executor.EnableKnowledgeRetrieval(provider); err != nil {
+			return nil, err
+		}
+		knowledgeProcessor, err = ingestion.New(repository, objects, provider)
+		if err != nil {
+			return nil, err
+		}
+	}
 	credits, err := creditsapplication.New(creditsRepository, nil)
 	if err != nil {
 		return nil, err
@@ -99,7 +125,7 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return &Worker{workspace: workspaceWorker, aicreation: aicreation}, nil
+	return &Worker{workspace: workspaceWorker, aicreation: aicreation, ingestion: knowledgeProcessor}, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {

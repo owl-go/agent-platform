@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElNotification } from "element-plus";
-import { Box, ChatDotRound, Connection, Loading, MagicStick, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { Box, ChatDotRound, Connection, Folder, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -25,8 +25,24 @@ const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
 const aiCreationUnread = ref(localStorage.getItem("ai-creation-unread") === "1");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
-const nav = [
-  { id: "sessions", icon: ChatDotRound, path: "/sessions" }, { id: "workflows", icon: Connection, path: "/workflows" }, { id: "experts", icon: MagicStick, path: "/experts" }, { id: "resources", icon: Box, path: "/resources" }, { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" }, { id: "settings", icon: Setting, path: "/settings" },
+const navGroups = [
+  {
+    id: "workspace",
+    items: [
+      { id: "sessions", icon: ChatDotRound, path: "/sessions" },
+      { id: "workflows", icon: Connection, path: "/workflows" },
+      { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" },
+      { id: "knowledge-bases", icon: Folder, path: "/knowledge-bases" },
+    ],
+  },
+  {
+    id: "resources",
+    items: [{ id: "resources", icon: Box, path: "/resources" }],
+  },
+  {
+    id: "system",
+    items: [{ id: "settings", icon: Setting, path: "/settings" }],
+  },
 ] as const;
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
@@ -119,8 +135,11 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
       <el-aside class="sidebar" :class="{ open: mobileOpen }" width="248px">
         <RouterLink to="/sessions" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
         <el-button class="new-session" @click="$router.push('/sessions?new=1'); mobileOpen = false"><el-icon><Plus /></el-icon>{{ t('sessions.new') }}</el-button>
-        <nav>
-          <RouterLink v-for="item in nav" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-creation' && aiCreationUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
+        <nav :aria-label="t('nav.label')">
+          <section v-for="group in navGroups" :key="group.id" class="nav-group">
+            <h2>{{ t(`nav.groups.${group.id}`) }}</h2>
+            <RouterLink v-for="item in group.items" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-creation' && aiCreationUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
+          </section>
         </nav>
         <div class="sidebar-spacer"></div>
         <div class="connection-state"><el-badge is-dot :type="online === true ? 'success' : online === false ? 'danger' : 'info'" /><span>{{ online === true ? t('auth.online') : online === false ? t('auth.offline') : t('auth.checkingApi') }}</span></div>

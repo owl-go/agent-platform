@@ -50,12 +50,21 @@ type Service struct {
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))
+	server.Handle("/api/v1/resource-creation-actions/", http.HandlerFunc(service.decideResourceCreationAction))
 	server.Handle("/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download", http.HandlerFunc(service.downloadSessionArtifact))
 	server.Handle("/api/v1/workflows/{workflow_id}/runs/{run_id}/events", http.HandlerFunc(service.streamRunEvents))
 	server.Handle("/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download", http.HandlerFunc(service.downloadWorkflowArtifact))
 	server.Handle("/api/v1/workflows/{workflow_id}/workspace/download", http.HandlerFunc(service.downloadWorkspaceFile))
 	server.Handle("/api/v1/attachments/upload", http.HandlerFunc(service.uploadAttachment))
 	server.Handle("/api/v1/attachments/{attachment_id}/download", http.HandlerFunc(service.downloadAttachment))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/upload", http.HandlerFunc(service.uploadKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/import", http.HandlerFunc(service.importKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/retry", http.HandlerFunc(service.retryKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/restore", http.HandlerFunc(service.restoreKnowledgeBase))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}/restore", http.HandlerFunc(service.restoreKnowledgeCategory))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}", http.HandlerFunc(service.mutateKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/restore", http.HandlerFunc(service.restoreKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/download", http.HandlerFunc(service.downloadKnowledgeDocument))
 	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/images/{position}", http.HandlerFunc(service.downloadGeneratedImage))
 	server.Handle("/api/v1/ai-creation/reference-images", http.HandlerFunc(service.uploadReferenceImage))
 	server.Handle("/api/v1/ai-creation/reference-images/{upload_id}", http.HandlerFunc(service.deleteReferenceImage))
@@ -144,6 +153,8 @@ func publicError(err error) error {
 		return kratoserrors.New(http.StatusPreconditionFailed, "version_conflict", "resource version changed")
 	case errors.Is(err, workspacedomain.ErrQueueFull):
 		return kratoserrors.New(http.StatusTooManyRequests, "queue_full", "workflow queue is full")
+	case errors.Is(err, workspacedomain.ErrWorkflowCredentialUnavailable):
+		return kratoserrors.New(http.StatusUnprocessableEntity, "workflow_credential_secret_unavailable", "Workflow API Secret is unavailable; regenerate the credential")
 	case errors.Is(err, workspacedomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.Is(err, creditsdomain.ErrInsufficientCredits):

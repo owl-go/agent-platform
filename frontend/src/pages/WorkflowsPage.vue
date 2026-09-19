@@ -1,20 +1,52 @@
 <script setup lang="ts">
-import { inject, onMounted, ref } from "vue";
+import { computed, inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type Expert, type ExpertTeam, type Workflow, type WorkflowInput } from "../api/client";
+import { platformApiKey, type Expert, type ExpertTeam, type KnowledgeBase, type Workflow, type WorkflowInput } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
+import ConfirmDialog from "../components/ConfirmDialog.vue";
+import { MoreHorizontal, Pencil, Trash2 } from "@lucide/vue";
 
 const api = inject(platformApiKey)!;
 const { t } = useI18n(); const router = useRouter();
-const workflows = ref<Workflow[]>([]); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const loading = ref(true); const showCreate = ref(false); const error = ref("");
-const form = ref<WorkflowInput>({ name: "", goal: "", environment: [] });
+const workflows = ref<Workflow[]>([]); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const knowledgeBases = ref<KnowledgeBase[]>([]); const loading = ref(true); const showCreate = ref(false); const error = ref(""); const renameTarget = ref<Workflow>(); const renameValue = ref(""); const renameBusy = ref(false); const deleteTarget = ref<Workflow>();
+const form = ref<WorkflowInput>({ name: "", goal: "", environment: [], knowledge_base_ids: [] });
+const selectedKnowledgeBaseIDs = computed<string[]>({
+  get: () => form.value.knowledge_base_ids ?? [],
+  set: (value) => { form.value.knowledge_base_ids = [...new Set(value)]; },
+});
 onMounted(refresh);
-async function refresh() { loading.value = true; try { [workflows.value, experts.value, expertTeams.value] = await Promise.all([api.listWorkflows(), api.listExperts(), api.listExpertTeams()]); } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
-async function create() { try { const item = await api.createWorkflow(form.value); showCreate.value = false; form.value = { name: "", goal: "", environment: [] }; await router.push(`/workflows/${item.id}`); } catch { error.value = t("errors.validation"); } }
+async function refresh() { loading.value = true; try { const knowledgeBasesRequest = typeof api.listKnowledgeBases === "function" ? api.listKnowledgeBases() : Promise.resolve([]); [workflows.value, experts.value, expertTeams.value, knowledgeBases.value] = await Promise.all([api.listWorkflows(), api.listExperts(), api.listExpertTeams(), knowledgeBasesRequest]); } catch { error.value = t("errors.generic"); } finally { loading.value = false; } }
+async function create() { try { const item = await api.createWorkflow({ ...form.value, knowledge_base_ids: [...selectedKnowledgeBaseIDs.value] }); showCreate.value = false; form.value = { name: "", goal: "", environment: [], knowledge_base_ids: [] }; await router.push(`/workflows/${item.id}`); } catch { error.value = t("errors.validation"); } }
 async function run(item: Workflow) { try { await api.runWorkflow(item.id); await router.push(`/workflows/${item.id}?tab=history`); } catch { error.value = t("errors.generic"); } }
+function openWorkflow(item: Workflow) { void router.push(`/workflows/${item.id}`); }
+function openRename(item: Workflow) { renameTarget.value = item; renameValue.value = item.name; }
+async function renameWorkflow() {
+  const item = renameTarget.value;
+  const name = renameValue.value.trim();
+  if (!item || !name || renameBusy.value) return;
+  renameBusy.value = true;
+  try {
+    const updated = await api.updateWorkflow(item.id, { name, goal: item.goal, expert_id: item.expert_id, expert_team_id: item.expert_team_id, environment: item.environment, schedule: item.schedule }, item.version);
+    workflows.value = workflows.value.map((workflow) => workflow.id === updated.id ? updated : workflow);
+    renameTarget.value = undefined;
+  } catch { error.value = t("errors.generic"); }
+  finally { renameBusy.value = false; }
+}
+async function removeWorkflow() {
+  const item = deleteTarget.value;
+  if (!item) return;
+  try {
+    await api.deleteWorkflow(item.id);
+    workflows.value = workflows.value.filter((workflow) => workflow.id !== item.id);
+    deleteTarget.value = undefined;
+  } catch { error.value = t("errors.generic"); }
+}
+function handleWorkflowAction(command: string | number | object, item: Workflow) {
+  if (command === "rename") openRename(item);
+  if (command === "delete") deleteTarget.value = item;
+}
 function setSpecialist(value: string) { form.value.expert_id = value.startsWith("expert:") ? value.slice(7) : undefined; form.value.expert_team_id = value.startsWith("team:") ? value.slice(5) : undefined; }
-function specialistName(workflow: Workflow) { return workflow.expert_team_id ? expertTeams.value.find((team) => team.id === workflow.expert_team_id)?.name : workflow.expert_id ? experts.value.find((expert) => expert.id === workflow.expert_id)?.name : undefined; }
 function teamSelectionLabel(team: ExpertTeam): string { const compatibility = team.experts.some((item) => item.compatibility === "incompatible") ? t("experts.incompatible") : team.experts.some((item) => item.compatibility === "unverified") ? t("settings.unverified") : t("settings.verified"); return `${team.name} · ${compatibility}`; }
 </script>
 
@@ -25,12 +57,14 @@ function teamSelectionLabel(team: ExpertTeam): string { const compatibility = te
     <el-skeleton v-if="loading" :rows="8" animated class="page-loading" />
     <el-empty v-else-if="workflows.length === 0" :description="t('common.empty')"><el-button type="primary" @click="showCreate = true">{{ t('workflows.new') }}</el-button></el-empty>
     <div v-else class="workflow-grid">
-      <el-card v-for="workflow in workflows" :key="workflow.id" class="workflow-card" shadow="hover">
-        <div class="workflow-card-top"><span class="status-dot"></span></div><h2>{{ workflow.name }}</h2><p>{{ workflow.goal }}</p>
-        <div v-if="specialistName(workflow)" class="workflow-meta"><el-tag size="small" type="info" effect="plain">{{ specialistName(workflow) }}</el-tag></div>
-        <footer><el-button @click="router.push(`/workflows/${workflow.id}`)">{{ t('workflows.open') }} →</el-button><el-button type="primary" circle :aria-label="t('workflows.runNow')" @click="run(workflow)">▶</el-button></footer>
+      <el-card v-for="workflow in workflows" :key="workflow.id" class="workflow-card" shadow="hover" role="button" tabindex="0" :aria-label="workflow.name" @click="openWorkflow(workflow)" @keydown.enter="openWorkflow(workflow)" @keydown.space.prevent="openWorkflow(workflow)">
+        <div class="workflow-card-top" @click.stop @keydown.stop><el-dropdown trigger="click" @command="handleWorkflowAction($event, workflow)"><el-button class="workflow-more" text circle :aria-label="t('common.more')" :title="t('common.more')"><MoreHorizontal /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="rename"><Pencil :size="14" />{{ t('common.rename') }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t('common.delete') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+        <h2>{{ workflow.name }}</h2><p class="workflow-created-at">{{ new Date(workflow.created_at).toLocaleString() }}</p>
+        <footer><el-button type="primary" circle :aria-label="t('workflows.runNow')" :title="t('workflows.runNow')" @click.stop="run(workflow)">▶</el-button></footer>
       </el-card>
     </div>
   </section>
-  <el-dialog v-model="showCreate" class="resource-dialog" width="min(680px, calc(100vw - 32px))" align-center><template #header><h2>{{ t('workflows.new') }}</h2></template><el-form :model="form" label-position="top" @submit.prevent="create"><div class="form-grid"><el-form-item :label="t('workflows.name')" required><el-input v-model="form.name" maxlength="100" /></el-form-item><el-form-item :label="t('workflows.expert')"><el-select :model-value="form.expert_team_id ? `team:${form.expert_team_id}` : form.expert_id ? `expert:${form.expert_id}` : 'none'" @change="setSpecialist"><el-option value="none" :label="t('sessions.noExpert')" /><el-option-group :label="t('experts.title')"><el-option v-for="expert in experts" :key="expert.id" :value="`expert:${expert.id}`" :label="expert.name" :disabled="!expert.available" /></el-option-group><el-option-group :label="t('experts.teams')"><el-option v-for="team in expertTeams" :key="team.id" :value="`team:${team.id}`" :label="teamSelectionLabel(team)" :disabled="!team.available" /></el-option-group></el-select></el-form-item><el-form-item class="full" :label="t('workflows.goal')" required><el-input v-model="form.goal" type="textarea" :rows="7" /></el-form-item></div></el-form><template #footer><el-button @click="showCreate = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :disabled="!form.name.trim() || !form.goal.trim()" @click="create">{{ t('workflows.new') }}</el-button></template></el-dialog>
+  <el-dialog :model-value="Boolean(renameTarget)" class="resource-dialog" width="min(480px, calc(100vw - 32px))" align-center :title="t('common.rename')" @close="renameTarget = undefined"><el-form @submit.prevent="renameWorkflow"><el-form-item :label="t('workflows.name')" required><el-input v-model="renameValue" maxlength="100" autofocus /></el-form-item></el-form><template #footer><el-button @click="renameTarget = undefined">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="renameBusy" :disabled="!renameValue.trim()" @click="renameWorkflow">{{ t('common.save') }}</el-button></template></el-dialog>
+  <ConfirmDialog :open="Boolean(deleteTarget)" :title="t('workflows.deleteTitle')" :message="deleteTarget ? `${t('common.delete')} “${deleteTarget.name}”?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger @cancel="deleteTarget = undefined" @confirm="removeWorkflow" />
+  <el-dialog v-model="showCreate" class="resource-dialog" width="min(680px, calc(100vw - 32px))" align-center><template #header><h2>{{ t('workflows.new') }}</h2></template><el-form :model="form" label-position="top" @submit.prevent="create"><div class="form-grid"><el-form-item :label="t('workflows.name')" required><el-input v-model="form.name" maxlength="100" /></el-form-item><el-form-item :label="t('workflows.expert')"><el-select :model-value="form.expert_team_id ? `team:${form.expert_team_id}` : form.expert_id ? `expert:${form.expert_id}` : 'none'" @change="setSpecialist"><el-option value="none" :label="t('sessions.noExpert')" /><el-option-group :label="t('experts.title')"><el-option v-for="expert in experts" :key="expert.id" :value="`expert:${expert.id}`" :label="expert.name" :disabled="!expert.available" /></el-option-group><el-option-group :label="t('experts.teams')"><el-option v-for="team in expertTeams" :key="team.id" :value="`team:${team.id}`" :label="teamSelectionLabel(team)" :disabled="!team.available" /></el-option-group></el-select></el-form-item><el-form-item class="full" :label="t('workflows.goal')" required><el-input v-model="form.goal" type="textarea" :rows="7" /></el-form-item><el-form-item class="full" :label="t('workflows.knowledgeBases')"><div v-if="knowledgeBases.length" class="knowledge-base-options" role="group" :aria-label="t('workflows.knowledgeBases')"><label v-for="knowledgeBase in knowledgeBases" :key="knowledgeBase.id" class="knowledge-base-option" :class="{ selected: selectedKnowledgeBaseIDs.includes(knowledgeBase.id) }"><input v-model="selectedKnowledgeBaseIDs" type="checkbox" :value="knowledgeBase.id"><span><strong>{{ knowledgeBase.name }}</strong><small>{{ knowledgeBase.visibility === 'public' ? t('knowledgeBases.public') : t('knowledgeBases.private') }}</small></span></label></div><p v-else class="muted knowledge-base-empty">{{ t('common.empty') }}</p><small class="muted">{{ t('workflows.knowledgeBasesHint') }}</small></el-form-item></div></el-form><template #footer><el-button @click="showCreate = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :disabled="!form.name.trim() || !form.goal.trim()" @click="create">{{ t('workflows.new') }}</el-button></template></el-dialog>
 </template>

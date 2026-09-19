@@ -22,12 +22,15 @@ function mountOptions(api: PlatformApi, router: ReturnType<typeof createAppRoute
 describe("Expert editors", () => {
   it("saves visible structured guidance without execution settings", async () => {
     const createExpert = vi.fn(async (input: ExpertInput) => ({ ...experts[0], ...input }));
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), createExpert } as unknown as PlatformApi;
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createExpert } as unknown as PlatformApi;
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts/new");
     const wrapper = mount(ExpertEditorPage, mountOptions(api, router));
     await flushPromises();
     expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
+    expect(wrapper.find(".extension-manager").exists()).toBe(false);
+    expect(wrapper.find(".expert-resource-selector").exists()).toBe(true);
+    expect(wrapper.find(".form-grid > label .icon-picker-upload").exists()).toBe(false);
     const inputs = wrapper.findAll('input[type="text"]');
     const textareas = wrapper.findAll("textarea");
     await inputs[0]!.setValue("架构专家");

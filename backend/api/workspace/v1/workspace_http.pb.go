@@ -30,6 +30,8 @@ const OperationAgentWorkspaceServiceCreateCLIConnectorDefinition = "/workspace.v
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
 const OperationAgentWorkspaceServiceCreateExpertTeam = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
 const OperationAgentWorkspaceServiceCreateImageModel = "/workspace.v1.AgentWorkspaceService/CreateImageModel"
+const OperationAgentWorkspaceServiceCreateKnowledgeBase = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeBase"
+const OperationAgentWorkspaceServiceCreateKnowledgeCategory = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeCategory"
 const OperationAgentWorkspaceServiceCreateMCPConnector = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
 const OperationAgentWorkspaceServiceCreateModelCreditRate = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
 const OperationAgentWorkspaceServiceCreateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
@@ -45,6 +47,8 @@ const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspace
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 const OperationAgentWorkspaceServiceDeleteImageGeneration = "/workspace.v1.AgentWorkspaceService/DeleteImageGeneration"
 const OperationAgentWorkspaceServiceDeleteImageModel = "/workspace.v1.AgentWorkspaceService/DeleteImageModel"
+const OperationAgentWorkspaceServiceDeleteKnowledgeBase = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeBase"
+const OperationAgentWorkspaceServiceDeleteKnowledgeCategory = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeCategory"
 const OperationAgentWorkspaceServiceDeleteMCPConnector = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
 const OperationAgentWorkspaceServiceDeleteModelProviderConnection = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
 const OperationAgentWorkspaceServiceDeleteSession = "/workspace.v1.AgentWorkspaceService/DeleteSession"
@@ -61,6 +65,7 @@ const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
 const OperationAgentWorkspaceServiceGetImageGeneration = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
+const OperationAgentWorkspaceServiceGetKnowledgeBase = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
@@ -68,6 +73,7 @@ const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceGetSkillDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 const OperationAgentWorkspaceServiceGetSkillDocument = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
+const OperationAgentWorkspaceServiceGetWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 const OperationAgentWorkspaceServiceListCLIConnectorAuthorizations = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
@@ -82,6 +88,9 @@ const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceListImageGenerationOptions = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
 const OperationAgentWorkspaceServiceListImageGenerations = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
 const OperationAgentWorkspaceServiceListImageModels = "/workspace.v1.AgentWorkspaceService/ListImageModels"
+const OperationAgentWorkspaceServiceListKnowledgeBases = "/workspace.v1.AgentWorkspaceService/ListKnowledgeBases"
+const OperationAgentWorkspaceServiceListKnowledgeCategories = "/workspace.v1.AgentWorkspaceService/ListKnowledgeCategories"
+const OperationAgentWorkspaceServiceListKnowledgeDocuments = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
 const OperationAgentWorkspaceServiceListMCPConnectors = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
@@ -120,6 +129,7 @@ const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorks
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
 const OperationAgentWorkspaceServiceUpdateExpertTeam = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
+const OperationAgentWorkspaceServiceUpdateKnowledgeBase = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
 const OperationAgentWorkspaceServiceUpdateMCPConnector = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
 const OperationAgentWorkspaceServiceUpdateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
 const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspaceService/UpdateSession"
@@ -143,6 +153,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
 	CreateExpertTeam(context.Context, *CreateExpertTeamRequest) (*ExpertTeam, error)
 	CreateImageModel(context.Context, *CreateImageModelRequest) (*ImageModel, error)
+	CreateKnowledgeBase(context.Context, *CreateKnowledgeBaseRequest) (*KnowledgeBase, error)
+	CreateKnowledgeCategory(context.Context, *CreateKnowledgeCategoryRequest) (*KnowledgeCategory, error)
 	CreateMCPConnector(context.Context, *CreateMCPConnectorRequest) (*MCPConnector, error)
 	CreateModelCreditRate(context.Context, *CreateModelCreditRateRequest) (*ModelCreditRate, error)
 	CreateModelProviderConnection(context.Context, *CreateModelProviderConnectionRequest) (*ModelProviderConnection, error)
@@ -158,6 +170,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	DeleteImageGeneration(context.Context, *DeleteImageGenerationRequest) (*DeleteResponse, error)
 	DeleteImageModel(context.Context, *DeleteImageModelRequest) (*DeleteResponse, error)
+	DeleteKnowledgeBase(context.Context, *DeleteKnowledgeBaseRequest) (*DeleteResponse, error)
+	DeleteKnowledgeCategory(context.Context, *DeleteKnowledgeCategoryRequest) (*DeleteResponse, error)
 	DeleteMCPConnector(context.Context, *DeleteMCPConnectorRequest) (*DeleteResponse, error)
 	DeleteModelProviderConnection(context.Context, *DeleteModelProviderConnectionRequest) (*DeleteResponse, error)
 	DeleteSession(context.Context, *DeleteSessionRequest) (*DeleteResponse, error)
@@ -174,6 +188,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
 	GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error)
+	GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error)
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
@@ -181,6 +196,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetSkillDocument(context.Context, *GetSkillDocumentRequest) (*SkillDocument, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
+	GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	ListCLIConnectorAuthorizations(context.Context, *ListCLIConnectorAuthorizationsRequest) (*ListCLIConnectorAuthorizationsResponse, error)
@@ -195,6 +211,9 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListImageGenerationOptions(context.Context, *ListImageGenerationOptionsRequest) (*ListImageGenerationOptionsResponse, error)
 	ListImageGenerations(context.Context, *ListImageGenerationsRequest) (*ListImageGenerationsResponse, error)
 	ListImageModels(context.Context, *ListImageModelsRequest) (*ListImageModelsResponse, error)
+	ListKnowledgeBases(context.Context, *ListKnowledgeBasesRequest) (*ListKnowledgeBasesResponse, error)
+	ListKnowledgeCategories(context.Context, *ListKnowledgeCategoriesRequest) (*ListKnowledgeCategoriesResponse, error)
+	ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error)
 	ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error)
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
@@ -233,6 +252,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
 	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
+	UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error)
 	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
 	UpdateModelProviderConnection(context.Context, *UpdateModelProviderConnectionRequest) (*ModelProviderConnection, error)
 	UpdateSession(context.Context, *UpdateSessionRequest) (*Session, error)
@@ -297,6 +317,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_DeleteWorkflow0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-token", _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_ListRuns0_HTTP_Handler(srv))
@@ -309,6 +330,15 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace", _AgentWorkspaceService_ListWorkspaceEntries0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace/file", _AgentWorkspaceService_GetWorkspaceFile0_HTTP_Handler(srv))
 	r.Handle("PUT", "/api/v1/workflows/{workflow_id}/git-source", _AgentWorkspaceService_ConfigureWorkflowGitSource0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/knowledge-bases", _AgentWorkspaceService_ListKnowledgeBases0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/knowledge-bases", _AgentWorkspaceService_CreateKnowledgeBase0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/knowledge-bases/{knowledge_base_id}", _AgentWorkspaceService_GetKnowledgeBase0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/knowledge-bases/{knowledge_base_id}", _AgentWorkspaceService_UpdateKnowledgeBase0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/knowledge-bases/{knowledge_base_id}", _AgentWorkspaceService_DeleteKnowledgeBase0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/knowledge-bases/{knowledge_base_id}/categories", _AgentWorkspaceService_ListKnowledgeCategories0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/knowledge-bases/{knowledge_base_id}/categories", _AgentWorkspaceService_CreateKnowledgeCategory0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}", _AgentWorkspaceService_DeleteKnowledgeCategory0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/knowledge-bases/{knowledge_base_id}/documents", _AgentWorkspaceService_ListKnowledgeDocuments0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts", _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_GetExpert0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/experts", _AgentWorkspaceService_CreateExpert0_HTTP_Handler(srv))
@@ -1427,6 +1457,28 @@ func _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv AgentWo
 	}
 }
 
+func _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetWorkflowCredentialRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetWorkflowCredential)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetWorkflowCredential(ctx, req.(*GetWorkflowCredentialRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*WorkflowCredential)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ExchangeWorkflowCredentialRequest
@@ -1687,6 +1739,198 @@ func _AgentWorkspaceService_ConfigureWorkflowGitSource0_HTTP_Handler(srv AgentWo
 			return err
 		}
 		reply := out.(*Workflow)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListKnowledgeBases0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListKnowledgeBasesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListKnowledgeBases)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListKnowledgeBases(ctx, req.(*ListKnowledgeBasesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListKnowledgeBasesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateKnowledgeBase0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateKnowledgeBaseRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateKnowledgeBase)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateKnowledgeBase(ctx, req.(*CreateKnowledgeBaseRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*KnowledgeBase)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetKnowledgeBase0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetKnowledgeBaseRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetKnowledgeBase)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetKnowledgeBase(ctx, req.(*GetKnowledgeBaseRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*KnowledgeBase)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_UpdateKnowledgeBase0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateKnowledgeBaseRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateKnowledgeBase)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateKnowledgeBase(ctx, req.(*UpdateKnowledgeBaseRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*KnowledgeBase)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteKnowledgeBase0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteKnowledgeBaseRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteKnowledgeBase)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteKnowledgeBase(ctx, req.(*DeleteKnowledgeBaseRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListKnowledgeCategories0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListKnowledgeCategoriesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListKnowledgeCategories)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListKnowledgeCategories(ctx, req.(*ListKnowledgeCategoriesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListKnowledgeCategoriesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateKnowledgeCategory0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateKnowledgeCategoryRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateKnowledgeCategory)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateKnowledgeCategory(ctx, req.(*CreateKnowledgeCategoryRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*KnowledgeCategory)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DeleteKnowledgeCategory0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DeleteKnowledgeCategoryRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDeleteKnowledgeCategory)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DeleteKnowledgeCategory(ctx, req.(*DeleteKnowledgeCategoryRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListKnowledgeDocuments0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListKnowledgeDocumentsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListKnowledgeDocuments)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListKnowledgeDocuments(ctx, req.(*ListKnowledgeDocumentsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListKnowledgeDocumentsResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -2682,6 +2926,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	CreateExpertTeam(ctx context.Context, req *CreateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	CreateImageModel(ctx context.Context, req *CreateImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
+	CreateKnowledgeBase(ctx context.Context, req *CreateKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
+	CreateKnowledgeCategory(ctx context.Context, req *CreateKnowledgeCategoryRequest, opts ...http.CallOption) (rsp *KnowledgeCategory, err error)
 	CreateMCPConnector(ctx context.Context, req *CreateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	CreateModelCreditRate(ctx context.Context, req *CreateModelCreditRateRequest, opts ...http.CallOption) (rsp *ModelCreditRate, err error)
 	CreateModelProviderConnection(ctx context.Context, req *CreateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
@@ -2697,6 +2943,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteImageGeneration(ctx context.Context, req *DeleteImageGenerationRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteImageModel(ctx context.Context, req *DeleteImageModelRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteKnowledgeBase(ctx context.Context, req *DeleteKnowledgeBaseRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
+	DeleteKnowledgeCategory(ctx context.Context, req *DeleteKnowledgeCategoryRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteMCPConnector(ctx context.Context, req *DeleteMCPConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteModelProviderConnection(ctx context.Context, req *DeleteModelProviderConnectionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteSession(ctx context.Context, req *DeleteSessionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -2713,6 +2961,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	GetImageGeneration(ctx context.Context, req *GetImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
+	GetKnowledgeBase(ctx context.Context, req *GetKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
@@ -2720,6 +2969,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetSkillDeletionImpact(ctx context.Context, req *GetSkillDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetSkillDocument(ctx context.Context, req *GetSkillDocumentRequest, opts ...http.CallOption) (rsp *SkillDocument, err error)
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	GetWorkflowCredential(ctx context.Context, req *GetWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
 	ListCLIConnectorAuthorizations(ctx context.Context, req *ListCLIConnectorAuthorizationsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorAuthorizationsResponse, err error)
@@ -2734,6 +2984,9 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListImageGenerationOptions(ctx context.Context, req *ListImageGenerationOptionsRequest, opts ...http.CallOption) (rsp *ListImageGenerationOptionsResponse, err error)
 	ListImageGenerations(ctx context.Context, req *ListImageGenerationsRequest, opts ...http.CallOption) (rsp *ListImageGenerationsResponse, err error)
 	ListImageModels(ctx context.Context, req *ListImageModelsRequest, opts ...http.CallOption) (rsp *ListImageModelsResponse, err error)
+	ListKnowledgeBases(ctx context.Context, req *ListKnowledgeBasesRequest, opts ...http.CallOption) (rsp *ListKnowledgeBasesResponse, err error)
+	ListKnowledgeCategories(ctx context.Context, req *ListKnowledgeCategoriesRequest, opts ...http.CallOption) (rsp *ListKnowledgeCategoriesResponse, err error)
+	ListKnowledgeDocuments(ctx context.Context, req *ListKnowledgeDocumentsRequest, opts ...http.CallOption) (rsp *ListKnowledgeDocumentsResponse, err error)
 	ListMCPConnectors(ctx context.Context, req *ListMCPConnectorsRequest, opts ...http.CallOption) (rsp *ListMCPConnectorsResponse, err error)
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
@@ -2772,6 +3025,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	UpdateExpertTeam(ctx context.Context, req *UpdateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	UpdateKnowledgeBase(ctx context.Context, req *UpdateKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	UpdateMCPConnector(ctx context.Context, req *UpdateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateModelProviderConnection(ctx context.Context, req *UpdateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
@@ -3002,6 +3256,40 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateImageModel(ctx context.Conte
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCreateImageModel),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateKnowledgeBase(ctx context.Context, in *CreateKnowledgeBaseRequest, opts ...http.CallOption) (*KnowledgeBase, error) {
+	var out KnowledgeBase
+	pattern := "/api/v1/knowledge-bases"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateKnowledgeBase),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateKnowledgeCategory(ctx context.Context, in *CreateKnowledgeCategoryRequest, opts ...http.CallOption) (*KnowledgeCategory, error) {
+	var out KnowledgeCategory
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}/categories"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateKnowledgeCategory),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -3252,6 +3540,38 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteImageModel(ctx context.Conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceDeleteImageModel),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteKnowledgeBase(ctx context.Context, in *DeleteKnowledgeBaseRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteKnowledgeBase),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DeleteKnowledgeCategory(ctx context.Context, in *DeleteKnowledgeCategoryRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDeleteKnowledgeCategory),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
@@ -3522,6 +3842,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetImageGeneration(ctx context.Con
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetKnowledgeBase(ctx context.Context, in *GetKnowledgeBaseRequest, opts ...http.CallOption) (*KnowledgeBase, error) {
+	var out KnowledgeBase
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetKnowledgeBase),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GetMCPConnectorDeletionImpact(ctx context.Context, in *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (*ResourceDeletionImpact, error) {
 	var out ResourceDeletionImpact
 	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}/deletion-impact"
@@ -3625,6 +3961,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetWorkflow(ctx context.Context, i
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetWorkflow),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...http.CallOption) (*WorkflowCredential, error) {
+	var out WorkflowCredential
+	pattern := "/api/v1/workflows/{workflow_id}/api-credential"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetWorkflowCredential),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -3849,6 +4201,54 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListImageModels(ctx context.Contex
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceListImageModels),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListKnowledgeBases(ctx context.Context, in *ListKnowledgeBasesRequest, opts ...http.CallOption) (*ListKnowledgeBasesResponse, error) {
+	var out ListKnowledgeBasesResponse
+	pattern := "/api/v1/knowledge-bases"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListKnowledgeBases),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListKnowledgeCategories(ctx context.Context, in *ListKnowledgeCategoriesRequest, opts ...http.CallOption) (*ListKnowledgeCategoriesResponse, error) {
+	var out ListKnowledgeCategoriesResponse
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}/categories"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListKnowledgeCategories),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListKnowledgeDocuments(ctx context.Context, in *ListKnowledgeDocumentsRequest, opts ...http.CallOption) (*ListKnowledgeDocumentsResponse, error) {
+	var out ListKnowledgeDocumentsResponse
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}/documents"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListKnowledgeDocuments),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -4480,6 +4880,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateExpertTeam(ctx context.Conte
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceUpdateExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateKnowledgeBase(ctx context.Context, in *UpdateKnowledgeBaseRequest, opts ...http.CallOption) (*KnowledgeBase, error) {
+	var out KnowledgeBase
+	pattern := "/api/v1/knowledge-bases/{knowledge_base_id}"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceUpdateKnowledgeBase),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)

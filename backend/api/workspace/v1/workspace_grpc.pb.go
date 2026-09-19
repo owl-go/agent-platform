@@ -71,6 +71,7 @@ const (
 	AgentWorkspaceService_UpdateWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
 	AgentWorkspaceService_DeleteWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
 	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
+	AgentWorkspaceService_GetWorkflowCredential_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
 	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
 	AgentWorkspaceService_RunWorkflow_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 	AgentWorkspaceService_ListRuns_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/ListRuns"
@@ -83,6 +84,15 @@ const (
 	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 	AgentWorkspaceService_GetWorkspaceFile_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
 	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
+	AgentWorkspaceService_ListKnowledgeBases_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListKnowledgeBases"
+	AgentWorkspaceService_CreateKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeBase"
+	AgentWorkspaceService_GetKnowledgeBase_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
+	AgentWorkspaceService_UpdateKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
+	AgentWorkspaceService_DeleteKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeBase"
+	AgentWorkspaceService_ListKnowledgeCategories_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ListKnowledgeCategories"
+	AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName             = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeCategory"
+	AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName             = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeCategory"
+	AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
 	AgentWorkspaceService_ListExperts_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ListExperts"
 	AgentWorkspaceService_GetExpert_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetExpert"
 	AgentWorkspaceService_CreateExpert_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/CreateExpert"
@@ -188,6 +198,7 @@ type AgentWorkspaceServiceClient interface {
 	UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GenerateWorkflowCredential(ctx context.Context, in *GenerateWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error)
+	GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error)
 	ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowAccessToken, error)
 	RunWorkflow(ctx context.Context, in *RunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
@@ -200,6 +211,15 @@ type AgentWorkspaceServiceClient interface {
 	ListWorkspaceEntries(ctx context.Context, in *ListWorkspaceEntriesRequest, opts ...grpc.CallOption) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(ctx context.Context, in *GetWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceFile, error)
 	ConfigureWorkflowGitSource(ctx context.Context, in *ConfigureWorkflowGitSourceRequest, opts ...grpc.CallOption) (*Workflow, error)
+	ListKnowledgeBases(ctx context.Context, in *ListKnowledgeBasesRequest, opts ...grpc.CallOption) (*ListKnowledgeBasesResponse, error)
+	CreateKnowledgeBase(ctx context.Context, in *CreateKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error)
+	GetKnowledgeBase(ctx context.Context, in *GetKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error)
+	UpdateKnowledgeBase(ctx context.Context, in *UpdateKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error)
+	DeleteKnowledgeBase(ctx context.Context, in *DeleteKnowledgeBaseRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	ListKnowledgeCategories(ctx context.Context, in *ListKnowledgeCategoriesRequest, opts ...grpc.CallOption) (*ListKnowledgeCategoriesResponse, error)
+	CreateKnowledgeCategory(ctx context.Context, in *CreateKnowledgeCategoryRequest, opts ...grpc.CallOption) (*KnowledgeCategory, error)
+	DeleteKnowledgeCategory(ctx context.Context, in *DeleteKnowledgeCategoryRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	ListKnowledgeDocuments(ctx context.Context, in *ListKnowledgeDocumentsRequest, opts ...grpc.CallOption) (*ListKnowledgeDocumentsResponse, error)
 	ListExperts(ctx context.Context, in *ListExpertsRequest, opts ...grpc.CallOption) (*ListExpertsResponse, error)
 	GetExpert(ctx context.Context, in *GetExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*Expert, error)
@@ -777,6 +797,16 @@ func (c *agentWorkspaceServiceClient) GenerateWorkflowCredential(ctx context.Con
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) GetWorkflowCredential(ctx context.Context, in *GetWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowCredential, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WorkflowCredential)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetWorkflowCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ExchangeWorkflowCredential(ctx context.Context, in *ExchangeWorkflowCredentialRequest, opts ...grpc.CallOption) (*WorkflowAccessToken, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WorkflowAccessToken)
@@ -891,6 +921,96 @@ func (c *agentWorkspaceServiceClient) ConfigureWorkflowGitSource(ctx context.Con
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Workflow)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListKnowledgeBases(ctx context.Context, in *ListKnowledgeBasesRequest, opts ...grpc.CallOption) (*ListKnowledgeBasesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListKnowledgeBasesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListKnowledgeBases_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateKnowledgeBase(ctx context.Context, in *CreateKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(KnowledgeBase)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateKnowledgeBase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetKnowledgeBase(ctx context.Context, in *GetKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(KnowledgeBase)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetKnowledgeBase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateKnowledgeBase(ctx context.Context, in *UpdateKnowledgeBaseRequest, opts ...grpc.CallOption) (*KnowledgeBase, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(KnowledgeBase)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateKnowledgeBase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DeleteKnowledgeBase(ctx context.Context, in *DeleteKnowledgeBaseRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteKnowledgeBase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListKnowledgeCategories(ctx context.Context, in *ListKnowledgeCategoriesRequest, opts ...grpc.CallOption) (*ListKnowledgeCategoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListKnowledgeCategoriesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListKnowledgeCategories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateKnowledgeCategory(ctx context.Context, in *CreateKnowledgeCategoryRequest, opts ...grpc.CallOption) (*KnowledgeCategory, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(KnowledgeCategory)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DeleteKnowledgeCategory(ctx context.Context, in *DeleteKnowledgeCategoryRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListKnowledgeDocuments(ctx context.Context, in *ListKnowledgeDocumentsRequest, opts ...grpc.CallOption) (*ListKnowledgeDocumentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListKnowledgeDocumentsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1423,6 +1543,7 @@ type AgentWorkspaceServiceServer interface {
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
 	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*DeleteResponse, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
+	GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error)
 	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
@@ -1435,6 +1556,15 @@ type AgentWorkspaceServiceServer interface {
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
 	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
+	ListKnowledgeBases(context.Context, *ListKnowledgeBasesRequest) (*ListKnowledgeBasesResponse, error)
+	CreateKnowledgeBase(context.Context, *CreateKnowledgeBaseRequest) (*KnowledgeBase, error)
+	GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error)
+	UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error)
+	DeleteKnowledgeBase(context.Context, *DeleteKnowledgeBaseRequest) (*DeleteResponse, error)
+	ListKnowledgeCategories(context.Context, *ListKnowledgeCategoriesRequest) (*ListKnowledgeCategoriesResponse, error)
+	CreateKnowledgeCategory(context.Context, *CreateKnowledgeCategoryRequest) (*KnowledgeCategory, error)
+	DeleteKnowledgeCategory(context.Context, *DeleteKnowledgeCategoryRequest) (*DeleteResponse, error)
+	ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
@@ -1648,6 +1778,9 @@ func (UnimplementedAgentWorkspaceServiceServer) DeleteWorkflow(context.Context, 
 func (UnimplementedAgentWorkspaceServiceServer) GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateWorkflowCredential not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkflowCredential not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeWorkflowCredential not implemented")
 }
@@ -1683,6 +1816,33 @@ func (UnimplementedAgentWorkspaceServiceServer) GetWorkspaceFile(context.Context
 }
 func (UnimplementedAgentWorkspaceServiceServer) ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfigureWorkflowGitSource not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListKnowledgeBases(context.Context, *ListKnowledgeBasesRequest) (*ListKnowledgeBasesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListKnowledgeBases not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateKnowledgeBase(context.Context, *CreateKnowledgeBaseRequest) (*KnowledgeBase, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateKnowledgeBase not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetKnowledgeBase not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateKnowledgeBase not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DeleteKnowledgeBase(context.Context, *DeleteKnowledgeBaseRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteKnowledgeBase not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListKnowledgeCategories(context.Context, *ListKnowledgeCategoriesRequest) (*ListKnowledgeCategoriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListKnowledgeCategories not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateKnowledgeCategory(context.Context, *CreateKnowledgeCategoryRequest) (*KnowledgeCategory, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateKnowledgeCategory not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DeleteKnowledgeCategory(context.Context, *DeleteKnowledgeCategoryRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteKnowledgeCategory not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListKnowledgeDocuments not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExperts not implemented")
@@ -2782,6 +2942,24 @@ func _AgentWorkspaceService_GenerateWorkflowCredential_Handler(srv interface{}, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_GetWorkflowCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetWorkflowCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetWorkflowCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetWorkflowCredential(ctx, req.(*GetWorkflowCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ExchangeWorkflowCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ExchangeWorkflowCredentialRequest)
 	if err := dec(in); err != nil {
@@ -2994,6 +3172,168 @@ func _AgentWorkspaceService_ConfigureWorkflowGitSource_Handler(srv interface{}, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).ConfigureWorkflowGitSource(ctx, req.(*ConfigureWorkflowGitSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListKnowledgeBases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListKnowledgeBasesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeBases(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListKnowledgeBases_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeBases(ctx, req.(*ListKnowledgeBasesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateKnowledgeBase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateKnowledgeBaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateKnowledgeBase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateKnowledgeBase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateKnowledgeBase(ctx, req.(*CreateKnowledgeBaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetKnowledgeBase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetKnowledgeBaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetKnowledgeBase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetKnowledgeBase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetKnowledgeBase(ctx, req.(*GetKnowledgeBaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateKnowledgeBase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateKnowledgeBaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateKnowledgeBase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateKnowledgeBase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateKnowledgeBase(ctx, req.(*UpdateKnowledgeBaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DeleteKnowledgeBase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteKnowledgeBaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DeleteKnowledgeBase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DeleteKnowledgeBase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DeleteKnowledgeBase(ctx, req.(*DeleteKnowledgeBaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListKnowledgeCategories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListKnowledgeCategoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeCategories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListKnowledgeCategories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeCategories(ctx, req.(*ListKnowledgeCategoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateKnowledgeCategory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateKnowledgeCategoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateKnowledgeCategory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateKnowledgeCategory(ctx, req.(*CreateKnowledgeCategoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DeleteKnowledgeCategory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteKnowledgeCategoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DeleteKnowledgeCategory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DeleteKnowledgeCategory(ctx, req.(*DeleteKnowledgeCategoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListKnowledgeDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListKnowledgeDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListKnowledgeDocuments(ctx, req.(*ListKnowledgeDocumentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4060,6 +4400,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_GenerateWorkflowCredential_Handler,
 		},
 		{
+			MethodName: "GetWorkflowCredential",
+			Handler:    _AgentWorkspaceService_GetWorkflowCredential_Handler,
+		},
+		{
 			MethodName: "ExchangeWorkflowCredential",
 			Handler:    _AgentWorkspaceService_ExchangeWorkflowCredential_Handler,
 		},
@@ -4106,6 +4450,42 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConfigureWorkflowGitSource",
 			Handler:    _AgentWorkspaceService_ConfigureWorkflowGitSource_Handler,
+		},
+		{
+			MethodName: "ListKnowledgeBases",
+			Handler:    _AgentWorkspaceService_ListKnowledgeBases_Handler,
+		},
+		{
+			MethodName: "CreateKnowledgeBase",
+			Handler:    _AgentWorkspaceService_CreateKnowledgeBase_Handler,
+		},
+		{
+			MethodName: "GetKnowledgeBase",
+			Handler:    _AgentWorkspaceService_GetKnowledgeBase_Handler,
+		},
+		{
+			MethodName: "UpdateKnowledgeBase",
+			Handler:    _AgentWorkspaceService_UpdateKnowledgeBase_Handler,
+		},
+		{
+			MethodName: "DeleteKnowledgeBase",
+			Handler:    _AgentWorkspaceService_DeleteKnowledgeBase_Handler,
+		},
+		{
+			MethodName: "ListKnowledgeCategories",
+			Handler:    _AgentWorkspaceService_ListKnowledgeCategories_Handler,
+		},
+		{
+			MethodName: "CreateKnowledgeCategory",
+			Handler:    _AgentWorkspaceService_CreateKnowledgeCategory_Handler,
+		},
+		{
+			MethodName: "DeleteKnowledgeCategory",
+			Handler:    _AgentWorkspaceService_DeleteKnowledgeCategory_Handler,
+		},
+		{
+			MethodName: "ListKnowledgeDocuments",
+			Handler:    _AgentWorkspaceService_ListKnowledgeDocuments_Handler,
 		},
 		{
 			MethodName: "ListExperts",

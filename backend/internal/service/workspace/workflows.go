@@ -121,10 +121,37 @@ func (service *Service) GenerateWorkflowCredential(ctx context.Context, request 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if _, err := service.workspace.Repository().SetWorkflowCredential(ctx, owner, request.WorkflowId, key, hash); err != nil {
+	ciphertext, err := service.box.Encrypt([]byte(secret), workflowCredentialAAD(owner, request.WorkflowId))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if _, err := service.workspace.Repository().SetWorkflowCredential(ctx, owner, request.WorkflowId, key, hash, ciphertext); err != nil {
 		return nil, publicError(err)
 	}
 	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: secret, CreatedAt: timestamppb.Now()}, nil
+}
+
+func (service *Service) GetWorkflowCredential(ctx context.Context, request *workspacev1.GetWorkflowCredentialRequest) (*workspacev1.WorkflowCredential, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	key, ciphertext, err := service.workspace.Repository().GetWorkflowCredential(ctx, owner, request.WorkflowId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if len(ciphertext) == 0 {
+		return nil, publicError(workspacedomain.ErrWorkflowCredentialUnavailable)
+	}
+	secret, err := service.box.Decrypt(ciphertext, workflowCredentialAAD(owner, request.WorkflowId))
+	if err != nil {
+		return nil, publicError(fmt.Errorf("%w: decrypt API Secret", workspacedomain.ErrWorkflowCredentialUnavailable))
+	}
+	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: string(secret)}, nil
+}
+
+func workflowCredentialAAD(owner, workflowID string) string {
+	return "workflow-api-credential:" + owner + ":" + workflowID
 }
 
 func (service *Service) ExchangeWorkflowCredential(ctx context.Context, request *workspacev1.ExchangeWorkflowCredentialRequest) (*workspacev1.WorkflowAccessToken, error) {
@@ -331,7 +358,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 	if input == nil {
 		return workspacedomain.WorkflowInput{}, nil, fmt.Errorf("%w: Workflow input is required", workspacedomain.ErrInvalid)
 	}
-	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId}
+	domainInput := workspacedomain.WorkflowInput{Name: input.Name, Goal: input.Goal, ExpertID: input.ExpertId, ExpertTeamID: input.ExpertTeamId, KnowledgeBaseIDs: append([]string(nil), input.KnowledgeBaseIds...)}
 	secrets := make(map[string]string)
 	for _, value := range input.Environment {
 		if value == nil {
@@ -357,7 +384,7 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 }
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
-	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, KnowledgeBaseIds: append([]string(nil), item.KnowledgeBaseIDs...), ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 	for _, value := range item.Environment {
 		environment := &workspacev1.EnvironmentVariable{Name: value.Name, Secret: value.Secret, Configured: value.Configured}
 		if !value.Secret && value.Value != "" {

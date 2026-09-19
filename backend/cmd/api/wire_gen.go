@@ -56,7 +56,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	service4, err := agentworkspace.NewWorkspaceService(database, repository)
+	service4, err := agentworkspace.NewWorkspaceService(contextContext, database, repository, applicationService, objectstoreProvider)
 	if err != nil {
 		return nil, err
 	}

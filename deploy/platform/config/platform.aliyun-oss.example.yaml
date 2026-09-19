@@ -61,6 +61,13 @@ object_store:
     bucket: "${ALIYUN_OSS_BUCKET}"
     prefix: "${ALIYUN_OSS_PREFIX}"
 
+anythingllm:
+  endpoint: "${ANYTHINGLLM_ENDPOINT}"
+  api_key: "${ANYTHINGLLM_API_KEY}"
+  deployment: "${ANYTHINGLLM_DEPLOYMENT}"
+  embedding_model: "${ANYTHINGLLM_EMBEDDING_MODEL}"
+  timeout: 30s
+
 sandbox:
   runtime: runsc
   egress_network: agent-public-egress

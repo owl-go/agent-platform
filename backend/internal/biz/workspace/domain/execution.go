@@ -14,6 +14,8 @@ type ExecutionSnapshot struct {
 	Stages                      []ExecutionStageSnapshot   `json:"stages,omitempty"`
 	WorkflowName                string                     `json:"workflow_name"`
 	Goal                        string                     `json:"goal"`
+	KnowledgeBaseIDs            []string                   `json:"knowledge_base_ids,omitempty"`
+	KnowledgeIndexGenerations   map[string]int64           `json:"knowledge_index_generations,omitempty"`
 	RuntimeEngine               RuntimeEngine              `json:"runtime_engine"`
 	ProviderModel               ProviderModelSnapshot      `json:"provider_model"`
 	Personality                 string                     `json:"personality"`

@@ -30,7 +30,8 @@ type Repository interface {
 	GetWorkflow(context.Context, string, string, bool) (domain.Workflow, error)
 	UpdateWorkflow(context.Context, string, string, domain.WorkflowInput, []byte, int64) (domain.Workflow, error)
 	DeleteWorkflow(context.Context, string, string) error
-	SetWorkflowCredential(context.Context, string, string, string, string) (domain.Workflow, error)
+	SetWorkflowCredential(context.Context, string, string, string, string, []byte) (domain.Workflow, error)
+	GetWorkflowCredential(context.Context, string, string) (string, []byte, error)
 	ResolveWorkflowCredential(context.Context, string, string) (string, string, error)
 	SetWorkflowGitSource(context.Context, string, string, domain.GitSource, []byte) (domain.Workflow, error)
 	GetWorkflowGitSecret(context.Context, string, string) ([]byte, error)
@@ -79,6 +80,22 @@ type Repository interface {
 	CreateSkill(context.Context, string, domain.Skill) (domain.Skill, error)
 	UpdateSkill(context.Context, string, string, string, string, *string, string, string, int64) (domain.Skill, error)
 	DeleteSkill(context.Context, string, string) error
+
+	ListKnowledgeBases(context.Context, string, bool, bool) ([]domain.KnowledgeBase, error)
+	GetKnowledgeBase(context.Context, string, string, bool, bool) (domain.KnowledgeBase, error)
+	CreateKnowledgeBase(context.Context, string, bool, domain.KnowledgeBaseInput) (domain.KnowledgeBase, error)
+	UpdateKnowledgeBase(context.Context, string, string, bool, domain.KnowledgeBaseInput, int64) (domain.KnowledgeBase, error)
+	DeleteKnowledgeBase(context.Context, string, string, bool) error
+	ListKnowledgeCategories(context.Context, string, string, bool) ([]domain.KnowledgeCategory, error)
+	CreateKnowledgeCategory(context.Context, string, string, bool, string) (domain.KnowledgeCategory, error)
+	DeleteKnowledgeCategory(context.Context, string, string, string, bool) error
+	ListKnowledgeDocuments(context.Context, string, string, bool) ([]domain.KnowledgeDocument, error)
+	CreateKnowledgeDocument(context.Context, string, bool, domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
+	RetryKnowledgeDocument(context.Context, string, string, string, bool) error
+	DeleteKnowledgeDocument(context.Context, string, string, string, bool) error
+	RestoreKnowledgeBase(context.Context, string, string, bool) error
+	RestoreKnowledgeCategory(context.Context, string, string, string, bool) error
+	RestoreKnowledgeDocument(context.Context, string, string, string, bool) error
 }
 
 type ModelCatalog interface {

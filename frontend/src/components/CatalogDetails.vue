@@ -20,7 +20,10 @@ const resourceMeta = ref<Record<string, { name: string; icon?: string }>>({});
 const item = computed(() => props.skill ?? props.expert ?? props.team);
 const open = computed(() => Boolean(item.value));
 const administrator = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
-const canEdit = computed(() => !props.skill?.platform && !props.expert?.platform || administrator.value || Boolean(props.team));
+const canEdit = computed(() => {
+  if (props.skill?.immutable || props.expert?.immutable) return false;
+  return (!props.skill?.platform && !props.expert?.platform) || administrator.value || Boolean(props.team);
+});
 const members = computed(() => props.expert ? [{ name: "", expert: props.expert, labels: [] as string[] }] : props.team?.members ?? []);
 const fields = ["core_capability", "operating_procedure", "output_standard", "cautions"] as const;
 const fieldLabels = { core_capability: "experts.coreCapability", operating_procedure: "experts.operatingProcedure", output_standard: "experts.outputStandard", cautions: "experts.cautions" };

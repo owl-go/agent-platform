@@ -23,7 +23,7 @@ func TestWorkflowCredentialAndTokenRoutesAreSeparated(t *testing.T) {
 	}
 }
 
-func TestIssueWorkflowTokenCreatesShortLivedJWT(t *testing.T) {
+func TestIssueWorkflowTokenCreates72HourJWT(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0)
 	token, expires, err := issueWorkflowToken(workflowCredentialContext{WorkflowID: "workflow-1", OwnerID: "user-1", APIKey: "awk_key", SecretHash: "hash"}, now)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestIssueWorkflowTokenCreatesShortLivedJWT(t *testing.T) {
 	if claims.Audience != "agent-platform-workflow" || claims.WorkflowID != "workflow-1" || claims.OwnerID != "user-1" {
 		t.Fatalf("claims = %#v", claims)
 	}
-	if !expires.Equal(now.Add(15*time.Minute)) || claims.ExpiresAt != expires.Unix() {
+	if !expires.Equal(now.Add(72*time.Hour)) || claims.ExpiresAt != expires.Unix() {
 		t.Fatalf("expiry = %v / %d", expires, claims.ExpiresAt)
 	}
 }

@@ -33,17 +33,16 @@ describe("ExpertsPage", () => {
     await flushPromises();
 
     const groups = wrapper.findAll(".catalog-group");
-    expect(groups).toHaveLength(2);
+    expect(groups).toHaveLength(1);
     expect(groups[0]!.text()).toContain("平台专家");
     expect(groups[0]!.text()).toContain("平台研究专家");
     expect(groups[0]!.text()).not.toContain("架构专家");
-    expect(groups[1]!.text()).toContain("我的专家");
-    expect(groups[1]!.text()).toContain("架构专家");
+    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的专家");
   });
 
   it("shows searchable Expert cards with capability and expertise tags", async () => {
     const router = createAppRouter(createMemoryHistory());
-    await router.push("/experts");
+    await router.push("/experts?scope=mine");
     const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });
     await flushPromises();
 
@@ -54,7 +53,27 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-card").text()).not.toContain("Codex");
     expect(wrapper.find(".expert-card > .el-card__body").exists()).toBe(true);
     expect(wrapper.get(".tag-row .el-tag").classes()).toContain("is-round");
+    expect(wrapper.find(".expert-category").exists()).toBe(false);
+    expect(wrapper.find(".filter-label").exists()).toBe(false);
+    expect(wrapper.get(".tag-filter").text()).not.toContain("Go");
+    expect(wrapper.get(".expert-tags").text()).toContain("Go");
     expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
+  });
+
+  it("reveals only my Experts from the header action", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/experts");
+    const platformExpert = { ...expert, id: "platform-expert", name: "平台研究专家", platform: true };
+    const testApi = api();
+    testApi.listExperts = vi.fn(async () => [platformExpert, expert]);
+    const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: testApi } } });
+    await flushPromises();
+    await wrapper.get(".my-resource-toggle").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query.scope).toBe("mine");
+    expect(wrapper.findAll(".catalog-group")).toHaveLength(1);
+    expect(wrapper.get(".catalog-group").text()).toContain("架构专家");
+    expect(wrapper.get(".catalog-group").text()).not.toContain("平台研究专家");
   });
 
   it("switches to Expert Teams and discloses ordered per-turn members", async () => {
@@ -70,7 +89,7 @@ describe("ExpertsPage", () => {
   });
 });
 
-for (const [path, field, id] of [["/experts", "expert_id", "expert-1"], ["/experts?tab=teams", "expert_team_id", "team-1"]]) {
+for (const [path, field, id] of [["/experts?scope=mine", "expert_id", "expert-1"], ["/experts?tab=teams", "expert_team_id", "team-1"]]) {
   it(`summons from ${path} without also opening card details`, async () => {
     const router = createAppRouter(createMemoryHistory()); await router.push(path!);
     const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api() } } });

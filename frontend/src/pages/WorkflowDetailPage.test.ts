@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type PlatformApi, type Run, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type KnowledgeBase, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -139,6 +139,9 @@ describe("WorkflowDetailPage", () => {
     const wrapper = await mountPage();
 
     expect(wrapper.find(".detail-hero .eyebrow").exists()).toBe(false);
+    expect(wrapper.get(".detail-hero h2").text()).toBe(workflow.name);
+    expect(wrapper.find(".detail-hero h1").exists()).toBe(false);
+    expect(wrapper.find(".detail-hero").text()).not.toContain(workflow.goal);
 
     for (const tabButton of wrapper.findAll(".tabs button")) {
       await tabButton.trigger("click");
@@ -162,6 +165,23 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find(".run-conversation-head .eyebrow").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
+    wrapper.unmount();
+  });
+
+  it("replays persisted Run activity into the shared conversation thread after completion", async () => {
+    const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void) => {
+      onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+      onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+    });
+    const wrapper = await mountPage(apiStub({ streamRunEvents }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(streamRunEvents).toHaveBeenCalledWith("workflow-1", "run-1", expect.any(Function));
+    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity details").text()).toContain("git status");
     wrapper.unmount();
   });
 
@@ -202,6 +222,33 @@ describe("WorkflowDetailPage", () => {
     expect(header).toContain("失败");
     expect(header).toContain(new Date(latestTurn.started_at!).toLocaleString());
     expect(header).not.toContain(new Date(run.started_at!).toLocaleString());
+    wrapper.unmount();
+  });
+
+  it("renders a failed Run error once when its expert stage repeats it", async () => {
+    const error = "command_failed: runtime command failed: PI Agent stopped with error: OpenAI API error (502)";
+    const failedRun: Run = {
+      ...run,
+      state: "failed",
+      final_text: undefined,
+      error,
+      expert_stages: [{
+        expert_id: "expert-1",
+        expert_name: "PI Agent",
+        position: 1,
+        total: 1,
+        state: "failed",
+        elapsed_ms: 27_000,
+        error,
+      }],
+    };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [failedRun]), listRunTurns: vi.fn(async () => [failedRun]) }));
+
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll(".message.assistant p").filter((item) => item.text() === error)).toHaveLength(1);
+    expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -303,6 +350,90 @@ describe("WorkflowDetailPage", () => {
     const sections = wrapper.findAll(".settings-section");
     expect(sections.length).toBeGreaterThan(1);
     expect(sections.every((section) => section.attributes("open") !== undefined)).toBe(true);
+    expect(wrapper.find(".section-heading-actions").exists()).toBe(false);
+    expect(wrapper.find(".danger-zone").exists()).toBe(false);
+    const bottomActions = wrapper.get(".settings-actions-bottom");
+    expect(bottomActions.find("button[type='submit']").exists()).toBe(true);
+    expect(bottomActions.findAll("button")).toHaveLength(2);
+    expect(bottomActions.findAll("button").map((button) => button.text())).toEqual(["删除", "保存"]);
+    wrapper.unmount();
+  });
+
+  it("lets a Workflow explicitly choose zero or more Knowledge Bases without a default", async () => {
+    const knowledgeBases: KnowledgeBase[] = [
+      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+    ];
+    const updateWorkflow = vi.fn(async (_id: string, input: Parameters<PlatformApi["updateWorkflow"]>[1], _version: number) => ({ ...workflow, ...input }));
+    const api = apiStub({ listKnowledgeBases: vi.fn(async () => knowledgeBases), updateWorkflow });
+    const wrapper = await mountPage(api);
+
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
+    expect(choices).toHaveLength(2);
+    expect(choices.every((choice) => !choice.element.checked)).toBe(true);
+
+    await choices[0]!.setValue(true);
+    expect(choices[0]!.element.checked).toBe(true);
+    await wrapper.get(".settings-form").trigger("submit");
+    await flushPromises();
+    expect(updateWorkflow).toHaveBeenCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: ["kb-1"] }), workflow.version);
+    wrapper.unmount();
+  });
+
+  it("shows copyable generated credentials and opens the integration guide", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const api = apiStub({
+      generateWorkflowCredential: vi.fn(async () => ({ api_key: "awk_test", api_secret: "aws_test", created_at: "2026-09-12T00:00:00Z" })),
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await wrapper.get(".api-credential-actions .button").trigger("click");
+    await flushPromises();
+
+    const rows = wrapper.findAll(".credential-row");
+    expect(rows).toHaveLength(2);
+    expect(wrapper.find(".secret-reveal > p").exists()).toBe(false);
+    expect(wrapper.find(".credential-copy-all").exists()).toBe(false);
+    expect(rows[0]!.text()).toContain("awk_test");
+    expect(rows[1]!.text()).not.toContain("aws_test");
+    expect(rows[1]!.text()).toContain("****");
+    const secretActions = rows[1]!.findAll(".credential-icon-button");
+    expect(secretActions).toHaveLength(2);
+    await secretActions[0]!.trigger("click");
+    expect(rows[1]!.text()).toContain("aws_test");
+    await secretActions[1]!.trigger("click");
+    expect(writeText).toHaveBeenCalledWith("aws_test");
+    await rows[0]!.get(".credential-icon-button").trigger("click");
+    expect(writeText).toHaveBeenCalledWith("awk_test");
+
+    await wrapper.get(".api-credential-actions .button:nth-child(2)").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/api-token");
+    expect(wrapper.get(".integration-guide").text()).toContain("RUN_ID=$(curl");
+    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID/events");
+    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID");
+    wrapper.unmount();
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+  });
+
+  it("loads and displays persisted credentials when reopening settings", async () => {
+    const savedWorkflow = { ...workflow, api_credential_configured: true };
+    const getWorkflowCredential = vi.fn(async () => ({ api_key: "awk_saved", api_secret: "aws_saved", created_at: "2026-09-12T00:00:00Z" }));
+    const api = apiStub({ getWorkflow: vi.fn(async () => savedWorkflow), getWorkflowCredential });
+    const wrapper = await mountPage(api);
+
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
+    await flushPromises();
+
+    expect(getWorkflowCredential).toHaveBeenCalledWith(workflow.id);
+    const rows = wrapper.findAll(".credential-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.text()).toContain("awk_saved");
+    expect(rows[1]!.text()).not.toContain("aws_saved");
     wrapper.unmount();
   });
 

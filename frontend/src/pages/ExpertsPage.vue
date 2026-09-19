@@ -15,22 +15,23 @@ const { t } = useI18n();
 const experts = ref<Expert[]>([]);
 const teams = ref<ExpertTeam[]>([]);
 const query = ref("");
-const tag = ref("");
+const category = ref("");
 const error = ref("");
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
+function createExpertSession() { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), create_expert: "true", draft: "帮我创建一个 XXX 专家，擅长 XXXXX。我的经验是：[请补充你的行业背景、相关经验]" } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
-const activeTags = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).flatMap((item) => item.expertise_tags))).sort());
+const mineOnly = computed(() => route.query.scope === "mine");
+const activeCategories = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).map((item) => item.expertise_tags[0]).filter(Boolean))).sort());
 const visibleExperts = computed(() => filter(experts.value));
 const visibleTeams = computed(() => filter(teams.value));
-const expertSections = computed(() => [
-  { key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) },
-  { key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) },
-]);
+const expertSections = computed(() => mineOnly.value
+  ? [{ key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) }]
+  : [{ key: "platform", title: t("experts.platformExperts"), items: visibleExperts.value.filter((item) => item.platform) }]);
 
 onMounted(refresh);
-watch(activeTab, () => { query.value = ""; tag.value = ""; });
+watch(activeTab, () => { query.value = ""; category.value = ""; });
 
 async function refresh() {
   try {
@@ -42,11 +43,18 @@ async function refresh() {
 
 function filter<T extends { name: string; introduction?: string; capability_introduction?: string; expertise_tags: string[] }>(items: T[]): T[] {
   const needle = query.value.trim().toLocaleLowerCase();
-  return items.filter((item) => (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)) && (!tag.value || item.expertise_tags.includes(tag.value)));
+  return items.filter((item) => (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)) && (!category.value || item.expertise_tags[0] === category.value));
 }
 
 function selectTab(tab: string | number) {
   void router.replace({ query: tab === "teams" ? { tab: "teams" } : {} });
+}
+
+function toggleMine() {
+  const query = { ...route.query };
+  if (mineOnly.value) delete query.scope;
+  else query.scope = "mine";
+  void router.replace({ query });
 }
 </script>
 
@@ -57,14 +65,14 @@ function selectTab(tab: string | number) {
         <el-tab-pane :label="t('experts.title')" name="experts" />
         <el-tab-pane :label="t('experts.teams')" name="teams" />
       </el-tabs>
-      <RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink>
+      <div class="catalog-head-actions"><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink v-if="activeTab === 'experts'" class="el-button el-button--primary" to="/experts/new" @click.prevent="createExpertSession">＋ {{ t('experts.new') }}</RouterLink><RouterLink v-else class="el-button el-button--primary" to="/expert-teams/new">＋ {{ t('experts.createTeam') }}</RouterLink></div>
     </header>
 
     <div class="catalog-tools">
       <el-input v-model="query" class="catalog-search" clearable :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"><template #prefix><Search :size="17" /></template></el-input>
-      <div class="tag-filter" :aria-label="t('experts.expertiseFilter')">
-        <el-check-tag :checked="!tag" @change="tag = ''">{{ t('experts.all') }}</el-check-tag>
-        <el-check-tag v-for="item in activeTags" :key="item" :checked="tag === item" @change="tag = item">{{ item }}</el-check-tag>
+      <div class="tag-filter" :aria-label="t('experts.categoryFilter')">
+        <el-check-tag :checked="!category" @change="category = ''">{{ t('experts.all') }}</el-check-tag>
+        <el-check-tag v-for="item in activeCategories" :key="item" :checked="category === item" @change="category = item">{{ item }}</el-check-tag>
       </div>
     </div>
 
@@ -82,7 +90,7 @@ function selectTab(tab: string | number) {
               <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
               <p>{{ expert.introduction }}</p>
               <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) }) }}</small>
-              <div v-if="expert.expertise_tags.length" class="tag-row"><el-tag v-for="item in expert.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div>
+              <div v-if="expert.expertise_tags.length > 1" class="tag-row expert-tags"><el-tag v-for="item in expert.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="expert.expertise_tags.length > 5" class="expert-tag-more">+{{ expert.expertise_tags.length - 5 }}</span></div>
             </div>
           </div>
         </el-card>
@@ -101,7 +109,7 @@ function selectTab(tab: string | number) {
               <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
               <p>{{ team.introduction }}</p>
               <ol class="member-preview"><li v-for="member in (team.members.length ? team.members : team.experts.map((expert) => ({ id: expert.id, name: expert.name, expert })))" :key="member.id"><span>{{ member.name }}</span><small>{{ member.expert.introduction }}</small></li></ol>
-              <div class="card-footer"><div class="tag-row"><el-tag v-for="item in team.expertise_tags" :key="item" effect="light" round size="small">{{ item }}</el-tag></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
+              <div class="card-footer"><div class="tag-row expert-tags"><el-tag v-for="item in team.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="team.expertise_tags.length > 5" class="expert-tag-more">+{{ team.expertise_tags.length - 5 }}</span></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
             </div>
           </div>
         </el-card>

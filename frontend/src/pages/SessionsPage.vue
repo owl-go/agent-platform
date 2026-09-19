@@ -1,26 +1,22 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Archive, ArchiveRestore, Box, Pencil, Trash2 } from "@lucide/vue";
+import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
-import CreditConsumption from "../components/CreditConsumption.vue";
-import ArtifactDisclosure from "../components/ArtifactDisclosure.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
-import ConversationAttachments from "../components/ConversationAttachments.vue";
+import ConversationThread from "../components/ConversationThread.vue";
 import type { ComposerSubmission } from "../conversationDraft";
-import { formatDuration, type SupportedLocale } from "../i18n";
-import { renderMarkdown } from "../markdown";
-import { displayArtifactNames } from "../artifactDisplay";
 import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
 import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
+import type { ConversationMessage } from "../conversationThread";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
 const router = useRouter();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const sessions = ref<Session[]>([]);
 const archived = ref<Session[]>([]);
 const specialistName = ref("");
@@ -30,17 +26,17 @@ const settings = ref<PersonalSettings>();
 const selected = ref<Session>();
 const messages = ref<SessionMessage[]>([]);
 const loadingMessages = ref(false);
-const copiedMessageID = ref<number>();
-const copiedStageKey = ref("");
 const editingSessionID = ref("");
 const editingTitle = ref("");
 const pendingDelete = ref<Session>();
 const deleting = ref(false);
 const deleteDialog = ref<HTMLElement>();
 const launchSkill = ref<{ sessionID: string; skillID: string }>();
+const launchPrompt = ref<{ sessionID: string; text: string }>();
 const loading = ref(true);
 const sending = ref(false);
 const cancellingMessageID = ref<number>();
+const resourceActionBusy = ref<string>();
 const creating = ref(false);
 const showArchived = ref(false);
 const error = ref("");
@@ -62,6 +58,42 @@ const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
   return cliAuthorizationRequestFromActivities(latestAssistant?.activities);
 });
+const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
+  const summaries = message.role === "assistant" ? activitySummaries(message) : [];
+  const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
+  const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
+  return {
+    id: String(message.id),
+    role: message.role,
+    content: message.role === "user" ? userMessageContent(message, index) : message.content,
+    copyText: message.role === "user" ? userMessageContent(message, index) : message.content,
+    state: message.state,
+    timestamp: message.created_at,
+    elapsedMs: message.elapsed_ms,
+    error: message.error,
+    pending,
+    finalizing: pending && message.progress_stage === "finalizing",
+    streaming: pending && message.role === "assistant",
+    progressTitle: pending ? (message.progress_stage === "finalizing" ? progressLabel(message.progress_stage) : message.state === "waiting_for_user" ? t("common.waitingForUser") : t("sessions.thinking")) : undefined,
+    progressDetail: pending ? activeStageLabel(message) : undefined,
+    currentActivity: pending && summaries.length ? { id: summaries.at(-1)!.id, label: activitySummaryLabel(summaries.at(-1)!), detail: summaries.at(-1)!.detail } : undefined,
+    activities: summaries.map((summary) => ({
+      id: summary.id,
+      label: activitySummaryLabel(summary),
+      detail: summary.detail,
+      state: summary.state,
+      items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
+    })),
+    stages: message.role === "assistant" ? message.expert_stages : undefined,
+    creditConsumption: message.credit_consumption,
+    artifacts: message.artifacts,
+    attachments: message.attachments,
+    skills: message.role === "user" ? messageSkills(index) : undefined,
+    resourceAction: message.resource_action,
+    meta: identity ? { label: `${identity.expertName ? `${identity.expertName} · ` : ""}${identity.modelName}`, title: `${identity.connection} · ${identity.modelID} · ${identity.runtime}` } : undefined,
+    retryable: message.role === "assistant" && message.state === "failed",
+  };
+}));
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let pollGeneration = 0;
 let composerObserver: ResizeObserver | undefined;
@@ -70,7 +102,6 @@ let revealTimer: ReturnType<typeof setTimeout> | undefined;
 let revealMessageID = 0;
 let revealTarget = "";
 let terminalSnapshot: SessionMessageSnapshot | undefined;
-let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 let deleteReturnFocus: HTMLElement | undefined;
 
 onMounted(async () => {
@@ -156,9 +187,15 @@ async function create() {
   try {
     const expertID = typeof route.query.expert_id === "string" ? route.query.expert_id : undefined;
     const teamID = typeof route.query.expert_team_id === "string" ? route.query.expert_team_id : undefined;
-    const skillID = typeof route.query.skill_id === "string" ? route.query.skill_id : undefined;
+    let skillID = typeof route.query.skill_id === "string" ? route.query.skill_id : undefined;
+    if (!skillID && route.query.create_expert === "true") {
+      const systemSkills = await api.listSkills();
+      skillID = systemSkills.find((skill) => skill.system_key === "system.create_expert" || (skill.platform && skill.name === "Create Expert"))?.id;
+    }
+    const prompt = typeof route.query.draft === "string" ? route.query.draft : undefined;
     const item = expertID || teamID ? await api.createSession({ expert_id: expertID, expert_team_id: teamID }) : await api.createSession();
     launchSkill.value = skillID ? { sessionID: item.id, skillID } : undefined;
+    launchPrompt.value = prompt ? { sessionID: item.id, text: prompt } : undefined;
     sessions.value.unshift(item);
     await router.replace({ path: "/sessions" }); await open(item);
   } catch {
@@ -255,6 +292,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
+  message.resource_action = snapshot.resource_action ?? message.resource_action;
   if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
@@ -347,13 +385,6 @@ function responseIdentity(message: SessionMessage) {
 	if (snapshot?.model_name) return { connection: snapshot.connection_name, modelID: snapshot.model_id, modelName: snapshot.model_name, runtime: snapshot.runtime_engine, expertName };
 	return undefined;
 }
-function visibleStages(message: SessionMessage) {
-	const stages = message.expert_stages ?? [];
-	if (stages.length !== 1) return stages;
-	const finalText = stages[0]?.final_text?.replace(/\r\n/g, "\n").trim();
-	const messageText = message.content.replace(/\r\n/g, "\n").trim();
-	return finalText && finalText === messageText ? [] : stages;
-}
 function messageSkills(index: number) {
   if (messages.value[index]?.role !== "user") return [];
   const response = messages.value[index + 1];
@@ -380,29 +411,23 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
 function activitySummaries(message: SessionMessage) {
   return summarizeExecutionActivities(message.activities ?? []);
 }
+async function decideResourceAction(messageOrID: SessionMessage | string, decision: "confirm" | "cancel") {
+  const message = typeof messageOrID === "string" ? messages.value.find((item) => String(item.id) === messageOrID) : messageOrID;
+  const action = message?.resource_action;
+  if (!message || !action || action.state !== "pending" || resourceActionBusy.value) return;
+  resourceActionBusy.value = action.id;
+  try {
+    const updated = await api.decideResourceCreationAction(action.id, decision);
+    message.resource_action = updated as ResourceCreationAction;
+  } catch (cause) {
+    error.value = cause instanceof ApiError ? cause.message : t("errors.generic");
+  } finally {
+    resourceActionBusy.value = undefined;
+  }
+}
 function activitySummaryLabel(summary: ExecutionActivitySummary) {
   if (summary.kind === "reasoning" && summary.detail) return summary.detail;
   return t(`sessions.activitySummary.${summary.kind}.${summary.state}`);
-}
-function stageStateLabel(state: string) {
-  return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
-}
-async function copyMessage(message: SessionMessage, index: number) {
-  try {
-    await navigator.clipboard.writeText(message.role === "user" ? userMessageContent(message, index) : message.content);
-    copiedMessageID.value = message.id;
-    if (copiedTimer) clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => { copiedMessageID.value = undefined; }, 1600);
-  } catch {
-    error.value = t("errors.copy");
-  }
-}
-async function copyStage(messageID: number, position: number, value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-    copiedStageKey.value = `${messageID}:${position}`;
-    window.setTimeout(() => { copiedStageKey.value = ""; }, 1600);
-  } catch { error.value = t("errors.copy"); }
 }
 async function archive(item: Session) {
   try { await api.archiveSession(item.id, !item.archived, item.version); if (selected.value?.id === item.id) selected.value = undefined; await refresh(); }
@@ -461,7 +486,7 @@ async function confirmRemove() {
   }
   finally { deleting.value = false; }
 }
-onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (copiedTimer) clearTimeout(copiedTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
+onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
 </script>
 
 <template>
@@ -500,35 +525,11 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ t('sessions.welcome') }}</p></div>
-          <div v-for="(message, index) in messages" :key="message.id" class="message" :class="message.role">
-            <div class="message-content">
-              <div v-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user') && message.progress_stage !== 'finalizing'" class="thinking-state"><span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><strong>{{ message.state === 'waiting_for_user' ? t('common.waitingForUser') : t('sessions.thinking') }}</strong><small>{{ activeStageLabel(message) }}</small></div>
-              <div v-else-if="message.role === 'assistant' && (message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user')" class="finalizing-state">{{ progressLabel(message.progress_stage) }}</div>
-              <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
-                <div v-if="message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user'" class="runtime-activity-current"><span class="activity-pulse active"></span><strong>{{ activitySummaryLabel(activitySummaries(message).at(-1)!) }}</strong></div>
-                <details class="runtime-activity-history"><summary>{{ t('workflows.activityDetails') }}</summary><div class="activity-summary-list"><details v-for="summary in activitySummaries(message)" :key="`${message.id}-${summary.id}`" class="activity-summary-group"><summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ activitySummaryLabel(summary) }}</strong></summary><ol class="activity-detail-list"><li v-for="(activity, activityIndex) in summary.activities" :key="`${message.id}-${summary.id}-${activityIndex}`"><span></span><div><strong>{{ activityLabel(activity, true) }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li></ol></details></div></details>
-              </div>
-              <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.state === 'queued' || message.state === 'generating' || message.state === 'waiting_for_user' }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
-              <p v-else-if="message.content">{{ message.role === 'user' ? userMessageContent(message, index) : message.content }}</p><p v-else-if="message.state === 'failed'">{{ message.error }}</p>
-              <div v-if="message.role === 'user' && messageSkills(index).length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')"><span v-for="skill in messageSkills(index)" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span></div>
-              <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="downloadSessionArtifact" />
-              <ConversationAttachments v-if="message.attachments?.length" :attachments="message.attachments" :load-attachment="api.getAttachmentDownload" @error="error = t('errors.generic')" />
-              <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
-              <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">
-                <details v-for="stage in visibleStages(message)" :key="`${stage.position}-${stage.expert_id}`"><summary><span>{{ stage.position }}/{{ stage.total || message.expert_stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary><div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, message.artifacts))"></div><p v-else-if="stage.error">{{ stage.error }}</p><button v-if="stage.final_text" type="button" class="stage-copy" @click="copyStage(message.id, stage.position, stage.final_text)">{{ copiedStageKey === `${message.id}:${stage.position}` ? t('common.copied') : t('common.copy') }}</button></details>
-              </div>
-              <CreditConsumption v-if="message.role === 'assistant'" :value="message.credit_consumption" />
-              <div class="message-actions">
-                <small class="message-meta">{{ new Date(message.created_at).toLocaleTimeString() }}<template v-if="message.elapsed_ms"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsed_ms, locale as SupportedLocale) }) }}</template><span v-if="responseIdentity(message)" class="message-model" :title="`${responseIdentity(message)?.connection} · ${responseIdentity(message)?.modelID} · ${responseIdentity(message)?.runtime}`"><template v-if="responseIdentity(message)?.expertName"> · {{ responseIdentity(message)?.expertName }}</template> · {{ responseIdentity(message)?.modelName }}</span></small>
-                <button v-if="message.content" type="button" class="message-copy" :class="{ copied: copiedMessageID === message.id }" :aria-label="message.role === 'user' ? t('sessions.copyQuestion') : t('sessions.copyAnswer')" @click="copyMessage(message, index)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ copiedMessageID === message.id ? t('common.copied') : t('common.copy') }}</span></button>
-                <el-button v-if="message.role === 'assistant' && message.state === 'failed'" text type="primary" @click="retry(index)">{{ t('common.retry') }}</el-button>
-              </div>
-            </div>
-          </div>
+          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>
