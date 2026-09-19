@@ -291,8 +291,8 @@ func validateKnowledgeUpload(header *multipart.FileHeader, content []byte) (stri
 	if !ok || len(content) == 0 {
 		return "", "", fmt.Errorf("unsupported Knowledge Document format")
 	}
-	contentType := strings.ToLower(strings.TrimSpace(header.Header.Get("Content-Type")))
-	detectedType := strings.ToLower(http.DetectContentType(content))
+	contentType := normalizeKnowledgeContentType(header.Header.Get("Content-Type"))
+	detectedType := normalizeKnowledgeContentType(http.DetectContentType(content))
 	if contentType == "" || contentType == "application/octet-stream" {
 		contentType = detectedType
 	}
@@ -310,6 +310,10 @@ func validateKnowledgeUpload(header *multipart.FileHeader, content []byte) (stri
 		return name, contentType, nil
 	}
 	return "", "", fmt.Errorf("Knowledge Document MIME does not match extension")
+}
+
+func normalizeKnowledgeContentType(value string) string {
+	return strings.ToLower(strings.TrimSpace(strings.Split(value, ";")[0]))
 }
 
 func publicKnowledgeDocument(item workspacedomain.KnowledgeDocument) map[string]any {

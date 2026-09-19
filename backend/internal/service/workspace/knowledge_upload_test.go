@@ -68,6 +68,23 @@ func TestValidateKnowledgeUploadRequiresMatchingType(t *testing.T) {
 	}
 }
 
+func TestValidateKnowledgeUploadAcceptsTextContentTypeParameters(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		contentType string
+		content     string
+	}{
+		{name: "notes.md", contentType: "text/markdown", content: "# Notes\n\nText content."},
+		{name: "notes.txt", contentType: "text/plain", content: "Plain text content."},
+		{name: "page.html", contentType: "text/html", content: "<!doctype html><html><body>Page</body></html>"},
+	} {
+		header := &multipartFileHeader{filename: test.name, contentType: test.contentType}
+		if _, _, err := validateKnowledgeUpload(header.fileHeader(), []byte(test.content)); err != nil {
+			t.Errorf("validateKnowledgeUpload(%q) returned error: %v", test.name, err)
+		}
+	}
+}
+
 type multipartFileHeader struct {
 	filename    string
 	contentType string
