@@ -317,7 +317,7 @@ func normalizeKnowledgeContentType(value string) string {
 }
 
 func publicKnowledgeDocument(item workspacedomain.KnowledgeDocument) map[string]any {
-	value := map[string]any{"id": item.ID, "knowledge_base_id": item.KnowledgeBaseID, "name": item.Name, "source_type": item.SourceType, "state": item.State, "version": item.Version}
+	value := map[string]any{"id": item.ID, "knowledge_base_id": item.KnowledgeBaseID, "name": item.Name, "source_type": item.SourceType, "state": item.State, "deleted": item.DeletedAt != nil, "created_at": item.CreatedAt, "updated_at": item.UpdatedAt, "version": item.Version}
 	if item.CategoryID != nil {
 		value["category_id"] = *item.CategoryID
 	}

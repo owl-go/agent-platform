@@ -4,6 +4,9 @@ import (
 	"mime/multipart"
 	"net/textproto"
 	"testing"
+	"time"
+
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
 )
@@ -81,6 +84,19 @@ func TestValidateKnowledgeUploadAcceptsTextContentTypeParameters(t *testing.T) {
 		header := &multipartFileHeader{filename: test.name, contentType: test.contentType}
 		if _, _, err := validateKnowledgeUpload(header.fileHeader(), []byte(test.content)); err != nil {
 			t.Errorf("validateKnowledgeUpload(%q) returned error: %v", test.name, err)
+		}
+	}
+}
+
+func TestPublicKnowledgeDocumentIncludesTimestamps(t *testing.T) {
+	createdAt := time.Date(2026, time.January, 1, 2, 3, 4, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Minute)
+	item := workspacedomain.KnowledgeDocument{ID: "doc-1", KnowledgeBaseID: "base-1", Name: "guide.md", CreatedAt: createdAt, UpdatedAt: updatedAt}
+	value := publicKnowledgeDocument(item)
+	for key, expected := range map[string]time.Time{"created_at": createdAt, "updated_at": updatedAt} {
+		actual, ok := value[key].(time.Time)
+		if !ok || !actual.Equal(expected) {
+			t.Errorf("publicKnowledgeDocument()[%s] = %#v, want %s", key, value[key], expected)
 		}
 	}
 }
