@@ -1,4 +1,4 @@
-import type { Artifact, Attachment, CreditConsumption, ExpertStage } from "./api/client";
+import type { Artifact, Attachment, CreditConsumption, ExpertStage, ResourceCreationAction } from "./api/client";
 
 export interface ConversationActivityItem {
   id: string | number;
@@ -35,6 +35,7 @@ export interface ConversationMessage {
   creditConsumption?: CreditConsumption;
   artifacts?: Artifact[];
   attachments?: Attachment[];
+  resourceAction?: ResourceCreationAction;
   skills?: Array<{ id: string; name: string }>;
   meta?: { label: string; title?: string };
   retryable?: boolean;

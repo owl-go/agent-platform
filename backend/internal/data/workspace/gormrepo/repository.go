@@ -71,9 +71,30 @@ type messageRecord struct {
 	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
 	RuntimeActivities []byte     `gorm:"column:runtime_activities;type:jsonb"`
+	ResourceActionID  *string    `gorm:"column:resource_creation_action_id"`
 }
 
 func (messageRecord) TableName() string { return "session_messages" }
+
+type resourceCreationActionRecord struct {
+	ID          string    `gorm:"column:id"`
+	OwnerID     string    `gorm:"column:owner_user_id"`
+	SessionID   string    `gorm:"column:session_id"`
+	MessageID   int64     `gorm:"column:message_id"`
+	Kind        string    `gorm:"column:kind"`
+	State       string    `gorm:"column:state"`
+	Name        string    `gorm:"column:name"`
+	Description string    `gorm:"column:description"`
+	Payload     []byte    `gorm:"column:payload;type:jsonb"`
+	ResourceID  *string   `gorm:"column:resource_id"`
+	Error       *string   `gorm:"column:error"`
+	ExpiresAt   time.Time `gorm:"column:expires_at"`
+	CreatedAt   time.Time `gorm:"column:created_at"`
+	UpdatedAt   time.Time `gorm:"column:updated_at"`
+	Version     int64     `gorm:"column:version"`
+}
+
+func (resourceCreationActionRecord) TableName() string { return "resource_creation_actions" }
 
 type sessionArtifactRecord struct {
 	ID         string     `gorm:"column:id"`
@@ -184,7 +205,10 @@ type expertRecord struct {
 	ID                        string     `gorm:"column:id"`
 	OwnerID                   string     `gorm:"column:owner_user_id"`
 	Platform                  bool       `gorm:"->;column:platform"`
+	SystemKey                 string     `gorm:"column:system_key"`
+	SystemManaged             bool       `gorm:"column:system_managed"`
 	Name                      string     `gorm:"column:name"`
+	NameNormalized            string     `gorm:"column:name_normalized"`
 	Icon                      string     `gorm:"column:icon"`
 	IconBackground            string     `gorm:"column:icon_background"`
 	Introduction              string     `gorm:"column:introduction"`
@@ -427,19 +451,22 @@ type mcpRecord struct {
 func (mcpRecord) TableName() string { return "mcp_servers" }
 
 type skillRecord struct {
-	ID        string    `gorm:"column:id"`
-	OwnerID   string    `gorm:"column:owner_user_id"`
-	Platform  bool      `gorm:"->;column:platform"`
-	Name      string    `gorm:"column:name"`
-	Icon      string    `gorm:"column:icon"`
-	Source    string    `gorm:"column:source"`
-	GitURL    *string   `gorm:"column:git_url"`
-	GitRef    *string   `gorm:"column:git_ref"`
-	ObjectKey string    `gorm:"column:object_key"`
-	SHA256    string    `gorm:"column:sha256"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
-	Version   int64     `gorm:"column:version"`
+	ID             string    `gorm:"column:id"`
+	OwnerID        string    `gorm:"column:owner_user_id"`
+	Platform       bool      `gorm:"->;column:platform"`
+	SystemKey      string    `gorm:"column:system_key"`
+	SystemManaged  bool      `gorm:"column:system_managed"`
+	Name           string    `gorm:"column:name"`
+	NameNormalized string    `gorm:"column:name_normalized"`
+	Icon           string    `gorm:"column:icon"`
+	Source         string    `gorm:"column:source"`
+	GitURL         *string   `gorm:"column:git_url"`
+	GitRef         *string   `gorm:"column:git_ref"`
+	ObjectKey      string    `gorm:"column:object_key"`
+	SHA256         string    `gorm:"column:sha256"`
+	CreatedAt      time.Time `gorm:"column:created_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
+	Version        int64     `gorm:"column:version"`
 }
 
 func (skillRecord) TableName() string { return "skills" }

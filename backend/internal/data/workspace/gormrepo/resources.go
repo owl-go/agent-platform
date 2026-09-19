@@ -14,6 +14,8 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -23,7 +25,7 @@ func accessibleResourceOwnerIDs(tx *gorm.DB, ownerID string) *gorm.DB {
 }
 
 func expertCatalogQuery(tx *gorm.DB) *gorm.DB {
-	return tx.Model(&expertRecord{}).Select("experts.*, EXISTS (SELECT 1 FROM users WHERE users.id = experts.owner_user_id AND users.administrator) AS platform")
+	return tx.Model(&expertRecord{}).Select("experts.*, (experts.system_managed OR EXISTS (SELECT 1 FROM users WHERE users.id = experts.owner_user_id AND users.administrator)) AS platform")
 }
 
 func mcpCatalogQuery(tx *gorm.DB) *gorm.DB {
@@ -31,7 +33,7 @@ func mcpCatalogQuery(tx *gorm.DB) *gorm.DB {
 }
 
 func skillCatalogQuery(tx *gorm.DB) *gorm.DB {
-	return tx.Model(&skillRecord{}).Select("skills.*, EXISTS (SELECT 1 FROM users WHERE users.id = skills.owner_user_id AND users.administrator) AS platform")
+	return tx.Model(&skillRecord{}).Select("skills.*, (skills.system_managed OR EXISTS (SELECT 1 FROM users WHERE users.id = skills.owner_user_id AND users.administrator)) AS platform")
 }
 
 func deletionImpact(resourceKind, resourceID string, resourceVersion int64, experts []expertRecord) (domain.ResourceDeletionImpact, error) {
@@ -110,8 +112,15 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	if strings.TrimSpace(input.CoreCapability) != "" {
 		projectionStatus, projectionRequestedAt, tags = "queued", &now, []byte("[]")
 	}
-	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, CLIConnectorDefinitionIDs: cliConnectors, TagProjectionStatus: projectionStatus, TagProjectionRequestedAt: projectionRequestedAt, Version: 1}
+	name := strings.TrimSpace(input.Name)
+	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: name, NameNormalized: normalizeResourceName(name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, CLIConnectorDefinitionIDs: cliConnectors, TagProjectionStatus: projectionStatus, TagProjectionRequestedAt: projectionRequestedAt, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := rejectResourceNameConflict(tx, "experts", ownerID, row.Name, ""); err != nil {
+			return err
+		}
+		if err := rejectPlatformNameConflict(tx, "experts", ownerID, row.Name); err != nil {
+			return err
+		}
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
@@ -135,10 +144,20 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&current).Error; err != nil {
 			return mapNotFound(err)
 		}
+		if current.SystemManaged {
+			return fmt.Errorf("%w: system Expert is immutable", domain.ErrConflict)
+		}
+		if err := rejectResourceNameConflict(tx, "experts", ownerID, input.Name, expertID); err != nil {
+			return err
+		}
+		if err := rejectPlatformNameConflict(tx, "experts", ownerID, input.Name); err != nil {
+			return err
+		}
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
-		updates := map[string]any{"name": strings.TrimSpace(input.Name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "cli_connector_definition_ids": cliConnectors, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+		name := strings.TrimSpace(input.Name)
+		updates := map[string]any{"name": name, "name_normalized": normalizeResourceName(name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "cli_connector_definition_ids": cliConnectors, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 		if strings.TrimSpace(input.CoreCapability) != "" {
 			updates["expertise_tags"] = current.ExpertiseTags
 		}
@@ -249,6 +268,9 @@ func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertI
 		if err := expertCatalogQuery(tx).Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&expert).Error; err != nil {
 			return mapNotFound(err)
 		}
+		if expert.SystemManaged {
+			return fmt.Errorf("%w: system Expert is immutable", domain.ErrConflict)
+		}
 		var teams []expertTeamRecord
 		teamQuery := tx.Model(&expertTeamRecord{})
 		if !expert.Platform {
@@ -301,7 +323,7 @@ func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID s
 }
 
 func expertDomain(row expertRecord) (domain.Expert, error) {
-	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
+	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, SystemKey: row.SystemKey, Immutable: row.SystemManaged, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
 	if row.TagProjectionError != nil {
 		item.TagProjectionError = *row.TagProjectionError
 	}
@@ -332,6 +354,52 @@ func normalizeTags(tags []string) []string {
 		result = append(result, strings.TrimSpace(tag))
 	}
 	return result
+}
+
+var resourceNameFold = cases.Fold()
+
+func normalizeResourceName(name string) string {
+	return resourceNameFold.String(norm.NFC.String(strings.TrimSpace(name)))
+}
+
+func rejectPlatformNameConflict(tx *gorm.DB, table, ownerID, name string) error {
+	if table != "skills" && table != "experts" {
+		return fmt.Errorf("%w: unsupported resource catalog", domain.ErrInvalid)
+	}
+	name = normalizeResourceName(name)
+	var administrator bool
+	if err := tx.Table("users").Select("administrator").Where("id = ?", ownerID).Scan(&administrator).Error; err != nil {
+		return err
+	}
+	if administrator {
+		return nil
+	}
+	var count int64
+	if err := tx.Table(table).Where("owner_user_id IN (SELECT id FROM users WHERE administrator) AND name_normalized = ?", name).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("%w: resource name is reserved by a Platform Resource", domain.ErrConflict)
+	}
+	return nil
+}
+
+func rejectResourceNameConflict(tx *gorm.DB, table, ownerID, name, excludeID string) error {
+	if table != "skills" && table != "experts" {
+		return fmt.Errorf("%w: unsupported resource catalog", domain.ErrInvalid)
+	}
+	query := tx.Table(table).Where("owner_user_id = ? AND name_normalized = ?", ownerID, normalizeResourceName(name))
+	if excludeID != "" {
+		query = query.Where("id <> ?", excludeID)
+	}
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("%w: resource name already exists", domain.ErrConflict)
+	}
+	return nil
 }
 
 func (repository *Repository) ListExpertTeams(ctx context.Context, ownerID string) ([]domain.ExpertTeam, error) {
@@ -1093,15 +1161,38 @@ func (repository *Repository) ListSkills(ctx context.Context, ownerID string) ([
 }
 
 func (repository *Repository) CreateSkill(ctx context.Context, ownerID string, skill domain.Skill) (domain.Skill, error) {
-	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(skill.Name), Icon: defaultString(skill.Icon, "sparkles"), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
-	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
+	name := strings.TrimSpace(skill.Name)
+	row := skillRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: name, NameNormalized: normalizeResourceName(name), Icon: defaultString(skill.Icon, "sparkles"), Source: skill.Source, GitURL: skill.GitURL, GitRef: skill.GitRef, ObjectKey: skill.ObjectKey, SHA256: skill.SHA256, Version: 1}
+	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := rejectResourceNameConflict(tx, "skills", ownerID, row.Name, ""); err != nil {
+			return err
+		}
+		if err := rejectPlatformNameConflict(tx, "skills", ownerID, row.Name); err != nil {
+			return err
+		}
+		return tx.Create(&row).Error
+	}); err != nil {
 		return domain.Skill{}, fmt.Errorf("create Skill: %w", err)
 	}
 	return repository.getSkill(ctx, ownerID, row.ID)
 }
 
 func (repository *Repository) UpdateSkill(ctx context.Context, ownerID, skillID, name, icon string, gitRef *string, objectKey, sha256 string, expectedVersion int64) (domain.Skill, error) {
-	updates := map[string]any{"name": strings.TrimSpace(name), "icon": defaultString(icon, "sparkles"), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+	var current skillRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&current).Error; err != nil {
+		return domain.Skill{}, mapNotFound(err)
+	}
+	if current.SystemManaged {
+		return domain.Skill{}, fmt.Errorf("%w: system Skill is immutable", domain.ErrConflict)
+	}
+	if err := rejectResourceNameConflict(repository.db.WithContext(ctx), "skills", ownerID, name, skillID); err != nil {
+		return domain.Skill{}, err
+	}
+	if err := rejectPlatformNameConflict(repository.db.WithContext(ctx), "skills", ownerID, name); err != nil {
+		return domain.Skill{}, err
+	}
+	name = strings.TrimSpace(name)
+	updates := map[string]any{"name": name, "name_normalized": normalizeResourceName(name), "icon": defaultString(icon, "sparkles"), "object_key": objectKey, "sha256": sha256, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	if gitRef != nil {
 		updates["git_ref"] = gitRef
 	}
@@ -1146,6 +1237,9 @@ func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID,
 		if err := skillCatalogQuery(tx).Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ?", ownerID, skillID).Take(&resource).Error; err != nil {
 			return mapNotFound(err)
 		}
+		if resource.SystemManaged {
+			return fmt.Errorf("%w: system Skill is immutable", domain.ErrConflict)
+		}
 		var experts []expertRecord
 		expertQuery := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&expertRecord{})
 		if !resource.Platform {
@@ -1186,7 +1280,7 @@ func (repository *Repository) DeleteSkillConfirmed(ctx context.Context, ownerID,
 }
 
 func skillDomain(row skillRecord) domain.Skill {
-	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Icon: row.Icon, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.Skill{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, SystemKey: row.SystemKey, Immutable: row.SystemManaged, Name: row.Name, Icon: row.Icon, Source: row.Source, GitURL: row.GitURL, GitRef: row.GitRef, ObjectKey: row.ObjectKey, SHA256: row.SHA256, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 
 func (repository *Repository) getSkill(ctx context.Context, ownerID, skillID string) (domain.Skill, error) {

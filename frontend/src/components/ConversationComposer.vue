@@ -12,7 +12,7 @@ import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPl
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -311,6 +311,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", handleAuthorizationReturn);
   const saved = storageKey.value ? loadConversationDraft(storageKey.value) : undefined;
   if (saved) { parts.value = saved.parts; selection.value = saved.selection; uploaded.value = saved.attachments; missingFiles.value = saved.pendingFileNames; }
+  else if (props.initialPrompt) parts.value = [{ kind: "text", text: props.initialPrompt }];
   await nextTick(); renderEditor();
   await initialize();
 });
