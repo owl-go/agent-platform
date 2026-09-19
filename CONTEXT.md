@@ -138,11 +138,23 @@ _Avoid_: queued execution, indefinite pause, automatic approval
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
 _Avoid_: Restorable Workflow, archived Workflow
 
-## AI Creation
+## AI Applications
 
-**AI Creation**:
-The product area in which a User uses task-specific generative tools outside a continuing Session or Workflow. Its first tool is Image Generation.
-_Avoid_: Session, Workflow, generic AI tools
+**AI Applications**:
+The product area in which a User creates and uses durable AI capabilities and task-specific creation tools outside a continuing Session or Workflow. Its first entries are Smart Assistants, Digital Humans, and Image Creation.
+_Avoid_: AI Creation as a top-level area, Session, Workflow, generic AI tools
+
+**Smart Assistant**:
+A reusable, User-owned AI application for one scenario, combining visible service rules with optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
+_Avoid_: AI Customer Service, Expert, Session, Workflow
+
+**Digital Human**:
+A reusable, User-owned presentation identity describing an AI interaction's avatar, voice, language, and supported expression or scene settings. A Digital Human does not own business knowledge or answer logic and may be referenced by multiple Smart Assistants.
+_Avoid_: Smart Assistant, Avatar-only upload, Expert
+
+**Image Creation**:
+The task-specific image-generation tool nested under AI Applications. It owns no Smart Assistant or Digital Human and uses Image Generation Records for its submitted requests and results.
+_Avoid_: AI Creation, Smart Assistant, Image Artifact
 
 **Image Model**:
 An Administrator-managed image-generation configuration containing one exact model identifier, independent API Endpoint, and write-only API Key. A User selects an available Image Model and supplies the size, quality, format, background, and output count for an Image Generation Record.
@@ -157,7 +169,7 @@ An image supplied as an ordered input to an image-to-image request, either by ne
 _Avoid_: prompt-only input, mutable external URL, cross-User image
 
 **Prompt Optimization**:
-An explicit AI Creation action that expands the current editable image prompt using the Administrator-configured model identifier, independent API Endpoint, write-only API Key, and optimization instruction. It is charged from measured input and output Tokens, replaces the draft prompt after success, and does not submit an Image Generation Record.
+An explicit Image Creation action that expands the current editable image prompt using the Administrator-configured model identifier, independent API Endpoint, write-only API Key, and optimization instruction. It is charged from measured input and output Tokens, replaces the draft prompt after success, and does not submit an Image Generation Record.
 _Avoid_: Model Provider Connection, automatic image generation, hidden prompt rewrite, Runtime Engine default
 
 **Generated Image**:
