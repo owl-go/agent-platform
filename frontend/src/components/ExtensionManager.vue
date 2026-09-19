@@ -59,6 +59,7 @@ const canManageCLI = computed(() => auth?.session.state.value.kind === "authenti
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
+const createdSkillIDs = ref(new Set<string>());
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
@@ -90,9 +91,13 @@ let lastCLICompletionPoll = 0;
 const connectorSections = computed(() => props.mineOnly
   ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }]
   : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value }]);
-const skillSections = computed(() => props.mineOnly
-  ? [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }]
-  : [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }]);
+const skillSections = computed(() => {
+  if (props.mineOnly) return [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }];
+  const sections = [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }];
+  const created = skills.value.filter((item) => !item.platform && createdSkillIDs.value.has(item.id));
+  if (created.length) sections.push({ key: "created", title: t("resources.mySkills"), items: created });
+  return sections;
+});
 
 onMounted(() => {
   void refresh();
@@ -117,6 +122,7 @@ function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transp
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
 function upsertSkill(item: Skill) {
+  if (!item.platform) createdSkillIDs.value = new Set(createdSkillIDs.value).add(item.id);
   skills.value = [item, ...skills.value.filter((entry) => entry.id !== item.id)];
   notifyResources();
 }
