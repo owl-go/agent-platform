@@ -6549,6 +6549,12 @@
           },
           "platform": {
             "type": "boolean"
+          },
+          "system_key": {
+            "type": "string"
+          },
+          "immutable": {
+            "type": "boolean"
           }
         }
       },
@@ -8003,6 +8009,40 @@
           }
         }
       },
+      "v1ResourceCreationAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1ResourceDeletionImpact": {
         "type": "object",
         "properties": {
@@ -8336,6 +8376,9 @@
             "items": {
               "$ref": "#/components/schemas/v1Artifact"
             }
+          },
+          "resource_action": {
+            "$ref": "#/components/schemas/v1ResourceCreationAction"
           }
         }
       },
@@ -8377,6 +8420,12 @@
           },
           "icon": {
             "type": "string"
+          },
+          "system_key": {
+            "type": "string"
+          },
+          "immutable": {
+            "type": "boolean"
           }
         }
       },

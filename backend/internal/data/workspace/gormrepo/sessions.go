@@ -194,6 +194,9 @@ func (repository *Repository) ListMessages(ctx context.Context, ownerID, session
 	if err := repository.loadSessionArtifacts(ctx, ownerID, sessionID, items); err != nil {
 		return nil, err
 	}
+	if err := repository.loadSessionResourceActions(ctx, ownerID, sessionID, items); err != nil {
+		return nil, err
+	}
 	return items, nil
 }
 
@@ -209,6 +212,9 @@ func (repository *Repository) GetMessage(ctx context.Context, ownerID, sessionID
 	item := messageDomain(row)
 	items := []domain.Message{item}
 	if err := repository.loadSessionArtifacts(ctx, ownerID, sessionID, items); err != nil {
+		return domain.Message{}, err
+	}
+	if err := repository.loadSessionResourceActions(ctx, ownerID, sessionID, items); err != nil {
 		return domain.Message{}, err
 	}
 	return items[0], nil
@@ -239,6 +245,29 @@ func (repository *Repository) loadSessionArtifacts(ctx context.Context, ownerID,
 			continue
 		}
 		messages[index].Artifacts = append(messages[index].Artifacts, sessionArtifactDomain(row))
+	}
+	return nil
+}
+
+func (repository *Repository) loadSessionResourceActions(ctx context.Context, ownerID, sessionID string, messages []domain.Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	messageIDs := make([]int64, 0, len(messages))
+	indexes := make(map[int64]int, len(messages))
+	for index := range messages {
+		messageIDs = append(messageIDs, messages[index].ID)
+		indexes[messages[index].ID] = index
+	}
+	var rows []resourceCreationActionRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND session_id = ? AND message_id IN ?", ownerID, sessionID, messageIDs).Find(&rows).Error; err != nil {
+		return fmt.Errorf("list Session resource actions: %w", err)
+	}
+	for _, row := range rows {
+		if index, ok := indexes[row.MessageID]; ok {
+			item := resourceCreationActionDomain(row)
+			messages[index].ResourceAction = &item
+		}
 	}
 	return nil
 }

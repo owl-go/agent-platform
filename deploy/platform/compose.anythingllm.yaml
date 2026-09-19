@@ -1,0 +1,54 @@
+services:
+  anythingllm:
+    image: ${ANYTHINGLLM_IMAGE:?ANYTHINGLLM_IMAGE must be an immutable repository digest}
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: "3001"
+      STORAGE_DIR: /app/server/storage
+      JWT_SECRET: ${ANYTHINGLLM_JWT_SECRET:?ANYTHINGLLM_JWT_SECRET is required}
+      AUTH_TOKEN: ${ANYTHINGLLM_AUTH_TOKEN:?ANYTHINGLLM_AUTH_TOKEN is required}
+      LLM_PROVIDER: ${ANYTHINGLLM_LLM_PROVIDER:-generic-openai}
+      EMBEDDING_ENGINE: ${ANYTHINGLLM_EMBEDDING_ENGINE:-native}
+      EMBEDDING_MODEL_PREF: ${ANYTHINGLLM_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
+      VECTOR_DB: ${ANYTHINGLLM_VECTOR_DB:-lancedb}
+    volumes:
+      - anythingllm-data:/app/server/storage
+    networks:
+      - control
+      - provider-egress
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # AnythingLLM's Puppeteer web-page importer uses its bundled Chromium sandbox.
+      - SYS_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3001/api/ping"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+  api:
+    environment:
+      ANYTHINGLLM_API_KEY: ${ANYTHINGLLM_API_KEY:-}
+      ANYTHINGLLM_ENDPOINT: ${ANYTHINGLLM_ENDPOINT:-http://anythingllm:3001}
+      ANYTHINGLLM_DEPLOYMENT: ${ANYTHINGLLM_DEPLOYMENT:-anythingllm@sha256:b7b570b8bfc0bd2a64097439524a38542784eea03522db9d30256f5e711f52fc}
+      ANYTHINGLLM_EMBEDDING_MODEL: ${ANYTHINGLLM_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
+    depends_on:
+      anythingllm:
+        condition: service_healthy
+
+  worker:
+    environment:
+      ANYTHINGLLM_API_KEY: ${ANYTHINGLLM_API_KEY:-}
+      ANYTHINGLLM_ENDPOINT: ${ANYTHINGLLM_ENDPOINT:-http://anythingllm:3001}
+      ANYTHINGLLM_DEPLOYMENT: ${ANYTHINGLLM_DEPLOYMENT:-anythingllm@sha256:b7b570b8bfc0bd2a64097439524a38542784eea03522db9d30256f5e711f52fc}
+      ANYTHINGLLM_EMBEDDING_MODEL: ${ANYTHINGLLM_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}
+    depends_on:
+      anythingllm:
+        condition: service_healthy
+
+volumes:
+  anythingllm-data:

@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
-import { Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
+import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -19,10 +19,11 @@ type ResourceTab = "mcp" | "skills";
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
-const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
+const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; showTabs?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
   selectable: false,
   initialTab: "mcp",
   mineOnly: false,
+  showTabs: true,
   mcpServerIds: () => [],
   skillIds: () => [],
   cliConnectorDefinitionIds: () => [],
@@ -40,6 +41,14 @@ const router = useRouter();
 const detailSkill = ref<Skill>();
 const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
+const createSkillPrompt = "请帮我创建一个可以实现「……」的技能";
+function systemSkill(systemKey: string, fallback: string) { return skills.value.find((item) => item.system_key === systemKey) ?? skills.value.find((item) => item.platform && item.name === fallback); }
+function createSkillSession() {
+  const skill = systemSkill("system.create_skill", "Create Skill");
+  if (!skill) { reportError(undefined, "systemSkillUnavailable"); return; }
+  void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: skill.id, draft: createSkillPrompt } });
+}
+function handleSkillAction(command: "create" | "upload") { if (command === "create") createSkillSession(); else openNewSkill(); }
 const auth = inject(authContextKey, undefined);
 const { locale, t } = useI18n();
 const { nextZIndex } = useZIndex();
@@ -59,6 +68,7 @@ const canManageCLI = computed(() => auth?.session.state.value.kind === "authenti
 const activeTab = ref<ResourceTab>(props.initialTab);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
+const createdSkillIDs = ref(new Set<string>());
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
@@ -90,9 +100,13 @@ let lastCLICompletionPoll = 0;
 const connectorSections = computed(() => props.mineOnly
   ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }]
   : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value }]);
-const skillSections = computed(() => props.mineOnly
-  ? [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }]
-  : [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }]);
+const skillSections = computed(() => {
+  if (props.mineOnly) return [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }];
+  const sections = [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }];
+  const created = skills.value.filter((item) => !item.platform && createdSkillIDs.value.has(item.id));
+  if (created.length) sections.push({ key: "created", title: t("resources.mySkills"), items: created });
+  return sections;
+});
 
 onMounted(() => {
   void refresh();
@@ -117,6 +131,7 @@ function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transp
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
 function notifyResources() { emit("resources", { mcp: mcp.value, skills: skills.value }); }
 function upsertSkill(item: Skill) {
+  if (!item.platform) createdSkillIDs.value = new Set(createdSkillIDs.value).add(item.id);
   skills.value = [item, ...skills.value.filter((entry) => entry.id !== item.id)];
   notifyResources();
 }
@@ -452,7 +467,7 @@ async function fileToBase64(file: File): Promise<string> {
 <template>
   <div class="extension-manager" :class="{ selectable }">
     <el-alert v-if="statusErrors.length" :title="t('resources.statusUpdateFailed')" type="warning" :closable="false" data-testid="resource-status-error" />
-    <nav class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
+    <nav v-if="showTabs" class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
       <div class="catalog-groups">
@@ -504,7 +519,7 @@ async function fileToBase64(file: File): Promise<string> {
       </div>
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
-      <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button></div>
+      <div class="resource-toolbar skill-add-actions"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button><el-dropdown trigger="click" @command="handleSkillAction"><el-button type="primary" class="skill-add-menu-button"><ChevronDown :size="15" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="create">{{ t('resources.createSkill') }}</el-dropdown-item><el-dropdown-item command="upload">{{ t('resources.uploadSkill') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
       <div class="catalog-groups">
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
@@ -515,8 +530,8 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>

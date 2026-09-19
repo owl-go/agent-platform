@@ -13,6 +13,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
+	"agent-platform/backend/internal/resourceaction"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -913,8 +914,28 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 			return err
 		}
 		if job.Kind == application.JobSession {
+			finalMessage, proposal, shouldCreateAction, actionErr := resourceActionForJob(job, result.FinalMessage)
+			if actionErr != nil {
+				return actionErr
+			}
+			actionID := ""
+			if shouldCreateAction {
+				payload, marshalErr := proposal.JSON()
+				if marshalErr != nil {
+					return marshalErr
+				}
+				name, description := proposal.NameAndDescription()
+				actionID = uuid.NewString()
+				if err := tx.Create(&resourceCreationActionRecord{ID: actionID, OwnerID: job.OwnerID, SessionID: job.SessionID, MessageID: job.AssistantMessageID, Kind: proposal.Kind, State: "pending", Name: name, Description: description, Payload: payload, ExpiresAt: now.Add(15 * time.Minute), CreatedAt: now, UpdatedAt: now, Version: 1}).Error; err != nil {
+					return fmt.Errorf("persist resource creation action: %w", err)
+				}
+			}
 			stages, _ := marshal(result.ExpertStages)
-			update := tx.Model(&messageRecord{}).Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).Updates(map[string]any{"state": "completed", "content": result.FinalMessage, "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
+			updates := map[string]any{"state": "completed", "content": finalMessage, "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			if actionID != "" {
+				updates["resource_creation_action_id"] = actionID
+			}
+			update := tx.Model(&messageRecord{}).Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).Updates(updates)
 			if update.Error != nil || update.RowsAffected != 1 {
 				if update.Error != nil {
 					return fmt.Errorf("complete Session message: %w", update.Error)
@@ -995,6 +1016,35 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 		return result.SuccessCommit.Cleanup()
 	}
 	return nil
+}
+
+func resourceActionForJob(job application.ExecutionJob, content string) (string, resourceaction.Proposal, bool, error) {
+	proposal, visible, marked, err := resourceaction.Parse(content)
+	if !marked {
+		return content, resourceaction.Proposal{}, false, nil
+	}
+	if err != nil {
+		return strings.TrimSpace(content), resourceaction.Proposal{}, false, nil
+	}
+	wanted := ""
+	if proposal.Kind == resourceaction.SkillKind {
+		wanted = "create_skill"
+	} else if proposal.Kind == resourceaction.ExpertKind {
+		wanted = "create_expert"
+	}
+	for _, stage := range job.Snapshot.Stages {
+		for _, skill := range stage.Skills {
+			if strings.Contains(skill.ObjectKey, "/system/"+wanted+".zip") {
+				return visible, proposal, true, nil
+			}
+		}
+	}
+	for _, skill := range job.Snapshot.Skills {
+		if strings.Contains(skill.ObjectKey, "/system/"+wanted+".zip") {
+			return visible, proposal, true, nil
+		}
+	}
+	return visible, resourceaction.Proposal{}, false, nil
 }
 
 func fileArtifactRecords(job application.ExecutionJob, artifacts []application.ExecutionArtifact, createdAt time.Time) []artifactRecord {

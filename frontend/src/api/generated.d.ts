@@ -1885,6 +1885,8 @@ export interface components {
             tag_projection_error?: string;
             cli_connector_definition_ids?: string[];
             platform?: boolean;
+            system_key?: string;
+            immutable?: boolean;
         };
         v1ExpertInput: {
             name?: string;
@@ -2363,6 +2365,19 @@ export interface components {
             disabled_connectors?: string[];
             refresh_ids?: string[];
         };
+        v1ResourceCreationAction: {
+            id?: string;
+            kind?: string;
+            state?: string;
+            name?: string;
+            description?: string;
+            resource_id?: string;
+            error?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         v1ResourceDeletionImpact: {
             affected_experts?: components["schemas"]["v1AffectedExpert"][];
             confirmation_token?: string;
@@ -2480,6 +2495,7 @@ export interface components {
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
             activities?: components["schemas"]["v1ExecutionActivity"][];
             artifacts?: components["schemas"]["v1Artifact"][];
+            resource_action?: components["schemas"]["v1ResourceCreationAction"];
         };
         v1Skill: {
             id?: string;
@@ -2496,6 +2512,8 @@ export interface components {
             version?: number;
             platform?: boolean;
             icon?: string;
+            system_key?: string;
+            immutable?: boolean;
         };
         v1SkillDocument: {
             skill?: components["schemas"]["v1Skill"];

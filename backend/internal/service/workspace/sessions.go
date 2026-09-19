@@ -239,6 +239,17 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	for _, artifact := range item.Artifacts {
 		response.Artifacts = append(response.Artifacts, artifactResponse(artifact))
 	}
+	if action := item.ResourceAction; action != nil {
+		response.ResourceAction = resourceCreationActionResponse(*action)
+	}
+	return response
+}
+
+func resourceCreationActionResponse(item workspacedomain.ResourceCreationAction) *workspacev1.ResourceCreationAction {
+	response := &workspacev1.ResourceCreationAction{Id: item.ID, Kind: item.Kind, State: item.State, Name: item.Name, Description: item.Description, ResourceId: item.ResourceID, ExpiresAt: timestamppb.New(item.ExpiresAt), Version: item.Version}
+	if item.Error != "" {
+		response.Error = &item.Error
+	}
 	return response
 }
 

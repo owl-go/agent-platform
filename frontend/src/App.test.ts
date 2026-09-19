@@ -65,18 +65,19 @@ describe("App navigation", () => {
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
       ["/sessions", "/workflows", "/ai-creation/image-generation", "/knowledge-bases"],
-      ["/experts", "/resources"],
+      ["/resources"],
       ["/settings"],
     ]);
+    expect(wrapper.get('a[href="/resources"]').text()).toContain("专家/技能/连接器");
     wrapper.unmount();
   });
 
   it.each([
     ["/workflows/workflow-1", "/workflows"],
-    ["/experts/expert-1", "/experts"],
-    ["/experts/new", "/experts"],
-    ["/expert-teams/team-1", "/experts"],
-    ["/expert-teams/new", "/experts"],
+    ["/experts/expert-1", "/resources"],
+    ["/experts/new", "/resources"],
+    ["/expert-teams/team-1", "/resources"],
+    ["/expert-teams/new", "/resources"],
   ])("keeps the parent navigation selected at %s", async (path, selectedHref) => {
     const wrapper = await mountAt(path);
 
