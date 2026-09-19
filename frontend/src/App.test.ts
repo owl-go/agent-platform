@@ -68,6 +68,7 @@ describe("App navigation", () => {
       ["/resources"],
       ["/settings"],
     ]);
+    expect(wrapper.get('a[href="/resources"]').text()).toContain("专家/技能/连接器");
     wrapper.unmount();
   });
 
