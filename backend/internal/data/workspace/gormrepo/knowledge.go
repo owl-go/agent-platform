@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
@@ -21,6 +22,103 @@ func knowledgeBaseAccess(query *gorm.DB, ownerID string, includeDeleted bool) *g
 		query = query.Where("knowledge_bases.deleted_at IS NULL")
 	}
 	return query
+}
+
+var _ workspaceapplication.KnowledgeIngestionRepository = (*Repository)(nil)
+
+func (repository *Repository) ClaimKnowledgeIngestionJob(ctx context.Context) (*workspaceapplication.KnowledgeIngestionJob, error) {
+	var result *workspaceapplication.KnowledgeIngestionJob
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row struct {
+			ID              string `gorm:"column:id"`
+			RevisionID      string `gorm:"column:revision_id"`
+			DocumentID      string `gorm:"column:document_id"`
+			KnowledgeBaseID string `gorm:"column:knowledge_base_id"`
+			ObjectKey       string `gorm:"column:object_key"`
+			ContentType     string `gorm:"column:content_type"`
+			Attempts        int    `gorm:"column:attempts"`
+		}
+		query := `SELECT job.id, job.revision_id, revision.document_id, document.knowledge_base_id,
+			revision.object_key, revision.content_type, job.attempts
+			FROM knowledge_ingestion_jobs job
+			JOIN knowledge_document_revisions revision ON revision.id = job.revision_id
+			JOIN knowledge_documents document ON document.id = revision.document_id
+			JOIN knowledge_bases base ON base.id = document.knowledge_base_id
+			WHERE (job.state = 'queued' OR (job.state = 'running' AND job.lease_expires_at < now())) AND job.next_attempt_at <= now()
+				AND revision.state IN ('accepted', 'failed')
+				AND document.deleted_at IS NULL AND base.deleted_at IS NULL
+			ORDER BY job.next_attempt_at, job.created_at, job.id
+			FOR UPDATE OF job SKIP LOCKED LIMIT 1`
+		if err := tx.Raw(query).Scan(&row).Error; err != nil {
+			return err
+		}
+		if row.ID == "" {
+			return nil
+		}
+		if err := tx.Table("knowledge_ingestion_jobs").Where("id = ?", row.ID).Updates(map[string]any{"state": "running", "attempts": gorm.Expr("attempts + 1"), "lease_expires_at": time.Now().UTC().Add(10 * time.Minute), "updated_at": gorm.Expr("now()")}).Error; err != nil {
+			return err
+		}
+		result = &workspaceapplication.KnowledgeIngestionJob{ID: row.ID, RevisionID: row.RevisionID, DocumentID: row.DocumentID, KnowledgeBaseID: row.KnowledgeBaseID, ObjectKey: row.ObjectKey, ContentType: row.ContentType, Attempts: row.Attempts + 1}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("claim Knowledge Ingestion Job: %w", err)
+	}
+	return result, nil
+}
+
+func (repository *Repository) FinishKnowledgeIngestionJob(ctx context.Context, job workspaceapplication.KnowledgeIngestionJob, processingErr error) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if processingErr == nil {
+			now := time.Now().UTC()
+			if err := tx.Table("knowledge_document_revisions").Where("id = ?", job.RevisionID).Updates(map[string]any{"state": string(domain.KnowledgeReady), "error": "", "ready_at": now}).Error; err != nil {
+				return err
+			}
+			if err := tx.Table("knowledge_documents").Where("id = ?", job.DocumentID).Updates(map[string]any{"state": string(domain.KnowledgeReady), "error": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+				return err
+			}
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?))", "knowledge-generation:"+job.KnowledgeBaseID).Error; err != nil {
+				return err
+			}
+			var latest int64
+			if err := tx.Table("knowledge_index_generations").Where("knowledge_base_id = ?", job.KnowledgeBaseID).Select("COALESCE(MAX(generation), 0)").Scan(&latest).Error; err != nil {
+				return err
+			}
+			if err := tx.Table("knowledge_index_generations").Create(map[string]any{"knowledge_base_id": job.KnowledgeBaseID, "generation": latest + 1, "state": "ready"}).Error; err != nil {
+				return err
+			}
+			return tx.Table("knowledge_ingestion_jobs").Where("id = ?", job.ID).Updates(map[string]any{"state": "succeeded", "error": "", "lease_expires_at": nil, "updated_at": gorm.Expr("now()")}).Error
+		}
+		errorText := strings.TrimSpace(processingErr.Error())
+		if len(errorText) > 500 {
+			errorText = errorText[:500]
+		}
+		if err := tx.Table("knowledge_document_revisions").Where("id = ?", job.RevisionID).Updates(map[string]any{"state": string(domain.KnowledgeFailed), "error": errorText}).Error; err != nil {
+			return err
+		}
+		var ready int64
+		if err := tx.Table("knowledge_document_revisions").Where("document_id = ? AND state = ?", job.DocumentID, string(domain.KnowledgeReady)).Count(&ready).Error; err != nil {
+			return err
+		}
+		documentState := string(domain.KnowledgeFailed)
+		if ready > 0 {
+			documentState = string(domain.KnowledgeReady)
+		}
+		if err := tx.Table("knowledge_documents").Where("id = ?", job.DocumentID).Updates(map[string]any{"state": documentState, "error": errorText, "updated_at": gorm.Expr("now()")}).Error; err != nil {
+			return err
+		}
+		return tx.Table("knowledge_ingestion_jobs").Where("id = ?", job.ID).Updates(map[string]any{"state": "failed", "error": errorText, "lease_expires_at": nil, "next_attempt_at": time.Now().UTC().Add(backoffForKnowledgeIngestion(job.Attempts)), "updated_at": gorm.Expr("now()")}).Error
+	})
+}
+
+func backoffForKnowledgeIngestion(attempts int) time.Duration {
+	if attempts < 1 {
+		attempts = 1
+	}
+	if attempts > 8 {
+		attempts = 8
+	}
+	return time.Duration(1<<attempts) * time.Second
 }
 
 func knowledgeMutationAccess(query *gorm.DB, ownerID string, administrator bool) *gorm.DB {
@@ -249,6 +347,39 @@ func (repository *Repository) CreateKnowledgeDocument(ctx context.Context, owner
 		return domain.KnowledgeDocument{}, fmt.Errorf("create Knowledge Document: %w", err)
 	}
 	return result, nil
+}
+
+func (repository *Repository) RetryKnowledgeDocument(ctx context.Context, ownerID, knowledgeBaseID, documentID string, administrator bool) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var document knowledgeDocumentRecord
+		query := knowledgeMutationAccess(tx.Table("knowledge_bases"), ownerID, administrator).
+			Joins("JOIN knowledge_documents ON knowledge_documents.knowledge_base_id = knowledge_bases.id").
+			Where("knowledge_bases.id = ? AND knowledge_documents.id = ? AND knowledge_documents.deleted_at IS NULL", knowledgeBaseID, documentID)
+		if err := query.Select("knowledge_documents.*").Take(&document).Error; err != nil {
+			return mapNotFound(err)
+		}
+		var revision knowledgeRevisionRecord
+		if err := tx.Where("document_id = ?", document.ID).Order("revision DESC").Take(&revision).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if revision.State != string(domain.KnowledgeFailed) {
+			return fmt.Errorf("%w: only failed Knowledge Documents can be retried", domain.ErrConflict)
+		}
+		if err := tx.Model(&revision).Updates(map[string]any{"state": string(domain.KnowledgeAccepted), "error": ""}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&document).Updates(map[string]any{"state": string(domain.KnowledgeAccepted), "error": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
+		}
+		result := tx.Table("knowledge_ingestion_jobs").Where("revision_id = ? AND state = 'failed'", revision.ID).Updates(map[string]any{"state": "queued", "error": "", "next_attempt_at": gorm.Expr("now()"), "lease_expires_at": nil, "updated_at": gorm.Expr("now()")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return fmt.Errorf("%w: ingestion job is not retryable", domain.ErrConflict)
+		}
+		return nil
+	})
 }
 
 func knowledgeBaseDomain(row knowledgeBaseRecord) (domain.KnowledgeBase, error) {

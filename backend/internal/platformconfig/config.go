@@ -29,7 +29,16 @@ type Config struct {
 	Worker         WorkerConfig         `yaml:"worker"`
 	Database       DatabaseConfig       `yaml:"database"`
 	ObjectStore    ObjectStoreConfig    `yaml:"object_store"`
+	AnythingLLM    AnythingLLMConfig    `yaml:"anythingllm"`
 	Sandbox        SandboxConfig        `yaml:"sandbox"`
+}
+
+type AnythingLLMConfig struct {
+	Endpoint       string   `yaml:"endpoint"`
+	APIKey         string   `yaml:"api_key"`
+	Deployment     string   `yaml:"deployment"`
+	EmbeddingModel string   `yaml:"embedding_model"`
+	Timeout        Duration `yaml:"timeout"`
 }
 
 type AccountsConfig struct {
@@ -404,6 +413,25 @@ func (config Config) ValidateWorker() error {
 		if !availableRuntime {
 			return fmt.Errorf("worker.cli_builder requires at least one available Runtime")
 		}
+	}
+	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
+		if err := validateAnythingLLMEndpoint(config.AnythingLLM.Endpoint); err != nil {
+			return err
+		}
+		if strings.TrimSpace(config.AnythingLLM.APIKey) == "" || strings.TrimSpace(config.AnythingLLM.Deployment) == "" || strings.TrimSpace(config.AnythingLLM.EmbeddingModel) == "" {
+			return fmt.Errorf("anythingllm api_key, deployment, and embedding_model are required when enabled")
+		}
+		if config.AnythingLLM.Timeout.Value() <= 0 || config.AnythingLLM.Timeout.Value() > 2*time.Minute {
+			return fmt.Errorf("anythingllm.timeout must be positive and no greater than 2m")
+		}
+	}
+	return nil
+}
+
+func validateAnythingLLMEndpoint(value string) error {
+	parsed, err := url.ParseRequestURI(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return fmt.Errorf("anythingllm.endpoint must be an absolute HTTP(S) URL without user info, query, or fragment")
 	}
 	return nil
 }

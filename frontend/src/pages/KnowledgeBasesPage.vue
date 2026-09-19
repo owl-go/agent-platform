@@ -67,6 +67,11 @@ async function downloadDocument(document: KnowledgeDocument) {
   try { const blob = await api.downloadKnowledgeDocument(selected.value.id, document.id); const href = URL.createObjectURL(blob); const anchor = window.document.createElement("a"); anchor.href = href; anchor.download = document.name; anchor.click(); URL.revokeObjectURL(href); }
   catch { error.value = t("knowledgeBases.downloadFailed"); }
 }
+async function retryDocument(document: KnowledgeDocument) {
+  if (!selected.value) return;
+  try { await api.retryKnowledgeDocument(selected.value.id, document.id); await selectBase(selected.value); ElMessage.success(t("knowledgeBases.retryAccepted")); }
+  catch { error.value = t("knowledgeBases.retryFailed"); }
+}
 onMounted(() => void refresh());
 </script>
 
@@ -91,7 +96,7 @@ onMounted(() => void refresh());
         <div class="category-bar"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div>
         <div class="category-chips"><el-tag v-for="category in categories" :key="category.id" effect="plain">{{ category.name }}</el-tag><el-tag v-if="documents.some((item) => !item.category_id)" type="info" effect="plain">{{ t("knowledgeBases.unclassified") }}</el-tag></div>
         <div class="source-controls"><el-select v-model="selectedCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL">{{ t("knowledgeBases.importURL") }}</el-button></div>
-        <el-table :data="documents" class="document-table"><el-table-column prop="name" :label="t('knowledgeBases.document')" /><el-table-column prop="state" :label="t('knowledgeBases.state')" width="140" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="120" /><el-table-column prop="updated_at" :label="t('knowledgeBases.updated')" width="190" /><el-table-column width="110"><template #default="scope"><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)">{{ t("common.download") }}</el-button></template></el-table-column></el-table>
+        <el-table :data="documents" class="document-table"><el-table-column prop="name" :label="t('knowledgeBases.document')" /><el-table-column prop="state" :label="t('knowledgeBases.state')" width="140" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="120" /><el-table-column prop="updated_at" :label="t('knowledgeBases.updated')" width="190" /><el-table-column width="180"><template #default="scope"><el-button v-if="(scope.row as KnowledgeDocument).state === 'failed'" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ t("knowledgeBases.retry") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)">{{ t("common.download") }}</el-button></template></el-table-column></el-table>
         <div v-if="!documents.length" class="empty-state compact">{{ t("knowledgeBases.noDocuments") }}</div>
       </el-card>
       <el-card v-else class="base-detail" shadow="never"><div class="empty-state">{{ t("knowledgeBases.select") }}</div></el-card>

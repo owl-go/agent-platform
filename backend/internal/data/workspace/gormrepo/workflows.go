@@ -526,8 +526,16 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow Knowledge Base selection: %w", err)
 		}
 	}
+	knowledgeGenerations := make(map[string]int64, len(knowledgeBaseIDs))
+	for _, knowledgeBaseID := range knowledgeBaseIDs {
+		var generation int64
+		if err := tx.Table("knowledge_index_generations").Where("knowledge_base_id = ? AND state = 'ready'", knowledgeBaseID).Order("generation DESC").Limit(1).Pluck("generation", &generation).Error; err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("load Knowledge Index Generation: %w", err)
+		}
+		knowledgeGenerations[knowledgeBaseID] = generation
+	}
 	snapshot := domain.ExecutionSnapshot{
-		SchemaVersion: 2, WorkflowName: workflow.Name, Goal: workflow.Goal, KnowledgeBaseIDs: knowledgeBaseIDs,
+		SchemaVersion: 2, WorkflowName: workflow.Name, Goal: workflow.Goal, KnowledgeBaseIDs: knowledgeBaseIDs, KnowledgeIndexGenerations: knowledgeGenerations,
 		Personality: settings.Personality, PersonalityInstructions: settings.PersonalityInstructions,
 		EnvironmentSecretCiphertext: workflow.EnvironmentSecret, GitSecretCiphertext: workflow.GitSecret,
 		WorkspacePath: workflow.WorkspacePath,

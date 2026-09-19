@@ -20,6 +20,9 @@ func TestKnowledgeDocumentActionPaths(t *testing.T) {
 	if actualBase, actualDocument, ok := knowledgeDocumentDownloadPath("/api/v1/knowledge-bases/" + baseID + "/documents/" + documentID + "/download"); !ok || actualBase != baseID || actualDocument != documentID {
 		t.Fatalf("download path = %q/%q, %t", actualBase, actualDocument, ok)
 	}
+	if actualBase, actualDocument, ok := knowledgeDocumentActionPath("/api/v1/knowledge-bases/"+baseID+"/documents/"+documentID+"/retry", "retry"); !ok || actualBase != baseID || actualDocument != documentID {
+		t.Fatalf("retry path = %q/%q, %t", actualBase, actualDocument, ok)
+	}
 }
 
 func TestValidateKnowledgeURLRejectsPrivateDestinations(t *testing.T) {

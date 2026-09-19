@@ -2,6 +2,10 @@ package anythingllm
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -26,5 +30,27 @@ func TestAdapterContractKeepsProviderDetailsOutOfRetrieval(t *testing.T) {
 	}
 	if len(result.Citations) != 1 || result.Citations[0].KnowledgeBaseID != "base" {
 		t.Fatalf("unexpected retrieval: %+v", result)
+	}
+}
+
+func TestClientUsesAnythingLLMVectorSearchAndBearerAuth(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/v1/workspace/knowledge-base/vector-search" {
+			t.Fatalf("path = %s", request.URL.Path)
+		}
+		if request.Header.Get("Authorization") != "Bearer secret" {
+			t.Fatalf("authorization = %q", request.Header.Get("Authorization"))
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(writer).Encode(map[string]any{"results": []any{map[string]any{"text": "grounded answer", "score": 0.9, "metadata": map[string]string{"title": "revision", "chunkSource": "guide.md"}}}})
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "secret", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Query(context.Background(), "base", 1, "question", 8, 6000)
+	if err != nil || len(result.Citations) != 1 || !strings.Contains(result.Citations[0].Text, "grounded") {
+		t.Fatalf("Query() = %+v, %v", result, err)
 	}
 }

@@ -90,6 +90,7 @@ type Repository interface {
 	DeleteKnowledgeCategory(context.Context, string, string, string, bool) error
 	ListKnowledgeDocuments(context.Context, string, string, bool) ([]domain.KnowledgeDocument, error)
 	CreateKnowledgeDocument(context.Context, string, bool, domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
+	RetryKnowledgeDocument(context.Context, string, string, string, bool) error
 }
 
 type ModelCatalog interface {
