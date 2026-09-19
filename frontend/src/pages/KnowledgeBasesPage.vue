@@ -284,9 +284,9 @@ onUnmounted(closePreview);
       <el-empty v-if="!bases.length" :description="t('knowledgeBases.empty')"><el-button type="primary" @click="openCreate">{{ t("knowledgeBases.new") }}</el-button></el-empty>
       <div v-else class="knowledge-grid" :class="`is-${displayMode}`">
         <el-card v-for="item in bases" :key="item.id" class="knowledge-card" shadow="never" role="button" tabindex="0" @click="openBase(item)" @keydown.enter="openBase(item)" @keydown.space.prevent="openBase(item)">
-          <div class="knowledge-card-head"><div class="knowledge-icon"><FolderOpen :size="20" /></div><el-dropdown v-if="canManageBase(item)" trigger="click" @command="handleBaseAction($event, item)"><el-button class="card-more" text circle :aria-label="t('common.more')" :title="t('common.more')" @click.stop><MoreHorizontal :size="18" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="edit"><Pencil :size="14" />{{ t("common.edit") }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t("common.delete") }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+          <div class="knowledge-card-head"><div class="knowledge-icon"><FolderOpen :size="20" /></div></div>
           <div class="knowledge-card-copy"><div class="knowledge-card-title"><h2>{{ item.name }}</h2><el-tag size="small" effect="plain"><Globe2 v-if="item.visibility === 'public'" :size="12" /><LockKeyhole v-else :size="12" />{{ item.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></div><p>{{ item.description || t("knowledgeBases.noDescription") }}</p></div>
-          <footer><span>{{ formatDate(item.updated_at) }}</span><strong>{{ t("knowledgeBases.open") }} <ArrowLeft :size="14" /></strong></footer>
+          <footer><span>{{ formatDate(item.updated_at) }}</span><div class="knowledge-card-footer-actions"><strong>{{ t("knowledgeBases.open") }} <ArrowLeft :size="14" /></strong><el-dropdown v-if="canManageBase(item)" trigger="click" @command="handleBaseAction($event, item)"><el-button class="card-more" text circle :aria-label="t('common.more')" :title="t('common.more')" @click.stop><MoreHorizontal :size="18" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="edit"><Pencil :size="14" />{{ t("common.edit") }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t("common.delete") }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></footer>
         </el-card>
       </div>
     </template>
@@ -326,6 +326,7 @@ onUnmounted(closePreview);
 .knowledge-card :deep(.el-card__body) { display: flex; flex-direction: column; min-height: 186px; padding: 20px; }
 .knowledge-card-head, .knowledge-card-title, .knowledge-card footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .knowledge-icon, .category-card-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--green); background: #e5efe8; }
+.knowledge-card-footer-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .card-more { color: var(--muted); }
 .knowledge-card-copy { min-width: 0; margin-top: 18px; }
 .knowledge-card-title h2 { min-width: 0; margin: 0; overflow: hidden; font-size: 1.05rem; text-overflow: ellipsis; white-space: nowrap; }
