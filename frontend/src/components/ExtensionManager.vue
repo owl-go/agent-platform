@@ -19,10 +19,11 @@ type ResourceTab = "mcp" | "skills";
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
-const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
+const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; showTabs?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
   selectable: false,
   initialTab: "mcp",
   mineOnly: false,
+  showTabs: true,
   mcpServerIds: () => [],
   skillIds: () => [],
   cliConnectorDefinitionIds: () => [],
@@ -446,7 +447,7 @@ async function fileToBase64(file: File): Promise<string> {
 <template>
   <div class="extension-manager" :class="{ selectable }">
     <el-alert v-if="statusErrors.length" :title="t('resources.statusUpdateFailed')" type="warning" :closable="false" data-testid="resource-status-error" />
-    <nav class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
+    <nav v-if="showTabs" class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
       <div class="catalog-groups">

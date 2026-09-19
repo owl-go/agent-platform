@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElNotification } from "element-plus";
-import { Box, ChatDotRound, Connection, Folder, Loading, MagicStick, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { Box, ChatDotRound, Connection, Folder, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -37,10 +37,7 @@ const navGroups = [
   },
   {
     id: "resources",
-    items: [
-      { id: "experts", icon: MagicStick, path: "/experts" },
-      { id: "resources", icon: Box, path: "/resources" },
-    ],
+    items: [{ id: "resources", icon: Box, path: "/resources" }],
   },
   {
     id: "system",
