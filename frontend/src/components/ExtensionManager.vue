@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
-import { Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
+import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -41,6 +41,14 @@ const router = useRouter();
 const detailSkill = ref<Skill>();
 const skillDocuments = ref<Record<string, string>>({});
 function useSkill(item: Skill) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: item.id } }); }
+const createSkillPrompt = "请帮我创建一个可以实现「……」的技能";
+function systemSkill(systemKey: string, fallback: string) { return skills.value.find((item) => item.system_key === systemKey) ?? skills.value.find((item) => item.platform && item.name === fallback); }
+function createSkillSession() {
+  const skill = systemSkill("system.create_skill", "Create Skill");
+  if (!skill) { reportError(undefined, "systemSkillUnavailable"); return; }
+  void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), skill_id: skill.id, draft: createSkillPrompt } });
+}
+function handleSkillAction(command: "create" | "upload") { if (command === "create") createSkillSession(); else openNewSkill(); }
 const auth = inject(authContextKey, undefined);
 const { locale, t } = useI18n();
 const { nextZIndex } = useZIndex();
@@ -511,7 +519,7 @@ async function fileToBase64(file: File): Promise<string> {
       </div>
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
-      <div class="resource-toolbar"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button></div>
+      <div class="resource-toolbar skill-add-actions"><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button><el-dropdown trigger="click" @command="handleSkillAction"><el-button type="primary" class="skill-add-menu-button"><ChevronDown :size="15" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="create">{{ t('resources.createSkill') }}</el-dropdown-item><el-dropdown-item command="upload">{{ t('resources.uploadSkill') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
       <div class="catalog-groups">
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
@@ -522,8 +530,8 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
+            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>

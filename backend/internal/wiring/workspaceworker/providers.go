@@ -69,6 +69,9 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	}
 	creditsRepository := creditsrepo.New(database.ORM())
 	repository := workspacerepo.New(database.ORM(), creditsRepository)
+	if err := repository.EnsureSystemSkills(context.Background(), objects); err != nil {
+		return nil, err
+	}
 	executor, err := runtimeexecutor.New(config, box, objects, warm)
 	if err != nil {
 		return nil, err

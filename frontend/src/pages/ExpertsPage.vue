@@ -20,6 +20,7 @@ const error = ref("");
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
+function createExpertSession() { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), create_expert: "true", draft: "帮我创建一个 XXX 专家，擅长 XXXXX。我的经验是：[请补充你的行业背景、相关经验]" } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const mineOnly = computed(() => route.query.scope === "mine");
 const activeCategories = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).map((item) => item.expertise_tags[0]).filter(Boolean))).sort());
@@ -64,7 +65,7 @@ function toggleMine() {
         <el-tab-pane :label="t('experts.title')" name="experts" />
         <el-tab-pane :label="t('experts.teams')" name="teams" />
       </el-tabs>
-      <div class="catalog-head-actions"><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink class="el-button el-button--primary" :to="activeTab === 'experts' ? '/experts/new' : '/expert-teams/new'">＋ {{ activeTab === 'experts' ? t('experts.new') : t('experts.createTeam') }}</RouterLink></div>
+      <div class="catalog-head-actions"><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink v-if="activeTab === 'experts'" class="el-button el-button--primary" to="/experts/new" @click.prevent="createExpertSession">＋ {{ t('experts.new') }}</RouterLink><RouterLink v-else class="el-button el-button--primary" to="/expert-teams/new">＋ {{ t('experts.createTeam') }}</RouterLink></div>
     </header>
 
     <div class="catalog-tools">

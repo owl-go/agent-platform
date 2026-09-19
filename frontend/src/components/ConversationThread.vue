@@ -18,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   downloadArtifact: [artifact: Artifact];
   retry: [messageID: string];
+  resourceAction: [messageID: string, decision: "confirm" | "cancel"];
   attachmentError: [];
   copyError: [];
 }>();
@@ -104,6 +105,15 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
           <span v-for="skill in message.skills" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span>
         </div>
         <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="emit('downloadArtifact', $event)" />
+        <section v-if="message.role === 'assistant' && message.resourceAction" class="resource-action-card" :class="`resource-action-${message.resourceAction.state}`" aria-live="polite">
+          <div class="resource-action-heading"><strong>{{ message.resourceAction.kind === 'skill' ? t('sessions.resourceActionSkill') : t('sessions.resourceActionExpert') }}</strong><span>{{ message.resourceAction.name }}</span></div>
+          <p v-if="message.resourceAction.description">{{ message.resourceAction.description }}</p>
+          <div v-if="message.resourceAction.state === 'pending'" class="resource-action-actions"><el-button type="primary" @click="emit('resourceAction', message.id, 'confirm')">{{ t('sessions.resourceActionConfirm') }}</el-button><el-button @click="emit('resourceAction', message.id, 'cancel')">{{ t('common.cancel') }}</el-button></div>
+          <small v-else-if="message.resourceAction.state === 'confirmed'">{{ t('sessions.resourceActionConfirmed') }}</small>
+          <small v-else-if="message.resourceAction.state === 'cancelled'">{{ t('sessions.resourceActionCancelled') }}</small>
+          <small v-else-if="message.resourceAction.error" class="resource-action-error">{{ message.resourceAction.error }}</small>
+          <small v-else>{{ t('sessions.resourceActionExpired') }}</small>
+        </section>
         <ConversationAttachments v-if="message.attachments?.length" :attachments="message.attachments" :load-attachment="props.loadAttachment" @error="emit('attachmentError')" />
         <p v-if="message.state === 'cancelled'" class="cancelled-response">{{ t('sessions.cancelled') }}</p>
 

@@ -73,8 +73,12 @@ func NewCreditsRepository(database *gormdb.Database) *creditsrepo.Repository {
 	return creditsrepo.New(database.ORM())
 }
 
-func NewWorkspaceService(database *gormdb.Database, credits *creditsrepo.Repository) (*workspaceapplication.Service, error) {
-	return workspaceapplication.New(workspacerepo.New(database.ORM(), credits), modeldiscovery.New(nil))
+func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider) (*workspaceapplication.Service, error) {
+	repository := workspacerepo.New(database.ORM(), credits)
+	if err := repository.EnsureSystemSkills(ctx, objects); err != nil {
+		return nil, err
+	}
+	return workspaceapplication.New(repository, modeldiscovery.New(nil))
 }
 
 func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {
