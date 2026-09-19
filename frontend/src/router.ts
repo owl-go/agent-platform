@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
 
-export type Surface = "sessions" | "workflows" | "experts" | "resources" | "ai-creation" | "settings";
+export type Surface = "sessions" | "workflows" | "experts" | "resources" | "ai-applications" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -24,8 +24,19 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "experts" } },
       { path: "/resources", name: "resources", component: () => import("./pages/SkillsConnectorsPage.vue"), meta: { surface: "resources" } },
       { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
-      { path: "/ai-creation", redirect: "/ai-creation/image-generation" },
-      { path: "/ai-creation/image-generation", name: "image-generation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-creation" } },
+      {
+        path: "/ai-apps",
+        component: () => import("./pages/AIApplicationsPage.vue"),
+        meta: { surface: "ai-applications" },
+        children: [
+          { path: "", redirect: "image-creation" },
+          { path: "image-creation", name: "image-creation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "assistants", name: "smart-assistants", component: () => import("./pages/SmartAssistantsPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "digital-humans", name: "digital-humans", component: () => import("./pages/DigitalHumansPage.vue"), meta: { surface: "ai-applications" } },
+        ],
+      },
+      { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
+      { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
       { path: "/:pathMatch(.*)*", redirect: "/sessions" },

@@ -1,0 +1,170 @@
+package application
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+
+	"agent-platform/backend/internal/biz/aiapplication/domain"
+)
+
+type Repository interface {
+	ListAssistants(context.Context, string) ([]domain.SmartAssistant, error)
+	GetAssistant(context.Context, string, string) (domain.SmartAssistant, error)
+	CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error)
+	UpdateAssistant(context.Context, string, string, domain.SmartAssistant, int64) (domain.SmartAssistant, error)
+	DeleteAssistant(context.Context, string, string) error
+	ListDigitalHumans(context.Context, string) ([]domain.DigitalHuman, error)
+	GetDigitalHuman(context.Context, string, string) (domain.DigitalHuman, error)
+	CreateDigitalHuman(context.Context, string, domain.DigitalHuman) (domain.DigitalHuman, error)
+	UpdateDigitalHuman(context.Context, string, string, domain.DigitalHuman, int64) (domain.DigitalHuman, error)
+	DeleteDigitalHuman(context.Context, string, string) error
+	ListFAQs(context.Context, string, string) ([]domain.FAQ, error)
+	CreateFAQ(context.Context, string, string, domain.FAQ) (domain.FAQ, error)
+	UpdateFAQ(context.Context, string, string, string, domain.FAQ, int64) (domain.FAQ, error)
+	DeleteFAQ(context.Context, string, string, string) error
+}
+
+type Service struct{ repository Repository }
+
+func New(repository Repository) (*Service, error) {
+	if repository == nil {
+		return nil, fmt.Errorf("AI Application Repository is required")
+	}
+	return &Service{repository: repository}, nil
+}
+
+func (service *Service) Repository() Repository { return service.repository }
+
+func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
+	return service.repository.ListAssistants(ctx, owner)
+}
+func (service *Service) GetAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
+	return service.repository.GetAssistant(ctx, owner, id)
+}
+func (service *Service) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
+	assistant.OwnerID = owner
+	if assistant.State == "" {
+		assistant.State = domain.StateEnabled
+	}
+	if assistant.Share.Enabled {
+		token, err := newShareToken()
+		if err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		assistant.Share.Token = token
+		assistant.Share.TokenHash = hashShareToken(token)
+	}
+	if assistant.DigitalHumanID != nil {
+		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	if assistant.Share.Width == "" {
+		assistant.Share.Width = "100%"
+	}
+	if assistant.Share.Height == 0 {
+		assistant.Share.Height = 600
+	}
+	if err := assistant.Validate(); err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	return service.repository.CreateAssistant(ctx, owner, assistant)
+}
+
+func newShareToken() (string, error) {
+	value := make([]byte, 32)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(value), nil
+}
+func hashShareToken(token string) string {
+	digest := sha256.Sum256([]byte(token))
+	return base64.RawURLEncoding.EncodeToString(digest[:])
+}
+func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
+	assistant.OwnerID = owner
+	if assistant.State == "" {
+		assistant.State = domain.StateEnabled
+	}
+	if assistant.Share.Enabled && assistant.Share.Token == "" {
+		token, err := newShareToken()
+		if err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		assistant.Share.Token = token
+		assistant.Share.TokenHash = hashShareToken(token)
+	}
+	if assistant.DigitalHumanID != nil {
+		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	if assistant.Share.Width == "" {
+		assistant.Share.Width = "100%"
+	}
+	if assistant.Share.Height == 0 {
+		assistant.Share.Height = 600
+	}
+	if err := assistant.Validate(); err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+}
+func (service *Service) DeleteAssistant(ctx context.Context, owner, id string) error {
+	return service.repository.DeleteAssistant(ctx, owner, id)
+}
+
+func (service *Service) ListDigitalHumans(ctx context.Context, owner string) ([]domain.DigitalHuman, error) {
+	return service.repository.ListDigitalHumans(ctx, owner)
+}
+func (service *Service) GetDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
+	return service.repository.GetDigitalHuman(ctx, owner, id)
+}
+func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, human domain.DigitalHuman) (domain.DigitalHuman, error) {
+	human.OwnerID = owner
+	if err := human.Validate(); err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	return service.repository.CreateDigitalHuman(ctx, owner, human)
+}
+func (service *Service) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
+	human.OwnerID = owner
+	if err := human.Validate(); err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
+}
+func (service *Service) DeleteDigitalHuman(ctx context.Context, owner, id string) error {
+	return service.repository.DeleteDigitalHuman(ctx, owner, id)
+}
+
+func (service *Service) ListFAQs(ctx context.Context, owner, assistantID string) ([]domain.FAQ, error) {
+	return service.repository.ListFAQs(ctx, owner, assistantID)
+}
+func (service *Service) CreateFAQ(ctx context.Context, owner, assistantID string, faq domain.FAQ) (domain.FAQ, error) {
+	faq.AssistantID = assistantID
+	if err := faq.Validate(); err != nil {
+		return domain.FAQ{}, err
+	}
+	if err := domain.DefaultSafetyPolicy().ValidateAnswer(faq.AnswerMarkdown); err != nil {
+		return domain.FAQ{}, err
+	}
+	return service.repository.CreateFAQ(ctx, owner, assistantID, faq)
+}
+func (service *Service) UpdateFAQ(ctx context.Context, owner, assistantID, id string, faq domain.FAQ, version int64) (domain.FAQ, error) {
+	faq.AssistantID = assistantID
+	if err := faq.Validate(); err != nil {
+		return domain.FAQ{}, err
+	}
+	if err := domain.DefaultSafetyPolicy().ValidateAnswer(faq.AnswerMarkdown); err != nil {
+		return domain.FAQ{}, err
+	}
+	return service.repository.UpdateFAQ(ctx, owner, assistantID, id, faq, version)
+}
+func (service *Service) DeleteFAQ(ctx context.Context, owner, assistantID, id string) error {
+	return service.repository.DeleteFAQ(ctx, owner, assistantID, id)
+}
