@@ -35,7 +35,7 @@ onMounted(async () => {
 function back() {
   const returnTo = (router.options.history.state as { skillReturnTo?: string }).skillReturnTo;
   if (returnTo) router.back();
-  else void router.push("/resources");
+  else void router.push("/resources?tab=skills");
 }
 
 function useSkill() {
