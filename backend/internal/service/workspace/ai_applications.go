@@ -104,6 +104,22 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		service.handleAssistantAnswer(writer, request, owner, rest[0])
 		return
 	}
+	if len(rest) == 2 && rest[1] == "share-token" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var input struct {
+			Version int64 `json:"version"`
+		}
+		if !decodeJSON(writer, request, &input) {
+			return
+		}
+		value, err := service.aiapplications.RegenerateShareToken(request.Context(), owner, rest[0], input.Version)
+		service.writeAIResult(writer, map[string]any{"assistant": value, "token": value.Share.Token}, err)
+		return
+	}
 	if len(rest) != 1 {
 		http.NotFound(writer, request)
 		return

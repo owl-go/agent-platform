@@ -640,3 +640,11 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .application-card h3 { margin: 0 0 8px; }
 .application-card p { margin: 0 0 14px; color: var(--muted); }
 .application-card small { color: var(--muted); }
+.application-detail-page { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+.application-detail-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.application-detail-header h1 { margin: 4px 0 0; }
+.application-detail-card { border-radius: 16px; }
+.faq-row { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.faq-row p { margin: 6px 0 0; color: var(--muted); white-space: pre-wrap; }
+.faq-create-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.share-snippet { margin-top: 14px; }

@@ -23,6 +23,7 @@ CREATE TABLE smart_assistants (
 );
 
 CREATE INDEX smart_assistants_owner ON smart_assistants(owner_user_id, updated_at DESC);
+CREATE UNIQUE INDEX smart_assistants_share_token ON smart_assistants(share_token_hash) WHERE share_token_hash IS NOT NULL;
 
 CREATE TABLE digital_humans (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

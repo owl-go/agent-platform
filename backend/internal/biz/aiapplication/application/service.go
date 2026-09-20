@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	ListAssistants(context.Context, string) ([]domain.SmartAssistant, error)
 	GetAssistant(context.Context, string, string) (domain.SmartAssistant, error)
+	GetAssistantByShareTokenHash(context.Context, string) (domain.SmartAssistant, error)
 	CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error)
 	UpdateAssistant(context.Context, string, string, domain.SmartAssistant, int64) (domain.SmartAssistant, error)
 	DeleteAssistant(context.Context, string, string) error
@@ -56,6 +57,7 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 		}
 		assistant.Share.Token = token
 		assistant.Share.TokenHash = hashShareToken(token)
+		assistant.Share.TokenRevision = 1
 	}
 	if assistant.DigitalHumanID != nil {
 		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
@@ -87,16 +89,27 @@ func hashShareToken(token string) string {
 }
 func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
 	assistant.OwnerID = owner
+	current, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
 	if assistant.State == "" {
 		assistant.State = domain.StateEnabled
 	}
-	if assistant.Share.Enabled && assistant.Share.Token == "" {
-		token, err := newShareToken()
-		if err != nil {
-			return domain.SmartAssistant{}, err
+	if assistant.Share.Enabled {
+		assistant.Share.TokenHash = current.Share.TokenHash
+		assistant.Share.TokenRevision = current.Share.TokenRevision
+		if assistant.Share.TokenHash == "" {
+			token, tokenErr := newShareToken()
+			if tokenErr != nil {
+				return domain.SmartAssistant{}, tokenErr
+			}
+			assistant.Share.Token = token
+			assistant.Share.TokenHash = hashShareToken(token)
+			assistant.Share.TokenRevision++
 		}
-		assistant.Share.Token = token
-		assistant.Share.TokenHash = hashShareToken(token)
+	} else {
+		assistant.Share.Token, assistant.Share.TokenHash, assistant.Share.TokenRevision = "", "", current.Share.TokenRevision
 	}
 	if assistant.DigitalHumanID != nil {
 		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
@@ -113,6 +126,42 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 		return domain.SmartAssistant{}, err
 	}
 	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+}
+
+func (service *Service) RegenerateShareToken(ctx context.Context, owner, id string, version int64) (domain.SmartAssistant, error) {
+	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	if !assistant.Share.Enabled {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: sharing is disabled", domain.ErrInvalid)
+	}
+	token, err := newShareToken()
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	assistant.Share.Token, assistant.Share.TokenHash = token, hashShareToken(token)
+	assistant.Share.TokenRevision++
+	updated, err := service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	updated.Share.Token = token
+	return updated, nil
+}
+
+func (service *Service) ResolveSharedAssistant(ctx context.Context, token string) (domain.SmartAssistant, error) {
+	if len(token) < 32 {
+		return domain.SmartAssistant{}, domain.ErrNotFound
+	}
+	assistant, err := service.repository.GetAssistantByShareTokenHash(ctx, hashShareToken(token))
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	if !assistant.Share.Enabled || assistant.State != domain.StateEnabled {
+		return domain.SmartAssistant{}, domain.ErrNotFound
+	}
+	return assistant, nil
 }
 func (service *Service) DeleteAssistant(ctx context.Context, owner, id string) error {
 	return service.repository.DeleteAssistant(ctx, owner, id)

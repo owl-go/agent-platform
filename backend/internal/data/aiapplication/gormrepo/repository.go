@@ -107,6 +107,17 @@ func (r *Repository) GetAssistant(ctx context.Context, owner, id string) (domain
 	}
 	return assistantFromRecord(row), nil
 }
+func (r *Repository) GetAssistantByShareTokenHash(ctx context.Context, hash string) (domain.SmartAssistant, error) {
+	var row assistantRecord
+	err := r.db.WithContext(ctx).Where("share_token_hash = ?", hash).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.SmartAssistant{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	return assistantFromRecord(row), nil
+}
 func (r *Repository) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
 	now := time.Now().UTC()
 	assistant.ID = uuid.NewString()
@@ -123,10 +134,7 @@ func (r *Repository) CreateAssistant(ctx context.Context, owner string, assistan
 func (r *Repository) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
 	share := assistant.Share
 	share.Token = ""
-	updates := map[string]any{"name": assistant.Name, "icon": assistant.Icon, "introduction": assistant.Introduction, "scenario": assistant.Scenario, "service_goal": assistant.ServiceGoal, "operating_rules": assistant.OperatingRules, "response_style": assistant.ResponseStyle, "knowledge_base_ids": encode(assistant.KnowledgeBaseIDs), "expert_id": assistant.ExpertID, "expert_team_id": assistant.ExpertTeamID, "digital_human_id": assistant.DigitalHumanID, "share": encode(share), "share_token_hash": optionalString(assistant.Share.TokenHash), "state": assistant.State, "updated_at": time.Now().UTC(), "version": version + 1}
-	if assistant.Share.TokenHash != "" {
-		updates["share_token_revision"] = gorm.Expr("share_token_revision + 1")
-	}
+	updates := map[string]any{"name": assistant.Name, "icon": assistant.Icon, "introduction": assistant.Introduction, "scenario": assistant.Scenario, "service_goal": assistant.ServiceGoal, "operating_rules": assistant.OperatingRules, "response_style": assistant.ResponseStyle, "knowledge_base_ids": encode(assistant.KnowledgeBaseIDs), "expert_id": assistant.ExpertID, "expert_team_id": assistant.ExpertTeamID, "digital_human_id": assistant.DigitalHumanID, "share": encode(share), "share_token_hash": optionalString(assistant.Share.TokenHash), "share_token_revision": assistant.Share.TokenRevision, "state": assistant.State, "updated_at": time.Now().UTC(), "version": version + 1}
 	result := r.db.WithContext(ctx).Model(&assistantRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", owner, id, version).Updates(updates)
 	if result.Error != nil {
 		return domain.SmartAssistant{}, mapDBError(result.Error)
@@ -284,6 +292,7 @@ func assistantFromRecord(row assistantRecord) domain.SmartAssistant {
 	if row.ShareTokenHash != nil {
 		share.TokenHash = *row.ShareTokenHash
 	}
+	share.TokenRevision = row.ShareTokenRevision
 	return domain.SmartAssistant{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Icon: row.Icon, Introduction: row.Introduction, Scenario: row.Scenario, ServiceGoal: row.ServiceGoal, OperatingRules: row.OperatingRules, ResponseStyle: row.ResponseStyle, KnowledgeBaseIDs: ids, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, DigitalHumanID: row.DigitalHumanID, Share: share, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 func assistantRecordFromDomain(value domain.SmartAssistant) assistantRecord {
@@ -293,7 +302,7 @@ func assistantRecordFromDomain(value domain.SmartAssistant) assistantRecord {
 	}
 	share := value.Share
 	share.Token = ""
-	return assistantRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, Icon: value.Icon, Introduction: value.Introduction, Scenario: value.Scenario, ServiceGoal: value.ServiceGoal, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: encode(value.KnowledgeBaseIDs), ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, Share: encode(share), ShareTokenHash: optionalString(value.Share.TokenHash), State: state, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
+	return assistantRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, Icon: value.Icon, Introduction: value.Introduction, Scenario: value.Scenario, ServiceGoal: value.ServiceGoal, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: encode(value.KnowledgeBaseIDs), ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, Share: encode(share), ShareTokenHash: optionalString(value.Share.TokenHash), ShareTokenRevision: value.Share.TokenRevision, State: state, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 
 func optionalString(value string) *string {

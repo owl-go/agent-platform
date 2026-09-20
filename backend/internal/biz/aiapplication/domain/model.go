@@ -58,6 +58,7 @@ type ShareConfiguration struct {
 	Enabled         bool     `json:"enabled"`
 	Token           string   `json:"token,omitempty"`
 	TokenHash       string   `json:"-"`
+	TokenRevision   int64    `json:"token_revision"`
 	AllowedOrigins  []string `json:"allowed_origins,omitempty"`
 	Width           string   `json:"width"`
 	Height          int      `json:"height"`

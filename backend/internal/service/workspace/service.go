@@ -69,8 +69,12 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs/{faq_id}", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/answer", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/share-token", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/digital-humans", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/digital-humans/{digital_human_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/answer", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
 func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {

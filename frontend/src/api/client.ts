@@ -62,6 +62,7 @@ export interface Skill { id: string; platform?: boolean; name: string; icon?: st
 export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number }
 export interface SmartAssistant { id: string; name: string; icon: string; introduction: string; scenario: string; service_goal: string; operating_rules: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state: "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
 export interface SmartAssistantInput { name: string; icon?: string; introduction?: string; scenario?: string; service_goal?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; share?: AssistantShareConfiguration }
+export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; created_at: string; updated_at: string; version: number }
 export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
@@ -193,8 +194,14 @@ export interface PlatformApi {
   listSkills(signal?: AbortSignal): Promise<Skill[]>;
   listSmartAssistants(signal?: AbortSignal): Promise<SmartAssistant[]>;
   createSmartAssistant(input: SmartAssistantInput, signal?: AbortSignal): Promise<SmartAssistant>;
+  getSmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
   updateSmartAssistant(id: string, input: SmartAssistantInput, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
   deleteSmartAssistant(id: string, signal?: AbortSignal): Promise<void>;
+  listAssistantFAQs(id: string, signal?: AbortSignal): Promise<SmartAssistantFAQ[]>;
+  createAssistantFAQ(id: string, input: Omit<SmartAssistantFAQ, "id" | "assistant_id" | "created_at" | "updated_at" | "version">, signal?: AbortSignal): Promise<SmartAssistantFAQ>;
+  updateAssistantFAQ(assistantID: string, id: string, input: Omit<SmartAssistantFAQ, "id" | "assistant_id" | "created_at" | "updated_at" | "version">, version: number, signal?: AbortSignal): Promise<SmartAssistantFAQ>;
+  deleteAssistantFAQ(assistantID: string, id: string, signal?: AbortSignal): Promise<void>;
+  regenerateAssistantShareToken(id: string, version: number, signal?: AbortSignal): Promise<{ token: string; assistant: SmartAssistant }>;
   listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
   updateDigitalHuman(id: string, input: DigitalHumanInput, version: number, signal?: AbortSignal): Promise<DigitalHuman>;
@@ -486,8 +493,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/skills", { signal })).items ?? []; },
     async listSmartAssistants(signal) { return await call<SmartAssistant[]>("/api/v1/ai-apps/assistants", { signal }); },
     createSmartAssistant(input, signal) { return call("/api/v1/ai-apps/assistants", json("POST", input, signal)); },
+    getSmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, { signal }); },
     updateSmartAssistant(id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     deleteSmartAssistant(id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, signal); },
+    async listAssistantFAQs(id, signal) { return await call<SmartAssistantFAQ[]>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, { signal }); },
+    createAssistantFAQ(id, input, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, json("POST", input, signal)); },
+    updateAssistantFAQ(assistantID, id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
+    deleteAssistantFAQ(assistantID, id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, signal); },
+    regenerateAssistantShareToken(id, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal)); },
     async listDigitalHumans(signal) { return await call<DigitalHuman[]>("/api/v1/ai-apps/digital-humans", { signal }); },
     createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },
     updateDigitalHuman(id, input, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },

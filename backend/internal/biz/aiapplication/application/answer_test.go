@@ -19,6 +19,9 @@ func (answerRepository) ListAssistants(context.Context, string) ([]domain.SmartA
 func (answerRepository) GetAssistant(context.Context, string, string) (domain.SmartAssistant, error) {
 	return domain.SmartAssistant{}, nil
 }
+func (answerRepository) GetAssistantByShareTokenHash(context.Context, string) (domain.SmartAssistant, error) {
+	return domain.SmartAssistant{}, nil
+}
 func (answerRepository) CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error) {
 	return domain.SmartAssistant{}, nil
 }
