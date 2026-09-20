@@ -242,7 +242,12 @@ func publicVisitor(request *http.Request) (string, *http.Cookie, error) {
 			return "", nil, err
 		}
 		visitor = base64.RawURLEncoding.EncodeToString(value)
-		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: http.SameSiteNoneMode, Secure: request.TLS != nil, MaxAge: 86400}
+		secure := request.TLS != nil
+		sameSite := http.SameSiteLaxMode
+		if secure {
+			sameSite = http.SameSiteNoneMode
+		}
+		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: sameSite, Secure: secure, MaxAge: 86400}
 	}
 	digest := sha256.Sum256([]byte(visitor))
 	return base64.RawURLEncoding.EncodeToString(digest[:]), cookie, nil
