@@ -3,6 +3,9 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"agent-platform/backend/internal/biz/aiapplication/domain"
@@ -29,6 +32,7 @@ func (knowledgeDocumentRecord) TableName() string { return "knowledge_documents"
 type knowledgeChunkRecord struct {
 	ID, DocumentID, Content string
 	Position                int
+	Embedding               string `gorm:"column:embedding"`
 	CreatedAt               time.Time
 }
 
@@ -86,6 +90,14 @@ func (r *Repository) ListKnowledgeDocuments(ctx context.Context, owner, baseID s
 	return result, nil
 }
 func (r *Repository) CreateKnowledgeDocument(ctx context.Context, owner, baseID string, document domain.KnowledgeDocument, chunks []domain.KnowledgeChunk) (domain.KnowledgeDocument, error) {
+	return r.createKnowledgeDocument(ctx, owner, baseID, document, chunks)
+}
+
+func (r *Repository) CreateKnowledgeDocumentWithEmbeddings(ctx context.Context, owner, baseID string, document domain.KnowledgeDocument, chunks []domain.KnowledgeChunk) (domain.KnowledgeDocument, error) {
+	return r.createKnowledgeDocument(ctx, owner, baseID, document, chunks)
+}
+
+func (r *Repository) createKnowledgeDocument(ctx context.Context, owner, baseID string, document domain.KnowledgeDocument, chunks []domain.KnowledgeChunk) (domain.KnowledgeDocument, error) {
 	if _, err := r.GetKnowledgeBase(ctx, owner, baseID); err != nil {
 		return domain.KnowledgeDocument{}, err
 	}
@@ -97,12 +109,40 @@ func (r *Repository) CreateKnowledgeDocument(ctx context.Context, owner, baseID 
 			return mapDBError(err)
 		}
 		for _, chunk := range chunks {
-			if err := tx.Create(&knowledgeChunkRecord{ID: uuid.NewString(), DocumentID: document.ID, Position: chunk.Position, Content: chunk.Text, CreatedAt: now}).Error; err != nil {
+			row := knowledgeChunkRecord{ID: uuid.NewString(), DocumentID: document.ID, Position: chunk.Position, Content: chunk.Text, CreatedAt: now}
+			if len(chunk.Embedding) > 0 {
+				row.Embedding = vectorLiteral(chunk.Embedding)
+			}
+			if err := tx.Create(&row).Error; err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func (r *Repository) SearchKnowledgeVector(ctx context.Context, owner string, baseIDs []string, embedding []float32, limit int) ([]domain.KnowledgeChunk, error) {
+	if len(baseIDs) == 0 || len(embedding) == 0 {
+		return nil, nil
+	}
+	var rows []knowledgeSearchRecord
+	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, 1 - (c.embedding <=> ?::vector) AS score", vectorLiteral(embedding)).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready'").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.state = 'ready'", owner).Where("d.knowledge_base_id IN ? AND c.embedding IS NOT NULL", baseIDs).Order(gorm.Expr("c.embedding <=> ?::vector ASC, c.position ASC", vectorLiteral(embedding))).Limit(limit).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]domain.KnowledgeChunk, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, domain.KnowledgeChunk{ID: row.ID, DocumentID: row.DocumentID, Position: row.Position, Text: row.Content, Score: row.Score})
+	}
+	return result, nil
+}
+
+func vectorLiteral(values []float32) string {
+	parts := make([]string, len(values))
+	for index, value := range values {
+		parts[index] = strconv.FormatFloat(float64(value), 'f', -1, 32)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(parts, ","))
 }
 func (r *Repository) SearchKnowledge(ctx context.Context, owner string, baseIDs []string, query string, limit int) ([]domain.KnowledgeChunk, error) {
 	if len(baseIDs) == 0 {

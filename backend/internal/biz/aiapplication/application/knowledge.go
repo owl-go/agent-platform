@@ -63,6 +63,23 @@ func (service *Service) CreateKnowledgeDocument(ctx context.Context, owner, base
 	document.State = domain.KnowledgeReady
 	document.UpdatedAt = time.Now().UTC()
 	chunks := chunkDocument(document.Content)
+	if service.embedder != nil {
+		vectors, embedErr := service.embedder.Embed(ctx, chunkTexts(chunks))
+		if embedErr != nil {
+			return domain.KnowledgeDocument{}, fmt.Errorf("embed knowledge document: %w", embedErr)
+		}
+		if len(vectors) != len(chunks) {
+			return domain.KnowledgeDocument{}, fmt.Errorf("embed knowledge document: expected %d vectors, got %d", len(chunks), len(vectors))
+		}
+		for index := range chunks {
+			chunks[index].Embedding = vectors[index]
+		}
+	}
+	if repository, ok := service.knowledge.(interface {
+		CreateKnowledgeDocumentWithEmbeddings(context.Context, string, string, domain.KnowledgeDocument, []domain.KnowledgeChunk) (domain.KnowledgeDocument, error)
+	}); ok {
+		return repository.CreateKnowledgeDocumentWithEmbeddings(ctx, owner, baseID, document, chunks)
+	}
 	return service.knowledge.CreateKnowledgeDocument(ctx, owner, baseID, document, chunks)
 }
 func (service *Service) SearchKnowledge(ctx context.Context, owner string, baseIDs []string, query string, limit int) ([]domain.KnowledgeChunk, error) {
@@ -76,7 +93,26 @@ func (service *Service) SearchKnowledge(ctx context.Context, owner string, baseI
 	if limit <= 0 || limit > 20 {
 		limit = 5
 	}
+	if service.embedder != nil {
+		if repository, ok := service.knowledge.(VectorKnowledgeRepository); ok {
+			vectors, embedErr := service.embedder.Embed(ctx, []string{query})
+			if embedErr == nil && len(vectors) == 1 {
+				chunks, vectorErr := repository.SearchKnowledgeVector(ctx, owner, baseIDs, vectors[0], limit)
+				if vectorErr == nil && len(chunks) > 0 {
+					return chunks, nil
+				}
+			}
+		}
+	}
 	return service.knowledge.SearchKnowledge(ctx, owner, baseIDs, query, limit)
+}
+
+func chunkTexts(chunks []domain.KnowledgeChunk) []string {
+	texts := make([]string, len(chunks))
+	for index := range chunks {
+		texts[index] = chunks[index].Text
+	}
+	return texts
 }
 
 func chunkDocument(content string) []domain.KnowledgeChunk {

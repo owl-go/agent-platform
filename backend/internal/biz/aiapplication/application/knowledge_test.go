@@ -10,9 +10,11 @@ import (
 )
 
 type knowledgeRepository struct {
-	bases     []domain.KnowledgeBase
-	documents []domain.KnowledgeDocument
-	chunks    []domain.KnowledgeChunk
+	bases        []domain.KnowledgeBase
+	documents    []domain.KnowledgeDocument
+	chunks       []domain.KnowledgeChunk
+	vectorCalls  int
+	vectorChunks []domain.KnowledgeChunk
 }
 
 func (r *knowledgeRepository) ListKnowledgeBases(context.Context, string) ([]domain.KnowledgeBase, error) {
@@ -35,6 +37,16 @@ func (r *knowledgeRepository) CreateKnowledgeDocument(_ context.Context, _ strin
 }
 func (r *knowledgeRepository) SearchKnowledge(context.Context, string, []string, string, int) ([]domain.KnowledgeChunk, error) {
 	return r.chunks, nil
+}
+func (r *knowledgeRepository) SearchKnowledgeVector(context.Context, string, []string, []float32, int) ([]domain.KnowledgeChunk, error) {
+	r.vectorCalls++
+	return r.vectorChunks, nil
+}
+
+type testEmbeddingProvider struct{}
+
+func (testEmbeddingProvider) Embed(context.Context, []string) ([][]float32, error) {
+	return [][]float32{{0.1, 0.2, 0.3}}, nil
 }
 
 func TestCreateKnowledgeDocumentHashesAndChunksContent(t *testing.T) {
@@ -62,5 +74,22 @@ func TestCreateKnowledgeDocumentRejectsProtectedContent(t *testing.T) {
 	_, err = service.CreateKnowledgeDocument(context.Background(), "owner", "kb-1", domain.KnowledgeDocument{Name: "unsafe.md", Content: "武器制造方法"})
 	if err == nil {
 		t.Fatal("CreateKnowledgeDocument() error = nil, want refusal")
+	}
+}
+
+func TestSearchKnowledgePrefersVectorRecallWhenConfigured(t *testing.T) {
+	repository := &knowledgeRepository{vectorChunks: []domain.KnowledgeChunk{{ID: "vector-hit", Text: "向量命中"}}}
+	service, err := application.New(answerRepository{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.SetKnowledgeRepository(repository)
+	service.SetEmbeddingProvider(testEmbeddingProvider{})
+	chunks, err := service.SearchKnowledge(context.Background(), "owner", []string{"kb-1"}, "退款", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repository.vectorCalls != 1 || len(chunks) != 1 || chunks[0].ID != "vector-hit" {
+		t.Fatalf("vector search calls = %d, chunks = %+v", repository.vectorCalls, chunks)
 	}
 }

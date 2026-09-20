@@ -59,9 +59,10 @@ func (document KnowledgeDocument) Validate() error {
 }
 
 type KnowledgeChunk struct {
-	ID         string  `json:"id"`
-	DocumentID string  `json:"document_id"`
-	Position   int     `json:"position"`
-	Text       string  `json:"text"`
-	Score      float32 `json:"score,omitempty"`
+	ID         string    `json:"id"`
+	DocumentID string    `json:"document_id"`
+	Position   int       `json:"position"`
+	Text       string    `json:"text"`
+	Score      float32   `json:"score,omitempty"`
+	Embedding  []float32 `json:"-"`
 }

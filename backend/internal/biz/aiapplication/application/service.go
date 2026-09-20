@@ -48,6 +48,7 @@ func (service *Service) BindAssistantSession(ctx context.Context, owner, assista
 type Service struct {
 	repository Repository
 	knowledge  KnowledgeRepository
+	embedder   EmbeddingProvider
 }
 
 func New(repository Repository) (*Service, error) {
@@ -58,6 +59,10 @@ func New(repository Repository) (*Service, error) {
 }
 
 func (service *Service) Repository() Repository { return service.repository }
+
+func (service *Service) SetEmbeddingProvider(provider EmbeddingProvider) {
+	service.embedder = provider
+}
 
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
 	return service.repository.ListAssistants(ctx, owner)
