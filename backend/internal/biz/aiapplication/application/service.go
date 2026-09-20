@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"agent-platform/backend/internal/biz/aiapplication/domain"
@@ -14,6 +15,7 @@ type Repository interface {
 	ListAssistants(context.Context, string) ([]domain.SmartAssistant, error)
 	GetAssistant(context.Context, string, string) (domain.SmartAssistant, error)
 	GetAssistantByShareTokenHash(context.Context, string) (domain.SmartAssistant, error)
+	BindAssistantSession(context.Context, string, string, string, []byte) error
 	CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error)
 	UpdateAssistant(context.Context, string, string, domain.SmartAssistant, int64) (domain.SmartAssistant, error)
 	DeleteAssistant(context.Context, string, string) error
@@ -26,6 +28,21 @@ type Repository interface {
 	CreateFAQ(context.Context, string, string, domain.FAQ) (domain.FAQ, error)
 	UpdateFAQ(context.Context, string, string, string, domain.FAQ, int64) (domain.FAQ, error)
 	DeleteFAQ(context.Context, string, string, string) error
+}
+
+func (service *Service) BindAssistantSession(ctx context.Context, owner, assistantID, sessionID string) error {
+	assistant, err := service.repository.GetAssistant(ctx, owner, assistantID)
+	if err != nil {
+		return err
+	}
+	if assistant.State != domain.StateEnabled {
+		return fmt.Errorf("%w: assistant is disabled", domain.ErrInvalid)
+	}
+	snapshot, err := json.Marshal(assistant)
+	if err != nil {
+		return err
+	}
+	return service.repository.BindAssistantSession(ctx, owner, assistantID, sessionID, snapshot)
 }
 
 type Service struct {

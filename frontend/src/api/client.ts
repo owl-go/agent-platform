@@ -204,6 +204,7 @@ export interface PlatformApi {
   updateAssistantFAQ(assistantID: string, id: string, input: Omit<SmartAssistantFAQ, "id" | "assistant_id" | "created_at" | "updated_at" | "version">, version: number, signal?: AbortSignal): Promise<SmartAssistantFAQ>;
   deleteAssistantFAQ(assistantID: string, id: string, signal?: AbortSignal): Promise<void>;
   regenerateAssistantShareToken(id: string, version: number, signal?: AbortSignal): Promise<{ token: string; assistant: SmartAssistant }>;
+  createAssistantSession(id: string, signal?: AbortSignal): Promise<Session>;
   listKnowledgeBases(signal?: AbortSignal): Promise<KnowledgeBase[]>;
   createKnowledgeBase(input: { name: string; description?: string }, signal?: AbortSignal): Promise<KnowledgeBase>;
   listKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
@@ -507,6 +508,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     updateAssistantFAQ(assistantID, id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     deleteAssistantFAQ(assistantID, id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, signal); },
     regenerateAssistantShareToken(id, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal)); },
+    createAssistantSession(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/sessions`, json("POST", {}, signal)); },
     async listKnowledgeBases(signal) { return await call<KnowledgeBase[]>("/api/v1/ai-apps/knowledge-bases", { signal }); },
     createKnowledgeBase(input, signal) { return call("/api/v1/ai-apps/knowledge-bases", json("POST", input, signal)); },
     async listKnowledgeDocuments(baseID, signal) { return await call<KnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },

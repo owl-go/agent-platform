@@ -75,6 +75,14 @@ type faqRecord struct {
 	Version        int64     `gorm:"column:version"`
 }
 
+type assistantSessionRecord struct {
+	SessionID, AssistantID, OwnerID string
+	AssistantSnapshot               []byte `gorm:"column:assistant_snapshot;type:jsonb"`
+	CreatedAt                       time.Time
+}
+
+func (assistantSessionRecord) TableName() string { return "smart_assistant_sessions" }
+
 func (faqRecord) TableName() string { return "smart_assistant_faqs" }
 
 func encode(value any) []byte { encoded, _ := json.Marshal(value); return encoded }
@@ -117,6 +125,9 @@ func (r *Repository) GetAssistantByShareTokenHash(ctx context.Context, hash stri
 		return domain.SmartAssistant{}, err
 	}
 	return assistantFromRecord(row), nil
+}
+func (r *Repository) BindAssistantSession(ctx context.Context, owner, assistantID, sessionID string, snapshot []byte) error {
+	return r.db.WithContext(ctx).Create(&assistantSessionRecord{SessionID: sessionID, AssistantID: assistantID, OwnerID: owner, AssistantSnapshot: snapshot, CreatedAt: time.Now().UTC()}).Error
 }
 func (r *Repository) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
 	now := time.Now().UTC()

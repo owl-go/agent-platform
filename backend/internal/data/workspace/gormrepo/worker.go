@@ -712,6 +712,9 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 		return nil, err
 	}
 	instruction := sessionInstruction(session.RollingSummary, recent, user.Content, checkpoint != "")
+	if assistantRules := assistantSessionInstruction(tx, session.ID); assistantRules != "" {
+		instruction = assistantRules + "\n\n" + instruction
+	}
 	var attachments []domain.Attachment
 	if len(user.Attachments) > 0 {
 		if err := json.Unmarshal(user.Attachments, &attachments); err != nil {
@@ -719,6 +722,44 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 		}
 	}
 	return &application.ExecutionJob{Kind: application.JobSession, ID: fmt.Sprintf("session-%s-%d", session.ID, assistant.ID), OwnerID: session.OwnerID, SessionID: session.ID, AssistantMessageID: assistant.ID, Instruction: instruction, Attachments: attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
+}
+
+func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
+	var row struct {
+		AssistantSnapshot []byte `gorm:"column:assistant_snapshot"`
+	}
+	if err := tx.Table("smart_assistant_sessions").Select("assistant_snapshot").Where("session_id = ?", sessionID).Take(&row).Error; err != nil || len(row.AssistantSnapshot) == 0 {
+		return ""
+	}
+	var snapshot struct{ Name, Scenario, ServiceGoal, OperatingRules, ResponseStyle string }
+	if json.Unmarshal(row.AssistantSnapshot, &snapshot) != nil {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("You are responding as the Smart Assistant named ")
+	builder.WriteString(snapshot.Name)
+	builder.WriteString(". Apply only the following visible Assistant configuration:\n")
+	if snapshot.Scenario != "" {
+		builder.WriteString("Scenario: ")
+		builder.WriteString(snapshot.Scenario)
+		builder.WriteByte('\n')
+	}
+	if snapshot.ServiceGoal != "" {
+		builder.WriteString("Service goal: ")
+		builder.WriteString(snapshot.ServiceGoal)
+		builder.WriteByte('\n')
+	}
+	if snapshot.OperatingRules != "" {
+		builder.WriteString("Operating rules: ")
+		builder.WriteString(snapshot.OperatingRules)
+		builder.WriteByte('\n')
+	}
+	if snapshot.ResponseStyle != "" {
+		builder.WriteString("Response style: ")
+		builder.WriteString(snapshot.ResponseStyle)
+		builder.WriteByte('\n')
+	}
+	return builder.String()
 }
 
 func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSnapshot, ownerID string) error {

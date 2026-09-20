@@ -22,6 +22,9 @@ func (answerRepository) GetAssistant(context.Context, string, string) (domain.Sm
 func (answerRepository) GetAssistantByShareTokenHash(context.Context, string) (domain.SmartAssistant, error) {
 	return domain.SmartAssistant{}, nil
 }
+func (answerRepository) BindAssistantSession(context.Context, string, string, string, []byte) error {
+	return nil
+}
 func (answerRepository) CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error) {
 	return domain.SmartAssistant{}, nil
 }

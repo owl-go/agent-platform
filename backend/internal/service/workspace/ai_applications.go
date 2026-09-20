@@ -165,6 +165,26 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		service.writeAIResult(writer, map[string]any{"assistant": value, "token": value.Share.Token}, err)
 		return
 	}
+	if len(rest) == 2 && rest[1] == "sessions" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		session, err := service.workspace.Repository().CreateSession(request.Context(), owner, nil, nil)
+		if err == nil {
+			err = service.aiapplications.BindAssistantSession(request.Context(), owner, rest[0], session.ID)
+		}
+		if err != nil {
+			if session.ID != "" {
+				_ = service.workspace.Repository().DeleteSession(request.Context(), owner, session.ID)
+			}
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "assistant_id": rest[0], "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
+		return
+	}
 	if len(rest) != 1 {
 		http.NotFound(writer, request)
 		return

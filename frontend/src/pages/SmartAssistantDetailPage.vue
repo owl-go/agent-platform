@@ -22,12 +22,13 @@ async function save() { if (!assistant.value) return; saving.value = true; try {
 async function addFAQ() { if (!faqDraft.value.question.trim() || !faqDraft.value.answer_markdown.trim()) return; try { faqs.value.push(await api.createAssistantFAQ(id, faqDraft.value)); faqDraft.value = { question: "", answer_markdown: "", display_order: faqs.value.length, category: "", tag: "", icon: "", enabled: true }; } catch { error.value = t("aiApplications.saveFailed"); } }
 async function removeFAQ(faq: SmartAssistantFAQ) { try { await api.deleteAssistantFAQ(id, faq.id); faqs.value = faqs.value.filter((item) => item.id !== faq.id); } catch { error.value = t("aiApplications.deleteFailed"); } }
 async function regenerateToken() { if (!assistant.value) return; try { const result = await api.regenerateAssistantShareToken(id, assistant.value.version); assistant.value = result.assistant; shareToken.value = result.token; } catch { error.value = t("aiApplications.saveFailed"); } }
+async function startConversation() { try { const session = await api.createAssistantSession(id); await router.push(`/sessions/${session.id}`); } catch { error.value = t("aiApplications.saveFailed"); } }
 onMounted(refresh);
 </script>
 
 <template>
   <section class="application-detail-page">
-    <header class="application-detail-header"><el-button text @click="router.push('/ai-apps/assistants')">← {{ t('common.back') }}</el-button><div><p class="eyebrow">{{ t('aiApplications.assistants.title') }}</p><h1>{{ assistant?.name || t('common.loading') }}</h1></div><el-button type="primary" :loading="saving" @click="save">{{ t('common.save') }}</el-button></header>
+    <header class="application-detail-header"><el-button text @click="router.push('/ai-apps/assistants')">← {{ t('common.back') }}</el-button><div><p class="eyebrow">{{ t('aiApplications.assistants.title') }}</p><h1>{{ assistant?.name || t('common.loading') }}</h1></div><div><el-button @click="startConversation">{{ t('aiApplications.startConversation') }}</el-button><el-button type="primary" :loading="saving" @click="save">{{ t('common.save') }}</el-button></div></header>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
     <template v-if="assistant">
       <el-card class="application-detail-card"><el-form label-position="top"><el-form-item :label="t('aiApplications.name')"><el-input v-model="assistant.name" /></el-form-item><el-form-item :label="t('aiApplications.goal')"><el-input v-model="assistant.service_goal" /></el-form-item><el-form-item :label="t('aiApplications.rules')"><el-input v-model="assistant.operating_rules" type="textarea" :rows="4" /></el-form-item><el-form-item :label="t('aiApplications.responseStyle')"><el-input v-model="assistant.response_style" /></el-form-item><el-form-item :label="t('aiApplications.state')"><el-switch v-model="assistant.state" active-value="enabled" inactive-value="disabled" /></el-form-item></el-form></el-card>
