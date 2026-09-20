@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type EmbeddingConfiguration, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 
-type Section = "personal" | "models";
+type Section = "personal" | "models" | "embedding";
 
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey)!;
@@ -29,13 +29,15 @@ const manualModel = ref({ model_id: "" });
 const pendingConnectionDelete = ref<ModelProviderConnection>();
 const personalities: Personality[] = ["gentle_professional", "direct_efficient", "lively_friendly", "custom"];
 const customPersonalityInstructions = ref("");
+const embedding = ref<EmbeddingConfiguration>();
+const embeddingAPIKey = ref("");
 onMounted(() => { void refresh(); });
 function clearFeedback() { error.value = ""; notice.value = ""; }
 function showError(kind: "generic" | "validation" | "conflict" = "generic") { error.value = t(`errors.${kind}`); }
 async function refresh() {
   clearFeedback();
   try {
-    const [nextSettings, nextConnections, nextPresets, nextRuntimes] = await Promise.all([api.getSettings(), api.listModelProviderConnections(), api.listModelProviderPresets(), api.listRuntimeEngines()]);
+    const [nextSettings, nextConnections, nextPresets, nextRuntimes, nextEmbedding] = await Promise.all([api.getSettings(), api.listModelProviderConnections(), api.listModelProviderPresets(), api.listRuntimeEngines(), canManageModels.value ? api.getEmbeddingConfiguration() : Promise.resolve(undefined)]);
     runtimes.value = nextRuntimes.filter((runtime) => runtime.name !== "openclaw");
     nextSettings.runtime_model_defaults = nextSettings.runtime_model_defaults.filter((item) => item.runtime_engine !== "openclaw");
     if (nextSettings.default_runtime_engine === "openclaw") {
@@ -44,8 +46,18 @@ async function refresh() {
     settings.value = nextSettings;
     connections.value = nextConnections;
     presets.value = nextPresets;
+    embedding.value = nextEmbedding ?? { endpoint: "https://api.openai.com/v1/embeddings", model: "text-embedding-3-small", dimensions: 1536, api_key_configured: false, enabled: false, version: 0, updated_at: "" };
     if (settings.value.personality === "custom") customPersonalityInstructions.value = settings.value.personality_instructions;
   } catch { showError(); }
+}
+async function saveEmbedding() {
+  if (!embedding.value) return;
+  clearFeedback();
+  try {
+    embedding.value = await api.updateEmbeddingConfiguration({ endpoint: embedding.value.endpoint, model: embedding.value.model, dimensions: embedding.value.dimensions, enabled: embedding.value.enabled, api_key: embeddingAPIKey.value || undefined, version: embedding.value.version });
+    embeddingAPIKey.value = "";
+    notice.value = t("settings.embeddingSaved");
+  } catch { showError("validation"); }
 }
 async function saveSettings() {
   if (!settings.value) return;
@@ -114,6 +126,7 @@ function selectPersonality(personality: Personality) {
       <nav class="settings-nav">
         <el-button text :class="{ active: section === 'personal' }" @click="section = 'personal'">{{ t("settings.personality") }}</el-button>
         <el-button v-if="canManageModels" text :class="{ active: section === 'models' }" @click="section = 'models'">{{ t("settings.model") }}</el-button>
+        <el-button v-if="canManageModels" text :class="{ active: section === 'embedding' }" @click="section = 'embedding'">{{ t("settings.embedding") }}</el-button>
       </nav>
       <div class="settings-canvas">
         <form v-if="section === 'personal' && settings" @submit.prevent="saveSettings">
@@ -130,6 +143,10 @@ function selectPersonality(personality: Personality) {
           <div class="section-heading"><div><h2>{{ t("settings.providers") }}</h2></div><el-button type="primary" @click="openNewConnection">＋ {{ t("settings.addProvider") }}</el-button></div>
           <div class="provider-grid"><article v-for="item in connections" :key="item.id" class="provider-card el-card"><header><span class="resource-mark">{{ item.name.slice(0, 2).toUpperCase() }}</span><div><strong>{{ item.name }}</strong><p>{{ presets.find((preset) => preset.provider_type === item.provider_type)?.display_name ?? item.provider_type }}</p></div><el-tag :type="item.verification_status === 'verified' ? 'success' : 'warning'" size="small">{{ t(`settings.${item.verification_status}`) }}</el-tag></header><p class="provider-endpoint">{{ item.endpoint }}</p><el-alert v-if="item.last_sync_error || item.verification_error" type="error" :closable="false" :title="item.last_sync_error || item.verification_error" /><div class="provider-model-summary"><strong>{{ item.models.filter((model) => model.available).length }}</strong><span>{{ t("settings.importedModels") }}</span><small v-if="item.last_synced_at">{{ new Date(item.last_synced_at).toLocaleString() }}</small></div><div class="provider-actions"><el-button class="button" @click="refreshModels(item)">↻ {{ t("settings.refreshModels") }}</el-button><el-button class="button" @click="openManualModel(item)">＋ {{ t("settings.manualModel") }}</el-button><el-button circle :aria-label="t('common.edit')" @click="openConnection(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="pendingConnectionDelete = item">×</el-button></div><el-collapse><el-collapse-item :title="t('settings.modelCatalog')"><div class="catalog-list"><span v-for="model in item.models" :key="model.id" :class="{ unavailable: !model.available }"><strong>{{ model.display_name }}</strong><small>{{ model.model_id }}</small></span></div></el-collapse-item></el-collapse></article><el-empty v-if="!connections.length" :description="t('common.empty')" /></div>
         </div>
+        <form v-if="section === 'embedding' && canManageModels && embedding" @submit.prevent="saveEmbedding">
+          <div class="section-heading section-heading-actions"><div><h2>{{ t("settings.embedding") }}</h2><p>{{ t("settings.embeddingHint") }}</p></div><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div>
+          <div class="form-grid"><label>{{ t("settings.endpoint") }}<input v-model="embedding.endpoint" type="url" required></label><label>{{ t("settings.embeddingModel") }}<input v-model="embedding.model" required></label><label>{{ t("settings.embeddingDimensions") }}<input v-model.number="embedding.dimensions" type="number" min="1536" max="1536" required></label><label class="check-row"><input v-model="embedding.enabled" type="checkbox"><span>{{ t("settings.embeddingEnabled") }}</span></label><label class="full">{{ t("settings.embeddingAPIKey") }}<input v-model="embeddingAPIKey" type="password" :placeholder="embedding.api_key_configured ? t('settings.keepSecret') : ''" :required="!embedding.api_key_configured"></label></div>
+        </form>
       </div>
     </div>
   </section>

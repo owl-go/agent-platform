@@ -66,6 +66,14 @@ type knowledgeDocumentPayload struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
 }
+type embeddingProviderPayload struct {
+	Endpoint   string `json:"endpoint"`
+	Model      string `json:"model"`
+	Dimensions int    `json:"dimensions"`
+	Enabled    bool   `json:"enabled"`
+	APIKey     string `json:"api_key"`
+	Version    int64  `json:"version"`
+}
 
 func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, request *http.Request) {
 	owner, err := service.owner(request.Context())
@@ -89,6 +97,26 @@ func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, reques
 	if parts[3] == "knowledge-bases" {
 		service.handleKnowledgeBases(writer, request, owner, parts[4:])
 		return
+	}
+	if parts[3] == "embedding-provider" && len(parts) == 4 {
+		if _, adminErr := service.administrator(request.Context()); adminErr != nil {
+			writeAuthError(writer, http.StatusForbidden, "administrator_required")
+			return
+		}
+		if request.Method == http.MethodGet {
+			value, configErr := service.aiapplications.GetEmbeddingConfiguration(request.Context())
+			service.writeAIResult(writer, value, configErr)
+			return
+		}
+		if request.Method == http.MethodPatch {
+			var payload embeddingProviderPayload
+			if !decodeJSON(writer, request, &payload) {
+				return
+			}
+			value, configErr := service.aiapplications.SaveEmbeddingConfiguration(request.Context(), aiapplicationdomain.EmbeddingConfiguration{Endpoint: payload.Endpoint, Model: payload.Model, Dimensions: payload.Dimensions, Enabled: payload.Enabled, Version: payload.Version}, []byte(payload.APIKey))
+			service.writeAIResult(writer, value, configErr)
+			return
+		}
 	}
 	http.NotFound(writer, request)
 }

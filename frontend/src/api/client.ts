@@ -65,6 +65,7 @@ export interface SmartAssistantInput { name: string; icon?: string; introduction
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface KnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface KnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
+export interface EmbeddingConfiguration { endpoint: string; model: string; dimensions: number; api_key_configured: boolean; enabled: boolean; version: number; updated_at: string }
 export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; created_at: string; updated_at: string; version: number }
 export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
@@ -209,6 +210,8 @@ export interface PlatformApi {
   createKnowledgeBase(input: { name: string; description?: string }, signal?: AbortSignal): Promise<KnowledgeBase>;
   listKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
   createKnowledgeDocument(baseID: string, input: { name: string; content: string }, signal?: AbortSignal): Promise<KnowledgeDocument>;
+  getEmbeddingConfiguration(signal?: AbortSignal): Promise<EmbeddingConfiguration>;
+  updateEmbeddingConfiguration(input: { endpoint: string; model: string; dimensions: number; enabled: boolean; api_key?: string; version: number }, signal?: AbortSignal): Promise<EmbeddingConfiguration>;
   listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
   getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
@@ -514,6 +517,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createKnowledgeBase(input, signal) { return call("/api/v1/ai-apps/knowledge-bases", json("POST", input, signal)); },
     async listKnowledgeDocuments(baseID, signal) { return await call<KnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },
     createKnowledgeDocument(baseID, input, signal) { return call(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, json("POST", input, signal)); },
+    getEmbeddingConfiguration(signal) { return call<EmbeddingConfiguration>("/api/v1/ai-apps/embedding-provider", { signal }); },
+    updateEmbeddingConfiguration(input, signal) { return call<EmbeddingConfiguration>("/api/v1/ai-apps/embedding-provider", json("PATCH", input, signal)); },
     async listDigitalHumans(signal) { return await call<DigitalHuman[]>("/api/v1/ai-apps/digital-humans", { signal }); },
     getDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, { signal }); },
     createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },

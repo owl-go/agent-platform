@@ -9,13 +9,17 @@ import (
 
 	"agent-platform/backend/internal/biz/aiapplication/application"
 	"agent-platform/backend/internal/biz/aiapplication/domain"
+	"agent-platform/backend/internal/secretcrypto"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type Repository struct{ db *gorm.DB }
+type Repository struct {
+	db  *gorm.DB
+	box *secretcrypto.Box
+}
 
-func New(db *gorm.DB) *Repository { return &Repository{db: db} }
+func New(db *gorm.DB, box *secretcrypto.Box) *Repository { return &Repository{db: db, box: box} }
 
 var _ application.Repository = (*Repository)(nil)
 

@@ -56,7 +56,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	serviceAIApplications, err := agentworkspace.NewAIApplicationService(database)
+	serviceAIApplications, err := agentworkspace.NewAIApplicationService(database, box)
 	if err != nil {
 		return nil, err
 	}

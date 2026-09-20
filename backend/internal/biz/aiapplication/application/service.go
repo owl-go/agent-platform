@@ -69,6 +69,25 @@ func (service *Service) SetEmbeddingProvider(provider EmbeddingProvider) {
 	service.embedder = provider
 }
 
+func (service *Service) GetEmbeddingConfiguration(ctx context.Context) (domain.EmbeddingConfiguration, error) {
+	repository, ok := service.repository.(EmbeddingConfigurationRepository)
+	if !ok {
+		return domain.EmbeddingConfiguration{}, fmt.Errorf("embedding configuration repository is unavailable")
+	}
+	return repository.GetEmbeddingConfiguration(ctx)
+}
+
+func (service *Service) SaveEmbeddingConfiguration(ctx context.Context, configuration domain.EmbeddingConfiguration, apiKey []byte) (domain.EmbeddingConfiguration, error) {
+	if err := configuration.Validate(); err != nil {
+		return domain.EmbeddingConfiguration{}, err
+	}
+	repository, ok := service.repository.(EmbeddingConfigurationRepository)
+	if !ok {
+		return domain.EmbeddingConfiguration{}, fmt.Errorf("embedding configuration repository is unavailable")
+	}
+	return repository.SaveEmbeddingConfiguration(ctx, configuration, apiKey)
+}
+
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
 	return service.repository.ListAssistants(ctx, owner)
 }

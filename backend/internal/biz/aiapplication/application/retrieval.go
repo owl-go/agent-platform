@@ -31,3 +31,8 @@ type RetrievalProvider interface {
 type VectorKnowledgeRepository interface {
 	SearchKnowledgeVector(context.Context, string, []string, []float32, int) ([]domain.KnowledgeChunk, error)
 }
+
+type EmbeddingConfigurationRepository interface {
+	GetEmbeddingConfiguration(context.Context) (domain.EmbeddingConfiguration, error)
+	SaveEmbeddingConfiguration(context.Context, domain.EmbeddingConfiguration, []byte) (domain.EmbeddingConfiguration, error)
+}

@@ -52,3 +52,15 @@ func TestPlatformSafetyPolicyRejectsUnsafeFAQAnswers(t *testing.T) {
 		t.Fatalf("ValidateAnswer() error = %v, want ErrInvalid", err)
 	}
 }
+
+func TestEmbeddingConfigurationRequiresHTTPSAndCurrentDimensions(t *testing.T) {
+	configuration := domain.EmbeddingConfiguration{Endpoint: "http://localhost:8080/v1/embeddings", Model: "text-embedding", Dimensions: 1536}
+	if !errors.Is(configuration.Validate(), domain.ErrInvalid) {
+		t.Fatal("Validate() accepted a non-HTTPS embedding endpoint")
+	}
+	configuration.Endpoint = "https://api.example.test/v1/embeddings"
+	configuration.Dimensions = 768
+	if !errors.Is(configuration.Validate(), domain.ErrInvalid) {
+		t.Fatal("Validate() accepted unsupported embedding dimensions")
+	}
+}
