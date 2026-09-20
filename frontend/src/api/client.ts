@@ -210,6 +210,7 @@ export interface PlatformApi {
   listKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
   createKnowledgeDocument(baseID: string, input: { name: string; content: string }, signal?: AbortSignal): Promise<KnowledgeDocument>;
   listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
+  getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
   updateDigitalHuman(id: string, input: DigitalHumanInput, version: number, signal?: AbortSignal): Promise<DigitalHuman>;
   deleteDigitalHuman(id: string, signal?: AbortSignal): Promise<void>;
@@ -514,6 +515,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listKnowledgeDocuments(baseID, signal) { return await call<KnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },
     createKnowledgeDocument(baseID, input, signal) { return call(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, json("POST", input, signal)); },
     async listDigitalHumans(signal) { return await call<DigitalHuman[]>("/api/v1/ai-apps/digital-humans", { signal }); },
+    getDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, { signal }); },
     createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },
     updateDigitalHuman(id, input, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     deleteDigitalHuman(id, signal) { return remove(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, signal); },
