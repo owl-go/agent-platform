@@ -65,6 +65,17 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": faq.AnswerMarkdown, "faq_id": faq.ID}, http.StatusOK)
 			return
 		}
+		if len(assistant.KnowledgeBaseIDs) > 0 {
+			chunks, searchErr := service.aiapplications.SearchKnowledge(request.Context(), assistant.OwnerID, assistant.KnowledgeBaseIDs, input.Question, 5)
+			if searchErr != nil {
+				writeAuthError(writer, http.StatusInternalServerError, "request_failed")
+				return
+			}
+			if len(chunks) > 0 {
+				writePublicJSON(writer, map[string]any{"kind": "grounded_context", "chunks": chunks}, http.StatusOK)
+				return
+			}
+		}
 		writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 		return
 	}
@@ -98,7 +109,7 @@ func (service *Service) publicAssistantEmbed(writer http.ResponseWriter, request
 	name := html.EscapeString(assistant.Name)
 	intro := html.EscapeString(assistant.Introduction)
 	publicURL := "/api/v1/public/assistants/" + html.EscapeString(token)
-	_, _ = writer.Write([]byte(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>` + name + `</title><style>body{font-family:system-ui,sans-serif;margin:0;padding:20px;color:#20342b;background:#f7faf8}main{max-width:720px;margin:auto;background:#fff;border:1px solid #dce8df;border-radius:16px;padding:20px}h1{margin:0 0 6px}p{color:#5b6c63}.faq{display:block;width:100%;text-align:left;border:1px solid #dce8df;border-radius:10px;background:#fff;padding:10px;margin:8px 0;cursor:pointer}textarea{box-sizing:border-box;width:100%;min-height:80px;padding:10px;border:1px solid #cbdad0;border-radius:10px}button[type=submit]{margin-top:8px;padding:9px 14px;border:0;border-radius:9px;background:#2b7d5b;color:#fff;cursor:pointer}#answer{white-space:pre-wrap;margin-top:16px}</style></head><body><main><h1>` + name + `</h1><p>` + intro + `</p><section id="faqs"></section><form id="form"><textarea id="question" placeholder="请输入问题"></textarea><button type="submit">提交问题</button></form><div id="answer" role="status"></div></main><script>const api=` + "'" + publicURL + "'" + `;const out=document.querySelector('#answer');function show(v){out.textContent=v.answer_markdown||v.answer||'暂时无法回答此类问题'}fetch(api).then(r=>r.json()).then(d=>{for(const f of d.faqs||[]){const b=document.createElement('button');b.className='faq';b.type='button';b.textContent=f.question;b.onclick=()=>show(f);document.querySelector('#faqs').appendChild(b)}});document.querySelector('#form').onsubmit=async(e)=>{e.preventDefault();const q=document.querySelector('#question').value;const r=await fetch(api+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});show(await r.json())}</script></body></html>`))
+	_, _ = writer.Write([]byte(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>` + name + `</title><style>body{font-family:system-ui,sans-serif;margin:0;padding:20px;color:#20342b;background:#f7faf8}main{max-width:720px;margin:auto;background:#fff;border:1px solid #dce8df;border-radius:16px;padding:20px}h1{margin:0 0 6px}p{color:#5b6c63}.faq{display:block;width:100%;text-align:left;border:1px solid #dce8df;border-radius:10px;background:#fff;padding:10px;margin:8px 0;cursor:pointer}textarea{box-sizing:border-box;width:100%;min-height:80px;padding:10px;border:1px solid #cbdad0;border-radius:10px}button[type=submit]{margin-top:8px;padding:9px 14px;border:0;border-radius:9px;background:#2b7d5b;color:#fff;cursor:pointer}#answer{white-space:pre-wrap;margin-top:16px}</style></head><body><main><h1>` + name + `</h1><p>` + intro + `</p><section id="faqs"></section><form id="form"><textarea id="question" placeholder="请输入问题"></textarea><button type="submit">提交问题</button></form><div id="answer" role="status"></div></main><script>const api=` + "'" + publicURL + "'" + `;const out=document.querySelector('#answer');function show(v){if(v.answer_markdown||v.answer){out.textContent=v.answer_markdown||v.answer;return}if(v.kind==='grounded_context'){out.textContent=(v.chunks||[]).map(c=>c.text).join('\n\n');return}out.textContent='暂时无法回答此类问题'}fetch(api).then(r=>r.json()).then(d=>{for(const f of d.faqs||[]){const b=document.createElement('button');b.className='faq';b.type='button';b.textContent=f.question;b.onclick=()=>show(f);document.querySelector('#faqs').appendChild(b)}});document.querySelector('#form').onsubmit=async(e)=>{e.preventDefault();const q=document.querySelector('#question').value;const r=await fetch(api+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});show(await r.json())}</script></body></html>`))
 }
 
 func publicOriginAllowed(origin string, allowed []string) bool {
