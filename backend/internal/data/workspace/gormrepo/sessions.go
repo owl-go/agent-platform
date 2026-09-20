@@ -15,7 +15,7 @@ import (
 )
 
 func (repository *Repository) ListSessions(ctx context.Context, ownerID string, archived bool) ([]domain.Session, error) {
-	query := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID)
+	query := repository.db.WithContext(ctx).Where("owner_user_id = ? AND external = ?", ownerID, false)
 	if archived {
 		query = query.Where("archived_at IS NOT NULL")
 	} else {
@@ -64,6 +64,30 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 		return domain.Session{}, fmt.Errorf("create Session: %w", err)
 	}
 	return sessionDomain(row), nil
+}
+
+// CreateExternalSession uses the normal Session execution substrate while
+// keeping the record out of the owner's private Session catalog.
+func (repository *Repository) CreateExternalSession(ctx context.Context, ownerID string, expertID, expertTeamID *string) (domain.Session, error) {
+	session, err := repository.CreateSession(ctx, ownerID, expertID, expertTeamID)
+	if err != nil {
+		return domain.Session{}, err
+	}
+	if err := repository.db.WithContext(ctx).Model(&sessionRecord{}).Where("id = ? AND owner_user_id = ?", session.ID, ownerID).Update("external", true).Error; err != nil {
+		return domain.Session{}, err
+	}
+	return session, nil
+}
+
+func (repository *Repository) DeleteExternalSession(ctx context.Context, ownerID, sessionID string) error {
+	result := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ? AND external = ?", ownerID, sessionID, true).Delete(&sessionRecord{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 func (repository *Repository) GetSession(ctx context.Context, ownerID, sessionID string) (domain.Session, error) {
@@ -441,7 +465,7 @@ func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessio
 }
 
 func (repository *Repository) session(ctx context.Context, ownerID, sessionID string, lock bool) (sessionRecord, error) {
-	query := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, sessionID)
+	query := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ? AND external = ?", ownerID, sessionID, false)
 	if lock {
 		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
 	}

@@ -36,3 +36,10 @@ type EmbeddingConfigurationRepository interface {
 	GetEmbeddingConfiguration(context.Context) (domain.EmbeddingConfiguration, error)
 	SaveEmbeddingConfiguration(context.Context, domain.EmbeddingConfiguration, []byte) (domain.EmbeddingConfiguration, error)
 }
+
+type ExternalConversationRepository interface {
+	CreateExternalConversation(context.Context, domain.ExternalConversation) (domain.ExternalConversation, error)
+	GetExternalConversation(context.Context, string, string, string) (domain.ExternalConversation, error)
+	CreateExternalResponse(context.Context, domain.ExternalResponse) (domain.ExternalResponse, error)
+	GetExternalResponse(context.Context, string, string, string) (domain.ExternalResponse, error)
+}

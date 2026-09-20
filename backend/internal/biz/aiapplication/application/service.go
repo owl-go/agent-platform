@@ -88,6 +88,42 @@ func (service *Service) SaveEmbeddingConfiguration(ctx context.Context, configur
 	return repository.SaveEmbeddingConfiguration(ctx, configuration, apiKey)
 }
 
+func (service *Service) CreateExternalConversation(ctx context.Context, conversation domain.ExternalConversation) (domain.ExternalConversation, error) {
+	repository, ok := service.repository.(ExternalConversationRepository)
+	if !ok {
+		return domain.ExternalConversation{}, fmt.Errorf("external conversation repository is unavailable")
+	}
+	return repository.CreateExternalConversation(ctx, conversation)
+}
+
+func (service *Service) GetExternalConversation(ctx context.Context, id, assistantID, visitorHash string) (domain.ExternalConversation, error) {
+	repository, ok := service.repository.(ExternalConversationRepository)
+	if !ok {
+		return domain.ExternalConversation{}, fmt.Errorf("external conversation repository is unavailable")
+	}
+	return repository.GetExternalConversation(ctx, id, assistantID, visitorHash)
+}
+
+func (service *Service) CreateExternalResponse(ctx context.Context, response domain.ExternalResponse) (domain.ExternalResponse, error) {
+	repository, ok := service.repository.(ExternalConversationRepository)
+	if !ok {
+		return domain.ExternalResponse{}, fmt.Errorf("external conversation repository is unavailable")
+	}
+	return repository.CreateExternalResponse(ctx, response)
+}
+
+func (service *Service) GetExternalResponse(ctx context.Context, id, conversationID, visitorHash string) (domain.ExternalResponse, error) {
+	repository, ok := service.repository.(ExternalConversationRepository)
+	if !ok {
+		return domain.ExternalResponse{}, fmt.Errorf("external conversation repository is unavailable")
+	}
+	conversation, err := repository.GetExternalConversation(ctx, conversationID, "", visitorHash)
+	if err != nil {
+		return domain.ExternalResponse{}, err
+	}
+	return repository.GetExternalResponse(ctx, id, conversation.ID, visitorHash)
+}
+
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
 	return service.repository.ListAssistants(ctx, owner)
 }
