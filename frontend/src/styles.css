@@ -648,3 +648,9 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio) { display: grid
 .faq-row p { margin: 6px 0 0; color: var(--muted); white-space: pre-wrap; }
 .faq-create-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .share-snippet { margin-top: 14px; }
+.application-card-copy { margin: 6px 0; color: var(--muted); }
+.knowledge-base-layout { display: grid; grid-template-columns: minmax(220px, .75fr) minmax(0, 1.5fr); gap: 16px; align-items: start; }
+.knowledge-base-item { display: grid; width: 100%; gap: 4px; padding: 12px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.knowledge-base-item:hover, .knowledge-base-item.active { background: var(--wash); }
+.knowledge-base-item small { color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 720px) { .knowledge-base-layout { grid-template-columns: 1fr; } }
