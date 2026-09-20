@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"time"
 
 	"agent-platform/backend/internal/biz/aiapplication/domain"
 )
@@ -42,4 +43,8 @@ type ExternalConversationRepository interface {
 	GetExternalConversation(context.Context, string, string, string) (domain.ExternalConversation, error)
 	CreateExternalResponse(context.Context, domain.ExternalResponse) (domain.ExternalResponse, error)
 	GetExternalResponse(context.Context, string, string, string) (domain.ExternalResponse, error)
+}
+
+type ExternalRateLimitRepository interface {
+	ConsumeExternalRate(context.Context, string, string, time.Time, int) (bool, error)
 }

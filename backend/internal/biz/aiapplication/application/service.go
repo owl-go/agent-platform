@@ -124,6 +124,17 @@ func (service *Service) GetExternalResponse(ctx context.Context, id, conversatio
 	return repository.GetExternalResponse(ctx, id, conversation.ID, visitorHash)
 }
 
+func (service *Service) ConsumeExternalRate(ctx context.Context, scope, key string, now time.Time, limit int) (bool, error) {
+	if limit <= 0 {
+		return true, nil
+	}
+	repository, ok := service.repository.(ExternalRateLimitRepository)
+	if !ok {
+		return false, fmt.Errorf("external rate-limit repository is unavailable")
+	}
+	return repository.ConsumeExternalRate(ctx, scope, key, now, limit)
+}
+
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
 	return service.repository.ListAssistants(ctx, owner)
 }

@@ -8,14 +8,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	aiapplicationdomain "agent-platform/backend/internal/biz/aiapplication/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 )
 
 const visitorCookieName = "agent_workspace_visitor"
+
+const (
+	publicShareTokenRateLimit = 300
+	publicVisitorRateLimit    = 60
+	publicIPRateLimit         = 120
+)
 
 type externalWorkspaceRepository interface {
 	CreateExternalSession(context.Context, string, *string, *string) (workspacedomain.Session, error)
@@ -87,6 +95,9 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 			return
 		}
+		if !service.consumePublicRate(writer, request, token, visitorHash) {
+			return
+		}
 		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
 		if usageErr != nil {
 			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
@@ -129,6 +140,44 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		return
 	}
 	http.NotFound(writer, request)
+}
+
+func (service *Service) consumePublicRate(writer http.ResponseWriter, request *http.Request, shareToken, visitorHash string) bool {
+	remoteHash := publicRemoteHash(request)
+	now := time.Now()
+	for _, rate := range []struct {
+		scope string
+		key   string
+		limit int
+	}{
+		{scope: "share_token", key: publicHash(shareToken), limit: publicShareTokenRateLimit},
+		{scope: "visitor", key: visitorHash, limit: publicVisitorRateLimit},
+		{scope: "ip", key: remoteHash, limit: publicIPRateLimit},
+	} {
+		allowed, err := service.aiapplications.ConsumeExternalRate(request.Context(), rate.scope, rate.key, now, rate.limit)
+		if err != nil {
+			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
+			return false
+		}
+		if !allowed {
+			writeAuthError(writer, http.StatusTooManyRequests, "rate_limit_exceeded")
+			return false
+		}
+	}
+	return true
+}
+
+func publicHash(value string) string {
+	digest := sha256.Sum256([]byte(value))
+	return base64.RawURLEncoding.EncodeToString(digest[:])
+}
+
+func publicRemoteHash(request *http.Request) string {
+	remote := request.RemoteAddr
+	if host, _, err := net.SplitHostPort(remote); err == nil {
+		remote = host
+	}
+	return publicHash(remote)
 }
 
 func (service *Service) enqueueExternalAnswer(ctx context.Context, assistant aiapplicationdomain.SmartAssistant, visitorHash, conversationID, question string) (aiapplicationdomain.ExternalResponse, error) {
