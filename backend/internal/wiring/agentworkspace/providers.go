@@ -84,13 +84,14 @@ func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Ser
 	return creditsapplication.New(credits, nil)
 }
 
-func NewAIApplicationService(database *gormdb.Database) (*aiapplication.Service, error) {
-	repository := aiapplicationrepo.New(database.ORM())
+func NewAIApplicationService(database *gormdb.Database, box *secretcrypto.Box) (*aiapplication.Service, error) {
+	repository := aiapplicationrepo.New(database.ORM(), box)
 	service, err := aiapplication.New(repository)
 	if err != nil {
 		return nil, err
 	}
 	service.SetKnowledgeRepository(repository)
+	service.SetEmbeddingProvider(repository)
 	return service, nil
 }
 
