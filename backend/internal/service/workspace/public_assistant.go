@@ -56,6 +56,15 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 			return
 		}
+		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
+		if usageErr != nil {
+			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
+			return
+		}
+		if !allowed {
+			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
+			return
+		}
 		faq, matched, faqErr := service.aiapplications.FAQAnswer(request.Context(), assistant.OwnerID, assistant.ID, input.Question)
 		if faqErr != nil {
 			writeAuthError(writer, http.StatusInternalServerError, "request_failed")

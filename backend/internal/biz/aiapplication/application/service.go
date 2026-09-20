@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"agent-platform/backend/internal/biz/aiapplication/domain"
 )
@@ -28,6 +29,10 @@ type Repository interface {
 	CreateFAQ(context.Context, string, string, domain.FAQ) (domain.FAQ, error)
 	UpdateFAQ(context.Context, string, string, string, domain.FAQ, int64) (domain.FAQ, error)
 	DeleteFAQ(context.Context, string, string, string) error
+}
+
+type ShareUsageRepository interface {
+	ConsumeShareCall(context.Context, string, time.Time, int) (bool, error)
 }
 
 func (service *Service) BindAssistantSession(ctx context.Context, owner, assistantID, sessionID string) error {
@@ -201,6 +206,17 @@ func (service *Service) ResolveSharedAssistant(ctx context.Context, token string
 		return domain.SmartAssistant{}, domain.ErrNotFound
 	}
 	return assistant, nil
+}
+
+func (service *Service) ConsumeSharedAssistantCall(ctx context.Context, assistantID string, dailyLimit int) (bool, error) {
+	if dailyLimit <= 0 {
+		return true, nil
+	}
+	repository, ok := service.repository.(ShareUsageRepository)
+	if !ok {
+		return true, nil
+	}
+	return repository.ConsumeShareCall(ctx, assistantID, time.Now().UTC(), dailyLimit)
 }
 func (service *Service) DeleteAssistant(ctx context.Context, owner, id string) error {
 	return service.repository.DeleteAssistant(ctx, owner, id)
