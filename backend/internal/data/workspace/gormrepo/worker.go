@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -671,6 +672,12 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := tx.Where("session_id = ? AND id < ? AND state = 'completed'", session.ID, user.ID).Order("id DESC").Limit(20).Find(&recent).Error; err != nil {
 		return nil, err
 	}
+	if assistantSessionSensitive(tx, session.ID, user.Content) {
+		if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "completed", "content": "暂时无法回答此类问题", "progress_stage": "", "completed_at": time.Now().UTC()}).Error; err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
 	if len(assistant.ResponseSnapshot) == 0 {
 		return nil, fmt.Errorf("queued Session response has no Response Snapshot")
 	}
@@ -715,6 +722,9 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if assistantRules := assistantSessionInstruction(tx, session.ID); assistantRules != "" {
 		instruction = assistantRules + "\n\n" + instruction
 	}
+	if knowledgeContext := assistantKnowledgeContext(tx, session.ID, session.OwnerID, user.Content); knowledgeContext != "" {
+		instruction = instruction + "\n\n" + knowledgeContext
+	}
 	var attachments []domain.Attachment
 	if len(user.Attachments) > 0 {
 		if err := json.Unmarshal(user.Attachments, &attachments); err != nil {
@@ -757,6 +767,50 @@ func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
 	if snapshot.ResponseStyle != "" {
 		builder.WriteString("Response style: ")
 		builder.WriteString(snapshot.ResponseStyle)
+		builder.WriteByte('\n')
+	}
+	return builder.String()
+}
+
+func assistantSessionSensitive(tx *gorm.DB, sessionID, question string) bool {
+	var count int64
+	if tx.Table("smart_assistant_sessions").Where("session_id = ?", sessionID).Count(&count).Error != nil || count == 0 {
+		return false
+	}
+	text := strings.ToLower(question)
+	for _, keyword := range []string{"政治", "军事", "武器", "炸弹", "暴力", "入侵", "绕过安全", "malware", "weapon", "military", "politics"} {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func assistantKnowledgeContext(tx *gorm.DB, sessionID, ownerID, question string) string {
+	if strings.TrimSpace(question) == "" {
+		return ""
+	}
+	var rows []struct {
+		ID, DocumentID, Content string
+		Position                int
+		Score                   float32
+	}
+	err := tx.Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", question).
+		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready'").
+		Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.state = 'ready'", ownerID).
+		Joins("JOIN smart_assistant_sessions AS s ON s.session_id = ? AND s.owner_user_id = b.owner_user_id", sessionID).
+		Where("jsonb_exists(s.assistant_snapshot->'knowledge_base_ids', b.id) AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?)", question).
+		Order("score DESC, c.position ASC").Limit(5).Scan(&rows).Error
+	if err != nil || len(rows) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("Grounding context from the Assistant Knowledge Bases. Use only relevant facts from these excerpts and do not invent unsupported details:\n")
+	for index, row := range rows {
+		builder.WriteString("[Source ")
+		builder.WriteString(strconv.Itoa(index + 1))
+		builder.WriteString("] ")
+		builder.WriteString(row.Content)
 		builder.WriteByte('\n')
 	}
 	return builder.String()

@@ -22,7 +22,7 @@ async function save() { if (!assistant.value) return; saving.value = true; try {
 async function addFAQ() { if (!faqDraft.value.question.trim() || !faqDraft.value.answer_markdown.trim()) return; try { faqs.value.push(await api.createAssistantFAQ(id, faqDraft.value)); faqDraft.value = { question: "", answer_markdown: "", display_order: faqs.value.length, category: "", tag: "", icon: "", enabled: true }; } catch { error.value = t("aiApplications.saveFailed"); } }
 async function removeFAQ(faq: SmartAssistantFAQ) { try { await api.deleteAssistantFAQ(id, faq.id); faqs.value = faqs.value.filter((item) => item.id !== faq.id); } catch { error.value = t("aiApplications.deleteFailed"); } }
 async function regenerateToken() { if (!assistant.value) return; try { const result = await api.regenerateAssistantShareToken(id, assistant.value.version); assistant.value = result.assistant; shareToken.value = result.token; } catch { error.value = t("aiApplications.saveFailed"); } }
-async function startConversation() { try { const session = await api.createAssistantSession(id); await router.push(`/sessions/${session.id}`); } catch { error.value = t("aiApplications.saveFailed"); } }
+async function startConversation() { try { const session = await api.createAssistantSession(id); await router.push(`/sessions?open=${encodeURIComponent(session.id)}`); } catch { error.value = t("aiApplications.saveFailed"); } }
 onMounted(refresh);
 </script>
 

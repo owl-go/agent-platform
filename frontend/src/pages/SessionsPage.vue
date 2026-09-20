@@ -79,8 +79,10 @@ onMounted(async () => {
   window.addEventListener("resize", handleViewportResize);
   await refresh();
   if (route.query.new) await create();
+  else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item) await open(item); }
 });
 watch(() => route.query.new, (value) => { if (value) void create(); });
+watch(() => route.query.open, (value) => { if (typeof value === "string") { const item = sessions.value.find((session) => session.id === value); if (item) void open(item); } });
 watch(composerLayer, (current, previous) => {
   if (previous) composerObserver?.unobserve(previous);
   if (current) composerObserver?.observe(current);
