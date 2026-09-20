@@ -28,7 +28,10 @@ type Repository interface {
 	DeleteFAQ(context.Context, string, string, string) error
 }
 
-type Service struct{ repository Repository }
+type Service struct {
+	repository Repository
+	knowledge  KnowledgeRepository
+}
 
 func New(repository Repository) (*Service, error) {
 	if repository == nil {
@@ -62,6 +65,13 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 	if assistant.DigitalHumanID != nil {
 		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
+		}
+	}
+	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
+		for _, baseID := range assistant.KnowledgeBaseIDs {
+			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+				return domain.SmartAssistant{}, err
+			}
 		}
 	}
 	if assistant.Share.Width == "" {
@@ -114,6 +124,13 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	if assistant.DigitalHumanID != nil {
 		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
+		}
+	}
+	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
+		for _, baseID := range assistant.KnowledgeBaseIDs {
+			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+				return domain.SmartAssistant{}, err
+			}
 		}
 	}
 	if assistant.Share.Width == "" {

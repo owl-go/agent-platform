@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 首期目录与 FAQ 基础端口已实现，Assistant 对话、外部分享、Knowledge Base 检索、真实数字人供应商、AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe、Knowledge Base 文档与 PostgreSQL 全文检索基础已实现，Assistant 对话模型生成、pgvector 向量召回、真实数字人供应商、AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 
@@ -17,7 +17,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 AI Creation 修订新增第四个限界上下文：
 
 - AI Creation：具有独立 Endpoint 和加密 API Key 的 Image Model、单一 Prompt Optimization 设置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；不引用 Workspace 的 Model Provider Connection 或 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
-- AI Applications：Smart Assistant、FAQ、Digital Human 和分享配置的用户私有目录与版本控制。当前 CRUD/FAQ 端口已接入；外部 iframe、Knowledge Base/pgvector 检索和 Assistant-bound Session 仍按产品规格分阶段实现。
+- AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。当前 CRUD、FAQ、受限 iframe、文档分块和 PostgreSQL 全文检索已接入；模型生成、pgvector 向量召回和 Assistant-bound Session 仍按产品规格分阶段实现。
 
 Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 

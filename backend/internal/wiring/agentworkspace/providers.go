@@ -85,7 +85,13 @@ func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Ser
 }
 
 func NewAIApplicationService(database *gormdb.Database) (*aiapplication.Service, error) {
-	return aiapplication.New(aiapplicationrepo.New(database.ORM()))
+	repository := aiapplicationrepo.New(database.ORM())
+	service, err := aiapplication.New(repository)
+	if err != nil {
+		return nil, err
+	}
+	service.SetKnowledgeRepository(repository)
+	return service, nil
 }
 
 func NewSecretBox(config platformconfig.Config) (*secretcrypto.Box, error) {

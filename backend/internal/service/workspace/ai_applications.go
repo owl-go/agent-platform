@@ -57,6 +57,15 @@ type faqPayload struct {
 	Version        int64  `json:"version"`
 }
 
+type knowledgeBasePayload struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+type knowledgeDocumentPayload struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
 func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, request *http.Request) {
 	owner, err := service.owner(request.Context())
 	if err != nil {
@@ -74,6 +83,42 @@ func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, reques
 	}
 	if parts[3] == "digital-humans" {
 		service.handleDigitalHumans(writer, request, owner, parts[4:])
+		return
+	}
+	if parts[3] == "knowledge-bases" {
+		service.handleKnowledgeBases(writer, request, owner, parts[4:])
+		return
+	}
+	http.NotFound(writer, request)
+}
+
+func (service *Service) handleKnowledgeBases(writer http.ResponseWriter, request *http.Request, owner string, rest []string) {
+	if len(rest) == 0 && request.Method == http.MethodGet {
+		value, err := service.aiapplications.ListKnowledgeBases(request.Context(), owner)
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 0 && request.Method == http.MethodPost {
+		var payload knowledgeBasePayload
+		if !decodeJSON(writer, request, &payload) {
+			return
+		}
+		value, err := service.aiapplications.CreateKnowledgeBase(request.Context(), owner, aiapplicationdomain.KnowledgeBase{Name: payload.Name, Description: payload.Description})
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "documents" && request.Method == http.MethodGet {
+		value, err := service.aiapplications.ListKnowledgeDocuments(request.Context(), owner, rest[0])
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "documents" && request.Method == http.MethodPost {
+		var payload knowledgeDocumentPayload
+		if !decodeJSON(writer, request, &payload) {
+			return
+		}
+		value, err := service.aiapplications.CreateKnowledgeDocument(request.Context(), owner, rest[0], aiapplicationdomain.KnowledgeDocument{Name: payload.Name, Content: payload.Content})
+		service.writeAIResult(writer, value, err)
 		return
 	}
 	http.NotFound(writer, request)
@@ -168,7 +213,19 @@ func (service *Service) handleAssistantAnswer(writer http.ResponseWriter, reques
 		service.writeAIResult(writer, map[string]any{"kind": "faq", "answer_markdown": faq.AnswerMarkdown, "faq_id": faq.ID}, nil)
 		return
 	}
-	service.writeAIResult(writer, map[string]string{"kind": "requires_retrieval"}, nil)
+	assistant, assistantErr := service.aiapplications.GetAssistant(request.Context(), owner, assistantID)
+	if assistantErr == nil && len(assistant.KnowledgeBaseIDs) > 0 {
+		chunks, searchErr := service.aiapplications.SearchKnowledge(request.Context(), owner, assistant.KnowledgeBaseIDs, input.Question, 5)
+		if searchErr != nil {
+			service.writeAIResult(writer, nil, searchErr)
+			return
+		}
+		if len(chunks) > 0 {
+			service.writeAIResult(writer, map[string]any{"kind": "grounded_context", "chunks": chunks}, nil)
+			return
+		}
+	}
+	service.writeAIResult(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, nil)
 }
 
 func (service *Service) handleFAQs(writer http.ResponseWriter, request *http.Request, owner, assistantID string, rest []string) {
