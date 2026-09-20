@@ -74,6 +74,7 @@ type SmartAssistant struct {
 	Introduction     string             `json:"introduction"`
 	Scenario         string             `json:"scenario"`
 	ServiceGoal      string             `json:"service_goal"`
+	AnswerScope      string             `json:"answer_scope"`
 	OperatingRules   string             `json:"operating_rules"`
 	ResponseStyle    string             `json:"response_style"`
 	KnowledgeBaseIDs []string           `json:"knowledge_base_ids"`
@@ -94,7 +95,7 @@ func (assistant SmartAssistant) Validate() error {
 	if assistant.State != "" && assistant.State != StateEnabled && assistant.State != StateDisabled {
 		return fmt.Errorf("%w: unsupported assistant state", ErrInvalid)
 	}
-	if len([]rune(assistant.ServiceGoal)) > 5000 || len([]rune(assistant.OperatingRules)) > 10000 || len([]rune(assistant.ResponseStyle)) > 2000 {
+	if len([]rune(assistant.ServiceGoal)) > 5000 || len([]rune(assistant.AnswerScope)) > 10000 || len([]rune(assistant.OperatingRules)) > 10000 || len([]rune(assistant.ResponseStyle)) > 2000 {
 		return fmt.Errorf("%w: visible rules are too long", ErrInvalid)
 	}
 	if assistant.Share.Width != "" && assistant.Share.Width != "100%" {

@@ -15,6 +15,7 @@ type assistantPayload struct {
 	Introduction     string       `json:"introduction"`
 	Scenario         string       `json:"scenario"`
 	ServiceGoal      string       `json:"service_goal"`
+	AnswerScope      string       `json:"answer_scope"`
 	OperatingRules   string       `json:"operating_rules"`
 	ResponseStyle    string       `json:"response_style"`
 	KnowledgeBaseIDs []string     `json:"knowledge_base_ids"`
@@ -360,7 +361,7 @@ func (service *Service) writeAIResult(writer http.ResponseWriter, value any, err
 }
 
 func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssistant {
-	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Introduction: value.Introduction, Scenario: value.Scenario, ServiceGoal: value.ServiceGoal, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Introduction: value.Introduction, Scenario: value.Scenario, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
 }
 func humanFromPayload(value digitalHumanPayload) aiapplicationdomain.DigitalHuman {
 	return aiapplicationdomain.DigitalHuman{Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription}

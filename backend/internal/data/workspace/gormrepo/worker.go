@@ -741,7 +741,7 @@ func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
 	if err := tx.Table("smart_assistant_sessions").Select("assistant_snapshot").Where("session_id = ?", sessionID).Take(&row).Error; err != nil || len(row.AssistantSnapshot) == 0 {
 		return ""
 	}
-	var snapshot struct{ Name, Scenario, ServiceGoal, OperatingRules, ResponseStyle string }
+	var snapshot struct{ Name, Scenario, ServiceGoal, AnswerScope, OperatingRules, ResponseStyle string }
 	if json.Unmarshal(row.AssistantSnapshot, &snapshot) != nil {
 		return ""
 	}
@@ -757,6 +757,11 @@ func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
 	if snapshot.ServiceGoal != "" {
 		builder.WriteString("Service goal: ")
 		builder.WriteString(snapshot.ServiceGoal)
+		builder.WriteByte('\n')
+	}
+	if snapshot.AnswerScope != "" {
+		builder.WriteString("Allowed answer scope: ")
+		builder.WriteString(snapshot.AnswerScope)
 		builder.WriteByte('\n')
 	}
 	if snapshot.OperatingRules != "" {
