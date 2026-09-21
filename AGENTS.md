@@ -52,6 +52,12 @@
 - **架构决策**：读 `docs/adr`。改变已记录决策时新增 ADR 或明确取代旧 ADR，不要静默让实现与决策分叉。
 - **服务端领域边界、分层或配置**：读 `docs/technical/service-architecture.md` 和 `docs/adr/0019-current-technology-stack.md`。
 
+## 协作资源
+
+- **Issue tracker**：需求与规格使用 `owl-go/agent-platform` GitHub Issues；执行 Issue 操作前阅读 `docs/agents/issue-tracker.md`。
+- **Triage labels**：Issue 分流使用仓库约定的五类标签；需要分流时阅读 `docs/agents/triage-labels.md`。
+- **领域文档**：领域术语与已批准决策的补充路由见 `docs/agents/domain.md`；它不能替代 `CONTEXT.md`、产品规格或 ADR。
+
 ## 必须守住的边界
 
 - Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`；Runtime 品牌差异留在各 Driver 内，共享行为留在 `cliadapter`、`processharness` 或公共契约层。
