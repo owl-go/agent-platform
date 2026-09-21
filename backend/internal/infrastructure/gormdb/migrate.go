@@ -18,6 +18,14 @@ var migrationFiles embed.FS
 
 const migrationLockID int64 = 770091734641
 
+// The original knowledge-base migration used an incomplete PostgreSQL error
+// list for the optional pgvector extension. Databases that already applied
+// that migration have the same schema, so their ledger checksum can be
+// upgraded once to the corrected migration text without replaying DDL.
+var legacyMigrationChecksums = map[string]string{
+	"000040_knowledge_bases.sql": "cab4e9c600dac2bcfaef2017e3ed7b4d56261ca5dd94396b415d4cb5d1d2c9c6",
+}
+
 type migrationRecord struct {
 	Name      string    `gorm:"column:name;primaryKey"`
 	Checksum  string    `gorm:"column:checksum"`
@@ -60,7 +68,13 @@ func Migrate(ctx context.Context, db *gorm.DB) error {
 			err = tx.Where("name = ?", entry.Name()).Take(&applied).Error
 			switch {
 			case err == nil && applied.Checksum != checksum:
-				return fmt.Errorf("database migration %s checksum changed", entry.Name())
+				if legacyMigrationChecksums[entry.Name()] != applied.Checksum {
+					return fmt.Errorf("database migration %s checksum changed", entry.Name())
+				}
+				if err := tx.Model(&migrationRecord{}).Where("name = ?", entry.Name()).Update("checksum", checksum).Error; err != nil {
+					return fmt.Errorf("upgrade database migration %s checksum: %w", entry.Name(), err)
+				}
+				continue
 			case err == nil:
 				continue
 			case err != gorm.ErrRecordNotFound:

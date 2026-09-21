@@ -376,6 +376,10 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="image-generation-page">
+    <header class="image-generation-head">
+      <div><p class="eyebrow">{{ t('nav.ai-applications') }}</p><h1>{{ t('imageGeneration.title') }}</h1><p>{{ t('imageGeneration.subtitle') }}</p></div>
+      <el-button v-if="administrator" :icon="Setting" @click="openAdmin">{{ t('imageGeneration.configure') }}</el-button>
+    </header>
     <div v-if="error" class="image-generation-error" role="alert">{{ error }}</div>
     <section v-loading="loading" class="image-workbench">
       <aside class="image-settings-card">

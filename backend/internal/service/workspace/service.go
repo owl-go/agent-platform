@@ -13,6 +13,8 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	aiapplication "agent-platform/backend/internal/biz/aiapplication/application"
+	aiapplicationdomain "agent-platform/backend/internal/biz/aiapplication/domain"
 	aicreationapplication "agent-platform/backend/internal/biz/aicreation/application"
 	aicreationdomain "agent-platform/backend/internal/biz/aicreation/domain"
 	creditsapplication "agent-platform/backend/internal/biz/credits/application"
@@ -36,6 +38,7 @@ type Service struct {
 	accounts                 *accountapplication.Service
 	credits                  *creditsapplication.Service
 	aicreation               *aicreationapplication.Service
+	aiapplications           *aiapplication.Service
 	workspace                *workspaceapplication.Service
 	box                      *secretcrypto.Box
 	files                    *workspacefs.Store
@@ -70,13 +73,29 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-creation/reference-images/{upload_id}", http.HandlerFunc(service.deleteReferenceImage))
 	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/download", http.HandlerFunc(service.downloadGeneratedImages))
 	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/events", http.HandlerFunc(service.streamImageGeneration))
+	server.Handle("/api/v1/ai-apps/assistants", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs/{faq_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/answer", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/share-token", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/sessions", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/knowledge-bases", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/knowledge-bases/{knowledge_base_id}/documents", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/embedding-provider", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/digital-humans", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/digital-humans/{digital_human_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/answer", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/conversations/{conversation_id}/responses/{response_id}", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
-	if accounts == nil || credits == nil || aicreation == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
-		return nil, fmt.Errorf("Account, Credits, AI Creation, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
+	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
+		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
+	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {
@@ -182,6 +201,14 @@ func publicError(err error) error {
 	case errors.Is(err, aicreationapplication.ErrInsufficientCredits):
 		return kratoserrors.New(http.StatusTooManyRequests, "insufficient_credits", "Available Credit is insufficient")
 	case errors.Is(err, aicreationdomain.ErrInvalid):
+		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
+	case errors.Is(err, aiapplicationdomain.ErrNotFound):
+		return kratoserrors.New(http.StatusNotFound, "resource_not_found", "resource not found")
+	case errors.Is(err, aiapplicationdomain.ErrConflict):
+		return kratoserrors.New(http.StatusConflict, "resource_conflict", "resource conflicts with current state")
+	case errors.Is(err, aiapplicationdomain.ErrVersionConflict):
+		return kratoserrors.New(http.StatusPreconditionFailed, "version_conflict", "resource version changed")
+	case errors.Is(err, aiapplicationdomain.ErrInvalid):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", err.Error())
 	case errors.As(err, &providerFailure):
 		status := http.StatusUnprocessableEntity

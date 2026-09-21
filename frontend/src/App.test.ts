@@ -64,7 +64,7 @@ describe("App navigation", () => {
 
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
-      ["/sessions", "/workflows", "/ai-creation/image-generation", "/knowledge-bases"],
+      ["/sessions", "/workflows", "/ai-creation/image-generation", "/ai-apps", "/knowledge-bases"],
       ["/resources"],
       ["/settings"],
     ]);
