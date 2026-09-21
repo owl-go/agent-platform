@@ -271,6 +271,18 @@ func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context
 	return nil
 }
 
+// ValidateMCPInvocation is the fail-closed lifecycle check used immediately before MCP configuration is materialized.
+func (repository *Repository) ValidateMCPInvocation(ctx context.Context, ownerID, serverID string) error {
+	db := repository.db.WithContext(ctx)
+	var server mcpRecord
+	if err := mcpCatalogQuery(db).
+		Where("owner_user_id IN (?) AND id = ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(db, ownerID), serverID).
+		Take(&server).Error; err != nil {
+		return mapNotFound(err)
+	}
+	return nil
+}
+
 func connectorRevisionDomain(row connectorRevisionRecord) domain.ConnectorRevision {
 	return domain.ConnectorRevision{ID: row.ID, PackageSource: row.PackageSource, Version: row.Version, Mode: domain.ConnectorMode(row.Mode), PackageSHA256: row.PackageSHA256, RuntimePolicy: row.RuntimePolicy, ObjectKey: row.ObjectKey, CreatedAt: row.CreatedAt}
 }

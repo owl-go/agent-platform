@@ -1,6 +1,7 @@
 package runtimeexecutor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -38,7 +39,7 @@ type codexMCPServer struct {
 	BearerTokenEnvVar string            `toml:"bearer_token_env_var,omitempty"`
 }
 
-func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
+func (executor *Executor) nativeMCPFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
 	files := make(map[string][]byte)
 	variables := make(map[string]string)
 	var redactValues [][]byte
@@ -50,6 +51,11 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 	hermesServers := make(map[string]nativeMCPServer)
 	openClawServers := make(map[string]openclaw.MCPServer)
 	for _, server := range job.Snapshot.MCPServers {
+		if executor.mcpLifecycle != nil {
+			if err := executor.mcpLifecycle.ValidateMCPInvocation(ctx, job.OwnerID, server.ID); err != nil {
+				return nil, nil, nil, fmt.Errorf("MCP Connector %q is unavailable: %w", server.Name, err)
+			}
+		}
 		var configuration storedMCPConfiguration
 		if err := json.Unmarshal(server.Configuration, &configuration); err != nil {
 			return nil, nil, nil, fmt.Errorf("decode MCP Server %q: %w", server.Name, err)

@@ -1,8 +1,10 @@
 package runtimeexecutor
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -29,7 +31,7 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 		"arguments": []string{"--stdio"}, "environment": []domain.EnvironmentVariable{{Name: "REGION", Value: "test"}},
 	})
 	executor := &Executor{box: box}
-	files, variables, redactions, err := executor.nativeMCPFiles(application.ExecutionJob{
+	files, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{
 		OwnerID: "user-owner",
 		Snapshot: domain.ExecutionSnapshot{
 			RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{
@@ -64,4 +66,40 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 			t.Fatalf("OpenClaw config = %s, missing %s", openClawConfig, want)
 		}
 	}
+}
+
+func TestNativeMCPFilesRevalidatesLifecycleBeforeReadingSnapshot(t *testing.T) {
+	ctx := context.WithValue(context.Background(), mcpLifecycleContextKey{}, "request-context")
+	lifecycleErr := errors.New("MCP Server is unavailable")
+	lifecycle := &recordingMCPLifecycle{err: lifecycleErr}
+	executor := &Executor{mcpLifecycle: lifecycle}
+
+	_, _, _, err := executor.nativeMCPFiles(ctx, application.ExecutionJob{
+		OwnerID: "user-owner",
+		Snapshot: domain.ExecutionSnapshot{MCPServers: []domain.MCPServerSnapshot{{
+			ID: "server-id", Name: "removed", Configuration: json.RawMessage(`not-json`),
+		}}},
+	})
+	if !errors.Is(err, lifecycleErr) {
+		t.Fatalf("nativeMCPFiles error = %v, want lifecycle error", err)
+	}
+	if lifecycle.ownerID != "user-owner" || lifecycle.serverID != "server-id" || lifecycle.contextValue != "request-context" {
+		t.Fatalf("lifecycle call = %#v", lifecycle)
+	}
+}
+
+type mcpLifecycleContextKey struct{}
+
+type recordingMCPLifecycle struct {
+	err          error
+	ownerID      string
+	serverID     string
+	contextValue string
+}
+
+func (lifecycle *recordingMCPLifecycle) ValidateMCPInvocation(ctx context.Context, ownerID, serverID string) error {
+	lifecycle.ownerID = ownerID
+	lifecycle.serverID = serverID
+	lifecycle.contextValue, _ = ctx.Value(mcpLifecycleContextKey{}).(string)
+	return lifecycle.err
 }

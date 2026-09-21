@@ -55,6 +55,7 @@ type Executor struct {
 	cliEgress      cliconnector.EgressGate
 	cliApprovals   cliconnector.ApprovalCoordinator
 	cliCredentials cliExecutionRepository
+	mcpLifecycle   mcpLifecycleRepository
 	warm           *containerprocess.WarmManager
 	checkout       func(context.Context, string) (runtimeLease, error)
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -70,6 +71,10 @@ type cliExecutionRepository interface {
 
 type cliLifecycleRepository interface {
 	ValidateCLIConnectorInvocation(context.Context, string, string) error
+}
+
+type mcpLifecycleRepository interface {
+	ValidateMCPInvocation(context.Context, string, string) error
 }
 
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
@@ -101,6 +106,14 @@ func (executor *Executor) EnableCLICredentials(repository cliExecutionRepository
 		return fmt.Errorf("CLI Connector credential repository is required")
 	}
 	executor.cliCredentials = repository
+	return nil
+}
+
+func (executor *Executor) EnableMCPLifecycle(repository mcpLifecycleRepository) error {
+	if repository == nil {
+		return fmt.Errorf("MCP lifecycle repository is required")
+	}
+	executor.mcpLifecycle = repository
 	return nil
 }
 
@@ -1292,7 +1305,7 @@ func anthropicBaseURL(providerType, endpoint string) string {
 }
 
 func (executor *Executor) extensionFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
-	files, extensionVariables, redactValues, err := executor.nativeMCPFiles(job)
+	files, extensionVariables, redactValues, err := executor.nativeMCPFiles(ctx, job)
 	if err != nil {
 		return nil, nil, nil, err
 	}
