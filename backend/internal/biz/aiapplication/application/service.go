@@ -144,7 +144,7 @@ func (service *Service) GetAssistant(ctx context.Context, owner, id string) (dom
 func (service *Service) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
 	assistant.OwnerID = owner
 	if assistant.State == "" {
-		assistant.State = domain.StateEnabled
+		assistant.State = domain.StateDraft
 	}
 	if assistant.Share.Enabled {
 		token, err := newShareToken()
@@ -197,7 +197,7 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 		return domain.SmartAssistant{}, err
 	}
 	if assistant.State == "" {
-		assistant.State = domain.StateEnabled
+		assistant.State = current.State
 	}
 	if assistant.Share.Enabled {
 		assistant.Share.TokenHash = current.Share.TokenHash

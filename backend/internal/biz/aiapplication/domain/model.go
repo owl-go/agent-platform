@@ -27,9 +27,32 @@ const (
 type ApplicationState string
 
 const (
+	StateDraft    ApplicationState = "draft"
 	StateEnabled  ApplicationState = "enabled"
 	StateDisabled ApplicationState = "disabled"
 )
+
+const (
+	ScenarioCustomerConsultation = "customer-consultation"
+	ScenarioPreSalesAdvisor      = "pre-sales-advisor"
+	ScenarioAfterSalesSupport    = "after-sales-support"
+	ScenarioProductGuide         = "product-guide"
+	ScenarioEnterpriseKnowledge  = "enterprise-knowledge"
+	ScenarioRecruitment          = "recruitment"
+	ScenarioTraining             = "training"
+	ScenarioCustom               = "custom"
+)
+
+var assistantScenarios = map[string]struct{}{
+	ScenarioCustomerConsultation: {},
+	ScenarioPreSalesAdvisor:      {},
+	ScenarioAfterSalesSupport:    {},
+	ScenarioProductGuide:         {},
+	ScenarioEnterpriseKnowledge:  {},
+	ScenarioRecruitment:          {},
+	ScenarioTraining:             {},
+	ScenarioCustom:               {},
+}
 
 type SafetyPolicy struct{ blocked []string }
 
@@ -92,8 +115,13 @@ func (assistant SmartAssistant) Validate() error {
 	if strings.TrimSpace(assistant.Name) == "" || len([]rune(assistant.Name)) > 100 {
 		return fmt.Errorf("%w: name is required", ErrInvalid)
 	}
-	if assistant.State != "" && assistant.State != StateEnabled && assistant.State != StateDisabled {
+	if assistant.State != "" && assistant.State != StateDraft && assistant.State != StateEnabled && assistant.State != StateDisabled {
 		return fmt.Errorf("%w: unsupported assistant state", ErrInvalid)
+	}
+	if assistant.Scenario != "" {
+		if _, ok := assistantScenarios[assistant.Scenario]; !ok {
+			return fmt.Errorf("%w: unsupported assistant scenario", ErrInvalid)
+		}
 	}
 	if len([]rune(assistant.ServiceGoal)) > 5000 || len([]rune(assistant.AnswerScope)) > 10000 || len([]rune(assistant.OperatingRules)) > 10000 || len([]rune(assistant.ResponseStyle)) > 2000 {
 		return fmt.Errorf("%w: visible rules are too long", ErrInvalid)
@@ -109,6 +137,20 @@ func (assistant SmartAssistant) Validate() error {
 	}
 	if assistant.Share.DailyCallLimit < 0 {
 		return fmt.Errorf("%w: daily call limit cannot be negative", ErrInvalid)
+	}
+	return nil
+}
+
+// ValidateForEnable checks the minimum visible configuration required before
+// an assistant can accept a new conversation. Drafts remain editable while
+// incomplete, so callers should use Validate for persistence and this method
+// only for the enable transition.
+func (assistant SmartAssistant) ValidateForEnable() error {
+	if err := assistant.Validate(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(assistant.ServiceGoal) == "" {
+		return fmt.Errorf("%w: service goal is required before enabling", ErrInvalid)
 	}
 	return nil
 }
