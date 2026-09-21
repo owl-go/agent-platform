@@ -722,10 +722,19 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	}
 	for _, id := range mcpIDs {
 		var row mcpRecord
-		if err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
-			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
+		err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error
+		if err == nil {
+			member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+			continue
 		}
-		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+		if err != gorm.ErrRecordNotFound {
+			return domain.ExpertMemberSnapshot{}, err
+		}
+		packageSnapshot, packageErr := connectorMCPServerSnapshot(tx, ownerID, id)
+		if packageErr != nil {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Connector is unavailable", domain.ErrInvalid)
+		}
+		member.MCPServers = append(member.MCPServers, packageSnapshot)
 	}
 	for _, id := range skillIDs {
 		var row skillRecord

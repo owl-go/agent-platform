@@ -765,12 +765,16 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 			}
 		}
 		for _, server := range stage.MCPServers {
-			var count int64
-			if err := tx.Model(&mcpRecord{}).Where("id = ? AND tested_at IS NOT NULL AND test_error IS NULL", server.ID).Count(&count).Error; err != nil {
+			var current mcpRecord
+			err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), server.ID).Take(&current).Error
+			if err == nil {
+				continue
+			}
+			if err != gorm.ErrRecordNotFound {
 				return err
 			}
-			if count != 1 {
-				return fmt.Errorf("%w: queued MCP Server for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+			if _, err := connectorMCPServerSnapshot(tx, ownerID, server.ID); err != nil {
+				return fmt.Errorf("%w: queued MCP Connector for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
 			}
 		}
 		for _, connector := range stage.CLIConnectors {

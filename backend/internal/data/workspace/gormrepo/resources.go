@@ -217,14 +217,18 @@ func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertIn
 		return err
 	}
 	if len(input.MCPServerIDs) > 0 {
-		var count int64
-		if err := tx.Model(&mcpRecord{}).
-			Where("owner_user_id IN (?) AND id IN ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), input.MCPServerIDs).
-			Count(&count).Error; err != nil {
-			return err
-		}
-		if count != int64(len(input.MCPServerIDs)) {
-			return fmt.Errorf("%w: every MCP Server must be visible to the User and pass its isolated test", domain.ErrInvalid)
+		for _, id := range input.MCPServerIDs {
+			var server mcpRecord
+			err := tx.Where("owner_user_id IN (?) AND id = ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&server).Error
+			if err == nil {
+				continue
+			}
+			if err != gorm.ErrRecordNotFound {
+				return err
+			}
+			if _, err := connectorMCPServerSnapshot(tx, ownerID, id); err != nil {
+				return fmt.Errorf("%w: every MCP Connector must be active, authorized, and available", domain.ErrInvalid)
+			}
 		}
 	}
 	if len(input.SkillIDs) > 0 {
