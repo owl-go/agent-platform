@@ -48,6 +48,7 @@ type ConnectorInstallation struct {
 	PackageSource    string
 	ActiveRevisionID string
 	AuthorizationID  string
+	Authorized       bool
 	State            ConnectorInstallationState
 	Version          int64
 	UpdatedAt        time.Time

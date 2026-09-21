@@ -6407,6 +6407,12 @@
           },
           "installation_type": {
             "type": "string"
+          },
+          "managed_installation": {
+            "type": "boolean"
+          },
+          "managed_authorized": {
+            "type": "boolean"
           }
         }
       },

@@ -73,6 +73,11 @@ type Definition struct {
 	VersionNumber          int64
 	FailureReason          string
 	CreatedByUserID        string
+	ManagedInstallation    bool
+	InstallationAuthorized bool
+	CPUMillis              int
+	MemoryMiB              int
+	ChildProcesses         int
 }
 
 type RecommendedSkill struct {
@@ -201,7 +206,7 @@ func validateExecutionPolicy(definition Definition) error {
 	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
 		return errors.New("CLI executable must be selected from package bin metadata")
 	}
-	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" {
+	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" && definition.AuthenticationDriver != "connector_package" {
 		return errors.New("unsupported built-in authentication driver")
 	}
 	if len(definition.Capabilities) == 0 {

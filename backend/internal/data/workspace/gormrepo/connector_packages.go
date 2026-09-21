@@ -159,12 +159,25 @@ func (repository *Repository) installConnector(ctx context.Context, input domain
 
 func (repository *Repository) ListConnectorInstallations(ctx context.Context, ownerID string) ([]domain.ConnectorInstallation, error) {
 	var rows []connectorInstallationRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND state <> ?", ownerID, domain.ConnectorInstallationUninstalled).Order("package_source, id").Find(&rows).Error; err != nil {
+	query := repository.db.WithContext(ctx).Table("connector_installations AS installation").Joins("JOIN connector_revisions AS revision ON revision.id = installation.active_revision_id").Where("installation.owner_user_id = ? AND installation.state <> ? AND COALESCE(revision.runtime_policy->>'legacy_projection', 'false') <> 'true'", ownerID, domain.ConnectorInstallationUninstalled).Select("installation.*").Order("installation.package_source, installation.id")
+	if err := query.Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Connector Installations: %w", err)
 	}
 	items := make([]domain.ConnectorInstallation, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, connectorInstallationDomain(row))
+		item := connectorInstallationDomain(row)
+		var revision connectorRevisionRecord
+		if err := repository.db.WithContext(ctx).Where("id = ?", row.ActiveRevisionID).Take(&revision).Error; err != nil {
+			return nil, fmt.Errorf("read Connector Revision: %w", err)
+		}
+		var policy struct {
+			AuthMode string `json:"auth_mode"`
+		}
+		if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil {
+			return nil, fmt.Errorf("decode Connector authorization policy: %w", err)
+		}
+		item.Authorized = policy.AuthMode == "none" || item.AuthorizationID != ""
+		items = append(items, item)
 	}
 	return items, nil
 }
@@ -427,7 +440,10 @@ func (repository *Repository) RecordConnectorAudit(ctx context.Context, input do
 func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context, ownerID, definitionID string) error {
 	var definition cliConnectorDefinitionRecord
 	if err := repository.db.WithContext(ctx).Where("id = ? AND state = ? AND deleted_at IS NULL", definitionID, cliconnector.StateAvailable).Take(&definition).Error; err != nil {
-		return mapNotFound(err)
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+		return repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, definitionID)
 	}
 	if definition.AuthenticationDriver == "none" {
 		return nil
@@ -444,6 +460,50 @@ func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context
 		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	return nil
+}
+
+func (repository *Repository) ValidateConnectorPackageCLIInvocation(ctx context.Context, ownerID, installationID string) error {
+	var installation connectorInstallationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ? AND state = ?", installationID, ownerID, domain.ConnectorInstallationActive).Take(&installation).Error; err != nil {
+		return fmt.Errorf("%w: Connector installation is unavailable", domain.ErrConflict)
+	}
+	var revision connectorRevisionRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND package_source = ? AND mode = ?", installation.ActiveRevisionID, installation.PackageSource, domain.ConnectorModeCLI).Take(&revision).Error; err != nil {
+		return fmt.Errorf("%w: Connector revision is unavailable", domain.ErrConflict)
+	}
+	var policy connectorCLIPolicy
+	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.LegacyProjection || policy.CLI == nil || policy.BundleObjectKey == "" || policy.BundleSHA256 == "" {
+		return fmt.Errorf("%w: Connector CLI bundle is unavailable", domain.ErrConflict)
+	}
+	if policy.AuthMode == "none" {
+		return nil
+	}
+	if installation.AuthorizationID == nil {
+		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	var authorization connectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err != nil {
+		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	return nil
+}
+
+func (repository *Repository) ResolveConnectorPackageAuthorization(ctx context.Context, ownerID, installationID, identity string) ([]byte, error) {
+	if err := repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, installationID); err != nil {
+		return nil, err
+	}
+	var installation connectorInstallationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", installationID, ownerID).Take(&installation).Error; err != nil || installation.AuthorizationID == nil {
+		return nil, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	var authorization connectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ?", *installation.AuthorizationID, installationID, ownerID).Take(&authorization).Error; err != nil {
+		return nil, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	if authorization.IdentityRef != "" && authorization.IdentityRef != identity && authorization.IdentityRef != "user" {
+		return nil, fmt.Errorf("%w: Connector identity is not authorized", domain.ErrConflict)
+	}
+	return append([]byte(nil), authorization.CredentialCiphertext...), nil
 }
 
 // ValidateMCPInvocation is the fail-closed lifecycle check used immediately before MCP configuration is materialized.
@@ -469,9 +529,10 @@ func (repository *Repository) ValidateMCPInvocation(ctx context.Context, ownerID
 		return mapNotFound(err)
 	}
 	var policy struct {
-		AuthMode string `json:"auth_mode"`
+		LegacyProjection bool   `json:"legacy_projection"`
+		AuthMode         string `json:"auth_mode"`
 	}
-	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.AuthMode == "" {
+	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.LegacyProjection || policy.AuthMode == "" {
 		return fmt.Errorf("%w: Connector authorization policy is unavailable", domain.ErrConflict)
 	}
 	if policy.AuthMode == "none" {

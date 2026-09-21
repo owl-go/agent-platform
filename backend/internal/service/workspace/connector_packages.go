@@ -79,6 +79,11 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 	if _, err := service.objects.Put(ctx, key, bytes.NewReader(pkg.NormalizedArchive), objectstore.PutOptions{Size: int64(len(pkg.NormalizedArchive)), SHA256: pkg.SHA256, ContentType: "application/zip", Metadata: map[string]string{"source": pkg.Metadata.Source, "version": pkg.Metadata.Version}}); err != nil {
 		return nil, publicError(err)
 	}
+	if len(pkg.CLIBundle) > 0 {
+		if _, err := service.objects.Put(ctx, connectorBundleObjectKey(pkg), bytes.NewReader(pkg.CLIBundle), objectstore.PutOptions{Size: int64(len(pkg.CLIBundle)), SHA256: pkg.CLIBundleSHA256, ContentType: "application/gzip", Metadata: map[string]string{"artifact-kind": "connector-package-cli-bundle", "source": pkg.Metadata.Source, "version": pkg.Metadata.Version}}); err != nil {
+			return nil, publicError(err)
+		}
+	}
 	revision.ObjectKey = key
 	revision, err = repository.CreateConnectorRevision(ctx, revision)
 	if err != nil {
@@ -88,6 +93,7 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 	if err != nil {
 		return nil, publicError(err)
 	}
+	installation.Authorized = pkg.Metadata.AuthMode == "none" || installation.AuthorizationID != ""
 	return connectorInstallationResponse(installation), nil
 }
 
@@ -194,9 +200,18 @@ func (service *Service) DisconnectConnectorAuthorization(ctx context.Context, re
 }
 
 func connectorRevisionFromPackage(pkg connectorpackage.Package) (domain.ConnectorRevision, string) {
-	policy, _ := json.Marshal(map[string]any{"auth_mode": pkg.Metadata.AuthMode, "mcp": pkg.MCP, "cli": pkg.CLI})
+	policyValue := map[string]any{"auth_mode": pkg.Metadata.AuthMode, "mcp": pkg.MCP, "cli": pkg.CLI}
+	if len(pkg.CLIBundle) > 0 {
+		policyValue["cli_bundle_object_key"] = connectorBundleObjectKey(pkg)
+		policyValue["cli_bundle_sha256"] = pkg.CLIBundleSHA256
+	}
+	policy, _ := json.Marshal(policyValue)
 	revision := domain.ConnectorRevision{PackageSource: pkg.Metadata.Source, Version: pkg.Metadata.Version, Mode: domain.ConnectorMode(pkg.Metadata.Type), PackageSHA256: pkg.SHA256, RuntimePolicy: policy}
 	return revision, fmt.Sprintf("connectors/%s/%s/%s.zip", pkg.Metadata.Source, pkg.Metadata.Version, pkg.SHA256)
+}
+
+func connectorBundleObjectKey(pkg connectorpackage.Package) string {
+	return fmt.Sprintf("cli-connectors/packages/%s/%s/%s.tgz", pkg.Metadata.Source, pkg.Metadata.Version, pkg.CLIBundleSHA256)
 }
 
 func buildGuidedConnectorPackage(input guidedConnectorInput) ([]byte, error) {
@@ -240,5 +255,5 @@ func buildGuidedConnectorPackage(input guidedConnectorInput) ([]byte, error) {
 }
 
 func connectorInstallationResponse(item domain.ConnectorInstallation) *workspacev1.ConnectorInstallation {
-	return &workspacev1.ConnectorInstallation{Id: item.ID, Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Authorized: item.AuthorizationID != "", Version: item.Version}
+	return &workspacev1.ConnectorInstallation{Id: item.ID, Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Authorized: item.Authorized || item.AuthorizationID != "", Version: item.Version}
 }

@@ -213,6 +213,8 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 	if err != nil {
 		return brokerFailure("execution_rejected", "CLI command was rejected")
 	}
+	result.Stdout = redactBytes(result.Stdout, request.Environment)
+	result.Stderr = redactBytes(result.Stderr, request.Environment)
 	limit := broker.outputLimit
 	if limit <= 0 {
 		limit = defaultBrokerOutputLimit
@@ -221,6 +223,15 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 		return brokerFailure("output_limit", "CLI command output exceeded the limit")
 	}
 	return BrokerResponse{StdoutBase64: base64.StdEncoding.EncodeToString(result.Stdout), StderrBase64: base64.StdEncoding.EncodeToString(result.Stderr), ExitCode: result.ExitCode}
+}
+
+func redactBytes(value []byte, secrets map[string]string) []byte {
+	for _, secret := range secrets {
+		if secret != "" {
+			value = bytes.ReplaceAll(value, []byte(secret), []byte("[REDACTED]"))
+		}
+	}
+	return value
 }
 
 func randomApprovalNonce() (string, error) {

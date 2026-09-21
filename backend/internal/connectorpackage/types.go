@@ -11,6 +11,8 @@ type Package struct {
 	Metadata          Metadata
 	MCP               *MCPManifest
 	CLI               *CLIManifest
+	CLIBundle         []byte
+	CLIBundleSHA256   string
 	Skills            []Skill
 	SHA256            string
 	NormalizedArchive []byte
@@ -93,11 +95,23 @@ type StatusMatch struct {
 type CLIManifest struct {
 	Runtime        ManagedRuntime        `json:"runtime"`
 	Executable     string                `json:"executable"`
+	BundlePath     string                `json:"bundle_path,omitempty"`
 	Commands       CLICommands           `json:"commands"`
 	StatusMatch    StatusMatch           `json:"status_match"`
+	Capabilities   []CLICapability       `json:"capabilities,omitempty"`
 	AuthURLDomains []string              `json:"auth_url_domains,omitempty"`
 	Environment    []EnvironmentVariable `json:"environment,omitempty"`
 	EgressHosts    []string              `json:"egress_hosts"`
 	TimeoutSeconds int                   `json:"timeout_seconds"`
 	Limits         ResourceLimits        `json:"resource_limits,omitempty"`
+}
+
+type CLICapability struct {
+	ID             string   `json:"id"`
+	ArgvPrefix     []string `json:"argv_prefix"`
+	Risk           string   `json:"risk"`
+	Identities     []string `json:"identities"`
+	Scopes         []string `json:"scopes,omitempty"`
+	EgressHosts    []string `json:"egress_hosts"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
 }

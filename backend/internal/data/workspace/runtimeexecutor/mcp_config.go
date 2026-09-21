@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"slices"
 	"strings"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -21,6 +23,13 @@ type storedMCPConfiguration struct {
 	PackageVersion *string                               `json:"package_version"`
 	Arguments      []string                              `json:"arguments"`
 	Environment    []workspacedomain.EnvironmentVariable `json:"environment"`
+	EgressHosts    []string                              `json:"egress_hosts"`
+	TimeoutSeconds int                                   `json:"timeout_seconds"`
+	ResourceLimits struct {
+		CPUMillis      int `json:"cpu_millis"`
+		MemoryMiB      int `json:"memory_mib"`
+		ChildProcesses int `json:"child_processes"`
+	} `json:"resource_limits"`
 }
 
 type nativeMCPServer struct {
@@ -94,6 +103,12 @@ func (executor *Executor) nativeMCPFiles(ctx context.Context, job application.Ex
 		if server.Transport == "streamable_http" {
 			if configuration.URL == nil {
 				return nil, nil, nil, fmt.Errorf("MCP Server %q is missing its URL", server.Name)
+			}
+			if len(configuration.EgressHosts) > 0 {
+				parsedURL, parseErr := url.Parse(*configuration.URL)
+				if parseErr != nil || !slices.Contains(configuration.EgressHosts, strings.ToLower(parsedURL.Hostname())) {
+					return nil, nil, nil, fmt.Errorf("MCP Server %q URL is outside its declared Egress policy", server.Name)
+				}
 			}
 			native := nativeMCPServer{URL: *configuration.URL}
 			codex := codexMCPServer{URL: *configuration.URL}

@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +33,13 @@ type mcpProbeConfiguration struct {
 		Value  string `json:"value"`
 		Secret bool   `json:"secret"`
 	} `json:"environment"`
+	EgressHosts    []string `json:"egress_hosts"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
+	ResourceLimits struct {
+		CPUMillis      int `json:"cpu_millis"`
+		MemoryMiB      int `json:"memory_mib"`
+		ChildProcesses int `json:"child_processes"`
+	} `json:"resource_limits"`
 }
 
 func (executor *Executor) testMCP(ctx context.Context, job application.ExecutionJob) (result application.ExecutionResult, returnErr error) {
@@ -85,18 +94,32 @@ func (executor *Executor) testMCP(ctx context.Context, job application.Execution
 	if !ok || !runtimeConfig.Available {
 		return result, fmt.Errorf("MCP test Runtime %s is unavailable", runtimeName)
 	}
+	limits := sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 512 << 20}
+	if configuration.ResourceLimits.CPUMillis > 0 && float64(configuration.ResourceLimits.CPUMillis)/1000 < limits.CPUs {
+		limits.CPUs = float64(configuration.ResourceLimits.CPUMillis) / 1000
+	}
+	if configuration.ResourceLimits.MemoryMiB > 0 && int64(configuration.ResourceLimits.MemoryMiB)<<20 < limits.MemoryBytes {
+		limits.MemoryBytes = int64(configuration.ResourceLimits.MemoryMiB) << 20
+	}
+	if configuration.ResourceLimits.ChildProcesses > 0 && int64(configuration.ResourceLimits.ChildProcesses) < limits.PIDs {
+		limits.PIDs = int64(configuration.ResourceLimits.ChildProcesses)
+	}
 	runProcess, err := containerprocess.New(containerprocess.Config{
 		Image: runtimeConfig.ImageDigest, RuntimeCommand: command[0], DirectCommand: true,
 		RunID: job.ID, Runtime: executor.config.Sandbox.Runtime,
 		WorkspaceDirectory: workspace, ContainerWorkspace: "/workspace", CredentialDirectory: environment.Directory(),
 		PublicEgressNetwork: executor.config.Sandbox.EgressNetwork, ResolverConfigFile: executor.config.Sandbox.ResolverConfig,
-		Egress: sandbox.EgressPublic, Limits: sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 512 << 20},
+		Egress: sandbox.EgressPublic, Limits: limits,
 		UID: executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID,
 	})
 	if err != nil {
 		return result, err
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	timeout := 30 * time.Second
+	if configuration.TimeoutSeconds > 0 && time.Duration(configuration.TimeoutSeconds)*time.Second < timeout {
+		timeout = time.Duration(configuration.TimeoutSeconds) * time.Second
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	initialize := strings.NewReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{},\"clientInfo\":{\"name\":\"agent-workspace\",\"version\":\"1\"}}}\n")
 	_, err = runProcess(probeCtx, processharness.Spec{
@@ -114,8 +137,19 @@ func (executor *Executor) testMCP(ctx context.Context, job application.Execution
 
 func mcpProbeCommand(configuration mcpProbeConfiguration, bearerToken bool) ([]string, string, processharness.OutputObserver, error) {
 	if configuration.URL != nil {
+		parsed, err := url.Parse(*configuration.URL)
+		if err != nil || parsed.Hostname() == "" {
+			return nil, "", nil, fmt.Errorf("invalid MCP URL")
+		}
+		if len(configuration.EgressHosts) > 0 && !slices.Contains(configuration.EgressHosts, strings.ToLower(parsed.Hostname())) {
+			return nil, "", nil, fmt.Errorf("MCP URL is outside its declared Egress policy")
+		}
+		maxTime := 20
+		if configuration.TimeoutSeconds > 0 && configuration.TimeoutSeconds < maxTime {
+			maxTime = configuration.TimeoutSeconds
+		}
 		command := []string{
-			"curl", "--fail-with-body", "--silent", "--show-error", "--max-time", "20",
+			"curl", "--fail-with-body", "--silent", "--show-error", "--max-time", fmt.Sprint(maxTime),
 			"--request", "POST", "--header", "Content-Type: application/json",
 			"--header", "Accept: application/json, text/event-stream",
 		}

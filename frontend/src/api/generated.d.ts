@@ -1791,6 +1791,8 @@ export interface components {
             icon?: string;
             description?: string;
             installation_type?: string;
+            managed_installation?: boolean;
+            managed_authorized?: boolean;
         };
         v1CLIConnectorDefinitionInput: {
             name?: string;

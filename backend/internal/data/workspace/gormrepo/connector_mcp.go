@@ -21,11 +21,20 @@ type connectorMCPManifest struct {
 		Name  string `json:"name"`
 		Value string `json:"value"`
 	} `json:"environment,omitempty"`
+	EgressHosts    []string `json:"egress_hosts"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
+	Limits         struct {
+		CPU            int `json:"cpu_millis"`
+		MemoryMiB      int `json:"memory_mib"`
+		Concurrency    int `json:"concurrency"`
+		ChildProcesses int `json:"child_processes"`
+	} `json:"resource_limits,omitempty"`
 }
 
 type connectorMCPPolicy struct {
-	AuthMode string                `json:"auth_mode"`
-	MCP      *connectorMCPManifest `json:"mcp"`
+	LegacyProjection bool                  `json:"legacy_projection"`
+	AuthMode         string                `json:"auth_mode"`
+	MCP              *connectorMCPManifest `json:"mcp"`
 }
 
 type connectorMCPConfig struct {
@@ -36,6 +45,11 @@ type connectorMCPConfig struct {
 	PackageVersion string
 	Arguments      []string
 	Environment    []domain.EnvironmentVariable
+	EgressHosts    []string
+	TimeoutSeconds int
+	CPUMillis      int
+	MemoryMiB      int
+	ChildProcesses int
 }
 
 func connectorMCPConfiguration(policy []byte) (connectorMCPConfig, string, error) {
@@ -46,11 +60,14 @@ func connectorMCPConfiguration(policy []byte) (connectorMCPConfig, string, error
 	if parsed.AuthMode == "" || parsed.MCP == nil {
 		return connectorMCPConfig{}, "", fmt.Errorf("Connector MCP policy is incomplete")
 	}
+	if parsed.LegacyProjection {
+		return connectorMCPConfig{}, "", domain.ErrNotFound
+	}
 	manifest := parsed.MCP
 	if manifest.Transport != "streamable_http" && manifest.Transport != "stdio" {
 		return connectorMCPConfig{}, "", fmt.Errorf("Connector MCP transport is unsupported")
 	}
-	configuration := connectorMCPConfig{Transport: manifest.Transport, URL: manifest.URL, Runner: manifest.Runner, Package: manifest.Package, PackageVersion: manifest.PackageVersion, Arguments: append([]string(nil), manifest.Arguments...)}
+	configuration := connectorMCPConfig{Transport: manifest.Transport, URL: manifest.URL, Runner: manifest.Runner, Package: manifest.Package, PackageVersion: manifest.PackageVersion, Arguments: append([]string(nil), manifest.Arguments...), EgressHosts: append([]string(nil), manifest.EgressHosts...), TimeoutSeconds: manifest.TimeoutSeconds, CPUMillis: manifest.Limits.CPU, MemoryMiB: manifest.Limits.MemoryMiB, ChildProcesses: manifest.Limits.ChildProcesses}
 	for _, variable := range manifest.Environment {
 		configuration.Environment = append(configuration.Environment, domain.EnvironmentVariable{Name: variable.Name, Value: variable.Value, Configured: true})
 	}
@@ -96,7 +113,7 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 		ciphertext = append([]byte(nil), authorization.CredentialCiphertext...)
 		secretAAD = "connector-authorization:" + ownerID
 	}
-	encoded, err := json.Marshal(map[string]any{"url": optionalConnectorString(configuration.URL), "runner": optionalConnectorString(configuration.Runner), "package": optionalConnectorString(configuration.Package), "package_version": optionalConnectorString(configuration.PackageVersion), "arguments": configuration.Arguments, "environment": configuration.Environment})
+	encoded, err := json.Marshal(map[string]any{"url": optionalConnectorString(configuration.URL), "runner": optionalConnectorString(configuration.Runner), "package": optionalConnectorString(configuration.Package), "package_version": optionalConnectorString(configuration.PackageVersion), "arguments": configuration.Arguments, "environment": configuration.Environment, "egress_hosts": configuration.EgressHosts, "timeout_seconds": configuration.TimeoutSeconds, "resource_limits": map[string]any{"cpu_millis": configuration.CPUMillis, "memory_mib": configuration.MemoryMiB, "child_processes": configuration.ChildProcesses}})
 	if err != nil {
 		return domain.MCPServerSnapshot{}, err
 	}

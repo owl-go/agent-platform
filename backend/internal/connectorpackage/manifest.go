@@ -140,6 +140,12 @@ func validateCLI(manifest CLIManifest) error {
 	if !identifierPattern.MatchString(manifest.Executable) {
 		return fmt.Errorf("cli.json executable is invalid")
 	}
+	if manifest.BundlePath != "" {
+		cleaned := path.Clean(strings.TrimPrefix(manifest.BundlePath, "./"))
+		if cleaned == "." || path.IsAbs(manifest.BundlePath) || strings.HasPrefix(cleaned, "../") || strings.ContainsAny(manifest.BundlePath, "\\\x00\r\n") {
+			return fmt.Errorf("cli.json bundle_path is unsafe")
+		}
+	}
 	commands := map[string]LifecycleCommand{"init": manifest.Commands.Init, "auth": manifest.Commands.Auth, "status": manifest.Commands.Status, "unAuth": manifest.Commands.UnAuth}
 	for name, command := range commands {
 		if len(command.Argv) == 0 {
@@ -165,6 +171,35 @@ func validateCLI(manifest CLIManifest) error {
 	}
 	if err := validateLimits(manifest.Limits); err != nil {
 		return fmt.Errorf("cli.json %w", err)
+	}
+	seenCapabilities := map[string]struct{}{}
+	for _, capability := range manifest.Capabilities {
+		if capability.ID == "" || len(capability.ArgvPrefix) == 0 || capability.TimeoutSeconds < 1 || capability.TimeoutSeconds > 900 {
+			return fmt.Errorf("cli.json capability %s is invalid", capability.ID)
+		}
+		if _, duplicate := seenCapabilities[capability.ID]; duplicate {
+			return fmt.Errorf("cli.json capability %s is duplicated", capability.ID)
+		}
+		seenCapabilities[capability.ID] = struct{}{}
+		if capability.Risk != "low" && capability.Risk != "high" {
+			return fmt.Errorf("cli.json capability %s has unsupported risk", capability.ID)
+		}
+		if len(capability.Identities) == 0 || len(capability.EgressHosts) == 0 {
+			return fmt.Errorf("cli.json capability %s requires identities and egress_hosts", capability.ID)
+		}
+		for _, identity := range capability.Identities {
+			if identity != "user" && identity != "bot" {
+				return fmt.Errorf("cli.json capability %s has unsupported identity", capability.ID)
+			}
+		}
+		for _, argument := range capability.ArgvPrefix {
+			if argument == "" || strings.ContainsAny(argument, "\x00\r\n") {
+				return fmt.Errorf("cli.json capability %s contains an unsafe argv prefix", capability.ID)
+			}
+		}
+		if err := validateHosts("cli.json capability egress_hosts", capability.EgressHosts); err != nil {
+			return err
+		}
 	}
 	return validateEnvironment("cli.json", manifest.Environment)
 }

@@ -1,10 +1,13 @@
 package connectorpackage
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -78,6 +81,18 @@ func Parse(content []byte) (Package, error) {
 			return Package{}, err
 		}
 		pkg.CLI = &manifest
+		if bundle, ok := byName["cli-bundle.tgz"]; ok {
+			bundlePath := manifest.BundlePath
+			if bundlePath == "" {
+				bundlePath = "bin/" + manifest.Executable
+			}
+			if err := validateCLIBundle(bundle, bundlePath); err != nil {
+				return Package{}, err
+			}
+			digest := sha256.Sum256(bundle)
+			pkg.CLIBundle = append([]byte(nil), bundle...)
+			pkg.CLIBundleSHA256 = hex.EncodeToString(digest[:])
+		}
 	}
 
 	for name, body := range byName {
@@ -107,6 +122,59 @@ func Parse(content []byte) (Package, error) {
 	pkg.NormalizedArchive = normalized
 	pkg.SHA256 = hex.EncodeToString(digest[:])
 	return pkg, nil
+}
+
+func validateCLIBundle(content []byte, executablePath string) error {
+	if len(content) == 0 || len(content) > 256<<20 {
+		return fmt.Errorf("cli-bundle.tgz must be non-empty and bounded")
+	}
+	cleaned := path.Clean(strings.TrimPrefix(executablePath, "./"))
+	if cleaned == "." || path.IsAbs(executablePath) || strings.HasPrefix(cleaned, "../") || strings.ContainsAny(executablePath, "\\\x00\r\n") {
+		return fmt.Errorf("cli.json bundle_path is unsafe")
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(content))
+	if err != nil {
+		return fmt.Errorf("open cli-bundle.tgz: %w", err)
+	}
+	defer reader.Close()
+	tarReader := tar.NewReader(reader)
+	seen := map[string]struct{}{}
+	var expanded int64
+	found := false
+	for {
+		header, err := tarReader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("read cli-bundle.tgz: %w", err)
+		}
+		name := path.Clean(strings.TrimPrefix(header.Name, "./"))
+		if name == "." || path.IsAbs(header.Name) || name == ".." || strings.HasPrefix(name, "../") || strings.ContainsAny(header.Name, "\\\x00\r\n") {
+			return fmt.Errorf("cli-bundle.tgz contains an unsafe path")
+		}
+		if _, ok := seen[name]; ok {
+			return fmt.Errorf("cli-bundle.tgz contains duplicate paths")
+		}
+		seen[name] = struct{}{}
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA && header.Typeflag != tar.TypeDir {
+			return fmt.Errorf("cli-bundle.tgz contains an unsupported entry")
+		}
+		if header.Size < 0 || header.Size > 256<<20 {
+			return fmt.Errorf("cli-bundle.tgz contains an invalid entry size")
+		}
+		expanded += header.Size
+		if expanded > 256<<20 {
+			return fmt.Errorf("cli-bundle.tgz expanded content is too large")
+		}
+		if name == cleaned && header.Typeflag == tar.TypeReg && header.Mode&0o111 != 0 {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("cli-bundle.tgz is missing executable %s", cleaned)
+	}
+	return nil
 }
 
 func readArchive(content []byte) ([]archiveFile, error) {

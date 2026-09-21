@@ -1,8 +1,12 @@
 package connectorpackage_test
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 	"testing"
 
@@ -46,6 +50,25 @@ func TestParseValidCLIPackage(t *testing.T) {
 	}
 	if pkg.CLI == nil || pkg.CLI.Executable != "example" || pkg.MCP != nil {
 		t.Fatalf("unexpected CLI package: %#v", pkg)
+	}
+}
+
+func TestParseValidCLIExecutableBundle(t *testing.T) {
+	bundle := executableBundle(t, "bin/example", []byte("#!/bin/sh\necho ok\n"))
+	archive := packageZIPBytes(t, map[string][]byte{
+		"connector-meta.json":     []byte(`{"source":"bundled-cli","version":"2.0.0","type":"cli","name":"Bundled CLI","description":"Operate Example","examples_zh":["执行"],"examples_en":["Run"],"minPlatformVersion":"1.0.0","auth_mode":"oauth"}`),
+		"icon.svg":                []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`),
+		"cli.json":                []byte(`{"runtime":{"kind":"node","version":"22.14.0","digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"executable":"example","bundle_path":"bin/example","commands":{"init":{"argv":["setup"]},"auth":{"argv":["auth"]},"status":{"argv":["status"]},"unAuth":{"argv":["logout"]}},"status_match":{"json_path":"$.authenticated","equals":true},"egress_hosts":["api.example.com"],"timeout_seconds":60,"capabilities":[{"id":"identity","argv_prefix":["status"],"risk":"low","identities":["user"],"egress_hosts":["api.example.com"],"timeout_seconds":30}]}`),
+		"cli-bundle.tgz":          bundle,
+		"skills/operate/SKILL.md": []byte("---\nname: bundled-operate\ndisplay_name: Bundled Operate\ndescription: Operate Example\nversion: 2.0.0\nauthor: Example\n---\n\n# Operate\n"),
+	})
+	pkg, err := connectorpackage.Parse(archive)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	wantDigest := sha256.Sum256(bundle)
+	if pkg.CLIBundleSHA256 != hex.EncodeToString(wantDigest[:]) || len(pkg.CLIBundle) != len(bundle) || pkg.CLI.BundlePath != "bin/example" {
+		t.Fatalf("bundle projection = digest %q bytes %d path %q", pkg.CLIBundleSHA256, len(pkg.CLIBundle), pkg.CLI.BundlePath)
 	}
 }
 
@@ -154,6 +177,15 @@ func TestParseRejectsUnsupportedTransportAndResourceLimits(t *testing.T) {
 
 func packageZIP(t *testing.T, files map[string]string) []byte {
 	t.Helper()
+	contents := make(map[string][]byte, len(files))
+	for name, body := range files {
+		contents[name] = []byte(body)
+	}
+	return packageZIPBytes(t, contents)
+}
+
+func packageZIPBytes(t *testing.T, files map[string][]byte) []byte {
+	t.Helper()
 	var buffer bytes.Buffer
 	writer := zip.NewWriter(&buffer)
 	for name, body := range files {
@@ -161,11 +193,31 @@ func packageZIP(t *testing.T, files map[string]string) []byte {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := entry.Write([]byte(body)); err != nil {
+		if _, err := entry.Write(body); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buffer.Bytes()
+}
+
+func executableBundle(t *testing.T, name string, body []byte) []byte {
+	t.Helper()
+	var buffer bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buffer)
+	tarWriter := tar.NewWriter(gzipWriter)
+	if err := tarWriter.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tarWriter.Write(body); err != nil {
+		t.Fatal(err)
+	}
+	if err := tarWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gzipWriter.Close(); err != nil {
 		t.Fatal(err)
 	}
 	return buffer.Bytes()

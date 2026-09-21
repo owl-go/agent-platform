@@ -13689,6 +13689,8 @@ type CLIConnectorDefinition struct {
 	Icon                      string                 `protobuf:"bytes,18,opt,name=icon,proto3" json:"icon,omitempty"`
 	Description               string                 `protobuf:"bytes,19,opt,name=description,proto3" json:"description,omitempty"`
 	InstallationType          string                 `protobuf:"bytes,20,opt,name=installation_type,json=installationType,proto3" json:"installation_type,omitempty"`
+	ManagedInstallation       bool                   `protobuf:"varint,21,opt,name=managed_installation,json=managedInstallation,proto3" json:"managed_installation,omitempty"`
+	ManagedAuthorized         bool                   `protobuf:"varint,22,opt,name=managed_authorized,json=managedAuthorized,proto3" json:"managed_authorized,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -13862,6 +13864,20 @@ func (x *CLIConnectorDefinition) GetInstallationType() string {
 		return x.InstallationType
 	}
 	return ""
+}
+
+func (x *CLIConnectorDefinition) GetManagedInstallation() bool {
+	if x != nil {
+		return x.ManagedInstallation
+	}
+	return false
+}
+
+func (x *CLIConnectorDefinition) GetManagedAuthorized() bool {
+	if x != nil {
+		return x.ManagedAuthorized
+	}
+	return false
 }
 
 type ListCLIConnectorDefinitionsRequest struct {
@@ -18330,7 +18346,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x04icon\x18\v \x01(\tR\x04icon\x12 \n" +
 	"\vdescription\x18\f \x01(\tR\vdescription\x12+\n" +
 	"\x11installation_type\x18\r \x01(\tR\x10installationType\x12\x18\n" +
-	"\aarchive\x18\x0e \x01(\fR\aarchive\"\xe4\x06\n" +
+	"\aarchive\x18\x0e \x01(\fR\aarchive\"\xc6\a\n" +
 	"\x16CLIConnectorDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -18356,7 +18372,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x12recommended_skills\x18\x11 \x03(\v2!.workspace.v1.CLIRecommendedSkillR\x11recommendedSkills\x12\x12\n" +
 	"\x04icon\x18\x12 \x01(\tR\x04icon\x12 \n" +
 	"\vdescription\x18\x13 \x01(\tR\vdescription\x12+\n" +
-	"\x11installation_type\x18\x14 \x01(\tR\x10installationTypeB\x11\n" +
+	"\x11installation_type\x18\x14 \x01(\tR\x10installationType\x121\n" +
+	"\x14managed_installation\x18\x15 \x01(\bR\x13managedInstallation\x12-\n" +
+	"\x12managed_authorized\x18\x16 \x01(\bR\x11managedAuthorizedB\x11\n" +
 	"\x0f_failure_reasonB\x10\n" +
 	"\x0e_bundle_sha256\"$\n" +
 	"\"ListCLIConnectorDefinitionsRequest\"a\n" +
