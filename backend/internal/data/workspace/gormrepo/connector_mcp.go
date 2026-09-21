@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"gorm.io/gorm"
@@ -100,6 +101,40 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 		return domain.MCPServerSnapshot{}, err
 	}
 	return domain.MCPServerSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, Configuration: encoded, SecretCiphertext: ciphertext, SecretOwnerID: ownerID, SecretAAD: secretAAD}, nil
+}
+
+func connectorMCPServerCatalog(tx *gorm.DB, ownerID string, installation connectorInstallationRecord) (domain.MCPServer, error) {
+	var revision connectorRevisionRecord
+	if err := tx.Where("id = ? AND package_source = ? AND mode = ?", installation.ActiveRevisionID, installation.PackageSource, domain.ConnectorModeMCP).Take(&revision).Error; err != nil {
+		return domain.MCPServer{}, mapNotFound(err)
+	}
+	configuration, authMode, err := connectorMCPConfiguration(revision.RuntimePolicy)
+	if err != nil {
+		return domain.MCPServer{}, err
+	}
+	tested := installation.State == string(domain.ConnectorInstallationActive)
+	testError := ""
+	if authMode != "none" {
+		tested = false
+		if installation.AuthorizationID != nil {
+			var authorization connectorAuthorizationRecord
+			if err := tx.Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err == nil {
+				tested = installation.State == string(domain.ConnectorInstallationActive)
+			} else if err != gorm.ErrRecordNotFound {
+				return domain.MCPServer{}, err
+			}
+		}
+		if !tested {
+			testError = "authorization required"
+		}
+	}
+	return domain.MCPServer{ID: installation.ID, OwnerID: ownerID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, URL: optionalConnectorString(configuration.URL), Runner: optionalConnectorString(configuration.Runner), Package: optionalConnectorString(configuration.Package), PackageVersion: optionalConnectorString(configuration.PackageVersion), Arguments: configuration.Arguments, Environment: configuration.Environment, TestError: testError, TestedAt: func() *time.Time {
+		if tested {
+			now := time.Now().UTC()
+			return &now
+		}
+		return nil
+	}(), UpdatedAt: installation.UpdatedAt, Version: installation.Version, ManagedInstallation: true}, nil
 }
 
 func optionalConnectorString(value string) *string {

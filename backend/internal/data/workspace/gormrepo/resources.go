@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -957,6 +958,20 @@ func (repository *Repository) ListMCPServers(ctx context.Context, ownerID string
 	items := make([]domain.MCPServer, 0, len(rows))
 	for _, row := range rows {
 		item, err := mcpDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	var installations []connectorInstallationRecord
+	if err := db.Where("owner_user_id = ? AND state <> ?", ownerID, domain.ConnectorInstallationUninstalled).Order("updated_at DESC, id DESC").Find(&installations).Error; err != nil {
+		return nil, fmt.Errorf("list Connector MCP installations: %w", err)
+	}
+	for _, installation := range installations {
+		item, err := connectorMCPServerCatalog(db, ownerID, installation)
+		if errors.Is(err, domain.ErrNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}

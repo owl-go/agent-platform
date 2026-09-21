@@ -56,6 +56,14 @@ func (repository *Repository) CreateConnectorRevision(ctx context.Context, input
 }
 
 func (repository *Repository) InstallConnector(ctx context.Context, input domain.ConnectorInstallation) (domain.ConnectorInstallation, error) {
+	return repository.installConnector(ctx, input, nil)
+}
+
+func (repository *Repository) InstallConnectorWithAudit(ctx context.Context, input domain.ConnectorInstallation, audit domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	return repository.installConnector(ctx, input, &audit)
+}
+
+func (repository *Repository) installConnector(ctx context.Context, input domain.ConnectorInstallation, audit *domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
 	if input.ID == "" {
 		input.ID = uuid.NewString()
 	}
@@ -102,7 +110,22 @@ func (repository *Repository) InstallConnector(ctx context.Context, input domain
 			if result.RowsAffected != 1 {
 				return domain.ErrConflict
 			}
-			return tx.Where("id = ?", row.ID).Take(&row).Error
+			if err := tx.Where("id = ?", row.ID).Take(&row).Error; err != nil {
+				return err
+			}
+			if audit != nil {
+				if audit.InstallationID == "" {
+					audit.InstallationID = row.ID
+				}
+				if audit.RevisionID == "" {
+					audit.RevisionID = row.ActiveRevisionID
+				}
+				if audit.Mode == "" {
+					audit.Mode = domain.ConnectorMode(revision.Mode)
+				}
+				return createConnectorAuditTx(tx, *audit)
+			}
+			return nil
 		}
 		if err != gorm.ErrRecordNotFound {
 			return err
@@ -111,7 +134,22 @@ func (repository *Repository) InstallConnector(ctx context.Context, input domain
 		if input.AuthorizationID != "" {
 			row.AuthorizationID = &input.AuthorizationID
 		}
-		return tx.Create(&row).Error
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = row.ID
+			}
+			if audit.RevisionID == "" {
+				audit.RevisionID = row.ActiveRevisionID
+			}
+			if audit.Mode == "" {
+				audit.Mode = domain.ConnectorMode(revision.Mode)
+			}
+			return createConnectorAuditTx(tx, *audit)
+		}
+		return nil
 	})
 	if err != nil {
 		return domain.ConnectorInstallation{}, fmt.Errorf("install Connector: %w", err)
@@ -132,6 +170,14 @@ func (repository *Repository) ListConnectorInstallations(ctx context.Context, ow
 }
 
 func (repository *Repository) SetConnectorInstallationState(ctx context.Context, ownerID, installationID string, state domain.ConnectorInstallationState, expectedVersion int64) (domain.ConnectorInstallation, error) {
+	return repository.setConnectorInstallationState(ctx, ownerID, installationID, state, expectedVersion, nil)
+}
+
+func (repository *Repository) SetConnectorInstallationStateWithAudit(ctx context.Context, ownerID, installationID string, state domain.ConnectorInstallationState, expectedVersion int64, audit domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	return repository.setConnectorInstallationState(ctx, ownerID, installationID, state, expectedVersion, &audit)
+}
+
+func (repository *Repository) setConnectorInstallationState(ctx context.Context, ownerID, installationID string, state domain.ConnectorInstallationState, expectedVersion int64, audit *domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
 	if state != domain.ConnectorInstallationDisabled && state != domain.ConnectorInstallationUninstalled {
 		return domain.ConnectorInstallation{}, fmt.Errorf("%w: unsupported Connector Installation state", domain.ErrInvalid)
 	}
@@ -151,7 +197,19 @@ func (repository *Repository) SetConnectorInstallationState(ctx context.Context,
 				return err
 			}
 		}
-		return tx.Where("id = ?", installationID).Take(&row).Error
+		if err := tx.Where("id = ?", installationID).Take(&row).Error; err != nil {
+			return err
+		}
+		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = row.ID
+			}
+			if audit.RevisionID == "" {
+				audit.RevisionID = row.ActiveRevisionID
+			}
+			return createConnectorAuditTx(tx, *audit)
+		}
+		return nil
 	})
 	if err != nil {
 		return domain.ConnectorInstallation{}, err
@@ -238,7 +296,60 @@ func (repository *Repository) DisconnectConnectorAuthorization(ctx context.Conte
 	return connectorAuthorizationDomain(row), nil
 }
 
+func (repository *Repository) DisconnectConnectorInstallationAuthorization(ctx context.Context, ownerID, installationID string, expectedVersion int64) (domain.ConnectorInstallation, error) {
+	return repository.disconnectConnectorInstallationAuthorization(ctx, ownerID, installationID, expectedVersion, nil)
+}
+
+func (repository *Repository) DisconnectConnectorInstallationAuthorizationWithAudit(ctx context.Context, ownerID, installationID string, expectedVersion int64, audit domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	return repository.disconnectConnectorInstallationAuthorization(ctx, ownerID, installationID, expectedVersion, &audit)
+}
+
+func (repository *Repository) disconnectConnectorInstallationAuthorization(ctx context.Context, ownerID, installationID string, expectedVersion int64, audit *domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	var row connectorInstallationRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ? AND version = ? AND state <> ?", installationID, ownerID, expectedVersion, domain.ConnectorInstallationUninstalled).Take(&row).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return domain.ErrConflict
+			}
+			return err
+		}
+		if row.AuthorizationID != nil {
+			if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND owner_user_id = ?", *row.AuthorizationID, ownerID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&connectorInstallationRecord{}).Where("id = ? AND version = ?", installationID, row.Version).Updates(map[string]any{"authorization_id": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("id = ?", installationID).Take(&row).Error; err != nil {
+			return err
+		}
+		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = row.ID
+			}
+			if audit.RevisionID == "" {
+				audit.RevisionID = row.ActiveRevisionID
+			}
+			return createConnectorAuditTx(tx, *audit)
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.ConnectorInstallation{}, err
+	}
+	return connectorInstallationDomain(row), nil
+}
+
 func (repository *Repository) CreateConnectorAuthorization(ctx context.Context, input domain.ConnectorAuthorization) (domain.ConnectorAuthorization, error) {
+	return repository.createConnectorAuthorization(ctx, input, nil)
+}
+
+func (repository *Repository) CreateConnectorAuthorizationWithAudit(ctx context.Context, input domain.ConnectorAuthorization, audit domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
+	return repository.createConnectorAuthorization(ctx, input, &audit)
+}
+
+func (repository *Repository) createConnectorAuthorization(ctx context.Context, input domain.ConnectorAuthorization, audit *domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
 	if input.ID == "" {
 		input.ID = uuid.NewString()
 	}
@@ -277,13 +388,29 @@ func (repository *Repository) CreateConnectorAuthorization(ctx context.Context, 
 				return err
 			}
 		}
-		return tx.Model(&connectorInstallationRecord{}).
+		if err := tx.Model(&connectorInstallationRecord{}).
 			Where("id = ? AND owner_user_id = ?", input.InstallationID, input.OwnerID).
-			Updates(map[string]any{"authorization_id": row.ID, "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error
+			Updates(map[string]any{"authorization_id": row.ID, "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
+		}
+		if audit != nil {
+			return createConnectorAuditTx(tx, *audit)
+		}
+		return nil
 	}); err != nil {
 		return domain.ConnectorAuthorization{}, fmt.Errorf("create Connector Authorization: %w", err)
 	}
 	return connectorAuthorizationDomain(row), nil
+}
+
+func createConnectorAuditTx(tx *gorm.DB, input domain.ConnectorAuditRecord) error {
+	if input.ID == "" {
+		input.ID = uuid.NewString()
+	}
+	if input.Operation == "" || input.Outcome == "" {
+		return fmt.Errorf("%w: audit operation and outcome are required", domain.ErrInvalid)
+	}
+	return tx.Create(&connectorAuditRecord{ID: input.ID, OwnerID: input.OwnerID, InstallationID: input.InstallationID, RevisionID: input.RevisionID, Mode: string(input.Mode), Operation: input.Operation, Risk: input.Risk, IdentityRef: input.IdentityRef, ApprovalReference: input.ApprovalReference, Outcome: input.Outcome, ErrorType: input.ErrorType, RequestID: input.RequestID, PolicyRevision: input.PolicyRevision, CreatedAt: input.CreatedAt}).Error
 }
 
 func (repository *Repository) RecordConnectorAudit(ctx context.Context, input domain.ConnectorAuditRecord) error {

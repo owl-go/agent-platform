@@ -18,8 +18,14 @@ import (
 type connectorPackageRepository interface {
 	CreateConnectorRevision(context.Context, domain.ConnectorRevision) (domain.ConnectorRevision, error)
 	InstallConnector(context.Context, domain.ConnectorInstallation) (domain.ConnectorInstallation, error)
+	InstallConnectorWithAudit(context.Context, domain.ConnectorInstallation, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
 	ListConnectorInstallations(context.Context, string) ([]domain.ConnectorInstallation, error)
 	SetConnectorInstallationState(context.Context, string, string, domain.ConnectorInstallationState, int64) (domain.ConnectorInstallation, error)
+	SetConnectorInstallationStateWithAudit(context.Context, string, string, domain.ConnectorInstallationState, int64, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
+	DisconnectConnectorInstallationAuthorization(context.Context, string, string, int64) (domain.ConnectorInstallation, error)
+	DisconnectConnectorInstallationAuthorizationWithAudit(context.Context, string, string, int64, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
+	CreateConnectorAuthorization(context.Context, domain.ConnectorAuthorization) (domain.ConnectorAuthorization, error)
+	CreateConnectorAuthorizationWithAudit(context.Context, domain.ConnectorAuthorization, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
 	RecordConnectorAudit(context.Context, domain.ConnectorAuditRecord) error
 }
 
@@ -78,11 +84,8 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 	if err != nil {
 		return nil, publicError(err)
 	}
-	installation, err := repository.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: ownerID, PackageSource: pkg.Metadata.Source, ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+	installation, err := repository.InstallConnectorWithAudit(ctx, domain.ConnectorInstallation{OwnerID: ownerID, PackageSource: pkg.Metadata.Source, ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, RevisionID: revision.ID, Mode: domain.ConnectorMode(pkg.Metadata.Type), Operation: "install", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
-		return nil, publicError(err)
-	}
-	if err := repository.RecordConnectorAudit(ctx, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: installation.ID, RevisionID: revision.ID, Mode: domain.ConnectorMode(pkg.Metadata.Type), Operation: "install", Outcome: "succeeded", CreatedAt: time.Now().UTC()}); err != nil {
 		return nil, publicError(err)
 	}
 	return connectorInstallationResponse(installation), nil
@@ -105,11 +108,8 @@ func (service *Service) DisableConnectorInstallation(ctx context.Context, reques
 	if err != nil {
 		return nil, publicError(err)
 	}
-	item, err := repository.SetConnectorInstallationState(ctx, ownerID, request.InstallationId, domain.ConnectorInstallationDisabled, request.ExpectedVersion)
+	item, err := repository.SetConnectorInstallationStateWithAudit(ctx, ownerID, request.InstallationId, domain.ConnectorInstallationDisabled, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: request.InstallationId, Operation: "disable", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
-		return nil, publicError(err)
-	}
-	if err := repository.RecordConnectorAudit(ctx, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: item.ID, RevisionID: item.ActiveRevisionID, Operation: "disable", Outcome: "succeeded", CreatedAt: time.Now().UTC()}); err != nil {
 		return nil, publicError(err)
 	}
 	return connectorInstallationResponse(item), nil
@@ -124,14 +124,73 @@ func (service *Service) UninstallConnector(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, publicError(err)
 	}
-	item, err := repository.SetConnectorInstallationState(ctx, ownerID, request.InstallationId, domain.ConnectorInstallationUninstalled, request.ExpectedVersion)
+	_, err = repository.SetConnectorInstallationStateWithAudit(ctx, ownerID, request.InstallationId, domain.ConnectorInstallationUninstalled, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: request.InstallationId, Operation: "uninstall", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if err := repository.RecordConnectorAudit(ctx, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: item.ID, RevisionID: item.ActiveRevisionID, Operation: "uninstall", Outcome: "succeeded", CreatedAt: time.Now().UTC()}); err != nil {
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
+func (service *Service) ConnectConnector(ctx context.Context, request *workspacev1.ConnectConnectorRequest) (*workspacev1.ConnectorInstallation, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(request.IdentityRef) == "" || len(request.CredentialsJson) == 0 || len(request.CredentialsJson) > 64*1024 || !json.Valid(request.CredentialsJson) {
+		return nil, publicError(fmt.Errorf("%w: connector authorization requires a bounded identity and credentials JSON", domain.ErrInvalid))
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
 		return nil, publicError(err)
 	}
-	return &workspacev1.DeleteResponse{Deleted: true}, nil
+	ciphertext, err := service.box.Encrypt(request.CredentialsJson, "connector-authorization:"+ownerID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListConnectorInstallations(ctx, ownerID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var installation domain.ConnectorInstallation
+	for _, item := range items {
+		if item.ID == request.InstallationId {
+			installation = item
+			break
+		}
+	}
+	if installation.ID == "" {
+		return nil, publicError(domain.ErrNotFound)
+	}
+	_, err = repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: ownerID, InstallationID: request.InstallationId, IdentityRef: strings.TrimSpace(request.IdentityRef), Scopes: append([]string(nil), request.Scopes...), CredentialCiphertext: ciphertext, State: domain.ConnectorAuthorizationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: installation.ID, RevisionID: installation.ActiveRevisionID, Operation: "authorize", IdentityRef: strings.TrimSpace(request.IdentityRef), Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err = repository.ListConnectorInstallations(ctx, ownerID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	for _, item := range items {
+		if item.ID == request.InstallationId {
+			return connectorInstallationResponse(item), nil
+		}
+	}
+	return nil, publicError(fmt.Errorf("%w: connector installation not found after authorization", domain.ErrNotFound))
+}
+
+func (service *Service) DisconnectConnectorAuthorization(ctx context.Context, request *workspacev1.DisconnectConnectorAuthorizationRequest) (*workspacev1.ConnectorInstallation, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := repository.DisconnectConnectorInstallationAuthorizationWithAudit(ctx, ownerID, request.InstallationId, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: request.InstallationId, Operation: "disconnect", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorInstallationResponse(item), nil
 }
 
 func connectorRevisionFromPackage(pkg connectorpackage.Package) (domain.ConnectorRevision, string) {

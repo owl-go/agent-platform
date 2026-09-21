@@ -1724,6 +1724,82 @@
         ]
       }
     },
+    "/api/v1/connectors/{installation_id}/authorization": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ConnectConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceConnectConnectorBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/authorization/disconnect": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisconnectConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisconnectConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/{installation_id}/disable": {
       "post": {
         "operationId": "AgentWorkspaceService_DisableConnectorInstallation",
@@ -4242,6 +4318,24 @@
         }
       }
     },
+    "AgentWorkspaceServiceConnectConnectorBody": {
+      "type": "object",
+      "properties": {
+        "identity_ref": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "credentials_json": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "AgentWorkspaceServiceContinueRunConversationBody": {
       "type": "object",
       "properties": {
@@ -4316,6 +4410,15 @@
       }
     },
     "AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDisconnectConnectorAuthorizationBody": {
       "type": "object",
       "properties": {
         "expected_version": {
@@ -7109,6 +7212,9 @@
         },
         "icon": {
           "type": "string"
+        },
+        "managed_installation": {
+          "type": "boolean"
         }
       }
     },

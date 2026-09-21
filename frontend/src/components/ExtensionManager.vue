@@ -482,9 +482,9 @@ async function fileToBase64(file: File): Promise<string> {
           </div>
           <div class="extension-card-actions" @click.stop>
             <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
-            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
-            <el-button v-if="!item.platform || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
+            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
+            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
+            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
           </div>
         </article>
         <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showCLIDetails(item)" @keydown.enter.self="showCLIDetails(item)" @keydown.space.self.prevent="showCLIDetails(item)">
@@ -540,7 +540,7 @@ async function fileToBase64(file: File): Promise<string> {
       </div>
     </div>
   </div>
-  <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && (!detailMCP.platform || canManageCLI) || detailCLI && canManageCLI && detailCLI.mutable)" @close="detailMCP = undefined; detailCLI = undefined" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails" />
+  <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && ((!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI) || detailCLI && canManageCLI && detailCLI.mutable)" @close="detailMCP = undefined; detailCLI = undefined" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails" />
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />

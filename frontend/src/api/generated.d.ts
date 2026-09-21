@@ -676,6 +676,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/{installation_id}/authorization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ConnectConnector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/authorization/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisconnectConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/{installation_id}/disable": {
         parameters: {
             query?: never;
@@ -1492,6 +1524,12 @@ export interface components {
             config?: components["schemas"]["v1GitConfigEntry"][];
             ssh_config?: string;
         };
+        AgentWorkspaceServiceConnectConnectorBody: {
+            identity_ref?: string;
+            scopes?: string[];
+            /** Format: byte */
+            credentials_json?: string;
+        };
         AgentWorkspaceServiceContinueRunConversationBody: {
             content?: string;
             attachment_ids?: string[];
@@ -1519,6 +1557,10 @@ export interface components {
             expected_version?: number;
         };
         AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDisconnectConnectorAuthorizationBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -2457,6 +2499,7 @@ export interface components {
             test_pending?: boolean;
             platform?: boolean;
             icon?: string;
+            managed_installation?: boolean;
         };
         v1MCPConnectorInput: {
             name?: string;
@@ -4633,6 +4676,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ConnectConnector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceConnectConnectorBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisconnectConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisconnectConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
                 };
             };
             /** @description An unexpected error response. */

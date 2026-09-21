@@ -891,7 +891,7 @@ func (service *Service) mcpInput(input *workspacev1.MCPConnectorInput) (workspac
 }
 
 func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
-	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Icon: item.Icon, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform}
+	response := &workspacev1.MCPConnector{Id: item.ID, Name: item.Name, Icon: item.Icon, Transport: item.Transport, Url: item.URL, Runner: item.Runner, Package: item.Package, PackageVersion: item.PackageVersion, Arguments: item.Arguments, Tested: item.TestedAt != nil && item.TestError == "", TestPending: item.TestRequestedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform, ManagedInstallation: item.ManagedInstallation}
 	if item.TestError != "" {
 		response.TestError = &item.TestError
 	}

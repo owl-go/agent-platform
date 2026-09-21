@@ -2256,6 +2256,106 @@
         ]
       }
     },
+    "/api/v1/connectors/{installation_id}/authorization": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ConnectConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorInstallation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceConnectConnectorBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/authorization/disconnect": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisconnectConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorInstallation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceDisconnectConnectorAuthorizationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/{installation_id}/disable": {
       "post": {
         "operationId": "AgentWorkspaceService_DisableConnectorInstallation",
@@ -5566,6 +5666,24 @@
           }
         }
       },
+      "AgentWorkspaceServiceConnectConnectorBody": {
+        "type": "object",
+        "properties": {
+          "identity_ref": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "credentials_json": {
+            "type": "string",
+            "format": "byte"
+          }
+        }
+      },
       "AgentWorkspaceServiceContinueRunConversationBody": {
         "type": "object",
         "properties": {
@@ -5639,6 +5757,15 @@
         }
       },
       "AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody": {
+        "type": "object",
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AgentWorkspaceServiceDisconnectConnectorAuthorizationBody": {
         "type": "object",
         "properties": {
           "expected_version": {
@@ -8375,6 +8502,9 @@
           },
           "icon": {
             "type": "string"
+          },
+          "managed_installation": {
+            "type": "boolean"
           }
         }
       },

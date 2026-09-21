@@ -62,7 +62,7 @@ export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; stat
 export interface ProviderModel { id: string; connection_id: string; model_id: string; display_name: string; available: boolean; manually_added: boolean; compatibility: RuntimeModelCompatibility[] }
 export interface ModelProviderConnection { id: string; name: string; provider_type: string; endpoint: string; protocols: string[]; api_key_configured: boolean; verification_status: "verified" | "unverified" | "failed"; verification_error?: string; custom_endpoint: boolean; last_synced_at?: string; last_sync_error?: string; models: ProviderModel[]; created_at: string; updated_at: string; version: number }
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
-export interface MCPServer { id: string; platform?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
+export interface MCPServer { id: string; platform?: boolean; managed_installation?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
@@ -221,6 +221,8 @@ export interface PlatformApi {
   createConnectorPackage(input: { source: string; version: string; type: "mcp" | "cli"; name: string; description: string; auth_mode: "none" | "oauth" | "cli"; mcp_json?: string; cli_json?: string; skill_name: string; skill_markdown: string }, signal?: AbortSignal): Promise<ConnectorInstallation>;
   disableConnectorInstallation(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
   uninstallConnector(id: string, version: number, signal?: AbortSignal): Promise<void>;
+  connectConnector(id: string, identityRef: string, scopes: string[], credentialsJson: string, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  disconnectConnectorAuthorization(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
   listCLIConnectorHealth(signal?: AbortSignal): Promise<CLIConnectorHealth[]>;
   createCLIConnectorDefinition(input: CLIConnectorDefinitionInput, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   updateCLIConnectorDefinition(id: string, input: CLIConnectorDefinitionInput, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
@@ -545,6 +547,13 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createConnectorPackage(input, signal) { return call("/api/v1/connectors/packages/guided", json("POST", input, signal)); },
     disableConnectorInstallation(id, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
     async uninstallConnector(id, version, signal) { await call(`/api/v1/connectors/${encodeURIComponent(id)}?expected_version=${version}`, { method: "DELETE", signal }); },
+    connectConnector(id, identityRef, scopes, credentialsJson, signal) {
+      const bytes = new TextEncoder().encode(credentialsJson);
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      return call(`/api/v1/connectors/${encodeURIComponent(id)}/authorization`, json("POST", { identity_ref: identityRef, scopes, credentials_json: btoa(binary) }, signal));
+    },
+    disconnectConnectorAuthorization(id, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/authorization/disconnect`, json("POST", { expected_version: version }, signal)); },
     async listCLIConnectorHealth(signal) { return (await call<{ items: CLIConnectorHealth[] }>("/api/v1/admin/connectors/cli-health", { signal })).items ?? []; },
     createCLIConnectorDefinition(input, signal) { return call("/api/v1/admin/connectors/cli", json("POST", { definition: input }, signal)); },
     updateCLIConnectorDefinition(id, input, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}`, json("PATCH", { definition: input, expected_version: version }, signal)); },

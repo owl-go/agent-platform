@@ -130,6 +130,8 @@ const (
 	AgentWorkspaceService_CreateConnectorPackage_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateConnectorPackage"
 	AgentWorkspaceService_DisableConnectorInstallation_FullMethodName        = "/workspace.v1.AgentWorkspaceService/DisableConnectorInstallation"
 	AgentWorkspaceService_UninstallConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
+	AgentWorkspaceService_ConnectConnector_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ConnectConnector"
+	AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName    = "/workspace.v1.AgentWorkspaceService/DisconnectConnectorAuthorization"
 	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName       = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
@@ -262,6 +264,8 @@ type AgentWorkspaceServiceClient interface {
 	CreateConnectorPackage(ctx context.Context, in *CreateConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	DisableConnectorInstallation(ctx context.Context, in *DisableConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	UninstallConnector(ctx context.Context, in *UninstallConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	ConnectConnector(ctx context.Context, in *ConnectConnectorRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	DisconnectConnectorAuthorization(ctx context.Context, in *DisconnectConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(ctx context.Context, in *UpdateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
@@ -1397,6 +1401,26 @@ func (c *agentWorkspaceServiceClient) UninstallConnector(ctx context.Context, in
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ConnectConnector(ctx context.Context, in *ConnectConnectorRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ConnectConnector_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DisconnectConnectorAuthorization(ctx context.Context, in *DisconnectConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CLIConnectorDefinition)
@@ -1662,6 +1686,8 @@ type AgentWorkspaceServiceServer interface {
 	CreateConnectorPackage(context.Context, *CreateConnectorPackageRequest) (*ConnectorInstallation, error)
 	DisableConnectorInstallation(context.Context, *DisableConnectorInstallationRequest) (*ConnectorInstallation, error)
 	UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error)
+	ConnectConnector(context.Context, *ConnectConnectorRequest) (*ConnectorInstallation, error)
+	DisconnectConnectorAuthorization(context.Context, *DisconnectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
@@ -2019,6 +2045,12 @@ func (UnimplementedAgentWorkspaceServiceServer) DisableConnectorInstallation(con
 }
 func (UnimplementedAgentWorkspaceServiceServer) UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UninstallConnector not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ConnectConnector(context.Context, *ConnectConnectorRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConnectConnector not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisconnectConnectorAuthorization(context.Context, *DisconnectConnectorAuthorizationRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisconnectConnectorAuthorization not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCLIConnectorDefinition not implemented")
@@ -4084,6 +4116,42 @@ func _AgentWorkspaceService_UninstallConnector_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ConnectConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectConnectorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ConnectConnector(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ConnectConnector_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ConnectConnector(ctx, req.(*ConnectConnectorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DisconnectConnectorAuthorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisconnectConnectorAuthorizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisconnectConnectorAuthorization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisconnectConnectorAuthorization(ctx, req.(*DisconnectConnectorAuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_CreateCLIConnectorDefinition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCLIConnectorDefinitionRequest)
 	if err := dec(in); err != nil {
@@ -4804,6 +4872,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UninstallConnector",
 			Handler:    _AgentWorkspaceService_UninstallConnector_Handler,
+		},
+		{
+			MethodName: "ConnectConnector",
+			Handler:    _AgentWorkspaceService_ConnectConnector_Handler,
+		},
+		{
+			MethodName: "DisconnectConnectorAuthorization",
+			Handler:    _AgentWorkspaceService_DisconnectConnectorAuthorization_Handler,
 		},
 		{
 			MethodName: "CreateCLIConnectorDefinition",
