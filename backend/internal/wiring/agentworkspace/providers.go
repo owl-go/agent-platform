@@ -6,11 +6,13 @@ import (
 
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	aiapplication "agent-platform/backend/internal/biz/aiapplication/application"
 	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	accountrepo "agent-platform/backend/internal/data/account/gormrepo"
 	"agent-platform/backend/internal/data/account/keycloak"
 	"agent-platform/backend/internal/data/account/tokenverifier"
+	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
@@ -36,6 +38,7 @@ var ProviderSet = wire.NewSet(
 	NewCreditsRepository,
 	NewCreditsService,
 	aicreationwiring.NewApplication,
+	NewAIApplicationService,
 	NewSecretBox,
 	NewWorkspaceFiles,
 	NewSkillStore,
@@ -83,6 +86,17 @@ func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits
 
 func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {
 	return creditsapplication.New(credits, nil)
+}
+
+func NewAIApplicationService(database *gormdb.Database, box *secretcrypto.Box) (*aiapplication.Service, error) {
+	repository := aiapplicationrepo.New(database.ORM(), box)
+	service, err := aiapplication.New(repository)
+	if err != nil {
+		return nil, err
+	}
+	service.SetKnowledgeRepository(repository)
+	service.SetEmbeddingProvider(repository)
+	return service, nil
 }
 
 func NewSecretBox(config platformconfig.Config) (*secretcrypto.Box, error) {

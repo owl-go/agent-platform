@@ -54,6 +54,19 @@
         }
     }
 
+    handle /embed/* {
+        header {
+            -X-Frame-Options
+        }
+        reverse_proxy api:8080 {
+            transport http {
+                dial_timeout 5s
+                response_header_timeout 5m
+                keepalive 30s
+            }
+        }
+    }
+
     handle /identity/* {
         reverse_proxy identity:8080 {
             transport http {

@@ -38,6 +38,7 @@ type sessionRecord struct {
 	SelectionID      *string    `gorm:"column:selection_id"`
 	ID               string     `gorm:"column:id"`
 	OwnerID          string     `gorm:"column:owner_user_id"`
+	External         bool       `gorm:"column:external"`
 	Title            string     `gorm:"column:title"`
 	ExpertID         *string    `gorm:"column:expert_id"`
 	ExpertTeamID     *string    `gorm:"column:expert_team_id"`

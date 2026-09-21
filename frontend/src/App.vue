@@ -23,7 +23,7 @@ const online = ref<boolean | undefined>();
 const mobileOpen = ref(false);
 const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
-const aiCreationUnread = ref(localStorage.getItem("ai-creation-unread") === "1");
+const aiApplicationsUnread = ref(localStorage.getItem("ai-applications-unread") === "1");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 const navGroups = [
   {
@@ -32,6 +32,7 @@ const navGroups = [
       { id: "sessions", icon: ChatDotRound, path: "/sessions" },
       { id: "workflows", icon: Connection, path: "/workflows" },
       { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" },
+      { id: "ai-applications", icon: Picture, path: "/ai-apps" },
       { id: "knowledge-bases", icon: Folder, path: "/knowledge-bases" },
     ],
   },
@@ -56,9 +57,9 @@ watch(currentUser, (user) => {
   void monitorImageGeneration();
 }, { immediate: true });
 watch(() => route.meta.surface, (surface) => {
-  if (surface === "ai-creation") {
-    aiCreationUnread.value = false;
-    localStorage.removeItem("ai-creation-unread");
+  if (surface === "ai-applications") {
+    aiApplicationsUnread.value = false;
+    localStorage.removeItem("ai-applications-unread");
   }
 }, { immediate: true });
 
@@ -97,9 +98,9 @@ async function monitorImageGeneration() {
       const completed = records.find((record) => record.id === monitoredImageRecord);
       if (completed) {
         ElNotification({ title: t("imageGeneration.title"), message: t(`imageGeneration.${completed.state}`), type: completed.state === "succeeded" ? "success" : "warning" });
-        if (route.meta.surface !== "ai-creation") {
-          aiCreationUnread.value = true;
-          localStorage.setItem("ai-creation-unread", "1");
+        if (route.meta.surface !== "ai-applications") {
+          aiApplicationsUnread.value = true;
+          localStorage.setItem("ai-applications-unread", "1");
         }
       }
       monitoredImageRecord = "";
@@ -138,7 +139,7 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
         <nav :aria-label="t('nav.label')">
           <section v-for="group in navGroups" :key="group.id" class="nav-group">
             <h2>{{ t(`nav.groups.${group.id}`) }}</h2>
-            <RouterLink v-for="item in group.items" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-creation' && aiCreationUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
+            <RouterLink v-for="item in group.items" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
           </section>
         </nav>
         <div class="sidebar-spacer"></div>

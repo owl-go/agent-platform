@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
 
-export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "settings";
+export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -27,6 +27,22 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "knowledge-bases" } },
       { path: "/ai-creation", redirect: "/ai-creation/image-generation" },
       { path: "/ai-creation/image-generation", name: "image-generation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-creation" } },
+      {
+        path: "/ai-apps",
+        component: () => import("./pages/AIApplicationsPage.vue"),
+        meta: { surface: "ai-applications" },
+        children: [
+          { path: "", redirect: "image-creation" },
+          { path: "image-creation", name: "image-creation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "assistants", name: "smart-assistants", component: () => import("./pages/SmartAssistantsPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "assistants/:assistantId", name: "smart-assistant-detail", component: () => import("./pages/SmartAssistantDetailPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "digital-humans", name: "digital-humans", component: () => import("./pages/DigitalHumansPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "digital-humans/:digitalHumanId", name: "digital-human-detail", component: () => import("./pages/DigitalHumanDetailPage.vue"), meta: { surface: "ai-applications" } },
+        ],
+      },
+      { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
+      { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
       { path: "/:pathMatch(.*)*", redirect: "/sessions" },
