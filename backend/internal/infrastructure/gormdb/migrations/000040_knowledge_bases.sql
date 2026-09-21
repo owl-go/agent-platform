@@ -40,6 +40,6 @@ DO $$
 BEGIN
     CREATE EXTENSION IF NOT EXISTS vector;
     ALTER TABLE knowledge_chunks ADD COLUMN embedding vector(1536);
-EXCEPTION WHEN undefined_file OR insufficient_privilege THEN
+EXCEPTION WHEN feature_not_supported OR undefined_file OR insufficient_privilege THEN
     ALTER TABLE knowledge_chunks ADD COLUMN embedding jsonb;
 END $$;
