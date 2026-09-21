@@ -297,8 +297,28 @@ A migrated or partially edited Expert missing required Introduction, Core Capabi
 _Avoid_: unavailable execution configuration, deleted Expert
 
 **Connector**:
-A selectable integration through which a Session response or Run accesses an external capability, with or without an Expert. A User may privately own an MCP Connector, while an Administrator creates platform-wide MCP and Third-party CLI Connectors; User-specific CLI authorization remains private to that User.
+A selectable integration through which a Session response or Run accesses an external capability, with or without an Expert. A Connector is distributed as a versioned Connector Package and declares exactly one external access mode: MCP or CLI. User-specific authorization remains private to that User.
 _Avoid_: Extension, Skill, Runtime Engine
+
+**Connector Package**:
+An immutable, versioned distributable containing `connector-meta.json`, `icon.svg`, exactly one mode manifest (`mcp.json` or `cli.json`), and at least one Skill directory with a required `SKILL.md`. It may enter the platform as an uploaded ZIP or be assembled through a guided creation flow, but both paths produce the same validated package contract. The package describes how its external capability is connected; its Skills explain how an Agent should use that capability. A package cannot declare both MCP and CLI modes.
+_Avoid_: Skill-only package, Runtime image, credential bundle
+
+**Connector Installation**:
+A User- or platform-scoped record that a validated Connector Package revision is available in the isolated installation area. Installation does not grant an external account authorization and does not imply that the Connector is connected.
+_Avoid_: Connector Authorization, active Runtime process, package upload
+
+**Connector Authorization**:
+A User-private grant that lets one installed Connector access an external identity or service scope. The platform owns the encrypted credential boundary and revalidates the current grant before every external invocation; disconnecting it immediately blocks new invocations without deleting the Connector Installation.
+_Avoid_: Connector Installation, permanent permission, shared platform credential
+
+**Connector Revision**:
+An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used.
+_Avoid_: Mutable Connector configuration, authorization version, latest tag
+
+**Connector Invocation Result**:
+The platform-normalized success or failure envelope returned from an MCP tool or CLI command. It carries a request identity, structured data or a stable error category, retry guidance, and only redacted diagnostics.
+_Avoid_: Raw process output, Provider response, Runtime event stream
 
 **CLI Connector Definition**:
 An Administrator-owned, platform-wide definition of one Third-party CLI's icon, name, capability description, immutable installation source, derived executable contract, capabilities, authentication, and execution policy. Users may use but never create or modify it.
@@ -330,7 +350,7 @@ The single Feishu developer application created for one User when that User enab
 _Avoid_: CLI Connector Definition, one application per Expert, platform-wide Feishu application
 
 **Skill**:
-A private User-owned or Administrator-created Platform Resource containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. Scripts run only inside an isolated Runtime environment.
+A private User-owned or Administrator-created Platform Resource containing a required `SKILL.md` and optional scripts or resources, installed from a Git URL or uploaded archive. A Connector Package must carry at least one such Skill; a standalone Skill does not provide external access by itself. Scripts run only inside an isolated Runtime environment.
 _Avoid_: Connector, Prompt, Runtime Engine
 
 **Recommended Skill Offer**:

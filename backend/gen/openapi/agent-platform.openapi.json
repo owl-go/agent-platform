@@ -1495,6 +1495,36 @@
         ]
       }
     },
+    "/api/v1/connectors": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorInstallations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListConnectorInstallationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli": {
       "get": {
         "operationId": "AgentWorkspaceService_ListCLIConnectorDefinitions",
@@ -2087,6 +2117,185 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AgentWorkspaceServiceTestMCPConnectorBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/packages": {
+      "post": {
+        "operationId": "AgentWorkspaceService_UploadConnectorPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorInstallation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1UploadConnectorPackageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/packages/guided": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateConnectorPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorInstallation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateConnectorPackageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_UninstallConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableConnectorInstallation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ConnectorInstallation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceDisableConnectorInstallationBody"
               }
             }
           },
@@ -2757,6 +2966,386 @@
           },
           "required": true
         },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeBases",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListKnowledgeBasesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1KnowledgeBase"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1CreateKnowledgeBaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1KnowledgeBase"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateKnowledgeBase",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1KnowledgeBase"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceUpdateKnowledgeBaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeCategories",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListKnowledgeCategoriesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateKnowledgeCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1KnowledgeCategory"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceCreateKnowledgeCategoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_DeleteKnowledgeCategory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/knowledge-bases/{knowledge_base_id}/documents": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListKnowledgeDocuments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListKnowledgeDocumentsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "tags": [
           "AgentWorkspaceService"
         ]
@@ -5000,6 +5589,14 @@
           }
         }
       },
+      "AgentWorkspaceServiceCreateKnowledgeCategoryBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "AgentWorkspaceServiceCreateProviderModelBody": {
         "type": "object",
         "properties": {
@@ -5024,6 +5621,15 @@
         }
       },
       "AgentWorkspaceServiceDisableCLIConnectorDefinitionBody": {
+        "type": "object",
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AgentWorkspaceServiceDisableConnectorInstallationBody": {
         "type": "object",
         "properties": {
           "expected_version": {
@@ -5264,6 +5870,18 @@
         "properties": {
           "expert_team": {
             "$ref": "#/components/schemas/v1ExpertTeamInput"
+          },
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AgentWorkspaceServiceUpdateKnowledgeBaseBody": {
+        "type": "object",
+        "properties": {
+          "knowledge_base": {
+            "$ref": "#/components/schemas/v1KnowledgeBaseInput"
           },
           "expected_version": {
             "type": "integer",
@@ -5877,6 +6495,30 @@
           }
         }
       },
+      "v1ConnectorInstallation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "active_revision_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "authorized": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1ConversationFile": {
         "type": "object",
         "properties": {
@@ -5981,6 +6623,41 @@
           }
         }
       },
+      "v1CreateConnectorPackageRequest": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "auth_mode": {
+            "type": "string"
+          },
+          "mcp_json": {
+            "type": "string"
+          },
+          "cli_json": {
+            "type": "string"
+          },
+          "skill_name": {
+            "type": "string"
+          },
+          "skill_markdown": {
+            "type": "string"
+          }
+        }
+      },
       "v1CreateExpertRequest": {
         "type": "object",
         "properties": {
@@ -6059,6 +6736,14 @@
           },
           "api_key": {
             "type": "string"
+          }
+        }
+      },
+      "v1CreateKnowledgeBaseRequest": {
+        "type": "object",
+        "properties": {
+          "knowledge_base": {
+            "$ref": "#/components/schemas/v1KnowledgeBaseInput"
           }
         }
       },
@@ -7094,6 +7779,179 @@
           }
         }
       },
+      "v1KnowledgeBase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1KnowledgeBaseInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1KnowledgeCategory": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "knowledge_base_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "v1KnowledgeDocument": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "knowledge_base_id": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string"
+          },
+          "source_uri": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "latest_revision": {
+            "$ref": "#/components/schemas/v1KnowledgeDocumentRevision"
+          }
+        }
+      },
+      "v1KnowledgeDocumentRevision": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "object_key": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ready_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "v1ListArtifactsResponse": {
         "type": "object",
         "properties": {
@@ -7156,6 +8014,17 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1CommandApproval"
+            }
+          }
+        }
+      },
+      "v1ListConnectorInstallationsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1ConnectorInstallation"
             }
           }
         }
@@ -7242,6 +8111,39 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/v1ImageModel"
+            }
+          }
+        }
+      },
+      "v1ListKnowledgeBasesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1KnowledgeBase"
+            }
+          }
+        }
+      },
+      "v1ListKnowledgeCategoriesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1KnowledgeCategory"
+            }
+          }
+        }
+      },
+      "v1ListKnowledgeDocumentsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1KnowledgeDocument"
             }
           }
         }
@@ -8529,6 +9431,15 @@
           }
         }
       },
+      "v1UploadConnectorPackageRequest": {
+        "type": "object",
+        "properties": {
+          "archive": {
+            "type": "string",
+            "format": "byte"
+          }
+        }
+      },
       "v1UserAccount": {
         "type": "object",
         "properties": {
@@ -8610,6 +9521,12 @@
           },
           "expert_team_id": {
             "type": "string"
+          },
+          "knowledge_base_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -8666,6 +9583,12 @@
           },
           "expert_team_id": {
             "type": "string"
+          },
+          "knowledge_base_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

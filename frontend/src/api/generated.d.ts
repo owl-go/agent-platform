@@ -436,6 +436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorInstallations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli": {
         parameters: {
             query?: never;
@@ -612,6 +628,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_UploadConnectorPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/packages/guided": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateConnectorPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_UninstallConnector"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisableConnectorInstallation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/conversation-files": {
         parameters: {
             query?: never;
@@ -754,6 +834,86 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["AgentWorkspaceService_UpdateExpert"];
+        trace?: never;
+    };
+    "/api/v1/knowledge-bases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListKnowledgeBases"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateKnowledgeBase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-bases/{knowledge_base_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetKnowledgeBase"];
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteKnowledgeBase"];
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateKnowledgeBase"];
+        trace?: never;
+    };
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListKnowledgeCategories"];
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateKnowledgeCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_DeleteKnowledgeCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-bases/{knowledge_base_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListKnowledgeDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/me": {
@@ -1338,6 +1498,9 @@ export interface components {
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
         };
+        AgentWorkspaceServiceCreateKnowledgeCategoryBody: {
+            name?: string;
+        };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
         };
@@ -1348,6 +1511,10 @@ export interface components {
             expected_version?: number;
         };
         AgentWorkspaceServiceDisableCLIConnectorDefinitionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDisableConnectorInstallationBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1430,6 +1597,11 @@ export interface components {
         };
         AgentWorkspaceServiceUpdateExpertTeamBody: {
             expert_team?: components["schemas"]["v1ExpertTeamInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateKnowledgeBaseBody: {
+            knowledge_base?: components["schemas"]["v1KnowledgeBaseInput"];
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1653,6 +1825,15 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1ConnectorInstallation: {
+            id?: string;
+            source?: string;
+            active_revision_id?: string;
+            state?: string;
+            authorized?: boolean;
+            /** Format: int64 */
+            version?: number;
+        };
         v1ConversationFile: {
             kind?: string;
             id?: string;
@@ -1683,6 +1864,18 @@ export interface components {
         v1CreateCLIConnectorDefinitionRequest: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
         };
+        v1CreateConnectorPackageRequest: {
+            source?: string;
+            version?: string;
+            type?: string;
+            name?: string;
+            description?: string;
+            auth_mode?: string;
+            mcp_json?: string;
+            cli_json?: string;
+            skill_name?: string;
+            skill_markdown?: string;
+        };
         v1CreateExpertRequest: {
             expert?: components["schemas"]["v1ExpertInput"];
         };
@@ -1704,6 +1897,9 @@ export interface components {
             rates?: components["schemas"]["v1ImageCreditRate"][];
             endpoint?: string;
             api_key?: string;
+        };
+        v1CreateKnowledgeBaseRequest: {
+            knowledge_base?: components["schemas"]["v1KnowledgeBaseInput"];
         };
         v1CreateMCPConnectorRequest: {
             mcp_connector?: components["schemas"]["v1MCPConnectorInput"];
@@ -2072,6 +2268,74 @@ export interface components {
             endpoint?: string;
             api_key_configured?: boolean;
         };
+        v1KnowledgeBase: {
+            id?: string;
+            owner_id?: string;
+            name?: string;
+            description?: string;
+            visibility?: string;
+            platform?: boolean;
+            deleted?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1KnowledgeBaseInput: {
+            name?: string;
+            description?: string;
+            visibility?: string;
+            platform?: boolean;
+        };
+        v1KnowledgeCategory: {
+            id?: string;
+            knowledge_base_id?: string;
+            name?: string;
+            deleted?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1KnowledgeDocument: {
+            id?: string;
+            knowledge_base_id?: string;
+            category_id?: string;
+            name?: string;
+            source_type?: string;
+            source_uri?: string;
+            state?: string;
+            error?: string;
+            deleted?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: int64 */
+            version?: number;
+            latest_revision?: components["schemas"]["v1KnowledgeDocumentRevision"];
+        };
+        v1KnowledgeDocumentRevision: {
+            id?: string;
+            document_id?: string;
+            /** Format: int32 */
+            revision?: number;
+            object_key?: string;
+            sha256?: string;
+            /** Format: int64 */
+            size?: number;
+            content_type?: string;
+            state?: string;
+            error?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            ready_at?: string;
+        };
         v1ListArtifactsResponse: {
             items?: components["schemas"]["v1Artifact"][];
         };
@@ -2089,6 +2353,9 @@ export interface components {
         };
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
+        };
+        v1ListConnectorInstallationsResponse: {
+            items?: components["schemas"]["v1ConnectorInstallation"][];
         };
         v1ListConversationFilesResponse: {
             items?: components["schemas"]["v1ConversationFile"][];
@@ -2112,6 +2379,15 @@ export interface components {
         };
         v1ListImageModelsResponse: {
             items?: components["schemas"]["v1ImageModel"][];
+        };
+        v1ListKnowledgeBasesResponse: {
+            items?: components["schemas"]["v1KnowledgeBase"][];
+        };
+        v1ListKnowledgeCategoriesResponse: {
+            items?: components["schemas"]["v1KnowledgeCategory"][];
+        };
+        v1ListKnowledgeDocumentsResponse: {
+            items?: components["schemas"]["v1KnowledgeDocument"][];
         };
         v1ListMCPConnectorsResponse: {
             items?: components["schemas"]["v1MCPConnector"][];
@@ -2549,6 +2825,10 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        v1UploadConnectorPackageRequest: {
+            /** Format: byte */
+            archive?: string;
+        };
         v1UserAccount: {
             id?: string;
             username?: string;
@@ -2579,6 +2859,7 @@ export interface components {
             /** Format: int64 */
             version?: number;
             expert_team_id?: string;
+            knowledge_base_ids?: string[];
         };
         v1WorkflowAccessToken: {
             jwt_token?: string;
@@ -2599,6 +2880,7 @@ export interface components {
             environment?: components["schemas"]["v1EnvironmentVariable"][];
             schedule?: components["schemas"]["v1Schedule"];
             expert_team_id?: string;
+            knowledge_base_ids?: string[];
         };
         v1WorkspaceEntry: {
             path?: string;
@@ -3776,6 +4058,35 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_ListConnectorInstallations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorInstallationsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListCLIConnectorDefinitions: {
         parameters: {
             query?: never;
@@ -4223,6 +4534,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1MCPConnector"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UploadConnectorPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1UploadConnectorPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateConnectorPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateConnectorPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UninstallConnector: {
+        parameters: {
+            query?: {
+                expected_version?: number;
+            };
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisableConnectorInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisableConnectorInstallationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
                 };
             };
             /** @description An unexpected error response. */
@@ -4735,6 +5180,296 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Expert"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListKnowledgeBases: {
+        parameters: {
+            query?: {
+                deleted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListKnowledgeBasesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateKnowledgeBase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1CreateKnowledgeBaseRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1KnowledgeBase"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetKnowledgeBase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1KnowledgeBase"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteKnowledgeBase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateKnowledgeBase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateKnowledgeBaseBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1KnowledgeBase"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListKnowledgeCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListKnowledgeCategoriesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateKnowledgeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCreateKnowledgeCategoryBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1KnowledgeCategory"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DeleteKnowledgeCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+                category_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListKnowledgeDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                knowledge_base_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListKnowledgeDocumentsResponse"];
                 };
             };
             /** @description An unexpected error response. */

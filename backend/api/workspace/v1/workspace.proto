@@ -123,6 +123,11 @@ service AgentWorkspaceService {
   rpc GetSkillDeletionImpact(GetSkillDeletionImpactRequest) returns (ResourceDeletionImpact) { option (google.api.http) = {get: "/api/v1/skills/{skill_id}/deletion-impact"}; }
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/skills/{skill_id}"}; }
   rpc ListCLIConnectorDefinitions(ListCLIConnectorDefinitionsRequest) returns (ListCLIConnectorDefinitionsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli"}; }
+  rpc ListConnectorInstallations(ListConnectorInstallationsRequest) returns (ListConnectorInstallationsResponse) { option (google.api.http) = {get: "/api/v1/connectors"}; }
+  rpc UploadConnectorPackage(UploadConnectorPackageRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/packages" body: "*"}; }
+  rpc CreateConnectorPackage(CreateConnectorPackageRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/packages/guided" body: "*"}; }
+  rpc DisableConnectorInstallation(DisableConnectorInstallationRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/disable" body: "*"}; }
+  rpc UninstallConnector(UninstallConnectorRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/{installation_id}"}; }
   rpc CreateCLIConnectorDefinition(CreateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli" body: "*"}; }
   rpc UpdateCLIConnectorDefinition(UpdateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {patch: "/api/v1/admin/connectors/cli/{definition_id}" body: "*"}; }
   rpc PublishCLIConnectorDefinition(PublishCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/publish" body: "*"}; }
@@ -480,6 +485,14 @@ message DeleteCLIConnectorDefinitionRequest { string definition_id = 1; int64 ex
 message ListCLIConnectorHealthRequest {}
 message ListCLIConnectorHealthResponse { repeated CLIConnectorHealth items = 1; }
 message CLIConnectorHealth { string definition_id = 1; string definition_name = 2; string definition_state = 3; int64 enablement_count = 4; int64 enabled_count = 5; int64 waiting_for_user_count = 6; int64 active_authorization_count = 7; int64 attention_authorization_count = 8; }
+message ConnectorRevision { string id = 1; string source = 2; string package_version = 3; string mode = 4; string sha256 = 5; }
+message ConnectorInstallation { string id = 1; string source = 2; string active_revision_id = 3; string state = 4; bool authorized = 5; int64 version = 6; }
+message ListConnectorInstallationsRequest {}
+message ListConnectorInstallationsResponse { repeated ConnectorInstallation items = 1; }
+message UploadConnectorPackageRequest { bytes archive = 1; }
+message CreateConnectorPackageRequest { string source = 1; string version = 2; string type = 3; string name = 4; string description = 5; string auth_mode = 6; string mcp_json = 7; string cli_json = 8; string skill_name = 9; string skill_markdown = 10; }
+message DisableConnectorInstallationRequest { string installation_id = 1; int64 expected_version = 2; }
+message UninstallConnectorRequest { string installation_id = 1; int64 expected_version = 2; }
 message EnableCLIConnectorRequest { string definition_id = 1; }
 message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; optional string provider_name = 7; optional string developer_console_url = 8; }
 message ListCLIConnectorEnablementsRequest {}

@@ -125,6 +125,11 @@ const (
 	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
 	AgentWorkspaceService_DeleteSkill_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
 	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName         = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
+	AgentWorkspaceService_ListConnectorInstallations_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListConnectorInstallations"
+	AgentWorkspaceService_UploadConnectorPackage_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UploadConnectorPackage"
+	AgentWorkspaceService_CreateConnectorPackage_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateConnectorPackage"
+	AgentWorkspaceService_DisableConnectorInstallation_FullMethodName        = "/workspace.v1.AgentWorkspaceService/DisableConnectorInstallation"
+	AgentWorkspaceService_UninstallConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
 	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName       = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
@@ -252,6 +257,11 @@ type AgentWorkspaceServiceClient interface {
 	GetSkillDeletionImpact(ctx context.Context, in *GetSkillDeletionImpactRequest, opts ...grpc.CallOption) (*ResourceDeletionImpact, error)
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(ctx context.Context, in *ListCLIConnectorDefinitionsRequest, opts ...grpc.CallOption) (*ListCLIConnectorDefinitionsResponse, error)
+	ListConnectorInstallations(ctx context.Context, in *ListConnectorInstallationsRequest, opts ...grpc.CallOption) (*ListConnectorInstallationsResponse, error)
+	UploadConnectorPackage(ctx context.Context, in *UploadConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	CreateConnectorPackage(ctx context.Context, in *CreateConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	DisableConnectorInstallation(ctx context.Context, in *DisableConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	UninstallConnector(ctx context.Context, in *UninstallConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(ctx context.Context, in *UpdateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
@@ -1337,6 +1347,56 @@ func (c *agentWorkspaceServiceClient) ListCLIConnectorDefinitions(ctx context.Co
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ListConnectorInstallations(ctx context.Context, in *ListConnectorInstallationsRequest, opts ...grpc.CallOption) (*ListConnectorInstallationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorInstallationsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorInstallations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UploadConnectorPackage(ctx context.Context, in *UploadConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UploadConnectorPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateConnectorPackage(ctx context.Context, in *CreateConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateConnectorPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DisableConnectorInstallation(ctx context.Context, in *DisableConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisableConnectorInstallation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UninstallConnector(ctx context.Context, in *UninstallConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UninstallConnector_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CLIConnectorDefinition)
@@ -1597,6 +1657,11 @@ type AgentWorkspaceServiceServer interface {
 	GetSkillDeletionImpact(context.Context, *GetSkillDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
+	ListConnectorInstallations(context.Context, *ListConnectorInstallationsRequest) (*ListConnectorInstallationsResponse, error)
+	UploadConnectorPackage(context.Context, *UploadConnectorPackageRequest) (*ConnectorInstallation, error)
+	CreateConnectorPackage(context.Context, *CreateConnectorPackageRequest) (*ConnectorInstallation, error)
+	DisableConnectorInstallation(context.Context, *DisableConnectorInstallationRequest) (*ConnectorInstallation, error)
+	UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
@@ -1939,6 +2004,21 @@ func (UnimplementedAgentWorkspaceServiceServer) DeleteSkill(context.Context, *De
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCLIConnectorDefinitions not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorInstallations(context.Context, *ListConnectorInstallationsRequest) (*ListConnectorInstallationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorInstallations not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UploadConnectorPackage(context.Context, *UploadConnectorPackageRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method UploadConnectorPackage not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateConnectorPackage(context.Context, *CreateConnectorPackageRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateConnectorPackage not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisableConnectorInstallation(context.Context, *DisableConnectorInstallationRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableConnectorInstallation not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UninstallConnector not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCLIConnectorDefinition not implemented")
@@ -3914,6 +3994,96 @@ func _AgentWorkspaceService_ListCLIConnectorDefinitions_Handler(srv interface{},
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ListConnectorInstallations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorInstallationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorInstallations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorInstallations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorInstallations(ctx, req.(*ListConnectorInstallationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UploadConnectorPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadConnectorPackageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UploadConnectorPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UploadConnectorPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UploadConnectorPackage(ctx, req.(*UploadConnectorPackageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateConnectorPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConnectorPackageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateConnectorPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateConnectorPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateConnectorPackage(ctx, req.(*CreateConnectorPackageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DisableConnectorInstallation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableConnectorInstallationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisableConnectorInstallation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisableConnectorInstallation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisableConnectorInstallation(ctx, req.(*DisableConnectorInstallationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UninstallConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UninstallConnectorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UninstallConnector(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UninstallConnector_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UninstallConnector(ctx, req.(*UninstallConnectorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_CreateCLIConnectorDefinition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCLIConnectorDefinitionRequest)
 	if err := dec(in); err != nil {
@@ -4614,6 +4784,26 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCLIConnectorDefinitions",
 			Handler:    _AgentWorkspaceService_ListCLIConnectorDefinitions_Handler,
+		},
+		{
+			MethodName: "ListConnectorInstallations",
+			Handler:    _AgentWorkspaceService_ListConnectorInstallations_Handler,
+		},
+		{
+			MethodName: "UploadConnectorPackage",
+			Handler:    _AgentWorkspaceService_UploadConnectorPackage_Handler,
+		},
+		{
+			MethodName: "CreateConnectorPackage",
+			Handler:    _AgentWorkspaceService_CreateConnectorPackage_Handler,
+		},
+		{
+			MethodName: "DisableConnectorInstallation",
+			Handler:    _AgentWorkspaceService_DisableConnectorInstallation_Handler,
+		},
+		{
+			MethodName: "UninstallConnector",
+			Handler:    _AgentWorkspaceService_UninstallConnector_Handler,
 		},
 		{
 			MethodName: "CreateCLIConnectorDefinition",

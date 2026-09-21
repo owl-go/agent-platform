@@ -278,6 +278,7 @@ type Wrapper struct {
 	Process         Process
 	ConsumeApproval func(context.Context, string, string) error
 	Revalidate      func(context.Context, Definition, Request) error
+	LifecycleCheck  func(context.Context, Definition, Request) error
 	Now             func() time.Time
 }
 
@@ -301,6 +302,11 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 	if wrapper.Revalidate != nil {
 		if err := wrapper.Revalidate(ctx, definition, request); err != nil {
 			return Result{}, fmt.Errorf("revalidate CLI command: %w", err)
+		}
+	}
+	if wrapper.LifecycleCheck != nil {
+		if err := wrapper.LifecycleCheck(ctx, definition, request); err != nil {
+			return Result{}, fmt.Errorf("revalidate Connector lifecycle: %w", err)
 		}
 	}
 	if capability.Risk == RiskHigh {

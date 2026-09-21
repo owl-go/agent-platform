@@ -68,6 +68,10 @@ type cliExecutionRepository interface {
 	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
 }
 
+type cliLifecycleRepository interface {
+	ValidateCLIConnectorInvocation(context.Context, string, string) error
+}
+
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
 	if service == nil {
 		return fmt.Errorf("Credits service is required")
@@ -823,8 +827,14 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		executionKind, executionID = "session", fmt.Sprint(job.AssistantMessageID)
 	}
 	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
+	lifecycle := func(checkCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
+		if repository, ok := executor.cliCredentials.(cliLifecycleRepository); ok {
+			return repository.ValidateCLIConnectorInvocation(checkCtx, job.OwnerID, definition.ID)
+		}
+		return nil
+	}
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
-		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
+		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process, LifecycleCheck: lifecycle},
 		ResolveEnvironment: executor.cliEnvironmentResolver(job.OwnerID),
 		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,

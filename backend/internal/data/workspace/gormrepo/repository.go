@@ -24,6 +24,66 @@ type Repository struct {
 	workerLockMu  sync.Mutex
 }
 
+type connectorRevisionRecord struct {
+	ID            string    `gorm:"column:id"`
+	PackageSource string    `gorm:"column:package_source"`
+	Version       string    `gorm:"column:version"`
+	Mode          string    `gorm:"column:mode"`
+	PackageSHA256 string    `gorm:"column:package_sha256"`
+	RuntimePolicy []byte    `gorm:"column:runtime_policy;type:jsonb"`
+	ObjectKey     string    `gorm:"column:object_key"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
+}
+
+func (connectorRevisionRecord) TableName() string { return "connector_revisions" }
+
+type connectorInstallationRecord struct {
+	ID               string    `gorm:"column:id"`
+	OwnerID          string    `gorm:"column:owner_user_id"`
+	PackageSource    string    `gorm:"column:package_source"`
+	ActiveRevisionID string    `gorm:"column:active_revision_id"`
+	AuthorizationID  *string   `gorm:"column:authorization_id"`
+	State            string    `gorm:"column:state"`
+	Version          int64     `gorm:"column:version"`
+	UpdatedAt        time.Time `gorm:"column:updated_at"`
+}
+
+func (connectorInstallationRecord) TableName() string { return "connector_installations" }
+
+type connectorAuthorizationRecord struct {
+	ID                   string     `gorm:"column:id"`
+	OwnerID              string     `gorm:"column:owner_user_id"`
+	InstallationID       string     `gorm:"column:installation_id"`
+	IdentityRef          string     `gorm:"column:identity_ref"`
+	Scopes               []byte     `gorm:"column:scopes;type:jsonb"`
+	CredentialCiphertext []byte     `gorm:"column:credential_ciphertext"`
+	State                string     `gorm:"column:state"`
+	ExpiresAt            *time.Time `gorm:"column:expires_at"`
+	Version              int64      `gorm:"column:version"`
+	UpdatedAt            time.Time  `gorm:"column:updated_at"`
+}
+
+func (connectorAuthorizationRecord) TableName() string { return "connector_authorizations" }
+
+type connectorAuditRecord struct {
+	ID                string    `gorm:"column:id"`
+	OwnerID           string    `gorm:"column:owner_user_id"`
+	InstallationID    string    `gorm:"column:installation_id"`
+	RevisionID        string    `gorm:"column:revision_id"`
+	Mode              string    `gorm:"column:mode"`
+	Operation         string    `gorm:"column:operation"`
+	Risk              string    `gorm:"column:risk"`
+	IdentityRef       string    `gorm:"column:identity_ref"`
+	ApprovalReference string    `gorm:"column:approval_reference"`
+	Outcome           string    `gorm:"column:outcome"`
+	ErrorType         string    `gorm:"column:error_type"`
+	RequestID         string    `gorm:"column:request_id"`
+	PolicyRevision    string    `gorm:"column:policy_revision"`
+	CreatedAt         time.Time `gorm:"column:created_at"`
+}
+
+func (connectorAuditRecord) TableName() string { return "connector_audit_records" }
+
 type creditTransactionSettler interface {
 	SettleTx(*gorm.DB, creditsdomain.Settlement) (creditsdomain.Consumption, error)
 }

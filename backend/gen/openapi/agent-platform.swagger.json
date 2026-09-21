@@ -1147,6 +1147,28 @@
         ]
       }
     },
+    "/api/v1/connectors": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorInstallations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectorInstallationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli": {
       "get": {
         "operationId": "AgentWorkspaceService_ListCLIConnectorDefinitions",
@@ -1593,6 +1615,145 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceTestMCPConnectorBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/packages": {
+      "post": {
+        "operationId": "AgentWorkspaceService_UploadConnectorPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UploadConnectorPackageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/packages/guided": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateConnectorPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateConnectorPackageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_UninstallConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableConnectorInstallation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisableConnectorInstallationBody"
             }
           }
         ],
@@ -4145,6 +4306,15 @@
         }
       }
     },
+    "AgentWorkspaceServiceDisableConnectorInstallationBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody": {
       "type": "object",
       "properties": {
@@ -5009,6 +5179,30 @@
         }
       }
     },
+    "v1ConnectorInstallation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "active_revision_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "authorized": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1ConversationFile": {
       "type": "object",
       "properties": {
@@ -5116,6 +5310,41 @@
       "properties": {
         "definition": {
           "$ref": "#/definitions/v1CLIConnectorDefinitionInput"
+        }
+      }
+    },
+    "v1CreateConnectorPackageRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "auth_mode": {
+          "type": "string"
+        },
+        "mcp_json": {
+          "type": "string"
+        },
+        "cli_json": {
+          "type": "string"
+        },
+        "skill_name": {
+          "type": "string"
+        },
+        "skill_markdown": {
+          "type": "string"
         }
       }
     },
@@ -6492,6 +6721,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1CommandApproval"
+          }
+        }
+      }
+    },
+    "v1ListConnectorInstallationsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectorInstallation"
           }
         }
       }
@@ -7936,6 +8177,15 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1UploadConnectorPackageRequest": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },
