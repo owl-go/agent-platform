@@ -84,7 +84,10 @@ func (repository *Repository) InstallConnector(ctx context.Context, input domain
 			}
 			updates := map[string]any{"active_revision_id": input.ActiveRevisionID, "state": string(domain.ConnectorInstallationActive), "updated_at": input.UpdatedAt, "version": gorm.Expr("version + 1")}
 			var oldRevision connectorRevisionRecord
-			if oldErr := tx.Where("id = ?", row.ActiveRevisionID).Take(&oldRevision).Error; oldErr == nil && oldRevision.Mode != revision.Mode {
+			if err := tx.Where("id = ?", row.ActiveRevisionID).Take(&oldRevision).Error; err != nil {
+				return err
+			}
+			if oldRevision.Mode != revision.Mode {
 				updates["authorization_id"] = nil
 				if row.AuthorizationID != nil {
 					if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ?", *row.AuthorizationID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
@@ -181,6 +184,20 @@ func (repository *Repository) changeConnectorRevision(ctx context.Context, owner
 			return domain.ErrConflict
 		}
 		updates := map[string]any{"active_revision_id": revisionID, "state": string(domain.ConnectorInstallationActive), "updated_at": now, "version": gorm.Expr("version + 1")}
+		var oldRevision connectorRevisionRecord
+		if err := tx.Where("id = ?", row.ActiveRevisionID).Take(&oldRevision).Error; err != nil {
+			return err
+		}
+		if oldRevision.Mode != revision.Mode {
+			updates["authorization_id"] = nil
+			if row.AuthorizationID != nil {
+				if err := tx.Model(&connectorAuthorizationRecord{}).
+					Where("id = ? AND owner_user_id = ?", *row.AuthorizationID, ownerID).
+					Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": now, "version": gorm.Expr("version + 1")}).Error; err != nil {
+					return err
+				}
+			}
+		}
 		if err := tx.Model(&connectorInstallationRecord{}).Where("id = ? AND version = ?", installationID, row.Version).Updates(updates).Error; err != nil {
 			return err
 		}
@@ -199,15 +216,19 @@ func (repository *Repository) DisconnectConnectorAuthorization(ctx context.Conte
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ?", authorizationID, ownerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if row.State == string(domain.ConnectorAuthorizationDisconnected) {
-			return nil
+		if row.State != string(domain.ConnectorAuthorizationDisconnected) {
+			result := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND version = ?", authorizationID, row.Version).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return domain.ErrConflict
+			}
 		}
-		result := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND version = ?", authorizationID, row.Version).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected != 1 {
-			return domain.ErrConflict
+		if err := tx.Model(&connectorInstallationRecord{}).
+			Where("id = ? AND owner_user_id = ? AND authorization_id = ?", row.InstallationID, ownerID, authorizationID).
+			Updates(map[string]any{"authorization_id": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
 		}
 		return tx.Where("id = ?", authorizationID).Take(&row).Error
 	})
@@ -227,12 +248,39 @@ func (repository *Repository) CreateConnectorAuthorization(ctx context.Context, 
 	if input.State == "" {
 		input.State = domain.ConnectorAuthorizationActive
 	}
+	now := time.Now().UTC()
+	if input.State != domain.ConnectorAuthorizationActive || input.ExpiresAt != nil && !now.Before(*input.ExpiresAt) {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("%w: Connector authorization must be active and unexpired", domain.ErrInvalid)
+	}
 	if input.Version == 0 {
 		input.Version = 1
 	}
-	scopes, _ := json.Marshal(input.Scopes)
-	row := connectorAuthorizationRecord{ID: input.ID, OwnerID: input.OwnerID, InstallationID: input.InstallationID, IdentityRef: input.IdentityRef, Scopes: scopes, CredentialCiphertext: input.CredentialCiphertext, State: string(input.State), ExpiresAt: input.ExpiresAt, Version: input.Version, UpdatedAt: time.Now().UTC()}
-	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
+	scopes, err := json.Marshal(input.Scopes)
+	if err != nil {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("encode Connector Authorization scopes: %w", err)
+	}
+	row := connectorAuthorizationRecord{ID: input.ID, OwnerID: input.OwnerID, InstallationID: input.InstallationID, IdentityRef: input.IdentityRef, Scopes: scopes, CredentialCiphertext: input.CredentialCiphertext, State: string(input.State), ExpiresAt: input.ExpiresAt, Version: input.Version, UpdatedAt: now}
+	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var installation connectorInstallationRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND owner_user_id = ? AND state <> ?", input.InstallationID, input.OwnerID, domain.ConnectorInstallationUninstalled).
+			Take(&installation).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		if installation.AuthorizationID != nil && *installation.AuthorizationID != row.ID {
+			if err := tx.Model(&connectorAuthorizationRecord{}).
+				Where("id = ? AND owner_user_id = ?", *installation.AuthorizationID, input.OwnerID).
+				Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Model(&connectorInstallationRecord{}).
+			Where("id = ? AND owner_user_id = ?", input.InstallationID, input.OwnerID).
+			Updates(map[string]any{"authorization_id": row.ID, "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error
+	}); err != nil {
 		return domain.ConnectorAuthorization{}, fmt.Errorf("create Connector Authorization: %w", err)
 	}
 	return connectorAuthorizationDomain(row), nil
@@ -275,10 +323,44 @@ func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context
 func (repository *Repository) ValidateMCPInvocation(ctx context.Context, ownerID, serverID string) error {
 	db := repository.db.WithContext(ctx)
 	var server mcpRecord
-	if err := mcpCatalogQuery(db).
+	err := mcpCatalogQuery(db).
 		Where("owner_user_id IN (?) AND id = ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(db, ownerID), serverID).
-		Take(&server).Error; err != nil {
+		Take(&server).Error
+	if err == nil {
+		return nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return err
+	}
+
+	var installation connectorInstallationRecord
+	if err := db.Where("id = ? AND owner_user_id = ? AND state = ?", serverID, ownerID, domain.ConnectorInstallationActive).Take(&installation).Error; err != nil {
 		return mapNotFound(err)
+	}
+	var revision connectorRevisionRecord
+	if err := db.Where("id = ? AND mode = ?", installation.ActiveRevisionID, domain.ConnectorModeMCP).Take(&revision).Error; err != nil {
+		return mapNotFound(err)
+	}
+	var policy struct {
+		AuthMode string `json:"auth_mode"`
+	}
+	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.AuthMode == "" {
+		return fmt.Errorf("%w: Connector authorization policy is unavailable", domain.ErrConflict)
+	}
+	if policy.AuthMode == "none" {
+		return nil
+	}
+	if installation.AuthorizationID == nil {
+		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	var count int64
+	if err := db.Model(&connectorAuthorizationRecord{}).
+		Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	return nil
 }

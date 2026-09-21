@@ -3,6 +3,7 @@ package workspace
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -10,10 +11,16 @@ import (
 )
 
 func TestConnectorRevisionFromPackageUsesImmutableChecksumKey(t *testing.T) {
-	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.2.3", Type: connectorpackage.TypeMCP}, SHA256: strings.Repeat("a", 64)}
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.2.3", Type: connectorpackage.TypeMCP, AuthMode: "oauth"}, SHA256: strings.Repeat("a", 64)}
 	revision, key := connectorRevisionFromPackage(pkg)
 	if revision.PackageSource != "example" || revision.Version != "1.2.3" || key != "connectors/example/1.2.3/"+strings.Repeat("a", 64)+".zip" {
 		t.Fatalf("unexpected revision=%#v key=%q", revision, key)
+	}
+	var policy struct {
+		AuthMode string `json:"auth_mode"`
+	}
+	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.AuthMode != "oauth" {
+		t.Fatalf("runtime policy = %s, error = %v", revision.RuntimePolicy, err)
 	}
 }
 

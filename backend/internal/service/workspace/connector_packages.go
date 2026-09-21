@@ -135,7 +135,7 @@ func (service *Service) UninstallConnector(ctx context.Context, request *workspa
 }
 
 func connectorRevisionFromPackage(pkg connectorpackage.Package) (domain.ConnectorRevision, string) {
-	policy, _ := json.Marshal(map[string]any{"mcp": pkg.MCP, "cli": pkg.CLI})
+	policy, _ := json.Marshal(map[string]any{"auth_mode": pkg.Metadata.AuthMode, "mcp": pkg.MCP, "cli": pkg.CLI})
 	revision := domain.ConnectorRevision{PackageSource: pkg.Metadata.Source, Version: pkg.Metadata.Version, Mode: domain.ConnectorMode(pkg.Metadata.Type), PackageSHA256: pkg.SHA256, RuntimePolicy: policy}
 	return revision, fmt.Sprintf("connectors/%s/%s/%s.zip", pkg.Metadata.Source, pkg.Metadata.Version, pkg.SHA256)
 }
