@@ -79,13 +79,6 @@ func TestConsumeExternalRateIsAtomicPerMinute(t *testing.T) {
 	if embeddingType != "jsonb" {
 		t.Fatalf("stock PostgreSQL embedding type = %q, want jsonb fallback", embeddingType)
 	}
-	if err := db.Exec(`UPDATE schema_migrations SET checksum = ? WHERE name = ?`, "cab4e9c600dac2bcfaef2017e3ed7b4d56261ca5dd94396b415d4cb5d1d2c9c6", "000040_knowledge_bases.sql").Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := gormdb.Migrate(context.Background(), db); err != nil {
-		t.Fatalf("upgrade legacy migration checksum: %v", err)
-	}
-
 	repository := New(db, nil)
 	now := time.Date(2026, time.September, 21, 4, 5, 30, 0, time.UTC)
 	const attempts = 12

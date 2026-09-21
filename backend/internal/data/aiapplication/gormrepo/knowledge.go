@@ -14,17 +14,20 @@ import (
 )
 
 type knowledgeBaseRecord struct {
-	ID, OwnerID, Name, Description, State string
-	CreatedAt, UpdatedAt                  time.Time
-	Version                               int64
+	ID, OwnerID, Name, Description, Visibility string
+	Platform                                   bool
+	DeletedAt                                  *time.Time
+	CreatedAt, UpdatedAt                       time.Time
+	Version                                    int64
 }
 
 func (knowledgeBaseRecord) TableName() string { return "knowledge_bases" }
 
 type knowledgeDocumentRecord struct {
-	ID, KnowledgeBaseID, Name, Content, ContentSHA256, State, FailureReason string
-	CreatedAt, UpdatedAt                                                    time.Time
-	Version                                                                 int64
+	ID, KnowledgeBaseID, Name, SourceType, NormalizedSource, Content, ContentSHA256, State, FailureReason string
+	DeletedAt                                                                                             *time.Time
+	CreatedAt, UpdatedAt                                                                                  time.Time
+	Version                                                                                               int64
 }
 
 func (knowledgeDocumentRecord) TableName() string { return "knowledge_documents" }
@@ -46,7 +49,7 @@ type knowledgeSearchRecord struct {
 
 func (r *Repository) ListKnowledgeBases(ctx context.Context, owner string) ([]domain.KnowledgeBase, error) {
 	var rows []knowledgeBaseRecord
-	if err := r.db.WithContext(ctx).Where("owner_user_id = ?", owner).Order("updated_at DESC").Find(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND deleted_at IS NULL", owner).Order("updated_at DESC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	result := make([]domain.KnowledgeBase, 0, len(rows))
@@ -57,7 +60,7 @@ func (r *Repository) ListKnowledgeBases(ctx context.Context, owner string) ([]do
 }
 func (r *Repository) GetKnowledgeBase(ctx context.Context, owner, id string) (domain.KnowledgeBase, error) {
 	var row knowledgeBaseRecord
-	err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", owner, id).Take(&row).Error
+	err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", owner, id).Take(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.KnowledgeBase{}, domain.ErrNotFound
 	}
@@ -69,7 +72,7 @@ func (r *Repository) GetKnowledgeBase(ctx context.Context, owner, id string) (do
 func (r *Repository) CreateKnowledgeBase(ctx context.Context, owner string, base domain.KnowledgeBase) (domain.KnowledgeBase, error) {
 	now := time.Now().UTC()
 	base.ID, base.OwnerID, base.CreatedAt, base.UpdatedAt, base.Version = uuid.NewString(), owner, now, now, 1
-	row := knowledgeBaseRecord{ID: base.ID, OwnerID: owner, Name: base.Name, Description: base.Description, State: string(base.State), CreatedAt: now, UpdatedAt: now, Version: 1}
+	row := knowledgeBaseRecord{ID: base.ID, OwnerID: owner, Name: base.Name, Description: base.Description, Visibility: "private", CreatedAt: now, UpdatedAt: now, Version: 1}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.KnowledgeBase{}, mapDBError(err)
 	}
@@ -80,7 +83,7 @@ func (r *Repository) ListKnowledgeDocuments(ctx context.Context, owner, baseID s
 		return nil, err
 	}
 	var rows []knowledgeDocumentRecord
-	if err := r.db.WithContext(ctx).Where("knowledge_base_id = ?", baseID).Order("updated_at DESC").Find(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("knowledge_base_id = ? AND deleted_at IS NULL", baseID).Order("updated_at DESC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	result := make([]domain.KnowledgeDocument, 0, len(rows))
@@ -104,7 +107,7 @@ func (r *Repository) createKnowledgeDocument(ctx context.Context, owner, baseID 
 	now := time.Now().UTC()
 	document.ID, document.KnowledgeBaseID, document.CreatedAt, document.UpdatedAt, document.Version = uuid.NewString(), baseID, now, now, 1
 	return document, r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		row := knowledgeDocumentRecord{ID: document.ID, KnowledgeBaseID: baseID, Name: document.Name, Content: document.Content, ContentSHA256: document.ContentSHA256, State: string(document.State), FailureReason: document.FailureReason, CreatedAt: now, UpdatedAt: now, Version: 1}
+		row := knowledgeDocumentRecord{ID: document.ID, KnowledgeBaseID: baseID, Name: document.Name, SourceType: "upload", NormalizedSource: document.ContentSHA256, Content: document.Content, ContentSHA256: document.ContentSHA256, State: string(document.State), FailureReason: document.FailureReason, CreatedAt: now, UpdatedAt: now, Version: 1}
 		if err := tx.Create(&row).Error; err != nil {
 			return mapDBError(err)
 		}
@@ -126,7 +129,7 @@ func (r *Repository) SearchKnowledgeVector(ctx context.Context, owner string, ba
 		return nil, nil
 	}
 	var rows []knowledgeSearchRecord
-	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, 1 - (c.embedding <=> ?::vector) AS score", vectorLiteral(embedding)).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready'").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.state = 'ready'", owner).Where("d.knowledge_base_id IN ? AND c.embedding IS NOT NULL", baseIDs).Order(gorm.Expr("c.embedding <=> ?::vector ASC, c.position ASC", vectorLiteral(embedding))).Limit(limit).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, 1 - (c.embedding <=> ?::vector) AS score", vectorLiteral(embedding)).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Where("d.knowledge_base_id IN ? AND c.embedding IS NOT NULL", baseIDs).Order(gorm.Expr("c.embedding <=> ?::vector ASC, c.position ASC", vectorLiteral(embedding))).Limit(limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +152,7 @@ func (r *Repository) SearchKnowledge(ctx context.Context, owner string, baseIDs 
 		return nil, nil
 	}
 	var rows []knowledgeSearchRecord
-	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", query).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready'").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.state = 'ready'", owner).Where("d.knowledge_base_id IN ? AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?)", baseIDs, query).Order("score DESC, c.position ASC").Limit(limit).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", query).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Where("d.knowledge_base_id IN ? AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?)", baseIDs, query).Order("score DESC, c.position ASC").Limit(limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +164,11 @@ func (r *Repository) SearchKnowledge(ctx context.Context, owner string, baseIDs 
 }
 
 func knowledgeBaseFromRecord(row knowledgeBaseRecord) domain.KnowledgeBase {
-	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Description: row.Description, State: domain.KnowledgeState(row.State), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	state := domain.KnowledgeReady
+	if row.DeletedAt != nil {
+		state = domain.KnowledgeDisabled
+	}
+	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Description: row.Description, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 func knowledgeDocumentFromRecord(row knowledgeDocumentRecord) domain.KnowledgeDocument {
 	return domain.KnowledgeDocument{ID: row.ID, KnowledgeBaseID: row.KnowledgeBaseID, Name: row.Name, Content: row.Content, ContentSHA256: row.ContentSHA256, State: domain.KnowledgeState(row.State), FailureReason: row.FailureReason, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
