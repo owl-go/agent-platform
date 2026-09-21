@@ -215,6 +215,40 @@ test('E2E-030 | UI | Mobile navigation and no horizontal overflow', async () => 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: '../output/playwright/mobile-sessions.png', fullPage: true }); await page.close();
 });
+test('E2E-045 | AI | Public assistant FAQ works in a real iframe page', async ({ request }) => {
+  const assistant = await ok(userAPI, 'POST', '/ai-apps/assistants', {
+    name: `${prefix}-public-assistant`,
+    service_goal: 'Answer public product questions',
+    share: { enabled: true, width: '100%', height: 640, free_text_enabled: false, daily_call_limit: 0 },
+  });
+  try {
+    const faq = await ok(userAPI, 'POST', `/ai-apps/assistants/${assistant.id}/faqs`, {
+      question: 'How long does delivery take?',
+      answer_markdown: 'Delivery takes **two business days**.',
+      display_order: 0,
+      enabled: true,
+    });
+    expect(faq.question).toBe('How long does delivery take?');
+    const share = await ok(userAPI, 'POST', `/ai-apps/assistants/${assistant.id}/share-token`, { version: assistant.version });
+    expect(share.token).toMatch(/^[A-Za-z0-9_-]{32,}$/);
+
+    const metadataResponse = await request.get(`/api/v1/public/assistants/${share.token}`);
+    expect(metadataResponse.status()).toBe(200);
+    const metadata = await metadataResponse.json();
+    expect(metadata.width).toBe('100%');
+    expect(metadata.height).toBe(640);
+    expect(metadata.faqs).toEqual([expect.objectContaining({ id: faq.id, question: faq.question, answer_markdown: faq.answer_markdown })]);
+
+    const page = await user.newPage();
+    await page.goto(`/embed/assistant/${share.token}`);
+    await expect(page.locator('.faq')).toHaveText(faq.question);
+    await page.locator('.faq').click();
+    await expect(page.locator('#answer')).toContainText('two business days');
+    await page.close();
+  } finally {
+    await ok(userAPI, 'DELETE', `/ai-apps/assistants/${assistant.id}`);
+  }
+});
 for (const [id, feature] of [['031', 'Runtime real model execution and SSE terminal event'], ['032', 'Scheduled Worker trigger and concurrent run locking'], ['033', 'CLI real authorization, sandbox command approval and recovery'], ['034', 'Linux gVisor sandbox isolation and production conformance']] as const) {
   test(`E2E-${id} | BLOCKED | ${feature}`, async () => { test.skip(true, 'Local macOS fixture has no Linux runsc Worker, verified Runtime RepoDigest or real provider credentials.'); });
 }
