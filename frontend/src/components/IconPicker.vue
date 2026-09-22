@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Picture } from "@element-plus/icons-vue";
 import ProfileIcon from "./ProfileIcon.vue";
 
@@ -7,8 +7,10 @@ const props = withDefaults(defineProps<{ modelValue: string; fallback?: string; 
 const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 const presets = ["sparkles", "compass", "code", "terminal", "users"];
 const custom = computed(() => props.modelValue.startsWith("data:image/"));
+const fileInput = ref<HTMLInputElement>();
 
 function choose(icon: string) { emit("update:modelValue", icon); }
+function openFilePicker() { fileInput.value?.click(); }
 function readImage(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -22,10 +24,9 @@ function readImage(event: Event) {
 
 <template>
   <div class="icon-picker">
-    <div class="icon-picker-current"><ProfileIcon v-if="modelValue" :icon="modelValue || fallback" :team="team" /><div v-else class="icon-picker-empty"><Picture /></div><div><strong>{{ custom ? '自定义图片' : modelValue ? '已上传图标' : '未上传图标' }}</strong><small>{{ uploadOnly ? '请上传助手图标' : '选择一个预设，或上传你的图片' }}</small></div></div>
     <div class="icon-picker-grid" role="radiogroup" aria-label="图标">
       <template v-if="!uploadOnly"><button v-for="icon in presets" :key="icon" type="button" class="icon-picker-option" :class="{ selected: modelValue === icon || (!modelValue && fallback === icon) }" :aria-label="icon" :aria-pressed="modelValue === icon" @click="choose(icon)"><ProfileIcon :icon="icon" :team="team && icon === 'users'" /></button></template>
-      <label data-testid="icon-picker-upload" class="icon-picker-option icon-picker-upload" :class="{ selected: custom }" title="上传图标" aria-label="上传图标"><Picture class="icon-picker-upload-icon" /><input data-testid="icon-picker-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="readImage"></label>
+      <button data-testid="icon-picker-upload" type="button" class="icon-picker-option icon-picker-upload" :class="{ selected: custom }" title="上传图标" aria-label="上传图标" @click="openFilePicker"><ProfileIcon v-if="custom" :icon="modelValue" :team="team" /><Picture v-else class="icon-picker-upload-icon" /></button><input ref="fileInput" data-testid="icon-picker-file" class="icon-picker-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="readImage">
     </div>
   </div>
 </template>

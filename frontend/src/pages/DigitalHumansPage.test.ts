@@ -53,6 +53,7 @@ describe("DigitalHumansPage lifecycle", () => {
 
     const buttons = wrapper.findAll(".digital-human-actions .el-button");
     expect(buttons.map((button) => button.text())).toEqual(["编辑", "详情", "删除"]);
+    await import("./DigitalHumanDetailPage.vue");
     await buttons.find((button) => button.text() === "编辑")!.trigger("click");
     await flushPromises();
     await new Promise((resolve) => setTimeout(resolve, 20));

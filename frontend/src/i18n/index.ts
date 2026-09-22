@@ -223,7 +223,7 @@ Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiA
   preprocessPrompt: "预处理提示词",
   startRequiresIcon: "请先上传助手图标，再开始对话。",
   validationFailed: "保存失败，请检查名称、图标和提示词配置。",
-  faq: { title: "常见问题", question: "问题", answer: "答案（Markdown）", add: "添加问题", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
+  faq: { title: "常见问题", question: "问题", answer: "答案", add: "添加问题", edit: "编辑问题", import: "导入 Excel", export: "导出 Excel", importFailed: "导入失败，请确认文件包含“问题”和“答案”两列。", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
 });
 Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
   description: "Assistant description",
@@ -231,7 +231,7 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
   preprocessPrompt: "Pre-process prompt",
   startRequiresIcon: "Upload an assistant icon before starting the conversation.",
   validationFailed: "Save failed. Check the name, icon, and prompt configuration.",
-  faq: { title: "Frequently Asked Questions", question: "Question", answer: "Answer (Markdown)", add: "Add FAQ", empty: "No FAQs yet.", enable: "Enable", disable: "Disable" },
+  faq: { title: "Frequently Asked Questions", question: "Question", answer: "Answer", add: "Add FAQ", edit: "Edit FAQ", import: "Import Excel", export: "Export Excel", importFailed: "Import failed. The file must contain Question and Answer columns.", empty: "No FAQs yet.", enable: "Enable", disable: "Disable" },
 });
 Object.assign((zh as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "已创建，可继续配置简介、提示词和知识库。" });
 Object.assign((en as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "Created. Continue configuring the description, prompts, and knowledge bases." });
