@@ -64,10 +64,14 @@ describe("App navigation", () => {
 
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
-      ["/sessions", "/workflows", "/ai-creation/image-generation", "/ai-apps", "/knowledge-bases"],
+      ["/sessions", "/workflows", "/ai-apps", "/ai-apps/assistants", "/ai-apps/digital-humans", "/ai-apps/image-creation", "/knowledge-bases"],
       ["/resources"],
       ["/settings"],
     ]);
+    expect(wrapper.get('a[href="/ai-apps"]').text()).toContain("AI 应用");
+    expect(wrapper.findAll(".nav-submenu a").map((link) => link.text())).toEqual(["智能助手", "数字人", "图片创作"]);
+    expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
+    expect(wrapper.find(".ai-applications-tabs").exists()).toBe(false);
     expect(wrapper.get('a[href="/resources"]').text()).toContain("专家/技能/连接器");
     wrapper.unmount();
   });
@@ -85,6 +89,15 @@ describe("App navigation", () => {
     expect(selected.classes()).toContain("router-link-active");
     expect(selected.attributes("aria-current")).toBe("page");
     expect(wrapper.findAll(".sidebar nav a.router-link-active")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it("renders AI applications as a secondary navigation directory", async () => {
+    const wrapper = await mountAt("/ai-apps/assistants/assistant-1");
+
+    expect(wrapper.get('a[href="/ai-apps"]').classes()).toContain("router-link-active");
+    expect(wrapper.get('a[href="/ai-apps/assistants"]').classes()).toContain("router-link-active");
+    expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
