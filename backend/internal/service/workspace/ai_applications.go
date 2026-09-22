@@ -214,6 +214,33 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "assistant_id": rest[0], "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
 		return
 	}
+	if len(rest) == 2 && rest[1] == "copy" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		value, err := service.aiapplications.CopyAssistant(request.Context(), owner, rest[0])
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "state" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var input struct {
+			State   aiapplicationdomain.ApplicationState `json:"state"`
+			Version int64                                `json:"version"`
+		}
+		if !decodeJSON(writer, request, &input) {
+			return
+		}
+		value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
+		service.writeAIResult(writer, value, err)
+		return
+	}
 	if len(rest) != 1 {
 		http.NotFound(writer, request)
 		return

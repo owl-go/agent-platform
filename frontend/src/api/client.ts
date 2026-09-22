@@ -65,8 +65,8 @@ export interface ModelProviderPreset { provider_type: string; display_name: stri
 export interface MCPServer { id: string; platform?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number }
-export interface SmartAssistant { id: string; name: string; icon: string; introduction: string; scenario: string; service_goal: string; answer_scope: string; operating_rules: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state: "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
-export interface SmartAssistantInput { name: string; icon?: string; introduction?: string; scenario?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; share?: AssistantShareConfiguration }
+export interface SmartAssistant { id: string; name: string; icon: string; introduction: string; scenario: string; service_goal: string; answer_scope: string; operating_rules: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
+export interface SmartAssistantInput { name: string; icon?: string; introduction?: string; scenario?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
@@ -222,6 +222,8 @@ export interface PlatformApi {
   createSmartAssistant(input: SmartAssistantInput, signal?: AbortSignal): Promise<SmartAssistant>;
   getSmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
   updateSmartAssistant(id: string, input: SmartAssistantInput, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
+  copySmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
+  setSmartAssistantState(id: string, state: SmartAssistant["state"], version: number, signal?: AbortSignal): Promise<SmartAssistant>;
   deleteSmartAssistant(id: string, signal?: AbortSignal): Promise<void>;
   listAssistantFAQs(id: string, signal?: AbortSignal): Promise<SmartAssistantFAQ[]>;
   createAssistantFAQ(id: string, input: Omit<SmartAssistantFAQ, "id" | "assistant_id" | "created_at" | "updated_at" | "version">, signal?: AbortSignal): Promise<SmartAssistantFAQ>;
@@ -554,6 +556,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createSmartAssistant(input, signal) { return call("/api/v1/ai-apps/assistants", json("POST", input, signal)); },
     getSmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, { signal }); },
     updateSmartAssistant(id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
+    copySmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
+    setSmartAssistantState(id, state, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },
     deleteSmartAssistant(id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, signal); },
     async listAssistantFAQs(id, signal) { return await call<SmartAssistantFAQ[]>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, { signal }); },
     createAssistantFAQ(id, input, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, json("POST", input, signal)); },

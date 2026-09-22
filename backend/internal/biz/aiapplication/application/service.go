@@ -179,6 +179,53 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 	return service.repository.CreateAssistant(ctx, owner, assistant)
 }
 
+// CopyAssistant creates a new editable draft from visible assistant
+// configuration. Share credentials and conversation identity are intentionally
+// excluded from the copy.
+func (service *Service) CopyAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
+	source, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	copy := source
+	copy.ID, copy.OwnerID, copy.CreatedAt, copy.UpdatedAt, copy.Version = "", "", time.Time{}, time.Time{}, 0
+	copy.State = domain.StateDraft
+	copy.Share.Enabled = false
+	copy.Share.Token, copy.Share.TokenHash, copy.Share.TokenRevision = "", "", 0
+	created, err := service.repository.CreateAssistant(ctx, owner, copy)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	faqs, err := service.repository.ListFAQs(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	for _, faq := range faqs {
+		faq.ID, faq.AssistantID, faq.CreatedAt, faq.UpdatedAt, faq.Version = "", "", time.Time{}, time.Time{}, 0
+		if _, err := service.CreateFAQ(ctx, owner, created.ID, faq); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	return service.repository.GetAssistant(ctx, owner, created.ID)
+}
+
+func (service *Service) SetAssistantState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.SmartAssistant, error) {
+	if state != domain.StateDraft && state != domain.StateEnabled && state != domain.StateDisabled {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: unsupported assistant state", domain.ErrInvalid)
+	}
+	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	if state == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	assistant.State = state
+	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+}
+
 func newShareToken() (string, error) {
 	value := make([]byte, 32)
 	if _, err := rand.Read(value); err != nil {
