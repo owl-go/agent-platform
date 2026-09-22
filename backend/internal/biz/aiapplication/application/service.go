@@ -156,7 +156,7 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 		assistant.Share.TokenRevision = 1
 	}
 	if assistant.DigitalHumanID != nil {
-		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
 		}
 	}
@@ -262,7 +262,7 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 		assistant.Share.Token, assistant.Share.TokenHash, assistant.Share.TokenRevision = "", "", current.Share.TokenRevision
 	}
 	if assistant.DigitalHumanID != nil {
-		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
 		}
 	}
@@ -343,6 +343,9 @@ func (service *Service) GetDigitalHuman(ctx context.Context, owner, id string) (
 }
 func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, human domain.DigitalHuman) (domain.DigitalHuman, error) {
 	human.OwnerID = owner
+	if human.State == "" {
+		human.State = domain.StateEnabled
+	}
 	if err := human.Validate(); err != nil {
 		return domain.DigitalHuman{}, err
 	}
@@ -350,13 +353,92 @@ func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, hu
 }
 func (service *Service) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
 	human.OwnerID = owner
+	current, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	if human.State == "" {
+		human.State = current.State
+		if human.State == "" {
+			human.State = domain.StateEnabled
+		}
+	}
 	if err := human.Validate(); err != nil {
 		return domain.DigitalHuman{}, err
 	}
 	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
 }
 func (service *Service) DeleteDigitalHuman(ctx context.Context, owner, id string) error {
+	return service.DeleteDigitalHumanWithOptions(ctx, owner, id, false)
+}
+
+func (service *Service) DeleteDigitalHumanWithOptions(ctx context.Context, owner, id string, detach bool) error {
+	if _, err := service.repository.GetDigitalHuman(ctx, owner, id); err != nil {
+		return err
+	}
+	assistants, err := service.repository.ListAssistants(ctx, owner)
+	if err != nil {
+		return err
+	}
+	for _, assistant := range assistants {
+		if assistant.DigitalHumanID == nil || *assistant.DigitalHumanID != id {
+			continue
+		}
+		if !detach {
+			return fmt.Errorf("%w: digital human is referenced by assistant", domain.ErrConflict)
+		}
+		assistant.DigitalHumanID = nil
+		if _, err := service.repository.UpdateAssistant(ctx, owner, assistant.ID, assistant, assistant.Version); err != nil {
+			return err
+		}
+	}
 	return service.repository.DeleteDigitalHuman(ctx, owner, id)
+}
+
+func (service *Service) CopyDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
+	source, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	copy := source
+	copy.ID, copy.OwnerID, copy.CreatedAt, copy.UpdatedAt, copy.Version = "", "", time.Time{}, time.Time{}, 0
+	copy.State = domain.StateEnabled
+	return service.repository.CreateDigitalHuman(ctx, owner, copy)
+}
+
+func (service *Service) SetDigitalHumanState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.DigitalHuman, error) {
+	if state != domain.StateEnabled && state != domain.StateDisabled {
+		return domain.DigitalHuman{}, fmt.Errorf("%w: unsupported digital human state", domain.ErrInvalid)
+	}
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	human.State = state
+	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
+}
+
+func (service *Service) PreviewDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHumanPreview, error) {
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHumanPreview{}, err
+	}
+	state := human.State
+	if state == "" {
+		state = domain.StateEnabled
+	}
+	return domain.DigitalHumanPreview{ID: human.ID, Name: human.Name, AvatarObjectKey: human.AvatarObjectKey, Voice: human.Voice, Language: human.Language, ExpressionStyle: human.ExpressionStyle, SceneDescription: human.SceneDescription, State: state, PreviewText: fmt.Sprintf("%s · %s · %s", human.Name, human.Language, human.Voice)}, nil
+}
+
+func (service *Service) validateDigitalHumanBinding(ctx context.Context, owner, id string) error {
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return err
+	}
+	if human.State == domain.StateDisabled {
+		return fmt.Errorf("%w: digital human is disabled", domain.ErrInvalid)
+	}
+	return nil
 }
 
 func (service *Service) ListFAQs(ctx context.Context, owner, assistantID string) ([]domain.FAQ, error) {

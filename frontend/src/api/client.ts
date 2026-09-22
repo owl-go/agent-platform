@@ -71,8 +71,9 @@ export interface SmartAssistantFAQ { id: string; assistant_id: string; question:
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
 export interface EmbeddingConfiguration { endpoint: string; model: string; dimensions: number; api_key_configured: boolean; enabled: boolean; version: number; updated_at: string }
-export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; created_at: string; updated_at: string; version: number }
-export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string }
+export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; state: "enabled" | "disabled"; created_at: string; updated_at: string; version: number }
+export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string; state?: DigitalHuman["state"] }
+export interface DigitalHumanPreview extends Omit<DigitalHuman, "created_at" | "updated_at" | "version"> { preview_text: string }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
 export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: string }
@@ -241,7 +242,10 @@ export interface PlatformApi {
   getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
   updateDigitalHuman(id: string, input: DigitalHumanInput, version: number, signal?: AbortSignal): Promise<DigitalHuman>;
-  deleteDigitalHuman(id: string, signal?: AbortSignal): Promise<void>;
+  copyDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
+  setDigitalHumanState(id: string, state: DigitalHuman["state"], version: number, signal?: AbortSignal): Promise<DigitalHuman>;
+  previewDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHumanPreview>;
+  deleteDigitalHuman(id: string, detach?: boolean, signal?: AbortSignal): Promise<void>;
   createGitSkill(input: { git_url: string; git_ref?: string; icon?: string }, signal?: AbortSignal): Promise<Skill>;
   createUploadSkill(input: { archive: string; icon?: string }, signal?: AbortSignal): Promise<Skill>;
   updateSkill(id: string, input: { git_ref?: string; archive?: string; icon?: string }, version: number, signal?: AbortSignal): Promise<Skill>;
@@ -575,7 +579,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     getDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, { signal }); },
     createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },
     updateDigitalHuman(id, input, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
-    deleteDigitalHuman(id, signal) { return remove(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, signal); },
+    copyDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
+    setDigitalHumanState(id, state, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },
+    previewDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/preview`, { signal }); },
+    deleteDigitalHuman(id, detach = false, signal) { return remove(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}${detach ? "?detach=true" : ""}`, signal); },
     createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "git", git_url: input.git_url, git_ref: input.git_ref || undefined, icon: input.icon }, signal)); },
     createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "upload", archive: input.archive, icon: input.icon }, signal)); },
     updateSkill(id, input, version, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },
