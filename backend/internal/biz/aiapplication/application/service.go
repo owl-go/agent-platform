@@ -55,6 +55,9 @@ func (service *Service) BindAssistantSession(ctx context.Context, owner, assista
 	if assistant.State != domain.StateEnabled {
 		return fmt.Errorf("%w: assistant is disabled", domain.ErrInvalid)
 	}
+	if err := assistant.ValidateForEnable(); err != nil {
+		return err
+	}
 	snapshot, err := json.Marshal(assistant)
 	if err != nil {
 		return err

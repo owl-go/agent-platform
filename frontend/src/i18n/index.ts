@@ -218,13 +218,23 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
 
 // Keep nested AI application translations intact after the legacy compatibility merges above.
 Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
-  startRequiresGoal: "请先在基本信息中填写服务目标，再开始对话。",
+  description: "助手简介",
+  prompt: "提示词",
+  preprocessPrompt: "预处理提示词",
+  startRequiresIcon: "请先上传助手图标，再开始对话。",
+  validationFailed: "保存失败，请检查名称、图标和提示词配置。",
   faq: { title: "常见问题", question: "问题", answer: "答案（Markdown）", add: "添加问题", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
 });
 Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
-  startRequiresGoal: "Enter a service goal in Basic information before starting the conversation.",
+  description: "Assistant description",
+  prompt: "Assistant prompt",
+  preprocessPrompt: "Pre-process prompt",
+  startRequiresIcon: "Upload an assistant icon before starting the conversation.",
+  validationFailed: "Save failed. Check the name, icon, and prompt configuration.",
   faq: { title: "Frequently Asked Questions", question: "Question", answer: "Answer (Markdown)", add: "Add FAQ", empty: "No FAQs yet.", enable: "Enable", disable: "Disable" },
 });
+Object.assign((zh as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "已创建，可继续配置简介、提示词和知识库。" });
+Object.assign((en as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "Created. Continue configuring the description, prompts, and knowledge bases." });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;

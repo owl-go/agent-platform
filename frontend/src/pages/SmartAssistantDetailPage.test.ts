@@ -3,12 +3,12 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
 import { createAppI18n } from "../i18n";
-import { ApiError, platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
+import { platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
 import { createAppRouter } from "../router";
 import SmartAssistantDetailPage from "./SmartAssistantDetailPage.vue";
 
 const assistant: SmartAssistant = {
-  id: "assistant-1", name: "产品助手", icon: "sparkles", introduction: "你好，欢迎咨询产品问题。", scenario: "product-guide", service_goal: "回答产品问题", answer_scope: "", operating_rules: "", response_style: "", knowledge_base_ids: [], state: "enabled", share: { enabled: false, width: "100%", height: 600 }, created_at: "2026-09-22T00:00:00Z", updated_at: "2026-09-22T00:00:00Z", version: 2,
+  id: "assistant-1", name: "产品助手", icon: "sparkles", description: "帮助用户解决产品问题", introduction: "你好，欢迎咨询产品问题。", scenario: "product-guide", prompt: "回答用户问题", preprocess_prompt: "整理用户问题", service_goal: "回答产品问题", answer_scope: "", operating_rules: "", response_style: "", knowledge_base_ids: [], state: "enabled", share: { enabled: false, width: "100%", height: 600 }, created_at: "2026-09-22T00:00:00Z", updated_at: "2026-09-22T00:00:00Z", version: 2,
 };
 
 function apiStub() {
@@ -23,14 +23,20 @@ function apiStub() {
 }
 
 describe("SmartAssistantDetailPage", () => {
-  it("opens sharing from the card query and saves an explicit assistant payload", async () => {
+  it("shows the reduced basic form and saves the new assistant fields", async () => {
     const router = createAppRouter(createMemoryHistory());
-    await router.push("/ai-apps/assistants/assistant-1?share=1");
+    await router.push("/ai-apps/assistants/assistant-1");
     const api = apiStub();
     const wrapper = mount(SmartAssistantDetailPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
     await flushPromises();
 
-    expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
+    expect(wrapper.get(".application-detail-card").text()).toContain("助手简介");
+    expect(wrapper.get(".application-detail-card").text()).toContain("提示词");
+    expect(wrapper.get(".application-detail-card").text()).toContain("预处理提示词");
+    expect(wrapper.get(".application-detail-card").text()).not.toContain("服务目标");
+    expect(wrapper.get(".application-detail-card").text()).not.toContain("回答范围");
+    expect(wrapper.get(".application-detail-card").text()).not.toContain("回答规则");
+    expect(wrapper.findAll(".icon-picker-option")).toHaveLength(1);
     await wrapper.get(".assistant-detail-tabs button:nth-child(2)").trigger("click");
     expect(wrapper.find(".faq-row").exists()).toBe(false);
     expect(wrapper.get(".faq-list-header strong").text()).toBe("常见问题");
@@ -40,7 +46,7 @@ describe("SmartAssistantDetailPage", () => {
     await wrapper.get(".assistant-detail-actions .el-button--primary").trigger("click");
     await flushPromises();
 
-    expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", introduction: assistant.introduction, digital_human_id: undefined }), 2);
+    expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", description: assistant.description, prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt, digital_human_id: undefined }), 2);
     wrapper.unmount();
   });
 
@@ -72,19 +78,18 @@ describe("SmartAssistantDetailPage", () => {
     await wrapper.get(".assistant-detail-actions .el-button").trigger("click");
     await flushPromises();
 
-    expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ state: "enabled", service_goal: assistant.service_goal }), 2);
+    expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ state: "enabled", prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt }), 2);
     expect(api.createAssistantSession).toHaveBeenCalledWith("assistant-1");
     expect(router.currentRoute.value.path).toBe("/sessions");
     wrapper.unmount();
   });
 
-  it("explains that a service goal is required before starting a draft assistant", async () => {
+  it("requires an uploaded icon before starting an assistant", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1");
-    const draftAssistant = { ...assistant, state: "draft" as const, service_goal: "" };
+    const draftAssistant = { ...assistant, state: "enabled" as const, icon: "" };
     const api = apiStub();
     vi.mocked(api.getSmartAssistant).mockResolvedValue(draftAssistant);
-    vi.mocked(api.updateSmartAssistant).mockRejectedValue(new ApiError("validation", 422, "invalid_input"));
     const wrapper = mount(SmartAssistantDetailPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
     await flushPromises();
 
@@ -93,7 +98,7 @@ describe("SmartAssistantDetailPage", () => {
 
     expect(api.updateSmartAssistant).not.toHaveBeenCalled();
     expect(api.createAssistantSession).not.toHaveBeenCalled();
-    expect(wrapper.find(".el-alert").text()).toContain("服务目标");
+    expect(wrapper.find(".el-alert").text()).toContain("图标");
     wrapper.unmount();
   });
 });
