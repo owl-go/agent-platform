@@ -216,6 +216,16 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
 Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiApplications, { search: "搜索智能助手", searchAction: "搜索", scenario: "场景类型", allScenarios: "全部场景", enable: "启用", disable: "停用", confirmDelete: "确认删除“{name}”？历史对话仍会保留快照。", states: { draft: "草稿", enabled: "已启用", disabled: "已停用" }, scenarios: { "customer-consultation": "客服咨询", "pre-sales-advisor": "售前顾问", "after-sales-support": "售后支持", "product-guide": "商品导购", "enterprise-knowledge": "企业知识助手", recruitment: "招聘助手", training: "培训助手", custom: "自定义" }, copy: "复制" });
 Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiApplications, { search: "Search Smart Assistants", searchAction: "Search", scenario: "Scenario", allScenarios: "All scenarios", enable: "Enable", disable: "Disable", confirmDelete: "Delete “{name}”? Historical conversations keep their snapshots.", states: { draft: "Draft", enabled: "Enabled", disabled: "Disabled" }, scenarios: { "customer-consultation": "Customer consultation", "pre-sales-advisor": "Pre-sales advisor", "after-sales-support": "After-sales support", "product-guide": "Product guide", "enterprise-knowledge": "Enterprise knowledge", recruitment: "Recruitment", training: "Training", custom: "Custom" }, copy: "Copy" });
 
+// Keep nested AI application translations intact after the legacy compatibility merges above.
+Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
+  startRequiresGoal: "请先在基本信息中填写服务目标，再开始对话。",
+  faq: { title: "常见问题", question: "问题", answer: "答案（Markdown）", add: "添加问题", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
+});
+Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
+  startRequiresGoal: "Enter a service goal in Basic information before starting the conversation.",
+  faq: { title: "Frequently Asked Questions", question: "Question", answer: "Answer (Markdown)", add: "Add FAQ", empty: "No FAQs yet.", enable: "Enable", disable: "Disable" },
+});
+
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";

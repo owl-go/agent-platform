@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
 import { createAppI18n } from "../i18n";
-import { platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
+import { ApiError, platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
 import { createAppRouter } from "../router";
 import SmartAssistantDetailPage from "./SmartAssistantDetailPage.vue";
 
@@ -33,6 +33,8 @@ describe("SmartAssistantDetailPage", () => {
     expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
     await wrapper.get(".assistant-detail-tabs button:nth-child(2)").trigger("click");
     expect(wrapper.find(".faq-row").exists()).toBe(false);
+    expect(wrapper.get(".faq-list-header strong").text()).toBe("常见问题");
+    expect(wrapper.get(".faq-list-header .el-button").text()).toBe("添加问题");
     await wrapper.get(".assistant-detail-tabs button:nth-child(1)").trigger("click");
     await wrapper.get(".application-detail-card input").setValue("更新后的助手");
     await wrapper.get(".assistant-detail-actions .el-button--primary").trigger("click");
@@ -55,6 +57,43 @@ describe("SmartAssistantDetailPage", () => {
     expect(api.createAssistantSession).toHaveBeenCalledWith("assistant-1");
     expect(router.currentRoute.value.path).toBe("/sessions");
     expect(router.currentRoute.value.query.assistant_welcome).toBe(assistant.introduction);
+    wrapper.unmount();
+  });
+
+  it("enables a complete draft before creating its session", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1");
+    const draftAssistant = { ...assistant, state: "draft" as const };
+    const api = apiStub();
+    vi.mocked(api.getSmartAssistant).mockResolvedValue(draftAssistant);
+    const wrapper = mount(SmartAssistantDetailPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    await wrapper.get(".assistant-detail-actions .el-button").trigger("click");
+    await flushPromises();
+
+    expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ state: "enabled", service_goal: assistant.service_goal }), 2);
+    expect(api.createAssistantSession).toHaveBeenCalledWith("assistant-1");
+    expect(router.currentRoute.value.path).toBe("/sessions");
+    wrapper.unmount();
+  });
+
+  it("explains that a service goal is required before starting a draft assistant", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1");
+    const draftAssistant = { ...assistant, state: "draft" as const, service_goal: "" };
+    const api = apiStub();
+    vi.mocked(api.getSmartAssistant).mockResolvedValue(draftAssistant);
+    vi.mocked(api.updateSmartAssistant).mockRejectedValue(new ApiError("validation", 422, "invalid_input"));
+    const wrapper = mount(SmartAssistantDetailPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    await wrapper.get(".assistant-detail-actions .el-button").trigger("click");
+    await flushPromises();
+
+    expect(api.updateSmartAssistant).not.toHaveBeenCalled();
+    expect(api.createAssistantSession).not.toHaveBeenCalled();
+    expect(wrapper.find(".el-alert").text()).toContain("服务目标");
     wrapper.unmount();
   });
 });

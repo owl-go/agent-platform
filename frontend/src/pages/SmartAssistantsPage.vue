@@ -30,7 +30,7 @@ async function refresh() {
   finally { loading.value = false; }
 }
 async function create() {
-  if (!form.value.name.trim()) return;
+  if (!form.value.name.trim() || !form.value.service_goal?.trim()) return;
   try {
     const item = await api.createSmartAssistant({ ...form.value, share: { enabled: false, width: "100%", height: 600 } });
     items.value.unshift(item);
@@ -74,7 +74,7 @@ onMounted(refresh);
       <el-form label-position="top" @submit.prevent="create">
         <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" autofocus :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
         <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
-        <el-form-item :label="t('aiApplications.goal')"><el-input v-model="form.service_goal" /></el-form-item>
+        <el-form-item :label="t('aiApplications.goal')" required><el-input v-model="form.service_goal" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" @click="create">{{ t('common.save') }}</el-button></template>
     </el-dialog>
