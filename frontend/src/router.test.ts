@@ -25,4 +25,16 @@ describe("application routes", () => {
     await router.push("/ai-apps/digital-humans/human-1");
     expect(router.currentRoute.value.name).toBe("digital-human-detail");
   });
+
+  it("keeps the top-level Knowledge Bases route distinct from the AI Applications route", async () => {
+    const router = createAppRouter(createMemoryHistory());
+
+    await router.push("/knowledge-bases");
+    expect(router.currentRoute.value.name).toBe("knowledge-bases");
+    expect(router.currentRoute.value.meta.surface).toBe("knowledge-bases");
+
+    await router.push("/ai-apps/knowledge-bases");
+    expect(router.currentRoute.value.name).toBe("ai-application-knowledge-bases");
+    expect(router.currentRoute.value.meta.surface).toBe("ai-applications");
+  });
 });

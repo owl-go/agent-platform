@@ -35,7 +35,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
           { path: "image-creation", name: "image-creation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants", name: "smart-assistants", component: () => import("./pages/SmartAssistantsPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId", name: "smart-assistant-detail", component: () => import("./pages/SmartAssistantDetailPage.vue"), meta: { surface: "ai-applications" } },
-          { path: "knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "knowledge-bases", name: "ai-application-knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
           { path: "digital-humans", name: "digital-humans", component: () => import("./pages/DigitalHumansPage.vue"), meta: { surface: "ai-applications" } },
           { path: "digital-humans/:digitalHumanId", name: "digital-human-detail", component: () => import("./pages/DigitalHumanDetailPage.vue"), meta: { surface: "ai-applications" } },
         ],
