@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -138,7 +139,21 @@ func (assistant SmartAssistant) Validate() error {
 	if assistant.Share.DailyCallLimit < 0 {
 		return fmt.Errorf("%w: daily call limit cannot be negative", ErrInvalid)
 	}
+	for _, origin := range assistant.Share.AllowedOrigins {
+		parsed, err := url.Parse(strings.TrimSpace(origin))
+		if err != nil || parsed.Host == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Scheme != "https" && !isLocalHTTPOrigin(parsed)) {
+			return fmt.Errorf("%w: share origin must be HTTPS or local development HTTP", ErrInvalid)
+		}
+	}
 	return nil
+}
+
+func isLocalHTTPOrigin(origin *url.URL) bool {
+	if origin.Scheme != "http" {
+		return false
+	}
+	host := strings.ToLower(origin.Hostname())
+	return host == "localhost" || host == "127.0.0.1" || host == "[::1]" || host == "::1"
 }
 
 // ValidateForEnable checks the minimum visible configuration required before

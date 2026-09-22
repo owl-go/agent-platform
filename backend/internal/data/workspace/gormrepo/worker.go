@@ -804,8 +804,9 @@ func assistantKnowledgeContext(tx *gorm.DB, sessionID, ownerID, question string)
 	err := tx.Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", question).
 		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready'").
 		Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.state = 'ready'", ownerID).
+		Joins("LEFT JOIN knowledge_index_generations AS g ON g.id = c.generation_id").
 		Joins("JOIN smart_assistant_sessions AS s ON s.session_id = ? AND s.owner_user_id = b.owner_user_id", sessionID).
-		Where("jsonb_exists(s.assistant_snapshot->'knowledge_base_ids', b.id) AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?)", question).
+		Where("jsonb_exists(s.assistant_snapshot->'knowledge_base_ids', b.id) AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?) AND (c.generation_id IS NULL OR (g.state = 'ready' AND g.generation = (SELECT MAX(g2.generation) FROM knowledge_index_generations g2 WHERE g2.knowledge_base_id = d.knowledge_base_id AND g2.state = 'ready')))", question).
 		Order("score DESC, c.position ASC").Limit(5).Scan(&rows).Error
 	if err != nil || len(rows) == 0 {
 		return ""

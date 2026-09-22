@@ -35,6 +35,18 @@ type ShareUsageRepository interface {
 	ConsumeShareCall(context.Context, string, time.Time, int) (bool, error)
 }
 
+type SafetyAuditRepository interface {
+	RecordSafetyAudit(context.Context, string, string, string, domain.SafetyDecision, string) error
+}
+
+func (service *Service) RecordSafetyAudit(ctx context.Context, owner, assistantID, source string, decision domain.SafetyDecision, creditOutcome string) error {
+	repository, ok := service.repository.(SafetyAuditRepository)
+	if !ok {
+		return nil
+	}
+	return repository.RecordSafetyAudit(ctx, owner, assistantID, source, decision, creditOutcome)
+}
+
 func (service *Service) BindAssistantSession(ctx context.Context, owner, assistantID, sessionID string) error {
 	assistant, err := service.repository.GetAssistant(ctx, owner, assistantID)
 	if err != nil {
@@ -162,10 +174,12 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
-			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
 				return domain.SmartAssistant{}, err
 			}
 		}
+	} else if len(assistant.KnowledgeBaseIDs) > 0 {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
 	}
 	if assistant.Share.Width == "" {
 		assistant.Share.Width = "100%"
@@ -173,7 +187,11 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 	if assistant.Share.Height == 0 {
 		assistant.Share.Height = 600
 	}
-	if err := assistant.Validate(); err != nil {
+	if assistant.State == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	} else if err := assistant.Validate(); err != nil {
 		return domain.SmartAssistant{}, err
 	}
 	return service.repository.CreateAssistant(ctx, owner, assistant)
@@ -219,6 +237,9 @@ func (service *Service) SetAssistantState(ctx context.Context, owner, id string,
 	}
 	if state == domain.StateEnabled {
 		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		if err := service.validateAssistantResources(ctx, owner, assistant); err != nil {
 			return domain.SmartAssistant{}, err
 		}
 	}
@@ -268,10 +289,12 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
-			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
 				return domain.SmartAssistant{}, err
 			}
 		}
+	} else if len(assistant.KnowledgeBaseIDs) > 0 {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
 	}
 	if assistant.Share.Width == "" {
 		assistant.Share.Width = "100%"
@@ -279,7 +302,14 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	if assistant.Share.Height == 0 {
 		assistant.Share.Height = 600
 	}
-	if err := assistant.Validate(); err != nil {
+	if assistant.State == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		if err := service.validateAssistantResources(ctx, owner, assistant); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	} else if err := assistant.Validate(); err != nil {
 		return domain.SmartAssistant{}, err
 	}
 	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
@@ -437,6 +467,34 @@ func (service *Service) validateDigitalHumanBinding(ctx context.Context, owner, 
 	}
 	if human.State == domain.StateDisabled {
 		return fmt.Errorf("%w: digital human is disabled", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (service *Service) validateKnowledgeBinding(ctx context.Context, owner, id string) error {
+	if service.knowledge == nil {
+		return fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
+	}
+	base, err := service.knowledge.GetKnowledgeBase(ctx, owner, id)
+	if err != nil {
+		return err
+	}
+	if base.State != "" && base.State != domain.KnowledgeReady {
+		return fmt.Errorf("%w: knowledge base is unavailable", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (service *Service) validateAssistantResources(ctx context.Context, owner string, assistant domain.SmartAssistant) error {
+	if assistant.DigitalHumanID != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
+			return err
+		}
+	}
+	for _, baseID := range assistant.KnowledgeBaseIDs {
+		if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
+			return err
+		}
 	}
 	return nil
 }

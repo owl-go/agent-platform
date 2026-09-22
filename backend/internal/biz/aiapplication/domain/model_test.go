@@ -26,6 +26,17 @@ func TestSmartAssistantValidatesVisibleRulesAndShareDimensions(t *testing.T) {
 	}
 }
 
+func TestSmartAssistantRejectsNonHTTPSShareOriginsExceptLocalDevelopment(t *testing.T) {
+	assistant := domain.SmartAssistant{Name: "产品助手", Share: domain.ShareConfiguration{AllowedOrigins: []string{"http://example.test"}}}
+	if !errors.Is(assistant.Validate(), domain.ErrInvalid) {
+		t.Fatal("Validate() accepted a non-HTTPS public share origin")
+	}
+	assistant.Share.AllowedOrigins = []string{"http://localhost:5173", "https://example.test"}
+	if err := assistant.Validate(); err != nil {
+		t.Fatalf("Validate() rejected local/HTTPS origins: %v", err)
+	}
+}
+
 func TestSmartAssistantValidatesScenarioAndEnablementSeparatelyFromDraft(t *testing.T) {
 	assistant := domain.SmartAssistant{Name: "产品助手", State: domain.StateDraft}
 	if err := assistant.Validate(); err != nil {
