@@ -15,6 +15,7 @@ const loading = ref(false);
 const error = ref("");
 const search = ref("");
 const scenario = ref("");
+const createDialogOpen = ref(false);
 const form = ref<SmartAssistantInput>({ name: "", scenario: "custom", service_goal: "", operating_rules: "", response_style: "" });
 const scenarios = ["customer-consultation", "pre-sales-advisor", "after-sales-support", "product-guide", "enterprise-knowledge", "recruitment", "training", "custom"];
 const filteredItems = computed(() => {
@@ -34,8 +35,10 @@ async function create() {
     const item = await api.createSmartAssistant({ ...form.value, share: { enabled: false, width: "100%", height: 600 } });
     items.value.unshift(item);
     form.value = { name: "", scenario: "custom", service_goal: "", operating_rules: "", response_style: "" };
+    createDialogOpen.value = false;
   } catch { error.value = t("aiApplications.saveFailed"); }
 }
+function openCreate() { createDialogOpen.value = true; }
 async function copy(item: SmartAssistant) {
   try { items.value.unshift(await api.copySmartAssistant(item.id)); }
   catch { error.value = t("aiApplications.saveFailed"); }
@@ -63,15 +66,17 @@ onMounted(refresh);
   <section class="application-catalog-page">
     <div class="application-catalog-toolbar">
       <div><h2>{{ t('aiApplications.assistants.title') }}</h2><p>{{ t('aiApplications.assistants.subtitle') }}</p></div>
-      <el-button type="primary" :icon="Plus" @click="create">{{ t('aiApplications.create') }}</el-button>
+      <el-button class="application-create-trigger" type="primary" :icon="Plus" @click="openCreate">{{ t('aiApplications.create') }}</el-button>
     </div>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
-    <el-form class="application-create-form" :inline="true" @submit.prevent="create">
-      <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
-      <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
-      <el-form-item :label="t('aiApplications.goal')"><el-input v-model="form.service_goal" /></el-form-item>
-      <el-form-item><el-button native-type="submit" type="primary">{{ t('common.save') }}</el-button></el-form-item>
-    </el-form>
+    <el-dialog v-model="createDialogOpen" class="application-create-dialog" :title="t('aiApplications.create')" width="min(560px, 92vw)" destroy-on-close>
+      <el-form label-position="top" @submit.prevent="create">
+        <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" autofocus :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
+        <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
+        <el-form-item :label="t('aiApplications.goal')"><el-input v-model="form.service_goal" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" @click="create">{{ t('common.save') }}</el-button></template>
+    </el-dialog>
     <div class="application-list-filters">
       <el-input v-model="search" class="assistant-search" clearable :placeholder="t('aiApplications.search')" />
       <el-select v-model="scenario" clearable :placeholder="t('aiApplications.allScenarios')"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select>
