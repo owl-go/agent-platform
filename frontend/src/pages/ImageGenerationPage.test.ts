@@ -25,6 +25,19 @@ function mountPage(api: PlatformApi, administrator = false) {
 }
 
 describe("ImageGenerationPage", () => {
+  it("keeps the Image Creation heading without the redundant description", async () => {
+    const api = {
+      getImageGenerationOptions: vi.fn(async () => ({ image_models: [], prompt_optimization_models: [] })),
+      listImageGenerations: vi.fn(async () => []),
+    } as unknown as PlatformApi;
+    const wrapper = mountPage(api);
+    await flushPromises();
+
+    expect(wrapper.get(".image-generation-head h1").text()).toBe("图片创作");
+    expect(wrapper.findAll(".image-generation-head p")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it("reuses an already loaded Generated Image when switching history", async () => {
     const record = (id: string, prompt: string) => ({
       id, image_model_id: model.id, image_model_revision_id: model.revision_id, image_model_name: model.display_name,
