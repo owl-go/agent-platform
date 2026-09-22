@@ -17,6 +17,18 @@ type knowledgeRepository struct {
 	vectorChunks []domain.KnowledgeChunk
 }
 
+type queuedKnowledgeRepository struct {
+	*knowledgeRepository
+	queued bool
+}
+
+func (r *queuedKnowledgeRepository) EnqueueKnowledgeDocument(_ context.Context, _ string, _ string, document domain.KnowledgeDocument) (domain.KnowledgeDocument, error) {
+	r.queued = true
+	document.State = domain.KnowledgeProcessing
+	document.Content = ""
+	return document, nil
+}
+
 func (r *knowledgeRepository) ListKnowledgeBases(context.Context, string) ([]domain.KnowledgeBase, error) {
 	return r.bases, nil
 }
@@ -91,5 +103,21 @@ func TestSearchKnowledgePrefersVectorRecallWhenConfigured(t *testing.T) {
 	}
 	if repository.vectorCalls != 1 || len(chunks) != 1 || chunks[0].ID != "vector-hit" {
 		t.Fatalf("vector search calls = %d, chunks = %+v", repository.vectorCalls, chunks)
+	}
+}
+
+func TestCreateKnowledgeDocumentUsesDurableAsyncIngestionWhenAvailable(t *testing.T) {
+	repository := &queuedKnowledgeRepository{knowledgeRepository: &knowledgeRepository{}}
+	service, err := application.New(answerRepository{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.SetKnowledgeRepository(repository)
+	document, err := service.CreateKnowledgeDocument(context.Background(), "owner", "kb-1", domain.KnowledgeDocument{Name: "guide.md", Content: "退款说明"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !repository.queued || document.State != domain.KnowledgeProcessing || document.Content != "" {
+		t.Fatalf("document = %+v, queued = %v; want processing document without source content", document, repository.queued)
 	}
 }
