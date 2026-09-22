@@ -1,8 +1,11 @@
 package runtimeexecutor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"slices"
 	"strings"
 
 	"agent-platform/backend/internal/agentruntime"
@@ -20,6 +23,13 @@ type storedMCPConfiguration struct {
 	PackageVersion *string                               `json:"package_version"`
 	Arguments      []string                              `json:"arguments"`
 	Environment    []workspacedomain.EnvironmentVariable `json:"environment"`
+	EgressHosts    []string                              `json:"egress_hosts"`
+	TimeoutSeconds int                                   `json:"timeout_seconds"`
+	ResourceLimits struct {
+		CPUMillis      int `json:"cpu_millis"`
+		MemoryMiB      int `json:"memory_mib"`
+		ChildProcesses int `json:"child_processes"`
+	} `json:"resource_limits"`
 }
 
 type nativeMCPServer struct {
@@ -38,7 +48,7 @@ type codexMCPServer struct {
 	BearerTokenEnvVar string            `toml:"bearer_token_env_var,omitempty"`
 }
 
-func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
+func (executor *Executor) nativeMCPFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
 	files := make(map[string][]byte)
 	variables := make(map[string]string)
 	var redactValues [][]byte
@@ -50,6 +60,11 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 	hermesServers := make(map[string]nativeMCPServer)
 	openClawServers := make(map[string]openclaw.MCPServer)
 	for _, server := range job.Snapshot.MCPServers {
+		if executor.mcpLifecycle != nil {
+			if err := executor.mcpLifecycle.ValidateMCPInvocation(ctx, job.OwnerID, server.ID); err != nil {
+				return nil, nil, nil, fmt.Errorf("MCP Connector %q is unavailable: %w", server.Name, err)
+			}
+		}
 		var configuration storedMCPConfiguration
 		if err := json.Unmarshal(server.Configuration, &configuration); err != nil {
 			return nil, nil, nil, fmt.Errorf("decode MCP Server %q: %w", server.Name, err)
@@ -60,7 +75,11 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 			if secretOwnerID == "" {
 				secretOwnerID = job.OwnerID
 			}
-			plaintext, err := executor.box.Decrypt(server.SecretCiphertext, "mcp-server:"+secretOwnerID)
+			aad := server.SecretAAD
+			if aad == "" {
+				aad = "mcp-server:" + secretOwnerID
+			}
+			plaintext, err := executor.box.Decrypt(server.SecretCiphertext, aad)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("decrypt MCP Server %q secrets: %w", server.Name, err)
 			}
@@ -84,6 +103,12 @@ func (executor *Executor) nativeMCPFiles(job application.ExecutionJob) (map[stri
 		if server.Transport == "streamable_http" {
 			if configuration.URL == nil {
 				return nil, nil, nil, fmt.Errorf("MCP Server %q is missing its URL", server.Name)
+			}
+			if len(configuration.EgressHosts) > 0 {
+				parsedURL, parseErr := url.Parse(*configuration.URL)
+				if parseErr != nil || !slices.Contains(configuration.EgressHosts, strings.ToLower(parsedURL.Hostname())) {
+					return nil, nil, nil, fmt.Errorf("MCP Server %q URL is outside its declared Egress policy", server.Name)
+				}
 			}
 			native := nativeMCPServer{URL: *configuration.URL}
 			codex := codexMCPServer{URL: *configuration.URL}

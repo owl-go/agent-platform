@@ -722,10 +722,19 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	}
 	for _, id := range mcpIDs {
 		var row mcpRecord
-		if err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error; err != nil {
-			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Server must pass its isolated test", domain.ErrInvalid)
+		err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error
+		if err == nil {
+			member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+			continue
 		}
-		member.MCPServers = append(member.MCPServers, domain.MCPServerSnapshot{ID: row.ID, Name: row.Name, Icon: row.Icon, Transport: row.Transport, Configuration: json.RawMessage(row.Configuration), SecretCiphertext: row.SecretCiphertext, SecretOwnerID: row.OwnerID})
+		if err != gorm.ErrRecordNotFound {
+			return domain.ExpertMemberSnapshot{}, err
+		}
+		packageSnapshot, packageErr := connectorMCPServerSnapshot(tx, ownerID, id)
+		if packageErr != nil {
+			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Connector is unavailable", domain.ErrInvalid)
+		}
+		member.MCPServers = append(member.MCPServers, packageSnapshot)
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
@@ -737,8 +746,16 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	for _, id := range cliConnectorIDs {
 		var row cliConnectorDefinitionRecord
 		query := tx.Table("cli_connector_definitions AS definition").Select("definition.*").Joins("JOIN cli_connector_enablements AS enablement ON enablement.definition_id = definition.id").Where("definition.id = ? AND definition.state = 'available' AND enablement.owner_user_id = ? AND enablement.state = 'enabled'", id, ownerID).Take(&row)
+		if query.Error != nil && query.Error != gorm.ErrRecordNotFound {
+			return domain.ExpertMemberSnapshot{}, query.Error
+		}
 		if query.Error != nil {
-			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector is unavailable", domain.ErrInvalid)
+			packageSnapshot, packageErr := connectorCLIServerSnapshot(tx, ownerID, id)
+			if packageErr != nil {
+				return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector is unavailable", domain.ErrInvalid)
+			}
+			member.CLIConnectors = append(member.CLIConnectors, packageSnapshot)
+			continue
 		}
 		if row.BundleObjectKey == nil || row.BundleSHA256 == nil || *row.BundleObjectKey == "" || *row.BundleSHA256 == "" {
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert CLI Connector has no verified bundle", domain.ErrInvalid)

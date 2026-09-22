@@ -1,8 +1,10 @@
 package runtimeexecutor
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -29,7 +31,7 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 		"arguments": []string{"--stdio"}, "environment": []domain.EnvironmentVariable{{Name: "REGION", Value: "test"}},
 	})
 	executor := &Executor{box: box}
-	files, variables, redactions, err := executor.nativeMCPFiles(application.ExecutionJob{
+	files, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{
 		OwnerID: "user-owner",
 		Snapshot: domain.ExecutionSnapshot{
 			RuntimeEngine: domain.RuntimeCodex, ProviderModel: domain.ProviderModelSnapshot{
@@ -64,4 +66,73 @@ func TestNativeMCPFilesProjectTestedSnapshotIntoAllRuntimes(t *testing.T) {
 			t.Fatalf("OpenClaw config = %s, missing %s", openClawConfig, want)
 		}
 	}
+}
+
+func TestNativeMCPFilesRevalidatesLifecycleBeforeReadingSnapshot(t *testing.T) {
+	ctx := context.WithValue(context.Background(), mcpLifecycleContextKey{}, "request-context")
+	lifecycleErr := errors.New("MCP Server is unavailable")
+	lifecycle := &recordingMCPLifecycle{err: lifecycleErr}
+	executor := &Executor{mcpLifecycle: lifecycle}
+
+	_, _, _, err := executor.nativeMCPFiles(ctx, application.ExecutionJob{
+		OwnerID: "user-owner",
+		Snapshot: domain.ExecutionSnapshot{MCPServers: []domain.MCPServerSnapshot{{
+			ID: "server-id", Name: "removed", Configuration: json.RawMessage(`not-json`),
+		}}},
+	})
+	if !errors.Is(err, lifecycleErr) {
+		t.Fatalf("nativeMCPFiles error = %v, want lifecycle error", err)
+	}
+	if lifecycle.ownerID != "user-owner" || lifecycle.serverID != "server-id" || lifecycle.contextValue != "request-context" {
+		t.Fatalf("lifecycle call = %#v", lifecycle)
+	}
+}
+
+func TestNativeMCPFilesDecryptsConnectorAuthorizationAAD(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"package-secret"}`), "connector-authorization:user-owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration, _ := json.Marshal(map[string]any{
+		"url":         "https://mcp.example.test/mcp",
+		"environment": []domain.EnvironmentVariable{{Name: "MCP_BEARER_TOKEN", Secret: true, Configured: true}},
+	})
+	executor := &Executor{box: box}
+	_, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{
+		ID:      "run-connector",
+		OwnerID: "user-owner",
+		Snapshot: domain.ExecutionSnapshot{
+			ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}},
+			MCPServers: []domain.MCPServerSnapshot{{
+				ID: "installation-id", Name: "package", Transport: "streamable_http", Configuration: configuration,
+				SecretCiphertext: secret, SecretOwnerID: "user-owner", SecretAAD: "connector-authorization:user-owner",
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if variables == nil || len(redactions) != 1 || string(redactions[0]) != "package-secret" {
+		t.Fatalf("connector authorization projection = variables:%v redactions:%q", variables, redactions)
+	}
+}
+
+type mcpLifecycleContextKey struct{}
+
+type recordingMCPLifecycle struct {
+	err          error
+	ownerID      string
+	serverID     string
+	contextValue string
+}
+
+func (lifecycle *recordingMCPLifecycle) ValidateMCPInvocation(ctx context.Context, ownerID, serverID string) error {
+	lifecycle.ownerID = ownerID
+	lifecycle.serverID = serverID
+	lifecycle.contextValue, _ = ctx.Value(mcpLifecycleContextKey{}).(string)
+	return lifecycle.err
 }

@@ -48,6 +48,10 @@ type cliConnectorRepository interface {
 	DecideCommandApproval(context.Context, string, string, workspacedomain.ApprovalState, workspacedomain.ExecutionIdentity, int64, time.Time) (workspacedomain.CommandApproval, error)
 }
 
+type managedCLIConnectorCatalog interface {
+	ListConnectorPackageCLIDefinitions(context.Context, string) ([]cliconnector.Definition, error)
+}
+
 func (service *Service) ListCLIConnectorHealth(ctx context.Context, _ *workspacev1.ListCLIConnectorHealthRequest) (*workspacev1.ListCLIConnectorHealthResponse, error) {
 	if _, err := service.administrator(ctx); err != nil {
 		return nil, err
@@ -98,6 +102,13 @@ func (service *Service) ListCLIConnectorDefinitions(ctx context.Context, _ *work
 	items, err := repository.ListCLIConnectorDefinitions(ctx, principal.Administrator)
 	if err != nil {
 		return nil, publicError(err)
+	}
+	if catalog, ok := service.workspace.Repository().(managedCLIConnectorCatalog); ok {
+		managed, managedErr := catalog.ListConnectorPackageCLIDefinitions(ctx, principal.UserID)
+		if managedErr != nil {
+			return nil, publicError(managedErr)
+		}
+		items = append(items, managed...)
 	}
 	response := make([]*workspacev1.CLIConnectorDefinition, 0, len(items))
 	for _, item := range items {
@@ -609,7 +620,7 @@ func cliDefinitionResponse(item cliconnector.Definition, mutable bool) *workspac
 	for _, skill := range item.RecommendedSkills {
 		recommendedSkills = append(recommendedSkills, &workspacev1.CLIRecommendedSkill{Name: skill.Name, GitUrl: skill.GitURL, GitRef: skill.GitRef})
 	}
-	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, Icon: item.Icon, Description: item.Description, InstallationType: item.InstallationType, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, ConformanceRuntimeDigests: item.RuntimeDigests, RecommendedSkills: recommendedSkills}
+	response := &workspacev1.CLIConnectorDefinition{Id: item.ID, Name: item.Name, Icon: item.Icon, Description: item.Description, InstallationType: item.InstallationType, NpmPackage: item.Package, NpmVersion: item.Version, NpmIntegrity: item.Integrity, Executable: item.Executable, AuthenticationDriver: item.AuthenticationDriver, Capabilities: capabilities, State: string(item.State), Mutable: mutable, Version: item.VersionNumber, SupportedArchitectures: item.SupportedArchitectures, ConformanceRuntimeDigests: item.RuntimeDigests, RecommendedSkills: recommendedSkills, ManagedInstallation: item.ManagedInstallation, ManagedAuthorized: item.InstallationAuthorized}
 	if item.FailureReason != "" {
 		response.FailureReason = &item.FailureReason
 	}

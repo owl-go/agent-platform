@@ -25,14 +25,25 @@ const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
 const aiApplicationsUnread = ref(localStorage.getItem("ai-applications-unread") === "1");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
+type NavChild = { id: string; path: string };
+type NavItem = { id: string; icon: typeof Picture; path: string; children?: NavChild[] };
+type NavGroup = { id: string; items: NavItem[] };
 const navGroups = [
   {
     id: "workspace",
     items: [
       { id: "sessions", icon: ChatDotRound, path: "/sessions" },
       { id: "workflows", icon: Connection, path: "/workflows" },
-      { id: "ai-creation", icon: Picture, path: "/ai-creation/image-generation" },
-      { id: "ai-applications", icon: Picture, path: "/ai-apps" },
+      {
+        id: "ai-applications",
+        icon: Picture,
+        path: "/ai-apps",
+        children: [
+          { id: "ai-applications-assistants", path: "/ai-apps/assistants" },
+          { id: "ai-applications-digital-humans", path: "/ai-apps/digital-humans" },
+          { id: "ai-applications-image-creation", path: "/ai-apps/image-creation" },
+        ],
+      },
       { id: "knowledge-bases", icon: Folder, path: "/knowledge-bases" },
     ],
   },
@@ -44,7 +55,7 @@ const navGroups = [
     id: "system",
     items: [{ id: "settings", icon: Setting, path: "/settings" }],
   },
-] as const;
+] satisfies NavGroup[];
 const elementLocale = computed(() => locale.value === "zh-CN" ? zhCn : en);
 let controller: AbortController | undefined;
 let imageMonitorTimer: number | undefined;
@@ -121,6 +132,14 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
   if (command === "locale") setLocale(locale.value === "zh-CN" ? "en-US" : "zh-CN");
   if (command === "signout") void auth.session.signOut();
 }
+
+function isNavItemActive(item: NavItem) {
+  return route.meta.surface === item.id;
+}
+
+function isNavChildActive(child: NavChild) {
+  return route.path === child.path || route.path.startsWith(`${child.path}/`);
+}
 </script>
 
 <template>
@@ -139,7 +158,12 @@ function handleUserCommand(command: "credits" | "users" | "locale" | "signout") 
         <nav :aria-label="t('nav.label')">
           <section v-for="group in navGroups" :key="group.id" class="nav-group">
             <h2>{{ t(`nav.groups.${group.id}`) }}</h2>
-            <RouterLink v-for="item in group.items" :key="item.id" :to="item.path" :class="{ 'router-link-active': route.meta.surface === item.id }" :aria-current="route.meta.surface === item.id ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
+            <template v-for="item in group.items" :key="item.id">
+              <RouterLink :to="item.path" :class="{ 'router-link-active': isNavItemActive(item) }" :aria-current="isNavItemActive(item) ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
+              <div v-if="item.children" class="nav-submenu" :aria-label="t(`nav.${item.id}`)">
+                <RouterLink v-for="child in item.children" :key="child.id" :to="child.path" :class="{ 'router-link-active': isNavChildActive(child) }" :aria-current="isNavChildActive(child) ? 'page' : undefined" @click="mobileOpen = false">{{ t(`nav.${child.id}`) }}</RouterLink>
+              </div>
+            </template>
           </section>
         </nav>
         <div class="sidebar-spacer"></div>

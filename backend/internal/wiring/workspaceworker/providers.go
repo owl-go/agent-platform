@@ -103,6 +103,9 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err := executor.EnableCLICredentials(repository); err != nil {
 		return nil, err
 	}
+	if err := executor.EnableMCPLifecycle(repository); err != nil {
+		return nil, err
+	}
 	var knowledgeProcessor *ingestion.Processor
 	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
 		provider, providerErr := anythingllm.NewClient(config.AnythingLLM.Endpoint, config.AnythingLLM.APIKey, config.AnythingLLM.Timeout.Value())

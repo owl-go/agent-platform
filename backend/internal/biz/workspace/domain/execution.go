@@ -196,6 +196,7 @@ type MCPServerSnapshot struct {
 	Configuration    json.RawMessage `json:"configuration"`
 	SecretCiphertext []byte          `json:"secret_ciphertext,omitempty"`
 	SecretOwnerID    string          `json:"secret_owner_id,omitempty"`
+	SecretAAD        string          `json:"secret_aad,omitempty"`
 }
 
 type SkillSnapshot struct {
@@ -211,7 +212,12 @@ type CLIConnectorSnapshot struct {
 	Name                 string          `json:"name"`
 	Icon                 string          `json:"icon,omitempty"`
 	Executable           string          `json:"executable"`
+	ExecutablePath       string          `json:"executable_path,omitempty"`
 	AuthenticationDriver string          `json:"authentication_driver"`
+	InstallationID       string          `json:"installation_id,omitempty"`
+	CPUMillis            int             `json:"cpu_millis,omitempty"`
+	MemoryMiB            int             `json:"memory_mib,omitempty"`
+	ChildProcesses       int             `json:"child_processes,omitempty"`
 	BundleObjectKey      string          `json:"bundle_object_key"`
 	BundleSHA256         string          `json:"bundle_sha256"`
 	RuntimeDigests       []string        `json:"runtime_digests"`

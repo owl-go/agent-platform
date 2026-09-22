@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -217,14 +218,18 @@ func validateExpertReferences(tx *gorm.DB, ownerID string, input domain.ExpertIn
 		return err
 	}
 	if len(input.MCPServerIDs) > 0 {
-		var count int64
-		if err := tx.Model(&mcpRecord{}).
-			Where("owner_user_id IN (?) AND id IN ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), input.MCPServerIDs).
-			Count(&count).Error; err != nil {
-			return err
-		}
-		if count != int64(len(input.MCPServerIDs)) {
-			return fmt.Errorf("%w: every MCP Server must be visible to the User and pass its isolated test", domain.ErrInvalid)
+		for _, id := range input.MCPServerIDs {
+			var server mcpRecord
+			err := tx.Where("owner_user_id IN (?) AND id = ? AND test_requested_at IS NULL AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&server).Error
+			if err == nil {
+				continue
+			}
+			if err != gorm.ErrRecordNotFound {
+				return err
+			}
+			if _, err := connectorMCPServerSnapshot(tx, ownerID, id); err != nil {
+				return fmt.Errorf("%w: every MCP Connector must be active, authorized, and available", domain.ErrInvalid)
+			}
 		}
 	}
 	if len(input.SkillIDs) > 0 {
@@ -953,6 +958,20 @@ func (repository *Repository) ListMCPServers(ctx context.Context, ownerID string
 	items := make([]domain.MCPServer, 0, len(rows))
 	for _, row := range rows {
 		item, err := mcpDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	var installations []connectorInstallationRecord
+	if err := db.Where("owner_user_id = ? AND state <> ?", ownerID, domain.ConnectorInstallationUninstalled).Order("updated_at DESC, id DESC").Find(&installations).Error; err != nil {
+		return nil, fmt.Errorf("list Connector MCP installations: %w", err)
+	}
+	for _, installation := range installations {
+		item, err := connectorMCPServerCatalog(db, ownerID, installation)
+		if errors.Is(err, domain.ErrNotFound) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
