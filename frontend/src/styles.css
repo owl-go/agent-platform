@@ -753,9 +753,14 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .application-card small { color: var(--muted); }
 .application-detail-page { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
 .application-detail-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.assistant-detail-actions,.faq-list-header { display: flex; align-items: center; gap: 8px; }
+.assistant-detail-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); }
+.assistant-detail-tabs button { padding: 11px 2px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+.assistant-detail-tabs button.active { color: var(--green); border-bottom-color: var(--green); }
 .application-detail-header h1 { margin: 4px 0 0; }
 .application-detail-card { border-radius: 16px; }
 .faq-row { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.faq-list-copy { min-width: 0; }
 .faq-row p { margin: 6px 0 0; color: var(--muted); white-space: pre-wrap; }
 .faq-create-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .share-snippet { margin-top: 14px; }
@@ -765,3 +770,4 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .knowledge-base-item:hover, .knowledge-base-item.active { background: var(--wash); }
 .knowledge-base-item small { color: var(--muted); overflow-wrap: anywhere; }
 @media (max-width: 720px) { .knowledge-base-layout { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .application-detail-header { align-items: flex-start; flex-wrap: wrap; }.assistant-detail-actions { width: 100%; }.assistant-detail-actions .el-button { flex: 1; }.faq-row { align-items: flex-start; flex-direction: column; }.faq-actions { display: flex; flex-wrap: wrap; } }

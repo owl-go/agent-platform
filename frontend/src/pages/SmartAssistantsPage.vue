@@ -2,7 +2,7 @@
 import { computed, inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
-import { Copy, Pause, Play, Search, Trash2 } from "@lucide/vue";
+import { Copy, Pause, Play, Search, Share2, Trash2 } from "@lucide/vue";
 import { ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type SmartAssistant, type SmartAssistantInput } from "../api/client";
@@ -39,6 +39,7 @@ async function create() {
   } catch { error.value = t("aiApplications.saveFailed"); }
 }
 function openCreate() { createDialogOpen.value = true; }
+function openShare(item: SmartAssistant) { void router.push({ path: `/ai-apps/assistants/${item.id}`, query: { share: "1" } }); }
 async function copy(item: SmartAssistant) {
   try { items.value.unshift(await api.copySmartAssistant(item.id)); }
   catch { error.value = t("aiApplications.saveFailed"); }
@@ -89,6 +90,7 @@ onMounted(refresh);
           <div class="application-card-actions">
             <el-button text :icon="Copy" :aria-label="t('common.copy')" @click.stop="copy(item)" />
             <el-button text :icon="item.state === 'enabled' ? Pause : Play" :aria-label="item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable')" @click.stop="toggleState(item)" />
+            <el-button text :icon="Share2" @click.stop="openShare(item)">{{ t('aiApplications.share.title') }}</el-button>
             <el-button text type="danger" :icon="Trash2" :aria-label="t('common.delete')" @click.stop="remove(item)" />
           </div>
         </div>
