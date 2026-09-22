@@ -49,4 +49,16 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(api.copySmartAssistant).toHaveBeenCalledWith("assistant-1");
     expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
   });
+
+  it("keeps the catalog compact and exposes a search action", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const wrapper = mount(SmartAssistantsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.find(".application-catalog-toolbar p").exists()).toBe(false);
+    expect(wrapper.find(".assistant-search-button").text()).toBe("搜索");
+    expect(wrapper.find(".assistant-search").classes()).toContain("assistant-search");
+    wrapper.unmount();
+  });
 });

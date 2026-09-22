@@ -24,7 +24,7 @@ onMounted(refresh);
 </script>
 <template>
   <section class="application-catalog-page">
-    <div class="application-catalog-toolbar"><div><h2>{{ t('aiApplications.digitalHumans.title') }}</h2><p>{{ t('aiApplications.digitalHumans.subtitle') }}</p></div><el-button class="application-create-trigger" type="primary" :icon="Plus" @click="openCreate">{{ t('aiApplications.create') }}</el-button></div>
+    <div class="application-catalog-toolbar"><div><h2>{{ t('aiApplications.digitalHumans.title') }}</h2></div><el-button class="application-create-trigger" type="primary" :icon="Plus" @click="openCreate">{{ t('aiApplications.create') }}</el-button></div>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
     <el-dialog v-model="createDialogOpen" class="application-create-dialog" :title="t('aiApplications.create')" width="min(560px, 92vw)" destroy-on-close>
       <el-form label-position="top" @submit.prevent="create"><el-form-item :label="t('aiApplications.name')"><el-input v-model="name" autofocus :placeholder="t('aiApplications.digitalHumanNamePlaceholder')" /></el-form-item></el-form>

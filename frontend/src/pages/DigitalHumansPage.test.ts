@@ -26,4 +26,14 @@ describe("DigitalHumansPage lifecycle", () => {
     expect(document.body.querySelector(".application-create-dialog")).not.toBeNull();
     wrapper.unmount();
   });
+
+  it("does not render the redundant catalog description", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/digital-humans");
+    const wrapper = mount(DigitalHumansPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.find(".application-catalog-toolbar p").exists()).toBe(false);
+    wrapper.unmount();
+  });
 });
