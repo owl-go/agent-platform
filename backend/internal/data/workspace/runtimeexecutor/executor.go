@@ -55,6 +55,7 @@ type Executor struct {
 	cliEgress      cliconnector.EgressGate
 	cliApprovals   cliconnector.ApprovalCoordinator
 	cliCredentials cliExecutionRepository
+	mcpLifecycle   mcpLifecycleRepository
 	warm           *containerprocess.WarmManager
 	checkout       func(context.Context, string) (runtimeLease, error)
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
@@ -66,6 +67,19 @@ type Executor struct {
 type cliExecutionRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
 	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
+}
+
+type cliLifecycleRepository interface {
+	ValidateCLIConnectorInvocation(context.Context, string, string) error
+}
+
+type connectorPackageCLIRepository interface {
+	ValidateConnectorPackageCLIInvocation(context.Context, string, string) error
+	ResolveConnectorPackageAuthorization(context.Context, string, string, string) ([]byte, error)
+}
+
+type mcpLifecycleRepository interface {
+	ValidateMCPInvocation(context.Context, string, string) error
 }
 
 func (executor *Executor) EnableCredits(service *creditsapplication.Service) error {
@@ -97,6 +111,14 @@ func (executor *Executor) EnableCLICredentials(repository cliExecutionRepository
 		return fmt.Errorf("CLI Connector credential repository is required")
 	}
 	executor.cliCredentials = repository
+	return nil
+}
+
+func (executor *Executor) EnableMCPLifecycle(repository mcpLifecycleRepository) error {
+	if repository == nil {
+		return fmt.Errorf("MCP lifecycle repository is required")
+	}
+	executor.mcpLifecycle = repository
 	return nil
 }
 
@@ -745,7 +767,14 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 		if err := executor.connectors.MaterializeVerified(ctx, connector.BundleObjectKey, connector.BundleSHA256, destination); err != nil {
 			return "", fmt.Errorf("materialize CLI Connector %q: %w", connector.Name, err)
 		}
-		executable := filepath.Join(destination, "node_modules", ".bin", connector.Executable)
+		executableRelative := filepath.Join("node_modules", ".bin", connector.Executable)
+		if connector.ExecutablePath != "" {
+			executableRelative = filepath.Clean(connector.ExecutablePath)
+			if executableRelative == "." || executableRelative == ".." || strings.HasPrefix(executableRelative, ".."+string(filepath.Separator)) || filepath.IsAbs(connector.ExecutablePath) || strings.ContainsAny(connector.ExecutablePath, "\\\x00\r\n") {
+				return "", fmt.Errorf("invalid frozen CLI Connector executable path")
+			}
+		}
+		executable := filepath.Join(destination, executableRelative)
 		resolvedRoot, err := filepath.EvalSymlinks(destination)
 		if err != nil {
 			return "", fmt.Errorf("resolve CLI Connector %q root: %w", connector.Name, err)
@@ -779,6 +808,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	}
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
+	containerLimits := sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 256 << 20}
 	for _, snapshot := range job.Snapshot.CLIConnectors {
 		verified, err := executor.cliConnectorRuntimeVerified(ctx, snapshot, runtimeDigest)
 		if err != nil {
@@ -797,10 +827,19 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		}
 		definitions = append(definitions, cliconnector.Definition{
 			ID: snapshot.ID, Name: snapshot.Name, Executable: snapshot.Executable,
-			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable,
+			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable, ManagedInstallation: snapshot.InstallationID != "",
 			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: runtimeDigests,
-			Capabilities: capabilities, VersionNumber: snapshot.Version,
+			Capabilities: capabilities, VersionNumber: snapshot.Version, CPUMillis: snapshot.CPUMillis, MemoryMiB: snapshot.MemoryMiB, ChildProcesses: snapshot.ChildProcesses,
 		})
+		if snapshot.CPUMillis > 0 && float64(snapshot.CPUMillis)/1000 < containerLimits.CPUs {
+			containerLimits.CPUs = float64(snapshot.CPUMillis) / 1000
+		}
+		if snapshot.MemoryMiB > 0 && int64(snapshot.MemoryMiB)*1024*1024 < containerLimits.MemoryBytes {
+			containerLimits.MemoryBytes = int64(snapshot.MemoryMiB) * 1024 * 1024
+		}
+		if snapshot.ChildProcesses > 0 && int64(snapshot.ChildProcesses) < containerLimits.PIDs {
+			containerLimits.PIDs = int64(snapshot.ChildProcesses)
+		}
 		for _, capability := range capabilities {
 			requiresApproval = requiresApproval || capability.Risk == cliconnector.RiskHigh
 		}
@@ -812,7 +851,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
 		BundleDirectory: bundleDirectory, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, EgressNetwork: executor.config.Sandbox.EgressNetwork,
-		Limits: sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 256 << 20},
+		Limits: containerLimits,
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID, Egress: executor.cliEgress,
 	})
 	if err != nil {
@@ -823,8 +862,20 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		executionKind, executionID = "session", fmt.Sprint(job.AssistantMessageID)
 	}
 	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
+	lifecycle := func(checkCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
+		if definition.ManagedInstallation {
+			if repository, ok := executor.cliCredentials.(connectorPackageCLIRepository); ok {
+				return repository.ValidateConnectorPackageCLIInvocation(checkCtx, job.OwnerID, definition.ID)
+			}
+			return fmt.Errorf("Connector Package lifecycle repository is unavailable")
+		}
+		if repository, ok := executor.cliCredentials.(cliLifecycleRepository); ok {
+			return repository.ValidateCLIConnectorInvocation(checkCtx, job.OwnerID, definition.ID)
+		}
+		return nil
+	}
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
-		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process},
+		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process, LifecycleCheck: lifecycle},
 		ResolveEnvironment: executor.cliEnvironmentResolver(job.OwnerID),
 		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
@@ -857,6 +908,23 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 			return map[string]string{}, nil
 		}
 		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
+			if definition.AuthenticationDriver == "connector_package" {
+				repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
+				if !ok || !definition.ManagedInstallation || definition.ID == "" {
+					return nil, errors.New("Connector Package credentials are unavailable")
+				}
+				ciphertext, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, string(identity))
+				if err != nil {
+					return nil, err
+				}
+				plaintext, err := executor.box.Decrypt(ciphertext, "connector-authorization:"+ownerID)
+				if err != nil {
+					return nil, err
+				}
+				value := string(plaintext)
+				clear(plaintext)
+				return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
+			}
 			return nil, errors.New("CLI Connector credentials are unavailable")
 		}
 		credentials, err := executor.cliCredentials.ResolveCLIConnectorExecutionCredentials(ctx, ownerID, definition.ID, identity, capability.Scopes)
@@ -1282,7 +1350,7 @@ func anthropicBaseURL(providerType, endpoint string) string {
 }
 
 func (executor *Executor) extensionFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
-	files, extensionVariables, redactValues, err := executor.nativeMCPFiles(job)
+	files, extensionVariables, redactValues, err := executor.nativeMCPFiles(ctx, job)
 	if err != nil {
 		return nil, nil, nil, err
 	}

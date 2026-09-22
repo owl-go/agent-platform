@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import ExtensionManager from "../components/ExtensionManager.vue";
+import ConnectorPackagePanel from "../components/ConnectorPackagePanel.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -26,5 +27,6 @@ function toggleMine() {
     <ExtensionManager :initial-tab="initialTab" :mine-only="mineOnly" :show-tabs="props.showTabs" @tab-change="router.replace({ query: $event === 'skills' ? {} : { tab: 'connectors' } })">
       <template #tab-actions><el-button v-if="props.showTabs" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
     </ExtensionManager>
+    <ConnectorPackagePanel v-if="initialTab === 'mcp'" />
   </section>
 </template>

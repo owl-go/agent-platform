@@ -283,6 +283,17 @@ describe("ExtensionManager", () => {
     wrapper.unmount();
   });
 
+  it("does not expose legacy MCP mutations for managed package installations", async () => {
+    const managed: MCPServer = { id: "installation-1", name: "统一包", managed_installation: true, transport: "streamable_http", url: "https://package.example.test/mcp", arguments: [], environment: [], tested: true, test_pending: false, ...timestamps };
+    const api = { listMCPServers: vi.fn(async () => [managed]), listSkills: vi.fn(async () => []) } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    expect(wrapper.find('button[aria-label="重试"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="编辑"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="删除"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("creates an MCP Server from the shared manager", async () => {
     const saved: MCPServer = { id: "mcp-1", name: "文档 MCP", transport: "streamable_http", url: "https://mcp.example.test", arguments: [], environment: [], tested: false, test_pending: false, ...timestamps };
     const createMCPServer = vi.fn(async () => saved);

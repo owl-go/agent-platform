@@ -73,6 +73,15 @@ func TestWrapperRejectsExpiredApprovalBeforeConsumption(t *testing.T) {
 	}
 }
 
+func TestWrapperRevalidatesConnectorLifecycleBeforeProcess(t *testing.T) {
+	process := &recordingProcess{}
+	wrapper := Wrapper{Process: process, LifecycleCheck: func(context.Context, Definition, Request) error { return errors.New("connector disabled") }}
+	definition := Definition{State: StateAvailable, Executable: "lark", BundleSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", RuntimeDigests: []string{"sha256:runtime"}, Capabilities: []Capability{{ID: "read", ArgvPrefix: []string{"read"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Timeout: time.Minute}}}
+	if _, err := wrapper.Execute(context.Background(), definition, Request{CapabilityID: "read", RuntimeDigest: "sha256:runtime", BundleSHA256: definition.BundleSHA256, Identity: IdentityUser, Argv: []string{"read"}}); err == nil || process.starts != 0 {
+		t.Fatalf("starts=%d err=%v", process.starts, err)
+	}
+}
+
 func TestDefinitionRejectsIncompleteOrUnsafeCapabilityPolicy(t *testing.T) {
 	base := Definition{Name: "Feishu", Package: "@larksuite/cli", Version: "1.0.93", Integrity: "sha512-test", Executable: "lark-cli", AuthenticationDriver: "feishu", SupportedArchitectures: []string{"linux-amd64"}, Capabilities: []Capability{{ID: "identity", ArgvPrefix: []string{"auth", "status"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute}}}
 	tests := []struct {

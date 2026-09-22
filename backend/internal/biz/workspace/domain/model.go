@@ -284,24 +284,25 @@ type ResponseSnapshot struct {
 }
 
 type MCPServer struct {
-	ID              string
-	OwnerID         string
-	Platform        bool
-	Name            string
-	Icon            string
-	Transport       string
-	URL             *string
-	Runner          *string
-	Package         *string
-	PackageVersion  *string
-	Arguments       []string
-	Environment     []EnvironmentVariable
-	TestRequestedAt *time.Time
-	TestedAt        *time.Time
-	TestError       string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	Version         int64
+	ID                  string
+	OwnerID             string
+	Platform            bool
+	ManagedInstallation bool
+	Name                string
+	Icon                string
+	Transport           string
+	URL                 *string
+	Runner              *string
+	Package             *string
+	PackageVersion      *string
+	Arguments           []string
+	Environment         []EnvironmentVariable
+	TestRequestedAt     *time.Time
+	TestedAt            *time.Time
+	TestError           string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Version             int64
 }
 
 func (server MCPServer) Validate() error {

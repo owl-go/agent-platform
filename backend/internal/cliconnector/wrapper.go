@@ -73,6 +73,11 @@ type Definition struct {
 	VersionNumber          int64
 	FailureReason          string
 	CreatedByUserID        string
+	ManagedInstallation    bool
+	InstallationAuthorized bool
+	CPUMillis              int
+	MemoryMiB              int
+	ChildProcesses         int
 }
 
 type RecommendedSkill struct {
@@ -201,7 +206,7 @@ func validateExecutionPolicy(definition Definition) error {
 	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
 		return errors.New("CLI executable must be selected from package bin metadata")
 	}
-	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" {
+	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" && definition.AuthenticationDriver != "connector_package" {
 		return errors.New("unsupported built-in authentication driver")
 	}
 	if len(definition.Capabilities) == 0 {
@@ -278,6 +283,7 @@ type Wrapper struct {
 	Process         Process
 	ConsumeApproval func(context.Context, string, string) error
 	Revalidate      func(context.Context, Definition, Request) error
+	LifecycleCheck  func(context.Context, Definition, Request) error
 	Now             func() time.Time
 }
 
@@ -301,6 +307,11 @@ func (wrapper Wrapper) Execute(ctx context.Context, definition Definition, reque
 	if wrapper.Revalidate != nil {
 		if err := wrapper.Revalidate(ctx, definition, request); err != nil {
 			return Result{}, fmt.Errorf("revalidate CLI command: %w", err)
+		}
+	}
+	if wrapper.LifecycleCheck != nil {
+		if err := wrapper.LifecycleCheck(ctx, definition, request); err != nil {
+			return Result{}, fmt.Errorf("revalidate Connector lifecycle: %w", err)
 		}
 	}
 	if capability.Risk == RiskHigh {

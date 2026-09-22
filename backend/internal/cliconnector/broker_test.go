@@ -184,6 +184,24 @@ func TestBrokerResolvesCredentialsForReviewedCapability(t *testing.T) {
 	}
 }
 
+func TestBrokerRedactsResolvedCredentialFromProcessOutput(t *testing.T) {
+	definition := brokerDefinition(RiskLow)
+	broker, err := NewBroker(BrokerConfig{
+		Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: secretOutputProcess{}},
+		ResolveEnvironment: func(context.Context, Definition, Capability, Identity) (map[string]string, error) {
+			return map[string]string{"TOKEN": "secret-value"}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: IdentityUser, Arguments: []string{"auth", "status"}})
+	stdout, decodeErr := base64.StdEncoding.DecodeString(response.StdoutBase64)
+	if decodeErr != nil || string(stdout) != "token=[REDACTED]" {
+		t.Fatalf("response=%#v stdout=%q decode=%v", response, stdout, decodeErr)
+	}
+}
+
 func TestBrokerCanonicalizesMeAsUserBeforeResolvingCredentials(t *testing.T) {
 	process := &recordingProcess{}
 	definition := brokerDefinition(RiskLow)
@@ -239,6 +257,12 @@ type recordingApprovalCoordinator struct {
 	grantIdentity    Identity
 	consumed, closed int
 	digest, nonce    string
+}
+
+type secretOutputProcess struct{}
+
+func (secretOutputProcess) Run(_ context.Context, request ProcessRequest) (Result, error) {
+	return Result{Stdout: []byte("token=" + request.Environment["TOKEN"])}, nil
 }
 
 func (coordinator *recordingApprovalCoordinator) Await(_ context.Context, request ApprovalRequest) (ApprovalGrant, error) {
