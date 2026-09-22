@@ -9,9 +9,10 @@ import (
 type KnowledgeState string
 
 const (
-	KnowledgeReady    KnowledgeState = "ready"
-	KnowledgeFailed   KnowledgeState = "failed"
-	KnowledgeDisabled KnowledgeState = "disabled"
+	KnowledgeProcessing KnowledgeState = "processing"
+	KnowledgeReady      KnowledgeState = "ready"
+	KnowledgeFailed     KnowledgeState = "failed"
+	KnowledgeDisabled   KnowledgeState = "disabled"
 )
 
 type KnowledgeBase struct {

@@ -46,6 +46,17 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		writeAuthError(writer, http.StatusForbidden, "origin_not_allowed")
 		return
 	}
+	if origin := request.Header.Get("Origin"); origin != "" {
+		writer.Header().Set("Access-Control-Allow-Origin", origin)
+		writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		writer.Header().Add("Vary", "Origin")
+		if request.Method == http.MethodOptions {
+			writer.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
 	visitorHash, visitorCookie, visitorErr := publicVisitor(request)
 	if visitorErr != nil {
 		writeAuthError(writer, http.StatusInternalServerError, "request_failed")
@@ -91,11 +102,22 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			writeAuthError(writer, http.StatusBadRequest, "invalid_json")
 			return
 		}
-		if aiapplicationdomain.DefaultSafetyPolicy().Decide(input.Question) == aiapplicationdomain.SafetyRefuse {
+		decision := aiapplicationdomain.DefaultSafetyPolicy().Decide(input.Question)
+		_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", decision, "not_charged")
+		if decision == aiapplicationdomain.SafetyRefuse {
 			writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 			return
 		}
 		if !service.consumePublicRate(writer, request, token, visitorHash) {
+			return
+		}
+		match, matched, faqErr := service.aiapplications.MatchFAQ(request.Context(), assistant.OwnerID, assistant.ID, input.Question)
+		if faqErr != nil {
+			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
+			return
+		}
+		if matched {
+			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": match.FAQ.AnswerMarkdown, "faq_id": match.FAQ.ID, "confidence": match.Confidence}, http.StatusOK)
 			return
 		}
 		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
@@ -105,30 +127,6 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		}
 		if !allowed {
 			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
-			return
-		}
-		faq, matched, faqErr := service.aiapplications.FAQAnswer(request.Context(), assistant.OwnerID, assistant.ID, input.Question)
-		if faqErr != nil {
-			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
-			return
-		}
-		if matched {
-			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": faq.AnswerMarkdown, "faq_id": faq.ID}, http.StatusOK)
-			return
-		}
-		grounded := false
-		if len(assistant.KnowledgeBaseIDs) > 0 {
-			chunks, searchErr := service.aiapplications.SearchKnowledge(request.Context(), assistant.OwnerID, assistant.KnowledgeBaseIDs, input.Question, 5)
-			if searchErr != nil {
-				writeAuthError(writer, http.StatusInternalServerError, "request_failed")
-				return
-			}
-			if len(chunks) > 0 {
-				grounded = true
-			}
-		}
-		if !grounded {
-			writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 			return
 		}
 		response, createErr := service.enqueueExternalAnswer(request.Context(), assistant, visitorHash, input.ConversationID, input.Question)

@@ -25,8 +25,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/resources", name: "resources", component: () => import("./pages/ResourceCenterPage.vue"), meta: { surface: "resources" } },
       { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
       { path: "/knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "knowledge-bases" } },
-      { path: "/ai-creation", redirect: "/ai-creation/image-generation" },
-      { path: "/ai-creation/image-generation", name: "image-generation", component: () => import("./pages/ImageGenerationPage.vue"), meta: { surface: "ai-creation" } },
+      { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
       {
         path: "/ai-apps",
         component: () => import("./pages/AIApplicationsPage.vue"),
@@ -41,7 +40,6 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
           { path: "digital-humans/:digitalHumanId", name: "digital-human-detail", component: () => import("./pages/DigitalHumanDetailPage.vue"), meta: { surface: "ai-applications" } },
         ],
       },
-      { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
       { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },

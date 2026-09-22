@@ -64,6 +64,17 @@ func TestFAQAnswerReturnsMarkdownWithoutModel(t *testing.T) {
 	}
 }
 
+func TestMatchFAQReturnsStableIdentityAndConfidence(t *testing.T) {
+	service, err := application.New(answerRepository{faq: domain.FAQ{ID: "faq-1", Question: "如何退款？", AnswerMarkdown: "在订单页申请。", Enabled: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	match, matched, err := service.MatchFAQ(context.Background(), "owner", "assistant", "怎么申请退款")
+	if err != nil || !matched || match.FAQ.ID != "faq-1" || match.Confidence <= 0 || match.Confidence > 1 {
+		t.Fatalf("MatchFAQ() = %+v, matched=%v, err=%v", match, matched, err)
+	}
+}
+
 func TestFAQAnswerSkipsProtectedQuestion(t *testing.T) {
 	service, err := application.New(answerRepository{faq: domain.FAQ{Question: "武器", AnswerMarkdown: "unsafe", Enabled: true}})
 	if err != nil {
