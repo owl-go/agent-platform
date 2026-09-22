@@ -38,14 +38,13 @@ func TestSmartAssistantRejectsNonHTTPSShareOriginsExceptLocalDevelopment(t *test
 }
 
 func TestSmartAssistantValidatesScenarioAndEnablementSeparatelyFromDraft(t *testing.T) {
-	assistant := domain.SmartAssistant{Name: "产品助手", State: domain.StateDraft}
+	assistant := domain.SmartAssistant{Name: "产品助手", Icon: "sparkles", State: domain.StateDraft}
 	if err := assistant.Validate(); err != nil {
 		t.Fatalf("Validate() draft error = %v", err)
 	}
-	if err := assistant.ValidateForEnable(); !errors.Is(err, domain.ErrInvalid) {
-		t.Fatalf("ValidateForEnable() error = %v, want ErrInvalid for incomplete assistant", err)
+	if err := assistant.ValidateForEnable(); err != nil {
+		t.Fatalf("ValidateForEnable() error = %v, want service-goal-free assistant to be enableable", err)
 	}
-	assistant.ServiceGoal = "回答产品问题"
 	assistant.Scenario = domain.ScenarioProductGuide
 	if err := assistant.ValidateForEnable(); err != nil {
 		t.Fatalf("ValidateForEnable() complete error = %v", err)

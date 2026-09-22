@@ -2,9 +2,11 @@
 import { computed, inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
-import { Copy, Pause, Play, Search, Share2, Trash2 } from "@lucide/vue";
+import { Pause, Play, Search, Share2, Trash2 } from "@lucide/vue";
 import { ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
+import IconPicker from "../components/IconPicker.vue";
+import SmartAssistantShareDialog from "../components/SmartAssistantShareDialog.vue";
 import { platformApiKey, type SmartAssistant, type SmartAssistantInput } from "../api/client";
 
 const api = inject(platformApiKey)!;
@@ -16,7 +18,9 @@ const error = ref("");
 const search = ref("");
 const scenario = ref("");
 const createDialogOpen = ref(false);
-const form = ref<SmartAssistantInput>({ name: "", scenario: "custom", service_goal: "", operating_rules: "", response_style: "" });
+const form = ref<SmartAssistantInput & { icon: string }>({ name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" });
+const shareAssistant = ref<SmartAssistant>();
+const shareDialogOpen = ref(false);
 const scenarios = ["customer-consultation", "pre-sales-advisor", "after-sales-support", "product-guide", "enterprise-knowledge", "recruitment", "training", "custom"];
 const filteredItems = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
@@ -30,20 +34,18 @@ async function refresh() {
   finally { loading.value = false; }
 }
 async function create() {
-  if (!form.value.name.trim() || !form.value.service_goal?.trim()) return;
+  if (!form.value.name.trim() || !form.value.icon?.trim()) return;
   try {
     const item = await api.createSmartAssistant({ ...form.value, share: { enabled: false, width: "100%", height: 600 } });
     items.value.unshift(item);
-    form.value = { name: "", scenario: "custom", service_goal: "", operating_rules: "", response_style: "" };
+    form.value = { name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" };
     createDialogOpen.value = false;
   } catch { error.value = t("aiApplications.saveFailed"); }
 }
 function openCreate() { createDialogOpen.value = true; }
-function openShare(item: SmartAssistant) { void router.push({ path: `/ai-apps/assistants/${item.id}`, query: { share: "1" } }); }
-async function copy(item: SmartAssistant) {
-  try { items.value.unshift(await api.copySmartAssistant(item.id)); }
-  catch { error.value = t("aiApplications.saveFailed"); }
-}
+function openShare(item: SmartAssistant) { shareAssistant.value = item; shareDialogOpen.value = true; }
+function updateSharedAssistant(updated: SmartAssistant) { items.value = items.value.map((item) => item.id === updated.id ? updated : item); shareAssistant.value = updated; }
+function showShareError(message: string) { error.value = message; }
 async function toggleState(item: SmartAssistant) {
   const next = item.state === "enabled" ? "disabled" : "enabled";
   try {
@@ -73,8 +75,9 @@ onMounted(refresh);
     <el-dialog v-model="createDialogOpen" class="application-create-dialog" :title="t('aiApplications.create')" width="min(560px, 92vw)" destroy-on-close>
       <el-form label-position="top" @submit.prevent="create">
         <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" autofocus :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
+        <el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="form.icon" upload-only /></el-form-item>
         <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
-        <el-form-item :label="t('aiApplications.goal')" required><el-input v-model="form.service_goal" /></el-form-item>
+        <el-form-item :label="t('aiApplications.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" @click="create">{{ t('common.save') }}</el-button></template>
     </el-dialog>
@@ -86,9 +89,8 @@ onMounted(refresh);
     <div v-loading="loading" class="application-card-grid">
       <el-card v-for="item in filteredItems" :key="item.id" class="application-card" role="button" tabindex="0" @click="router.push(`/ai-apps/assistants/${item.id}`)" @keydown.enter="router.push(`/ai-apps/assistants/${item.id}`)">
         <div class="application-card-heading">
-          <div><h3>{{ item.name }}</h3><p>{{ item.service_goal || item.introduction || t('aiApplications.assistants.defaultIntro') }}</p></div>
+          <div><h3>{{ item.name }}</h3><p>{{ item.description || item.introduction || t('aiApplications.assistants.defaultIntro') }}</p></div>
           <div class="application-card-actions">
-            <el-button text :icon="Copy" :aria-label="t('common.copy')" @click.stop="copy(item)" />
             <el-button text :icon="item.state === 'enabled' ? Pause : Play" :aria-label="item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable')" @click.stop="toggleState(item)" />
             <el-button text :icon="Share2" @click.stop="openShare(item)">{{ t('aiApplications.share.title') }}</el-button>
             <el-button text type="danger" :icon="Trash2" :aria-label="t('common.delete')" @click.stop="remove(item)" />
@@ -98,5 +100,6 @@ onMounted(refresh);
       </el-card>
       <el-empty v-if="!loading && !filteredItems.length" :description="t('aiApplications.assistants.empty')" />
     </div>
+    <SmartAssistantShareDialog v-model="shareDialogOpen" :assistant="shareAssistant" @updated="updateSharedAssistant" @error="showShareError" />
   </section>
 </template>
