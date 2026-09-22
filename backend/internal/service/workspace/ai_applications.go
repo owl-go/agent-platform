@@ -217,7 +217,7 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 			service.writeAIResult(writer, nil, err)
 			return
 		}
-		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "expert_id": session.ExpertID, "expert_team_id": session.ExpertTeamID, "assistant_id": rest[0], "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
+		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "expert_id": session.ExpertID, "expert_team_id": session.ExpertTeamID, "assistant_id": rest[0], "assistant_welcome": assistant.Introduction, "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
 		return
 	}
 	if len(rest) == 2 && rest[1] == "copy" {
