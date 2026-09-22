@@ -42,7 +42,7 @@ ALTER TABLE connector_authorizations
     ADD CONSTRAINT connector_authorizations_installation_fk
     FOREIGN KEY (installation_id) REFERENCES connector_installations(id) ON DELETE CASCADE;
 
-CREATE TABLE connector_audit_records (
+CREATE TABLE connector_package_audit_records (
     id uuid PRIMARY KEY,
     owner_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
     installation_id uuid REFERENCES connector_installations(id) ON DELETE SET NULL,
@@ -69,4 +69,4 @@ $$;
 CREATE TRIGGER connector_revisions_immutable BEFORE UPDATE OR DELETE ON connector_revisions FOR EACH ROW EXECUTE FUNCTION reject_connector_revision_mutation();
 
 CREATE INDEX connector_installations_owner_state ON connector_installations(owner_user_id, state);
-CREATE INDEX connector_audit_records_installation_created ON connector_audit_records(installation_id, created_at DESC);
+CREATE INDEX connector_package_audit_records_installation_created ON connector_package_audit_records(installation_id, created_at DESC);

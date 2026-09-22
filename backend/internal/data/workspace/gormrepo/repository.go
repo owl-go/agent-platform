@@ -82,7 +82,7 @@ type connectorAuditRecord struct {
 	CreatedAt         time.Time `gorm:"column:created_at"`
 }
 
-func (connectorAuditRecord) TableName() string { return "connector_audit_records" }
+func (connectorAuditRecord) TableName() string { return "connector_package_audit_records" }
 
 type creditTransactionSettler interface {
 	SettleTx(*gorm.DB, creditsdomain.Settlement) (creditsdomain.Consumption, error)
