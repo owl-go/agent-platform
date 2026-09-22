@@ -20,6 +20,10 @@ type KnowledgeRepository interface {
 	SearchKnowledge(context.Context, string, []string, string, int) ([]domain.KnowledgeChunk, error)
 }
 
+type AsyncKnowledgeIngestionRepository interface {
+	EnqueueKnowledgeDocument(context.Context, string, string, domain.KnowledgeDocument) (domain.KnowledgeDocument, error)
+}
+
 func (service *Service) SetKnowledgeRepository(repository KnowledgeRepository) {
 	service.knowledge = repository
 }
@@ -60,6 +64,11 @@ func (service *Service) CreateKnowledgeDocument(ctx context.Context, owner, base
 	}
 	digest := sha256.Sum256([]byte(document.Content))
 	document.ContentSHA256 = hex.EncodeToString(digest[:])
+	if repository, ok := service.knowledge.(AsyncKnowledgeIngestionRepository); ok {
+		document.State = domain.KnowledgeProcessing
+		document.UpdatedAt = time.Now().UTC()
+		return repository.EnqueueKnowledgeDocument(ctx, owner, baseID, document)
+	}
 	document.State = domain.KnowledgeReady
 	document.UpdatedAt = time.Now().UTC()
 	chunks := chunkDocument(document.Content)

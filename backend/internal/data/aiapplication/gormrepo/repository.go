@@ -58,6 +58,7 @@ type humanRecord struct {
 	Language         string    `gorm:"column:language"`
 	ExpressionStyle  string    `gorm:"column:expression_style"`
 	SceneDescription string    `gorm:"column:scene_description"`
+	State            string    `gorm:"column:state"`
 	CreatedAt        time.Time `gorm:"column:created_at"`
 	UpdatedAt        time.Time `gorm:"column:updated_at"`
 	Version          int64     `gorm:"column:version"`
@@ -222,7 +223,11 @@ func (r *Repository) CreateDigitalHuman(ctx context.Context, owner string, human
 	return human, nil
 }
 func (r *Repository) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
-	updates := map[string]any{"name": human.Name, "avatar_object_key": human.AvatarObjectKey, "voice": human.Voice, "language": human.Language, "expression_style": human.ExpressionStyle, "scene_description": human.SceneDescription, "updated_at": time.Now().UTC(), "version": version + 1}
+	state := human.State
+	if state == "" {
+		state = domain.StateEnabled
+	}
+	updates := map[string]any{"name": human.Name, "avatar_object_key": human.AvatarObjectKey, "voice": human.Voice, "language": human.Language, "expression_style": human.ExpressionStyle, "scene_description": human.SceneDescription, "state": state, "updated_at": time.Now().UTC(), "version": version + 1}
 	result := r.db.WithContext(ctx).Model(&humanRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", owner, id, version).Updates(updates)
 	if result.Error != nil {
 		return domain.DigitalHuman{}, mapDBError(result.Error)
@@ -343,10 +348,18 @@ func optionalString(value string) *string {
 	return &value
 }
 func humanFromRecord(row humanRecord) domain.DigitalHuman {
-	return domain.DigitalHuman{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, AvatarObjectKey: row.AvatarObjectKey, Voice: row.Voice, Language: row.Language, ExpressionStyle: row.ExpressionStyle, SceneDescription: row.SceneDescription, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	state := domain.ApplicationState(row.State)
+	if state == "" {
+		state = domain.StateEnabled
+	}
+	return domain.DigitalHuman{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, AvatarObjectKey: row.AvatarObjectKey, Voice: row.Voice, Language: row.Language, ExpressionStyle: row.ExpressionStyle, SceneDescription: row.SceneDescription, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 func humanRecordFromDomain(value domain.DigitalHuman) humanRecord {
-	return humanRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
+	state := value.State
+	if state == "" {
+		state = domain.StateEnabled
+	}
+	return humanRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, State: string(state), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 func faqFromRecord(row faqRecord) domain.FAQ {
 	return domain.FAQ{ID: row.ID, AssistantID: row.AssistantID, Question: row.Question, AnswerMarkdown: row.AnswerMarkdown, DisplayOrder: row.DisplayOrder, Category: row.Category, Tag: row.Tag, Icon: row.Icon, Enabled: row.Enabled, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}

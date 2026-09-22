@@ -34,6 +34,7 @@ func (knowledgeDocumentRecord) TableName() string { return "knowledge_documents"
 
 type knowledgeChunkRecord struct {
 	ID, DocumentID, Content string
+	GenerationID            *string `gorm:"column:generation_id"`
 	Position                int
 	Embedding               string `gorm:"column:embedding"`
 	CreatedAt               time.Time
@@ -46,6 +47,27 @@ type knowledgeSearchRecord struct {
 	Position                int
 	Score                   float32
 }
+
+type knowledgeIndexGenerationRecord struct {
+	ID              string    `gorm:"column:id"`
+	KnowledgeBaseID string    `gorm:"column:knowledge_base_id"`
+	Generation      int64     `gorm:"column:generation"`
+	State           string    `gorm:"column:state"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+}
+
+type aiKnowledgeJobRecord struct {
+	ID         string    `gorm:"column:id"`
+	DocumentID string    `gorm:"column:document_id"`
+	State      string    `gorm:"column:state"`
+	Attempts   int       `gorm:"column:attempts"`
+	Error      string    `gorm:"column:error"`
+	CreatedAt  time.Time `gorm:"column:created_at"`
+	UpdatedAt  time.Time `gorm:"column:updated_at"`
+}
+
+func (knowledgeIndexGenerationRecord) TableName() string { return "knowledge_index_generations" }
+func (aiKnowledgeJobRecord) TableName() string           { return "ai_application_knowledge_jobs" }
 
 func (r *Repository) ListKnowledgeBases(ctx context.Context, owner string) ([]domain.KnowledgeBase, error) {
 	var rows []knowledgeBaseRecord
@@ -100,6 +122,27 @@ func (r *Repository) CreateKnowledgeDocumentWithEmbeddings(ctx context.Context, 
 	return r.createKnowledgeDocument(ctx, owner, baseID, document, chunks)
 }
 
+func (r *Repository) EnqueueKnowledgeDocument(ctx context.Context, owner, baseID string, document domain.KnowledgeDocument) (domain.KnowledgeDocument, error) {
+	if _, err := r.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+		return domain.KnowledgeDocument{}, err
+	}
+	now := time.Now().UTC()
+	document.ID, document.KnowledgeBaseID, document.CreatedAt, document.UpdatedAt, document.Version = uuid.NewString(), baseID, now, now, 1
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		row := knowledgeDocumentRecord{ID: document.ID, KnowledgeBaseID: baseID, Name: document.Name, SourceType: "upload", NormalizedSource: document.ContentSHA256, Content: document.Content, ContentSHA256: document.ContentSHA256, State: string(domain.KnowledgeProcessing), CreatedAt: now, UpdatedAt: now, Version: 1}
+		if err := tx.Create(&row).Error; err != nil {
+			return mapDBError(err)
+		}
+		return tx.Create(&aiKnowledgeJobRecord{ID: uuid.NewString(), DocumentID: document.ID, State: "queued", CreatedAt: now, UpdatedAt: now}).Error
+	})
+	if err != nil {
+		return domain.KnowledgeDocument{}, err
+	}
+	document.State = domain.KnowledgeProcessing
+	document.Content = ""
+	return document, nil
+}
+
 func (r *Repository) createKnowledgeDocument(ctx context.Context, owner, baseID string, document domain.KnowledgeDocument, chunks []domain.KnowledgeChunk) (domain.KnowledgeDocument, error) {
 	if _, err := r.GetKnowledgeBase(ctx, owner, baseID); err != nil {
 		return domain.KnowledgeDocument{}, err
@@ -129,7 +172,7 @@ func (r *Repository) SearchKnowledgeVector(ctx context.Context, owner string, ba
 		return nil, nil
 	}
 	var rows []knowledgeSearchRecord
-	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, 1 - (c.embedding <=> ?::vector) AS score", vectorLiteral(embedding)).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Where("d.knowledge_base_id IN ? AND c.embedding IS NOT NULL", baseIDs).Order(gorm.Expr("c.embedding <=> ?::vector ASC, c.position ASC", vectorLiteral(embedding))).Limit(limit).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, 1 - (c.embedding <=> ?::vector) AS score", vectorLiteral(embedding)).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Joins("LEFT JOIN knowledge_index_generations AS g ON g.id = c.generation_id").Where("d.knowledge_base_id IN ? AND c.embedding IS NOT NULL AND (c.generation_id IS NULL OR (g.state = 'ready' AND g.generation = (SELECT MAX(g2.generation) FROM knowledge_index_generations g2 WHERE g2.knowledge_base_id = d.knowledge_base_id AND g2.state = 'ready')))", baseIDs).Order(gorm.Expr("c.embedding <=> ?::vector ASC, c.position ASC", vectorLiteral(embedding))).Limit(limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +195,7 @@ func (r *Repository) SearchKnowledge(ctx context.Context, owner string, baseIDs 
 		return nil, nil
 	}
 	var rows []knowledgeSearchRecord
-	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", query).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Where("d.knowledge_base_id IN ? AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?)", baseIDs, query).Order("score DESC, c.position ASC").Limit(limit).Scan(&rows).Error
+	err := r.db.WithContext(ctx).Table("knowledge_chunks AS c").Select("c.id, c.document_id, c.content, c.position, ts_rank(to_tsvector('simple', c.content), plainto_tsquery('simple', ?)) AS score", query).Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.state = 'ready' AND d.deleted_at IS NULL").Joins("JOIN knowledge_bases AS b ON b.id = d.knowledge_base_id AND b.owner_user_id = ? AND b.deleted_at IS NULL", owner).Joins("LEFT JOIN knowledge_index_generations AS g ON g.id = c.generation_id").Where("d.knowledge_base_id IN ? AND to_tsvector('simple', c.content) @@ plainto_tsquery('simple', ?) AND (c.generation_id IS NULL OR (g.state = 'ready' AND g.generation = (SELECT MAX(g2.generation) FROM knowledge_index_generations g2 WHERE g2.knowledge_base_id = d.knowledge_base_id AND g2.state = 'ready')))", baseIDs, query).Order("score DESC, c.position ASC").Limit(limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}

@@ -44,6 +44,7 @@ type digitalHumanPayload struct {
 	Language         string `json:"language"`
 	ExpressionStyle  string `json:"expression_style"`
 	SceneDescription string `json:"scene_description"`
+	State            string `json:"state"`
 	Version          int64  `json:"version"`
 }
 
@@ -200,7 +201,12 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		session, err := service.workspace.Repository().CreateSession(request.Context(), owner, nil, nil)
+		assistant, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		session, err := service.workspace.Repository().CreateSession(request.Context(), owner, assistant.ExpertID, assistant.ExpertTeamID)
 		if err == nil {
 			err = service.aiapplications.BindAssistantSession(request.Context(), owner, rest[0], session.ID)
 		}
@@ -211,7 +217,34 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 			service.writeAIResult(writer, nil, err)
 			return
 		}
-		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "assistant_id": rest[0], "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
+		service.writeAIResult(writer, map[string]any{"id": session.ID, "title": session.Title, "expert_id": session.ExpertID, "expert_team_id": session.ExpertTeamID, "assistant_id": rest[0], "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "version": session.Version}, nil)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "copy" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		value, err := service.aiapplications.CopyAssistant(request.Context(), owner, rest[0])
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "state" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var input struct {
+			State   aiapplicationdomain.ApplicationState `json:"state"`
+			Version int64                                `json:"version"`
+		}
+		if !decodeJSON(writer, request, &input) {
+			return
+		}
+		value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
+		service.writeAIResult(writer, value, err)
 		return
 	}
 	if len(rest) != 1 {
@@ -249,32 +282,47 @@ func (service *Service) handleAssistantAnswer(writer http.ResponseWriter, reques
 	if !decodeJSON(writer, request, &input) {
 		return
 	}
-	if aiapplicationdomain.DefaultSafetyPolicy().Decide(input.Question) == aiapplicationdomain.SafetyRefuse {
+	decision := aiapplicationdomain.DefaultSafetyPolicy().Decide(input.Question)
+	_ = service.aiapplications.RecordSafetyAudit(request.Context(), owner, assistantID, "authenticated", decision, "not_charged")
+	if decision == aiapplicationdomain.SafetyRefuse {
 		service.writeAIResult(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, nil)
 		return
 	}
-	faq, matched, err := service.aiapplications.FAQAnswer(request.Context(), owner, assistantID, input.Question)
+	match, matched, err := service.aiapplications.MatchFAQ(request.Context(), owner, assistantID, input.Question)
 	if err != nil {
 		service.writeAIResult(writer, nil, err)
 		return
 	}
 	if matched {
-		service.writeAIResult(writer, map[string]any{"kind": "faq", "answer_markdown": faq.AnswerMarkdown, "faq_id": faq.ID}, nil)
+		service.writeAIResult(writer, map[string]any{"kind": "faq", "answer_markdown": match.FAQ.AnswerMarkdown, "faq_id": match.FAQ.ID, "confidence": match.Confidence}, nil)
 		return
 	}
 	assistant, assistantErr := service.aiapplications.GetAssistant(request.Context(), owner, assistantID)
-	if assistantErr == nil && len(assistant.KnowledgeBaseIDs) > 0 {
-		chunks, searchErr := service.aiapplications.SearchKnowledge(request.Context(), owner, assistant.KnowledgeBaseIDs, input.Question, 5)
-		if searchErr != nil {
-			service.writeAIResult(writer, nil, searchErr)
-			return
-		}
-		if len(chunks) > 0 {
-			service.writeAIResult(writer, map[string]any{"kind": "grounded_context", "chunks": chunks}, nil)
+	if assistantErr != nil {
+		service.writeAIResult(writer, nil, assistantErr)
+		return
+	}
+	if err := service.credits.RequirePositiveBalance(request.Context(), owner, service.userTimezone(request.Context(), owner)); err != nil {
+		service.writeAIResult(writer, nil, err)
+		return
+	}
+	session, sessionErr := service.workspace.Repository().CreateSession(request.Context(), owner, assistant.ExpertID, assistant.ExpertTeamID)
+	if sessionErr == nil {
+		sessionErr = service.aiapplications.BindAssistantSession(request.Context(), owner, assistantID, session.ID)
+	}
+	if sessionErr == nil {
+		_, assistantMessage, messageErr := service.workspace.Repository().CreateMessagePair(request.Context(), owner, session.ID, input.Question, nil)
+		if messageErr != nil {
+			sessionErr = messageErr
+		} else {
+			service.writeAIResult(writer, map[string]any{"kind": "generating", "session_id": session.ID, "message_id": assistantMessage.ID, "state": assistantMessage.State}, nil)
 			return
 		}
 	}
-	service.writeAIResult(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, nil)
+	if session.ID != "" {
+		_ = service.workspace.Repository().DeleteSession(request.Context(), owner, session.ID)
+	}
+	service.writeAIResult(writer, nil, sessionErr)
 }
 
 func (service *Service) handleFAQs(writer http.ResponseWriter, request *http.Request, owner, assistantID string, rest []string) {
@@ -331,6 +379,43 @@ func (service *Service) handleDigitalHumans(writer http.ResponseWriter, request 
 			return
 		}
 	}
+	if len(rest) == 2 && rest[1] == "copy" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		value, err := service.aiapplications.CopyDigitalHuman(request.Context(), owner, rest[0])
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "preview" {
+		if request.Method != http.MethodGet {
+			writer.Header().Set("Allow", http.MethodGet)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		value, err := service.aiapplications.PreviewDigitalHuman(request.Context(), owner, rest[0])
+		service.writeAIResult(writer, value, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "state" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var input struct {
+			State   aiapplicationdomain.ApplicationState `json:"state"`
+			Version int64                                `json:"version"`
+		}
+		if !decodeJSON(writer, request, &input) {
+			return
+		}
+		value, err := service.aiapplications.SetDigitalHumanState(request.Context(), owner, rest[0], input.State, input.Version)
+		service.writeAIResult(writer, value, err)
+		return
+	}
 	if len(rest) != 1 {
 		http.NotFound(writer, request)
 		return
@@ -347,7 +432,8 @@ func (service *Service) handleDigitalHumans(writer http.ResponseWriter, request 
 		value, err := service.aiapplications.UpdateDigitalHuman(request.Context(), owner, rest[0], humanFromPayload(payload), payload.Version)
 		service.writeAIResult(writer, value, err)
 	case http.MethodDelete:
-		service.writeAIResult(writer, nil, service.aiapplications.DeleteDigitalHuman(request.Context(), owner, rest[0]))
+		detach := request.URL.Query().Get("detach") == "true"
+		service.writeAIResult(writer, nil, service.aiapplications.DeleteDigitalHumanWithOptions(request.Context(), owner, rest[0], detach))
 	default:
 		writer.Header().Set("Allow", "GET, PATCH, DELETE")
 		http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
@@ -392,7 +478,7 @@ func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssis
 	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Introduction: value.Introduction, Scenario: value.Scenario, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
 }
 func humanFromPayload(value digitalHumanPayload) aiapplicationdomain.DigitalHuman {
-	return aiapplicationdomain.DigitalHuman{Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription}
+	return aiapplicationdomain.DigitalHuman{Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, State: aiapplicationdomain.ApplicationState(value.State)}
 }
 func faqFromPayload(value faqPayload) aiapplicationdomain.FAQ {
 	return aiapplicationdomain.FAQ{Question: value.Question, AnswerMarkdown: value.AnswerMarkdown, DisplayOrder: value.DisplayOrder, Category: value.Category, Tag: value.Tag, Icon: value.Icon, Enabled: value.Enabled}
