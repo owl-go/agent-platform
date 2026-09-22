@@ -87,11 +87,13 @@ Scenario type is a discovery and display classification. It does not change the 
 The minimum editable configuration is:
 
 - Name
-- Icon or avatar
-- Short introduction
+- Uploaded icon or avatar
+- Short description
+- Welcome message shown when a User opens the Assistant for the first time
 - Scenario type
-- Service objective
-- Response style and service rules
+- Assistant prompt
+- User-question pre-processing prompt
+- Response style
 - Optional Knowledge Selection containing one or more Knowledge Bases
 - Optional Expert or Expert Team selection
 - Optional Digital Human selection
@@ -100,7 +102,7 @@ The minimum editable configuration is:
 - Optional public Share Configuration for the authenticated Web UI and iframe embedding
 - Enabled or disabled state
 
-The configuration must not contain hidden, unreviewable instructions. User-authored service rules remain visible in the editor and are included in the application snapshot used by a conversation.
+The configuration must not contain hidden, unreviewable instructions. User-authored prompts remain visible in the editor and are included in the application snapshot used by a conversation. The former Service Objective, Answer Scope, and Operating Rules editor fields are not part of the current configuration surface.
 
 The Assistant uses the User's existing Personal Settings execution configuration unless a future product decision adds an explicit application-level model policy. The first version does not add a separate Provider Model or Runtime Engine selector to the Assistant editor.
 
@@ -124,7 +126,7 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 ### 4.5 Conversation Execution
 
 - Opening an Assistant provides a dedicated conversation entry point.
-- A conversation uses the Assistant's selected Knowledge Bases, Expert or Expert Team, Digital Human, and visible service rules.
+- A conversation uses the Assistant's selected Knowledge Bases, Expert or Expert Team, Digital Human, and visible prompts.
 - The first accepted message freezes the effective Assistant configuration and the existing Session execution configuration.
 - Later Assistant edits affect only new conversations.
 - A conversation continues to use platform-owned history, Rolling Summary, Credit admission, Runtime cancellation, event ordering, and secret redaction from the existing Session contract.
@@ -160,7 +162,7 @@ FAQ matching returns a stable FAQ identity and confidence. It never rewrites a m
 
 ### 4.8 Answer Scope And Safety
 
-Every Smart Assistant has an editable Answer Safety Policy containing a visible service scope, optional allowed business topics, optional user-defined blocked topics, and a fixed refusal message. The User may narrow the Assistant's service scope but cannot weaken platform-level safety rules.
+Every Smart Assistant is protected by an Answer Safety Policy containing the platform safety categories and a fixed refusal message. The current Assistant editor does not expose a separate Answer Scope field; product safety remains enforced outside the user-authored prompt and cannot be weakened by the User.
 
 Platform-level rules always reject requests involving sensitive political or military content, weapon construction, violent crime, dangerous operations, security bypasses, or other configured safety categories. The policy is evaluated before FAQ matching, Knowledge Base retrieval, or answer generation. A rejected request returns exactly the localized fixed message:
 

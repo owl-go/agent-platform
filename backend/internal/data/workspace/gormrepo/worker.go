@@ -742,7 +742,7 @@ func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
 	if err := tx.Table("smart_assistant_sessions").Select("assistant_snapshot").Where("session_id = ?", sessionID).Take(&row).Error; err != nil || len(row.AssistantSnapshot) == 0 {
 		return ""
 	}
-	var snapshot struct{ Name, Scenario, ServiceGoal, AnswerScope, OperatingRules, ResponseStyle string }
+	var snapshot struct{ Name, Scenario, Description, Prompt, PreprocessPrompt, ServiceGoal, AnswerScope, OperatingRules, ResponseStyle string }
 	if json.Unmarshal(row.AssistantSnapshot, &snapshot) != nil {
 		return ""
 	}
@@ -755,19 +755,19 @@ func assistantSessionInstruction(tx *gorm.DB, sessionID string) string {
 		builder.WriteString(snapshot.Scenario)
 		builder.WriteByte('\n')
 	}
-	if snapshot.ServiceGoal != "" {
-		builder.WriteString("Service goal: ")
-		builder.WriteString(snapshot.ServiceGoal)
+	if snapshot.Description != "" {
+		builder.WriteString("Assistant description: ")
+		builder.WriteString(snapshot.Description)
 		builder.WriteByte('\n')
 	}
-	if snapshot.AnswerScope != "" {
-		builder.WriteString("Allowed answer scope: ")
-		builder.WriteString(snapshot.AnswerScope)
+	if snapshot.PreprocessPrompt != "" {
+		builder.WriteString("Pre-process the user's question using these instructions: ")
+		builder.WriteString(snapshot.PreprocessPrompt)
 		builder.WriteByte('\n')
 	}
-	if snapshot.OperatingRules != "" {
-		builder.WriteString("Operating rules: ")
-		builder.WriteString(snapshot.OperatingRules)
+	if snapshot.Prompt != "" {
+		builder.WriteString("Follow this Assistant prompt: ")
+		builder.WriteString(snapshot.Prompt)
 		builder.WriteByte('\n')
 	}
 	if snapshot.ResponseStyle != "" {
