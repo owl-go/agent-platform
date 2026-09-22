@@ -22,6 +22,18 @@ function apiStub(): PlatformApi {
 }
 
 describe("SmartAssistantsPage lifecycle", () => {
+  it("opens the assistant creation form from the create action", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    await wrapper.get(".application-create-trigger").trigger("click");
+
+    expect(document.body.querySelector(".application-create-dialog")).not.toBeNull();
+    wrapper.unmount();
+  });
+
   it("filters by name and copies an assistant without opening its detail page", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");
