@@ -64,15 +64,28 @@ describe("App navigation", () => {
 
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
-      ["/sessions", "/workflows", "/ai-apps", "/ai-apps/assistants", "/ai-apps/digital-humans", "/ai-apps/image-creation", "/knowledge-bases"],
+      ["/sessions", "/workflows", "/ai-apps/assistants", "/ai-apps/digital-humans", "/ai-apps/image-creation", "/knowledge-bases"],
       ["/resources"],
       ["/settings"],
     ]);
-    expect(wrapper.get('a[href="/ai-apps"]').text()).toContain("AI 应用");
+    expect(wrapper.get(".nav-parent").text()).toContain("AI 应用");
+    expect(wrapper.get(".nav-parent").attributes("aria-expanded")).toBe("true");
     expect(wrapper.findAll(".nav-submenu a").map((link) => link.text())).toEqual(["智能助手", "数字人", "图片创作"]);
     expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
     expect(wrapper.find(".ai-applications-tabs").exists()).toBe(false);
     expect(wrapper.get('a[href="/resources"]').text()).toContain("专家/技能/连接器");
+    await wrapper.get(".nav-parent").trigger("click");
+    expect(wrapper.get(".nav-parent").attributes("aria-expanded")).toBe("false");
+    expect(wrapper.find(".nav-submenu").exists()).toBe(false);
+    await wrapper.get(".nav-parent").trigger("click");
+    expect(wrapper.find(".nav-submenu").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("keeps the top-level knowledge base route when its navigation item is clicked", async () => {
+    const wrapper = await mountAt("/sessions");
+
+    expect(wrapper.get('a[href="/knowledge-bases"]').attributes("href")).toBe("/knowledge-bases");
     wrapper.unmount();
   });
 
@@ -95,7 +108,7 @@ describe("App navigation", () => {
   it("renders AI applications as a secondary navigation directory", async () => {
     const wrapper = await mountAt("/ai-apps/assistants/assistant-1");
 
-    expect(wrapper.get('a[href="/ai-apps"]').classes()).toContain("router-link-active");
+    expect(wrapper.get(".nav-parent").classes()).toContain("router-link-active");
     expect(wrapper.get('a[href="/ai-apps/assistants"]').classes()).toContain("router-link-active");
     expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
     wrapper.unmount();

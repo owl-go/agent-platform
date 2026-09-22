@@ -24,6 +24,7 @@ const mobileOpen = ref(false);
 const creditPanelOpen = ref(false);
 const creditBalance = ref<CreditBalance>();
 const aiApplicationsUnread = ref(localStorage.getItem("ai-applications-unread") === "1");
+const aiApplicationsExpanded = ref(localStorage.getItem("ai-applications-expanded") !== "0");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
 type NavChild = { id: string; path: string };
 type NavItem = { id: string; icon: typeof Picture; path: string; children?: NavChild[] };
@@ -140,6 +141,11 @@ function isNavItemActive(item: NavItem) {
 function isNavChildActive(child: NavChild) {
   return route.path === child.path || route.path.startsWith(`${child.path}/`);
 }
+
+function toggleAIApplications() {
+  aiApplicationsExpanded.value = !aiApplicationsExpanded.value;
+  localStorage.setItem("ai-applications-expanded", aiApplicationsExpanded.value ? "1" : "0");
+}
 </script>
 
 <template>
@@ -159,10 +165,13 @@ function isNavChildActive(child: NavChild) {
           <section v-for="group in navGroups" :key="group.id" class="nav-group">
             <h2>{{ t(`nav.groups.${group.id}`) }}</h2>
             <template v-for="item in group.items" :key="item.id">
-              <RouterLink :to="item.path" :class="{ 'router-link-active': isNavItemActive(item) }" :aria-current="isNavItemActive(item) ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}<span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span></RouterLink>
-              <div v-if="item.children" class="nav-submenu" :aria-label="t(`nav.${item.id}`)">
-                <RouterLink v-for="child in item.children" :key="child.id" :to="child.path" :class="{ 'router-link-active': isNavChildActive(child) }" :aria-current="isNavChildActive(child) ? 'page' : undefined" @click="mobileOpen = false">{{ t(`nav.${child.id}`) }}</RouterLink>
-              </div>
+              <template v-if="item.children">
+                <button class="nav-parent" :class="{ 'router-link-active': isNavItemActive(item) }" type="button" :aria-current="isNavItemActive(item) ? 'page' : undefined" :aria-expanded="aiApplicationsExpanded" aria-controls="ai-applications-submenu" @click="toggleAIApplications"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon><span>{{ t(`nav.${item.id}`) }}</span><span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span><span class="nav-chevron" :class="{ expanded: aiApplicationsExpanded }" aria-hidden="true">⌄</span></button>
+                <div v-if="aiApplicationsExpanded" id="ai-applications-submenu" class="nav-submenu" :aria-label="t(`nav.${item.id}`)">
+                  <RouterLink v-for="child in item.children" :key="child.id" :to="child.path" :class="{ 'router-link-active': isNavChildActive(child) }" :aria-current="isNavChildActive(child) ? 'page' : undefined" @click="mobileOpen = false">{{ t(`nav.${child.id}`) }}</RouterLink>
+                </div>
+              </template>
+              <RouterLink v-else :to="item.path" :class="{ 'router-link-active': isNavItemActive(item) }" :aria-current="isNavItemActive(item) ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}</RouterLink>
             </template>
           </section>
         </nav>
