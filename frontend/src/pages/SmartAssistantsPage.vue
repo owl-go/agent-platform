@@ -2,7 +2,7 @@
 import { computed, inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
-import { Copy, Pause, Play, Trash2 } from "@lucide/vue";
+import { Copy, Pause, Play, Search, Trash2 } from "@lucide/vue";
 import { ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type SmartAssistant, type SmartAssistantInput } from "../api/client";
@@ -65,7 +65,7 @@ onMounted(refresh);
 <template>
   <section class="application-catalog-page">
     <div class="application-catalog-toolbar">
-      <div><h2>{{ t('aiApplications.assistants.title') }}</h2><p>{{ t('aiApplications.assistants.subtitle') }}</p></div>
+      <div><h2>{{ t('aiApplications.assistants.title') }}</h2></div>
       <el-button class="application-create-trigger" type="primary" :icon="Plus" @click="openCreate">{{ t('aiApplications.create') }}</el-button>
     </div>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
@@ -80,6 +80,7 @@ onMounted(refresh);
     <div class="application-list-filters">
       <el-input v-model="search" class="assistant-search" clearable :placeholder="t('aiApplications.search')" />
       <el-select v-model="scenario" clearable :placeholder="t('aiApplications.allScenarios')"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select>
+      <el-button class="assistant-search-button" type="primary" :icon="Search" @click="search = search.trim()">{{ t('aiApplications.searchAction') }}</el-button>
     </div>
     <div v-loading="loading" class="application-card-grid">
       <el-card v-for="item in filteredItems" :key="item.id" class="application-card" role="button" tabindex="0" @click="router.push(`/ai-apps/assistants/${item.id}`)" @keydown.enter="router.push(`/ai-apps/assistants/${item.id}`)">
