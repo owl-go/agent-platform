@@ -169,7 +169,8 @@ async function open(item: Session) {
   responseController?.abort(); stopReveal();
   cancellingMessageID.value = undefined;
   keepAtLatest.value = true; showJumpToLatest.value = false;
-  selected.value = item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
+  const welcome = typeof route.query.assistant_welcome === "string" ? route.query.assistant_welcome : item.assistant_welcome;
+  selected.value = welcome ? { ...item, assistant_welcome: welcome } : item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
   try {
     const loadedMessages = await api.listSessionMessages(item.id);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
@@ -526,7 +527,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
-          <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ t('sessions.welcome') }}</p></div>
+          <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
           <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
         <div ref="composerLayer" class="composer-layer">
