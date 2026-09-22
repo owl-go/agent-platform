@@ -35,6 +35,18 @@ type ShareUsageRepository interface {
 	ConsumeShareCall(context.Context, string, time.Time, int) (bool, error)
 }
 
+type SafetyAuditRepository interface {
+	RecordSafetyAudit(context.Context, string, string, string, domain.SafetyDecision, string) error
+}
+
+func (service *Service) RecordSafetyAudit(ctx context.Context, owner, assistantID, source string, decision domain.SafetyDecision, creditOutcome string) error {
+	repository, ok := service.repository.(SafetyAuditRepository)
+	if !ok {
+		return nil
+	}
+	return repository.RecordSafetyAudit(ctx, owner, assistantID, source, decision, creditOutcome)
+}
+
 func (service *Service) BindAssistantSession(ctx context.Context, owner, assistantID, sessionID string) error {
 	assistant, err := service.repository.GetAssistant(ctx, owner, assistantID)
 	if err != nil {
@@ -144,7 +156,7 @@ func (service *Service) GetAssistant(ctx context.Context, owner, id string) (dom
 func (service *Service) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
 	assistant.OwnerID = owner
 	if assistant.State == "" {
-		assistant.State = domain.StateEnabled
+		assistant.State = domain.StateDraft
 	}
 	if assistant.Share.Enabled {
 		token, err := newShareToken()
@@ -156,16 +168,18 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 		assistant.Share.TokenRevision = 1
 	}
 	if assistant.DigitalHumanID != nil {
-		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
 		}
 	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
-			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
 				return domain.SmartAssistant{}, err
 			}
 		}
+	} else if len(assistant.KnowledgeBaseIDs) > 0 {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
 	}
 	if assistant.Share.Width == "" {
 		assistant.Share.Width = "100%"
@@ -173,10 +187,64 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 	if assistant.Share.Height == 0 {
 		assistant.Share.Height = 600
 	}
-	if err := assistant.Validate(); err != nil {
+	if assistant.State == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	} else if err := assistant.Validate(); err != nil {
 		return domain.SmartAssistant{}, err
 	}
 	return service.repository.CreateAssistant(ctx, owner, assistant)
+}
+
+// CopyAssistant creates a new editable draft from visible assistant
+// configuration. Share credentials and conversation identity are intentionally
+// excluded from the copy.
+func (service *Service) CopyAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
+	source, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	copy := source
+	copy.ID, copy.OwnerID, copy.CreatedAt, copy.UpdatedAt, copy.Version = "", "", time.Time{}, time.Time{}, 0
+	copy.State = domain.StateDraft
+	copy.Share.Enabled = false
+	copy.Share.Token, copy.Share.TokenHash, copy.Share.TokenRevision = "", "", 0
+	created, err := service.repository.CreateAssistant(ctx, owner, copy)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	faqs, err := service.repository.ListFAQs(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	for _, faq := range faqs {
+		faq.ID, faq.AssistantID, faq.CreatedAt, faq.UpdatedAt, faq.Version = "", "", time.Time{}, time.Time{}, 0
+		if _, err := service.CreateFAQ(ctx, owner, created.ID, faq); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	return service.repository.GetAssistant(ctx, owner, created.ID)
+}
+
+func (service *Service) SetAssistantState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.SmartAssistant, error) {
+	if state != domain.StateDraft && state != domain.StateEnabled && state != domain.StateDisabled {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: unsupported assistant state", domain.ErrInvalid)
+	}
+	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	if state == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		if err := service.validateAssistantResources(ctx, owner, assistant); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	}
+	assistant.State = state
+	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
 }
 
 func newShareToken() (string, error) {
@@ -197,7 +265,7 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 		return domain.SmartAssistant{}, err
 	}
 	if assistant.State == "" {
-		assistant.State = domain.StateEnabled
+		assistant.State = current.State
 	}
 	if assistant.Share.Enabled {
 		assistant.Share.TokenHash = current.Share.TokenHash
@@ -215,16 +283,18 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 		assistant.Share.Token, assistant.Share.TokenHash, assistant.Share.TokenRevision = "", "", current.Share.TokenRevision
 	}
 	if assistant.DigitalHumanID != nil {
-		if _, err := service.repository.GetDigitalHuman(ctx, owner, *assistant.DigitalHumanID); err != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
 			return domain.SmartAssistant{}, err
 		}
 	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
-			if _, err := service.knowledge.GetKnowledgeBase(ctx, owner, baseID); err != nil {
+			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
 				return domain.SmartAssistant{}, err
 			}
 		}
+	} else if len(assistant.KnowledgeBaseIDs) > 0 {
+		return domain.SmartAssistant{}, fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
 	}
 	if assistant.Share.Width == "" {
 		assistant.Share.Width = "100%"
@@ -232,7 +302,14 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	if assistant.Share.Height == 0 {
 		assistant.Share.Height = 600
 	}
-	if err := assistant.Validate(); err != nil {
+	if assistant.State == domain.StateEnabled {
+		if err := assistant.ValidateForEnable(); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+		if err := service.validateAssistantResources(ctx, owner, assistant); err != nil {
+			return domain.SmartAssistant{}, err
+		}
+	} else if err := assistant.Validate(); err != nil {
 		return domain.SmartAssistant{}, err
 	}
 	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
@@ -296,6 +373,9 @@ func (service *Service) GetDigitalHuman(ctx context.Context, owner, id string) (
 }
 func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, human domain.DigitalHuman) (domain.DigitalHuman, error) {
 	human.OwnerID = owner
+	if human.State == "" {
+		human.State = domain.StateEnabled
+	}
 	if err := human.Validate(); err != nil {
 		return domain.DigitalHuman{}, err
 	}
@@ -303,13 +383,120 @@ func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, hu
 }
 func (service *Service) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
 	human.OwnerID = owner
+	current, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	if human.State == "" {
+		human.State = current.State
+		if human.State == "" {
+			human.State = domain.StateEnabled
+		}
+	}
 	if err := human.Validate(); err != nil {
 		return domain.DigitalHuman{}, err
 	}
 	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
 }
 func (service *Service) DeleteDigitalHuman(ctx context.Context, owner, id string) error {
+	return service.DeleteDigitalHumanWithOptions(ctx, owner, id, false)
+}
+
+func (service *Service) DeleteDigitalHumanWithOptions(ctx context.Context, owner, id string, detach bool) error {
+	if _, err := service.repository.GetDigitalHuman(ctx, owner, id); err != nil {
+		return err
+	}
+	assistants, err := service.repository.ListAssistants(ctx, owner)
+	if err != nil {
+		return err
+	}
+	for _, assistant := range assistants {
+		if assistant.DigitalHumanID == nil || *assistant.DigitalHumanID != id {
+			continue
+		}
+		if !detach {
+			return fmt.Errorf("%w: digital human is referenced by assistant", domain.ErrConflict)
+		}
+		assistant.DigitalHumanID = nil
+		if _, err := service.repository.UpdateAssistant(ctx, owner, assistant.ID, assistant, assistant.Version); err != nil {
+			return err
+		}
+	}
 	return service.repository.DeleteDigitalHuman(ctx, owner, id)
+}
+
+func (service *Service) CopyDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
+	source, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	copy := source
+	copy.ID, copy.OwnerID, copy.CreatedAt, copy.UpdatedAt, copy.Version = "", "", time.Time{}, time.Time{}, 0
+	copy.State = domain.StateEnabled
+	return service.repository.CreateDigitalHuman(ctx, owner, copy)
+}
+
+func (service *Service) SetDigitalHumanState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.DigitalHuman, error) {
+	if state != domain.StateEnabled && state != domain.StateDisabled {
+		return domain.DigitalHuman{}, fmt.Errorf("%w: unsupported digital human state", domain.ErrInvalid)
+	}
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHuman{}, err
+	}
+	human.State = state
+	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
+}
+
+func (service *Service) PreviewDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHumanPreview, error) {
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return domain.DigitalHumanPreview{}, err
+	}
+	state := human.State
+	if state == "" {
+		state = domain.StateEnabled
+	}
+	return domain.DigitalHumanPreview{ID: human.ID, Name: human.Name, AvatarObjectKey: human.AvatarObjectKey, Voice: human.Voice, Language: human.Language, ExpressionStyle: human.ExpressionStyle, SceneDescription: human.SceneDescription, State: state, PreviewText: fmt.Sprintf("%s · %s · %s", human.Name, human.Language, human.Voice)}, nil
+}
+
+func (service *Service) validateDigitalHumanBinding(ctx context.Context, owner, id string) error {
+	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
+	if err != nil {
+		return err
+	}
+	if human.State == domain.StateDisabled {
+		return fmt.Errorf("%w: digital human is disabled", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (service *Service) validateKnowledgeBinding(ctx context.Context, owner, id string) error {
+	if service.knowledge == nil {
+		return fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
+	}
+	base, err := service.knowledge.GetKnowledgeBase(ctx, owner, id)
+	if err != nil {
+		return err
+	}
+	if base.State != "" && base.State != domain.KnowledgeReady {
+		return fmt.Errorf("%w: knowledge base is unavailable", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (service *Service) validateAssistantResources(ctx context.Context, owner string, assistant domain.SmartAssistant) error {
+	if assistant.DigitalHumanID != nil {
+		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
+			return err
+		}
+	}
+	for _, baseID := range assistant.KnowledgeBaseIDs {
+		if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (service *Service) ListFAQs(ctx context.Context, owner, assistantID string) ([]domain.FAQ, error) {

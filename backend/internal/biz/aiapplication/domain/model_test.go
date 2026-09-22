@@ -26,6 +26,36 @@ func TestSmartAssistantValidatesVisibleRulesAndShareDimensions(t *testing.T) {
 	}
 }
 
+func TestSmartAssistantRejectsNonHTTPSShareOriginsExceptLocalDevelopment(t *testing.T) {
+	assistant := domain.SmartAssistant{Name: "产品助手", Share: domain.ShareConfiguration{AllowedOrigins: []string{"http://example.test"}}}
+	if !errors.Is(assistant.Validate(), domain.ErrInvalid) {
+		t.Fatal("Validate() accepted a non-HTTPS public share origin")
+	}
+	assistant.Share.AllowedOrigins = []string{"http://localhost:5173", "https://example.test"}
+	if err := assistant.Validate(); err != nil {
+		t.Fatalf("Validate() rejected local/HTTPS origins: %v", err)
+	}
+}
+
+func TestSmartAssistantValidatesScenarioAndEnablementSeparatelyFromDraft(t *testing.T) {
+	assistant := domain.SmartAssistant{Name: "产品助手", State: domain.StateDraft}
+	if err := assistant.Validate(); err != nil {
+		t.Fatalf("Validate() draft error = %v", err)
+	}
+	if err := assistant.ValidateForEnable(); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("ValidateForEnable() error = %v, want ErrInvalid for incomplete assistant", err)
+	}
+	assistant.ServiceGoal = "回答产品问题"
+	assistant.Scenario = domain.ScenarioProductGuide
+	if err := assistant.ValidateForEnable(); err != nil {
+		t.Fatalf("ValidateForEnable() complete error = %v", err)
+	}
+	assistant.Scenario = "not-a-scenario"
+	if err := assistant.Validate(); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("Validate() error = %v, want ErrInvalid for unknown scenario", err)
+	}
+}
+
 func TestFAQRequiresQuestionAndMarkdownAnswer(t *testing.T) {
 	faq := domain.FAQ{Question: "怎么退款？", AnswerMarkdown: "请在订单页申请退款。", Enabled: true}
 	if err := faq.Validate(); err != nil {
