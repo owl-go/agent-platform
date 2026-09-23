@@ -102,6 +102,17 @@ describe("SmartAssistantConversationPage", () => {
     wrapper.unmount();
   });
 
+  it("labels FAQ shortcuts and uses a compact question control", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.get(".assistant-conversation-faq-label").text()).toBe("常见问题");
+    expect(wrapper.get(".assistant-conversation-faqs .assistant-conversation-faq").text()).toBe("怎么退款？");
+    wrapper.unmount();
+  });
+
   it("creates a new conversation without deleting the old audit history", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
@@ -114,6 +125,19 @@ describe("SmartAssistantConversationPage", () => {
 
     expect(api.createAssistantConversation).toHaveBeenCalledWith("assistant-1");
     expect(router.currentRoute.value.params.conversationId).toBe("conversation-2");
+    wrapper.unmount();
+  });
+
+  it("shows history navigation even when only one saved conversation exists", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const api = apiStub();
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    expect(api.listAssistantConversations).toHaveBeenCalledWith("assistant-1");
+    expect(wrapper.get(".assistant-conversation-history-label").text()).toBe("历史对话");
+    expect(wrapper.find(".assistant-conversation-history").exists()).toBe(true);
     wrapper.unmount();
   });
 });

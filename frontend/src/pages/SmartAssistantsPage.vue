@@ -68,12 +68,13 @@ function openShare(item: SmartAssistant) { shareAssistant.value = item; shareDia
 function updateSharedAssistant(updated: SmartAssistant) { items.value = items.value.map((item) => item.id === updated.id ? updated : item); shareAssistant.value = updated; }
 function showShareError(message: string) { error.value = message; }
 async function startConversation(item: SmartAssistant) {
-  if (item.state !== "enabled") {
-    error.value = t("aiApplications.startRequiresEnabled");
-    return;
-  }
   try {
-    const conversation = await api.createAssistantConversation(item.id);
+    const history = await api.listAssistantConversations(item.id);
+    if (!history.length && item.state !== "enabled") {
+      error.value = t("aiApplications.startRequiresEnabled");
+      return;
+    }
+    const conversation = history[0] ?? await api.createAssistantConversation(item.id);
     await router.push(`/ai-apps/assistants/${encodeURIComponent(item.id)}/conversations/${encodeURIComponent(conversation.id)}`);
   } catch (cause) { error.value = cause instanceof ApiError && cause.code === "assistant_model_unavailable" ? t("aiApplications.chat.modelUnavailable") : t("aiApplications.startFailed"); }
 }

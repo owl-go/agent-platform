@@ -2,7 +2,7 @@
 import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ArrowLeft, ArrowUp, CircleAlert, MessageCircle, RotateCcw, Square } from "@lucide/vue";
+import { ArrowLeft, ArrowUp, CircleAlert, CircleHelp, MessageCircle, RotateCcw, Square } from "@lucide/vue";
 import { ApiError, platformApiKey, type AssistantConversation, type AssistantTurn, type SmartAssistantFAQ } from "../api/client";
 import { renderMarkdown } from "../markdown";
 
@@ -124,7 +124,8 @@ onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceA
       <el-button text :icon="ArrowLeft" @click="router.push('/ai-apps/assistants')">{{ t('common.back') }}</el-button>
       <h2>{{ conversation?.assistant_name || t('aiApplications.assistants.title') }}</h2>
       <div class="assistant-conversation-actions">
-        <el-select v-if="history.length > 1" :model-value="conversationID" class="assistant-conversation-history" :aria-label="t('aiApplications.chat.history')" @change="router.push(`/ai-apps/assistants/${assistantID}/conversations/${$event}`)">
+        <span v-if="history.length" class="assistant-conversation-history-label">{{ t('aiApplications.chat.history') }}</span>
+        <el-select v-if="history.length" :model-value="conversationID" class="assistant-conversation-history" :aria-label="t('aiApplications.chat.history')" @change="router.push(`/ai-apps/assistants/${assistantID}/conversations/${$event}`)">
           <el-option v-for="item in history" :key="item.id" :label="new Date(item.created_at).toLocaleString()" :value="item.id" />
         </el-select>
         <el-button :icon="RotateCcw" :loading="creating" @click="clearConversation">{{ t('aiApplications.chat.new') }}</el-button>
@@ -140,7 +141,8 @@ onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceA
         <div class="assistant-conversation-bubble">{{ conversation.welcome || t('aiApplications.chat.defaultWelcome') }}</div>
       </div>
       <div v-if="faqs.length" class="assistant-conversation-faqs">
-        <button v-for="faq in faqs" :key="faq.id" type="button" :disabled="busy" @click="send(faq.question, faq.id)">{{ faq.question }}</button>
+        <span class="assistant-conversation-faq-label"><CircleHelp :size="14" aria-hidden="true" />{{ t('aiApplications.faq.title') }}</span>
+        <button v-for="faq in faqs" :key="faq.id" type="button" class="assistant-conversation-faq" :disabled="busy" @click="send(faq.question, faq.id)">{{ faq.question }}</button>
       </div>
       <div v-for="turn in turns" :key="turn.id" class="assistant-conversation-turn">
         <div class="assistant-conversation-message assistant-conversation-message--user">
