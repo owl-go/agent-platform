@@ -95,6 +95,25 @@ describe("SmartAssistantsPage lifecycle", () => {
     wrapper.unmount();
   });
 
+  it("renders the more menu outside the clipping assistant card", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    await wrapper.get("[data-testid=assistant-more]").trigger("click");
+    await flushPromises();
+
+    const menu = document.body.querySelector(".assistant-card-action-menu");
+    expect(menu).not.toBeNull();
+    expect(wrapper.get(".application-card").element.contains(menu)).toBe(false);
+    (menu!.querySelectorAll(".el-dropdown-menu__item")[1] as HTMLElement).click();
+    await flushPromises();
+    expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
+    expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
+    wrapper.unmount();
+  });
+
   it("starts a conversation from the card chat action", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");

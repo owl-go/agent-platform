@@ -132,7 +132,7 @@ onBeforeUnmount(() => replaceIconPreview());
             <el-tooltip :content="t('aiApplications.startConversation')" placement="top">
               <el-button data-testid="assistant-chat" class="application-card-action-button" text :icon="MessageCircle" :aria-label="t('aiApplications.startConversation')" @click.stop="startConversation(item)" />
             </el-tooltip>
-            <el-dropdown trigger="click" placement="bottom-end" :teleported="false" @command="handleCardAction(item, $event)">
+            <el-dropdown trigger="click" placement="bottom-end" @command="handleCardAction(item, $event)">
               <el-tooltip :content="t('common.more')" placement="top">
                 <el-button data-testid="assistant-more" class="application-card-action-button" text :icon="Ellipsis" :aria-label="t('common.more')" @click.stop />
               </el-tooltip>
