@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
 import { Pause, Play, Search, Share2, Trash2 } from "@lucide/vue";
@@ -18,7 +18,10 @@ const error = ref("");
 const search = ref("");
 const scenario = ref("");
 const createDialogOpen = ref(false);
+const creating = ref(false);
 const form = ref<SmartAssistantInput & { icon: string }>({ name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" });
+const iconFile = ref<File>();
+const iconPreviewUrl = ref("");
 const shareAssistant = ref<SmartAssistant>();
 const shareDialogOpen = ref(false);
 const scenarios = ["customer-consultation", "pre-sales-advisor", "after-sales-support", "product-guide", "enterprise-knowledge", "recruitment", "training", "custom"];
@@ -34,15 +37,33 @@ async function refresh() {
   finally { loading.value = false; }
 }
 async function create() {
-  if (!form.value.name.trim() || !form.value.icon?.trim()) return;
+  if (!form.value.name.trim() || !iconFile.value) return;
+  creating.value = true;
+  let created: SmartAssistant | undefined;
   try {
-    const item = await api.createSmartAssistant({ ...form.value, share: { enabled: false, width: "100%", height: 600 } });
+    created = await api.createSmartAssistant({ ...form.value, icon: "", share: { enabled: false, width: "100%", height: 600 } });
+    const item = await api.uploadSmartAssistantIcon(created.id, iconFile.value, created.version);
     items.value.unshift(item);
     form.value = { name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" };
+    iconFile.value = undefined;
+    replaceIconPreview();
     createDialogOpen.value = false;
-  } catch { error.value = t("aiApplications.saveFailed"); }
+  } catch {
+    if (created) await api.deleteSmartAssistant(created.id).catch(() => undefined);
+    error.value = t("aiApplications.iconUploadFailed");
+  } finally { creating.value = false; }
 }
 function openCreate() { createDialogOpen.value = true; }
+function replaceIconPreview(value = "") {
+  if (iconPreviewUrl.value.startsWith("blob:")) URL.revokeObjectURL(iconPreviewUrl.value);
+  iconPreviewUrl.value = value;
+}
+function selectIcon(file: File) {
+  iconFile.value = file;
+  error.value = "";
+  if (typeof URL.createObjectURL === "function") replaceIconPreview(URL.createObjectURL(file));
+}
+function invalidIcon() { error.value = t("aiApplications.iconInvalid"); }
 function openShare(item: SmartAssistant) { shareAssistant.value = item; shareDialogOpen.value = true; }
 function updateSharedAssistant(updated: SmartAssistant) { items.value = items.value.map((item) => item.id === updated.id ? updated : item); shareAssistant.value = updated; }
 function showShareError(message: string) { error.value = message; }
@@ -63,6 +84,7 @@ async function remove(item: SmartAssistant) {
   }
 }
 onMounted(refresh);
+onBeforeUnmount(() => replaceIconPreview());
 </script>
 
 <template>
@@ -75,11 +97,11 @@ onMounted(refresh);
     <el-dialog v-model="createDialogOpen" class="application-create-dialog" :title="t('aiApplications.create')" width="min(560px, 92vw)" destroy-on-close>
       <el-form label-position="top" @submit.prevent="create">
         <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" autofocus :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
-        <el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="form.icon" upload-only /></el-form-item>
+        <el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="form.icon" upload-only remote-upload :preview-url="iconPreviewUrl" :uploading="creating" @file-selected="selectIcon" @invalid="invalidIcon" /></el-form-item>
         <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
         <el-form-item :label="t('aiApplications.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
       </el-form>
-      <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" @click="create">{{ t('common.save') }}</el-button></template>
+      <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="creating" @click="create">{{ t('common.save') }}</el-button></template>
     </el-dialog>
     <div class="application-list-filters">
       <el-input v-model="search" class="assistant-search" clearable :placeholder="t('aiApplications.search')" />

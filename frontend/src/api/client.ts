@@ -223,6 +223,8 @@ export interface PlatformApi {
   listSmartAssistants(signal?: AbortSignal): Promise<SmartAssistant[]>;
   createSmartAssistant(input: SmartAssistantInput, signal?: AbortSignal): Promise<SmartAssistant>;
   getSmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
+  uploadSmartAssistantIcon(id: string, file: File, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
+  getSmartAssistantIcon(id: string, signal?: AbortSignal): Promise<Blob>;
   updateSmartAssistant(id: string, input: SmartAssistantInput, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
   copySmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
   setSmartAssistantState(id: string, state: SmartAssistant["state"], version: number, signal?: AbortSignal): Promise<SmartAssistant>;
@@ -567,6 +569,13 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listSmartAssistants(signal) { return await call<SmartAssistant[]>("/api/v1/ai-apps/assistants", { signal }); },
     createSmartAssistant(input, signal) { return call("/api/v1/ai-apps/assistants", json("POST", input, signal)); },
     getSmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, { signal }); },
+    uploadSmartAssistantIcon(id, file, version, signal) {
+      const form = new FormData();
+      form.append("icon", file);
+      form.append("version", String(version));
+      return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } });
+    },
+    getSmartAssistantIcon(id, signal) { return download(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, signal); },
     updateSmartAssistant(id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     copySmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
     setSmartAssistantState(id, state, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },

@@ -222,6 +222,9 @@ Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiA
   prompt: "提示词",
   preprocessPrompt: "预处理提示词",
   startRequiresIcon: "请先上传助手图标，再开始对话。",
+  iconInvalid: "请选择 2MB 以内的 PNG、JPG、WebP 或 GIF 图片。",
+  iconUploadFailed: "助手图标上传失败，请重试。",
+  iconLoadFailed: "助手图标加载失败，请重新上传。",
   validationFailed: "保存失败，请检查名称、图标和提示词配置。",
   faq: { title: "常见问题", question: "问题", answer: "答案", add: "添加问题", edit: "编辑问题", import: "导入 Excel", export: "导出 Excel", importFailed: "导入失败，请确认文件包含“问题”和“答案”两列。", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
 });
@@ -230,6 +233,9 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
   prompt: "Assistant prompt",
   preprocessPrompt: "Pre-process prompt",
   startRequiresIcon: "Upload an assistant icon before starting the conversation.",
+  iconInvalid: "Choose a PNG, JPG, WebP, or GIF image no larger than 2MB.",
+  iconUploadFailed: "Unable to upload the assistant icon. Try again.",
+  iconLoadFailed: "Unable to load the assistant icon. Upload it again.",
   validationFailed: "Save failed. Check the name, icon, and prompt configuration.",
   faq: { title: "Frequently Asked Questions", question: "Question", answer: "Answer", add: "Add FAQ", edit: "Edit FAQ", import: "Import Excel", export: "Export Excel", importFailed: "Import failed. The file must contain Question and Answer columns.", empty: "No FAQs yet.", enable: "Enable", disable: "Disable" },
 });

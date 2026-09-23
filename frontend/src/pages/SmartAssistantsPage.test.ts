@@ -18,6 +18,7 @@ function apiStub(): PlatformApi {
     updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...source, ...input, version: version + 1 })),
     deleteSmartAssistant: vi.fn(async () => {}),
     createSmartAssistant: vi.fn(async () => source),
+    uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...source, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
   } as unknown as PlatformApi;
 }
 
@@ -31,6 +32,30 @@ describe("SmartAssistantsPage lifecycle", () => {
     await wrapper.get(".application-create-trigger").trigger("click");
 
     expect(document.body.querySelector(".application-create-dialog")).not.toBeNull();
+    wrapper.unmount();
+  });
+
+  it("uploads the selected icon after creating the assistant draft", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const api = apiStub();
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    await wrapper.get(".application-create-trigger").trigger("click");
+    const dialog = document.body.querySelector(".application-create-dialog") as HTMLElement;
+    const name = dialog.querySelector("input[type=text]") as HTMLInputElement;
+    name.value = "新助手";
+    name.dispatchEvent(new Event("input"));
+    const file = new File(["png-content"], "assistant.png", { type: "image/png" });
+    const input = dialog.querySelector('[data-testid="icon-picker-file"]') as HTMLInputElement;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    input.dispatchEvent(new Event("change"));
+    await flushPromises();
+    (dialog.querySelector(".el-dialog__footer .el-button--primary") as HTMLButtonElement).click();
+    await flushPromises();
+
+    expect(api.createSmartAssistant).toHaveBeenCalledWith(expect.objectContaining({ name: "新助手", icon: "" }));
+    expect(api.uploadSmartAssistantIcon).toHaveBeenCalledWith("assistant-1", file, 1);
     wrapper.unmount();
   });
 
