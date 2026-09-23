@@ -23,7 +23,35 @@ Administrator configuration supplies one controlled AnythingLLM endpoint, fixed 
 
 When `anythingllm.endpoint` is omitted, source acceptance remains available but ingestion and retrieval stay unavailable until an administrator configures the provider. A configured Worker claims durable `KnowledgeIngestionJob` rows, reads the private source object, uploads it to the Knowledge Base workspace, and records a ready revision plus a new index generation. Runtime containers receive only the bounded retrieval text; they never receive the AnythingLLM API key or call its API.
 
-The adapter exposes structured `CreateWorkspace`, `DeleteWorkspace`, `UpsertRevision`, `RemoveRevision`, and `QueryGeneration` operations. It must translate provider errors into safe categories, never persist raw provider responses, and never use provider workspace IDs as product authorization keys. Contract tests use a fake adapter; real availability requires the exact deployment digest and embedding model to pass the production Conformance gate.
+The current adapter exposes `EnsureWorkspace`, `DeleteWorkspace`, `UpsertRevision`, `RemoveRevision`, and `Query`. The API and Worker reuse the trusted adapter boundary; a browser never calls AnythingLLM directly. Provider errors must not expose its credentials or raw responses, and provider workspace IDs are never product authorization keys. `RemoveRevision` currently has no provider-side delete-by-source implementation; product retrieval therefore revalidates every candidate against current database permissions and revision state. Contract tests use a fake adapter; real availability requires the exact deployment digest and embedding model to pass the production Conformance gate.
+
+## Interactive Knowledge Base search
+
+The Knowledge Base detail page offers a read-only test query so a User can check indexed content without creating a Workflow Run or Smart Assistant conversation. This query targets the latest **ready** Knowledge Index Generation at request time; unlike a Run, it does not freeze a generation in a Workflow Snapshot. The endpoint is `GET /api/v1/knowledge-bases/{knowledge_base_id}/search?q={query}` with the normal authenticated User token, not a Workflow API credential. A private Base is visible only to its owner; a public Administrator Base is readable by any authenticated User. Cross-owner or deleted Bases return `404`, and blank queries or queries longer than 500 Unicode code points return `422`.
+
+After authorization, a Base with no ready generation returns HTTP `200` with `{"index_ready":false,"items":[]}`. Otherwise the API asks AnythingLLM for up to 30 bounded candidates and returns at most ten nonempty excerpts in retrieval order. Each excerpt is truncated to 1,200 Unicode code points. The provider's revision title or source location must contain a Document Revision UUID; the API resolves that UUID against the requested Base and requires an active Base, Category (when present), and document, plus the document's latest ready revision. Unknown, deleted, superseded, failed, or inaccessible candidates are skipped. Document and Category display names come from the platform database, not untrusted provider metadata. The response never contains a provider URL, Object Key, signed download URL, or API secret.
+
+The current AnythingLLM client passes a generation number to `Query` but its vector-search call is scoped only by workspace; it cannot select a historical provider index by generation. The interactive page intentionally searches the current provider workspace and filters results to currently eligible revisions. The stronger frozen-generation reproducibility required for Workflow Runs remains a separate conformance gap; a ready-generation database row alone does not prove that provider-side snapshot isolation exists.
+
+Successful responses use the following shape; an indexed no-hit result has `index_ready: true` and an empty `items` array:
+
+```json
+{
+  "index_ready": true,
+  "items": [
+    {
+      "document_id": "<uuid>",
+      "revision_id": "<uuid>",
+      "document_name": "guide.txt",
+      "category_name": "Manuals",
+      "text": "Relevant source excerpt...",
+      "relevance": 0.91
+    }
+  ]
+}
+```
+
+`category_name` is omitted for unclassified documents. Missing provider configuration returns `503`; a provider query failure returns `502`; a database lookup failure returns `500`. The page distinguishes an unready index, an indexed no-hit result, and a retrieval error. This endpoint does not invoke a Provider Model, generate an answer, or archive the query; the cited excerpt is a search preview, not a full document download or a retained Run citation.
 
 ## Workflow execution
 
@@ -42,4 +70,4 @@ The Run history stores a bounded, redacted `KnowledgeCitation` for each returned
 
 ## Conformance boundary
 
-The adapter, fake, ingestion state machine, permission checks, object lifecycle, and Workflow snapshot behavior are testable without external services. A production claim additionally requires the exact AnythingLLM image digest, embedding model, endpoint health, workspace isolation, query citation behavior, deletion cleanup, and Linux/network deployment evidence. Missing or skipped evidence is reported as unverified rather than passed.
+The adapter, fake, ingestion state machine, permission checks, object lifecycle, interactive source filtering, and Workflow snapshot behavior are testable without external services. Local tests cover the ten-item bound, stale/deleted-source rejection, owner/public database access, and the page's result states. They do **not** prove that a real uploaded file produces a usable vector hit with revision provenance. Production acceptance must upload a supported file, wait for a ready revision and generation, search for a distinctive phrase, confirm a sourced excerpt, then verify no-hit, unauthorized access, deletion/replacement filtering, provider failure, and cleanup against the exact AnythingLLM image digest and embedding model. Endpoint health, workspace isolation, and Linux/network deployment evidence are also required. Missing or skipped evidence is reported as unverified rather than passed.
