@@ -56,11 +56,11 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	serviceAIApplications, err := agentworkspace.NewAIApplicationService(database, box)
+	service4, err := agentworkspace.NewAIApplicationService(database, box)
 	if err != nil {
 		return nil, err
 	}
-	service4, err := agentworkspace.NewWorkspaceService(contextContext, database, repository, applicationService, objectstoreProvider)
+	service5, err := agentworkspace.NewWorkspaceService(contextContext, database, repository, applicationService, objectstoreProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -72,11 +72,11 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, service3, serviceAIApplications, service4, box, store, skillstoreStore, objectstoreProvider, config)
+	workspaceService, err := workspace.New(applicationService, service2, service3, service4, service5, box, store, skillstoreStore, objectstoreProvider, config)
 	if err != nil {
 		return nil, err
 	}
-	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service4)
+	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service5)
 	if err != nil {
 		return nil, err
 	}
