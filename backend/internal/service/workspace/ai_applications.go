@@ -71,12 +71,18 @@ type knowledgeDocumentPayload struct {
 	Content string `json:"content"`
 }
 type embeddingProviderPayload struct {
-	Endpoint   string `json:"endpoint"`
-	Model      string `json:"model"`
-	Dimensions int    `json:"dimensions"`
-	Enabled    bool   `json:"enabled"`
-	APIKey     string `json:"api_key"`
-	Version    int64  `json:"version"`
+	Endpoint string `json:"endpoint"`
+	Model    string `json:"model"`
+	APIKey   string `json:"api_key"`
+	Version  int64  `json:"version"`
+}
+
+func (payload embeddingProviderPayload) configuration() aiapplicationdomain.EmbeddingConfiguration {
+	return aiapplicationdomain.EmbeddingConfiguration{
+		Endpoint: payload.Endpoint, Model: payload.Model,
+		Dimensions: aiapplicationdomain.EmbeddingDimensions, Enabled: true,
+		Version: payload.Version,
+	}
 }
 
 func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, request *http.Request) {
@@ -117,7 +123,7 @@ func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, reques
 			if !decodeJSON(writer, request, &payload) {
 				return
 			}
-			value, configErr := service.aiapplications.SaveEmbeddingConfiguration(request.Context(), aiapplicationdomain.EmbeddingConfiguration{Endpoint: payload.Endpoint, Model: payload.Model, Dimensions: payload.Dimensions, Enabled: payload.Enabled, Version: payload.Version}, []byte(payload.APIKey))
+			value, configErr := service.aiapplications.SaveEmbeddingConfiguration(request.Context(), payload.configuration(), []byte(payload.APIKey))
 			service.writeAIResult(writer, value, configErr)
 			return
 		}

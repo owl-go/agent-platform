@@ -54,7 +54,7 @@ async function saveEmbedding() {
   if (!embedding.value) return;
   clearFeedback();
   try {
-    embedding.value = await api.updateEmbeddingConfiguration({ endpoint: embedding.value.endpoint, model: embedding.value.model, dimensions: embedding.value.dimensions, enabled: embedding.value.enabled, api_key: embeddingAPIKey.value || undefined, version: embedding.value.version });
+    embedding.value = await api.updateEmbeddingConfiguration({ endpoint: embedding.value.endpoint, model: embedding.value.model, api_key: embeddingAPIKey.value || undefined, version: embedding.value.version });
     embeddingAPIKey.value = "";
     notice.value = t("settings.embeddingSaved");
   } catch { showError("validation"); }
@@ -145,7 +145,7 @@ function selectPersonality(personality: Personality) {
         </div>
         <form v-if="section === 'embedding' && canManageModels && embedding" @submit.prevent="saveEmbedding">
           <div class="section-heading section-heading-actions"><div><h2>{{ t("settings.embedding") }}</h2><p>{{ t("settings.embeddingHint") }}</p></div><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div>
-          <div class="form-grid"><label>{{ t("settings.endpoint") }}<input v-model="embedding.endpoint" type="url" required></label><label>{{ t("settings.embeddingModel") }}<input v-model="embedding.model" required></label><label>{{ t("settings.embeddingDimensions") }}<input v-model.number="embedding.dimensions" type="number" min="1536" max="1536" required></label><label class="check-row"><input v-model="embedding.enabled" type="checkbox"><span>{{ t("settings.embeddingEnabled") }}</span></label><label class="full">{{ t("settings.embeddingAPIKey") }}<input v-model="embeddingAPIKey" type="password" :placeholder="embedding.api_key_configured ? t('settings.keepSecret') : ''" :required="!embedding.api_key_configured"></label></div>
+          <div class="form-grid"><label>{{ t("settings.endpoint") }}<input v-model="embedding.endpoint" type="url" required></label><label>{{ t("settings.embeddingModel") }}<input v-model="embedding.model" required></label><label class="full">{{ t("settings.embeddingAPIKey") }}<input v-model="embeddingAPIKey" type="password" :placeholder="embedding.api_key_configured ? t('settings.keepSecret') : ''" :required="!embedding.api_key_configured"></label></div>
         </form>
       </div>
     </div>

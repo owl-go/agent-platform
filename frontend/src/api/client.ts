@@ -240,7 +240,7 @@ export interface PlatformApi {
   listApplicationKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument[]>;
   createApplicationKnowledgeDocument(baseID: string, input: { name: string; content: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument>;
   getEmbeddingConfiguration(signal?: AbortSignal): Promise<EmbeddingConfiguration>;
-  updateEmbeddingConfiguration(input: { endpoint: string; model: string; dimensions: number; enabled: boolean; api_key?: string; version: number }, signal?: AbortSignal): Promise<EmbeddingConfiguration>;
+  updateEmbeddingConfiguration(input: { endpoint: string; model: string; api_key?: string; version: number }, signal?: AbortSignal): Promise<EmbeddingConfiguration>;
   listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
   getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;

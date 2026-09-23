@@ -63,6 +63,34 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
+  it("hides fixed embedding controls and saves a configuration without them", async () => {
+    const api = apiStub();
+    api.updateEmbeddingConfiguration = vi.fn(async () => ({ endpoint: "https://api.openai.com/v1/embeddings", model: "text-embedding-3-small", dimensions: 1536, api_key_configured: true, enabled: true, version: 1, updated_at: "2026-09-23T00:00:00Z" }));
+    const wrapper = mount(SettingsPage, {
+      global: {
+        plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+        provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) },
+      },
+    });
+    await flushPromises();
+    await wrapper.findAll(".settings-nav button")[2]!.trigger("click");
+
+    expect(wrapper.text()).not.toContain("向量维度");
+    expect(wrapper.text()).not.toContain("启用向量检索");
+    expect(wrapper.findAll('.settings-canvas form input')).toHaveLength(3);
+    await wrapper.get<HTMLInputElement>('input[type="password"]').setValue("test-api-key");
+    await wrapper.get(".settings-canvas form").trigger("submit");
+    await flushPromises();
+
+    expect(api.updateEmbeddingConfiguration).toHaveBeenCalledWith({
+      endpoint: "https://api.openai.com/v1/embeddings",
+      model: "text-embedding-3-small",
+      api_key: "test-api-key",
+      version: 0,
+    });
+    wrapper.unmount();
+  });
+
   it("updates the personality instructions when a preset is selected", async () => {
     const api = apiStub();
     api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({

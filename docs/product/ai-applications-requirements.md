@@ -330,9 +330,11 @@ The first Knowledge Base retrieval implementation accepts text and Markdown docu
 
 Retrieval uses PostgreSQL full-text/keyword matching plus the PostgreSQL `pgvector` extension. Embedding configuration is versioned and supplied through an `EmbeddingProvider` boundary; the first provider is an Administrator-configured OpenAI-compatible embedding endpoint and model. Embedding API Keys are encrypted and never enter ordinary snapshots, browser payloads, logs, or artifacts.
 
+The Administrator enters only the embedding endpoint, model, and API Key. Saving a valid configuration enables vector retrieval automatically. The current PostgreSQL index fixes embedding output at 1536 dimensions; this is enforced by the service, not exposed as an editable dimension or enable/disable control.
+
 The application owns Knowledge Base, Document, Document Revision, Chunk provenance, permissions, Assistant binding, and retained Knowledge Citation records. A replaceable `RetrievalProvider` owns indexing and recall only. A future Ragflow or other RAG adapter can replace the PostgreSQL implementation without changing Assistant permissions, conversation snapshots, or citation semantics.
 
-Changing the embedding model or vector dimension creates a new index generation. The current Ready generation remains live until the replacement generation is complete; activation is atomic and a failed rebuild leaves the previous generation serving queries.
+Changing the embedding model creates a new index generation; a future index-width change would require the same rebuild. The current Ready generation remains live until the replacement generation is complete; activation is atomic and a failed rebuild leaves the previous generation serving queries.
 
 When retrieval does not produce a bounded set of excerpts above the configured relevance threshold, the Assistant returns a safe no-grounding response instead of inventing an answer. A grounded response stores bounded citation metadata identifying the Knowledge Base, Document Revision, source location, relevance, and safe display text.
 
