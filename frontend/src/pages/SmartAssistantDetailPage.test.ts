@@ -4,7 +4,7 @@ import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
 import * as XLSX from "xlsx";
 import { createAppI18n } from "../i18n";
-import { platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
+import { ApiError, platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
 import { createAppRouter } from "../router";
 import SmartAssistantDetailPage from "./SmartAssistantDetailPage.vue";
 
@@ -117,6 +117,22 @@ describe("SmartAssistantDetailPage", () => {
     expect(api.createAssistantSession).toHaveBeenCalledWith("assistant-1");
     expect(router.currentRoute.value.path).toBe("/sessions");
     expect(router.currentRoute.value.query.assistant_welcome).toBe(assistant.introduction);
+    wrapper.unmount();
+  });
+
+  it("does not report a session creation failure as an unsaved or disabled assistant", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1");
+    const api = apiStub();
+    vi.mocked(api.createAssistantSession).mockRejectedValue(new ApiError("unavailable", 500, "assistant_session_create_failed"));
+    const wrapper = mount(SmartAssistantDetailPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    await wrapper.get(".assistant-detail-actions .el-button").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".el-alert").text()).not.toContain("请先保存并启用智能助手");
+    expect(wrapper.get(".el-alert").text()).toContain("创建对话失败");
     wrapper.unmount();
   });
 
