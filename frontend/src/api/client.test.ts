@@ -150,6 +150,30 @@ describe("Agent Workspace API client", () => {
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
+  it("uploads and downloads a Smart Assistant icon through authenticated endpoints", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        const form = init.body as FormData;
+        expect(form.get("version")).toBe("3");
+        expect(form.get("icon")).toBeInstanceOf(File);
+        return new Response(JSON.stringify({ id: "assistant-1", icon: "ai-applications/assistant-icons/user-1/icon-1", version: 4 }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "Content-Type": "image/png" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+    const file = new File(["png"], "assistant.png", { type: "image/png" });
+
+    const assistant = await api.uploadSmartAssistantIcon("assistant-1", file, 3);
+    const icon = await api.getSmartAssistantIcon("assistant-1");
+
+    expect(assistant.icon).toContain("assistant-icons");
+    expect(icon.type).toBe("image/png");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/ai-apps/assistants/assistant-1/icon");
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/ai-apps/assistants/assistant-1/icon");
+  });
+
   it("loads Session Artifact metadata and downloads authenticated content", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => String(input).endsWith("/download")
       ? new Response("generated report", { status: 200, headers: { "Content-Type": "application/octet-stream" } })

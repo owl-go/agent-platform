@@ -20,6 +20,7 @@ function apiStub() {
     listAssistantFAQs: vi.fn(async () => [existingFAQ]),
     listApplicationKnowledgeBases: vi.fn(async () => []),
     listDigitalHumans: vi.fn(async () => []),
+    uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...assistant, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
     updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...assistant, ...input, version: version + 1 })),
     createAssistantFAQ: vi.fn(async (_id, input) => ({ ...existingFAQ, ...input, id: "faq-2", question: input.question, answer_markdown: input.answer_markdown, version: 1 })),
     updateAssistantFAQ: vi.fn(async (_id, faqID, input, version) => ({ ...existingFAQ, ...input, id: faqID, version: version + 1 })),
@@ -44,15 +45,15 @@ describe("SmartAssistantDetailPage", () => {
     expect(wrapper.get(".application-detail-card").text()).not.toContain("回答规则");
     expect(wrapper.find(".icon-picker-current").exists()).toBe(false);
     expect(wrapper.findAll(".icon-picker-option")).toHaveLength(1);
+    await wrapper.findAll("textarea")[1].setValue("尚未保存的简介");
     const iconInput = wrapper.get('[data-testid="icon-picker-file"]');
     const iconFile = new File(["png-content"], "assistant.png", { type: "image/png" });
     Object.defineProperty(iconInput.element, "files", { configurable: true, value: [iconFile] });
     await iconInput.trigger("change");
-    await new Promise((resolve) => setTimeout(resolve, 0));
     await flushPromises();
-    await wrapper.get(".assistant-detail-actions .el-button--primary").trigger("click");
-    await flushPromises();
-    expect(api.updateSmartAssistant).toHaveBeenNthCalledWith(1, "assistant-1", expect.objectContaining({ icon: expect.stringMatching(/^data:image\/png;base64,/) }), 2);
+    expect(api.uploadSmartAssistantIcon).toHaveBeenCalledWith("assistant-1", iconFile, 2);
+    expect(api.updateSmartAssistant).not.toHaveBeenCalled();
+    expect((wrapper.findAll("textarea")[1].element as HTMLTextAreaElement).value).toBe("尚未保存的简介");
     await wrapper.get(".assistant-detail-tabs button:nth-child(2)").trigger("click");
     expect(wrapper.find(".faq-table").exists()).toBe(true);
     expect(wrapper.find(".faq-create-form").exists()).toBe(false);
@@ -72,7 +73,7 @@ describe("SmartAssistantDetailPage", () => {
     await wrapper.get(".assistant-detail-actions .el-button--primary").trigger("click");
     await flushPromises();
 
-    expect(api.updateSmartAssistant).toHaveBeenLastCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", description: assistant.description, prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt, digital_human_id: undefined }), 3);
+    expect(api.updateSmartAssistant).toHaveBeenLastCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", description: "尚未保存的简介", prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt, digital_human_id: undefined }), 3);
     wrapper.unmount();
   });
 
