@@ -19,6 +19,7 @@ function apiStub(): PlatformApi {
     deleteSmartAssistant: vi.fn(async () => {}),
     createSmartAssistant: vi.fn(async () => source),
     uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...source, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
+    createAssistantSession: vi.fn(async () => ({ id: "session-1", title: "产品助手", archived: false, created_at: "2026-09-22T00:00:00Z", updated_at: "2026-09-22T00:00:00Z", version: 1 })),
   } as unknown as PlatformApi;
 }
 
@@ -69,7 +70,7 @@ describe("SmartAssistantsPage lifecycle", () => {
     await wrapper.get(".assistant-search input").setValue("不存在");
     expect(wrapper.findAll(".application-card")).toHaveLength(0);
     await wrapper.get(".assistant-search input").setValue("产品");
-    await wrapper.get(".application-card-actions .el-button:nth-child(2)").trigger("click");
+    wrapper.findComponent({ name: "ElDropdown" }).vm.$emit("command", "share");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
     expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
@@ -88,6 +89,41 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(wrapper.find(".application-catalog-toolbar p").exists()).toBe(false);
     expect(wrapper.find(".assistant-search-button").text()).toBe("搜索");
     expect(wrapper.find(".assistant-search").classes()).toContain("assistant-search");
+    expect(wrapper.findAll(".application-card-actions .el-button")).toHaveLength(2);
+    expect(wrapper.get("[data-testid=assistant-chat]").attributes("aria-label")).toBe("开始对话");
+    expect(wrapper.get("[data-testid=assistant-more]").attributes("aria-label")).toBe("更多");
+    wrapper.unmount();
+  });
+
+  it("starts a conversation from the card chat action", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const api = apiStub();
+    vi.mocked(api.listSmartAssistants).mockResolvedValue([{ ...source, state: "enabled", introduction: "欢迎使用产品助手" }]);
+    const wrapper = mount(SmartAssistantsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    await wrapper.get("[data-testid=assistant-chat]").trigger("click");
+    await flushPromises();
+
+    expect(api.createAssistantSession).toHaveBeenCalledWith("assistant-1");
+    expect(router.currentRoute.value.path).toBe("/sessions");
+    expect(router.currentRoute.value.query.assistant_welcome).toBe("欢迎使用产品助手");
+    wrapper.unmount();
+  });
+
+  it("asks the user to enable a disabled assistant before chatting", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const api = apiStub();
+    const wrapper = mount(SmartAssistantsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    await wrapper.get("[data-testid=assistant-chat]").trigger("click");
+    await flushPromises();
+
+    expect(api.createAssistantSession).not.toHaveBeenCalled();
+    expect(wrapper.get(".el-alert").text()).toContain("请先启用智能助手");
     wrapper.unmount();
   });
 });

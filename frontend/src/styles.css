@@ -750,12 +750,24 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .application-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
 .application-card { min-height: 130px; }
 .application-card-heading { display: flex; justify-content: space-between; gap: 10px; }
+.application-card-heading > div:first-child { flex: 1; min-width: 0; }
+.application-card-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; }
+.application-card-actions .el-button { margin-left: 0; }
+.application-card-action-button { width: 34px; height: 34px; padding: 0; }
+.assistant-card-action-menu svg { margin-right: 8px; }
+.assistant-card-delete-action { color: var(--el-color-danger); }
 .application-card h3 { margin: 0 0 8px; }
 .application-card p { margin: 0 0 14px; color: var(--muted); }
 .application-card small { color: var(--muted); }
 .application-detail-page { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
 .application-detail-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
-.assistant-detail-actions,.faq-list-header,.faq-list-actions { display: flex; align-items: center; gap: 8px; }
+.faq-list-header,.faq-list-actions { display: flex; align-items: center; }
+.faq-list-header { justify-content: space-between; width: 100%; gap: 8px; }
+.faq-list-actions { justify-content: flex-end; gap: 3px; margin-left: auto; }
+.faq-list-actions .el-button { margin-left: 0; }
+.faq-tool-button { width: 32px; height: 32px; padding: 0; }
+.assistant-detail-footer { display: flex; justify-content: flex-end; padding-top: 2px; }
+.assistant-detail-footer .el-button { min-width: 120px; }
 .assistant-detail-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); }
 .assistant-detail-tabs button { padding: 11px 2px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
 .assistant-detail-tabs button.active { color: var(--green); border-bottom-color: var(--green); }
@@ -779,4 +791,4 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .knowledge-base-item:hover, .knowledge-base-item.active { background: var(--wash); }
 .knowledge-base-item small { color: var(--muted); overflow-wrap: anywhere; }
 @media (max-width: 720px) { .knowledge-base-layout { grid-template-columns: 1fr; } }
-@media (max-width: 720px) { .application-detail-header { align-items: flex-start; flex-wrap: wrap; }.assistant-detail-actions { width: 100%; }.assistant-detail-actions .el-button { flex: 1; }.faq-list-header { align-items: flex-start; flex-direction: column; }.faq-list-actions { width: 100%; flex-wrap: wrap; }.faq-list-actions .el-button { flex: 1; }.faq-actions { display: flex; flex-wrap: wrap; } }
+@media (max-width: 720px) { .application-detail-header { align-items: flex-start; flex-wrap: wrap; }.faq-list-header { align-items: center; }.faq-list-actions { flex-wrap: wrap; }.faq-actions { display: flex; flex-wrap: wrap; }.assistant-detail-footer .el-button { width: 100%; } }
