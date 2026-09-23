@@ -61,6 +61,32 @@ describe("SmartAssistantConversationPage", () => {
     wrapper.unmount();
   });
 
+  it("distinguishes a failed reply from normal messages and preserves partial output", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const api = apiStub();
+    api.getAssistantConversation = vi.fn(async () => ({ conversation, turns: [{ ...completedTurn, id: "failed-turn", state: "failed" as const, answer: "部分答案" }, completedTurn], faqs: [faq] }));
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    const failed = wrapper.get(".assistant-conversation-message--failed");
+    expect(failed.get("[role='alert']").text()).toContain("回答失败");
+    expect(failed.get(".markdown-body").text()).toContain("部分答案");
+    expect(wrapper.findAll(".assistant-conversation-turn")[1]?.find(".assistant-conversation-message--failed").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("keeps the text input and send action together in the chat composer", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.get(".assistant-conversation-composer-shell textarea").attributes("placeholder")).toContain("输入问题");
+    expect(wrapper.get(".assistant-conversation-composer-actions .assistant-conversation-send").text()).toBe("发送");
+    wrapper.unmount();
+  });
+
   it("shows the welcome and sends an FAQ selection through the dedicated conversation API", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");

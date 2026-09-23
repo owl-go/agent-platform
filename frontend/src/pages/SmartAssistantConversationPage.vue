@@ -2,7 +2,7 @@
 import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ArrowLeft, MessageCircle, RotateCcw, Square } from "@lucide/vue";
+import { ArrowLeft, ArrowUp, CircleAlert, MessageCircle, RotateCcw, Square } from "@lucide/vue";
 import { ApiError, platformApiKey, type AssistantConversation, type AssistantTurn, type SmartAssistantFAQ } from "../api/client";
 import { renderMarkdown } from "../markdown";
 
@@ -146,20 +146,27 @@ onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceA
         <div class="assistant-conversation-message assistant-conversation-message--user">
           <div class="assistant-conversation-bubble">{{ turn.question }}</div>
         </div>
-        <div v-if="turn.answer || turn.state === 'generating' || turn.state === 'cancelled' || turn.state === 'failed'" class="assistant-conversation-message assistant-conversation-message--assistant">
+        <div v-if="turn.answer || turn.state === 'generating' || turn.state === 'cancelled' || turn.state === 'failed'" class="assistant-conversation-message assistant-conversation-message--assistant" :class="{ 'assistant-conversation-message--failed': turn.state === 'failed' }">
           <div class="assistant-conversation-avatar">
             <img v-if="avatarUrl" :src="avatarUrl" :alt="conversation?.assistant_name || ''" />
             <MessageCircle v-else :size="20" aria-hidden="true" />
           </div>
-          <div v-if="turn.answer" class="assistant-conversation-bubble markdown-body" v-html="renderMarkdown(turn.answer)" />
-          <div v-else class="assistant-conversation-bubble assistant-conversation-thinking">{{ t(`aiApplications.chat.${turn.state === 'generating' ? 'thinking' : turn.state}`) }}</div>
+          <div class="assistant-conversation-bubble">
+            <div v-if="turn.state === 'failed'" class="assistant-conversation-failure" role="alert"><CircleAlert :size="17" aria-hidden="true" />{{ t('aiApplications.chat.failed') }}</div>
+            <div v-if="turn.answer" class="markdown-body" v-html="renderMarkdown(turn.answer)" />
+            <div v-else-if="turn.state !== 'failed'" class="assistant-conversation-thinking">{{ t(`aiApplications.chat.${turn.state === 'generating' ? 'thinking' : turn.state}`) }}</div>
+          </div>
         </div>
       </div>
     </div>
     <div class="assistant-conversation-composer">
-      <el-input v-model="draft" type="textarea" :rows="2" :maxlength="4000" :disabled="busy || loading" :placeholder="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />
-      <el-button v-if="busy" type="danger" :icon="Square" @click="stop">{{ t('aiApplications.chat.stop') }}</el-button>
-      <el-button v-else type="primary" :disabled="!draft.trim() || loading" @click="send()">{{ t('aiApplications.chat.send') }}</el-button>
+      <div class="assistant-conversation-composer-shell">
+        <el-input v-model="draft" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" :maxlength="4000" :disabled="busy || loading" :placeholder="t('aiApplications.chat.placeholder')" :aria-label="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />
+        <div class="assistant-conversation-composer-actions">
+          <el-button v-if="busy" type="danger" class="assistant-conversation-send" :icon="Square" @click="stop">{{ t('aiApplications.chat.stop') }}</el-button>
+          <el-button v-else type="primary" class="assistant-conversation-send" :icon="ArrowUp" :disabled="!draft.trim() || loading" @click="send()">{{ t('aiApplications.chat.send') }}</el-button>
+        </div>
+      </div>
     </div>
   </section>
 </template>

@@ -130,6 +130,7 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 - A continuing question retrieves relevant results from the Assistant's Knowledge Bases, then streams the model's answer with those results; when no results are found, the model may answer directly.
 - The conversation freezes the effective Assistant and Provider Model configuration on creation. Later Assistant edits affect only new conversations, except that enabled FAQ answers are read at answer time.
 - Each accepted question first emits a thinking state. Only one turn can generate in a conversation; the User may stop it or create a new conversation. A new conversation does not erase the previous transcript.
+- A failed Assistant reply remains in the transcript as a visually distinct error message, including any partial output already streamed. The chat composer keeps the growing question field and send or stop action in one focused input surface.
 - The model receives at most the latest 10 completed turns, with a compressed summary if the context grows too long. Every turn, including failed or cancelled turns and partial output, remains in the owner's audit transcript independently of model context pruning.
 - Each model stage uses Credit admission and settlement; provider credentials never enter snapshots or responses.
 - An Assistant without a Digital Human remains usable as text or voice according to the supported client surface.
