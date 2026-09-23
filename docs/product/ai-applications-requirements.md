@@ -93,6 +93,7 @@ The minimum editable configuration is:
 - Scenario type
 - Assistant prompt
 - User-question pre-processing prompt
+- One available Provider Model from a connection with a configured API Key and `openai_chat` protocol
 - Response style
 - Optional Knowledge Selection containing one or more Knowledge Bases
 - Optional Expert or Expert Team selection
@@ -104,7 +105,7 @@ The minimum editable configuration is:
 
 The configuration must not contain hidden, unreviewable instructions. User-authored prompts remain visible in the editor and are included in the application snapshot used by a conversation. The former Service Objective, Answer Scope, and Operating Rules editor fields are not part of the current configuration surface.
 
-The Assistant uses the User's existing Personal Settings execution configuration unless a future product decision adds an explicit application-level model policy. The first version does not add a separate Provider Model or Runtime Engine selector to the Assistant editor.
+The Assistant editor selects a Provider Model independently of the User's Personal Settings. Only available models whose connection has a configured API Key and supports `openai_chat` may be selected; the backend repeats this check on create, update, enable, and new conversation creation. The Assistant does not select a Runtime Engine. Existing Assistants without a saved model keep the Personal Settings default as a compatibility fallback only when that model also supports `openai_chat`; editing them requires an explicit selection.
 
 ### 4.4 Lifecycle And Operations
 
@@ -128,7 +129,7 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 - Opening an enabled Assistant reopens its most recently created authenticated Assistant Conversation, or creates one when none exists; it never opens a Workspace Session. The User can explicitly create a new conversation and can always access saved Assistant Conversation history, even when only one conversation exists. The welcome appears as the first Assistant chat message with the uploaded Assistant icon; enabled FAQs appear beside that message as compact, labeled question shortcuts before the first User question. Later Assistant replies use the same left-aligned message and icon treatment, while User questions appear on the right.
 - Selecting an FAQ returns its stored answer without model invocation. Free text is preprocessed by the configured Provider Model to classify an FAQ, reject an out-of-scope question with `对不起，我暂时无法回答此类问题`, or continue.
 - A continuing question retrieves relevant results from the Assistant's Knowledge Bases, then streams the model's answer with those results; when no results are found, the model may answer directly.
-- The conversation freezes the effective Assistant and Provider Model configuration on creation. Later Assistant edits affect only new conversations, except that enabled FAQ answers are read at answer time.
+- The conversation freezes the Assistant's selected Provider Model and connection configuration on creation. Later Assistant edits affect only new conversations, except that enabled FAQ answers are read at answer time.
 - Each accepted question first emits a thinking state. Only one turn can generate in a conversation; the User may stop it or create a new conversation. A new conversation does not erase the previous transcript.
 - A failed Assistant reply remains in the transcript as a visually distinct error message, including any partial output already streamed. The chat composer keeps the growing question field and send or stop action in one focused input surface.
 - The model receives at most the latest 10 completed turns, with a compressed summary if the context grows too long. Every turn, including failed or cancelled turns and partial output, remains in the owner's audit transcript independently of model context pruning.
@@ -208,9 +209,9 @@ The generated embed resembles:
 ></iframe>
 ```
 
-The iframe provides FAQ shortcut buttons and free-text conversation. It never exposes Provider Model, Runtime Engine, Expert, Knowledge Base internals, User Access Tokens, API Keys, internal Session IDs, Object Keys, signed URLs, or private application settings.
+The iframe provides FAQ shortcut buttons and free-text conversation. New external conversations freeze the Assistant's selected `openai_chat` Provider Model and use the same preprocessing, Knowledge Base, Credit, and answer-audit pipeline as authenticated Assistant conversations; older external Session conversations keep their original execution snapshot. It never exposes Provider Model, Runtime Engine, Expert, Knowledge Base internals, User Access Tokens, API Keys, internal Session IDs, Object Keys, signed URLs, or private application settings.
 
-External visitors are anonymous and receive a short-lived Visitor ID represented only by a one-way hash in platform records. Each public interaction creates or continues an `External Conversation`, which is not shown in the owner's private Session list. It retains the Assistant, Share Token revision, Assistant and Digital Human snapshots, FAQ or retrieval source, and Credit settlement needed for audit.
+External visitors are anonymous and receive a short-lived Visitor ID represented only by a one-way hash in platform records. New free-text interactions create or continue a visitor-scoped Assistant Conversation, hidden from the owner's private Assistant Conversation history; pre-existing `External Conversation` records remain readable through their original Session path. The public conversation retains the Assistant and selected Provider Model snapshots, Share Token revision, answer source, and Credit settlement needed for audit.
 
 Free-text external model calls consume the Smart Assistant owner's Credits. The owner may disable free-text questions or set an Assistant-level daily call limit; direct FAQ clicks do not consume model Credits. Platform-wide concurrency, IP, Visitor ID, and Share Token rate limits always apply and cannot be disabled by the owner.
 
@@ -347,7 +348,7 @@ When retrieval does not produce a bounded set of excerpts above the configured r
 - Live-streaming Digital Human broadcasts
 - Multiple Digital Humans collaborating in one conversation
 - Custom Digital Human training or user-uploaded model weights
-- Assistant-level independent Provider Model or Runtime Engine policies
+- Assistant-level Runtime Engine policies
 - Detailed product analytics beyond basic share usage, safety audit, and existing conversation/execution history
 
 ## 10. Acceptance Boundary
@@ -376,4 +377,3 @@ The following decisions must be made before implementing external delivery or li
 1. Which initial Digital Human provider and protocol are supported?
 2. Is live voice/video interaction part of the first release, or is the first release configuration and preview only?
 3. Which external channels, if any, receive a Smart Assistant after the authenticated Web and iframe surfaces are complete?
-4. Does a Smart Assistant later need an explicit model policy independent of Personal Settings?

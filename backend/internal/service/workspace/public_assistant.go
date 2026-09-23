@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"net"
@@ -66,6 +67,20 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		http.SetCookie(writer, visitorCookie)
 	}
 	if len(parts) == 9 && parts[5] == "conversations" && parts[7] == "responses" && request.Method == http.MethodGet {
+		direct, directErr := service.directPublicResponse(request.Context(), assistant, visitorHash, parts[6], parts[8])
+		if directErr == nil {
+			writePublicJSON(writer, direct, http.StatusOK)
+			return
+		}
+		if !errors.Is(directErr, aiapplicationdomain.ErrNotFound) {
+			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
+			return
+		}
+		legacy, legacyErr := service.aiapplications.GetExternalConversation(request.Context(), parts[6], assistant.ID, visitorHash)
+		if legacyErr != nil || legacy.ShareTokenRevision != assistant.Share.TokenRevision {
+			http.NotFound(writer, request)
+			return
+		}
 		response, responseErr := service.aiapplications.GetExternalResponse(request.Context(), parts[8], parts[6], visitorHash)
 		if responseErr != nil {
 			http.NotFound(writer, request)
@@ -103,8 +118,8 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			return
 		}
 		decision := aiapplicationdomain.DefaultSafetyPolicy().Decide(input.Question)
-		_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", decision, "not_charged")
 		if decision == aiapplicationdomain.SafetyRefuse {
+			_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", decision, "not_charged")
 			writePublicJSON(writer, map[string]string{"kind": "refusal", "answer": aiapplicationdomain.SafetyRefusal}, http.StatusOK)
 			return
 		}
@@ -117,6 +132,7 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			return
 		}
 		if matched {
+			_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", aiapplicationdomain.SafetyAllow, "not_charged")
 			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": match.FAQ.AnswerMarkdown, "faq_id": match.FAQ.ID, "confidence": match.Confidence}, http.StatusOK)
 			return
 		}
@@ -129,12 +145,20 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
 			return
 		}
-		response, createErr := service.enqueueExternalAnswer(request.Context(), assistant, visitorHash, input.ConversationID, input.Question)
+		response, createErr := service.publicAnswer(request.Context(), assistant, visitorHash, input.ConversationID, input.Question)
 		if createErr != nil {
+			if errors.Is(createErr, aiapplicationdomain.ErrInvalid) {
+				writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+				return
+			}
+			if errors.Is(createErr, aiapplicationdomain.ErrNotFound) {
+				http.NotFound(writer, request)
+				return
+			}
 			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
 			return
 		}
-		writePublicJSON(writer, map[string]any{"kind": "generating", "response_id": response.ID, "conversation_id": response.ConversationID, "state": response.State}, http.StatusAccepted)
+		writePublicJSON(writer, response, http.StatusAccepted)
 		return
 	}
 	http.NotFound(writer, request)

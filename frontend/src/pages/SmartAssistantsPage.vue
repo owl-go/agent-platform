@@ -6,20 +6,23 @@ import { Ellipsis, MessageCircle, Pause, Play, Search, Share2, Trash2 } from "@l
 import { ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import IconPicker from "../components/IconPicker.vue";
+import { assistantModelOptions } from "../assistantModels";
 import SmartAssistantShareDialog from "../components/SmartAssistantShareDialog.vue";
-import { ApiError, platformApiKey, type SmartAssistant, type SmartAssistantInput } from "../api/client";
+import { ApiError, platformApiKey, type ModelProviderConnection, type SmartAssistant, type SmartAssistantInput } from "../api/client";
 
 const api = inject(platformApiKey)!;
 const router = useRouter();
 const { t } = useI18n();
 const items = ref<SmartAssistant[]>([]);
+const connections = ref<ModelProviderConnection[]>([]);
+const modelOptions = computed(() => assistantModelOptions(connections.value));
 const loading = ref(false);
 const error = ref("");
 const search = ref("");
 const scenario = ref("");
 const createDialogOpen = ref(false);
 const creating = ref(false);
-const form = ref<SmartAssistantInput & { icon: string }>({ name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" });
+const form = ref<SmartAssistantInput & { icon: string }>({ name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", provider_model_id: "", response_style: "" });
 const iconFile = ref<File>();
 const iconPreviewUrl = ref("");
 const shareAssistant = ref<SmartAssistant>();
@@ -32,25 +35,25 @@ const filteredItems = computed(() => {
 
 async function refresh() {
   loading.value = true;
-  try { items.value = await api.listSmartAssistants(); }
+  try { [items.value, connections.value] = await Promise.all([api.listSmartAssistants(), api.listModelProviderConnections()]); }
   catch { error.value = t("aiApplications.loadFailed"); }
   finally { loading.value = false; }
 }
 async function create() {
-  if (!form.value.name.trim() || !iconFile.value) return;
+  if (!form.value.name.trim() || !iconFile.value || !form.value.provider_model_id) return;
   creating.value = true;
   let created: SmartAssistant | undefined;
   try {
     created = await api.createSmartAssistant({ ...form.value, icon: "", share: { enabled: false, width: "100%", height: 600 } });
     const item = await api.uploadSmartAssistantIcon(created.id, iconFile.value, created.version);
     items.value.unshift(item);
-    form.value = { name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", response_style: "" };
+    form.value = { name: "", icon: "", description: "", scenario: "custom", introduction: "", prompt: "", preprocess_prompt: "", provider_model_id: "", response_style: "" };
     iconFile.value = undefined;
     replaceIconPreview();
     createDialogOpen.value = false;
-  } catch {
+  } catch (cause) {
     if (created) await api.deleteSmartAssistant(created.id).catch(() => undefined);
-    error.value = t("aiApplications.iconUploadFailed");
+    error.value = created ? t("aiApplications.iconUploadFailed") : cause instanceof ApiError && cause.code === "assistant_model_unavailable" ? t("aiApplications.modelUnavailable") : t("aiApplications.saveFailed");
   } finally { creating.value = false; }
 }
 function openCreate() { createDialogOpen.value = true; }
@@ -116,9 +119,10 @@ onBeforeUnmount(() => replaceIconPreview());
         <el-form-item :label="t('aiApplications.name')"><el-input v-model="form.name" autofocus :placeholder="t('aiApplications.assistantNamePlaceholder')" /></el-form-item>
         <el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="form.icon" upload-only remote-upload :preview-url="iconPreviewUrl" :uploading="creating" @file-selected="selectIcon" @invalid="invalidIcon" /></el-form-item>
         <el-form-item :label="t('aiApplications.scenario')"><el-select v-model="form.scenario"><el-option v-for="value in scenarios" :key="value" :label="t(`aiApplications.scenarios.${value}`)" :value="value" /></el-select></el-form-item>
+        <el-form-item :label="t('aiApplications.model')" required><el-select v-model="form.provider_model_id" data-testid="assistant-model-select" :placeholder="t('aiApplications.modelPlaceholder')"><el-option v-for="option in modelOptions" :key="option.value" :label="option.label" :value="option.value" /></el-select><small v-if="!modelOptions.length">{{ t('aiApplications.modelUnavailable') }}</small></el-form-item>
         <el-form-item :label="t('aiApplications.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
       </el-form>
-      <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="creating" @click="create">{{ t('common.save') }}</el-button></template>
+      <template #footer><el-button @click="createDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="creating" :disabled="!form.provider_model_id" @click="create">{{ t('common.save') }}</el-button></template>
     </el-dialog>
     <div class="application-list-filters">
       <el-input v-model="search" class="assistant-search" clearable :placeholder="t('aiApplications.search')" />

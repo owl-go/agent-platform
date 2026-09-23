@@ -22,7 +22,12 @@ func (service *Service) handleAssistantConversations(writer http.ResponseWriter,
 			items, err := service.aiapplications.ListAssistantConversations(ctx, owner, assistantID)
 			service.writeAIResult(writer, map[string]any{"items": items}, err)
 		case http.MethodPost:
-			model, err := service.resolveAssistantModel(ctx, owner)
+			assistant, err := service.aiapplications.GetAssistant(ctx, owner, assistantID)
+			if err != nil {
+				service.writeAIResult(writer, nil, err)
+				return
+			}
+			model, err := service.resolveAssistantModel(ctx, owner, assistant.ProviderModelID)
 			if err != nil {
 				if errors.Is(err, aiappdomain.ErrInvalid) {
 					writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
@@ -147,7 +152,7 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "cancelled", "", "", "", 0, 0)
 		return
 	}
-	answer, answerErr := service.answerAssistantTurn(ctx, owner, conversation, turn, input.FAQID, func(delta string) error {
+	answer, answerErr := service.answerAssistantTurn(ctx, owner, conversation, turn, input.FAQID, "authenticated", func(delta string) error {
 		return writeAssistantEvent(writer, flusher, "delta", map[string]string{"turn_id": turn.ID, "text": delta})
 	})
 	state := assistantTurnState(answerErr)

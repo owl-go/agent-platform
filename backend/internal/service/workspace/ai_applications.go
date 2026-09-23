@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -17,6 +18,7 @@ type assistantPayload struct {
 	Scenario         string       `json:"scenario"`
 	Prompt           string       `json:"prompt"`
 	PreprocessPrompt string       `json:"preprocess_prompt"`
+	ProviderModelID  string       `json:"provider_model_id"`
 	ServiceGoal      string       `json:"service_goal"`
 	AnswerScope      string       `json:"answer_scope"`
 	OperatingRules   string       `json:"operating_rules"`
@@ -169,6 +171,14 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 			if !decodeJSON(writer, request, &payload) {
 				return
 			}
+			if payload.ProviderModelID == "" {
+				writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+				return
+			}
+			if err := service.validateAssistantModel(request.Context(), owner, payload.ProviderModelID); err != nil {
+				service.writeAssistantModelError(writer, err)
+				return
+			}
 			value, err := service.aiapplications.CreateAssistant(request.Context(), owner, assistantFromPayload(payload))
 			service.writeAIResult(writer, value, err)
 			return
@@ -254,6 +264,17 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		if !decodeJSON(writer, request, &input) {
 			return
 		}
+		if input.State == aiapplicationdomain.StateEnabled {
+			assistant, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+			if err != nil {
+				service.writeAIResult(writer, nil, err)
+				return
+			}
+			if err := service.validateAssistantModel(request.Context(), owner, assistant.ProviderModelID); err != nil {
+				service.writeAssistantModelError(writer, err)
+				return
+			}
+		}
 		value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
 		service.writeAIResult(writer, value, err)
 		return
@@ -269,6 +290,19 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 	case http.MethodPatch:
 		var payload assistantPayload
 		if !decodeJSON(writer, request, &payload) {
+			return
+		}
+		current, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		if payload.ProviderModelID == "" && current.ProviderModelID != "" {
+			writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+			return
+		}
+		if err := service.validateAssistantModel(request.Context(), owner, payload.ProviderModelID); err != nil {
+			service.writeAssistantModelError(writer, err)
 			return
 		}
 		value, err := service.aiapplications.UpdateAssistant(request.Context(), owner, rest[0], assistantFromPayload(payload), payload.Version)
@@ -486,7 +520,20 @@ func (service *Service) writeAIResult(writer http.ResponseWriter, value any, err
 }
 
 func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssistant {
-	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+}
+
+func (service *Service) validateAssistantModel(ctx context.Context, owner, modelID string) error {
+	_, err := service.resolveAssistantModel(ctx, owner, modelID)
+	return err
+}
+
+func (service *Service) writeAssistantModelError(writer http.ResponseWriter, err error) {
+	if errors.Is(err, aiapplicationdomain.ErrInvalid) {
+		writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+		return
+	}
+	service.writeAIResult(writer, nil, err)
 }
 func humanFromPayload(value digitalHumanPayload) aiapplicationdomain.DigitalHuman {
 	return aiapplicationdomain.DigitalHuman{Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, State: aiapplicationdomain.ApplicationState(value.State)}

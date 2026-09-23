@@ -145,7 +145,7 @@ The product area in which a User creates and uses durable AI capabilities and ta
 _Avoid_: AI Creation as a top-level area, Session, Workflow, generic AI tools
 
 **Smart Assistant**:
-A reusable, User-owned AI application for one scenario, combining visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
+A reusable, User-owned AI application for one scenario, combining a selected Provider Model, visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
 _Avoid_: AI Customer Service, Expert, Session, Workflow
 
 **Smart Assistant FAQ**:

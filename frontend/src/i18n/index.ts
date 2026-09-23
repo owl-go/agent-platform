@@ -220,7 +220,10 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
 
 // Keep nested AI application translations intact after the legacy compatibility merges above.
 Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
-  chat: { loadFailed: "加载对话失败，请重试。", sendFailed: "发送失败，请重试。", stopFailed: "打断失败，请重试。", newFailed: "新建对话失败，请重试。", modelUnavailable: "请先在设置中选择可用的默认模型。", history: "历史对话", new: "清空并新建对话", defaultWelcome: "你好，有什么可以帮你？", thinking: "思考中...", cancelled: "已停止", failed: "回答失败，请重试。", placeholder: "输入问题，Enter 发送", stop: "停止输出", send: "发送" },
+  chat: { loadFailed: "加载对话失败，请重试。", sendFailed: "发送失败，请重试。", stopFailed: "打断失败，请重试。", newFailed: "新建对话失败，请重试。", modelUnavailable: "请为智能助手选择支持 openai_chat 的可用模型。", history: "历史对话", new: "清空并新建对话", defaultWelcome: "你好，有什么可以帮你？", thinking: "思考中...", cancelled: "已停止", failed: "回答失败，请重试。", placeholder: "输入问题，Enter 发送", stop: "停止输出", send: "发送" },
+  model: "对话模型",
+  modelPlaceholder: "选择支持 openai_chat 的模型",
+  modelUnavailable: "请选择已配置密钥、可用且支持 openai_chat 的模型。",
   description: "助手简介",
   prompt: "提示词",
   preprocessPrompt: "预处理提示词",
@@ -234,7 +237,10 @@ Object.assign((zh as unknown as { aiApplications: Record<string, unknown> }).aiA
   faq: { title: "常见问题", question: "问题", answer: "答案", add: "添加问题", edit: "编辑问题", import: "导入", export: "导出", importFailed: "导入失败，请确认文件包含“问题”和“答案”两列。", empty: "还没有常见问题。", enable: "启用", disable: "停用" },
 });
 Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiApplications, {
-  chat: { loadFailed: "Could not load the conversation.", sendFailed: "Could not send the question.", stopFailed: "Could not stop the response.", newFailed: "Could not start a new conversation.", modelUnavailable: "Choose an available default model in Settings first.", history: "Conversation history", new: "Clear and start again", defaultWelcome: "Hello, how can I help?", thinking: "Thinking...", cancelled: "Stopped", failed: "Response failed. Try again.", placeholder: "Ask a question, Enter to send", stop: "Stop", send: "Send" },
+  chat: { loadFailed: "Could not load the conversation.", sendFailed: "Could not send the question.", stopFailed: "Could not stop the response.", newFailed: "Could not start a new conversation.", modelUnavailable: "Choose an available openai_chat model for this Smart Assistant.", history: "Conversation history", new: "Clear and start again", defaultWelcome: "Hello, how can I help?", thinking: "Thinking...", cancelled: "Stopped", failed: "Response failed. Try again.", placeholder: "Ask a question, Enter to send", stop: "Stop", send: "Send" },
+  model: "Conversation model",
+  modelPlaceholder: "Select an openai_chat model",
+  modelUnavailable: "Choose an available model with an API key and openai_chat support.",
   description: "Assistant description",
   prompt: "Assistant prompt",
   preprocessPrompt: "Pre-process prompt",

@@ -14,6 +14,7 @@ type AssistantConversationRepository interface {
 	CreateAssistantConversation(context.Context, domain.AssistantConversation) (domain.AssistantConversation, error)
 	ListAssistantConversations(context.Context, string, string) ([]domain.AssistantConversation, error)
 	GetAssistantConversation(context.Context, string, string) (domain.AssistantConversation, error)
+	GetPublicAssistantConversation(context.Context, string, string, string, string, int64) (domain.AssistantConversation, error)
 	ListAssistantTurns(context.Context, string, string) ([]domain.AssistantTurn, error)
 	BeginAssistantTurn(context.Context, string, string, string) (domain.AssistantTurn, error)
 	SaveAssistantTurnProgress(context.Context, string, string, string, string) error
@@ -32,6 +33,17 @@ func (service *Service) conversations() (AssistantConversationRepository, error)
 }
 
 func (service *Service) CreateAssistantConversation(ctx context.Context, owner, assistantID string, model domain.AssistantModel) (domain.AssistantConversation, error) {
+	return service.createAssistantConversation(ctx, owner, assistantID, "", 0, model)
+}
+
+func (service *Service) CreatePublicAssistantConversation(ctx context.Context, owner, assistantID, visitorHash string, shareRevision int64, model domain.AssistantModel) (domain.AssistantConversation, error) {
+	if visitorHash == "" || shareRevision <= 0 {
+		return domain.AssistantConversation{}, fmt.Errorf("%w: missing public conversation scope", domain.ErrInvalid)
+	}
+	return service.createAssistantConversation(ctx, owner, assistantID, visitorHash, shareRevision, model)
+}
+
+func (service *Service) createAssistantConversation(ctx context.Context, owner, assistantID, visitorHash string, shareRevision int64, model domain.AssistantModel) (domain.AssistantConversation, error) {
 	assistant, err := service.GetAssistant(ctx, owner, assistantID)
 	if err != nil {
 		return domain.AssistantConversation{}, err
@@ -42,11 +54,28 @@ func (service *Service) CreateAssistantConversation(ctx context.Context, owner, 
 	if err := assistant.ValidateForEnable(); err != nil {
 		return domain.AssistantConversation{}, err
 	}
+	if assistant.ProviderModelID != model.ProviderModelID && assistant.ProviderModelID != "" {
+		return domain.AssistantConversation{}, fmt.Errorf("%w: Assistant model changed before conversation creation", domain.ErrConflict)
+	}
+	if visitorHash != "" && (!assistant.Share.Enabled || assistant.Share.TokenRevision != shareRevision) {
+		return domain.AssistantConversation{}, fmt.Errorf("%w: public sharing has changed", domain.ErrConflict)
+	}
 	repository, err := service.conversations()
 	if err != nil {
 		return domain.AssistantConversation{}, err
 	}
-	return repository.CreateAssistantConversation(ctx, domain.AssistantConversation{OwnerID: owner, AssistantID: assistant.ID, AssistantName: assistant.Name, Welcome: assistant.Introduction, AssistantSnapshot: assistant, ModelSnapshot: model})
+	return repository.CreateAssistantConversation(ctx, domain.AssistantConversation{OwnerID: owner, AssistantID: assistant.ID, VisitorHash: visitorHash, ShareTokenRevision: shareRevision, AssistantName: assistant.Name, Welcome: assistant.Introduction, AssistantSnapshot: assistant, ModelSnapshot: model})
+}
+
+func (service *Service) GetPublicAssistantConversation(ctx context.Context, owner, assistantID, conversationID, visitorHash string, shareRevision int64) (domain.AssistantConversation, error) {
+	if visitorHash == "" || shareRevision <= 0 {
+		return domain.AssistantConversation{}, domain.ErrNotFound
+	}
+	repository, err := service.conversations()
+	if err != nil {
+		return domain.AssistantConversation{}, err
+	}
+	return repository.GetPublicAssistantConversation(ctx, owner, assistantID, conversationID, visitorHash, shareRevision)
 }
 
 func (service *Service) ListAssistantConversations(ctx context.Context, owner, assistantID string) ([]domain.AssistantConversation, error) {

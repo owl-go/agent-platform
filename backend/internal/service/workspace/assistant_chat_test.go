@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	aiappdomain "agent-platform/backend/internal/biz/aiapplication/domain"
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 )
 
 func TestAssistantHistoryUsesOnlyLatestTenCompletedTurns(t *testing.T) {
@@ -24,11 +25,32 @@ func TestAssistantHistoryUsesOnlyLatestTenCompletedTurns(t *testing.T) {
 	}
 }
 
-func TestAssistantChatProtocolPreference(t *testing.T) {
-	if got := selectAssistantProtocol("claude", []string{"openai_chat", "anthropic_messages"}); got != "anthropic_messages" {
-		t.Fatalf("Claude protocol = %q", got)
+func TestAssistantModelSelectionRequiresAvailableOpenAIChatModelAndKey(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		protocols []string
+		available bool
+		hasKey    bool
+		valid     bool
+	}{
+		{name: "OpenAI Chat", protocols: []string{"openai_chat", "openai_responses"}, available: true, hasKey: true, valid: true},
+		{name: "Responses only", protocols: []string{"openai_responses"}, available: true, hasKey: true},
+		{name: "Unavailable model", protocols: []string{"openai_chat"}, hasKey: true},
+		{name: "Missing key", protocols: []string{"openai_chat"}, available: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			connections := []workspacedomain.ModelProviderConnection{{ID: "connection-1", CredentialOwnerID: "admin", ProviderType: "openai", Endpoint: "https://example.test/v1", Protocols: test.protocols, HasAPIKey: test.hasKey, Version: 3, Models: []workspacedomain.ProviderModel{{ID: "model-1", ModelID: "chat-model", Available: test.available}}}}
+			model, err := selectAssistantModel(connections, "model-1")
+			if test.valid {
+				if err != nil || model.ProviderModelID != "model-1" || model.Protocol != "openai_chat" || model.ConnectionVersion != 3 {
+					t.Fatalf("model = %+v, err = %v", model, err)
+				}
+			} else if err == nil {
+				t.Fatalf("unexpected model: %+v", model)
+			}
+		})
 	}
-	if got := selectAssistantProtocol("codex", []string{"openai_chat", "openai_responses"}); got != "openai_responses" {
-		t.Fatalf("Codex protocol = %q", got)
+	if _, err := selectAssistantModel(nil, "other-user-or-missing-model"); err == nil {
+		t.Fatal("missing model was accepted")
 	}
 }

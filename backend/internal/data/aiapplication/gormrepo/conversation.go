@@ -17,6 +17,8 @@ type assistantConversationRecord struct {
 	ID                 string    `gorm:"column:id;primaryKey"`
 	OwnerID            string    `gorm:"column:owner_user_id"`
 	AssistantID        string    `gorm:"column:assistant_id"`
+	VisitorHash        string    `gorm:"column:visitor_hash"`
+	ShareTokenRevision int64     `gorm:"column:share_token_revision"`
 	AssistantName      string    `gorm:"column:assistant_name"`
 	Welcome            string    `gorm:"column:welcome"`
 	AssistantSnapshot  []byte    `gorm:"column:assistant_snapshot;type:jsonb"`
@@ -61,7 +63,7 @@ func (r *Repository) CreateAssistantConversation(ctx context.Context, value doma
 	if err != nil {
 		return domain.AssistantConversation{}, err
 	}
-	row := assistantConversationRecord{ID: value.ID, OwnerID: value.OwnerID, AssistantID: value.AssistantID, AssistantName: value.AssistantName, Welcome: value.Welcome, AssistantSnapshot: assistantSnapshot, ModelSnapshot: modelSnapshot, CreatedAt: now, UpdatedAt: now}
+	row := assistantConversationRecord{ID: value.ID, OwnerID: value.OwnerID, AssistantID: value.AssistantID, VisitorHash: value.VisitorHash, ShareTokenRevision: value.ShareTokenRevision, AssistantName: value.AssistantName, Welcome: value.Welcome, AssistantSnapshot: assistantSnapshot, ModelSnapshot: modelSnapshot, CreatedAt: now, UpdatedAt: now}
 	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.AssistantConversation{}, mapDBError(err)
 	}
@@ -70,7 +72,7 @@ func (r *Repository) CreateAssistantConversation(ctx context.Context, value doma
 
 func (r *Repository) ListAssistantConversations(ctx context.Context, owner, assistantID string) ([]domain.AssistantConversation, error) {
 	var rows []assistantConversationRecord
-	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND assistant_id = ?", owner, assistantID).Order("created_at DESC").Find(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND assistant_id = ? AND visitor_hash = ''", owner, assistantID).Order("created_at DESC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	result := make([]domain.AssistantConversation, 0, len(rows))
@@ -86,14 +88,25 @@ func (r *Repository) ListAssistantConversations(ctx context.Context, owner, assi
 
 func (r *Repository) GetAssistantConversation(ctx context.Context, owner, id string) (domain.AssistantConversation, error) {
 	var row assistantConversationRecord
-	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", owner, id).Take(&row).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ? AND visitor_hash = ''", owner, id).Take(&row).Error; err != nil {
+		return domain.AssistantConversation{}, mapAssistantReadError(err)
+	}
+	return conversationFromRecord(row)
+}
+
+func (r *Repository) GetPublicAssistantConversation(ctx context.Context, owner, assistantID, id, visitorHash string, shareRevision int64) (domain.AssistantConversation, error) {
+	if visitorHash == "" || shareRevision <= 0 {
+		return domain.AssistantConversation{}, domain.ErrNotFound
+	}
+	var row assistantConversationRecord
+	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND assistant_id = ? AND id = ? AND visitor_hash = ? AND share_token_revision = ?", owner, assistantID, id, visitorHash, shareRevision).Take(&row).Error; err != nil {
 		return domain.AssistantConversation{}, mapAssistantReadError(err)
 	}
 	return conversationFromRecord(row)
 }
 
 func conversationFromRecord(row assistantConversationRecord) (domain.AssistantConversation, error) {
-	value := domain.AssistantConversation{ID: row.ID, OwnerID: row.OwnerID, AssistantID: row.AssistantID, AssistantName: row.AssistantName, Welcome: row.Welcome, Summary: row.Summary, SummaryThroughTurn: row.SummaryThroughTurn, LastTurn: row.LastTurn, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
+	value := domain.AssistantConversation{ID: row.ID, OwnerID: row.OwnerID, AssistantID: row.AssistantID, VisitorHash: row.VisitorHash, ShareTokenRevision: row.ShareTokenRevision, AssistantName: row.AssistantName, Welcome: row.Welcome, Summary: row.Summary, SummaryThroughTurn: row.SummaryThroughTurn, LastTurn: row.LastTurn, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 	if err := json.Unmarshal(row.AssistantSnapshot, &value.AssistantSnapshot); err != nil {
 		return domain.AssistantConversation{}, fmt.Errorf("decode Assistant snapshot: %w", err)
 	}
@@ -104,7 +117,7 @@ func conversationFromRecord(row assistantConversationRecord) (domain.AssistantCo
 }
 
 func (r *Repository) ListAssistantTurns(ctx context.Context, owner, conversationID string) ([]domain.AssistantTurn, error) {
-	if _, err := r.GetAssistantConversation(ctx, owner, conversationID); err != nil {
+	if err := r.assistantConversationExists(ctx, owner, conversationID); err != nil {
 		return nil, err
 	}
 	var rows []assistantTurnRecord
@@ -116,6 +129,17 @@ func (r *Repository) ListAssistantTurns(ctx context.Context, owner, conversation
 		result = append(result, turnFromRecord(row))
 	}
 	return result, nil
+}
+
+func (r *Repository) assistantConversationExists(ctx context.Context, owner, conversationID string) error {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&assistantConversationRecord{}).Where("id = ? AND owner_user_id = ?", conversationID, owner).Count(&count).Error; err != nil {
+		return err
+	}
+	if count != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 func (r *Repository) BeginAssistantTurn(ctx context.Context, owner, conversationID, question string) (domain.AssistantTurn, error) {
@@ -158,7 +182,7 @@ func (r *Repository) SaveAssistantTurnProgress(ctx context.Context, owner, conve
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		if _, err := r.GetAssistantConversation(ctx, owner, conversationID); err != nil {
+		if err := r.assistantConversationExists(ctx, owner, conversationID); err != nil {
 			return err
 		}
 		return domain.ErrConflict
@@ -228,14 +252,13 @@ func (r *Repository) SaveAssistantSummary(ctx context.Context, owner, conversati
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		_, err := r.GetAssistantConversation(ctx, owner, conversationID)
-		return err
+		return r.assistantConversationExists(ctx, owner, conversationID)
 	}
 	return nil
 }
 
 func (r *Repository) MarkAssistantInterruptedCreditsReleased(ctx context.Context, owner, conversationID, turnID string) error {
-	if _, err := r.GetAssistantConversation(ctx, owner, conversationID); err != nil {
+	if err := r.assistantConversationExists(ctx, owner, conversationID); err != nil {
 		return err
 	}
 	return r.db.WithContext(ctx).Model(&assistantTurnRecord{}).Where("id = ? AND conversation_id = ? AND state = 'failed' AND error = 'interrupted'", turnID, conversationID).Update("error", "credits_released").Error

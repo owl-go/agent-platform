@@ -23,9 +23,12 @@ func TestAssistantConversationAuditAndSingleActiveTurn(t *testing.T) {
 	}
 	repository := New(db, nil)
 	assistantID := uuid.NewString()
-	conversation, err := repository.CreateAssistantConversation(ctx, domain.AssistantConversation{OwnerID: owner, AssistantID: assistantID, AssistantName: "测试助手", Welcome: "你好", AssistantSnapshot: domain.SmartAssistant{ID: assistantID, Name: "测试助手"}, ModelSnapshot: domain.AssistantModel{ModelID: "test-model"}})
+	conversation, err := repository.CreateAssistantConversation(ctx, domain.AssistantConversation{OwnerID: owner, AssistantID: assistantID, AssistantName: "测试助手", Welcome: "你好", AssistantSnapshot: domain.SmartAssistant{ID: assistantID, Name: "测试助手", ProviderModelID: "model-1"}, ModelSnapshot: domain.AssistantModel{ProviderModelID: "model-1", ModelID: "test-model", Protocol: "openai_chat"}})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if frozen, err := repository.GetAssistantConversation(ctx, owner, conversation.ID); err != nil || frozen.ModelSnapshot.ProviderModelID != "model-1" || frozen.ModelSnapshot.Protocol != "openai_chat" {
+		t.Fatalf("frozen model = %+v, err = %v", frozen.ModelSnapshot, err)
 	}
 	if _, err := repository.GetAssistantConversation(ctx, other, conversation.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("other owner read: %v", err)
@@ -97,5 +100,72 @@ func TestAssistantConversationAuditAndSingleActiveTurn(t *testing.T) {
 	history, err = repository.ListAssistantTurns(ctx, owner, conversation.ID)
 	if err != nil || history[1].Error != "credits_released" {
 		t.Fatalf("released credit marker: %+v, %v", history, err)
+	}
+}
+
+func TestAssistantProviderModelPersistsAcrossEdits(t *testing.T) {
+	db := rateLimitTestDatabase(t)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users (id, oidc_subject, username, email, display_name) VALUES (?, ?, ?, ?, ?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	repository := New(db, nil)
+	created, err := repository.CreateAssistant(ctx, owner, domain.SmartAssistant{Name: "模型助手", ProviderModelID: "model-1", State: domain.StateDraft})
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := repository.GetAssistant(ctx, owner, created.ID)
+	if err != nil || loaded.ProviderModelID != "model-1" {
+		t.Fatalf("created model = %q, err = %v", loaded.ProviderModelID, err)
+	}
+	loaded.ProviderModelID = "model-2"
+	updated, err := repository.UpdateAssistant(ctx, owner, created.ID, loaded, loaded.Version)
+	if err != nil || updated.ProviderModelID != "model-2" {
+		t.Fatalf("updated model = %q, err = %v", updated.ProviderModelID, err)
+	}
+}
+
+func TestPublicAssistantConversationIsVisitorScopedAndHiddenFromPrivateHistory(t *testing.T) {
+	db := rateLimitTestDatabase(t)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users (id, oidc_subject, username, email, display_name) VALUES (?, ?, ?, ?, ?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	repository := New(db, nil)
+	assistantID := uuid.NewString()
+	created, err := repository.CreateAssistantConversation(ctx, domain.AssistantConversation{OwnerID: owner, AssistantID: assistantID, VisitorHash: "visitor-a", ShareTokenRevision: 3, AssistantName: "共享助手", AssistantSnapshot: domain.SmartAssistant{ID: assistantID, Name: "共享助手"}, ModelSnapshot: domain.AssistantModel{ProviderModelID: "model-1", Protocol: "openai_chat"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.GetAssistantConversation(ctx, owner, created.ID); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("private read of public conversation: %v", err)
+	}
+	if history, err := repository.ListAssistantConversations(ctx, owner, assistantID); err != nil || len(history) != 0 {
+		t.Fatalf("private history = %+v, err = %v", history, err)
+	}
+	for _, scope := range []struct {
+		visitor  string
+		revision int64
+	}{{"visitor-b", 3}, {"visitor-a", 4}, {"", 3}, {"visitor-a", 0}} {
+		if _, err := repository.GetPublicAssistantConversation(ctx, owner, assistantID, created.ID, scope.visitor, scope.revision); !errors.Is(err, domain.ErrNotFound) {
+			t.Fatalf("cross-scope read: %v", err)
+		}
+	}
+	loaded, err := repository.GetPublicAssistantConversation(ctx, owner, assistantID, created.ID, "visitor-a", 3)
+	if err != nil || loaded.ModelSnapshot.ProviderModelID != "model-1" || loaded.ModelSnapshot.Protocol != "openai_chat" {
+		t.Fatalf("public snapshot = %+v, err = %v", loaded.ModelSnapshot, err)
+	}
+	turn, err := repository.BeginAssistantTurn(ctx, owner, created.ID, "问题")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FinishAssistantTurn(ctx, owner, created.ID, turn.ID, "completed", "model", "", "答案", 2, 3); err != nil {
+		t.Fatal(err)
+	}
+	turns, err := repository.ListAssistantTurns(ctx, owner, created.ID)
+	if err != nil || len(turns) != 1 || turns[0].Answer != "答案" {
+		t.Fatalf("public audit turns = %+v, err = %v", turns, err)
 	}
 }

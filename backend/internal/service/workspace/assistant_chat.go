@@ -22,50 +22,43 @@ type assistantAnswer struct {
 	inputTokens, outputTokens int64
 }
 
-func (service *Service) resolveAssistantModel(ctx context.Context, owner string) (aiappdomain.AssistantModel, error) {
-	settings, err := service.workspace.Repository().GetSettings(ctx, owner)
-	if err != nil {
-		return aiappdomain.AssistantModel{}, err
-	}
-	modelID := settings.RuntimeModelDefaults[settings.DefaultRuntimeEngine]
+func (service *Service) resolveAssistantModel(ctx context.Context, owner, modelID string) (aiappdomain.AssistantModel, error) {
 	if modelID == "" {
-		return aiappdomain.AssistantModel{}, fmt.Errorf("%w: configure a default Provider Model", aiappdomain.ErrInvalid)
+		// Assistants created before model selection was added retain their
+		// Personal Settings fallback until an explicit model is saved.
+		settings, err := service.workspace.Repository().GetSettings(ctx, owner)
+		if err != nil {
+			return aiappdomain.AssistantModel{}, err
+		}
+		modelID = settings.RuntimeModelDefaults[settings.DefaultRuntimeEngine]
+	}
+	if modelID == "" {
+		return aiappdomain.AssistantModel{}, fmt.Errorf("%w: select an openai_chat Provider Model", aiappdomain.ErrInvalid)
 	}
 	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
 	if err != nil {
 		return aiappdomain.AssistantModel{}, err
 	}
-	for _, connection := range connections {
-		for _, model := range connection.Models {
-			if model.ID != modelID || !model.Available {
-				continue
-			}
-			protocol := selectAssistantProtocol(settings.DefaultRuntimeEngine, connection.Protocols)
-			if protocol == "" {
-				return aiappdomain.AssistantModel{}, fmt.Errorf("%w: default Provider Model has no supported chat protocol", aiappdomain.ErrInvalid)
-			}
-			return aiappdomain.AssistantModel{ConnectionID: connection.ID, CredentialOwnerID: connection.CredentialOwnerID, ProviderType: connection.ProviderType, Protocol: protocol, ModelID: model.ModelID, Endpoint: connection.Endpoint, ConnectionVersion: connection.Version}, nil
-		}
-	}
-	return aiappdomain.AssistantModel{}, fmt.Errorf("%w: default Provider Model is unavailable", aiappdomain.ErrInvalid)
+	return selectAssistantModel(connections, modelID)
 }
 
-func selectAssistantProtocol(runtime workspacedomain.RuntimeEngine, protocols []string) string {
-	preferred := []string{"openai_chat", "openai_responses", "anthropic_messages", "gemini"}
-	if runtime == workspacedomain.RuntimeCodex {
-		preferred = []string{"openai_responses", "openai_chat", "anthropic_messages", "gemini"}
-	}
-	if runtime == workspacedomain.RuntimeClaude {
-		preferred = []string{"anthropic_messages", "openai_chat", "openai_responses", "gemini"}
-	}
-	for _, candidate := range preferred {
-		for _, available := range protocols {
-			if candidate == available {
-				return candidate
+func selectAssistantModel(connections []workspacedomain.ModelProviderConnection, modelID string) (aiappdomain.AssistantModel, error) {
+	for _, connection := range connections {
+		for _, model := range connection.Models {
+			if model.ID != modelID {
+				continue
 			}
+			if model.Available && connection.HasAPIKey {
+				for _, protocol := range connection.Protocols {
+					if protocol == "openai_chat" {
+						return aiappdomain.AssistantModel{ProviderModelID: model.ID, ConnectionID: connection.ID, CredentialOwnerID: connection.CredentialOwnerID, ProviderType: connection.ProviderType, Protocol: "openai_chat", ModelID: model.ModelID, Endpoint: connection.Endpoint, ConnectionVersion: connection.Version}, nil
+					}
+				}
+			}
+			return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model must be available with an API key and openai_chat protocol", aiappdomain.ErrInvalid)
 		}
 	}
-	return ""
+	return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model is unavailable", aiappdomain.ErrInvalid)
 }
 
 func (service *Service) runAssistantModel(ctx context.Context, owner, turnID string, stage int, model aiappdomain.AssistantModel, messages []aiapp.ChatMessage, stream bool, onDelta func(string) error) (aiapp.ChatResult, error) {
@@ -104,15 +97,15 @@ func (service *Service) runAssistantModel(ctx context.Context, owner, turnID str
 	return result, callErr
 }
 
-func (service *Service) answerAssistantTurn(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turn aiappdomain.AssistantTurn, requestedFAQID string, emit func(string) error) (assistantAnswer, error) {
+func (service *Service) answerAssistantTurn(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turn aiappdomain.AssistantTurn, requestedFAQID, auditSource string, emit func(string) error) (assistantAnswer, error) {
 	result := assistantAnswer{}
 	assistant := conversation.AssistantSnapshot
 	if aiappdomain.DefaultSafetyPolicy().Decide(turn.Question) == aiappdomain.SafetyRefuse {
-		_ = service.aiapplications.RecordSafetyAudit(ctx, owner, assistant.ID, "authenticated", aiappdomain.SafetyRefuse, "not_charged")
+		_ = service.aiapplications.RecordSafetyAudit(ctx, owner, assistant.ID, auditSource, aiappdomain.SafetyRefuse, "not_charged")
 		result.text, result.source = aiappdomain.SafetyRefusal, "safety"
 		return result, nil
 	}
-	_ = service.aiapplications.RecordSafetyAudit(ctx, owner, assistant.ID, "authenticated", aiappdomain.SafetyAllow, "pending")
+	_ = service.aiapplications.RecordSafetyAudit(ctx, owner, assistant.ID, auditSource, aiappdomain.SafetyAllow, "pending")
 	faqs, err := service.aiapplications.ListFAQs(ctx, owner, assistant.ID)
 	if err != nil {
 		return result, err

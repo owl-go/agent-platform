@@ -8,6 +8,8 @@ type AssistantConversation struct {
 	ID                 string         `json:"id"`
 	OwnerID            string         `json:"-"`
 	AssistantID        string         `json:"assistant_id"`
+	VisitorHash        string         `json:"-"`
+	ShareTokenRevision int64          `json:"-"`
 	AssistantName      string         `json:"assistant_name"`
 	Welcome            string         `json:"welcome"`
 	AssistantSnapshot  SmartAssistant `json:"-"`
@@ -20,6 +22,7 @@ type AssistantConversation struct {
 }
 
 type AssistantModel struct {
+	ProviderModelID   string `json:"provider_model_id"`
 	ConnectionID      string `json:"connection_id"`
 	CredentialOwnerID string `json:"credential_owner_id"`
 	ProviderType      string `json:"provider_type"`

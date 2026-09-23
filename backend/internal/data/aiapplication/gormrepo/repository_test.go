@@ -4,8 +4,16 @@ import (
 	"sync"
 	"testing"
 
+	"agent-platform/backend/internal/biz/aiapplication/domain"
 	"gorm.io/gorm/schema"
 )
+
+func TestAssistantRecordPreservesSelectedProviderModel(t *testing.T) {
+	row := assistantRecordFromDomain(domain.SmartAssistant{Name: "产品助手", ProviderModelID: "model-1"})
+	if row.ProviderModelID != "model-1" || assistantFromRecord(row).ProviderModelID != "model-1" {
+		t.Fatalf("selected Provider Model was not preserved: %+v", row)
+	}
+}
 
 func TestAssistantSessionOwnerUsesDatabaseColumn(t *testing.T) {
 	mapping, err := schema.Parse(&assistantSessionRecord{}, &sync.Map{}, schema.NamingStrategy{})
