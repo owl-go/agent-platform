@@ -326,7 +326,7 @@ Image Creation = a separate tool for creating images
 
 ### 8.1 Knowledge Retrieval
 
-The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry.
+The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry. A missing or disabled Embedding configuration fails the AI Application ingestion job explicitly rather than marking an unembedded document Ready.
 
 Retrieval uses PostgreSQL full-text/keyword matching plus the PostgreSQL `pgvector` extension. Embedding configuration is versioned and supplied through an `EmbeddingProvider` boundary; the first provider is an Administrator-configured OpenAI-compatible embedding endpoint and model. Embedding API Keys are encrypted and never enter ordinary snapshots, browser payloads, logs, or artifacts.
 

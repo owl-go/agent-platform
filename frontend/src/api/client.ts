@@ -191,6 +191,7 @@ export interface PlatformApi {
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
   retryKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  regenerateKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
@@ -515,6 +516,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
     downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
     async retryKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/retry`, json("POST", {}, signal)); },
+    async regenerateKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/regenerate`, json("POST", {}, signal)); },
     deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
     async restoreKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/restore`, json("POST", {}, signal)); },
     async listExperts(signal) {

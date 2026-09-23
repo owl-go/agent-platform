@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var knowledgeSHA256Pattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
@@ -368,7 +369,15 @@ func (repository *Repository) RetryKnowledgeDocument(ctx context.Context, ownerI
 		if err := tx.Model(&revision).Updates(map[string]any{"state": string(domain.KnowledgeAccepted), "error": ""}).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&document).Updates(map[string]any{"state": string(domain.KnowledgeAccepted), "error": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+		var ready int64
+		if err := tx.Model(&knowledgeRevisionRecord{}).Where("document_id = ? AND state = ?", document.ID, string(domain.KnowledgeReady)).Count(&ready).Error; err != nil {
+			return err
+		}
+		state := domain.KnowledgeAccepted
+		if ready > 0 {
+			state = domain.KnowledgeReady
+		}
+		if err := tx.Model(&document).Updates(map[string]any{"state": string(state), "error": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
 			return err
 		}
 		result := tx.Table("knowledge_ingestion_jobs").Where("revision_id = ? AND state = 'failed'", revision.ID).Updates(map[string]any{"state": "queued", "error": "", "next_attempt_at": gorm.Expr("now()"), "lease_expires_at": nil, "updated_at": gorm.Expr("now()")})
@@ -379,6 +388,36 @@ func (repository *Repository) RetryKnowledgeDocument(ctx context.Context, ownerI
 			return fmt.Errorf("%w: ingestion job is not retryable", domain.ErrConflict)
 		}
 		return nil
+	})
+}
+
+// RegenerateKnowledgeDocument re-ingests the immutable source as a new revision.
+// The previous Ready revision remains available while the new job runs.
+func (repository *Repository) RegenerateKnowledgeDocument(ctx context.Context, ownerID, knowledgeBaseID, documentID string, administrator bool) error {
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var document knowledgeDocumentRecord
+		query := knowledgeMutationAccess(tx.Table("knowledge_bases"), ownerID, administrator).
+			Joins("JOIN knowledge_documents ON knowledge_documents.knowledge_base_id = knowledge_bases.id").
+			Where("knowledge_bases.id = ? AND knowledge_documents.id = ? AND knowledge_documents.deleted_at IS NULL", knowledgeBaseID, documentID).
+			Clauses(clause.Locking{Strength: "UPDATE", Table: clause.Table{Name: "knowledge_documents"}})
+		if err := query.Select("knowledge_documents.*").Take(&document).Error; err != nil {
+			return mapNotFound(err)
+		}
+		var latest knowledgeRevisionRecord
+		if err := tx.Where("document_id = ?", document.ID).Order("revision DESC").Take(&latest).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if latest.State != string(domain.KnowledgeReady) || latest.ObjectKey == "" {
+			return fmt.Errorf("%w: only a Ready Knowledge Document can be regenerated", domain.ErrConflict)
+		}
+		revision := knowledgeRevisionRecord{ID: uuid.NewString(), DocumentID: document.ID, Revision: latest.Revision + 1, ObjectKey: latest.ObjectKey, SHA256: latest.SHA256, Size: latest.Size, ContentType: latest.ContentType, State: string(domain.KnowledgeAccepted)}
+		if err := tx.Create(&revision).Error; err != nil {
+			return err
+		}
+		if err := tx.Table("knowledge_ingestion_jobs").Create(map[string]any{"id": uuid.NewString(), "revision_id": revision.ID, "idempotency_key": "knowledge-revision:" + revision.ID, "state": "queued"}).Error; err != nil {
+			return err
+		}
+		return tx.Table("knowledge_documents").Where("id = ?", document.ID).Updates(map[string]any{"error": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error
 	})
 }
 
