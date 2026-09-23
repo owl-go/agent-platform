@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { Download, Pencil, Trash2, Upload } from "@lucide/vue";
@@ -18,6 +18,8 @@ const knowledgeBases = ref<ApplicationKnowledgeBase[]>([]);
 const digitalHumans = ref<DigitalHuman[]>([]);
 const error = ref("");
 const saving = ref(false);
+const iconUploading = ref(false);
+const iconPreviewUrl = ref("");
 const activeTab = ref<"basic" | "faq">("basic");
 const faqDialogOpen = ref(false);
 const editingFAQ = ref<SmartAssistantFAQ>();
@@ -25,7 +27,21 @@ const faqDraft = ref({ question: "", answer_markdown: "" });
 const id = String(route.params.assistantId);
 const assistantEnabled = computed({ get: () => assistant.value?.state === "enabled", set: (value: boolean) => { if (assistant.value) assistant.value.state = value ? "enabled" : "disabled"; } });
 
-async function refresh() { try { [assistant.value, faqs.value, knowledgeBases.value, digitalHumans.value] = await Promise.all([api.getSmartAssistant(id), api.listAssistantFAQs(id), api.listApplicationKnowledgeBases(), api.listDigitalHumans()]); } catch (cause) { error.value = errorMessage(cause, "aiApplications.loadFailed"); } }
+function replaceIconPreview(value = "") {
+  if (iconPreviewUrl.value.startsWith("blob:")) URL.revokeObjectURL(iconPreviewUrl.value);
+  iconPreviewUrl.value = value;
+}
+async function loadIconPreview() {
+  if (!assistant.value?.icon.startsWith("ai-applications/assistant-icons/")) { replaceIconPreview(); return; }
+  try { replaceIconPreview(URL.createObjectURL(await api.getSmartAssistantIcon(id))); }
+  catch { error.value = t("aiApplications.iconLoadFailed"); }
+}
+async function refresh() {
+  try {
+    [assistant.value, faqs.value, knowledgeBases.value, digitalHumans.value] = await Promise.all([api.getSmartAssistant(id), api.listAssistantFAQs(id), api.listApplicationKnowledgeBases(), api.listDigitalHumans()]);
+    await loadIconPreview();
+  } catch (cause) { error.value = errorMessage(cause, "aiApplications.loadFailed"); }
+}
 function input(state = assistant.value?.state): SmartAssistantInput | undefined {
   if (!assistant.value) return undefined;
   return { name: assistant.value.name.trim(), icon: assistant.value.icon, description: assistant.value.description ?? "", introduction: assistant.value.introduction, scenario: assistant.value.scenario, prompt: assistant.value.prompt ?? "", preprocess_prompt: assistant.value.preprocess_prompt ?? "", response_style: assistant.value.response_style, knowledge_base_ids: assistant.value.knowledge_base_ids, expert_id: assistant.value.expert_id, expert_team_id: assistant.value.expert_team_id, digital_human_id: assistant.value.digital_human_id || undefined, state, share: { enabled: assistant.value.share.enabled, allowed_origins: assistant.value.share.allowed_origins ?? [], width: assistant.value.share.width || "100%", height: assistant.value.share.height || 600, free_text_enabled: assistant.value.share.free_text_enabled ?? false, daily_call_limit: assistant.value.share.daily_call_limit ?? 0 } };
@@ -38,6 +54,24 @@ function errorMessage(cause: unknown, fallback: string) {
   return t(fallback);
 }
 async function save(state = assistant.value?.state) { if (!assistant.value) return false; const payload = input(state); if (!payload) return false; saving.value = true; try { assistant.value = await api.updateSmartAssistant(id, payload, assistant.value.version); return true; } catch (cause) { error.value = errorMessage(cause, "aiApplications.saveFailed"); return false; } finally { saving.value = false; } }
+async function uploadIcon(file: File) {
+  if (!assistant.value) return;
+  const draft = assistant.value;
+  error.value = "";
+  iconUploading.value = true;
+  const previousPreview = iconPreviewUrl.value;
+  if (typeof URL.createObjectURL === "function") replaceIconPreview(URL.createObjectURL(file));
+  try {
+    const updated = await api.uploadSmartAssistantIcon(id, file, draft.version);
+    assistant.value = { ...draft, icon: updated.icon, version: updated.version, updated_at: updated.updated_at };
+  }
+  catch (cause) {
+    replaceIconPreview(previousPreview.startsWith("blob:") ? "" : previousPreview);
+    error.value = errorMessage(cause, "aiApplications.iconUploadFailed");
+    await loadIconPreview();
+  } finally { iconUploading.value = false; }
+}
+function invalidIcon() { error.value = t("aiApplications.iconInvalid"); }
 function resetFAQDraft() { faqDraft.value = { question: "", answer_markdown: "" }; }
 function openAddFAQ() { editingFAQ.value = undefined; resetFAQDraft(); faqDialogOpen.value = true; }
 function openEditFAQ(faq: SmartAssistantFAQ) { editingFAQ.value = faq; faqDraft.value = { question: faq.question, answer_markdown: faq.answer_markdown }; faqDialogOpen.value = true; }
@@ -107,15 +141,16 @@ function exportFAQs() {
 }
 async function startConversation() { if (!assistant.value) return; if (!assistant.value.icon.trim()) { activeTab.value = "basic"; error.value = t("aiApplications.startRequiresIcon"); return; } try { if (assistant.value.state !== "enabled" && !(await save("enabled"))) return; const session = await api.createAssistantSession(id); const welcome = assistant.value.introduction.trim(); await router.push(`/sessions?open=${encodeURIComponent(session.id)}${welcome ? `&assistant_welcome=${encodeURIComponent(welcome)}` : ""}`); } catch (cause) { error.value = errorMessage(cause, "aiApplications.startFailed"); } }
 onMounted(refresh);
+onBeforeUnmount(() => replaceIconPreview());
 </script>
 
 <template>
   <section class="application-detail-page">
-    <header class="application-detail-header"><el-button text @click="router.push('/ai-apps/assistants')">← {{ t('common.back') }}</el-button><div class="assistant-detail-actions"><el-button @click="startConversation">{{ t('aiApplications.startConversation') }}</el-button><el-button type="primary" :loading="saving" @click="save()">{{ t('common.save') }}</el-button></div></header>
+    <header class="application-detail-header"><el-button text @click="router.push('/ai-apps/assistants')">← {{ t('common.back') }}</el-button><div class="assistant-detail-actions"><el-button :disabled="iconUploading" @click="startConversation">{{ t('aiApplications.startConversation') }}</el-button><el-button type="primary" :loading="saving || iconUploading" :disabled="iconUploading" @click="save()">{{ t('common.save') }}</el-button></div></header>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
     <template v-if="assistant">
       <nav class="assistant-detail-tabs" role="tablist"><button type="button" :class="{ active: activeTab === 'basic' }" role="tab" :aria-selected="activeTab === 'basic'" @click="activeTab = 'basic'">{{ t('aiApplications.basic') }}</button><button type="button" :class="{ active: activeTab === 'faq' }" role="tab" :aria-selected="activeTab === 'faq'" @click="activeTab = 'faq'">{{ t('aiApplications.faq.title') }}</button></nav>
-      <el-card v-if="activeTab === 'basic'" class="application-detail-card"><el-form label-position="top"><el-form-item :label="t('aiApplications.name')"><el-input v-model="assistant.name" /></el-form-item><el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="assistant.icon" upload-only /></el-form-item><el-form-item :label="t('aiApplications.welcome')"><el-input v-model="assistant.introduction" type="textarea" :rows="3" :placeholder="t('aiApplications.welcomePlaceholder')" /></el-form-item><el-form-item :label="t('aiApplications.description')"><el-input v-model="assistant.description" type="textarea" :rows="3" /></el-form-item><el-form-item :label="t('aiApplications.prompt')"><el-input v-model="assistant.prompt" type="textarea" :rows="6" /></el-form-item><el-form-item :label="t('aiApplications.preprocessPrompt')"><el-input v-model="assistant.preprocess_prompt" type="textarea" :rows="5" /></el-form-item><el-form-item :label="t('aiApplications.responseStyle')"><el-input v-model="assistant.response_style" /></el-form-item><el-form-item :label="t('aiApplications.digitalHuman.binding')"><el-select v-model="assistant.digital_human_id" clearable :placeholder="t('aiApplications.digitalHuman.selectPlaceholder')"><el-option v-for="human in digitalHumans.filter((item) => item.state === 'enabled')" :key="human.id" :label="human.name" :value="human.id" /></el-select></el-form-item><el-form-item :label="t('aiApplications.state')"><el-switch v-model="assistantEnabled" /></el-form-item><el-form-item :label="t('aiApplications.knowledge.selected')"><el-select v-model="assistant.knowledge_base_ids" multiple collapse-tags :placeholder="t('aiApplications.knowledge.selectPlaceholder')"><el-option v-for="base in knowledgeBases" :key="base.id" :label="base.name" :value="base.id" /></el-select></el-form-item></el-form></el-card>
+      <el-card v-if="activeTab === 'basic'" class="application-detail-card"><el-form label-position="top"><el-form-item :label="t('aiApplications.name')"><el-input v-model="assistant.name" /></el-form-item><el-form-item :label="t('aiApplications.icon')" required><IconPicker v-model="assistant.icon" upload-only remote-upload :preview-url="iconPreviewUrl" :uploading="iconUploading" @file-selected="uploadIcon" @invalid="invalidIcon" /></el-form-item><el-form-item :label="t('aiApplications.welcome')"><el-input v-model="assistant.introduction" type="textarea" :rows="3" :placeholder="t('aiApplications.welcomePlaceholder')" /></el-form-item><el-form-item :label="t('aiApplications.description')"><el-input v-model="assistant.description" type="textarea" :rows="3" /></el-form-item><el-form-item :label="t('aiApplications.prompt')"><el-input v-model="assistant.prompt" type="textarea" :rows="6" /></el-form-item><el-form-item :label="t('aiApplications.preprocessPrompt')"><el-input v-model="assistant.preprocess_prompt" type="textarea" :rows="5" /></el-form-item><el-form-item :label="t('aiApplications.responseStyle')"><el-input v-model="assistant.response_style" /></el-form-item><el-form-item :label="t('aiApplications.digitalHuman.binding')"><el-select v-model="assistant.digital_human_id" clearable :placeholder="t('aiApplications.digitalHuman.selectPlaceholder')"><el-option v-for="human in digitalHumans.filter((item) => item.state === 'enabled')" :key="human.id" :label="human.name" :value="human.id" /></el-select></el-form-item><el-form-item :label="t('aiApplications.state')"><el-switch v-model="assistantEnabled" /></el-form-item><el-form-item :label="t('aiApplications.knowledge.selected')"><el-select v-model="assistant.knowledge_base_ids" multiple collapse-tags :placeholder="t('aiApplications.knowledge.selectPlaceholder')"><el-option v-for="base in knowledgeBases" :key="base.id" :label="base.name" :value="base.id" /></el-select></el-form-item></el-form></el-card>
       <el-card v-else class="application-detail-card"><template #header><div class="faq-list-header"><strong>{{ t('aiApplications.faq.title') }}</strong><div class="faq-list-actions"><el-button data-testid="faq-import" text :icon="Upload" @click="($refs.faqImport as HTMLInputElement)?.click()">{{ t('aiApplications.faq.import') }}</el-button><input ref="faqImport" data-testid="faq-import-file" class="faq-import-input" type="file" accept=".xlsx,.xls" @change="importFAQs"><el-button data-testid="faq-export" text :icon="Download" @click="exportFAQs">{{ t('aiApplications.faq.export') }}</el-button><el-button data-testid="faq-add" type="primary" @click="openAddFAQ">{{ t('aiApplications.faq.add') }}</el-button></div></div></template><el-table v-if="faqs.length" :data="faqs" class="faq-table"><el-table-column min-width="240" :label="t('aiApplications.faq.question')"><template #default="scope"><strong>{{ (scope.row as SmartAssistantFAQ).question }}</strong></template></el-table-column><el-table-column min-width="360" :label="t('aiApplications.faq.answer')"><template #default="scope"><div class="markdown-body faq-answer" v-html="renderMarkdown((scope.row as SmartAssistantFAQ).answer_markdown)"></div></template></el-table-column><el-table-column width="150" :label="t('aiApplications.actions')" align="right"><template #default="scope"><div class="faq-actions"><el-button text :icon="Pencil" @click="openEditFAQ(scope.row as SmartAssistantFAQ)">{{ t('common.edit') }}</el-button><el-button text type="danger" :icon="Trash2" @click="removeFAQ(scope.row as SmartAssistantFAQ)">{{ t('common.delete') }}</el-button></div></template></el-table-column></el-table><el-empty v-else :description="t('aiApplications.faq.empty')" /><el-dialog v-model="faqDialogOpen" class="faq-dialog" :title="editingFAQ ? t('aiApplications.faq.edit') : t('aiApplications.faq.add')" width="min(620px, 92vw)" destroy-on-close data-testid="faq-dialog"><el-form label-position="top"><el-form-item data-testid="faq-dialog-question" :label="t('aiApplications.faq.question')" required><el-input v-model="faqDraft.question" /></el-form-item><el-form-item data-testid="faq-dialog-answer" :label="t('aiApplications.faq.answer')" required><el-input v-model="faqDraft.answer_markdown" type="textarea" :rows="6" /></el-form-item></el-form><template #footer><el-button @click="faqDialogOpen = false">{{ t('common.cancel') }}</el-button><el-button data-testid="faq-dialog-submit" type="primary" @click="submitFAQ">{{ t('common.save') }}</el-button></template></el-dialog></el-card>
     </template>
   </section>
