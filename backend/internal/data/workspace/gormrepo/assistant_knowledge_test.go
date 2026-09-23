@@ -44,4 +44,7 @@ func TestAssistantKnowledgeContextUsesCurrentKnowledgeBaseSchema(t *testing.T) {
 			t.Fatalf("knowledge query does not exclude deleted records with %q: %s", predicate, capture.sql)
 		}
 	}
+	if !strings.Contains(capture.sql, "jsonb_exists(s.assistant_snapshot->'knowledge_base_ids', b.id::text)") {
+		t.Fatalf("knowledge query does not cast the UUID knowledge base ID for JSONB membership: %s", capture.sql)
+	}
 }
