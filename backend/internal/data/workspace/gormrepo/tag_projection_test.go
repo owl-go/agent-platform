@@ -45,7 +45,7 @@ func TestClaimExpertTagProjectionLoadsVersionedCredential(t *testing.T) {
 				exec(`DELETE FROM model_provider_credential_versions WHERE connection_id=?`, connection)
 			}
 			expert := uuid.NewString()
-			exec(`INSERT INTO experts(id,owner_user_id,name,introduction,core_capability,operating_procedure,output_standard,expertise_tags,tag_projection_status,tag_projection_requested_at) VALUES(?, ?, ?, 'Intro','Architecture','Steps','Report','["Previous"]','queued',now())`, expert, owner, expert)
+			exec(`INSERT INTO experts(id,owner_user_id,name,name_normalized,introduction,core_capability,operating_procedure,output_standard,expertise_tags,tag_projection_status,tag_projection_requested_at) VALUES(?, ?, ?, ?, 'Intro','Architecture','Steps','Report','["Previous"]','queued',now())`, expert, owner, expert, strings.ToLower(expert))
 			job, err := repository.ClaimNext(ctx)
 			if err != nil {
 				t.Fatal(err)
