@@ -229,7 +229,11 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 	if rootPlan.Stages[0].Expert == nil {
 		t.Fatal("follow-up rewrote initial Run")
 	}
-	if _, err = repository.ContinueSelectedRunConversation(ctx, owner, workflow, run, "concurrent", nil, runSelection.ID); !errors.Is(err, domain.ErrConflict) {
-		t.Fatalf("concurrent follow-up accepted: %v", err)
+	concurrent, err := repository.ContinueSelectedRunConversation(ctx, owner, workflow, run, "concurrent", nil, runSelection.ID)
+	if err != nil {
+		t.Fatalf("concurrent follow-up rejected: %v", err)
+	}
+	if concurrent.TurnNumber != 3 {
+		t.Fatalf("concurrent follow-up turn number = %d, want 3", concurrent.TurnNumber)
 	}
 }
