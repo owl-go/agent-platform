@@ -768,14 +768,17 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-conversation-actions { display: flex; align-items: center; gap: 8px; }
 .assistant-conversation-history { width: 190px; }
 .assistant-conversation-thread { flex: 1; min-height: 300px; padding: 24px 4px; }
-.assistant-conversation-welcome { display: grid; justify-items: center; gap: 10px; padding: 40px 12px 18px; color: var(--ink); text-align: center; }
-.assistant-conversation-welcome p { margin: 0; white-space: pre-wrap; }
-.assistant-conversation-faqs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px auto 24px; }
+.assistant-conversation-message { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+.assistant-conversation-message--assistant { justify-content: flex-start; }
+.assistant-conversation-message--user { justify-content: flex-end; }
+.assistant-conversation-avatar { display: grid; flex: 0 0 36px; place-items: center; width: 36px; height: 36px; overflow: hidden; border-radius: 50%; color: var(--green); background: var(--wash); }
+.assistant-conversation-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.assistant-conversation-bubble { max-width: min(80%, 680px); padding: 11px 15px; border: 1px solid var(--line); border-radius: 4px 14px 14px 14px; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-conversation-message--user .assistant-conversation-bubble { border-color: transparent; border-radius: 14px 14px 4px 14px; background: var(--wash); }
+.assistant-conversation-faqs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px 46px; }
 .assistant-conversation-faqs button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer; }
 .assistant-conversation-faqs button:hover { border-color: var(--green); }
-.assistant-conversation-turn { display: grid; gap: 12px; margin-bottom: 24px; }
-.assistant-conversation-question { justify-self: end; max-width: min(80%, 680px); padding: 12px 16px; border-radius: 14px 14px 4px 14px; background: var(--wash); white-space: pre-wrap; overflow-wrap: anywhere; }
-.assistant-conversation-answer, .assistant-conversation-thinking { justify-self: start; max-width: min(85%, 760px); padding: 12px 16px; overflow-wrap: anywhere; }
+.assistant-conversation-turn { margin-bottom: 24px; }
 .assistant-conversation-thinking { color: var(--muted); }
 .assistant-conversation-composer { position: sticky; bottom: 0; display: flex; align-items: end; gap: 10px; padding: 15px 0; background: var(--paper); border-top: 1px solid var(--line); }
 .assistant-conversation-composer .el-textarea { flex: 1; }

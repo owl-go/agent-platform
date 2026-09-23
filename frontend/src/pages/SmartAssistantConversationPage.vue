@@ -22,7 +22,27 @@ const busy = ref(false);
 const creating = ref(false);
 const error = ref("");
 const activeTurnID = ref("");
+const avatarUrl = ref("");
 let controller: AbortController | undefined;
+let avatarController: AbortController | undefined;
+
+function replaceAvatar(url = "") {
+  if (avatarUrl.value && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(avatarUrl.value);
+  avatarUrl.value = url;
+}
+
+async function loadAvatar(id: string) {
+  avatarController?.abort();
+  const request = new AbortController();
+  avatarController = request;
+  replaceAvatar();
+  try {
+    const image = await api.getSmartAssistantIcon(id, request.signal);
+    if (!request.signal.aborted && typeof URL.createObjectURL === "function") replaceAvatar(URL.createObjectURL(image));
+  } catch {
+    // An assistant with no available image still has a readable conversation.
+  }
+}
 
 async function load() {
   loading.value = true;
@@ -94,7 +114,8 @@ async function clearConversation() {
 }
 
 watch(() => route.params.conversationId, () => { controller?.abort(); void load(); }, { immediate: true });
-onBeforeUnmount(() => controller?.abort());
+watch(assistantID, (id) => { void loadAvatar(id); }, { immediate: true });
+onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceAvatar(); });
 </script>
 
 <template>
@@ -111,19 +132,28 @@ onBeforeUnmount(() => controller?.abort());
     </header>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
     <div v-loading="loading" class="assistant-conversation-thread" aria-live="polite">
-      <div v-if="conversation" class="assistant-conversation-welcome">
-        <MessageCircle :size="32" />
-        <p>{{ conversation.welcome || t('aiApplications.chat.defaultWelcome') }}</p>
+      <div v-if="conversation" class="assistant-conversation-message assistant-conversation-message--assistant assistant-conversation-message--welcome">
+        <div class="assistant-conversation-avatar">
+          <img v-if="avatarUrl" :src="avatarUrl" :alt="conversation.assistant_name" />
+          <MessageCircle v-else :size="20" aria-hidden="true" />
+        </div>
+        <div class="assistant-conversation-bubble">{{ conversation.welcome || t('aiApplications.chat.defaultWelcome') }}</div>
       </div>
       <div v-if="faqs.length" class="assistant-conversation-faqs">
         <button v-for="faq in faqs" :key="faq.id" type="button" :disabled="busy" @click="send(faq.question, faq.id)">{{ faq.question }}</button>
       </div>
       <div v-for="turn in turns" :key="turn.id" class="assistant-conversation-turn">
-        <div class="assistant-conversation-question">{{ turn.question }}</div>
-        <div v-if="turn.answer" class="assistant-conversation-answer markdown-body" v-html="renderMarkdown(turn.answer)" />
-        <div v-else-if="turn.state === 'generating'" class="assistant-conversation-thinking">{{ t('aiApplications.chat.thinking') }}</div>
-        <div v-else-if="turn.state === 'cancelled'" class="assistant-conversation-thinking">{{ t('aiApplications.chat.cancelled') }}</div>
-        <div v-else-if="turn.state === 'failed'" class="assistant-conversation-thinking">{{ t('aiApplications.chat.failed') }}</div>
+        <div class="assistant-conversation-message assistant-conversation-message--user">
+          <div class="assistant-conversation-bubble">{{ turn.question }}</div>
+        </div>
+        <div v-if="turn.answer || turn.state === 'generating' || turn.state === 'cancelled' || turn.state === 'failed'" class="assistant-conversation-message assistant-conversation-message--assistant">
+          <div class="assistant-conversation-avatar">
+            <img v-if="avatarUrl" :src="avatarUrl" :alt="conversation?.assistant_name || ''" />
+            <MessageCircle v-else :size="20" aria-hidden="true" />
+          </div>
+          <div v-if="turn.answer" class="assistant-conversation-bubble markdown-body" v-html="renderMarkdown(turn.answer)" />
+          <div v-else class="assistant-conversation-bubble assistant-conversation-thinking">{{ t(`aiApplications.chat.${turn.state === 'generating' ? 'thinking' : turn.state}`) }}</div>
+        </div>
       </div>
     </div>
     <div class="assistant-conversation-composer">

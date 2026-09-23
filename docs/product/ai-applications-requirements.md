@@ -125,7 +125,7 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 
 ### 4.5 Conversation Execution
 
-- Opening an enabled Assistant creates an authenticated Assistant Conversation, not a Workspace Session. The page shows the welcome message and enabled FAQs before the first question.
+- Opening an enabled Assistant creates an authenticated Assistant Conversation, not a Workspace Session. The welcome appears as the first Assistant chat message with the uploaded Assistant icon; enabled FAQs appear beside that message as question shortcuts before the first User question. Later Assistant replies use the same left-aligned message and icon treatment, while User questions appear on the right.
 - Selecting an FAQ returns its stored answer without model invocation. Free text is preprocessed by the configured Provider Model to classify an FAQ, reject an out-of-scope question with `对不起，我暂时无法回答此类问题`, or continue.
 - A continuing question retrieves relevant results from the Assistant's Knowledge Bases, then streams the model's answer with those results; when no results are found, the model may answer directly.
 - The conversation freezes the effective Assistant and Provider Model configuration on creation. Later Assistant edits affect only new conversations, except that enabled FAQ answers are read at answer time.
