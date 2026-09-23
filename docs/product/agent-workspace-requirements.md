@@ -288,6 +288,7 @@ Run metadata and final text/JSON results are retained without a time limit in th
 - Run history retains bounded, redacted Knowledge Citation summaries. Opening a source re-checks current permission. Deleting or privatizing a base revokes future retrieval and downloads without rewriting completed Run history.
 - Deleting a Knowledge Base, Category, or document immediately removes it from listings and retrieval, cancels active ingestion, and schedules idempotent cleanup. A 30-day tombstone permits restore before permanent object/index deletion.
 - The UI exposes a top-level Knowledge Bases entry with category/unclassified document management, upload and URL import, ingestion status, failure reasons, retry, restore, and deletion confirmation. Workflow settings expose only multi-select Knowledge Base binding.
+- Within a Knowledge Base, an authenticated reader can submit a test query against its current ready index. The page shows up to ten relevant document excerpts in retrieval order, each with its current document and Category (if any) as the citation source. A not-yet-ready index, no matches, and retrieval failure are distinct states; deleted, superseded, or inaccessible sources are never shown as results.
 
 ## 9. Experts, Skills, And Connectors
 

@@ -61,6 +61,7 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/attachments/upload", http.HandlerFunc(service.uploadAttachment))
 	server.Handle("/api/v1/attachments/{attachment_id}/download", http.HandlerFunc(service.downloadAttachment))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/upload", http.HandlerFunc(service.uploadKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/search", http.HandlerFunc(service.searchKnowledgeBase))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/import", http.HandlerFunc(service.importKnowledgeDocument))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/retry", http.HandlerFunc(service.retryKnowledgeDocument))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/restore", http.HandlerFunc(service.restoreKnowledgeBase))

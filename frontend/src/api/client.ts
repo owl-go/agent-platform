@@ -41,6 +41,8 @@ export interface KnowledgeBase { id: string; owner_id: string; name: string; des
 export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
 export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
+export interface KnowledgeSearchResult { document_id: string; revision_id: string; document_name: string; category_name?: string; text: string; relevance: number }
+export interface KnowledgeSearchResponse { index_ready: boolean; items: KnowledgeSearchResult[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
@@ -187,6 +189,7 @@ export interface PlatformApi {
   deleteKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeDocuments(id: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
+  searchKnowledgeBase(id: string, query: string, signal?: AbortSignal): Promise<KnowledgeSearchResponse>;
   uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
@@ -504,6 +507,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteKnowledgeCategory(knowledgeBaseID, categoryID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}`, signal); },
     async restoreKnowledgeCategory(knowledgeBaseID, categoryID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}/restore`, json("POST", {}, signal)); },
     async listKnowledgeDocuments(id, signal) { return (await call<{ items: KnowledgeDocument[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents`, { signal })).items ?? []; },
+    searchKnowledgeBase(id, query, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/search?q=${encodeURIComponent(query)}`, { signal }); },
     async uploadKnowledgeDocument(id, file, categoryID, signal) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
