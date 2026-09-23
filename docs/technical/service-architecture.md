@@ -17,7 +17,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 AI Creation 修订新增第四个限界上下文：
 
 - AI Creation：具有独立 Endpoint 和加密 API Key 的 Image Model、单一 Prompt Optimization 设置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；不引用 Workspace 的 Model Provider Connection 或 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
-- AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。当前 CRUD、FAQ、受限 iframe、文档分块、Embedding Provider 管理、PostgreSQL 全文/可选 pgvector 检索以及与现有 Worker 执行链路隔离的 External Conversation 已接入；模型生成通过隐藏执行 Session 复用现有 Runtime、Credit 与安全边界，真实数字人供应商和完整外部会话审计仍按产品规格分阶段实现。
+- AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。认证用户的 Assistant Conversation 拥有独立于 Workspace Session 的持久回合和完整审计记录；API 请求内通过独立 Model Provider Adapter 执行预处理和 SSE 生成，每个模型阶段走 Credits 准入与结算。External Conversation 仍是独立的匿名分享链路；真实数字人供应商和完整外部会话审计仍按产品规格分阶段实现。
 
 Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 

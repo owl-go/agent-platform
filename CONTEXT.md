@@ -168,6 +168,10 @@ _Avoid_: Public Session, API Key, User Access Token
 An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Digital Human, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.
 _Avoid_: Session, visitor account, public chat transcript
 
+**Assistant Conversation**:
+An authenticated User's private conversation with a Smart Assistant, separate from a Workspace Session and retained as a complete audit transcript. A new conversation starts with the Assistant's welcome and enabled FAQs; only a bounded portion of its history is used for subsequent answers.
+_Avoid_: Session, External Conversation, temporary chat
+
 **Image Creation**:
 The task-specific image-generation tool nested under AI Applications. It owns no Smart Assistant or Digital Human and uses Image Generation Records for its submitted requests and results.
 _Avoid_: AI Creation, Smart Assistant, Image Artifact

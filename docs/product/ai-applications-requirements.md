@@ -125,11 +125,13 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 
 ### 4.5 Conversation Execution
 
-- Opening an Assistant provides a dedicated conversation entry point.
-- A conversation uses the Assistant's selected Knowledge Bases, Expert or Expert Team, Digital Human, and visible prompts.
-- The first accepted message freezes the effective Assistant configuration and the existing Session execution configuration.
-- Later Assistant edits affect only new conversations.
-- A conversation continues to use platform-owned history, Rolling Summary, Credit admission, Runtime cancellation, event ordering, and secret redaction from the existing Session contract.
+- Opening an enabled Assistant creates an authenticated Assistant Conversation, not a Workspace Session. The page shows the welcome message and enabled FAQs before the first question.
+- Selecting an FAQ returns its stored answer without model invocation. Free text is preprocessed by the configured Provider Model to classify an FAQ, reject an out-of-scope question with `对不起，我暂时无法回答此类问题`, or continue.
+- A continuing question retrieves relevant results from the Assistant's Knowledge Bases, then streams the model's answer with those results; when no results are found, the model may answer directly.
+- The conversation freezes the effective Assistant and Provider Model configuration on creation. Later Assistant edits affect only new conversations, except that enabled FAQ answers are read at answer time.
+- Each accepted question first emits a thinking state. Only one turn can generate in a conversation; the User may stop it or create a new conversation. A new conversation does not erase the previous transcript.
+- The model receives at most the latest 10 completed turns, with a compressed summary if the context grows too long. Every turn, including failed or cancelled turns and partial output, remains in the owner's audit transcript independently of model context pruning.
+- Each model stage uses Credit admission and settlement; provider credentials never enter snapshots or responses.
 - An Assistant without a Digital Human remains usable as text or voice according to the supported client surface.
 - An Assistant cannot silently invoke another User's resources.
 
@@ -143,7 +145,7 @@ An incomplete or invalid Assistant remains editable but cannot start a new conve
 
 ### 4.7 Frequently Asked Questions
 
-A Smart Assistant may contain any number of ordered Frequently Asked Questions. Each FAQ contains question text, a Markdown answer, display order, enabled state, and optional category, tag, or icon. The first version does not generate FAQs automatically, import FAQ batches, or expose semantic FAQ editing.
+A Smart Assistant may contain any number of ordered Frequently Asked Questions. Each FAQ contains question text, a Markdown answer, display order, enabled state, and optional category, tag, or icon. FAQ import and export use question and answer columns; imported duplicate questions replace the previous answer.
 
 An external or authenticated User can select an enabled FAQ and receive its stored answer directly. A direct FAQ answer does not invoke a Provider Model, retrieve a Knowledge Base, or consume Credits. FAQ Markdown is rendered through the existing safe Markdown boundary; raw HTML, scripts, and unsafe external content are not executable.
 
@@ -151,11 +153,10 @@ Free-text input follows the same ordered decision pipeline for every access surf
 
 ```text
 Safety pre-check
-  -> deterministic FAQ matching
-  -> lightweight FAQ classifier when deterministic matching is uncertain
-  -> direct FAQ answer when confidence reaches the configured threshold
+  -> model FAQ and scope classification
+  -> direct FAQ answer or fixed out-of-scope refusal
   -> Knowledge Base retrieval when no FAQ matches
-  -> grounded answer or safe refusal
+  -> grounded answer or model-only answer when no results exist
 ```
 
 FAQ matching returns a stable FAQ identity and confidence. It never rewrites a matched FAQ answer. If an enabled Assistant changes an FAQ, the change affects new requests immediately; a response already returned to a User is not rewritten.
