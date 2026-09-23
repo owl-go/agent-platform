@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
@@ -39,6 +40,8 @@ type Service struct {
 	credits                  *creditsapplication.Service
 	aicreation               *aicreationapplication.Service
 	aiapplications           *aiapplication.Service
+	assistantChatModel       aiapplication.ChatModel
+	activeAssistantTurns     sync.Map
 	workspace                *workspaceapplication.Service
 	box                      *secretcrypto.Box
 	files                    *workspacefs.Store
@@ -81,6 +84,10 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/answer", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/share-token", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/sessions", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations/{conversation_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations/{conversation_id}/turns", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations/{conversation_id}/turns/{turn_id}/cancel", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/copy", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/state", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/knowledge-bases", http.HandlerFunc(service.aiApplicationsHandler))
@@ -97,11 +104,11 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
-	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
+	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
+	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {
