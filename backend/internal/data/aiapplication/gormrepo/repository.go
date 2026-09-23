@@ -85,9 +85,11 @@ type faqRecord struct {
 }
 
 type assistantSessionRecord struct {
-	SessionID, AssistantID, OwnerID string
-	AssistantSnapshot               []byte `gorm:"column:assistant_snapshot;type:jsonb"`
-	CreatedAt                       time.Time
+	SessionID         string    `gorm:"column:session_id"`
+	AssistantID       string    `gorm:"column:assistant_id"`
+	OwnerID           string    `gorm:"column:owner_user_id"`
+	AssistantSnapshot []byte    `gorm:"column:assistant_snapshot;type:jsonb"`
+	CreatedAt         time.Time `gorm:"column:created_at"`
 }
 
 func (assistantSessionRecord) TableName() string { return "smart_assistant_sessions" }
