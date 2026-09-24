@@ -2,12 +2,46 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	aiappdomain "agent-platform/backend/internal/biz/aiapplication/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 )
+
+type assistantKnowledgeSearcher struct {
+	hits  []retrieval.Hit
+	err   error
+	calls int
+}
+
+func (searcher *assistantKnowledgeSearcher) Search(_ context.Context, owner, baseID string, generation int64, query string, limit, _ int) ([]retrieval.Hit, error) {
+	searcher.calls++
+	if owner != "owner" || baseID != "base" || generation != 0 || query != "question" || limit != 5 {
+		return nil, fmt.Errorf("unexpected search arguments: %s %s %d %s %d", owner, baseID, generation, query, limit)
+	}
+	return searcher.hits, searcher.err
+}
+
+func TestAssistantRetrievalUsesVerifiedKnowledgeSearcher(t *testing.T) {
+	searcher := &assistantKnowledgeSearcher{hits: []retrieval.Hit{{Text: "grounded answer", Source: workspacedomain.KnowledgeSearchSource{DocumentName: "guide.txt", CategoryName: "manual", RevisionID: "revision"}}}}
+	service := &Service{knowledgeSearch: searcher}
+	text, grounded, err := service.retrieveAssistantKnowledge(context.Background(), "owner", []string{"base"}, "question")
+	if err != nil || !grounded || !strings.Contains(text, "manual/guide.txt") || !strings.Contains(text, "grounded answer") || searcher.calls != 1 {
+		t.Fatalf("Assistant retrieval = %q, %v, %v, calls=%d", text, grounded, err, searcher.calls)
+	}
+	searcher.err = workspacedomain.ErrNotFound
+	if _, _, err := service.retrieveAssistantKnowledge(context.Background(), "owner", []string{"base"}, "question"); !errors.Is(err, workspacedomain.ErrNotFound) {
+		t.Fatalf("inaccessible Knowledge Base silently fell back: %v", err)
+	}
+	service.knowledgeSearch = nil
+	if _, _, err := service.retrieveAssistantKnowledge(context.Background(), "owner", []string{"base"}, "question"); err == nil {
+		t.Fatal("missing AnythingLLM silently fell back to PostgreSQL")
+	}
+}
 
 func TestAssistantHistoryUsesOnlyLatestTenCompletedTurns(t *testing.T) {
 	turns := make([]aiappdomain.AssistantTurn, 0, 14)

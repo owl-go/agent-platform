@@ -76,7 +76,6 @@ export interface AssistantConversationDetail { conversation: AssistantConversati
 export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; message: string };
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "processing" | "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
-export interface EmbeddingConfiguration { endpoint: string; model: string; dimensions: number; api_key_configured: boolean; enabled: boolean; version: number; updated_at: string }
 export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; state: "enabled" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string; state?: DigitalHuman["state"] }
 export interface DigitalHumanPreview extends Omit<DigitalHuman, "created_at" | "updated_at" | "version"> { preview_text: string }
@@ -198,6 +197,7 @@ export interface PlatformApi {
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
   retryKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  regenerateKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
@@ -251,8 +251,6 @@ export interface PlatformApi {
   createApplicationKnowledgeBase(input: { name: string; description?: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeBase>;
   listApplicationKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument[]>;
   createApplicationKnowledgeDocument(baseID: string, input: { name: string; content: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument>;
-  getEmbeddingConfiguration(signal?: AbortSignal): Promise<EmbeddingConfiguration>;
-  updateEmbeddingConfiguration(input: { endpoint: string; model: string; dimensions: number; enabled: boolean; api_key?: string; version: number }, signal?: AbortSignal): Promise<EmbeddingConfiguration>;
   listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
   getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
   createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
@@ -528,6 +526,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
     downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
     async retryKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/retry`, json("POST", {}, signal)); },
+    async regenerateKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/regenerate`, json("POST", {}, signal)); },
     deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
     async restoreKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/restore`, json("POST", {}, signal)); },
     async listExperts(signal) {
@@ -644,8 +643,6 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createApplicationKnowledgeBase(input, signal) { return call("/api/v1/ai-apps/knowledge-bases", json("POST", input, signal)); },
     async listApplicationKnowledgeDocuments(baseID, signal) { return await call<ApplicationKnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },
     createApplicationKnowledgeDocument(baseID, input, signal) { return call(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, json("POST", input, signal)); },
-    getEmbeddingConfiguration(signal) { return call<EmbeddingConfiguration>("/api/v1/ai-apps/embedding-provider", { signal }); },
-    updateEmbeddingConfiguration(input, signal) { return call<EmbeddingConfiguration>("/api/v1/ai-apps/embedding-provider", json("PATCH", input, signal)); },
     async listDigitalHumans(signal) { return await call<DigitalHuman[]>("/api/v1/ai-apps/digital-humans", { signal }); },
     getDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, { signal }); },
     createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },

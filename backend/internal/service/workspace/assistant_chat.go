@@ -171,17 +171,13 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if question == "" || len([]rune(question)) > 4000 {
 		question = turn.Question
 	}
-	chunks, err := service.aiapplications.SearchKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question, 5)
+	knowledge, grounded, err := service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
 	if err != nil {
 		return result, err
 	}
 	result.source = "model"
-	knowledge := ""
-	if len(chunks) > 0 {
+	if grounded {
 		result.source = "knowledge"
-		for _, chunk := range chunks {
-			knowledge += "\n[来源 " + chunk.DocumentID + "] " + truncateRunes(chunk.Text, 1300)
-		}
 	}
 	history, err := service.aiapplications.ListAssistantTurns(ctx, owner, conversation.ID)
 	if err != nil {
@@ -212,6 +208,49 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text = generated.Text
 	}
 	return result, generateErr
+}
+
+// retrieveAssistantKnowledge shares the same AnythingLLM retrieval and active
+// revision verification used by Knowledge Base search and Workflow Runs.
+func (service *Service) retrieveAssistantKnowledge(ctx context.Context, owner string, baseIDs []string, question string) (string, bool, error) {
+	if len(baseIDs) == 0 {
+		return "", false, nil
+	}
+	if service.knowledgeSearch == nil {
+		return "", false, fmt.Errorf("Knowledge retrieval is configured but AnythingLLM is unavailable")
+	}
+	var excerpts []string
+	seen := make(map[string]struct{})
+	for _, baseID := range baseIDs {
+		remaining := 5 - len(excerpts)
+		if remaining <= 0 {
+			break
+		}
+		hits, err := service.knowledgeSearch.Search(ctx, owner, baseID, 0, question, remaining, 6000)
+		if err != nil {
+			return "", false, fmt.Errorf("retrieve Knowledge Base %s: %w", baseID, err)
+		}
+		for _, hit := range hits {
+			text := truncateRunes(strings.TrimSpace(hit.Text), 1300)
+			if text == "" {
+				continue
+			}
+			key := hit.Source.RevisionID + "\x00" + text
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
+			source := hit.Source.DocumentName
+			if hit.Source.CategoryName != "" {
+				source = hit.Source.CategoryName + "/" + source
+			}
+			excerpts = append(excerpts, "[来源 "+source+"，修订 "+hit.Source.RevisionID+"] "+text)
+		}
+	}
+	if len(excerpts) == 0 {
+		return "", false, nil
+	}
+	return "\n" + strings.Join(excerpts, "\n"), true, nil
 }
 
 func (service *Service) assistantHistory(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turnID string, turns []aiappdomain.AssistantTurn) ([]aiapp.ChatMessage, aiapp.ChatResult, error) {

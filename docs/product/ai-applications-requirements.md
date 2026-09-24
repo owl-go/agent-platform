@@ -331,13 +331,13 @@ Image Creation = a separate tool for creating images
 
 The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry.
 
-Retrieval uses PostgreSQL full-text/keyword matching plus the PostgreSQL `pgvector` extension. Embedding configuration is versioned and supplied through an `EmbeddingProvider` boundary; the first provider is an Administrator-configured OpenAI-compatible embedding endpoint and model. Embedding API Keys are encrypted and never enter ordinary snapshots, browser payloads, logs, or artifacts.
+Retrieval uses the platform-controlled AnythingLLM Knowledge Base workspace for candidate chunks. Its embedding model and secret are deployment configuration, not a second per-Assistant or browser setting. The same retrieval path serves the Knowledge Base test search, Workflow Runs, and authenticated/new shared Smart Assistant conversations. Platform authorization and the latest Ready Document Revision are checked before any candidate is returned or cited.
 
-The application owns Knowledge Base, Document, Document Revision, Chunk provenance, permissions, Assistant binding, and retained Knowledge Citation records. A replaceable `RetrievalProvider` owns indexing and recall only. A future Ragflow or other RAG adapter can replace the PostgreSQL implementation without changing Assistant permissions, conversation snapshots, or citation semantics.
+The application owns Knowledge Base, Document, Document Revision, permissions, Assistant binding, and retained Knowledge Citation records. AnythingLLM owns chunk indexing and recall only. A future provider may replace it only after matching the shared ingestion, authorization, provenance, and conformance contract.
 
-Changing the embedding model or vector dimension creates a new index generation. The current Ready generation remains live until the replacement generation is complete; activation is atomic and a failed rebuild leaves the previous generation serving queries.
+Reindexing a Ready document creates a new immutable revision from its saved source. The previous Ready revision remains eligible while the new ingestion is pending or fails. A successful replacement advances the platform generation and makes older revisions ineligible. Because the AnythingLLM workspace is mutable, a Workflow Run frozen to an older generation fails closed instead of pretending historical index isolation exists.
 
-When retrieval does not produce a bounded set of excerpts above the configured relevance threshold, the Assistant returns a safe no-grounding response instead of inventing an answer. A grounded response stores bounded citation metadata identifying the Knowledge Base, Document Revision, source location, relevance, and safe display text.
+When retrieval produces no eligible excerpts, the Assistant may answer directly with its selected Provider Model, subject to its safety and scope policy; it must not imply that an ungrounded answer came from a Knowledge Base. A grounded response stores bounded citation metadata identifying the Knowledge Base, Document Revision, source location, relevance, and safe display text.
 
 ## 9. Out Of Scope For The First Version
 
@@ -364,7 +364,7 @@ Completion requires real browser-to-API closure for both ordinary User and Admin
 - Smart Assistant Share Configuration, unpredictable Token, Token rotation/revocation, allowed Origins, iframe width/height validation, generated snippet, anonymous Visitor ID, External Conversation isolation, owner Credit charging, and platform rate limits
 - Digital Human create, edit, copy, preview, list, enable, disable, delete conflict, reuse across multiple Assistants, protected provider configuration, and snapshot behavior
 - Image Creation route, old-route redirect, existing Image Generation behavior, existing Image Model administration, history, notifications, owner isolation, and credit settlement
-- Knowledge Base text/Markdown ingestion, asynchronous lifecycle, safety gating, PostgreSQL full-text and pgvector retrieval, versioned embedding generations, atomic index activation, RetrievalProvider substitution seam, bounded citations, grounded answers, and safe no-grounding responses
+- Knowledge Base text/Markdown ingestion, asynchronous lifecycle, safety gating, common AnythingLLM indexing and retrieval, permission-checked revision provenance, bounded citations, grounded answers, and safe no-grounding responses; pinned-deployment end-to-end evidence remains required
 - historical conversations remain readable after an Assistant or Digital Human is disabled or deleted, subject to existing retention and artifact rules
 - no Assistant, Digital Human, or Image Creation API leaks credentials, private content, provider responses, internal object keys, or signed URLs
 

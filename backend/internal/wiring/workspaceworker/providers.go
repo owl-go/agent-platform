@@ -14,13 +14,13 @@ import (
 	creditsapplication "agent-platform/backend/internal/biz/credits/application"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/cliconnector"
-	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/knowledgebase/ingestion"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
@@ -39,17 +39,15 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
-	workspace   *workspaceapplication.Worker
-	aicreation  *aicreationapplication.Service
-	ingestion   *ingestion.Processor
-	aiKnowledge interface {
-		ProcessNextKnowledgeDocument(context.Context) (bool, error)
-	}
+	workspace       *workspaceapplication.Worker
+	aicreation      *aicreationapplication.Service
+	ingestion       *ingestion.Processor
+	legacyKnowledge *ingestion.LegacyProcessor
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
-	if worker.aiKnowledge != nil {
-		worked, err := worker.aiKnowledge.ProcessNextKnowledgeDocument(ctx)
+	if worker.legacyKnowledge != nil {
+		worked, err := worker.legacyKnowledge.ProcessNext(ctx)
 		if err != nil || worked {
 			return worked, err
 		}
@@ -77,9 +75,12 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	aiKnowledge := aiapplicationrepo.New(database.ORM(), box)
 	creditsRepository := creditsrepo.New(database.ORM())
 	repository := workspacerepo.New(database.ORM(), creditsRepository)
+	legacyKnowledge, err := ingestion.NewLegacy(repository, objects)
+	if err != nil {
+		return nil, err
+	}
 	if err := repository.EnsureSystemSkills(context.Background(), objects); err != nil {
 		return nil, err
 	}
@@ -112,7 +113,11 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 		if providerErr != nil {
 			return nil, providerErr
 		}
-		if err := executor.EnableKnowledgeRetrieval(provider); err != nil {
+		searcher, searchErr := retrieval.New(repository, provider)
+		if searchErr != nil {
+			return nil, searchErr
+		}
+		if err := executor.EnableKnowledgeRetrieval(searcher); err != nil {
 			return nil, err
 		}
 		knowledgeProcessor, err = ingestion.New(repository, objects, provider)
@@ -139,7 +144,7 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return &Worker{workspace: workspaceWorker, aicreation: aicreation, ingestion: knowledgeProcessor, aiKnowledge: aiKnowledge}, nil
+	return &Worker{workspace: workspaceWorker, aicreation: aicreation, ingestion: knowledgeProcessor, legacyKnowledge: legacyKnowledge}, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {

@@ -94,6 +94,7 @@ type Repository interface {
 	ListKnowledgeDocuments(context.Context, string, string, bool) ([]domain.KnowledgeDocument, error)
 	CreateKnowledgeDocument(context.Context, string, bool, domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
 	RetryKnowledgeDocument(context.Context, string, string, string, bool) error
+	RegenerateKnowledgeDocument(context.Context, string, string, string, bool) error
 	DeleteKnowledgeDocument(context.Context, string, string, string, bool) error
 	RestoreKnowledgeBase(context.Context, string, string, bool) error
 	RestoreKnowledgeCategory(context.Context, string, string, string, bool) error

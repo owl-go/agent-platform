@@ -15,7 +15,7 @@ const (
 	knowledgeTokenLimit  = 6000
 )
 
-func (executor *Executor) injectKnowledgeContext(ctx context.Context, snapshot workspacedomain.ExecutionSnapshot, instruction string) (string, error) {
+func (executor *Executor) injectKnowledgeContext(ctx context.Context, owner string, snapshot workspacedomain.ExecutionSnapshot, instruction string) (string, error) {
 	if len(snapshot.KnowledgeBaseIDs) == 0 {
 		return instruction, nil
 	}
@@ -38,11 +38,11 @@ func (executor *Executor) injectKnowledgeContext(ctx context.Context, snapshot w
 		if remaining <= 0 {
 			break
 		}
-		result, err := executor.knowledge.Query(ctx, knowledgeBaseID, generation, query, remaining, knowledgeTokenLimit-usedTokens)
+		hits, err := executor.knowledge.Search(ctx, owner, knowledgeBaseID, generation, query, remaining, knowledgeTokenLimit-usedTokens)
 		if err != nil {
 			return "", fmt.Errorf("retrieve Knowledge Base %s: %w", knowledgeBaseID, err)
 		}
-		for _, citation := range result.Citations {
+		for _, citation := range hits {
 			if len(contextParts) >= knowledgeResultLimit {
 				break
 			}
@@ -64,11 +64,11 @@ func (executor *Executor) injectKnowledgeContext(ctx context.Context, snapshot w
 				text = string([]rune(text)[:remainingTokens*4])
 			}
 			usedTokens += max(1, len([]rune(text))/4)
-			location := strings.TrimSpace(citation.SourceLocation)
-			if location == "" {
-				location = "unknown source"
+			location := citation.Source.DocumentName
+			if citation.Source.CategoryName != "" {
+				location = citation.Source.CategoryName + "/" + location
 			}
-			contextParts = append(contextParts, fmt.Sprintf("[%d] Knowledge Base %s (%s, relevance %.3f)\n%s", len(contextParts)+1, citation.KnowledgeBaseID, location, citation.Relevance, text))
+			contextParts = append(contextParts, fmt.Sprintf("[%d] Knowledge Base %s (%s, revision %s, relevance %.3f)\n%s", len(contextParts)+1, knowledgeBaseID, location, citation.Source.RevisionID, citation.Relevance, text))
 		}
 	}
 	if len(contextParts) == 0 {
