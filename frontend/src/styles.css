@@ -225,6 +225,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .resource-center-tabs .el-tabs__content { display: none; }
 .resource-center-content > .page-surface { max-width: none; margin: 0; padding: 0; animation: none; }
 .resource-child-actions { display: flex; justify-content: flex-end; margin-bottom: 22px; }
+.resource-catalog-frame { width: min(100%,1180px); }
 @media (max-width: 720px) { .resource-center-page { padding: 25px 18px 50px; }.resource-center-header { align-items: flex-start; }.resource-center-tabs .el-tabs__item { padding: 0 14px; font-size: 1.05rem; } }
 .expert-tags { align-items: center; }
 .expert-tag-more { color: var(--muted); font-size: .7rem; font-weight: 700; }
@@ -520,6 +521,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .approval-card p, .approval-card small { margin: 0; }
 .approval-card code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resource-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.extension-catalog-toolbar { align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.extension-catalog-toolbar .el-button + .el-button { margin-left: 0; }
 .resource-action-card { margin: 14px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #f6faf6; }
 .resource-action-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--green); }
 .resource-action-heading span { color: var(--ink); font-weight: 700; }
@@ -531,6 +534,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .resource-toolbar .compact-action.el-button { display: inline-flex; gap: 6px; margin: 0; }
 .resource-toolbar .compact-action svg { width: 16px; height: 16px; }
 .extension-catalog-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.connector-catalog-grid { grid-template-columns: repeat(auto-fit,minmax(420px,1fr)); }
 .resource-list .extension-catalog-card { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; align-items: start; gap: 12px; min-height: 108px; padding: 17px; border-color: #e5e8e3; border-radius: 16px; background: rgba(255,255,255,.88); transition: border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
 .resource-list .extension-catalog-card:hover { border-color: #cfd8d0; box-shadow: 0 10px 28px rgba(30,48,39,.07); transform: translateY(-1px); }
 .extension-card-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #e7eee8; color: var(--green); font: 750 .78rem/1 ui-monospace,monospace; }
@@ -551,6 +555,18 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .connector-account-actions span,.connector-account-actions small { color: var(--muted); font-size: .66rem; }
 .connector-account-actions a { font-size: .7rem; }
 .extension-empty { grid-column: 1/-1; min-height: 112px; }
+.connector-package-panel { margin-top: 34px; padding: 20px; border: 1px solid #dfe4de; border-radius: 16px; background: rgba(255,255,255,.72); }
+.connector-package-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.connector-package-header h2 { margin: 0; font-family: "Noto Serif SC","Source Han Serif SC",serif; font-size: 1.08rem; }
+.connector-package-header-actions,.connector-package-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.connector-package-header-actions label.el-button { display: inline-flex; margin: 0; }
+.connector-package-header-actions .el-button + .el-button,.connector-package-actions .el-button + .el-button { margin-left: 0; }
+.connector-package-list { display: grid; gap: 10px; }
+.connector-package-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border-color: #e4e8e3; border-radius: 12px; box-shadow: none; }
+.connector-package-item > div:first-child { min-width: 0; display: grid; gap: 4px; }
+.connector-package-item strong,.connector-package-item small { overflow-wrap: anywhere; }
+.connector-package-item small { color: var(--muted); }
+.connector-package-empty { margin: 0; padding: 22px 16px; border: 1px dashed #d5dbd4; border-radius: 12px; background: #f7f9f6; font-size: .8rem; text-align: center; }
 .connector-kind-dialog { width: min(620px,calc(100vw - 40px)); }
 .connector-kind-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 20px 0 6px; }
 .connector-kind-options button { display: grid; gap: 8px; min-height: 128px; padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #f9faf8; color: var(--ink); text-align: left; transition: border-color .16s ease,background .16s ease,transform .16s ease; }
@@ -595,12 +611,17 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 }
 @media (max-width: 980px) { .extension-catalog-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
+  .extension-catalog-toolbar { justify-content: flex-start; }
   .resource-list .extension-catalog-card { grid-template-columns: 38px minmax(0,1fr); min-height: 0; padding: 14px; }
   .extension-card-mark { width: 38px; height: 38px; }
   .resource-list article > .extension-card-actions { grid-column: 2; flex-wrap: wrap; justify-content: flex-start; }
   .connector-kind-options { grid-template-columns: 1fr; }
   .connector-kind-options button { min-height: 104px; }
   .connector-detail-fields > div { grid-template-columns: 1fr; gap: 5px; }
+  .connector-package-panel { margin-top: 24px; padding: 16px; }
+  .connector-package-header,.connector-package-item { align-items: stretch; flex-direction: column; }
+  .connector-package-header-actions .el-button,.connector-package-header-actions label.el-button { flex: 1; justify-content: center; }
+  .connector-package-actions { justify-content: flex-start; }
 }
 .artifact-disclosure { width: min(100%,680px); margin: 14px 0 8px; }
 .artifact-disclosure-links { display: flex; flex-wrap: wrap; gap: 6px 20px; }

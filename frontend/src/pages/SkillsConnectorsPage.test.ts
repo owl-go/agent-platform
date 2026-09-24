@@ -24,6 +24,27 @@ describe("SkillsConnectorsPage", () => {
     wrapper.unmount();
   });
 
+  it("keeps embedded connector actions and packages in one catalog frame", async () => {
+    const api = {
+      listMCPServers: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      listCLIConnectorDefinitions: vi.fn(async () => []),
+      listCLIConnectorEnablements: vi.fn(async () => []),
+      listConnectorInstallations: vi.fn(async () => []),
+    } as unknown as PlatformApi;
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
+    await router.push("/resources?tab=connectors");
+    const wrapper = mount(SkillsConnectorsPage, { props: { showTabs: false }, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    const frame = wrapper.get(".resource-catalog-frame");
+    expect(frame.find(".resource-child-actions").exists()).toBe(false);
+    expect(frame.get(".extension-catalog-toolbar").text()).toContain("我的连接器");
+    expect(frame.get(".extension-catalog-toolbar").text()).toContain("新建连接器");
+    expect(frame.get(".connector-package-panel").text()).toContain("暂无统一连接器包");
+    wrapper.unmount();
+  });
+
   it.each([["zh-CN", "启用", "操作失败"], ["en", "Enable", "Operation failed"]])("shows failed enablement requests in the catalog (%s)", async (language, enableLabel, errorTitle) => {
     const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [] };
     const enableCLIConnector = vi.fn().mockRejectedValue(new Error("request_failed"));
