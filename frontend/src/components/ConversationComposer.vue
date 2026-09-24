@@ -27,6 +27,7 @@ const uploaded = ref<Attachment[]>([]);
 const pending = ref<File[]>([]);
 const missingFiles = ref<string[]>([]);
 const experts = ref<Expert[]>([]), teams = ref<ExpertTeam[]>([]), skills = ref<Skill[]>([]), mcp = ref<MCPServer[]>([]), cli = ref<CLIConnectorDefinition[]>([]), enablements = ref<CLIConnectorEnablement[]>([]);
+const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const files = ref<ConversationFile[]>([]);
 const workspacePath = ref("");
 const menu = ref<"main" | "experts" | "skills" | "connectors" | "files" | "">("");
@@ -138,12 +139,25 @@ async function toggleConnector(kind: "mcp" | "cli", id: string) {
 }
 
 function cliEnablement(definitionID: string) { return enablements.value.find((item) => item.definition_id === definitionID); }
-function cliActivationIsOn(definitionID: string) { return ["enabled", "waiting_for_user"].includes(cliEnablement(definitionID)?.state ?? ""); }
+function cliActivationIsOn(definitionID: string) {
+  const enablement = cliEnablement(definitionID);
+  if (enablement?.state === "waiting_for_user") return true;
+  if (enablement?.state !== "enabled") return false;
+  const definition = cli.value.find((item) => item.id === definitionID);
+  if (definition?.authentication_driver !== "feishu") return true;
+  if (cliAuthorizationPrompt.value?.definition.id === definitionID && cliAuthorizationPrompt.value.activation) return true;
+  const scopes = cliUserScopes(definition);
+  return (cliAuthorizations.value[enablement.id] ?? []).some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
+}
 function cliUserScopes(definition: CLIConnectorDefinition) {
   return [...new Set((definition.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
 }
 function replaceCLIEnablement(value: CLIConnectorEnablement) {
   enablements.value = [...enablements.value.filter((item) => item.definition_id !== value.definition_id), value];
+  if (value.state === "disabled") {
+    const { [value.id]: _removed, ...remaining } = cliAuthorizations.value;
+    cliAuthorizations.value = remaining;
+  }
 }
 async function selectActivatedCLI(definitionID: string) {
   if (!selection.value || connectorEnabled(`cli:${definitionID}`)) return true;
@@ -154,6 +168,7 @@ async function authorizeActivatedCLI(definition: CLIConnectorDefinition, enablem
   const scopes = cliUserScopes(definition);
   if (definition.authentication_driver !== "feishu" || !scopes.length) { closeBlankCLIWindow(popup); return; }
   const authorizations = await api.listCLIConnectorAuthorizations(enablement.id);
+  cliAuthorizations.value = { ...cliAuthorizations.value, [enablement.id]: authorizations };
   if (authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)))) { closeBlankCLIWindow(popup); return; }
   const flow = await api.beginCLIConnectorAuthorization(enablement.id, "user", scopes);
   cliAuthorizationPrompt.value = { definition, enablement, scopes, flow, activation: true };
@@ -247,6 +262,7 @@ async function refreshRequestedCLIAuthorization() {
   try { authorizations = await api.listCLIConnectorAuthorizations(enablement.id); }
   catch { return; }
   if (props.authorizationRequest !== request || disposed) return;
+  cliAuthorizations.value = { ...cliAuthorizations.value, [enablement.id]: authorizations };
   const authorized = authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
   if (authorized) {
     cliAuthorizationPrompt.value = undefined;
@@ -291,7 +307,10 @@ async function completeSelectedCLIAuthorization() {
   try {
     const flow = await api.completeCLIConnectorAuthorization(prompt.flow.id);
     prompt.flow = flow;
-    if (flow.state === "completed") prompt.completed = true;
+    if (flow.state === "completed") {
+      prompt.completed = true;
+      cliAuthorizations.value = { ...cliAuthorizations.value, [prompt.enablement.id]: await api.listCLIConnectorAuthorizations(prompt.enablement.id) };
+    }
     else if (flow.state === "invalid") prompt.failed = true;
     else scheduleCLIAuthorizationPoll();
   } catch { scheduleCLIAuthorizationPoll(); }
@@ -385,6 +404,9 @@ async function initialize() {
     const results = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listSkills(), api.listMCPServers(), api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]);
     if (disposed) return;
     [experts.value, teams.value, skills.value, mcp.value, cli.value, enablements.value] = results;
+    const authorizations = await Promise.all(enablements.value.filter((item) => item.state === "enabled" && cli.value.some((definition) => definition.id === item.definition_id && definition.authentication_driver === "feishu")).map(async (item) => [item.id, await api.listCLIConnectorAuthorizations(item.id)] as const));
+    if (disposed) return;
+    cliAuthorizations.value = Object.fromEntries(authorizations);
     if (!selection.value) selection.value = await api.getConversationSelection(props.scope);
     if (props.initialSkillId) {
       const skill = skills.value.find((item) => item.id === props.initialSkillId);

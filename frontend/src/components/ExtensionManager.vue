@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
-import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
+import { ChevronDown, Pencil, Plus, PowerOff, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type ConnectorAuthorization, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorPublication, type ConnectorSetup, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -249,7 +249,7 @@ function openSkillDetails(item: Skill) {
 }
 async function enableCLI(item: CLIConnectorDefinition) {
   operationError.value = undefined;
-  if (canManageCLI.value || item.managed_installation || cliEnableBusy.value.includes(item.id)) return;
+  if (item.managed_installation || cliEnableBusy.value.includes(item.id)) return;
   cliEnableBusy.value.push(item.id);
   const popup = item.authentication_driver === "feishu" ? openCLIWindow() : null;
   if (item.authentication_driver === "feishu") cliSetupWindows.set(item.id, popup);
@@ -304,7 +304,7 @@ async function continueCLISetup(item: CLIConnectorDefinition, enablement: CLICon
   if (!cliSetupWindows.has(item.id) || enablement.state === "waiting_for_user") return;
   const popup = cliSetupWindows.get(item.id) ?? null;
   cliSetupWindows.delete(item.id);
-  if (enablement.state === "enabled") await beginCLIAccountAuthorization(item, popup);
+  if (enablement.state === "enabled") await beginCLIAccountAuthorization(item, popup, userScopes(item));
   else closeBlankCLIWindow(popup);
 }
 async function removeCLI() {
@@ -353,6 +353,10 @@ function hasActiveCLIAuthorization(item: CLIConnectorDefinition) {
 function needsCLIReauthorization(item: CLIConnectorDefinition) {
   const required = userScopes(item);
   return required.length > 0 && !authorizationsFor(item.id).some((authorization) => authorization.state === "active" && required.every((scope) => (authorization.scopes ?? []).includes(scope)));
+}
+function cliNeedsActivation(item: CLIConnectorDefinition) {
+  if (enablementFor(item.id)?.state !== "enabled") return true;
+  return item.authentication_driver === "feishu" && (!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item));
 }
 async function refreshCLIAuthorizations() {
   const enabled = cliEnablements.value.filter((item) => item.state === "enabled");
@@ -613,12 +617,12 @@ async function fileToBase64(file: File): Promise<string> {
         <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showCLIDetails(item)" @keydown.enter.self="showCLIDetails(item)" @keydown.space.self.prevent="showCLIDetails(item)">
           <ConnectorIcon class="connector-card-icon" :icon="item.icon || 'terminal'" :size="42" />
           <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled'" type="success" size="small">{{ t('common.enabled') }}</el-tag></div>
+            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled' && !cliNeedsActivation(item)" type="success" size="small">{{ t('common.enabled') }}</el-tag><el-tag v-else-if="!item.managed_installation && enablementFor(item.id)?.state === 'enabled'" type="warning" size="small">{{ t('resources.setupRequired') }}</el-tag></div>
             <p>{{ cliDescription(item) }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p>
             <small>{{ item.managed_installation ? `package · ${item.npm_package}@${item.npm_version}` : item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
             <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
             <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
-            <div v-if="!canManageCLI && !item.managed_installation" class="connector-account-actions" @click.stop>
+            <div v-if="!item.managed_installation" class="connector-account-actions" @click.stop>
               <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer" @click="resumeCLISetup(item, $event)">{{ t('resources.continueSetup') }}</a>
               <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
                 <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
@@ -630,8 +634,8 @@ async function fileToBase64(file: File): Promise<string> {
           </div>
           <div class="extension-card-actions" @click.stop>
             <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="item.managed_installation ? !item.managed_authorized : enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
-            <el-button v-if="!canManageCLI && !item.managed_installation && enablementFor(item.id)?.state === 'enabled'" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)">{{ t('resources.disable') }}</el-button>
-            <el-button v-else-if="!canManageCLI && !item.managed_installation && item.state === 'available'" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
+            <el-button v-if="!item.managed_installation && item.state === 'available' && cliNeedsActivation(item)" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
+            <el-button v-if="!item.managed_installation && ['enabled', 'waiting_for_user'].includes(enablementFor(item.id)?.state ?? '')" circle :aria-label="t('resources.deactivate')" :title="t('resources.deactivate')" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)"><PowerOff /></el-button>
             <el-button v-if="canManageCLI && !item.managed_installation && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
             <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
             <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, createPlatformApi, platformApiKey, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { ApiError, createPlatformApi, platformApiKey, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
@@ -183,11 +183,44 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "停用")!.trigger("click");
+      await wrapper.get('button[aria-label="取消激活"]').trigger("click");
       await flushPromises();
       expect(flow.api.disableCLIConnector).toHaveBeenCalledWith(flow.enabled.definition_id, flow.enabled.version);
       expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[]]);
       expect(wrapper.find('button[aria-label="启用"]').exists()).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("keeps the activation plus visible when a saved Feishu application has no account authorization", async () => {
+    const flow = setupCLIFlow("enabled");
+    const definition = (await flow.api.listCLIConnectorDefinitions())[0];
+    vi.mocked(flow.api.listCLIConnectorDefinitions).mockResolvedValue([{ ...definition, capabilities: [{ identities: ["user"], scopes: ["im:message"] }] } as CLIConnectorDefinition]);
+    vi.mocked(flow.api.listCLIConnectorEnablements).mockResolvedValue([flow.enabled as Awaited<ReturnType<PlatformApi["enableCLIConnector"]>>]);
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      expect(wrapper.get(".connector-catalog-card").text()).toContain("需要设置");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await flushPromises();
+      expect(flow.enableCLIConnector).toHaveBeenCalledWith("cli-1");
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message"]);
+      expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("shows personal activation beside platform management actions for an administrator", async () => {
+    const flow = setupCLIFlow("enabled");
+    const definition = (await flow.api.listCLIConnectorDefinitions())[0];
+    vi.mocked(flow.api.listCLIConnectorDefinitions).mockResolvedValue([{ ...definition, mutable: true }]);
+    const wrapper = mountManager(flow.api, true);
+    try {
+      await flushPromises();
+      expect(wrapper.find('button[aria-label="编辑"]').exists()).toBe(true);
+      expect(wrapper.find('button[aria-label="启用"]').exists()).toBe(true);
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await flushPromises();
+      expect(flow.enableCLIConnector).toHaveBeenCalledWith("cli-1");
+      expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", []);
     } finally { wrapper.unmount(); }
   });
 
@@ -731,7 +764,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     expect(completeCLIConnectorEnablement).toHaveBeenCalledWith(waiting.id);
-    expect(wrapper.text()).toContain("已启用");
+    expect(wrapper.text()).toContain("需要设置");
     expect(wrapper.text()).toContain("用户的飞书CLI");
     expect(wrapper.get('a[href="https://open.feishu.cn/app/cli-1"]').text()).toBe("开发者后台");
     wrapper.unmount();

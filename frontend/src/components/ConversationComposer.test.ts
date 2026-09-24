@@ -123,7 +123,7 @@ describe("ConversationComposer", () => {
   vi.spyOn(window, "open").mockReturnValue(null);
   const { wrapper, api } = await setup({ authorization: true });
   expect(wrapper.find(".composer-authorization").exists()).toBe(false);
-  expect(api.listCLIConnectorAuthorizations).not.toHaveBeenCalled();
+  expect(api.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
   await wrapper.setProps({ authorizationRequest: { connectorID: "feishu", capabilityID: "send" } }); await flushPromises();
   expect(wrapper.get(".composer-authorization").text()).toContain("飞书 CLI 需要飞书账号授权");
   expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
@@ -154,6 +154,22 @@ describe("ConversationComposer", () => {
   await flushPromises();
   expect(api.disableCLIConnector).toHaveBeenCalledWith("feishu", 1);
   expect(api.resolveConversationSelection).toHaveBeenLastCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: [] }));
+  wrapper.unmount();
+ });
+ it("offers activation in a conversation when the saved Feishu application has no authorization", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await flushPromises();
+  const option = wrapper.get(".composer-connector-option");
+  expect(option.text()).toContain("打开右侧开关即可激活");
+  expect(option.get(".el-switch").classes()).not.toContain("is-checked");
+  await option.get(".el-switch").trigger("click");
+  await flushPromises();
+  expect(api.enableCLIConnector).toHaveBeenCalledWith("feishu");
+  expect(api.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(option.get(".el-switch").classes()).toContain("is-checked");
   wrapper.unmount();
  });
 });

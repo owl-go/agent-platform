@@ -6,11 +6,13 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/objectstore/memory"
 
@@ -26,6 +28,23 @@ type cliCatalogRepository struct {
 	disabledOwner   string
 	disabledID      string
 	disabledVersion int64
+	enabledOwner    string
+	enabledID       string
+	approvalOwner   string
+}
+
+func (repository *cliCatalogRepository) GetAvailableCLIConnectorDefinition(_ context.Context, id string) (cliconnector.Definition, error) {
+	return cliconnector.Definition{ID: id, State: cliconnector.StateAvailable, AuthenticationDriver: "none"}, nil
+}
+
+func (repository *cliCatalogRepository) EnableCLIConnector(_ context.Context, ownerID, id string) (cliconnector.Enablement, error) {
+	repository.enabledOwner, repository.enabledID = ownerID, id
+	return cliconnector.Enablement{ID: "enablement-1", OwnerID: ownerID, DefinitionID: id, State: "enabled", Version: 1}, nil
+}
+
+func (repository *cliCatalogRepository) DecideCommandApproval(_ context.Context, ownerID, approvalID string, state workspacedomain.ApprovalState, identity workspacedomain.ExecutionIdentity, _ int64, _ time.Time) (workspacedomain.CommandApproval, error) {
+	repository.approvalOwner = ownerID
+	return workspacedomain.CommandApproval{ID: approvalID, OwnerID: ownerID, State: state, Identity: identity, ExpiresAt: time.Now().Add(time.Minute), Version: 2}, nil
 }
 
 func (repository *cliCatalogRepository) DeleteCLIConnectorDefinition(_ context.Context, id string, version int64) error {
@@ -111,21 +130,32 @@ func TestCLIUploadInputStoresValidatedImmutableSource(t *testing.T) {
 	}
 }
 
-func TestAdministratorCannotDecideCommandApproval(t *testing.T) {
-	service := &Service{accounts: &accountapplication.Service{}}
+func TestAdministratorCanDecideOwnCommandApproval(t *testing.T) {
+	repository := &cliCatalogRepository{}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
 	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "administrator-1", Administrator: true})
-	_, err := service.DecideCommandApproval(ctx, &workspacev1.DecideCommandApprovalRequest{ApprovalId: "approval-1", Decision: "approved", ExpectedVersion: 1})
-	if code := kratoserrors.Code(err); code != http.StatusForbidden {
-		t.Fatalf("Administrator approval code = %d, want %d", code, http.StatusForbidden)
+	identity := "user"
+	response, err := service.DecideCommandApproval(ctx, &workspacev1.DecideCommandApprovalRequest{ApprovalId: "approval-1", Decision: "approved", Identity: &identity, ExpectedVersion: 1})
+	if err != nil || response.State != "approved" || repository.approvalOwner != "administrator-1" {
+		t.Fatalf("administrator approval = %#v, %v", response, err)
 	}
 }
 
-func TestAdministratorCannotEnableCLIConnector(t *testing.T) {
-	service := &Service{accounts: &accountapplication.Service{}}
+func TestAdministratorCanEnableOwnCLIConnector(t *testing.T) {
+	repository := &cliCatalogRepository{}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
 	ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "administrator-1", Administrator: true})
-	_, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
-	if code := kratoserrors.Code(err); code != http.StatusForbidden {
-		t.Fatalf("Administrator enablement code = %d, want %d", code, http.StatusForbidden)
+	response, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
+	if err != nil || response.State != "enabled" || repository.enabledOwner != "administrator-1" || repository.enabledID != "definition-1" {
+		t.Fatalf("administrator enablement = %#v, %v", response, err)
 	}
 }
 
@@ -139,8 +169,8 @@ func TestUserCanDisableCLIConnectorWithVersion(t *testing.T) {
 	user := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "user-1"})
 	admin := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "admin", Administrator: true})
 	request := &workspacev1.DisableCLIConnectorRequest{DefinitionId: "definition-1", ExpectedVersion: 4}
-	if _, err := service.DisableCLIConnector(admin, request); kratoserrors.Code(err) != http.StatusForbidden {
-		t.Fatalf("administrator disablement = %v", err)
+	if response, err := service.DisableCLIConnector(admin, request); err != nil || response.State != "disabled" || repository.disabledOwner != "admin" {
+		t.Fatalf("administrator disablement = %#v, %v", response, err)
 	}
 	if _, err := service.DisableCLIConnector(user, &workspacev1.DisableCLIConnectorRequest{DefinitionId: request.DefinitionId}); kratoserrors.Code(err) != http.StatusUnprocessableEntity {
 		t.Fatalf("unversioned disablement = %v", err)
