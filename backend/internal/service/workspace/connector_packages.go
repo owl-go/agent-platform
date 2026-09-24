@@ -71,6 +71,9 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 	if err != nil {
 		return nil, publicError(fmt.Errorf("%w: %v", domain.ErrInvalid, err))
 	}
+	if err := validatePrivateConnectorPackage(pkg); err != nil {
+		return nil, publicError(err)
+	}
 	repository, err := service.connectorPackages()
 	if err != nil {
 		return nil, publicError(err)
@@ -95,6 +98,13 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 	}
 	installation.Authorized = pkg.Metadata.AuthMode == "none" || installation.AuthorizationID != ""
 	return connectorInstallationResponse(installation), nil
+}
+
+func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.CLI != nil && pkg.CLI.AuthenticationDriver == "feishu" {
+		return fmt.Errorf("%w: the Feishu authentication driver is reserved for a Conformance-backed platform publication", domain.ErrInvalid)
+	}
+	return nil
 }
 
 func (service *Service) CreateConnectorPackage(ctx context.Context, request *workspacev1.CreateConnectorPackageRequest) (*workspacev1.ConnectorInstallation, error) {
