@@ -60,6 +60,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
+	chatModel := agentworkspace.NewAssistantChatModel()
 	service5, err := agentworkspace.NewWorkspaceService(contextContext, database, repository, applicationService, objectstoreProvider)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, service3, service4, service5, box, store, skillstoreStore, objectstoreProvider, config)
+	workspaceService, err := workspace.New(applicationService, service2, service3, service4, chatModel, service5, box, store, skillstoreStore, objectstoreProvider, config)
 	if err != nil {
 		return nil, err
 	}
