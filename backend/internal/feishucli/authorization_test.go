@@ -71,3 +71,31 @@ func TestRegistrarPollAuthorizationPreservesPending(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+func TestRegistrarRefreshesAuthorizationAndPreservesRefreshToken(t *testing.T) {
+	requests := 0
+	client := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		requests++
+		if requests == 1 {
+			data, _ := io.ReadAll(request.Body)
+			values, _ := url.ParseQuery(string(data))
+			if request.URL.String() != "https://open.example.test/open-apis/authen/v2/oauth/token" || values.Get("grant_type") != "refresh_token" || values.Get("refresh_token") != "old-refresh" || values.Get("client_id") != "app" || values.Get("client_secret") != "secret" {
+				t.Fatalf("refresh request = %s %q", request.URL, data)
+			}
+			return jsonResponse(`{"access_token":"new-access","expires_in":3600,"scope":"offline_access calendar:calendar:read"}`), nil
+		}
+		if request.URL.String() != "https://open.example.test/open-apis/authen/v1/user_info" || request.Header.Get("Authorization") != "Bearer new-access" {
+			t.Fatalf("user info request = %s %#v", request.URL, request.Header)
+		}
+		return jsonResponse(`{"code":0,"data":{"open_id":"ou_user","name":"Tester"}}`), nil
+	})
+	now := time.Unix(200, 0).UTC()
+	registrar := &Registrar{client: client, openBaseURL: "https://open.example.test", now: func() time.Time { return now }}
+	result, err := registrar.RefreshAuthorization(context.Background(), "app", "secret", "old-refresh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExternalID != "ou_user" || result.AccessToken != "new-access" || result.RefreshToken != "old-refresh" || !result.ExpiresAt.Equal(now.Add(time.Hour)) {
+		t.Fatalf("authorization = %#v", result)
+	}
+}

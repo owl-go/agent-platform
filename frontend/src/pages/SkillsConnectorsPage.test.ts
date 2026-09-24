@@ -24,12 +24,13 @@ describe("SkillsConnectorsPage", () => {
     wrapper.unmount();
   });
 
-  it("keeps embedded connector actions and packages in one catalog frame", async () => {
+  it("presents published and installed connectors in one catalog", async () => {
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
       listCLIConnectorDefinitions: vi.fn(async () => []),
       listCLIConnectorEnablements: vi.fn(async () => []),
+      listConnectorPublications: vi.fn(async () => [{ source: "feishu", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "feishu", package_version: "1.0.93", mode: "cli", sha256: "a".repeat(64), name: "飞书", description: "读取和发送飞书消息", icon: "plug", authentication_driver: "feishu", runtime_digests: ["sha256:" + "b".repeat(64)], conformance_available: true, required_scopes: ["im:message"] } }]),
       listConnectorInstallations: vi.fn(async () => []),
     } as unknown as PlatformApi;
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
@@ -41,7 +42,10 @@ describe("SkillsConnectorsPage", () => {
     expect(frame.find(".resource-child-actions").exists()).toBe(false);
     expect(frame.get(".extension-catalog-toolbar").text()).toContain("我的连接器");
     expect(frame.get(".extension-catalog-toolbar").text()).toContain("新建连接器");
-    expect(frame.get(".connector-package-panel").text()).toContain("暂无统一连接器包");
+    expect(frame.find(".connector-package-panel").exists()).toBe(false);
+    expect(frame.findAll(".published-connector-card")).toHaveLength(1);
+    expect(frame.get(".published-connector-card").text()).toContain("飞书");
+    expect(frame.get(".published-connector-card").text()).toContain("可安装");
     wrapper.unmount();
   });
 

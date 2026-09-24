@@ -164,6 +164,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/connectors/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StageConnectorPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/publication-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorPublicationHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/publications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorPublicationRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/publications/{revision_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_PublishConnectorRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/connectors/publications/{source}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisableConnectorPublication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model-credit-rates": {
         parameters: {
             query?: never;
@@ -452,6 +532,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/authorization-flows/{flow_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CompleteConnectorAuthorizationFlow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/authorizations/{authorization_id}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisconnectPublishedConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorPublications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/catalog/{source}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_InstallPublishedConnector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli": {
         parameters: {
             query?: never;
@@ -660,6 +804,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/setup/{flow_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CompleteConnectorSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/{installation_id}": {
         parameters: {
             query?: never;
@@ -692,6 +852,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/{installation_id}/authorization-flows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_BeginConnectorAuthorizationFlow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/{installation_id}/authorization/disconnect": {
         parameters: {
             query?: never;
@@ -708,6 +884,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/{installation_id}/authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListConnectorAuthorizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RefreshConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/select": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_SelectConnectorAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/{installation_id}/disable": {
         parameters: {
             query?: never;
@@ -718,6 +942,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AgentWorkspaceService_DisableConnectorInstallation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_BeginConnectorSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{installation_id}/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_UpgradeConnectorInstallation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1506,10 +1762,17 @@ export interface components {
             identity?: string;
             scopes?: string[];
         };
+        AgentWorkspaceServiceBeginConnectorAuthorizationFlowBody: {
+            identity?: string;
+            scopes?: string[];
+        };
+        AgentWorkspaceServiceBeginConnectorSetupBody: Record<string, never>;
         AgentWorkspaceServiceCancelRunBody: Record<string, never>;
         AgentWorkspaceServiceCancelSessionMessageBody: Record<string, never>;
         AgentWorkspaceServiceCompleteCLIConnectorAuthorizationBody: Record<string, never>;
         AgentWorkspaceServiceCompleteCLIConnectorEnablementBody: Record<string, never>;
+        AgentWorkspaceServiceCompleteConnectorAuthorizationFlowBody: Record<string, never>;
+        AgentWorkspaceServiceCompleteConnectorSetupBody: Record<string, never>;
         AgentWorkspaceServiceConfigureUserDailyCreditsBody: {
             /** Format: int64 */
             allocation_hundredths?: number;
@@ -1556,6 +1819,10 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceDisableConnectorPublicationBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
         AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody: {
             /** Format: int64 */
             expected_version?: number;
@@ -1564,10 +1831,20 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceDisconnectPublishedConnectorAuthorizationBody: Record<string, never>;
         AgentWorkspaceServiceEnableCLIConnectorBody: Record<string, never>;
         AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
+        AgentWorkspaceServiceInstallPublishedConnectorBody: Record<string, never>;
         AgentWorkspaceServicePublishCLIConnectorDefinitionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServicePublishConnectorRevisionBody: {
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceRefreshConnectorAuthorizationBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1599,6 +1876,10 @@ export interface components {
         AgentWorkspaceServiceRunWorkflowBody: {
             text_input?: string;
             json_input?: Record<string, never>;
+        };
+        AgentWorkspaceServiceSelectConnectorAuthorizationBody: {
+            /** Format: int64 */
+            expected_version?: number;
         };
         AgentWorkspaceServiceSendSessionMessageBody: {
             content?: string;
@@ -1675,6 +1956,10 @@ export interface components {
         };
         AgentWorkspaceServiceUpdateWorkflowBody: {
             workflow?: components["schemas"]["v1WorkflowInput"];
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceUpgradeConnectorInstallationBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1869,6 +2154,31 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        v1ConnectorAuthorization: {
+            id?: string;
+            installation_id?: string;
+            identity_ref?: string;
+            scopes?: string[];
+            state?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: int64 */
+            version?: number;
+            selected?: boolean;
+            external_identity_id?: string;
+            external_display_name?: string;
+        };
+        v1ConnectorAuthorizationFlow: {
+            id?: string;
+            installation_id?: string;
+            identity?: string;
+            scopes?: string[];
+            state?: string;
+            action_url?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            authorization?: components["schemas"]["v1ConnectorAuthorization"];
+        };
         v1ConnectorInstallation: {
             id?: string;
             source?: string;
@@ -1877,6 +2187,64 @@ export interface components {
             authorized?: boolean;
             /** Format: int64 */
             version?: number;
+            package_version?: string;
+            name?: string;
+            description?: string;
+            authentication_driver?: string;
+            selected_authorization_id?: string;
+            upgrade_available?: boolean;
+        };
+        v1ConnectorPublication: {
+            source?: string;
+            active_revision_id?: string;
+            state?: string;
+            /** Format: int64 */
+            version?: number;
+            revision?: components["schemas"]["v1ConnectorRevision"];
+        };
+        v1ConnectorPublicationHealth: {
+            source?: string;
+            state?: string;
+            active_revision_id?: string;
+            package_sha256?: string;
+            bundle_sha256?: string;
+            runtime_digests?: string[];
+            conformance_available?: boolean;
+            /** Format: int64 */
+            installation_count?: number;
+            /** Format: int64 */
+            active_installation_count?: number;
+            /** Format: int64 */
+            active_authorization_count?: number;
+        };
+        v1ConnectorPublicationRevision: {
+            revision?: components["schemas"]["v1ConnectorRevision"];
+            publication?: components["schemas"]["v1ConnectorPublication"];
+        };
+        v1ConnectorRevision: {
+            id?: string;
+            source?: string;
+            package_version?: string;
+            mode?: string;
+            sha256?: string;
+            name?: string;
+            description?: string;
+            icon?: string;
+            authentication_driver?: string;
+            bundle_sha256?: string;
+            runtime_digests?: string[];
+            conformance_available?: boolean;
+            required_scopes?: string[];
+        };
+        v1ConnectorSetup: {
+            id?: string;
+            installation_id?: string;
+            state?: string;
+            action_url?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            provider_name?: string;
+            developer_console_url?: string;
         };
         v1ConversationFile: {
             kind?: string;
@@ -2398,8 +2766,20 @@ export interface components {
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
         };
+        v1ListConnectorAuthorizationsResponse: {
+            items?: components["schemas"]["v1ConnectorAuthorization"][];
+        };
         v1ListConnectorInstallationsResponse: {
             items?: components["schemas"]["v1ConnectorInstallation"][];
+        };
+        v1ListConnectorPublicationHealthResponse: {
+            items?: components["schemas"]["v1ConnectorPublicationHealth"][];
+        };
+        v1ListConnectorPublicationRevisionsResponse: {
+            items?: components["schemas"]["v1ConnectorPublicationRevision"][];
+        };
+        v1ListConnectorPublicationsResponse: {
+            items?: components["schemas"]["v1ConnectorPublication"][];
         };
         v1ListConversationFilesResponse: {
             items?: components["schemas"]["v1ConversationFile"][];
@@ -2845,6 +3225,10 @@ export interface components {
             name?: string;
             object_key?: string;
             sha256?: string;
+        };
+        v1StageConnectorPackageRequest: {
+            /** Format: byte */
+            archive?: string;
         };
         v1SubmitImageGenerationRequest: {
             image_model_id?: string;
@@ -3404,6 +3788,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CLIConnectorDefinition"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StageConnectorPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1StageConnectorPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorRevision"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListConnectorPublicationHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorPublicationHealthResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListConnectorPublicationRevisions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorPublicationRevisionsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PublishConnectorRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                revision_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServicePublishConnectorRevisionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorPublication"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisableConnectorPublication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisableConnectorPublicationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorPublication"];
                 };
             };
             /** @description An unexpected error response. */
@@ -4132,6 +4677,140 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_CompleteConnectorAuthorizationFlow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCompleteConnectorAuthorizationFlowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorAuthorizationFlow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisconnectPublishedConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisconnectPublishedConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorAuthorization"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListConnectorPublications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorPublicationsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_InstallPublishedConnector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceInstallPublishedConnectorBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListCLIConnectorDefinitions: {
         parameters: {
             query?: never;
@@ -4658,6 +5337,41 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_CompleteConnectorSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCompleteConnectorSetupBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorSetup"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_UninstallConnector: {
         parameters: {
             query?: {
@@ -4726,6 +5440,41 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_BeginConnectorAuthorizationFlow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceBeginConnectorAuthorizationFlowBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorAuthorizationFlow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_DisconnectConnectorAuthorization: {
         parameters: {
             query?: never;
@@ -4761,6 +5510,109 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_ListConnectorAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListConnectorAuthorizationsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RefreshConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+                authorization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRefreshConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorAuthorization"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SelectConnectorAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+                authorization_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSelectConnectorAuthorizationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_DisableConnectorInstallation: {
         parameters: {
             query?: never;
@@ -4773,6 +5625,76 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceDisableConnectorInstallationBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorInstallation"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_BeginConnectorSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceBeginConnectorSetupBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ConnectorSetup"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpgradeConnectorInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpgradeConnectorInstallationBody"];
             };
         };
         responses: {

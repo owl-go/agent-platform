@@ -58,6 +58,14 @@ type ConnectorPublication struct {
 	UpdatedAt        time.Time
 }
 
+type ConnectorPublicationHealth struct {
+	Publication              ConnectorPublication
+	Revision                 ConnectorRevision
+	InstallationCount        int64
+	ActiveInstallationCount  int64
+	ActiveAuthorizationCount int64
+}
+
 func (publication *ConnectorPublication) Publish(administratorID, revisionID string, now time.Time) error {
 	if publication == nil || strings.TrimSpace(publication.PackageSource) == "" || administratorID == "" || revisionID == "" {
 		return fmt.Errorf("%w: connector publication is incomplete", ErrInvalid)
@@ -125,16 +133,62 @@ func (installation *ConnectorInstallation) RollbackRevision(ownerID, revisionID,
 }
 
 type ConnectorAuthorization struct {
+	ID                          string
+	OwnerID                     string
+	InstallationID              string
+	IdentityRef                 string
+	ExternalIdentityID          string
+	ExternalDisplayName         string
+	Scopes                      []string
+	CredentialCiphertext        []byte
+	CredentialAAD               string
+	CredentialFormat            string
+	RefreshCredentialCiphertext []byte
+	RefreshCredentialAAD        string
+	State                       ConnectorAuthorizationState
+	ExpiresAt                   *time.Time
+	Version                     int64
+	UpdatedAt                   time.Time
+}
+
+type ConnectorAuthorizationMaterial struct {
+	CredentialCiphertext []byte
+	CredentialAAD        string
+	CredentialFormat     string
+	AppIDCiphertext      []byte
+	AppSecretCiphertext  []byte
+}
+
+type ConnectorSetup struct {
 	ID                   string
 	OwnerID              string
 	InstallationID       string
-	IdentityRef          string
-	Scopes               []string
-	CredentialCiphertext []byte
-	State                ConnectorAuthorizationState
+	State                string
+	ActionURL            string
 	ExpiresAt            *time.Time
-	Version              int64
-	UpdatedAt            time.Time
+	DeviceCodeCiphertext []byte
+	ProviderName         string
+	DeveloperConsoleURL  string
+}
+
+type ConnectorProviderApplication struct {
+	OwnerID             string
+	InstallationID      string
+	AppIDCiphertext     []byte
+	AppSecretCiphertext []byte
+	ProviderName        string
+	DeveloperConsoleURL string
+}
+
+type ConnectorAuthorizationAttempt struct {
+	ID                   string
+	OwnerID              string
+	InstallationID       string
+	Identity             string
+	Scopes               []string
+	ActionURL            string
+	ExpiresAt            time.Time
+	DeviceCodeCiphertext []byte
 }
 
 func (authorization ConnectorAuthorization) CanInvoke() bool {

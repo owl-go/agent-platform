@@ -6,7 +6,7 @@ import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
 import { ChevronDown, Pencil, Plus, RefreshCw, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
-import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
+import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type ConnectorAuthorization, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorPublication, type ConnectorSetup, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import { localizedSkillDescription, parseSkillDocument } from "../skillDocument";
@@ -16,6 +16,7 @@ import ProfileIcon from "./ProfileIcon.vue";
 import IconPicker from "./IconPicker.vue";
 
 type ResourceTab = "mcp" | "skills";
+type ConnectorCatalogEntry = { publication?: ConnectorPublication; installation?: ConnectorInstallation };
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
@@ -70,6 +71,13 @@ const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
 const createdSkillIDs = ref(new Set<string>());
 const cliDefinitions = ref<CLIConnectorDefinition[]>([]);
+const connectorPublications = ref<ConnectorPublication[]>([]);
+const connectorInstallations = ref<ConnectorInstallation[]>([]);
+const connectorAuthorizations = ref<Record<string, ConnectorAuthorization[]>>({});
+const connectorBusy = ref<string[]>([]);
+const connectorSetups = ref<Record<string, ConnectorSetup>>({});
+const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
+const connectorFlowWindows = new Map<string, Window | null>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
@@ -84,6 +92,7 @@ let cliCompletionBusy = false;
 let disposed = false;
 const showCLI = ref(false);
 const showConnectorKind = ref(false);
+const connectorPackageInput = ref<HTMLInputElement>();
 const cliForm = ref<CLIDraft>(emptyCLIDraft());
 const editingMCP = ref<MCPServer>();
 const showMCP = ref(false);
@@ -98,8 +107,13 @@ const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
 const connectorSections = computed(() => props.mineOnly
-  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[] }]
-  : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value }]);
+  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: connectorCatalogItems.value.filter((item) => Boolean(item.installation)) }]
+  : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value.filter((item) => !item.managed_installation), packages: connectorCatalogItems.value }]);
+const connectorCatalogItems = computed(() => {
+  const bySource = new Map<string, ConnectorCatalogEntry>(connectorPublications.value.map((publication) => [publication.source, { publication, installation: connectorInstallations.value.find((item) => item.source === publication.source) }]));
+  for (const installation of connectorInstallations.value) if (!bySource.has(installation.source)) bySource.set(installation.source, { publication: undefined, installation });
+  return [...bySource.values()];
+});
 const skillSections = computed(() => {
   if (props.mineOnly) return [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }];
   const sections = [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }];
@@ -118,12 +132,14 @@ onMounted(() => {
       void completePendingCLIEnablements();
     }
     if (cliAuthorizationFlow.value?.state === "waiting_for_user" && Date.now() - lastCLICompletionPoll >= 5000) void completeCLIAccountAuthorization();
+    if ((Object.values(connectorSetups.value).some((item) => item.state === "waiting_for_user") || Object.values(connectorAuthorizationFlows.value).some((item) => item.state === "waiting_for_user")) && Date.now() - lastCLICompletionPoll >= 5000) void completePublishedConnectorFlows();
   }, 1500);
 });
 onBeforeUnmount(() => {
   disposed = true;
   if (poll !== undefined) window.clearInterval(poll);
   for (const popup of cliSetupWindows.values()) closeBlankCLIWindow(popup);
+  for (const popup of connectorFlowWindows.values()) closeBlankCLIWindow(popup);
   cliSetupWindows.clear();
 });
 
@@ -138,10 +154,75 @@ function upsertSkill(item: Skill) {
 function selectTab(value: ResourceTab) { activeTab.value = value; emit("tabChange", value); }
 async function refresh() {
   try {
-    [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([])]);
-    await Promise.all([refreshCLIAuthorizations(), refreshSkillDocuments()]);
+    [mcp.value, skills.value, cliDefinitions.value, cliEnablements.value, connectorPublications.value, connectorInstallations.value] = await Promise.all([api.listMCPServers(), api.listSkills(), api.listCLIConnectorDefinitions?.() ?? Promise.resolve([]), api.listCLIConnectorEnablements?.() ?? Promise.resolve([]), api.listConnectorPublications?.() ?? Promise.resolve([]), api.listConnectorInstallations?.() ?? Promise.resolve([])]);
+    await Promise.all([refreshCLIAuthorizations(), refreshConnectorAuthorizations(), refreshSkillDocuments()]);
     notifyResources();
   } catch (cause) { reportError(cause); }
+}
+
+async function refreshConnectorAuthorizations() {
+  const entries = await Promise.all(connectorInstallations.value.map(async (item) => [item.id, await api.listConnectorAuthorizations(item.id)] as const));
+  connectorAuthorizations.value = Object.fromEntries(entries);
+}
+function connectorOperationBusy(source: string) { return connectorBusy.value.includes(source); }
+function connectorNeedsScopeRecovery(item: ConnectorInstallation, publication?: ConnectorPublication) {
+  const required = publication?.revision.required_scopes ?? [];
+  if (!required.length) return false;
+  const selected = (connectorAuthorizations.value[item.id] ?? []).find((authorization) => authorization.selected && authorization.state === "active");
+  return !selected || required.some((scope) => !selected.scopes.includes(scope));
+}
+async function runConnectorOperation(source: string, action: () => Promise<unknown>) {
+  connectorBusy.value = [...connectorBusy.value, source];
+  try { await action(); await refresh(); }
+  catch (cause) { reportError(cause); }
+  finally { connectorBusy.value = connectorBusy.value.filter((item) => item !== source); }
+}
+function installPublication(item: ConnectorPublication) { return runConnectorOperation(item.source, () => api.installPublishedConnector(item.source)); }
+function upgradeInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.upgradeConnectorInstallation(item.id, item.version)); }
+function disableInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.disableConnectorInstallation(item.id, item.version)); }
+function uninstallInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.uninstallConnector(item.id, item.version)); }
+function selectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.selectConnectorAuthorization(item.id, authorization.id, item.version)); }
+function refreshAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.refreshConnectorAuthorization(item.id, authorization.id, authorization.version)); }
+function disconnectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.disconnectPublishedConnectorAuthorization(authorization.id)); }
+async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
+  const popup = window.open("about:blank", "_blank");
+  connectorFlowWindows.set(item.id, popup);
+  connectorBusy.value = [...connectorBusy.value, item.source];
+  try {
+    const setup = await api.beginConnectorSetup(item.id);
+    connectorSetups.value = { ...connectorSetups.value, [item.id]: setup };
+    if (setup.state === "waiting_for_user" && setup.action_url) popup?.location.replace(setup.action_url);
+    else await beginPublishedConnectorAuthorization(item, publication, popup);
+  } catch (cause) { closeBlankCLIWindow(popup); reportError(cause, "authorizationInvalidInput"); }
+  finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== item.source); }
+}
+async function beginPublishedConnectorAuthorization(item: ConnectorInstallation, publication?: ConnectorPublication, popup?: Window | null) {
+  const scopes = publication?.revision.required_scopes ?? [];
+  const flow = await api.beginConnectorAuthorizationFlow(item.id, "user", scopes);
+  connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [item.id]: flow };
+  if (flow.state === "waiting_for_user" && flow.action_url) popup?.location.replace(flow.action_url);
+}
+async function completePublishedConnectorFlows() {
+  lastCLICompletionPoll = Date.now();
+  for (const [installationID, setup] of Object.entries(connectorSetups.value)) {
+    if (setup.state !== "waiting_for_user") continue;
+    try {
+      const completed = await api.completeConnectorSetup(setup.id);
+      connectorSetups.value = { ...connectorSetups.value, [installationID]: completed };
+      if (completed.state === "completed") {
+        const installation = connectorInstallations.value.find((item) => item.id === installationID);
+        if (installation) await beginPublishedConnectorAuthorization(installation, connectorPublications.value.find((item) => item.source === installation.source), connectorFlowWindows.get(installationID));
+      }
+    } catch (cause) { reportError(cause); }
+  }
+  for (const [installationID, flow] of Object.entries(connectorAuthorizationFlows.value)) {
+    if (flow.state !== "waiting_for_user") continue;
+    try {
+      const completed = await api.completeConnectorAuthorizationFlow(flow.id);
+      connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
+      if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
+    } catch (cause) { reportError(cause); }
+  }
 }
 async function refreshSkillDocuments() {
   let failed = false;
@@ -304,10 +385,19 @@ function toggleCLI(item: CLIConnectorDefinition, checked: boolean) {
   emit("update:cliConnectorDefinitionIds", checked ? [...new Set([...props.cliConnectorDefinitionIds, item.id])] : props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
 }
 function openNewConnector() { showConnectorKind.value = true; }
-function chooseConnectorKind(kind: "mcp" | "cli") {
+function chooseConnectorKind(kind: "mcp" | "cli" | "package") {
   showConnectorKind.value = false;
   if (kind === "mcp") openNewMCP();
-  else if (canManageCLI.value) openNewCLI();
+  else if (kind === "cli" && canManageCLI.value) openNewCLI();
+  else if (kind === "package") connectorPackageInput.value?.click();
+}
+async function uploadConnectorPackage(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try { await api.uploadConnectorPackage(file); await refresh(); }
+  catch (cause) { reportError(cause); }
+  finally { input.value = ""; }
 }
 function openNewCLI() { editingCLI.value = undefined; cliForm.value = emptyCLIDraft(); showCLI.value = true; }
 function openCLI(item: CLIConnectorDefinition) {
@@ -474,6 +564,26 @@ async function fileToBase64(file: File): Promise<string> {
       <section v-for="section in connectorSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
+        <article v-for="entry in section.packages" :key="`package:${entry.publication?.source || entry.installation?.source}`" class="el-card extension-catalog-card connector-catalog-card published-connector-card">
+          <ConnectorIcon class="connector-card-icon" :icon="entry.publication?.revision.icon || 'plug'" :size="42" />
+          <div class="extension-card-copy">
+            <div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div>
+            <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
+            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
+            <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.authorizationPending') }}</small>
+            <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions">
+              <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
+            </div>
+          </div>
+          <div class="extension-card-actions">
+            <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
+            <el-button v-else-if="entry.installation && entry.installation.authentication_driver === 'feishu' && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
+            <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
+            <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
+            <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
+          </div>
+        </article>
         <article v-for="item in section.mcp" :key="`mcp:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showMCPDetails(item)" @keydown.enter.self="showMCPDetails(item)" @keydown.space.self.prevent="showMCPDetails(item)">
           <ConnectorIcon class="connector-card-icon" :icon="item.icon" :size="42" />
           <div class="extension-card-copy">
@@ -513,7 +623,7 @@ async function fileToBase64(file: File): Promise<string> {
             <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
           </div>
         </article>
-        <div v-if="!section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
+        <div v-if="!section.packages.length && !section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
       </section>
       </div>
@@ -544,7 +654,8 @@ async function fileToBase64(file: File): Promise<string> {
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
-    <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
+    <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-package" @click="chooseConnectorKind('package')"><strong>{{ t('resources.connectorPackageUpload') }}</strong><span>{{ t('resources.connectorPackageUploadHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
+    <input ref="connectorPackageInput" type="file" accept=".zip,application/zip" hidden @change="uploadConnectorPackage">
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><div class="form-field"><span>{{ t("resources.icon") }}</span><IconPicker v-model="mcpForm.icon" fallback="terminal" /></div><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>
     <div v-if="showSkill" class="modal-layer" @click.self="showSkill = false"><form class="modal-card skill-import-card el-card" @submit.prevent="saveSkill"><h2>{{ editingSkill ? t('resources.updateSkill') : t('resources.importSkill') }}</h2><p v-if="editingSkill" class="skill-import-name">{{ editingSkill.name }}</p><div class="form-field"><span>{{ t('resources.icon') }}</span><IconPicker v-model="skillForm.icon" fallback="sparkles" /></div><label>{{ t("settings.source") }}<select v-model="skillForm.source" :disabled="Boolean(editingSkill)"><option value="git">{{ t('resources.gitAddress') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><template v-if="skillForm.source === 'git'"><label>{{ t('resources.gitAddress') }}<input v-model="skillForm.git_url" type="url" :disabled="Boolean(editingSkill)" required placeholder="https://github.com/owner/skill.git"></label><label>{{ t('resources.gitBranchOptional') }}<input v-model="skillForm.git_ref" :placeholder="t('resources.defaultBranchHint')"></label></template><label v-else class="skill-upload-field"><span>{{ t('resources.zipUpload') }}</span><input type="file" accept=".zip,application/zip" :required="Boolean(editingSkill) || !skillForm.archive" @change="selectSkillArchive"><small>{{ skillForm.archive ? t('resources.skillArchiveReady') : t('resources.chooseSkillArchive') }}</small></label><div class="modal-actions"><el-button @click="showSkill = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ editingSkill ? t('common.save') : t('resources.importSkill') }}</el-button></div></form></div>
     <div v-if="showCLI" class="modal-layer" @click.self="showCLI = false"><form class="modal-card cli-install-card el-card" @submit.prevent="saveCLI"><h2>{{ editingCLI ? t('resources.editCLI') : t('resources.installCLI') }}</h2><div class="form-field"><span>{{ t('resources.icon') }}</span><IconPicker v-model="cliForm.icon" fallback="terminal" /></div><label>{{ t('common.name') }}<input v-model="cliForm.name" maxlength="100" required></label><label>{{ t('resources.capabilityDescription') }}<textarea v-model="cliForm.description" rows="4" maxlength="2000" required></textarea></label><label>{{ t('resources.installationType') }}<select v-model="cliForm.installation_type"><option value="npm">{{ t('resources.npmInstall') }}</option><option value="upload">{{ t('resources.zipUpload') }}</option></select></label><label v-if="cliForm.installation_type === 'npm'">{{ t('resources.npmPackageSpec') }}<input v-model="cliForm.npm_install" required placeholder="@scope/package@1.2.3"><small>{{ t('resources.exactNPMHint') }}</small></label><label v-else>{{ t('resources.zipUpload') }}<input type="file" accept=".zip,application/zip" required @change="selectCLIArchive"><small>{{ t('resources.cliZipHint') }}</small></label><div class="modal-actions"><el-button @click="showCLI = false">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="cliSaveBusy">{{ t('resources.install') }}</el-button></div></form></div>

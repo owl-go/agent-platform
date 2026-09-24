@@ -1,6 +1,6 @@
 # Connector Platform P1 Implementation Plan
 
-**Status:** accepted for implementation
+**Status:** implemented in `codex/connector-platform-p1`; production Conformance remains environment-gated and cannot make a publication available until exact Linux + `runsc` evidence is attached
 
 **Goal:** Publish and operate the official Feishu CLI as the first real Connector Package, using the P0 package, installation, authorization, audit, and Runtime boundaries instead of maintaining a second mutable CLI lifecycle.
 

@@ -5,18 +5,29 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
+	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type connectorPackageRepository interface {
 	CreateConnectorRevision(context.Context, domain.ConnectorRevision) (domain.ConnectorRevision, error)
+	GetConnectorRevision(context.Context, string) (domain.ConnectorRevision, error)
+	ListConnectorRevisions(context.Context) ([]domain.ConnectorRevision, error)
+	PublishConnectorRevision(context.Context, string, string, int64) (domain.ConnectorPublication, error)
+	SetConnectorPublicationState(context.Context, string, string, domain.ConnectorPublicationState, int64) (domain.ConnectorPublication, error)
+	ListConnectorPublications(context.Context, bool) ([]domain.ConnectorPublication, error)
+	ListConnectorPublicationHealth(context.Context) ([]domain.ConnectorPublicationHealth, error)
+	HasConnectorBundleRuntimeConformance(context.Context, string, string) (bool, error)
 	InstallConnector(context.Context, domain.ConnectorInstallation) (domain.ConnectorInstallation, error)
 	InstallConnectorWithAudit(context.Context, domain.ConnectorInstallation, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
 	ListConnectorInstallations(context.Context, string) ([]domain.ConnectorInstallation, error)
@@ -26,7 +37,31 @@ type connectorPackageRepository interface {
 	DisconnectConnectorInstallationAuthorizationWithAudit(context.Context, string, string, int64, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
 	CreateConnectorAuthorization(context.Context, domain.ConnectorAuthorization) (domain.ConnectorAuthorization, error)
 	CreateConnectorAuthorizationWithAudit(context.Context, domain.ConnectorAuthorization, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
+	ListConnectorAuthorizations(context.Context, string, string) ([]domain.ConnectorAuthorization, error)
+	SelectConnectorAuthorizationWithAudit(context.Context, string, string, string, int64, domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error)
+	RefreshConnectorAuthorization(context.Context, domain.ConnectorAuthorization, int64, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
+	DisconnectConnectorAuthorization(context.Context, string, string) (domain.ConnectorAuthorization, error)
+	DisconnectConnectorAuthorizationWithAudit(context.Context, string, string, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
+	ActivateConnectorRevision(context.Context, string, string, string, time.Time) (domain.ConnectorInstallation, error)
+	ActivateConnectorRevisionWithVersion(context.Context, string, string, string, int64, time.Time) (domain.ConnectorInstallation, error)
+	BeginConnectorSetup(context.Context, domain.ConnectorSetup) (domain.ConnectorSetup, error)
+	GetConnectorSetup(context.Context, string, string) (domain.ConnectorSetup, error)
+	GetConnectorProviderApplication(context.Context, string, string) (domain.ConnectorProviderApplication, error)
+	CompleteConnectorSetup(context.Context, string, string, domain.ConnectorProviderApplication) (domain.ConnectorSetup, error)
+	BeginConnectorAuthorizationFlow(context.Context, domain.ConnectorAuthorizationAttempt) (domain.ConnectorAuthorizationAttempt, error)
+	GetConnectorAuthorizationFlow(context.Context, string, string) (domain.ConnectorAuthorizationAttempt, error)
+	DeleteConnectorAuthorizationFlow(context.Context, string, string) error
 	RecordConnectorAudit(context.Context, domain.ConnectorAuditRecord) error
+}
+
+type connectorRevisionPolicy struct {
+	AuthMode         string                        `json:"auth_mode"`
+	Metadata         connectorpackage.Metadata     `json:"metadata"`
+	CLI              *connectorpackage.CLIManifest `json:"cli"`
+	MCP              *connectorpackage.MCPManifest `json:"mcp"`
+	BundleObjectKey  string                        `json:"cli_bundle_object_key"`
+	BundleSHA256     string                        `json:"cli_bundle_sha256"`
+	LegacyProjection bool                          `json:"legacy_projection"`
 }
 
 type guidedConnectorInput struct {
@@ -56,10 +91,664 @@ func (service *Service) ListConnectorInstallations(ctx context.Context, _ *works
 		return nil, publicError(err)
 	}
 	response := &workspacev1.ListConnectorInstallationsResponse{Items: make([]*workspacev1.ConnectorInstallation, 0, len(items))}
+	publications, _ := repository.ListConnectorPublications(ctx, false)
+	publishedRevisions := make(map[string]string, len(publications))
+	for _, publication := range publications {
+		publishedRevisions[publication.PackageSource] = publication.ActiveRevisionID
+	}
 	for _, item := range items {
-		response.Items = append(response.Items, connectorInstallationResponse(item))
+		revision, readErr := repository.GetConnectorRevision(ctx, item.ActiveRevisionID)
+		if readErr != nil {
+			return nil, publicError(readErr)
+		}
+		response.Items = append(response.Items, connectorInstallationDetailsResponse(item, revision, publishedRevisions[item.PackageSource] != "" && publishedRevisions[item.PackageSource] != item.ActiveRevisionID))
 	}
 	return response, nil
+}
+
+func (service *Service) ListConnectorPublications(ctx context.Context, _ *workspacev1.ListConnectorPublicationsRequest) (*workspacev1.ListConnectorPublicationsResponse, error) {
+	if _, err := service.owner(ctx); err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListConnectorPublications(ctx, false)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := &workspacev1.ListConnectorPublicationsResponse{Items: make([]*workspacev1.ConnectorPublication, 0, len(items))}
+	for _, item := range items {
+		revision, readErr := repository.GetConnectorRevision(ctx, item.ActiveRevisionID)
+		if readErr != nil {
+			return nil, publicError(readErr)
+		}
+		response.Items = append(response.Items, connectorPublicationResponse(item, revision))
+	}
+	return response, nil
+}
+
+func (service *Service) StageConnectorPackage(ctx context.Context, request *workspacev1.StageConnectorPackageRequest) (*workspacev1.ConnectorRevision, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	pkg, err := connectorpackage.Parse(request.Archive)
+	if err != nil {
+		return nil, publicError(fmt.Errorf("%w: %v", domain.ErrInvalid, err))
+	}
+	if err := validatePlatformConnectorPackage(pkg); err != nil {
+		return nil, publicError(err)
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if pkg.CLI != nil {
+		verified, verifyErr := repository.HasConnectorBundleRuntimeConformance(ctx, pkg.CLIBundleSHA256, pkg.CLI.Runtime.Digest)
+		if verifyErr != nil {
+			return nil, publicError(verifyErr)
+		}
+		if !verified {
+			return nil, publicError(fmt.Errorf("%w: exact bundle and Runtime RepoDigest Conformance evidence is unavailable", domain.ErrInvalid))
+		}
+	}
+	revision, err := service.storeConnectorRevision(ctx, repository, pkg)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorRevisionResponse(revision), nil
+}
+
+func (service *Service) ListConnectorPublicationRevisions(ctx context.Context, _ *workspacev1.ListConnectorPublicationRevisionsRequest) (*workspacev1.ListConnectorPublicationRevisionsResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revisions, err := repository.ListConnectorRevisions(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	publications, err := repository.ListConnectorPublications(ctx, true)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	bySource := make(map[string]domain.ConnectorPublication, len(publications))
+	for _, item := range publications {
+		bySource[item.PackageSource] = item
+	}
+	response := &workspacev1.ListConnectorPublicationRevisionsResponse{Items: make([]*workspacev1.ConnectorPublicationRevision, 0, len(revisions))}
+	for _, revision := range revisions {
+		item := &workspacev1.ConnectorPublicationRevision{Revision: connectorRevisionResponse(revision)}
+		if publication, ok := bySource[revision.PackageSource]; ok && publication.ActiveRevisionID == revision.ID {
+			item.Publication = connectorPublicationResponse(publication, revision)
+		}
+		response.Items = append(response.Items, item)
+	}
+	return response, nil
+}
+
+func (service *Service) PublishConnectorRevision(ctx context.Context, request *workspacev1.PublishConnectorRevisionRequest) (*workspacev1.ConnectorPublication, error) {
+	principal, err := service.administrator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revision, err := repository.GetConnectorRevision(ctx, request.RevisionId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := validateStagedRevision(revision); err != nil {
+		return nil, publicError(err)
+	}
+	publication, err := repository.PublishConnectorRevision(ctx, principal.UserID, revision.ID, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorPublicationResponse(publication, revision), nil
+}
+
+func (service *Service) DisableConnectorPublication(ctx context.Context, request *workspacev1.DisableConnectorPublicationRequest) (*workspacev1.ConnectorPublication, error) {
+	principal, err := service.administrator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	publication, err := repository.SetConnectorPublicationState(ctx, principal.UserID, request.Source, domain.ConnectorPublicationDisabled, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revision, err := repository.GetConnectorRevision(ctx, publication.ActiveRevisionID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorPublicationResponse(publication, revision), nil
+}
+
+func (service *Service) ListConnectorPublicationHealth(ctx context.Context, _ *workspacev1.ListConnectorPublicationHealthRequest) (*workspacev1.ListConnectorPublicationHealthResponse, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListConnectorPublicationHealth(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	response := &workspacev1.ListConnectorPublicationHealthResponse{Items: make([]*workspacev1.ConnectorPublicationHealth, 0, len(items))}
+	for _, item := range items {
+		policy, _ := decodeConnectorRevisionPolicy(item.Revision)
+		health := &workspacev1.ConnectorPublicationHealth{Source: item.Publication.PackageSource, State: string(item.Publication.State), ActiveRevisionId: item.Revision.ID, PackageSha256: item.Revision.PackageSHA256, RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item.Revision, policy), InstallationCount: item.InstallationCount, ActiveInstallationCount: item.ActiveInstallationCount, ActiveAuthorizationCount: item.ActiveAuthorizationCount}
+		if policy.BundleSHA256 != "" {
+			health.BundleSha256 = &policy.BundleSHA256
+		}
+		response.Items = append(response.Items, health)
+	}
+	return response, nil
+}
+
+func (service *Service) InstallPublishedConnector(ctx context.Context, request *workspacev1.InstallPublishedConnectorRequest) (*workspacev1.ConnectorInstallation, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	publications, err := repository.ListConnectorPublications(ctx, false)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var publication domain.ConnectorPublication
+	for _, item := range publications {
+		if item.PackageSource == request.Source {
+			publication = item
+			break
+		}
+	}
+	if publication.PackageSource == "" {
+		return nil, publicError(domain.ErrNotFound)
+	}
+	installation, err := repository.InstallConnectorWithAudit(ctx, domain.ConnectorInstallation{OwnerID: ownerID, PackageSource: publication.PackageSource, ActiveRevisionID: publication.ActiveRevisionID, State: domain.ConnectorInstallationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, RevisionID: publication.ActiveRevisionID, Operation: "install_published", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revision, err := repository.GetConnectorRevision(ctx, publication.ActiveRevisionID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	policy, _ := decodeConnectorRevisionPolicy(revision)
+	installation.Authorized = policy.AuthMode == "none"
+	if current, listErr := repository.ListConnectorInstallations(ctx, ownerID); listErr == nil {
+		for _, item := range current {
+			if item.ID == installation.ID {
+				installation.Authorized = item.Authorized
+				break
+			}
+		}
+	}
+	return connectorInstallationDetailsResponse(installation, revision, false), nil
+}
+
+func (service *Service) UpgradeConnectorInstallation(ctx context.Context, request *workspacev1.UpgradeConnectorInstallationRequest) (*workspacev1.ConnectorInstallation, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	installations, err := repository.ListConnectorInstallations(ctx, ownerID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var installation domain.ConnectorInstallation
+	for _, item := range installations {
+		if item.ID == request.InstallationId {
+			installation = item
+			break
+		}
+	}
+	if installation.ID == "" {
+		return nil, publicError(domain.ErrNotFound)
+	}
+	if installation.Version != request.ExpectedVersion {
+		return nil, publicError(domain.ErrConflict)
+	}
+	publications, err := repository.ListConnectorPublications(ctx, false)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var revisionID string
+	for _, item := range publications {
+		if item.PackageSource == installation.PackageSource {
+			revisionID = item.ActiveRevisionID
+			break
+		}
+	}
+	if revisionID == "" {
+		return nil, publicError(domain.ErrNotFound)
+	}
+	updated, err := repository.ActivateConnectorRevisionWithVersion(ctx, ownerID, installation.ID, revisionID, request.ExpectedVersion, time.Now().UTC())
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revision, err := repository.GetConnectorRevision(ctx, revisionID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorInstallationDetailsResponse(updated, revision, false), nil
+}
+
+func (service *Service) ListConnectorAuthorizations(ctx context.Context, request *workspacev1.ListConnectorAuthorizationsRequest) (*workspacev1.ListConnectorAuthorizationsResponse, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListConnectorAuthorizations(ctx, ownerID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	installations, _ := repository.ListConnectorInstallations(ctx, ownerID)
+	selected := ""
+	for _, item := range installations {
+		if item.ID == request.InstallationId {
+			selected = item.AuthorizationID
+		}
+	}
+	response := &workspacev1.ListConnectorAuthorizationsResponse{Items: make([]*workspacev1.ConnectorAuthorization, 0, len(items))}
+	for _, item := range items {
+		response.Items = append(response.Items, connectorAuthorizationResponse(item, item.ID == selected))
+	}
+	return response, nil
+}
+
+func (service *Service) SelectConnectorAuthorization(ctx context.Context, request *workspacev1.SelectConnectorAuthorizationRequest) (*workspacev1.ConnectorInstallation, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := repository.SelectConnectorAuthorizationWithAudit(ctx, ownerID, request.InstallationId, request.AuthorizationId, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: request.InstallationId, Operation: "select_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	revision, err := repository.GetConnectorRevision(ctx, item.ActiveRevisionID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorInstallationDetailsResponse(item, revision, false), nil
+}
+
+func (service *Service) RefreshConnectorAuthorization(ctx context.Context, request *workspacev1.RefreshConnectorAuthorizationRequest) (*workspacev1.ConnectorAuthorization, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	items, err := repository.ListConnectorAuthorizations(ctx, principal.UserID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	var current domain.ConnectorAuthorization
+	for _, item := range items {
+		if item.ID == request.AuthorizationId {
+			current = item
+			break
+		}
+	}
+	if current.ID == "" {
+		return nil, publicError(domain.ErrNotFound)
+	}
+	refreshToken := ""
+	switch current.CredentialFormat {
+	case "json":
+		if current.CredentialAAD == "" {
+			return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
+		}
+		plaintext, decryptErr := service.box.Decrypt(current.CredentialCiphertext, current.CredentialAAD)
+		if decryptErr != nil {
+			return nil, publicError(decryptErr)
+		}
+		var credentials struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
+			refreshToken = credentials.RefreshToken
+		}
+	case "access_token":
+		if len(current.RefreshCredentialCiphertext) > 0 && current.RefreshCredentialAAD != "" {
+			plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
+			if decryptErr != nil {
+				return nil, publicError(decryptErr)
+			}
+			refreshToken = string(plaintext)
+		}
+	}
+	if strings.TrimSpace(refreshToken) == "" {
+		return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
+	}
+	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	result, err := service.feishu.RefreshAuthorization(ctx, appID, appSecret, refreshToken)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if current.ExternalIdentityID != "" && current.ExternalIdentityID != result.ExternalID {
+		return nil, publicError(fmt.Errorf("%w: refreshed authorization belongs to a different account", domain.ErrConflict))
+	}
+	if len(result.Scopes) == 0 {
+		result.Scopes = append([]string(nil), current.Scopes...)
+	}
+	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	aad := connectorAuthorizationAAD(principal.UserID, request.InstallationId, result.ExternalID)
+	ciphertext, err := service.box.Encrypt(refreshedCredentials, aad)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	current.ExternalIdentityID = result.ExternalID
+	current.ExternalDisplayName = result.DisplayName
+	current.Scopes = result.Scopes
+	current.CredentialCiphertext = ciphertext
+	current.CredentialAAD = aad
+	current.CredentialFormat = "json"
+	current.State = domain.ConnectorAuthorizationActive
+	current.ExpiresAt = &result.ExpiresAt
+	updated, err := repository.RefreshConnectorAuthorization(ctx, current, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: request.InstallationId, Operation: "refresh_authorization", IdentityRef: current.IdentityRef, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorAuthorizationResponse(updated, false), nil
+}
+
+func (service *Service) DisconnectPublishedConnectorAuthorization(ctx context.Context, request *workspacev1.DisconnectPublishedConnectorAuthorizationRequest) (*workspacev1.ConnectorAuthorization, error) {
+	ownerID, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	item, err := repository.DisconnectConnectorAuthorizationWithAudit(ctx, ownerID, request.AuthorizationId, domain.ConnectorAuditRecord{OwnerID: ownerID, Operation: "disconnect_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorAuthorizationResponse(item, false), nil
+}
+
+func (service *Service) BeginConnectorSetup(ctx context.Context, request *workspacev1.BeginConnectorSetupRequest) (*workspacev1.ConnectorSetup, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	installation, revision, policy, err := connectorInstallationPolicy(ctx, repository, principal.UserID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if policy.CLI == nil || policy.CLI.AuthenticationDriver != "feishu" {
+		return nil, publicError(fmt.Errorf("%w: Connector does not use the Feishu setup driver", domain.ErrInvalid))
+	}
+	if existing, existingErr := repository.GetConnectorProviderApplication(ctx, principal.UserID, installation.ID); existingErr == nil {
+		return connectorSetupResponse(domain.ConnectorSetup{ID: installation.ID, InstallationID: installation.ID, State: "completed", ProviderName: existing.ProviderName, DeveloperConsoleURL: existing.DeveloperConsoleURL}), nil
+	} else if !errors.Is(existingErr, domain.ErrNotFound) {
+		return nil, publicError(existingErr)
+	}
+	registration, err := service.feishu.Begin(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Encrypt([]byte(registration.DeviceCode), connectorSetupAAD(principal.UserID, installation.ID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	flow, err := repository.BeginConnectorSetup(ctx, domain.ConnectorSetup{OwnerID: principal.UserID, InstallationID: installation.ID, State: "waiting_for_user", ActionURL: registration.ActionURL, ExpiresAt: &registration.ExpiresAt, DeviceCodeCiphertext: deviceCode})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	_ = revision
+	return connectorSetupResponse(flow), nil
+}
+
+func (service *Service) CompleteConnectorSetup(ctx context.Context, request *workspacev1.CompleteConnectorSetupRequest) (*workspacev1.ConnectorSetup, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	flow, err := repository.GetConnectorSetup(ctx, principal.UserID, request.FlowId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Decrypt(flow.DeviceCodeCiphertext, connectorSetupAAD(principal.UserID, flow.InstallationID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	application, err := service.feishu.Poll(ctx, string(deviceCode))
+	if errors.Is(err, feishucli.ErrPending) {
+		return connectorSetupResponse(flow), nil
+	}
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, err := service.box.Encrypt([]byte(application.AppID), feishuApplicationAAD(principal.UserID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appSecret, err := service.box.Encrypt([]byte(application.AppSecret), feishuApplicationAAD(principal.UserID))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	providerName := strings.TrimSpace(application.UserName)
+	if providerName == "" {
+		providerName = strings.TrimSpace(principal.DisplayName)
+	}
+	if providerName == "" {
+		providerName = principal.Username
+	}
+	providerName += "的飞书CLI"
+	completed, err := repository.CompleteConnectorSetup(ctx, principal.UserID, flow.ID, domain.ConnectorProviderApplication{OwnerID: principal.UserID, InstallationID: flow.InstallationID, AppIDCiphertext: appID, AppSecretCiphertext: appSecret, ProviderName: providerName, DeveloperConsoleURL: "https://open.feishu.cn/app/" + url.PathEscape(application.AppID)})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorSetupResponse(completed), nil
+}
+
+func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, request *workspacev1.BeginConnectorAuthorizationFlowRequest) (*workspacev1.ConnectorAuthorizationFlow, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if request.Identity != "user" {
+		return nil, publicError(fmt.Errorf("%w: interactive authorization only supports user identity", domain.ErrInvalid))
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	installation, _, policy, err := connectorInstallationPolicy(ctx, repository, principal.UserID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	allowedScopes := map[string]struct{}{}
+	if policy.CLI != nil {
+		for _, capability := range policy.CLI.Capabilities {
+			for _, identity := range capability.Identities {
+				if identity == "user" {
+					for _, scope := range capability.Scopes {
+						allowedScopes[scope] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	for _, scope := range request.Scopes {
+		if _, ok := allowedScopes[scope]; !ok {
+			return nil, publicError(fmt.Errorf("%w: requested scope is outside the reviewed Connector policy", domain.ErrInvalid))
+		}
+	}
+	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, installation.ID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	providerFlow, err := service.feishu.BeginAuthorization(ctx, appID, appSecret, request.Scopes)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Encrypt([]byte(providerFlow.DeviceCode), connectorAuthorizationFlowAAD(principal.UserID, installation.ID, request.Identity))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	flow, err := repository.BeginConnectorAuthorizationFlow(ctx, domain.ConnectorAuthorizationAttempt{OwnerID: principal.UserID, InstallationID: installation.ID, Identity: request.Identity, Scopes: providerFlow.Scopes, ActionURL: providerFlow.ActionURL, ExpiresAt: providerFlow.ExpiresAt, DeviceCodeCiphertext: deviceCode})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+}
+
+func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, request *workspacev1.CompleteConnectorAuthorizationFlowRequest) (*workspacev1.ConnectorAuthorizationFlow, error) {
+	principal, err := service.accounts.Current(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	repository, err := service.connectorPackages()
+	if err != nil {
+		return nil, publicError(err)
+	}
+	flow, err := repository.GetConnectorAuthorizationFlow(ctx, principal.UserID, request.FlowId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, flow.InstallationID)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	deviceCode, err := service.box.Decrypt(flow.DeviceCodeCiphertext, connectorAuthorizationFlowAAD(principal.UserID, flow.InstallationID, flow.Identity))
+	if err != nil {
+		return nil, publicError(err)
+	}
+	result, err := service.feishu.PollAuthorization(ctx, appID, appSecret, string(deviceCode))
+	if errors.Is(err, feishucli.ErrPending) {
+		return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+	}
+	if errors.Is(err, feishucli.ErrDenied) || errors.Is(err, feishucli.ErrExpired) {
+		_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+	}
+	if err != nil {
+		return nil, publicError(err)
+	}
+	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	aad := connectorAuthorizationAAD(principal.UserID, flow.InstallationID, result.ExternalID)
+	ciphertext, err := service.box.Encrypt(credentials, aad)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &result.ExpiresAt}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID); err != nil {
+		return nil, publicError(err)
+	}
+	return connectorAuthorizationFlowResponse(flow, "completed", &authorization), nil
+}
+
+func connectorInstallationPolicy(ctx context.Context, repository connectorPackageRepository, ownerID, installationID string) (domain.ConnectorInstallation, domain.ConnectorRevision, connectorRevisionPolicy, error) {
+	installations, err := repository.ListConnectorInstallations(ctx, ownerID)
+	if err != nil {
+		return domain.ConnectorInstallation{}, domain.ConnectorRevision{}, connectorRevisionPolicy{}, err
+	}
+	var installation domain.ConnectorInstallation
+	for _, item := range installations {
+		if item.ID == installationID {
+			installation = item
+			break
+		}
+	}
+	if installation.ID == "" || installation.State != domain.ConnectorInstallationActive {
+		return domain.ConnectorInstallation{}, domain.ConnectorRevision{}, connectorRevisionPolicy{}, domain.ErrNotFound
+	}
+	revision, err := repository.GetConnectorRevision(ctx, installation.ActiveRevisionID)
+	if err != nil {
+		return domain.ConnectorInstallation{}, domain.ConnectorRevision{}, connectorRevisionPolicy{}, err
+	}
+	policy, err := decodeConnectorRevisionPolicy(revision)
+	return installation, revision, policy, err
+}
+
+func (service *Service) decryptConnectorApplication(ownerID string, application domain.ConnectorProviderApplication) (string, string, error) {
+	appID, err := service.box.Decrypt(application.AppIDCiphertext, feishuApplicationAAD(ownerID))
+	if err != nil {
+		return "", "", err
+	}
+	appSecret, err := service.box.Decrypt(application.AppSecretCiphertext, feishuApplicationAAD(ownerID))
+	if err != nil {
+		return "", "", err
+	}
+	return string(appID), string(appSecret), nil
+}
+
+func connectorSetupAAD(ownerID, installationID string) string {
+	return "connector-feishu-registration:" + ownerID + ":" + installationID
+}
+
+func connectorAuthorizationFlowAAD(ownerID, installationID, identity string) string {
+	return "connector-feishu-authorization-flow:" + ownerID + ":" + installationID + ":" + identity
+}
+
+func connectorAuthorizationAAD(ownerID, installationID, identity string) string {
+	return "connector-authorization:" + ownerID + ":" + installationID + ":" + identity
 }
 
 func (service *Service) UploadConnectorPackage(ctx context.Context, request *workspacev1.UploadConnectorPackageRequest) (*workspacev1.ConnectorInstallation, error) {
@@ -105,6 +794,33 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 		return fmt.Errorf("%w: the Feishu authentication driver is reserved for a Conformance-backed platform publication", domain.ErrInvalid)
 	}
 	return nil
+}
+
+func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.CLI == nil {
+		return nil
+	}
+	if len(pkg.CLIBundle) == 0 || len(pkg.CLIBundleSHA256) != 64 {
+		return fmt.Errorf("%w: a platform CLI publication requires an immutable executable bundle", domain.ErrInvalid)
+	}
+	if len(pkg.CLI.Capabilities) == 0 || len(pkg.CLI.Runtime.Digest) != 71 || !strings.HasPrefix(pkg.CLI.Runtime.Digest, "sha256:") {
+		return fmt.Errorf("%w: a platform CLI publication requires reviewed capabilities and an exact Runtime RepoDigest", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func (service *Service) storeConnectorRevision(ctx context.Context, repository connectorPackageRepository, pkg connectorpackage.Package) (domain.ConnectorRevision, error) {
+	revision, key := connectorRevisionFromPackage(pkg)
+	if _, err := service.objects.Put(ctx, key, bytes.NewReader(pkg.NormalizedArchive), objectstore.PutOptions{Size: int64(len(pkg.NormalizedArchive)), SHA256: pkg.SHA256, ContentType: "application/zip", Metadata: map[string]string{"source": pkg.Metadata.Source, "version": pkg.Metadata.Version}}); err != nil {
+		return domain.ConnectorRevision{}, err
+	}
+	if len(pkg.CLIBundle) > 0 {
+		if _, err := service.objects.Put(ctx, connectorBundleObjectKey(pkg), bytes.NewReader(pkg.CLIBundle), objectstore.PutOptions{Size: int64(len(pkg.CLIBundle)), SHA256: pkg.CLIBundleSHA256, ContentType: "application/gzip", Metadata: map[string]string{"artifact-kind": "connector-package-cli-bundle", "source": pkg.Metadata.Source, "version": pkg.Metadata.Version}}); err != nil {
+			return domain.ConnectorRevision{}, err
+		}
+	}
+	revision.ObjectKey = key
+	return repository.CreateConnectorRevision(ctx, revision)
 }
 
 func (service *Service) CreateConnectorPackage(ctx context.Context, request *workspacev1.CreateConnectorPackageRequest) (*workspacev1.ConnectorInstallation, error) {
@@ -177,7 +893,7 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 	if installation.ID == "" {
 		return nil, publicError(domain.ErrNotFound)
 	}
-	_, err = repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: ownerID, InstallationID: request.InstallationId, IdentityRef: strings.TrimSpace(request.IdentityRef), Scopes: append([]string(nil), request.Scopes...), CredentialCiphertext: ciphertext, State: domain.ConnectorAuthorizationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: installation.ID, RevisionID: installation.ActiveRevisionID, Operation: "authorize", IdentityRef: strings.TrimSpace(request.IdentityRef), Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	_, err = repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: ownerID, InstallationID: request.InstallationId, IdentityRef: strings.TrimSpace(request.IdentityRef), Scopes: append([]string(nil), request.Scopes...), CredentialCiphertext: ciphertext, CredentialAAD: "connector-authorization:" + ownerID, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: installation.ID, RevisionID: installation.ActiveRevisionID, Operation: "authorize", IdentityRef: strings.TrimSpace(request.IdentityRef), Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -210,7 +926,7 @@ func (service *Service) DisconnectConnectorAuthorization(ctx context.Context, re
 }
 
 func connectorRevisionFromPackage(pkg connectorpackage.Package) (domain.ConnectorRevision, string) {
-	policyValue := map[string]any{"auth_mode": pkg.Metadata.AuthMode, "mcp": pkg.MCP, "cli": pkg.CLI}
+	policyValue := map[string]any{"auth_mode": pkg.Metadata.AuthMode, "metadata": pkg.Metadata, "mcp": pkg.MCP, "cli": pkg.CLI}
 	if len(pkg.CLIBundle) > 0 {
 		policyValue["cli_bundle_object_key"] = connectorBundleObjectKey(pkg)
 		policyValue["cli_bundle_sha256"] = pkg.CLIBundleSHA256
@@ -266,4 +982,130 @@ func buildGuidedConnectorPackage(input guidedConnectorInput) ([]byte, error) {
 
 func connectorInstallationResponse(item domain.ConnectorInstallation) *workspacev1.ConnectorInstallation {
 	return &workspacev1.ConnectorInstallation{Id: item.ID, Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Authorized: item.Authorized || item.AuthorizationID != "", Version: item.Version}
+}
+
+func decodeConnectorRevisionPolicy(revision domain.ConnectorRevision) (connectorRevisionPolicy, error) {
+	var policy connectorRevisionPolicy
+	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil {
+		return connectorRevisionPolicy{}, fmt.Errorf("decode Connector Revision policy: %w", err)
+	}
+	return policy, nil
+}
+
+func connectorRuntimeDigests(policy connectorRevisionPolicy) []string {
+	if policy.CLI == nil || policy.CLI.Runtime.Digest == "" {
+		return nil
+	}
+	return []string{policy.CLI.Runtime.Digest}
+}
+
+func connectorConformanceAvailable(revision domain.ConnectorRevision, policy connectorRevisionPolicy) bool {
+	if revision.Mode == domain.ConnectorModeMCP {
+		return policy.MCP != nil
+	}
+	return policy.CLI != nil && len(policy.CLI.Capabilities) > 0 && len(policy.BundleSHA256) == 64 && len(connectorRuntimeDigests(policy)) > 0
+}
+
+func validateStagedRevision(revision domain.ConnectorRevision) error {
+	policy, err := decodeConnectorRevisionPolicy(revision)
+	if err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrInvalid, err)
+	}
+	if policy.LegacyProjection || !connectorConformanceAvailable(revision, policy) {
+		return fmt.Errorf("%w: Connector Revision has no exact Conformance evidence", domain.ErrInvalid)
+	}
+	return nil
+}
+
+func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.ConnectorRevision {
+	policy, _ := decodeConnectorRevisionPolicy(item)
+	name := policy.Metadata.Name
+	if name == "" {
+		name = item.PackageSource
+	}
+	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: "plug", RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
+	if policy.CLI != nil {
+		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
+		seenScopes := map[string]struct{}{}
+		for _, capability := range policy.CLI.Capabilities {
+			for _, scope := range capability.Scopes {
+				if _, exists := seenScopes[scope]; !exists {
+					seenScopes[scope] = struct{}{}
+					response.RequiredScopes = append(response.RequiredScopes, scope)
+				}
+			}
+		}
+	}
+	if response.AuthenticationDriver == "" {
+		response.AuthenticationDriver = policy.AuthMode
+	}
+	if policy.BundleSHA256 != "" {
+		response.BundleSha256 = &policy.BundleSHA256
+	}
+	return response
+}
+
+func connectorPublicationResponse(item domain.ConnectorPublication, revision domain.ConnectorRevision) *workspacev1.ConnectorPublication {
+	return &workspacev1.ConnectorPublication{Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Version: item.Version, Revision: connectorRevisionResponse(revision)}
+}
+
+func connectorInstallationDetailsResponse(item domain.ConnectorInstallation, revision domain.ConnectorRevision, upgradeAvailable bool) *workspacev1.ConnectorInstallation {
+	base := connectorInstallationResponse(item)
+	policy, _ := decodeConnectorRevisionPolicy(revision)
+	base.PackageVersion = revision.Version
+	base.Name = policy.Metadata.Name
+	if base.Name == "" {
+		base.Name = item.PackageSource
+	}
+	base.Description = policy.Metadata.Description
+	base.AuthenticationDriver = policy.AuthMode
+	if policy.CLI != nil && policy.CLI.AuthenticationDriver != "" {
+		base.AuthenticationDriver = policy.CLI.AuthenticationDriver
+	}
+	if item.AuthorizationID != "" {
+		base.SelectedAuthorizationId = &item.AuthorizationID
+	}
+	base.UpgradeAvailable = upgradeAvailable
+	return base
+}
+
+func connectorAuthorizationResponse(item domain.ConnectorAuthorization, selected bool) *workspacev1.ConnectorAuthorization {
+	state := item.State
+	if state == domain.ConnectorAuthorizationActive && item.ExpiresAt != nil && !time.Now().UTC().Before(*item.ExpiresAt) {
+		state = domain.ConnectorAuthorizationExpired
+	}
+	response := &workspacev1.ConnectorAuthorization{Id: item.ID, InstallationId: item.InstallationID, IdentityRef: item.IdentityRef, ExternalIdentityId: item.ExternalIdentityID, ExternalDisplayName: item.ExternalDisplayName, Scopes: item.Scopes, State: string(state), Version: item.Version, Selected: selected}
+	if item.ExpiresAt != nil {
+		response.ExpiresAt = timestamppb.New(*item.ExpiresAt)
+	}
+	return response
+}
+
+func connectorSetupResponse(item domain.ConnectorSetup) *workspacev1.ConnectorSetup {
+	response := &workspacev1.ConnectorSetup{Id: item.ID, InstallationId: item.InstallationID, State: item.State}
+	if item.ActionURL != "" {
+		response.ActionUrl = &item.ActionURL
+	}
+	if item.ExpiresAt != nil {
+		response.ExpiresAt = timestamppb.New(*item.ExpiresAt)
+	}
+	if item.ProviderName != "" {
+		response.ProviderName = &item.ProviderName
+	}
+	if item.DeveloperConsoleURL != "" {
+		response.DeveloperConsoleUrl = &item.DeveloperConsoleURL
+	}
+	return response
+}
+
+func connectorAuthorizationFlowResponse(item domain.ConnectorAuthorizationAttempt, state string, authorization *domain.ConnectorAuthorization) *workspacev1.ConnectorAuthorizationFlow {
+	response := &workspacev1.ConnectorAuthorizationFlow{Id: item.ID, InstallationId: item.InstallationID, Identity: item.Identity, Scopes: item.Scopes, State: state}
+	if state == "waiting_for_user" {
+		response.ActionUrl = &item.ActionURL
+		response.ExpiresAt = timestamppb.New(item.ExpiresAt)
+	}
+	if authorization != nil {
+		response.Authorization = connectorAuthorizationResponse(*authorization, true)
+	}
+	return response
 }

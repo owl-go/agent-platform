@@ -475,6 +475,158 @@
         ]
       }
     },
+    "/api/v1/admin/connectors/packages": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StageConnectorPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorRevision"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1StageConnectorPackageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/publication-health": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorPublicationHealth",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectorPublicationHealthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/publications": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorPublicationRevisions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectorPublicationRevisionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/publications/{revision_id}/publish": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PublishConnectorRevision",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorPublication"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "revision_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServicePublishConnectorRevisionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/connectors/publications/{source}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableConnectorPublication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorPublication"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisableConnectorPublicationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/model-credit-rates": {
       "get": {
         "operationId": "AgentWorkspaceService_ListModelCreditRates",
@@ -1169,6 +1321,142 @@
         ]
       }
     },
+    "/api/v1/connectors/authorization-flows/{flow_id}/complete": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CompleteConnectorAuthorizationFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorAuthorizationFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCompleteConnectorAuthorizationFlowBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/authorizations/{authorization_id}/disconnect": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisconnectPublishedConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorAuthorization"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "authorization_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDisconnectPublishedConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/catalog": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorPublications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectorPublicationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/catalog/{source}/install": {
+      "post": {
+        "operationId": "AgentWorkspaceService_InstallPublishedConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceInstallPublishedConnectorBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli": {
       "get": {
         "operationId": "AgentWorkspaceService_ListCLIConnectorDefinitions",
@@ -1687,6 +1975,44 @@
         ]
       }
     },
+    "/api/v1/connectors/setup/{flow_id}/complete": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CompleteConnectorSetup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorSetup"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCompleteConnectorSetupBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/{installation_id}": {
       "delete": {
         "operationId": "AgentWorkspaceService_UninstallConnector",
@@ -1762,6 +2088,44 @@
         ]
       }
     },
+    "/api/v1/connectors/{installation_id}/authorization-flows": {
+      "post": {
+        "operationId": "AgentWorkspaceService_BeginConnectorAuthorizationFlow",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorAuthorizationFlow"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceBeginConnectorAuthorizationFlowBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/{installation_id}/authorization/disconnect": {
       "post": {
         "operationId": "AgentWorkspaceService_DisconnectConnectorAuthorization",
@@ -1800,6 +2164,124 @@
         ]
       }
     },
+    "/api/v1/connectors/{installation_id}/authorizations": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListConnectorAuthorizations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListConnectorAuthorizationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/refresh": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RefreshConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorAuthorization"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRefreshConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/select": {
+      "post": {
+        "operationId": "AgentWorkspaceService_SelectConnectorAuthorization",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSelectConnectorAuthorizationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/{installation_id}/disable": {
       "post": {
         "operationId": "AgentWorkspaceService_DisableConnectorInstallation",
@@ -1830,6 +2312,82 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceDisableConnectorInstallationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/setup": {
+      "post": {
+        "operationId": "AgentWorkspaceService_BeginConnectorSetup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorSetup"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceBeginConnectorSetupBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/connectors/{installation_id}/upgrade": {
+      "post": {
+        "operationId": "AgentWorkspaceService_UpgradeConnectorInstallation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConnectorInstallation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpgradeConnectorInstallationBody"
             }
           }
         ],
@@ -4264,6 +4822,23 @@
         }
       }
     },
+    "AgentWorkspaceServiceBeginConnectorAuthorizationFlowBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "AgentWorkspaceServiceBeginConnectorSetupBody": {
+      "type": "object"
+    },
     "AgentWorkspaceServiceCancelRunBody": {
       "type": "object"
     },
@@ -4274,6 +4849,12 @@
       "type": "object"
     },
     "AgentWorkspaceServiceCompleteCLIConnectorEnablementBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceCompleteConnectorAuthorizationFlowBody": {
+      "type": "object"
+    },
+    "AgentWorkspaceServiceCompleteConnectorSetupBody": {
       "type": "object"
     },
     "AgentWorkspaceServiceConfigureUserDailyCreditsBody": {
@@ -4409,6 +4990,15 @@
         }
       }
     },
+    "AgentWorkspaceServiceDisableConnectorPublicationBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "AgentWorkspaceServiceDisconnectCLIConnectorAuthorizationBody": {
       "type": "object",
       "properties": {
@@ -4427,6 +5017,9 @@
         }
       }
     },
+    "AgentWorkspaceServiceDisconnectPublishedConnectorAuthorizationBody": {
+      "type": "object"
+    },
     "AgentWorkspaceServiceEnableCLIConnectorBody": {
       "type": "object"
     },
@@ -4436,7 +5029,28 @@
     "AgentWorkspaceServiceGenerateWorkflowCredentialBody": {
       "type": "object"
     },
+    "AgentWorkspaceServiceInstallPublishedConnectorBody": {
+      "type": "object"
+    },
     "AgentWorkspaceServicePublishCLIConnectorDefinitionBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServicePublishConnectorRevisionBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceRefreshConnectorAuthorizationBody": {
       "type": "object",
       "properties": {
         "expected_version": {
@@ -4543,6 +5157,15 @@
         },
         "json_input": {
           "type": "object"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSelectConnectorAuthorizationBody": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -4744,6 +5367,15 @@
         "workflow": {
           "$ref": "#/definitions/v1WorkflowInput"
         },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpgradeConnectorInstallationBody": {
+      "type": "object",
+      "properties": {
         "expected_version": {
           "type": "string",
           "format": "int64"
@@ -5288,6 +5920,79 @@
         }
       }
     },
+    "v1ConnectorAuthorization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "identity_ref": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "external_identity_id": {
+          "type": "string"
+        },
+        "external_display_name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ConnectorAuthorizationFlow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "action_url": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authorization": {
+          "$ref": "#/definitions/v1ConnectorAuthorization"
+        }
+      }
+    },
     "v1ConnectorInstallation": {
       "type": "object",
       "properties": {
@@ -5309,6 +6014,174 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "authentication_driver": {
+          "type": "string"
+        },
+        "selected_authorization_id": {
+          "type": "string"
+        },
+        "upgrade_available": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ConnectorPublication": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "active_revision_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "revision": {
+          "$ref": "#/definitions/v1ConnectorRevision"
+        }
+      }
+    },
+    "v1ConnectorPublicationHealth": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "active_revision_id": {
+          "type": "string"
+        },
+        "package_sha256": {
+          "type": "string"
+        },
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "runtime_digests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conformance_available": {
+          "type": "boolean"
+        },
+        "installation_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "active_installation_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "active_authorization_count": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ConnectorPublicationRevision": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "$ref": "#/definitions/v1ConnectorRevision"
+        },
+        "publication": {
+          "$ref": "#/definitions/v1ConnectorPublication"
+        }
+      }
+    },
+    "v1ConnectorRevision": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "authentication_driver": {
+          "type": "string"
+        },
+        "bundle_sha256": {
+          "type": "string"
+        },
+        "runtime_digests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conformance_available": {
+          "type": "boolean"
+        },
+        "required_scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1ConnectorSetup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installation_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "action_url": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provider_name": {
+          "type": "string"
+        },
+        "developer_console_url": {
+          "type": "string"
         }
       }
     },
@@ -6834,6 +7707,18 @@
         }
       }
     },
+    "v1ListConnectorAuthorizationsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectorAuthorization"
+          }
+        }
+      }
+    },
     "v1ListConnectorInstallationsResponse": {
       "type": "object",
       "properties": {
@@ -6842,6 +7727,42 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ConnectorInstallation"
+          }
+        }
+      }
+    },
+    "v1ListConnectorPublicationHealthResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectorPublicationHealth"
+          }
+        }
+      }
+    },
+    "v1ListConnectorPublicationRevisionsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectorPublicationRevision"
+          }
+        }
+      }
+    },
+    "v1ListConnectorPublicationsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ConnectorPublication"
           }
         }
       }
@@ -8216,6 +9137,15 @@
         },
         "sha256": {
           "type": "string"
+        }
+      }
+    },
+    "v1StageConnectorPackageRequest": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },

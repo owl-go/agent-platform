@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -15,22 +16,66 @@ import (
 
 type ConnectorPackageRepository interface {
 	CreateConnectorRevision(context.Context, domain.ConnectorRevision) (domain.ConnectorRevision, error)
+	GetConnectorRevision(context.Context, string) (domain.ConnectorRevision, error)
+	ListConnectorRevisions(context.Context) ([]domain.ConnectorRevision, error)
 	PublishConnectorRevision(context.Context, string, string, int64) (domain.ConnectorPublication, error)
 	SetConnectorPublicationState(context.Context, string, string, domain.ConnectorPublicationState, int64) (domain.ConnectorPublication, error)
 	ListConnectorPublications(context.Context, bool) ([]domain.ConnectorPublication, error)
+	ListConnectorPublicationHealth(context.Context) ([]domain.ConnectorPublicationHealth, error)
+	HasConnectorBundleRuntimeConformance(context.Context, string, string) (bool, error)
 	InstallConnector(context.Context, domain.ConnectorInstallation) (domain.ConnectorInstallation, error)
 	ListConnectorInstallations(context.Context, string) ([]domain.ConnectorInstallation, error)
 	ListConnectorAuthorizations(context.Context, string, string) ([]domain.ConnectorAuthorization, error)
 	SelectConnectorAuthorization(context.Context, string, string, string, int64) (domain.ConnectorInstallation, error)
+	RefreshConnectorAuthorization(context.Context, domain.ConnectorAuthorization, int64, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
 	ActivateConnectorRevision(context.Context, string, string, string, time.Time) (domain.ConnectorInstallation, error)
+	ActivateConnectorRevisionWithVersion(context.Context, string, string, string, int64, time.Time) (domain.ConnectorInstallation, error)
 	RollbackConnectorRevision(context.Context, string, string, string, string, time.Time) (domain.ConnectorInstallation, error)
 	SetConnectorInstallationState(context.Context, string, string, domain.ConnectorInstallationState, int64) (domain.ConnectorInstallation, error)
 	DisconnectConnectorAuthorization(context.Context, string, string) (domain.ConnectorAuthorization, error)
+	DisconnectConnectorAuthorizationWithAudit(context.Context, string, string, domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error)
 	CreateConnectorAuthorization(context.Context, domain.ConnectorAuthorization) (domain.ConnectorAuthorization, error)
 	RecordConnectorAudit(context.Context, domain.ConnectorAuditRecord) error
 }
 
 var _ ConnectorPackageRepository = (*Repository)(nil)
+
+func (repository *Repository) HasConnectorBundleRuntimeConformance(ctx context.Context, bundleSHA256, runtimeDigest string) (bool, error) {
+	if len(bundleSHA256) != 64 || !strings.HasPrefix(runtimeDigest, "sha256:") {
+		return false, fmt.Errorf("%w: Connector conformance identity is invalid", domain.ErrInvalid)
+	}
+	var count int64
+	err := repository.db.WithContext(ctx).Table("cli_connector_conformance").
+		Where("bundle_sha256 = ? AND runtime_repo_digest = ? AND passed = true", bundleSHA256, runtimeDigest).
+		Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("read Connector Conformance evidence: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (repository *Repository) GetConnectorRevision(ctx context.Context, revisionID string) (domain.ConnectorRevision, error) {
+	if revisionID == "" {
+		return domain.ConnectorRevision{}, fmt.Errorf("%w: Connector Revision ID is required", domain.ErrInvalid)
+	}
+	var row connectorRevisionRecord
+	if err := repository.db.WithContext(ctx).Where("id = ?", revisionID).Take(&row).Error; err != nil {
+		return domain.ConnectorRevision{}, mapNotFound(err)
+	}
+	return connectorRevisionDomain(row), nil
+}
+
+func (repository *Repository) ListConnectorRevisions(ctx context.Context) ([]domain.ConnectorRevision, error) {
+	var rows []connectorRevisionRecord
+	if err := repository.db.WithContext(ctx).Order("package_source, created_at DESC, id").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Connector Revisions: %w", err)
+	}
+	items := make([]domain.ConnectorRevision, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, connectorRevisionDomain(row))
+	}
+	return items, nil
+}
 
 func (repository *Repository) PublishConnectorRevision(ctx context.Context, administratorID, revisionID string, expectedVersion int64) (domain.ConnectorPublication, error) {
 	if administratorID == "" || revisionID == "" || expectedVersion < 0 {
@@ -109,6 +154,32 @@ func (repository *Repository) ListConnectorPublications(ctx context.Context, inc
 	return items, nil
 }
 
+func (repository *Repository) ListConnectorPublicationHealth(ctx context.Context) ([]domain.ConnectorPublicationHealth, error) {
+	publications, err := repository.ListConnectorPublications(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]domain.ConnectorPublicationHealth, 0, len(publications))
+	for _, publication := range publications {
+		revision, readErr := repository.GetConnectorRevision(ctx, publication.ActiveRevisionID)
+		if readErr != nil {
+			return nil, readErr
+		}
+		var installationCount, activeInstallationCount, activeAuthorizationCount int64
+		if err := repository.db.WithContext(ctx).Model(&connectorInstallationRecord{}).Where("package_source = ? AND state <> ?", publication.PackageSource, domain.ConnectorInstallationUninstalled).Count(&installationCount).Error; err != nil {
+			return nil, err
+		}
+		if err := repository.db.WithContext(ctx).Model(&connectorInstallationRecord{}).Where("package_source = ? AND state = ?", publication.PackageSource, domain.ConnectorInstallationActive).Count(&activeInstallationCount).Error; err != nil {
+			return nil, err
+		}
+		if err := repository.db.WithContext(ctx).Table("connector_authorizations AS authorization").Joins("JOIN connector_installations AS installation ON installation.id = authorization.installation_id").Where("installation.package_source = ? AND authorization.state = ?", publication.PackageSource, domain.ConnectorAuthorizationActive).Count(&activeAuthorizationCount).Error; err != nil {
+			return nil, err
+		}
+		items = append(items, domain.ConnectorPublicationHealth{Publication: publication, Revision: revision, InstallationCount: installationCount, ActiveInstallationCount: activeInstallationCount, ActiveAuthorizationCount: activeAuthorizationCount})
+	}
+	return items, nil
+}
+
 func (repository *Repository) CreateConnectorRevision(ctx context.Context, input domain.ConnectorRevision) (domain.ConnectorRevision, error) {
 	if input.ID == "" {
 		input.ID = uuid.NewString()
@@ -180,7 +251,7 @@ func (repository *Repository) installConnector(ctx context.Context, input domain
 			if oldRevision.Mode != revision.Mode {
 				updates["authorization_id"] = nil
 				if row.AuthorizationID != nil {
-					if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ?", *row.AuthorizationID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+					if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ?", *row.AuthorizationID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
 						return err
 					}
 				}
@@ -258,7 +329,14 @@ func (repository *Repository) ListConnectorInstallations(ctx context.Context, ow
 		if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil {
 			return nil, fmt.Errorf("decode Connector authorization policy: %w", err)
 		}
-		item.Authorized = policy.AuthMode == "none" || item.AuthorizationID != ""
+		item.Authorized = policy.AuthMode == "none"
+		if !item.Authorized && item.AuthorizationID != "" {
+			var count int64
+			if err := repository.db.WithContext(ctx).Model(&connectorAuthorizationRecord{}).Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", item.AuthorizationID, item.ID, ownerID, domain.ConnectorAuthorizationActive).Count(&count).Error; err != nil {
+				return nil, fmt.Errorf("read Connector authorization state: %w", err)
+			}
+			item.Authorized = count == 1
+		}
 		items = append(items, item)
 	}
 	return items, nil
@@ -361,7 +439,7 @@ func (repository *Repository) setConnectorInstallationState(ctx context.Context,
 			return err
 		}
 		if state == domain.ConnectorInstallationUninstalled {
-			if err := tx.Model(&connectorAuthorizationRecord{}).Where("installation_id = ? AND owner_user_id = ?", installationID, ownerID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			if err := tx.Model(&connectorAuthorizationRecord{}).Where("installation_id = ? AND owner_user_id = ?", installationID, ownerID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
 				return err
 			}
 		}
@@ -386,20 +464,34 @@ func (repository *Repository) setConnectorInstallationState(ctx context.Context,
 }
 
 func (repository *Repository) ActivateConnectorRevision(ctx context.Context, ownerID, installationID, revisionID string, now time.Time) (domain.ConnectorInstallation, error) {
-	return repository.changeConnectorRevision(ctx, ownerID, installationID, revisionID, "", now)
+	return repository.changeConnectorRevision(ctx, ownerID, installationID, revisionID, "", 0, now)
+}
+
+func (repository *Repository) ActivateConnectorRevisionWithVersion(ctx context.Context, ownerID, installationID, revisionID string, expectedVersion int64, now time.Time) (domain.ConnectorInstallation, error) {
+	if expectedVersion <= 0 {
+		return domain.ConnectorInstallation{}, fmt.Errorf("%w: expected Connector Installation version is required", domain.ErrInvalid)
+	}
+	return repository.changeConnectorRevision(ctx, ownerID, installationID, revisionID, "", expectedVersion, now)
 }
 
 func (repository *Repository) RollbackConnectorRevision(ctx context.Context, ownerID, installationID, revisionID, reason string, now time.Time) (domain.ConnectorInstallation, error) {
-	return repository.changeConnectorRevision(ctx, ownerID, installationID, revisionID, reason, now)
+	return repository.changeConnectorRevision(ctx, ownerID, installationID, revisionID, reason, 0, now)
 }
 
-func (repository *Repository) changeConnectorRevision(ctx context.Context, ownerID, installationID, revisionID, reason string, now time.Time) (domain.ConnectorInstallation, error) {
+func (repository *Repository) changeConnectorRevision(ctx context.Context, ownerID, installationID, revisionID, reason string, expectedVersion int64, now time.Time) (domain.ConnectorInstallation, error) {
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
 	var row connectorInstallationRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ?", installationID, ownerID).Take(&row).Error; err != nil {
+		query := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ?", installationID, ownerID)
+		if expectedVersion > 0 {
+			query = query.Where("version = ?", expectedVersion)
+		}
+		if err := query.Take(&row).Error; err != nil {
+			if err == gorm.ErrRecordNotFound && expectedVersion > 0 {
+				return domain.ErrConflict
+			}
 			return mapNotFound(err)
 		}
 		var revision connectorRevisionRecord
@@ -419,7 +511,7 @@ func (repository *Repository) changeConnectorRevision(ctx context.Context, owner
 			if row.AuthorizationID != nil {
 				if err := tx.Model(&connectorAuthorizationRecord{}).
 					Where("id = ? AND owner_user_id = ?", *row.AuthorizationID, ownerID).
-					Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": now, "version": gorm.Expr("version + 1")}).Error; err != nil {
+					Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": now, "version": gorm.Expr("version + 1")}).Error; err != nil {
 					return err
 				}
 			}
@@ -437,13 +529,21 @@ func (repository *Repository) changeConnectorRevision(ctx context.Context, owner
 }
 
 func (repository *Repository) DisconnectConnectorAuthorization(ctx context.Context, ownerID, authorizationID string) (domain.ConnectorAuthorization, error) {
+	return repository.disconnectConnectorAuthorization(ctx, ownerID, authorizationID, nil)
+}
+
+func (repository *Repository) DisconnectConnectorAuthorizationWithAudit(ctx context.Context, ownerID, authorizationID string, audit domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
+	return repository.disconnectConnectorAuthorization(ctx, ownerID, authorizationID, &audit)
+}
+
+func (repository *Repository) disconnectConnectorAuthorization(ctx context.Context, ownerID, authorizationID string, audit *domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
 	var row connectorAuthorizationRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ?", authorizationID, ownerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		if row.State != string(domain.ConnectorAuthorizationDisconnected) {
-			result := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND version = ?", authorizationID, row.Version).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+			result := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND version = ?", authorizationID, row.Version).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 			if result.Error != nil {
 				return result.Error
 			}
@@ -456,10 +556,75 @@ func (repository *Repository) DisconnectConnectorAuthorization(ctx context.Conte
 			Updates(map[string]any{"authorization_id": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
 			return err
 		}
+		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = row.InstallationID
+			}
+			if audit.IdentityRef == "" {
+				audit.IdentityRef = row.IdentityRef
+			}
+			if audit.RevisionID == "" {
+				var installation connectorInstallationRecord
+				if err := tx.Where("id = ?", row.InstallationID).Take(&installation).Error; err != nil {
+					return err
+				}
+				audit.RevisionID = installation.ActiveRevisionID
+			}
+			if err := createConnectorAuditTx(tx, *audit); err != nil {
+				return err
+			}
+		}
 		return tx.Where("id = ?", authorizationID).Take(&row).Error
 	})
 	if err != nil {
 		return domain.ConnectorAuthorization{}, err
+	}
+	return connectorAuthorizationDomain(row), nil
+}
+
+func (repository *Repository) RefreshConnectorAuthorization(ctx context.Context, input domain.ConnectorAuthorization, expectedVersion int64, audit domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
+	if input.ID == "" || input.OwnerID == "" || input.InstallationID == "" || input.IdentityRef == "" || input.ExternalIdentityID == "" || len(input.CredentialCiphertext) == 0 || input.CredentialAAD == "" || input.CredentialFormat != "json" || input.ExpiresAt == nil || !time.Now().UTC().Before(*input.ExpiresAt) || expectedVersion <= 0 {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("%w: refreshed Connector authorization is incomplete", domain.ErrInvalid)
+	}
+	scopes, err := json.Marshal(input.Scopes)
+	if err != nil {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("encode refreshed Connector Authorization scopes: %w", err)
+	}
+	var row connectorAuthorizationRecord
+	err = repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var installation connectorInstallationRecord
+		if err := tx.Where("id = ? AND owner_user_id = ? AND state = ?", input.InstallationID, input.OwnerID, domain.ConnectorInstallationActive).Take(&installation).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if audit.InstallationID == "" {
+			audit.InstallationID = installation.ID
+		}
+		if audit.RevisionID == "" {
+			audit.RevisionID = installation.ActiveRevisionID
+		}
+		result := tx.Model(&connectorAuthorizationRecord{}).
+			Where("id = ? AND installation_id = ? AND owner_user_id = ? AND version = ? AND state IN ?", input.ID, input.InstallationID, input.OwnerID, expectedVersion, []string{string(domain.ConnectorAuthorizationActive), string(domain.ConnectorAuthorizationExpired)}).
+			Updates(map[string]any{
+				"identity_ref": input.IdentityRef, "external_identity_id": input.ExternalIdentityID,
+				"external_display_name": input.ExternalDisplayName, "scopes": scopes,
+				"credential_ciphertext": input.CredentialCiphertext, "credential_aad": input.CredentialAAD,
+				"refresh_credential_ciphertext": nil, "refresh_credential_aad": "",
+				"credential_format": input.CredentialFormat, "state": string(domain.ConnectorAuthorizationActive),
+				"expires_at": input.ExpiresAt, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		if err := createConnectorAuditTx(tx, audit); err != nil {
+			return err
+		}
+		return tx.Where("id = ?", input.ID).Take(&row).Error
+	})
+	if err != nil {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("refresh Connector Authorization: %w", err)
 	}
 	return connectorAuthorizationDomain(row), nil
 }
@@ -482,7 +647,7 @@ func (repository *Repository) disconnectConnectorInstallationAuthorization(ctx c
 			return err
 		}
 		if row.AuthorizationID != nil {
-			if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND owner_user_id = ?", *row.AuthorizationID, ownerID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+			if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND owner_user_id = ?", *row.AuthorizationID, ownerID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
 				return err
 			}
 		}
@@ -538,7 +703,13 @@ func (repository *Repository) createConnectorAuthorization(ctx context.Context, 
 	if err != nil {
 		return domain.ConnectorAuthorization{}, fmt.Errorf("encode Connector Authorization scopes: %w", err)
 	}
-	row := connectorAuthorizationRecord{ID: input.ID, OwnerID: input.OwnerID, InstallationID: input.InstallationID, IdentityRef: input.IdentityRef, Scopes: scopes, CredentialCiphertext: input.CredentialCiphertext, State: string(input.State), ExpiresAt: input.ExpiresAt, Version: input.Version, UpdatedAt: now}
+	if input.CredentialFormat == "" {
+		input.CredentialFormat = "json"
+	}
+	if input.CredentialFormat != "json" && input.CredentialFormat != "access_token" {
+		return domain.ConnectorAuthorization{}, fmt.Errorf("%w: Connector authorization credential format is unsupported", domain.ErrInvalid)
+	}
+	row := connectorAuthorizationRecord{ID: input.ID, OwnerID: input.OwnerID, InstallationID: input.InstallationID, IdentityRef: input.IdentityRef, ExternalIdentityID: input.ExternalIdentityID, ExternalDisplayName: input.ExternalDisplayName, Scopes: scopes, CredentialCiphertext: input.CredentialCiphertext, CredentialAAD: input.CredentialAAD, CredentialFormat: input.CredentialFormat, RefreshCredentialCiphertext: input.RefreshCredentialCiphertext, RefreshCredentialAAD: input.RefreshCredentialAAD, State: string(input.State), ExpiresAt: input.ExpiresAt, Version: input.Version, UpdatedAt: now}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var installation connectorInstallationRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -546,7 +717,36 @@ func (repository *Repository) createConnectorAuthorization(ctx context.Context, 
 			Take(&installation).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if err := tx.Create(&row).Error; err != nil {
+		if row.ExternalIdentityID != "" {
+			var existing connectorAuthorizationRecord
+			err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND installation_id = ? AND identity_ref = ? AND external_identity_id = ?", row.OwnerID, row.InstallationID, row.IdentityRef, row.ExternalIdentityID).Take(&existing).Error
+			switch {
+			case err == nil:
+				row.ID = existing.ID
+				result := tx.Model(&connectorAuthorizationRecord{}).Where("id = ? AND version = ?", existing.ID, existing.Version).Updates(map[string]any{
+					"external_display_name": row.ExternalDisplayName, "scopes": row.Scopes,
+					"credential_ciphertext": row.CredentialCiphertext, "credential_aad": row.CredentialAAD,
+					"credential_format": row.CredentialFormat, "refresh_credential_ciphertext": row.RefreshCredentialCiphertext,
+					"refresh_credential_aad": row.RefreshCredentialAAD, "state": row.State, "expires_at": row.ExpiresAt,
+					"updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1"),
+				})
+				if result.Error != nil {
+					return result.Error
+				}
+				if result.RowsAffected != 1 {
+					return domain.ErrConflict
+				}
+				if err := tx.Where("id = ?", row.ID).Take(&row).Error; err != nil {
+					return err
+				}
+			case err == gorm.ErrRecordNotFound:
+				if err := tx.Create(&row).Error; err != nil {
+					return err
+				}
+			default:
+				return err
+			}
+		} else if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
 		if err := tx.Model(&connectorInstallationRecord{}).
@@ -555,6 +755,12 @@ func (repository *Repository) createConnectorAuthorization(ctx context.Context, 
 			return err
 		}
 		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = installation.ID
+			}
+			if audit.RevisionID == "" {
+				audit.RevisionID = installation.ActiveRevisionID
+			}
 			return createConnectorAuditTx(tx, *audit)
 		}
 		return nil
@@ -591,7 +797,7 @@ func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context
 		if err != gorm.ErrRecordNotFound {
 			return err
 		}
-		return repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, definitionID)
+		return repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, definitionID, "", "")
 	}
 	if definition.AuthenticationDriver == "none" {
 		return nil
@@ -610,14 +816,23 @@ func (repository *Repository) ValidateCLIConnectorInvocation(ctx context.Context
 	return nil
 }
 
-func (repository *Repository) ValidateConnectorPackageCLIInvocation(ctx context.Context, ownerID, installationID string) error {
+func (repository *Repository) ValidateConnectorPackageCLIInvocation(ctx context.Context, ownerID, installationID, revisionID, authorizationID string) error {
 	var installation connectorInstallationRecord
 	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ? AND state = ?", installationID, ownerID, domain.ConnectorInstallationActive).Take(&installation).Error; err != nil {
 		return fmt.Errorf("%w: Connector installation is unavailable", domain.ErrConflict)
 	}
+	if revisionID == "" {
+		revisionID = installation.ActiveRevisionID
+	}
 	var revision connectorRevisionRecord
-	if err := repository.db.WithContext(ctx).Where("id = ? AND package_source = ? AND mode = ?", installation.ActiveRevisionID, installation.PackageSource, domain.ConnectorModeCLI).Take(&revision).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("id = ? AND package_source = ? AND mode = ?", revisionID, installation.PackageSource, domain.ConnectorModeCLI).Take(&revision).Error; err != nil {
 		return fmt.Errorf("%w: Connector revision is unavailable", domain.ErrConflict)
+	}
+	var publication connectorPublicationRecord
+	if err := repository.db.WithContext(ctx).Where("package_source = ?", installation.PackageSource).Take(&publication).Error; err == nil && publication.State != string(domain.ConnectorPublicationAvailable) {
+		return fmt.Errorf("%w: Connector publication is disabled", domain.ErrConflict)
+	} else if err != nil && err != gorm.ErrRecordNotFound {
+		return err
 	}
 	var policy connectorCLIPolicy
 	if err := json.Unmarshal(revision.RuntimePolicy, &policy); err != nil || policy.LegacyProjection || policy.CLI == nil || policy.BundleObjectKey == "" || policy.BundleSHA256 == "" {
@@ -626,32 +841,54 @@ func (repository *Repository) ValidateConnectorPackageCLIInvocation(ctx context.
 	if policy.AuthMode == "none" {
 		return nil
 	}
-	if installation.AuthorizationID == nil {
+	if authorizationID == "" && installation.AuthorizationID != nil {
+		authorizationID = *installation.AuthorizationID
+	}
+	if authorizationID == "" {
 		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	var authorization connectorAuthorizationRecord
-	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", authorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err != nil {
 		return fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	return nil
 }
 
-func (repository *Repository) ResolveConnectorPackageAuthorization(ctx context.Context, ownerID, installationID, identity string) ([]byte, error) {
-	if err := repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, installationID); err != nil {
-		return nil, err
+func (repository *Repository) ResolveConnectorPackageAuthorization(ctx context.Context, ownerID, installationID, revisionID, authorizationID, identity string) (domain.ConnectorAuthorizationMaterial, error) {
+	if err := repository.ValidateConnectorPackageCLIInvocation(ctx, ownerID, installationID, revisionID, authorizationID); err != nil {
+		return domain.ConnectorAuthorizationMaterial{}, err
 	}
 	var installation connectorInstallationRecord
-	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", installationID, ownerID).Take(&installation).Error; err != nil || installation.AuthorizationID == nil {
-		return nil, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ?", installationID, ownerID).Take(&installation).Error; err != nil {
+		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	}
+	if authorizationID == "" && installation.AuthorizationID != nil {
+		authorizationID = *installation.AuthorizationID
+	}
+	if authorizationID == "" {
+		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	var authorization connectorAuthorizationRecord
-	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ?", *installation.AuthorizationID, installationID, ownerID).Take(&authorization).Error; err != nil {
-		return nil, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
+	if err := repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ?", authorizationID, installationID, ownerID).Take(&authorization).Error; err != nil {
+		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 	}
 	if authorization.IdentityRef != "" && authorization.IdentityRef != identity && authorization.IdentityRef != "user" {
-		return nil, fmt.Errorf("%w: Connector identity is not authorized", domain.ErrConflict)
+		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector identity is not authorized", domain.ErrConflict)
 	}
-	return append([]byte(nil), authorization.CredentialCiphertext...), nil
+	material := domain.ConnectorAuthorizationMaterial{CredentialCiphertext: append([]byte(nil), authorization.CredentialCiphertext...), CredentialAAD: authorization.CredentialAAD, CredentialFormat: authorization.CredentialFormat}
+	if material.CredentialAAD == "" {
+		material.CredentialAAD = "connector-authorization:" + ownerID
+	}
+	var application connectorProviderApplicationRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND installation_id = ?", ownerID, installationID).Take(&application).Error; err == nil {
+		material.AppIDCiphertext = append([]byte(nil), application.ProviderApplicationIDCiphertext...)
+		material.AppSecretCiphertext = append([]byte(nil), application.ProviderApplicationSecretCiphertext...)
+	} else if material.CredentialFormat == "access_token" {
+		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector provider application is unavailable", domain.ErrConflict)
+	} else if err != gorm.ErrRecordNotFound {
+		return domain.ConnectorAuthorizationMaterial{}, err
+	}
+	return material, nil
 }
 
 // ValidateMCPInvocation is the fail-closed lifecycle check used immediately before MCP configuration is materialized.
@@ -720,5 +957,5 @@ func connectorInstallationDomain(row connectorInstallationRecord) domain.Connect
 func connectorAuthorizationDomain(row connectorAuthorizationRecord) domain.ConnectorAuthorization {
 	var scopes []string
 	_ = json.Unmarshal(row.Scopes, &scopes)
-	return domain.ConnectorAuthorization{ID: row.ID, OwnerID: row.OwnerID, InstallationID: row.InstallationID, IdentityRef: row.IdentityRef, Scopes: scopes, CredentialCiphertext: row.CredentialCiphertext, State: domain.ConnectorAuthorizationState(row.State), ExpiresAt: row.ExpiresAt, Version: row.Version, UpdatedAt: row.UpdatedAt}
+	return domain.ConnectorAuthorization{ID: row.ID, OwnerID: row.OwnerID, InstallationID: row.InstallationID, IdentityRef: row.IdentityRef, ExternalIdentityID: row.ExternalIdentityID, ExternalDisplayName: row.ExternalDisplayName, Scopes: scopes, CredentialCiphertext: row.CredentialCiphertext, CredentialAAD: row.CredentialAAD, CredentialFormat: row.CredentialFormat, RefreshCredentialCiphertext: row.RefreshCredentialCiphertext, RefreshCredentialAAD: row.RefreshCredentialAAD, State: domain.ConnectorAuthorizationState(row.State), ExpiresAt: row.ExpiresAt, Version: row.Version, UpdatedAt: row.UpdatedAt}
 }

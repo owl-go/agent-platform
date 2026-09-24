@@ -86,7 +86,12 @@ export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: s
 export interface CLIConnectorDefinitionInput { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_package: string; npm_version: string; archive?: string; npm_integrity?: string; executable?: string; authentication_driver?: "none" | "feishu" | "connector_package"; capabilities?: CLICapability[]; supported_architectures?: Array<"linux-amd64" | "linux-arm64">; recommended_skills?: CLIRecommendedSkill[]; recommended_skill_ids?: string[] }
 export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { npm_integrity: string; executable: string; authentication_driver: "none" | "feishu" | "connector_package"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skills: CLIRecommendedSkill[]; recommended_skill_ids: string[]; id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[]; managed_installation?: boolean; managed_authorized?: boolean }
 export interface CLIConnectorHealth { definition_id: string; definition_name: string; definition_state: CLIConnectorDefinition["state"]; enablement_count: number; enabled_count: number; waiting_for_user_count: number; active_authorization_count: number; attention_authorization_count: number }
-export interface ConnectorInstallation { id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number }
+export interface ConnectorRevision { id: string; source: string; package_version: string; mode: "mcp" | "cli"; sha256: string; name: string; description: string; icon: string; authentication_driver: string; bundle_sha256?: string; runtime_digests: string[]; conformance_available: boolean; required_scopes: string[] }
+export interface ConnectorPublication { source: string; active_revision_id: string; state: "available" | "disabled"; version: number; revision: ConnectorRevision }
+export interface ConnectorAuthorization { id: string; installation_id: string; identity_ref: string; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "expired" | "disconnected" | "revoked"; expires_at?: string; version: number; selected: boolean }
+export interface ConnectorSetup { id: string; installation_id: string; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; provider_name?: string; developer_console_url?: string }
+export interface ConnectorAuthorizationFlow { id: string; installation_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: ConnectorAuthorization }
+export interface ConnectorInstallation { id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number; package_version: string; name: string; description: string; authentication_driver: string; selected_authorization_id?: string; upgrade_available: boolean }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
@@ -268,6 +273,17 @@ export interface PlatformApi {
   deleteSkill(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
   listCLIConnectorDefinitions(signal?: AbortSignal): Promise<CLIConnectorDefinition[]>;
   listConnectorInstallations(signal?: AbortSignal): Promise<ConnectorInstallation[]>;
+  listConnectorPublications(signal?: AbortSignal): Promise<ConnectorPublication[]>;
+  installPublishedConnector(source: string, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  upgradeConnectorInstallation(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  listConnectorAuthorizations(id: string, signal?: AbortSignal): Promise<ConnectorAuthorization[]>;
+  selectConnectorAuthorization(installationID: string, authorizationID: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  refreshConnectorAuthorization(installationID: string, authorizationID: string, version: number, signal?: AbortSignal): Promise<ConnectorAuthorization>;
+  disconnectPublishedConnectorAuthorization(id: string, signal?: AbortSignal): Promise<ConnectorAuthorization>;
+  beginConnectorSetup(id: string, signal?: AbortSignal): Promise<ConnectorSetup>;
+  completeConnectorSetup(flowID: string, signal?: AbortSignal): Promise<ConnectorSetup>;
+  beginConnectorAuthorizationFlow(id: string, identity: "user", scopes: string[], signal?: AbortSignal): Promise<ConnectorAuthorizationFlow>;
+  completeConnectorAuthorizationFlow(flowID: string, signal?: AbortSignal): Promise<ConnectorAuthorizationFlow>;
   uploadConnectorPackage(archive: File, signal?: AbortSignal): Promise<ConnectorInstallation>;
   createConnectorPackage(input: { source: string; version: string; type: "mcp" | "cli"; name: string; description: string; auth_mode: "none" | "oauth" | "cli"; mcp_json?: string; cli_json?: string; skill_name: string; skill_markdown: string }, signal?: AbortSignal): Promise<ConnectorInstallation>;
   disableConnectorInstallation(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
@@ -664,6 +680,17 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteSkill(id, confirmationToken, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
     async listConnectorInstallations(signal) { return (await call<{ items: ConnectorInstallation[] }>("/api/v1/connectors", { signal })).items ?? []; },
+    async listConnectorPublications(signal) { return (await call<{ items: ConnectorPublication[] }>("/api/v1/connectors/catalog", { signal })).items ?? []; },
+    installPublishedConnector(source, signal) { return call(`/api/v1/connectors/catalog/${encodeURIComponent(source)}/install`, json("POST", {}, signal)); },
+    upgradeConnectorInstallation(id, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/upgrade`, json("POST", { expected_version: version }, signal)); },
+    async listConnectorAuthorizations(id, signal) { return (await call<{ items: ConnectorAuthorization[] }>(`/api/v1/connectors/${encodeURIComponent(id)}/authorizations`, { signal })).items ?? []; },
+    selectConnectorAuthorization(installationID, authorizationID, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(installationID)}/authorizations/${encodeURIComponent(authorizationID)}/select`, json("POST", { expected_version: version }, signal)); },
+    refreshConnectorAuthorization(installationID, authorizationID, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(installationID)}/authorizations/${encodeURIComponent(authorizationID)}/refresh`, json("POST", { expected_version: version }, signal)); },
+    disconnectPublishedConnectorAuthorization(id, signal) { return call(`/api/v1/connectors/authorizations/${encodeURIComponent(id)}/disconnect`, json("POST", {}, signal)); },
+    beginConnectorSetup(id, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/setup`, json("POST", {}, signal)); },
+    completeConnectorSetup(flowID, signal) { return call(`/api/v1/connectors/setup/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
+    beginConnectorAuthorizationFlow(id, identity, scopes, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/authorization-flows`, json("POST", { identity, scopes }, signal)); },
+    completeConnectorAuthorizationFlow(flowID, signal) { return call(`/api/v1/connectors/authorization-flows/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
     async uploadConnectorPackage(archive, signal) {
       const bytes = new Uint8Array(await archive.arrayBuffer());
       let binary = "";
