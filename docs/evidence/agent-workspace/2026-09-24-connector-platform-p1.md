@@ -22,3 +22,16 @@
 `make production-conformance-preflight` was run and failed closed because this host is macOS, `runsc` and the controlled Egress network are unavailable, and the required Runtime image, provider credential, object-store, repository, and evidence-root variables are not configured. Production Conformance was therefore not run.
 
 No official Feishu package was staged or published during this verification, so there is no package SHA-256, bundle SHA-256, Runtime RepoDigest, provider registration, OAuth account, or Linux sandbox execution result to record. The service rejects publication without exact locally recorded Conformance evidence. The P1 implementation can be deployed, but the official catalog entry must remain unavailable until a Linux + `runsc` Conformance run supplies those exact Digests and an Administrator stages and publishes that resulting archive.
+
+## Deployment
+
+- Integration commit: `6d1f01c` on `main_temp`.
+- Release: `platform-20260924T094307Z`.
+- Source: `/opt/agent-platform/src.release-platform-20260924T094307Z`.
+- Web: `/opt/agent-platform/web/releases/platform-20260924T094307Z`.
+- Pre-cutover backup: `/opt/agent-platform/backups/pre-platform-20260924T094307Z`.
+- Public origin: `https://47-237-108-63.sslip.io`.
+
+The deployment script ran its test, build, frontend test/typecheck/build, backup-integrity, image-build, migration, cutover, and service-health gates without bypasses. Independent checks returned `{"status":"ok"}` and `{"status":"ready"}`. The public and local `index.html` SHA-256 values both equal `ff722d1aaa22d20a268f695bd8e58a34e715b94e7e90bd81bcf63953ef25c568`. API, Worker, Egress Controller, Caddy, AnythingLLM, PostgreSQL, identity, and MinIO containers were running; health-enabled services reported healthy. Migrations `000054_connector_package_publications.sql`, `000055_connector_feishu_authorization.sql`, and `000056_feishu_connector_installation_projection.sql` were present in `schema_migrations`.
+
+The production database contained zero active `feishu` Publications after deployment. This is intentional: application deployment does not substitute for the missing exact Linux + `runsc` package Conformance evidence described above.
