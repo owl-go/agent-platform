@@ -80,6 +80,7 @@ type feishuApplicationRegistrar interface {
 	Poll(context.Context, string) (feishucli.Application, error)
 	BeginAuthorization(context.Context, string, string, []string) (feishucli.AuthorizationRequest, error)
 	PollAuthorization(context.Context, string, string, string) (feishucli.Authorization, error)
+	RefreshAuthorization(context.Context, string, string, string) (feishucli.Authorization, error)
 }
 
 func (service *Service) cliConnectors() (cliConnectorRepository, error) {

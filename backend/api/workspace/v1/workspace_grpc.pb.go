@@ -19,134 +19,150 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentWorkspaceService_GetConversationSelection_FullMethodName            = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
-	AgentWorkspaceService_ResolveConversationSelection_FullMethodName        = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
-	AgentWorkspaceService_ListConversationFiles_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
-	AgentWorkspaceService_GetSkillDocument_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
-	AgentWorkspaceService_GetCurrentUser_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
-	AgentWorkspaceService_ListUsers_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/ListUsers"
-	AgentWorkspaceService_CreateUser_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/CreateUser"
-	AgentWorkspaceService_SetUserEnabled_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
-	AgentWorkspaceService_ResetUserPassword_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
-	AgentWorkspaceService_GetCreditBalance_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
-	AgentWorkspaceService_ListCreditLedger_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
-	AgentWorkspaceService_RedeemCreditCode_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
-	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName           = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
-	AgentWorkspaceService_AdjustUserCredits_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
-	AgentWorkspaceService_ListModelCreditRates_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
-	AgentWorkspaceService_CreateModelCreditRate_FullMethodName               = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
-	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName           = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
-	AgentWorkspaceService_ListRedemptionCodes_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
-	AgentWorkspaceService_VoidRedemptionCode_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
-	AgentWorkspaceService_ListImageGenerationOptions_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
-	AgentWorkspaceService_SubmitImageGeneration_FullMethodName               = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
-	AgentWorkspaceService_ListImageGenerations_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
-	AgentWorkspaceService_GetImageGeneration_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
-	AgentWorkspaceService_StopImageGeneration_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
-	AgentWorkspaceService_RegenerateImageGeneration_FullMethodName           = "/workspace.v1.AgentWorkspaceService/RegenerateImageGeneration"
-	AgentWorkspaceService_DeleteImageGeneration_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DeleteImageGeneration"
-	AgentWorkspaceService_OptimizeImagePrompt_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
-	AgentWorkspaceService_ListImageModels_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListImageModels"
-	AgentWorkspaceService_CreateImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateImageModel"
-	AgentWorkspaceService_ReviseImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
-	AgentWorkspaceService_DeleteImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DeleteImageModel"
-	AgentWorkspaceService_VerifyImageModel_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/VerifyImageModel"
-	AgentWorkspaceService_SetImageModelAvailability_FullMethodName           = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
-	AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName = "/workspace.v1.AgentWorkspaceService/ReplacePromptOptimizationCandidates"
-	AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName    = "/workspace.v1.AgentWorkspaceService/ListPromptOptimizationCandidates"
-	AgentWorkspaceService_ListSessions_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListSessions"
-	AgentWorkspaceService_CreateSession_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/CreateSession"
-	AgentWorkspaceService_GetSession_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetSession"
-	AgentWorkspaceService_UpdateSession_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/UpdateSession"
-	AgentWorkspaceService_SetSessionArchived_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
-	AgentWorkspaceService_SetSessionExpertSelection_FullMethodName           = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
-	AgentWorkspaceService_DeleteSession_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/DeleteSession"
-	AgentWorkspaceService_ListSessionMessages_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
-	AgentWorkspaceService_SendSessionMessage_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
-	AgentWorkspaceService_RetrySessionMessage_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
-	AgentWorkspaceService_CancelSessionMessage_FullMethodName                = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
-	AgentWorkspaceService_ListWorkflows_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
-	AgentWorkspaceService_CreateWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
-	AgentWorkspaceService_GetWorkflow_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
-	AgentWorkspaceService_UpdateWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
-	AgentWorkspaceService_DeleteWorkflow_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
-	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
-	AgentWorkspaceService_GetWorkflowCredential_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
-	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
-	AgentWorkspaceService_RunWorkflow_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
-	AgentWorkspaceService_ListRuns_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/ListRuns"
-	AgentWorkspaceService_GetRun_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/GetRun"
-	AgentWorkspaceService_ListRunTurns_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
-	AgentWorkspaceService_ContinueRunConversation_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
-	AgentWorkspaceService_CancelRun_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/CancelRun"
-	AgentWorkspaceService_RerunWorkflow_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
-	AgentWorkspaceService_ListArtifacts_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
-	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
-	AgentWorkspaceService_GetWorkspaceFile_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
-	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
-	AgentWorkspaceService_ListKnowledgeBases_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListKnowledgeBases"
-	AgentWorkspaceService_CreateKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeBase"
-	AgentWorkspaceService_GetKnowledgeBase_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
-	AgentWorkspaceService_UpdateKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
-	AgentWorkspaceService_DeleteKnowledgeBase_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeBase"
-	AgentWorkspaceService_ListKnowledgeCategories_FullMethodName             = "/workspace.v1.AgentWorkspaceService/ListKnowledgeCategories"
-	AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName             = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeCategory"
-	AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName             = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeCategory"
-	AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
-	AgentWorkspaceService_ListExperts_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ListExperts"
-	AgentWorkspaceService_GetExpert_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetExpert"
-	AgentWorkspaceService_CreateExpert_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/CreateExpert"
-	AgentWorkspaceService_UpdateExpert_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
-	AgentWorkspaceService_DeleteExpert_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
-	AgentWorkspaceService_ListExpertTeams_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
-	AgentWorkspaceService_GetExpertTeam_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
-	AgentWorkspaceService_CreateExpertTeam_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
-	AgentWorkspaceService_UpdateExpertTeam_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
-	AgentWorkspaceService_DeleteExpertTeam_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
-	AgentWorkspaceService_GetSettings_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/GetSettings"
-	AgentWorkspaceService_UpdateSettings_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
-	AgentWorkspaceService_ListRuntimeEngines_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
-	AgentWorkspaceService_ListModelProviderPresets_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
-	AgentWorkspaceService_ListModelProviderConnections_FullMethodName        = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
-	AgentWorkspaceService_CreateModelProviderConnection_FullMethodName       = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
-	AgentWorkspaceService_UpdateModelProviderConnection_FullMethodName       = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
-	AgentWorkspaceService_DeleteModelProviderConnection_FullMethodName       = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
-	AgentWorkspaceService_RefreshProviderModels_FullMethodName               = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
-	AgentWorkspaceService_CreateProviderModel_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
-	AgentWorkspaceService_ListMCPConnectors_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
-	AgentWorkspaceService_CreateMCPConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
-	AgentWorkspaceService_UpdateMCPConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
-	AgentWorkspaceService_TestMCPConnector_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
-	AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName       = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
-	AgentWorkspaceService_DeleteMCPConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
-	AgentWorkspaceService_ListSkills_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/ListSkills"
-	AgentWorkspaceService_CreateSkill_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/CreateSkill"
-	AgentWorkspaceService_UpdateSkill_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
-	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName              = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
-	AgentWorkspaceService_DeleteSkill_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
-	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName         = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
-	AgentWorkspaceService_ListConnectorInstallations_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListConnectorInstallations"
-	AgentWorkspaceService_UploadConnectorPackage_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UploadConnectorPackage"
-	AgentWorkspaceService_CreateConnectorPackage_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateConnectorPackage"
-	AgentWorkspaceService_DisableConnectorInstallation_FullMethodName        = "/workspace.v1.AgentWorkspaceService/DisableConnectorInstallation"
-	AgentWorkspaceService_UninstallConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
-	AgentWorkspaceService_ConnectConnector_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ConnectConnector"
-	AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName    = "/workspace.v1.AgentWorkspaceService/DisconnectConnectorAuthorization"
-	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
-	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
-	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName       = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
-	AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName       = "/workspace.v1.AgentWorkspaceService/DisableCLIConnectorDefinition"
-	AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName        = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
-	AgentWorkspaceService_ListCLIConnectorHealth_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
-	AgentWorkspaceService_EnableCLIConnector_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
-	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName         = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
-	AgentWorkspaceService_ListCommandApprovals_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
-	AgentWorkspaceService_DecideCommandApproval_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
-	AgentWorkspaceService_CompleteCLIConnectorEnablement_FullMethodName      = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorEnablement"
-	AgentWorkspaceService_BeginCLIConnectorAuthorization_FullMethodName      = "/workspace.v1.AgentWorkspaceService/BeginCLIConnectorAuthorization"
-	AgentWorkspaceService_CompleteCLIConnectorAuthorization_FullMethodName   = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorAuthorization"
-	AgentWorkspaceService_ListCLIConnectorAuthorizations_FullMethodName      = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
-	AgentWorkspaceService_DisconnectCLIConnectorAuthorization_FullMethodName = "/workspace.v1.AgentWorkspaceService/DisconnectCLIConnectorAuthorization"
+	AgentWorkspaceService_GetConversationSelection_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
+	AgentWorkspaceService_ResolveConversationSelection_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
+	AgentWorkspaceService_ListConversationFiles_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
+	AgentWorkspaceService_GetSkillDocument_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
+	AgentWorkspaceService_GetCurrentUser_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
+	AgentWorkspaceService_ListUsers_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/ListUsers"
+	AgentWorkspaceService_CreateUser_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/CreateUser"
+	AgentWorkspaceService_SetUserEnabled_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
+	AgentWorkspaceService_ResetUserPassword_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
+	AgentWorkspaceService_GetCreditBalance_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
+	AgentWorkspaceService_ListCreditLedger_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
+	AgentWorkspaceService_RedeemCreditCode_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
+	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
+	AgentWorkspaceService_AdjustUserCredits_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/AdjustUserCredits"
+	AgentWorkspaceService_ListModelCreditRates_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
+	AgentWorkspaceService_CreateModelCreditRate_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/CreateModelCreditRate"
+	AgentWorkspaceService_CreateRedemptionCodeBatch_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateRedemptionCodeBatch"
+	AgentWorkspaceService_ListRedemptionCodes_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListRedemptionCodes"
+	AgentWorkspaceService_VoidRedemptionCode_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/VoidRedemptionCode"
+	AgentWorkspaceService_ListImageGenerationOptions_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
+	AgentWorkspaceService_SubmitImageGeneration_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
+	AgentWorkspaceService_ListImageGenerations_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
+	AgentWorkspaceService_GetImageGeneration_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
+	AgentWorkspaceService_StopImageGeneration_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
+	AgentWorkspaceService_RegenerateImageGeneration_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/RegenerateImageGeneration"
+	AgentWorkspaceService_DeleteImageGeneration_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/DeleteImageGeneration"
+	AgentWorkspaceService_OptimizeImagePrompt_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
+	AgentWorkspaceService_ListImageModels_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/ListImageModels"
+	AgentWorkspaceService_CreateImageModel_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/CreateImageModel"
+	AgentWorkspaceService_ReviseImageModel_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
+	AgentWorkspaceService_DeleteImageModel_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/DeleteImageModel"
+	AgentWorkspaceService_VerifyImageModel_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/VerifyImageModel"
+	AgentWorkspaceService_SetImageModelAvailability_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
+	AgentWorkspaceService_ReplacePromptOptimizationCandidates_FullMethodName       = "/workspace.v1.AgentWorkspaceService/ReplacePromptOptimizationCandidates"
+	AgentWorkspaceService_ListPromptOptimizationCandidates_FullMethodName          = "/workspace.v1.AgentWorkspaceService/ListPromptOptimizationCandidates"
+	AgentWorkspaceService_ListSessions_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/ListSessions"
+	AgentWorkspaceService_CreateSession_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/CreateSession"
+	AgentWorkspaceService_GetSession_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/GetSession"
+	AgentWorkspaceService_UpdateSession_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/UpdateSession"
+	AgentWorkspaceService_SetSessionArchived_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
+	AgentWorkspaceService_SetSessionExpertSelection_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
+	AgentWorkspaceService_DeleteSession_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/DeleteSession"
+	AgentWorkspaceService_ListSessionMessages_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
+	AgentWorkspaceService_SendSessionMessage_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
+	AgentWorkspaceService_RetrySessionMessage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
+	AgentWorkspaceService_CancelSessionMessage_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+	AgentWorkspaceService_ListWorkflows_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
+	AgentWorkspaceService_CreateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
+	AgentWorkspaceService_GetWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
+	AgentWorkspaceService_UpdateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
+	AgentWorkspaceService_DeleteWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/DeleteWorkflow"
+	AgentWorkspaceService_GenerateWorkflowCredential_FullMethodName                = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
+	AgentWorkspaceService_GetWorkflowCredential_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
+	AgentWorkspaceService_ExchangeWorkflowCredential_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
+	AgentWorkspaceService_RunWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
+	AgentWorkspaceService_ListRuns_FullMethodName                                  = "/workspace.v1.AgentWorkspaceService/ListRuns"
+	AgentWorkspaceService_GetRun_FullMethodName                                    = "/workspace.v1.AgentWorkspaceService/GetRun"
+	AgentWorkspaceService_ListRunTurns_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/ListRunTurns"
+	AgentWorkspaceService_ContinueRunConversation_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
+	AgentWorkspaceService_CancelRun_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/CancelRun"
+	AgentWorkspaceService_RerunWorkflow_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
+	AgentWorkspaceService_ListArtifacts_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
+	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
+	AgentWorkspaceService_GetWorkspaceFile_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
+	AgentWorkspaceService_ConfigureWorkflowGitSource_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
+	AgentWorkspaceService_ListKnowledgeBases_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListKnowledgeBases"
+	AgentWorkspaceService_CreateKnowledgeBase_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeBase"
+	AgentWorkspaceService_GetKnowledgeBase_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
+	AgentWorkspaceService_UpdateKnowledgeBase_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
+	AgentWorkspaceService_DeleteKnowledgeBase_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeBase"
+	AgentWorkspaceService_ListKnowledgeCategories_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ListKnowledgeCategories"
+	AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeCategory"
+	AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeCategory"
+	AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
+	AgentWorkspaceService_ListExperts_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/ListExperts"
+	AgentWorkspaceService_GetExpert_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/GetExpert"
+	AgentWorkspaceService_CreateExpert_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/CreateExpert"
+	AgentWorkspaceService_UpdateExpert_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
+	AgentWorkspaceService_DeleteExpert_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
+	AgentWorkspaceService_ListExpertTeams_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
+	AgentWorkspaceService_GetExpertTeam_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+	AgentWorkspaceService_CreateExpertTeam_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/CreateExpertTeam"
+	AgentWorkspaceService_UpdateExpertTeam_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
+	AgentWorkspaceService_DeleteExpertTeam_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
+	AgentWorkspaceService_GetSettings_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetSettings"
+	AgentWorkspaceService_UpdateSettings_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
+	AgentWorkspaceService_ListRuntimeEngines_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
+	AgentWorkspaceService_ListModelProviderPresets_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
+	AgentWorkspaceService_ListModelProviderConnections_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
+	AgentWorkspaceService_CreateModelProviderConnection_FullMethodName             = "/workspace.v1.AgentWorkspaceService/CreateModelProviderConnection"
+	AgentWorkspaceService_UpdateModelProviderConnection_FullMethodName             = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
+	AgentWorkspaceService_DeleteModelProviderConnection_FullMethodName             = "/workspace.v1.AgentWorkspaceService/DeleteModelProviderConnection"
+	AgentWorkspaceService_RefreshProviderModels_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/RefreshProviderModels"
+	AgentWorkspaceService_CreateProviderModel_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/CreateProviderModel"
+	AgentWorkspaceService_ListMCPConnectors_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
+	AgentWorkspaceService_CreateMCPConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/CreateMCPConnector"
+	AgentWorkspaceService_UpdateMCPConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
+	AgentWorkspaceService_TestMCPConnector_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
+	AgentWorkspaceService_GetMCPConnectorDeletionImpact_FullMethodName             = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
+	AgentWorkspaceService_DeleteMCPConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/DeleteMCPConnector"
+	AgentWorkspaceService_ListSkills_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/ListSkills"
+	AgentWorkspaceService_CreateSkill_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/CreateSkill"
+	AgentWorkspaceService_UpdateSkill_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
+	AgentWorkspaceService_GetSkillDeletionImpact_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/GetSkillDeletionImpact"
+	AgentWorkspaceService_DeleteSkill_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/DeleteSkill"
+	AgentWorkspaceService_ListCLIConnectorDefinitions_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
+	AgentWorkspaceService_ListConnectorInstallations_FullMethodName                = "/workspace.v1.AgentWorkspaceService/ListConnectorInstallations"
+	AgentWorkspaceService_ListConnectorPublications_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListConnectorPublications"
+	AgentWorkspaceService_InstallPublishedConnector_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/InstallPublishedConnector"
+	AgentWorkspaceService_UpgradeConnectorInstallation_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UpgradeConnectorInstallation"
+	AgentWorkspaceService_ListConnectorAuthorizations_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListConnectorAuthorizations"
+	AgentWorkspaceService_SelectConnectorAuthorization_FullMethodName              = "/workspace.v1.AgentWorkspaceService/SelectConnectorAuthorization"
+	AgentWorkspaceService_RefreshConnectorAuthorization_FullMethodName             = "/workspace.v1.AgentWorkspaceService/RefreshConnectorAuthorization"
+	AgentWorkspaceService_DisconnectPublishedConnectorAuthorization_FullMethodName = "/workspace.v1.AgentWorkspaceService/DisconnectPublishedConnectorAuthorization"
+	AgentWorkspaceService_BeginConnectorSetup_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/BeginConnectorSetup"
+	AgentWorkspaceService_CompleteConnectorSetup_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CompleteConnectorSetup"
+	AgentWorkspaceService_BeginConnectorAuthorizationFlow_FullMethodName           = "/workspace.v1.AgentWorkspaceService/BeginConnectorAuthorizationFlow"
+	AgentWorkspaceService_CompleteConnectorAuthorizationFlow_FullMethodName        = "/workspace.v1.AgentWorkspaceService/CompleteConnectorAuthorizationFlow"
+	AgentWorkspaceService_UploadConnectorPackage_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/UploadConnectorPackage"
+	AgentWorkspaceService_CreateConnectorPackage_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/CreateConnectorPackage"
+	AgentWorkspaceService_DisableConnectorInstallation_FullMethodName              = "/workspace.v1.AgentWorkspaceService/DisableConnectorInstallation"
+	AgentWorkspaceService_UninstallConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
+	AgentWorkspaceService_ConnectConnector_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/ConnectConnector"
+	AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName          = "/workspace.v1.AgentWorkspaceService/DisconnectConnectorAuthorization"
+	AgentWorkspaceService_StageConnectorPackage_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/StageConnectorPackage"
+	AgentWorkspaceService_ListConnectorPublicationRevisions_FullMethodName         = "/workspace.v1.AgentWorkspaceService/ListConnectorPublicationRevisions"
+	AgentWorkspaceService_PublishConnectorRevision_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/PublishConnectorRevision"
+	AgentWorkspaceService_DisableConnectorPublication_FullMethodName               = "/workspace.v1.AgentWorkspaceService/DisableConnectorPublication"
+	AgentWorkspaceService_ListConnectorPublicationHealth_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListConnectorPublicationHealth"
+	AgentWorkspaceService_CreateCLIConnectorDefinition_FullMethodName              = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
+	AgentWorkspaceService_UpdateCLIConnectorDefinition_FullMethodName              = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
+	AgentWorkspaceService_PublishCLIConnectorDefinition_FullMethodName             = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
+	AgentWorkspaceService_DisableCLIConnectorDefinition_FullMethodName             = "/workspace.v1.AgentWorkspaceService/DisableCLIConnectorDefinition"
+	AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName              = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
+	AgentWorkspaceService_ListCLIConnectorHealth_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
+	AgentWorkspaceService_EnableCLIConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
+	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
+	AgentWorkspaceService_ListCommandApprovals_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
+	AgentWorkspaceService_DecideCommandApproval_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
+	AgentWorkspaceService_CompleteCLIConnectorEnablement_FullMethodName            = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorEnablement"
+	AgentWorkspaceService_BeginCLIConnectorAuthorization_FullMethodName            = "/workspace.v1.AgentWorkspaceService/BeginCLIConnectorAuthorization"
+	AgentWorkspaceService_CompleteCLIConnectorAuthorization_FullMethodName         = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorAuthorization"
+	AgentWorkspaceService_ListCLIConnectorAuthorizations_FullMethodName            = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
+	AgentWorkspaceService_DisconnectCLIConnectorAuthorization_FullMethodName       = "/workspace.v1.AgentWorkspaceService/DisconnectCLIConnectorAuthorization"
 )
 
 // AgentWorkspaceServiceClient is the client API for AgentWorkspaceService service.
@@ -260,12 +276,28 @@ type AgentWorkspaceServiceClient interface {
 	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(ctx context.Context, in *ListCLIConnectorDefinitionsRequest, opts ...grpc.CallOption) (*ListCLIConnectorDefinitionsResponse, error)
 	ListConnectorInstallations(ctx context.Context, in *ListConnectorInstallationsRequest, opts ...grpc.CallOption) (*ListConnectorInstallationsResponse, error)
+	ListConnectorPublications(ctx context.Context, in *ListConnectorPublicationsRequest, opts ...grpc.CallOption) (*ListConnectorPublicationsResponse, error)
+	InstallPublishedConnector(ctx context.Context, in *InstallPublishedConnectorRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	UpgradeConnectorInstallation(ctx context.Context, in *UpgradeConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	ListConnectorAuthorizations(ctx context.Context, in *ListConnectorAuthorizationsRequest, opts ...grpc.CallOption) (*ListConnectorAuthorizationsResponse, error)
+	SelectConnectorAuthorization(ctx context.Context, in *SelectConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	RefreshConnectorAuthorization(ctx context.Context, in *RefreshConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorAuthorization, error)
+	DisconnectPublishedConnectorAuthorization(ctx context.Context, in *DisconnectPublishedConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorAuthorization, error)
+	BeginConnectorSetup(ctx context.Context, in *BeginConnectorSetupRequest, opts ...grpc.CallOption) (*ConnectorSetup, error)
+	CompleteConnectorSetup(ctx context.Context, in *CompleteConnectorSetupRequest, opts ...grpc.CallOption) (*ConnectorSetup, error)
+	BeginConnectorAuthorizationFlow(ctx context.Context, in *BeginConnectorAuthorizationFlowRequest, opts ...grpc.CallOption) (*ConnectorAuthorizationFlow, error)
+	CompleteConnectorAuthorizationFlow(ctx context.Context, in *CompleteConnectorAuthorizationFlowRequest, opts ...grpc.CallOption) (*ConnectorAuthorizationFlow, error)
 	UploadConnectorPackage(ctx context.Context, in *UploadConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	CreateConnectorPackage(ctx context.Context, in *CreateConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	DisableConnectorInstallation(ctx context.Context, in *DisableConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	UninstallConnector(ctx context.Context, in *UninstallConnectorRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ConnectConnector(ctx context.Context, in *ConnectConnectorRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
 	DisconnectConnectorAuthorization(ctx context.Context, in *DisconnectConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error)
+	StageConnectorPackage(ctx context.Context, in *StageConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorRevision, error)
+	ListConnectorPublicationRevisions(ctx context.Context, in *ListConnectorPublicationRevisionsRequest, opts ...grpc.CallOption) (*ListConnectorPublicationRevisionsResponse, error)
+	PublishConnectorRevision(ctx context.Context, in *PublishConnectorRevisionRequest, opts ...grpc.CallOption) (*ConnectorPublication, error)
+	DisableConnectorPublication(ctx context.Context, in *DisableConnectorPublicationRequest, opts ...grpc.CallOption) (*ConnectorPublication, error)
+	ListConnectorPublicationHealth(ctx context.Context, in *ListConnectorPublicationHealthRequest, opts ...grpc.CallOption) (*ListConnectorPublicationHealthResponse, error)
 	CreateCLIConnectorDefinition(ctx context.Context, in *CreateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(ctx context.Context, in *UpdateCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*CLIConnectorDefinition, error)
@@ -1361,6 +1393,116 @@ func (c *agentWorkspaceServiceClient) ListConnectorInstallations(ctx context.Con
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ListConnectorPublications(ctx context.Context, in *ListConnectorPublicationsRequest, opts ...grpc.CallOption) (*ListConnectorPublicationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorPublicationsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorPublications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) InstallPublishedConnector(ctx context.Context, in *InstallPublishedConnectorRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_InstallPublishedConnector_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpgradeConnectorInstallation(ctx context.Context, in *UpgradeConnectorInstallationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpgradeConnectorInstallation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListConnectorAuthorizations(ctx context.Context, in *ListConnectorAuthorizationsRequest, opts ...grpc.CallOption) (*ListConnectorAuthorizationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorAuthorizationsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorAuthorizations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SelectConnectorAuthorization(ctx context.Context, in *SelectConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorInstallation)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SelectConnectorAuthorization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) RefreshConnectorAuthorization(ctx context.Context, in *RefreshConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorAuthorization, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorAuthorization)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_RefreshConnectorAuthorization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DisconnectPublishedConnectorAuthorization(ctx context.Context, in *DisconnectPublishedConnectorAuthorizationRequest, opts ...grpc.CallOption) (*ConnectorAuthorization, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorAuthorization)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisconnectPublishedConnectorAuthorization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) BeginConnectorSetup(ctx context.Context, in *BeginConnectorSetupRequest, opts ...grpc.CallOption) (*ConnectorSetup, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorSetup)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_BeginConnectorSetup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CompleteConnectorSetup(ctx context.Context, in *CompleteConnectorSetupRequest, opts ...grpc.CallOption) (*ConnectorSetup, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorSetup)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CompleteConnectorSetup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) BeginConnectorAuthorizationFlow(ctx context.Context, in *BeginConnectorAuthorizationFlowRequest, opts ...grpc.CallOption) (*ConnectorAuthorizationFlow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorAuthorizationFlow)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_BeginConnectorAuthorizationFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CompleteConnectorAuthorizationFlow(ctx context.Context, in *CompleteConnectorAuthorizationFlowRequest, opts ...grpc.CallOption) (*ConnectorAuthorizationFlow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorAuthorizationFlow)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CompleteConnectorAuthorizationFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) UploadConnectorPackage(ctx context.Context, in *UploadConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorInstallation, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConnectorInstallation)
@@ -1415,6 +1557,56 @@ func (c *agentWorkspaceServiceClient) DisconnectConnectorAuthorization(ctx conte
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConnectorInstallation)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisconnectConnectorAuthorization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StageConnectorPackage(ctx context.Context, in *StageConnectorPackageRequest, opts ...grpc.CallOption) (*ConnectorRevision, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorRevision)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StageConnectorPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListConnectorPublicationRevisions(ctx context.Context, in *ListConnectorPublicationRevisionsRequest, opts ...grpc.CallOption) (*ListConnectorPublicationRevisionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorPublicationRevisionsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorPublicationRevisions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) PublishConnectorRevision(ctx context.Context, in *PublishConnectorRevisionRequest, opts ...grpc.CallOption) (*ConnectorPublication, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorPublication)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_PublishConnectorRevision_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DisableConnectorPublication(ctx context.Context, in *DisableConnectorPublicationRequest, opts ...grpc.CallOption) (*ConnectorPublication, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConnectorPublication)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisableConnectorPublication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListConnectorPublicationHealth(ctx context.Context, in *ListConnectorPublicationHealthRequest, opts ...grpc.CallOption) (*ListConnectorPublicationHealthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConnectorPublicationHealthResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListConnectorPublicationHealth_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1682,12 +1874,28 @@ type AgentWorkspaceServiceServer interface {
 	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteResponse, error)
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
 	ListConnectorInstallations(context.Context, *ListConnectorInstallationsRequest) (*ListConnectorInstallationsResponse, error)
+	ListConnectorPublications(context.Context, *ListConnectorPublicationsRequest) (*ListConnectorPublicationsResponse, error)
+	InstallPublishedConnector(context.Context, *InstallPublishedConnectorRequest) (*ConnectorInstallation, error)
+	UpgradeConnectorInstallation(context.Context, *UpgradeConnectorInstallationRequest) (*ConnectorInstallation, error)
+	ListConnectorAuthorizations(context.Context, *ListConnectorAuthorizationsRequest) (*ListConnectorAuthorizationsResponse, error)
+	SelectConnectorAuthorization(context.Context, *SelectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
+	RefreshConnectorAuthorization(context.Context, *RefreshConnectorAuthorizationRequest) (*ConnectorAuthorization, error)
+	DisconnectPublishedConnectorAuthorization(context.Context, *DisconnectPublishedConnectorAuthorizationRequest) (*ConnectorAuthorization, error)
+	BeginConnectorSetup(context.Context, *BeginConnectorSetupRequest) (*ConnectorSetup, error)
+	CompleteConnectorSetup(context.Context, *CompleteConnectorSetupRequest) (*ConnectorSetup, error)
+	BeginConnectorAuthorizationFlow(context.Context, *BeginConnectorAuthorizationFlowRequest) (*ConnectorAuthorizationFlow, error)
+	CompleteConnectorAuthorizationFlow(context.Context, *CompleteConnectorAuthorizationFlowRequest) (*ConnectorAuthorizationFlow, error)
 	UploadConnectorPackage(context.Context, *UploadConnectorPackageRequest) (*ConnectorInstallation, error)
 	CreateConnectorPackage(context.Context, *CreateConnectorPackageRequest) (*ConnectorInstallation, error)
 	DisableConnectorInstallation(context.Context, *DisableConnectorInstallationRequest) (*ConnectorInstallation, error)
 	UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error)
 	ConnectConnector(context.Context, *ConnectConnectorRequest) (*ConnectorInstallation, error)
 	DisconnectConnectorAuthorization(context.Context, *DisconnectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
+	StageConnectorPackage(context.Context, *StageConnectorPackageRequest) (*ConnectorRevision, error)
+	ListConnectorPublicationRevisions(context.Context, *ListConnectorPublicationRevisionsRequest) (*ListConnectorPublicationRevisionsResponse, error)
+	PublishConnectorRevision(context.Context, *PublishConnectorRevisionRequest) (*ConnectorPublication, error)
+	DisableConnectorPublication(context.Context, *DisableConnectorPublicationRequest) (*ConnectorPublication, error)
+	ListConnectorPublicationHealth(context.Context, *ListConnectorPublicationHealthRequest) (*ListConnectorPublicationHealthResponse, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
@@ -2034,6 +2242,39 @@ func (UnimplementedAgentWorkspaceServiceServer) ListCLIConnectorDefinitions(cont
 func (UnimplementedAgentWorkspaceServiceServer) ListConnectorInstallations(context.Context, *ListConnectorInstallationsRequest) (*ListConnectorInstallationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListConnectorInstallations not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorPublications(context.Context, *ListConnectorPublicationsRequest) (*ListConnectorPublicationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorPublications not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) InstallPublishedConnector(context.Context, *InstallPublishedConnectorRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method InstallPublishedConnector not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpgradeConnectorInstallation(context.Context, *UpgradeConnectorInstallationRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpgradeConnectorInstallation not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorAuthorizations(context.Context, *ListConnectorAuthorizationsRequest) (*ListConnectorAuthorizationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorAuthorizations not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SelectConnectorAuthorization(context.Context, *SelectConnectorAuthorizationRequest) (*ConnectorInstallation, error) {
+	return nil, status.Error(codes.Unimplemented, "method SelectConnectorAuthorization not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) RefreshConnectorAuthorization(context.Context, *RefreshConnectorAuthorizationRequest) (*ConnectorAuthorization, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshConnectorAuthorization not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisconnectPublishedConnectorAuthorization(context.Context, *DisconnectPublishedConnectorAuthorizationRequest) (*ConnectorAuthorization, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisconnectPublishedConnectorAuthorization not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) BeginConnectorSetup(context.Context, *BeginConnectorSetupRequest) (*ConnectorSetup, error) {
+	return nil, status.Error(codes.Unimplemented, "method BeginConnectorSetup not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CompleteConnectorSetup(context.Context, *CompleteConnectorSetupRequest) (*ConnectorSetup, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteConnectorSetup not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) BeginConnectorAuthorizationFlow(context.Context, *BeginConnectorAuthorizationFlowRequest) (*ConnectorAuthorizationFlow, error) {
+	return nil, status.Error(codes.Unimplemented, "method BeginConnectorAuthorizationFlow not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CompleteConnectorAuthorizationFlow(context.Context, *CompleteConnectorAuthorizationFlowRequest) (*ConnectorAuthorizationFlow, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteConnectorAuthorizationFlow not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) UploadConnectorPackage(context.Context, *UploadConnectorPackageRequest) (*ConnectorInstallation, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadConnectorPackage not implemented")
 }
@@ -2051,6 +2292,21 @@ func (UnimplementedAgentWorkspaceServiceServer) ConnectConnector(context.Context
 }
 func (UnimplementedAgentWorkspaceServiceServer) DisconnectConnectorAuthorization(context.Context, *DisconnectConnectorAuthorizationRequest) (*ConnectorInstallation, error) {
 	return nil, status.Error(codes.Unimplemented, "method DisconnectConnectorAuthorization not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StageConnectorPackage(context.Context, *StageConnectorPackageRequest) (*ConnectorRevision, error) {
+	return nil, status.Error(codes.Unimplemented, "method StageConnectorPackage not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorPublicationRevisions(context.Context, *ListConnectorPublicationRevisionsRequest) (*ListConnectorPublicationRevisionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorPublicationRevisions not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) PublishConnectorRevision(context.Context, *PublishConnectorRevisionRequest) (*ConnectorPublication, error) {
+	return nil, status.Error(codes.Unimplemented, "method PublishConnectorRevision not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisableConnectorPublication(context.Context, *DisableConnectorPublicationRequest) (*ConnectorPublication, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableConnectorPublication not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListConnectorPublicationHealth(context.Context, *ListConnectorPublicationHealthRequest) (*ListConnectorPublicationHealthResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConnectorPublicationHealth not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCLIConnectorDefinition not implemented")
@@ -4044,6 +4300,204 @@ func _AgentWorkspaceService_ListConnectorInstallations_Handler(srv interface{}, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ListConnectorPublications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorPublicationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorPublications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublications(ctx, req.(*ListConnectorPublicationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_InstallPublishedConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InstallPublishedConnectorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).InstallPublishedConnector(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_InstallPublishedConnector_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).InstallPublishedConnector(ctx, req.(*InstallPublishedConnectorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpgradeConnectorInstallation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpgradeConnectorInstallationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpgradeConnectorInstallation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpgradeConnectorInstallation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpgradeConnectorInstallation(ctx, req.(*UpgradeConnectorInstallationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListConnectorAuthorizations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorAuthorizationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorAuthorizations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorAuthorizations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorAuthorizations(ctx, req.(*ListConnectorAuthorizationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SelectConnectorAuthorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SelectConnectorAuthorizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SelectConnectorAuthorization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SelectConnectorAuthorization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SelectConnectorAuthorization(ctx, req.(*SelectConnectorAuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_RefreshConnectorAuthorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshConnectorAuthorizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).RefreshConnectorAuthorization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_RefreshConnectorAuthorization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).RefreshConnectorAuthorization(ctx, req.(*RefreshConnectorAuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DisconnectPublishedConnectorAuthorization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisconnectPublishedConnectorAuthorizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisconnectPublishedConnectorAuthorization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisconnectPublishedConnectorAuthorization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisconnectPublishedConnectorAuthorization(ctx, req.(*DisconnectPublishedConnectorAuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_BeginConnectorSetup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BeginConnectorSetupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).BeginConnectorSetup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_BeginConnectorSetup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).BeginConnectorSetup(ctx, req.(*BeginConnectorSetupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CompleteConnectorSetup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteConnectorSetupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CompleteConnectorSetup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CompleteConnectorSetup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CompleteConnectorSetup(ctx, req.(*CompleteConnectorSetupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_BeginConnectorAuthorizationFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BeginConnectorAuthorizationFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).BeginConnectorAuthorizationFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_BeginConnectorAuthorizationFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).BeginConnectorAuthorizationFlow(ctx, req.(*BeginConnectorAuthorizationFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CompleteConnectorAuthorizationFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteConnectorAuthorizationFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CompleteConnectorAuthorizationFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CompleteConnectorAuthorizationFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CompleteConnectorAuthorizationFlow(ctx, req.(*CompleteConnectorAuthorizationFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_UploadConnectorPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UploadConnectorPackageRequest)
 	if err := dec(in); err != nil {
@@ -4148,6 +4602,96 @@ func _AgentWorkspaceService_DisconnectConnectorAuthorization_Handler(srv interfa
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).DisconnectConnectorAuthorization(ctx, req.(*DisconnectConnectorAuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StageConnectorPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StageConnectorPackageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StageConnectorPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StageConnectorPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StageConnectorPackage(ctx, req.(*StageConnectorPackageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListConnectorPublicationRevisions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorPublicationRevisionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublicationRevisions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorPublicationRevisions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublicationRevisions(ctx, req.(*ListConnectorPublicationRevisionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_PublishConnectorRevision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishConnectorRevisionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).PublishConnectorRevision(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_PublishConnectorRevision_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).PublishConnectorRevision(ctx, req.(*PublishConnectorRevisionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DisableConnectorPublication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableConnectorPublicationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisableConnectorPublication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisableConnectorPublication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisableConnectorPublication(ctx, req.(*DisableConnectorPublicationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListConnectorPublicationHealth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConnectorPublicationHealthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublicationHealth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListConnectorPublicationHealth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListConnectorPublicationHealth(ctx, req.(*ListConnectorPublicationHealthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4858,6 +5402,50 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_ListConnectorInstallations_Handler,
 		},
 		{
+			MethodName: "ListConnectorPublications",
+			Handler:    _AgentWorkspaceService_ListConnectorPublications_Handler,
+		},
+		{
+			MethodName: "InstallPublishedConnector",
+			Handler:    _AgentWorkspaceService_InstallPublishedConnector_Handler,
+		},
+		{
+			MethodName: "UpgradeConnectorInstallation",
+			Handler:    _AgentWorkspaceService_UpgradeConnectorInstallation_Handler,
+		},
+		{
+			MethodName: "ListConnectorAuthorizations",
+			Handler:    _AgentWorkspaceService_ListConnectorAuthorizations_Handler,
+		},
+		{
+			MethodName: "SelectConnectorAuthorization",
+			Handler:    _AgentWorkspaceService_SelectConnectorAuthorization_Handler,
+		},
+		{
+			MethodName: "RefreshConnectorAuthorization",
+			Handler:    _AgentWorkspaceService_RefreshConnectorAuthorization_Handler,
+		},
+		{
+			MethodName: "DisconnectPublishedConnectorAuthorization",
+			Handler:    _AgentWorkspaceService_DisconnectPublishedConnectorAuthorization_Handler,
+		},
+		{
+			MethodName: "BeginConnectorSetup",
+			Handler:    _AgentWorkspaceService_BeginConnectorSetup_Handler,
+		},
+		{
+			MethodName: "CompleteConnectorSetup",
+			Handler:    _AgentWorkspaceService_CompleteConnectorSetup_Handler,
+		},
+		{
+			MethodName: "BeginConnectorAuthorizationFlow",
+			Handler:    _AgentWorkspaceService_BeginConnectorAuthorizationFlow_Handler,
+		},
+		{
+			MethodName: "CompleteConnectorAuthorizationFlow",
+			Handler:    _AgentWorkspaceService_CompleteConnectorAuthorizationFlow_Handler,
+		},
+		{
 			MethodName: "UploadConnectorPackage",
 			Handler:    _AgentWorkspaceService_UploadConnectorPackage_Handler,
 		},
@@ -4880,6 +5468,26 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DisconnectConnectorAuthorization",
 			Handler:    _AgentWorkspaceService_DisconnectConnectorAuthorization_Handler,
+		},
+		{
+			MethodName: "StageConnectorPackage",
+			Handler:    _AgentWorkspaceService_StageConnectorPackage_Handler,
+		},
+		{
+			MethodName: "ListConnectorPublicationRevisions",
+			Handler:    _AgentWorkspaceService_ListConnectorPublicationRevisions_Handler,
+		},
+		{
+			MethodName: "PublishConnectorRevision",
+			Handler:    _AgentWorkspaceService_PublishConnectorRevision_Handler,
+		},
+		{
+			MethodName: "DisableConnectorPublication",
+			Handler:    _AgentWorkspaceService_DisableConnectorPublication_Handler,
+		},
+		{
+			MethodName: "ListConnectorPublicationHealth",
+			Handler:    _AgentWorkspaceService_ListConnectorPublicationHealth_Handler,
 		},
 		{
 			MethodName: "CreateCLIConnectorDefinition",

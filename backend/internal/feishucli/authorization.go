@@ -117,6 +117,52 @@ func (registrar *Registrar) PollAuthorization(ctx context.Context, appID, appSec
 	}, nil
 }
 
+func (registrar *Registrar) RefreshAuthorization(ctx context.Context, appID, appSecret, refreshToken string) (Authorization, error) {
+	if strings.TrimSpace(appID) == "" || strings.TrimSpace(appSecret) == "" || strings.TrimSpace(refreshToken) == "" {
+		return Authorization{}, errors.New("refresh Feishu authorization: application credentials and refresh token are required")
+	}
+	values := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {refreshToken},
+		"client_id":     {appID},
+		"client_secret": {appSecret},
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, registrar.openBaseURL+oauthTokenPath, strings.NewReader(values.Encode()))
+	if err != nil {
+		return Authorization{}, err
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	body, err := registrar.doJSON(request)
+	if err != nil {
+		return Authorization{}, fmt.Errorf("refresh Feishu authorization: %w", err)
+	}
+	switch stringField(body, "error") {
+	case "invalid_grant", "invalid_token", "expired_token":
+		return Authorization{}, ErrExpired
+	case "":
+	default:
+		return Authorization{}, errors.New("refresh Feishu authorization: provider rejected request")
+	}
+	accessToken := stringField(body, "access_token")
+	expiresIn := integerField(body, "expires_in")
+	if accessToken == "" || expiresIn <= 0 || expiresIn > 30*24*60*60 {
+		return Authorization{}, errors.New("refresh Feishu authorization: invalid provider response")
+	}
+	externalID, displayName, err := registrar.userInfo(ctx, accessToken)
+	if err != nil {
+		return Authorization{}, err
+	}
+	rotatedRefreshToken := stringField(body, "refresh_token")
+	if rotatedRefreshToken == "" {
+		rotatedRefreshToken = refreshToken
+	}
+	return Authorization{
+		ExternalID: externalID, DisplayName: displayName, AccessToken: accessToken,
+		RefreshToken: rotatedRefreshToken, Scopes: normalizedScopes(strings.Fields(stringField(body, "scope"))),
+		ExpiresAt: registrar.now().Add(time.Duration(expiresIn) * time.Second),
+	}, nil
+}
+
 func (registrar *Registrar) userInfo(ctx context.Context, accessToken string) (string, string, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, registrar.openBaseURL+userInfoPath, nil)
 	if err != nil {

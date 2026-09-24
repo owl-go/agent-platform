@@ -51,6 +51,25 @@ func TestParseValidCLIPackage(t *testing.T) {
 	if pkg.CLI == nil || pkg.CLI.Executable != "example" || pkg.MCP != nil {
 		t.Fatalf("unexpected CLI package: %#v", pkg)
 	}
+	if pkg.CLI.AuthenticationDriver != "connector_package" {
+		t.Fatalf("default authentication driver = %q", pkg.CLI.AuthenticationDriver)
+	}
+}
+
+func TestParseOfficialFeishuAuthenticationDriver(t *testing.T) {
+	archive := packageZIP(t, map[string]string{
+		"connector-meta.json":      `{"source":"feishu","version":"1.0.93","type":"cli","name":"Feishu CLI","description":"Operate Feishu with reviewed commands","examples_zh":["查询飞书消息"],"examples_en":["Search Feishu messages"],"minPlatformVersion":"1.0.0","auth_mode":"oauth"}`,
+		"icon.svg":                 `<svg xmlns="http://www.w3.org/2000/svg"></svg>`,
+		"cli.json":                 `{"runtime":{"kind":"node","version":"22.22.0","digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"executable":"lark-cli","authentication_driver":"feishu","commands":{"init":{"argv":["app","status","--output","json"]},"auth":{"argv":["auth","login","--output","json"]},"status":{"argv":["auth","status","--output","json"]},"unAuth":{"argv":["auth","logout","--output","json"]}},"status_match":{"json_path":"$.authenticated","equals":true},"auth_url_domains":["open.feishu.cn"],"egress_hosts":["open.feishu.cn"],"timeout_seconds":60}`,
+		"skills/messages/SKILL.md": "---\nname: feishu-messages\ndisplay_name: Feishu Messages\ndescription: Search and send reviewed Feishu messages\nversion: 1.0.0\nauthor: Agent Workspace\n---\n\nUse only the reviewed message capabilities.\n",
+	})
+	pkg, err := connectorpackage.Parse(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pkg.CLI == nil || pkg.CLI.AuthenticationDriver != "feishu" {
+		t.Fatalf("official Feishu driver was not preserved: %#v", pkg.CLI)
+	}
 }
 
 func TestParseValidCLIExecutableBundle(t *testing.T) {

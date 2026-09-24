@@ -74,8 +74,8 @@ type cliLifecycleRepository interface {
 }
 
 type connectorPackageCLIRepository interface {
-	ValidateConnectorPackageCLIInvocation(context.Context, string, string) error
-	ResolveConnectorPackageAuthorization(context.Context, string, string, string) ([]byte, error)
+	ValidateConnectorPackageCLIInvocation(context.Context, string, string, string, string) error
+	ResolveConnectorPackageAuthorization(context.Context, string, string, string, string, string) (workspacedomain.ConnectorAuthorizationMaterial, error)
 }
 
 type mcpLifecycleRepository interface {
@@ -830,6 +830,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable, ManagedInstallation: snapshot.InstallationID != "",
 			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: runtimeDigests,
 			Capabilities: capabilities, VersionNumber: snapshot.Version, CPUMillis: snapshot.CPUMillis, MemoryMiB: snapshot.MemoryMiB, ChildProcesses: snapshot.ChildProcesses,
+			RevisionID: snapshot.RevisionID, AuthorizationID: snapshot.AuthorizationID, PackageSHA256: snapshot.PackageSHA256,
 		})
 		if snapshot.CPUMillis > 0 && float64(snapshot.CPUMillis)/1000 < containerLimits.CPUs {
 			containerLimits.CPUs = float64(snapshot.CPUMillis) / 1000
@@ -865,7 +866,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	lifecycle := func(checkCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
 		if definition.ManagedInstallation {
 			if repository, ok := executor.cliCredentials.(connectorPackageCLIRepository); ok {
-				return repository.ValidateConnectorPackageCLIInvocation(checkCtx, job.OwnerID, definition.ID)
+				return repository.ValidateConnectorPackageCLIInvocation(checkCtx, job.OwnerID, definition.ID, definition.RevisionID, definition.AuthorizationID)
 			}
 			return fmt.Errorf("Connector Package lifecycle repository is unavailable")
 		}
@@ -907,17 +908,63 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 		if definition.AuthenticationDriver == "none" {
 			return map[string]string{}, nil
 		}
+		if definition.ManagedInstallation {
+			repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
+			if !ok || definition.ID == "" {
+				return nil, errors.New("Connector Package credentials are unavailable")
+			}
+			material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
+			if err != nil {
+				return nil, err
+			}
+			plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
+			if err != nil {
+				return nil, err
+			}
+			if material.CredentialFormat == "access_token" || definition.AuthenticationDriver == "feishu" {
+				appID, appErr := executor.box.Decrypt(material.AppIDCiphertext, "feishu-cli-application:"+ownerID)
+				if appErr != nil {
+					clear(plaintext)
+					return nil, appErr
+				}
+				appSecret, appErr := executor.box.Decrypt(material.AppSecretCiphertext, "feishu-cli-application:"+ownerID)
+				if appErr != nil {
+					clear(plaintext)
+					clear(appID)
+					return nil, appErr
+				}
+				token := string(plaintext)
+				if material.CredentialFormat == "json" {
+					var credentials map[string]string
+					if jsonErr := json.Unmarshal(plaintext, &credentials); jsonErr != nil || credentials["access_token"] == "" {
+						clear(plaintext)
+						clear(appID)
+						clear(appSecret)
+						return nil, errors.New("Connector Package credentials are invalid")
+					}
+					token = credentials["access_token"]
+				}
+				environment := map[string]string{"LARKSUITE_CLI_APP_ID": string(appID), "LARKSUITE_CLI_APP_SECRET": string(appSecret), "LARKSUITE_CLI_USER_ACCESS_TOKEN": token, "LARKSUITE_CLI_BRAND": "feishu", "LARKSUITE_CLI_STRICT_MODE": string(identity)}
+				clear(plaintext)
+				clear(appID)
+				clear(appSecret)
+				return environment, nil
+			}
+			value := string(plaintext)
+			clear(plaintext)
+			return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
+		}
 		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
 			if definition.AuthenticationDriver == "connector_package" {
 				repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
 				if !ok || !definition.ManagedInstallation || definition.ID == "" {
 					return nil, errors.New("Connector Package credentials are unavailable")
 				}
-				ciphertext, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, string(identity))
+				material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
 				if err != nil {
 					return nil, err
 				}
-				plaintext, err := executor.box.Decrypt(ciphertext, "connector-authorization:"+ownerID)
+				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 				if err != nil {
 					return nil, err
 				}

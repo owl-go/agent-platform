@@ -555,18 +555,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .connector-account-actions span,.connector-account-actions small { color: var(--muted); font-size: .66rem; }
 .connector-account-actions a { font-size: .7rem; }
 .extension-empty { grid-column: 1/-1; min-height: 112px; }
-.connector-package-panel { margin-top: 34px; padding: 20px; border: 1px solid #dfe4de; border-radius: 16px; background: rgba(255,255,255,.72); }
-.connector-package-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.connector-package-header h2 { margin: 0; font-family: "Noto Serif SC","Source Han Serif SC",serif; font-size: 1.08rem; }
-.connector-package-header-actions,.connector-package-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.connector-package-header-actions label.el-button { display: inline-flex; margin: 0; }
-.connector-package-header-actions .el-button + .el-button,.connector-package-actions .el-button + .el-button { margin-left: 0; }
-.connector-package-list { display: grid; gap: 10px; }
-.connector-package-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border-color: #e4e8e3; border-radius: 12px; box-shadow: none; }
-.connector-package-item > div:first-child { min-width: 0; display: grid; gap: 4px; }
-.connector-package-item strong,.connector-package-item small { overflow-wrap: anywhere; }
-.connector-package-item small { color: var(--muted); }
-.connector-package-empty { margin: 0; padding: 22px 16px; border: 1px dashed #d5dbd4; border-radius: 12px; background: #f7f9f6; font-size: .8rem; text-align: center; }
 .connector-kind-dialog { width: min(620px,calc(100vw - 40px)); }
 .connector-kind-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 20px 0 6px; }
 .connector-kind-options button { display: grid; gap: 8px; min-height: 128px; padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #f9faf8; color: var(--ink); text-align: left; transition: border-color .16s ease,background .16s ease,transform .16s ease; }
@@ -618,10 +606,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
   .connector-kind-options { grid-template-columns: 1fr; }
   .connector-kind-options button { min-height: 104px; }
   .connector-detail-fields > div { grid-template-columns: 1fr; gap: 5px; }
-  .connector-package-panel { margin-top: 24px; padding: 16px; }
-  .connector-package-header,.connector-package-item { align-items: stretch; flex-direction: column; }
-  .connector-package-header-actions .el-button,.connector-package-header-actions label.el-button { flex: 1; justify-content: center; }
-  .connector-package-actions { justify-content: flex-start; }
 }
 .artifact-disclosure { width: min(100%,680px); margin: 14px 0 8px; }
 .artifact-disclosure-links { display: flex; flex-wrap: wrap; gap: 6px 20px; }

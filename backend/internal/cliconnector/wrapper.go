@@ -75,6 +75,9 @@ type Definition struct {
 	CreatedByUserID        string
 	ManagedInstallation    bool
 	InstallationAuthorized bool
+	RevisionID             string
+	AuthorizationID        string
+	PackageSHA256          string
 	CPUMillis              int
 	MemoryMiB              int
 	ChildProcesses         int
