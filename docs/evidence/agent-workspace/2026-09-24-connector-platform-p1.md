@@ -21,6 +21,8 @@
 
 `make production-conformance-preflight` was run and failed closed because this host is macOS, `runsc` and the controlled Egress network are unavailable, and the required Runtime image, provider credential, object-store, repository, and evidence-root variables are not configured. Production Conformance was therefore not run.
 
+The deployed Linux host does have the `runsc` Docker runtime and `agent-public-egress` network. A second preflight there still failed closed because the Conformance repository/work/evidence roots, resolver file, sandbox test URLs, five immutable Runtime images/models/credential directories, Aliyun OSS credentials, and MinIO API credentials are not configured. No model or provider call was started.
+
 No official Feishu package was staged or published during this verification, so there is no package SHA-256, bundle SHA-256, Runtime RepoDigest, provider registration, OAuth account, or Linux sandbox execution result to record. The service rejects publication without exact locally recorded Conformance evidence. The P1 implementation can be deployed, but the official catalog entry must remain unavailable until a Linux + `runsc` Conformance run supplies those exact Digests and an Administrator stages and publishes that resulting archive.
 
 ## Deployment
