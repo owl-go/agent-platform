@@ -12,7 +12,6 @@ import (
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
-	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/feishucli"
@@ -211,9 +210,6 @@ func (service *Service) EnableCLIConnector(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
-	}
 	repository, err := service.cliConnectors()
 	if err != nil {
 		return nil, publicError(err)
@@ -261,9 +257,6 @@ func (service *Service) DisableCLIConnector(ctx context.Context, request *worksp
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
-	}
 	if request.ExpectedVersion < 1 {
 		return nil, publicError(workspacedomain.ErrInvalid)
 	}
@@ -282,9 +275,6 @@ func (service *Service) CompleteCLIConnectorEnablement(ctx context.Context, requ
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
 		return nil, publicError(err)
-	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
 	}
 	repository, err := service.cliConnectors()
 	if err != nil {
@@ -367,9 +357,6 @@ func (service *Service) BeginCLIConnectorAuthorization(ctx context.Context, requ
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
-	}
 	identity := cliconnector.Identity(request.Identity)
 	if identity != cliconnector.IdentityUser {
 		return nil, publicError(fmt.Errorf("%w: interactive authorization only supports user identity", workspacedomain.ErrInvalid))
@@ -422,9 +409,6 @@ func (service *Service) CompleteCLIConnectorAuthorization(ctx context.Context, r
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
 		return nil, publicError(err)
-	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
 	}
 	repository, err := service.cliConnectors()
 	if err != nil {
@@ -501,9 +485,6 @@ func (service *Service) DisconnectCLIConnectorAuthorization(ctx context.Context,
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
-	}
 	repository, err := service.cliConnectors()
 	if err != nil {
 		return nil, publicError(err)
@@ -559,9 +540,6 @@ func (service *Service) DecideCommandApproval(ctx context.Context, request *work
 	principal, err := service.accounts.Current(ctx)
 	if err != nil {
 		return nil, publicError(err)
-	}
-	if principal.Administrator {
-		return nil, publicError(accountdomain.ErrForbidden)
 	}
 	owner := principal.UserID
 	decision := workspacedomain.ApprovalState(request.Decision)

@@ -68,6 +68,7 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { iconUploadHint: "支持 PNG、JPEG、WebP 或 GIF，大小不超过 384KB。" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { platformSkills: "平台技能", mySkills: "我的技能", platformConnectors: "平台连接器", myConnectors: "我的连接器" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connected: "已连接", setupRequired: "需要设置", availableToInstall: "可安装", packageVersion: "版本 {version}", conformanceAvailable: "已通过运行验证", conformanceUnavailable: "运行验证不可用", selectedAccount: "当前账号", refreshAuthorization: "刷新授权", upgrade: "升级", uninstall: "卸载" });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { deactivate: "取消激活" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "上传连接器", connectorPackageUploadHint: "上传一个经过校验的 ZIP；安装后仍显示在同一个连接器目录中。" });
 Object.assign(zh.experts, { platformExperts: "平台专家", myExperts: "我的专家" });
 Object.assign(zh.experts, {
@@ -124,6 +125,7 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { iconUploadHint: "PNG, JPEG, WebP, or GIF up to 384KB." });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { platformSkills: "Platform Skills", mySkills: "My Skills", platformConnectors: "Platform Connectors", myConnectors: "My Connectors" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connected: "Connected", setupRequired: "Setup required", availableToInstall: "Available to install", packageVersion: "Version {version}", conformanceAvailable: "Runtime verified", conformanceUnavailable: "Runtime verification unavailable", selectedAccount: "Selected account", refreshAuthorization: "Refresh authorization", upgrade: "Upgrade", uninstall: "Uninstall" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { deactivate: "Deactivate" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "Upload Connector", connectorPackageUploadHint: "Upload a validated ZIP. The installation appears in this same Connector catalog." });
 Object.assign(en.experts, { platformExperts: "Platform Experts", myExperts: "My Experts" });
 Object.assign(en.experts, {
