@@ -166,7 +166,7 @@ async function selectActivatedCLI(definitionID: string) {
 }
 async function authorizeActivatedCLI(definition: CLIConnectorDefinition, enablement: CLIConnectorEnablement, popup: Window | null) {
   const scopes = cliUserScopes(definition);
-  if (definition.authentication_driver !== "feishu" || !scopes.length) { closeBlankCLIWindow(popup); return; }
+  if (definition.authentication_driver !== "feishu") { closeBlankCLIWindow(popup); return; }
   const authorizations = await api.listCLIConnectorAuthorizations(enablement.id);
   cliAuthorizations.value = { ...cliAuthorizations.value, [enablement.id]: authorizations };
   if (authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)))) { closeBlankCLIWindow(popup); return; }
