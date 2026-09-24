@@ -13,6 +13,13 @@ const (
 	ConnectorModeCLI ConnectorMode = "cli"
 )
 
+type ConnectorPublicationState string
+
+const (
+	ConnectorPublicationAvailable ConnectorPublicationState = "available"
+	ConnectorPublicationDisabled  ConnectorPublicationState = "disabled"
+)
+
 type ConnectorInstallationState string
 
 const (
@@ -40,6 +47,38 @@ type ConnectorRevision struct {
 	RuntimePolicy []byte
 	ObjectKey     string
 	CreatedAt     time.Time
+}
+
+type ConnectorPublication struct {
+	PackageSource    string
+	ActiveRevisionID string
+	State            ConnectorPublicationState
+	AdministratorID  string
+	Version          int64
+	UpdatedAt        time.Time
+}
+
+func (publication *ConnectorPublication) Publish(administratorID, revisionID string, now time.Time) error {
+	if publication == nil || strings.TrimSpace(publication.PackageSource) == "" || administratorID == "" || revisionID == "" {
+		return fmt.Errorf("%w: connector publication is incomplete", ErrInvalid)
+	}
+	publication.ActiveRevisionID = revisionID
+	publication.State = ConnectorPublicationAvailable
+	publication.AdministratorID = administratorID
+	publication.Version++
+	publication.UpdatedAt = now
+	return nil
+}
+
+func (publication *ConnectorPublication) Disable(administratorID string, now time.Time) error {
+	if publication == nil || publication.PackageSource == "" || publication.ActiveRevisionID == "" || administratorID == "" {
+		return fmt.Errorf("%w: connector publication is incomplete", ErrInvalid)
+	}
+	publication.State = ConnectorPublicationDisabled
+	publication.AdministratorID = administratorID
+	publication.Version++
+	publication.UpdatedAt = now
+	return nil
 }
 
 type ConnectorInstallation struct {

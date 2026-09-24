@@ -12,4 +12,8 @@ P0 separates installation, connection, and authorization. Package revisions are 
 
 Connector and capability risk declarations are advisory inputs to platform policy. The platform may raise risk, and every high-risk command requires a one-use, time-bounded User approval bound to an immutable command digest and nonce. Skill instructions cannot approve or bypass that policy.
 
-The P0 deliverable includes package validation, safe ZIP handling, a unified domain and API seam, lifecycle and audit persistence, upload and guided-creation UI, and generic MCP/CLI fixtures. It does not ship a real third-party Connector. Package signatures, trust chains, marketplace review, and external supply-chain scanning remain P2 work.
+The P0 deliverable includes package validation, safe ZIP handling, a unified domain and API seam, lifecycle and audit persistence, upload and guided-creation UI, and generic MCP/CLI fixtures. It does not ship a real third-party Connector.
+
+P1 makes that boundary operational with the official Feishu CLI as the first real Connector Package. An Administrator publishes an exact, Conformance-backed package revision; Users browse it without authorization, install it idempotently, complete the existing one-application-per-User Feishu registration and account authorization flows, and invoke it through the unified installation and approval lifecycle. P1 preserves multiple Feishu account authorizations, User/Bot identity, least-privilege scope recovery, immutable upgrade and rollback behavior, historical snapshots, and the existing secret and Egress boundaries. Legacy CLI Definition and Enablement rows remain a compatibility source during migration but stop being the mutable source of truth after a User is migrated.
+
+Package signatures, trust chains, marketplace review, and external supply-chain scanning remain P2 work.

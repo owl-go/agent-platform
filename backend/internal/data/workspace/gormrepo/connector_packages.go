@@ -15,8 +15,13 @@ import (
 
 type ConnectorPackageRepository interface {
 	CreateConnectorRevision(context.Context, domain.ConnectorRevision) (domain.ConnectorRevision, error)
+	PublishConnectorRevision(context.Context, string, string, int64) (domain.ConnectorPublication, error)
+	SetConnectorPublicationState(context.Context, string, string, domain.ConnectorPublicationState, int64) (domain.ConnectorPublication, error)
+	ListConnectorPublications(context.Context, bool) ([]domain.ConnectorPublication, error)
 	InstallConnector(context.Context, domain.ConnectorInstallation) (domain.ConnectorInstallation, error)
 	ListConnectorInstallations(context.Context, string) ([]domain.ConnectorInstallation, error)
+	ListConnectorAuthorizations(context.Context, string, string) ([]domain.ConnectorAuthorization, error)
+	SelectConnectorAuthorization(context.Context, string, string, string, int64) (domain.ConnectorInstallation, error)
 	ActivateConnectorRevision(context.Context, string, string, string, time.Time) (domain.ConnectorInstallation, error)
 	RollbackConnectorRevision(context.Context, string, string, string, string, time.Time) (domain.ConnectorInstallation, error)
 	SetConnectorInstallationState(context.Context, string, string, domain.ConnectorInstallationState, int64) (domain.ConnectorInstallation, error)
@@ -26,6 +31,83 @@ type ConnectorPackageRepository interface {
 }
 
 var _ ConnectorPackageRepository = (*Repository)(nil)
+
+func (repository *Repository) PublishConnectorRevision(ctx context.Context, administratorID, revisionID string, expectedVersion int64) (domain.ConnectorPublication, error) {
+	if administratorID == "" || revisionID == "" || expectedVersion < 0 {
+		return domain.ConnectorPublication{}, fmt.Errorf("%w: connector publication input is incomplete", domain.ErrInvalid)
+	}
+	var row connectorPublicationRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var revision connectorRevisionRecord
+		if err := tx.Where("id = ?", revisionID).Take(&revision).Error; err != nil {
+			return mapNotFound(err)
+		}
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("package_source = ?", revision.PackageSource).Take(&row).Error
+		if err == gorm.ErrRecordNotFound {
+			if expectedVersion != 0 {
+				return domain.ErrConflict
+			}
+			row = connectorPublicationRecord{PackageSource: revision.PackageSource, ActiveRevisionID: revision.ID, State: string(domain.ConnectorPublicationAvailable), AdministratorID: administratorID, Version: 1, UpdatedAt: time.Now().UTC()}
+			return tx.Create(&row).Error
+		}
+		if err != nil {
+			return err
+		}
+		if row.Version != expectedVersion {
+			return domain.ErrConflict
+		}
+		result := tx.Model(&connectorPublicationRecord{}).
+			Where("package_source = ? AND version = ?", row.PackageSource, row.Version).
+			Updates(map[string]any{"active_revision_id": revision.ID, "state": string(domain.ConnectorPublicationAvailable), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		return tx.Where("package_source = ?", row.PackageSource).Take(&row).Error
+	})
+	if err != nil {
+		return domain.ConnectorPublication{}, fmt.Errorf("publish Connector Revision: %w", err)
+	}
+	return connectorPublicationDomain(row), nil
+}
+
+func (repository *Repository) SetConnectorPublicationState(ctx context.Context, administratorID, packageSource string, state domain.ConnectorPublicationState, expectedVersion int64) (domain.ConnectorPublication, error) {
+	if administratorID == "" || packageSource == "" || expectedVersion <= 0 || state != domain.ConnectorPublicationAvailable && state != domain.ConnectorPublicationDisabled {
+		return domain.ConnectorPublication{}, fmt.Errorf("%w: connector publication state input is invalid", domain.ErrInvalid)
+	}
+	var row connectorPublicationRecord
+	result := repository.db.WithContext(ctx).Model(&connectorPublicationRecord{}).
+		Where("package_source = ? AND version = ?", packageSource, expectedVersion).
+		Updates(map[string]any{"state": string(state), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
+	if result.Error != nil {
+		return domain.ConnectorPublication{}, fmt.Errorf("set Connector Publication state: %w", result.Error)
+	}
+	if result.RowsAffected != 1 {
+		return domain.ConnectorPublication{}, domain.ErrConflict
+	}
+	if err := repository.db.WithContext(ctx).Where("package_source = ?", packageSource).Take(&row).Error; err != nil {
+		return domain.ConnectorPublication{}, fmt.Errorf("read Connector Publication: %w", err)
+	}
+	return connectorPublicationDomain(row), nil
+}
+
+func (repository *Repository) ListConnectorPublications(ctx context.Context, includeDisabled bool) ([]domain.ConnectorPublication, error) {
+	query := repository.db.WithContext(ctx).Order("package_source")
+	if !includeDisabled {
+		query = query.Where("state = ?", domain.ConnectorPublicationAvailable)
+	}
+	var rows []connectorPublicationRecord
+	if err := query.Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Connector Publications: %w", err)
+	}
+	items := make([]domain.ConnectorPublication, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, connectorPublicationDomain(row))
+	}
+	return items, nil
+}
 
 func (repository *Repository) CreateConnectorRevision(ctx context.Context, input domain.ConnectorRevision) (domain.ConnectorRevision, error) {
 	if input.ID == "" {
@@ -180,6 +262,79 @@ func (repository *Repository) ListConnectorInstallations(ctx context.Context, ow
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (repository *Repository) ListConnectorAuthorizations(ctx context.Context, ownerID, installationID string) ([]domain.ConnectorAuthorization, error) {
+	if ownerID == "" || installationID == "" {
+		return nil, fmt.Errorf("%w: connector authorization owner and installation are required", domain.ErrInvalid)
+	}
+	var installation connectorInstallationRecord
+	if err := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ? AND state <> ?", installationID, ownerID, domain.ConnectorInstallationUninstalled).Take(&installation).Error; err != nil {
+		return nil, mapNotFound(err)
+	}
+	var rows []connectorAuthorizationRecord
+	if err := repository.db.WithContext(ctx).Where("installation_id = ? AND owner_user_id = ?", installationID, ownerID).Order("updated_at DESC, id").Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("list Connector Authorizations: %w", err)
+	}
+	items := make([]domain.ConnectorAuthorization, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, connectorAuthorizationDomain(row))
+	}
+	return items, nil
+}
+
+func (repository *Repository) SelectConnectorAuthorization(ctx context.Context, ownerID, installationID, authorizationID string, expectedVersion int64) (domain.ConnectorInstallation, error) {
+	return repository.selectConnectorAuthorization(ctx, ownerID, installationID, authorizationID, expectedVersion, nil)
+}
+
+func (repository *Repository) SelectConnectorAuthorizationWithAudit(ctx context.Context, ownerID, installationID, authorizationID string, expectedVersion int64, audit domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	return repository.selectConnectorAuthorization(ctx, ownerID, installationID, authorizationID, expectedVersion, &audit)
+}
+
+func (repository *Repository) selectConnectorAuthorization(ctx context.Context, ownerID, installationID, authorizationID string, expectedVersion int64, audit *domain.ConnectorAuditRecord) (domain.ConnectorInstallation, error) {
+	if ownerID == "" || installationID == "" || authorizationID == "" || expectedVersion <= 0 {
+		return domain.ConnectorInstallation{}, fmt.Errorf("%w: connector authorization selection is incomplete", domain.ErrInvalid)
+	}
+	var row connectorInstallationRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND owner_user_id = ? AND version = ? AND state = ?", installationID, ownerID, expectedVersion, domain.ConnectorInstallationActive).Take(&row).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return domain.ErrConflict
+			}
+			return err
+		}
+		var authorization connectorAuthorizationRecord
+		if err := tx.Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", authorizationID, installationID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err != nil {
+			return mapNotFound(err)
+		}
+		result := tx.Model(&connectorInstallationRecord{}).Where("id = ? AND version = ?", row.ID, row.Version).Updates(map[string]any{"authorization_id": authorization.ID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		if err := tx.Where("id = ?", row.ID).Take(&row).Error; err != nil {
+			return err
+		}
+		if audit != nil {
+			if audit.InstallationID == "" {
+				audit.InstallationID = row.ID
+			}
+			if audit.RevisionID == "" {
+				audit.RevisionID = row.ActiveRevisionID
+			}
+			if audit.IdentityRef == "" {
+				audit.IdentityRef = authorization.IdentityRef
+			}
+			return createConnectorAuditTx(tx, *audit)
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.ConnectorInstallation{}, fmt.Errorf("select Connector Authorization: %w", err)
+	}
+	return connectorInstallationDomain(row), nil
 }
 
 func (repository *Repository) SetConnectorInstallationState(ctx context.Context, ownerID, installationID string, state domain.ConnectorInstallationState, expectedVersion int64) (domain.ConnectorInstallation, error) {
@@ -394,13 +549,6 @@ func (repository *Repository) createConnectorAuthorization(ctx context.Context, 
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
-		if installation.AuthorizationID != nil && *installation.AuthorizationID != row.ID {
-			if err := tx.Model(&connectorAuthorizationRecord{}).
-				Where("id = ? AND owner_user_id = ?", *installation.AuthorizationID, input.OwnerID).
-				Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error; err != nil {
-				return err
-			}
-		}
 		if err := tx.Model(&connectorInstallationRecord{}).
 			Where("id = ? AND owner_user_id = ?", input.InstallationID, input.OwnerID).
 			Updates(map[string]any{"authorization_id": row.ID, "updated_at": row.UpdatedAt, "version": gorm.Expr("version + 1")}).Error; err != nil {
@@ -555,6 +703,10 @@ func (repository *Repository) ValidateMCPInvocation(ctx context.Context, ownerID
 
 func connectorRevisionDomain(row connectorRevisionRecord) domain.ConnectorRevision {
 	return domain.ConnectorRevision{ID: row.ID, PackageSource: row.PackageSource, Version: row.Version, Mode: domain.ConnectorMode(row.Mode), PackageSHA256: row.PackageSHA256, RuntimePolicy: row.RuntimePolicy, ObjectKey: row.ObjectKey, CreatedAt: row.CreatedAt}
+}
+
+func connectorPublicationDomain(row connectorPublicationRecord) domain.ConnectorPublication {
+	return domain.ConnectorPublication{PackageSource: row.PackageSource, ActiveRevisionID: row.ActiveRevisionID, State: domain.ConnectorPublicationState(row.State), AdministratorID: row.AdministratorID, Version: row.Version, UpdatedAt: row.UpdatedAt}
 }
 
 func connectorInstallationDomain(row connectorInstallationRecord) domain.ConnectorInstallation {

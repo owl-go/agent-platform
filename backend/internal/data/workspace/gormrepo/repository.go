@@ -37,6 +37,17 @@ type connectorRevisionRecord struct {
 
 func (connectorRevisionRecord) TableName() string { return "connector_revisions" }
 
+type connectorPublicationRecord struct {
+	PackageSource    string    `gorm:"column:package_source"`
+	ActiveRevisionID string    `gorm:"column:active_revision_id"`
+	State            string    `gorm:"column:state"`
+	AdministratorID  string    `gorm:"column:administrator_user_id"`
+	Version          int64     `gorm:"column:version"`
+	UpdatedAt        time.Time `gorm:"column:updated_at"`
+}
+
+func (connectorPublicationRecord) TableName() string { return "connector_package_publications" }
+
 type connectorInstallationRecord struct {
 	ID               string    `gorm:"column:id"`
 	OwnerID          string    `gorm:"column:owner_user_id"`
