@@ -264,6 +264,19 @@ async function enableCLI(item: CLIConnectorDefinition) {
   finally { cliEnableBusy.value = cliEnableBusy.value.filter((id) => id !== item.id); }
 }
 
+async function deactivateCLI(item: CLIConnectorDefinition) {
+  operationError.value = undefined;
+  const enablement = enablementFor(item.id);
+  if (!enablement || cliEnableBusy.value.includes(item.id)) return;
+  cliEnableBusy.value.push(item.id);
+  try {
+    const value = await api.disableCLIConnector(item.id, enablement.version);
+    cliEnablements.value = [...cliEnablements.value.filter((entry) => entry.definition_id !== item.id), value];
+    emit("update:cliConnectorDefinitionIds", props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
+  } catch (cause) { reportError(cause); }
+  finally { cliEnableBusy.value = cliEnableBusy.value.filter((id) => id !== item.id); }
+}
+
 function openCLIWindow(): Window | null {
   // Reserve the tab during the click so async API responses do not trigger popup blocking.
   try {
@@ -613,11 +626,12 @@ async function fileToBase64(file: File): Promise<string> {
                 <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
                 <el-button v-else-if="!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item)" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t(hasActiveCLIAuthorization(item) ? 'resources.expandAuthorization' : 'resources.authorizeAccount') }}</el-button>
               </template>
-              <el-button v-else-if="item.state === 'available' && !item.managed_installation" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)">{{ t('resources.enable') }}</el-button>
             </div>
           </div>
           <div class="extension-card-actions" @click.stop>
             <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="item.managed_installation ? !item.managed_authorized : enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
+            <el-button v-if="!canManageCLI && !item.managed_installation && enablementFor(item.id)?.state === 'enabled'" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)">{{ t('resources.disable') }}</el-button>
+            <el-button v-else-if="!canManageCLI && !item.managed_installation && item.state === 'available'" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
             <el-button v-if="canManageCLI && !item.managed_installation && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
             <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
             <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>

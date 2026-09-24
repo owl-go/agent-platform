@@ -20,14 +20,22 @@ import (
 type cliCatalogRepository struct {
 	workspaceapplication.Repository
 	cliConnectorRepository
-	items          []cliconnector.Definition
-	deletedID      string
-	deletedVersion int64
+	items           []cliconnector.Definition
+	deletedID       string
+	deletedVersion  int64
+	disabledOwner   string
+	disabledID      string
+	disabledVersion int64
 }
 
 func (repository *cliCatalogRepository) DeleteCLIConnectorDefinition(_ context.Context, id string, version int64) error {
 	repository.deletedID, repository.deletedVersion = id, version
 	return nil
+}
+
+func (repository *cliCatalogRepository) DisableCLIConnector(_ context.Context, ownerID, id string, version int64) (cliconnector.Enablement, error) {
+	repository.disabledOwner, repository.disabledID, repository.disabledVersion = ownerID, id, version
+	return cliconnector.Enablement{ID: "enablement-1", OwnerID: ownerID, DefinitionID: id, State: "disabled", Version: version + 1}, nil
 }
 
 func TestCLIConnectorDeletionRequiresAdministratorAndVersion(t *testing.T) {
@@ -118,6 +126,28 @@ func TestAdministratorCannotEnableCLIConnector(t *testing.T) {
 	_, err := service.EnableCLIConnector(ctx, &workspacev1.EnableCLIConnectorRequest{DefinitionId: "definition-1"})
 	if code := kratoserrors.Code(err); code != http.StatusForbidden {
 		t.Fatalf("Administrator enablement code = %d, want %d", code, http.StatusForbidden)
+	}
+}
+
+func TestUserCanDisableCLIConnectorWithVersion(t *testing.T) {
+	repository := &cliCatalogRepository{}
+	application, err := workspaceapplication.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{accounts: &accountapplication.Service{}, workspace: application}
+	user := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "user-1"})
+	admin := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "admin", Administrator: true})
+	request := &workspacev1.DisableCLIConnectorRequest{DefinitionId: "definition-1", ExpectedVersion: 4}
+	if _, err := service.DisableCLIConnector(admin, request); kratoserrors.Code(err) != http.StatusForbidden {
+		t.Fatalf("administrator disablement = %v", err)
+	}
+	if _, err := service.DisableCLIConnector(user, &workspacev1.DisableCLIConnectorRequest{DefinitionId: request.DefinitionId}); kratoserrors.Code(err) != http.StatusUnprocessableEntity {
+		t.Fatalf("unversioned disablement = %v", err)
+	}
+	response, err := service.DisableCLIConnector(user, request)
+	if err != nil || response.State != "disabled" || repository.disabledOwner != "user-1" || repository.disabledID != "definition-1" || repository.disabledVersion != 4 {
+		t.Fatalf("user disablement failed: response=%#v err=%v", response, err)
 	}
 }
 

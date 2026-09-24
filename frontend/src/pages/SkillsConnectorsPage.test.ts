@@ -57,7 +57,7 @@ describe("SkillsConnectorsPage", () => {
     await router.push("/resources?tab=connectors");
     const wrapper = mount(SkillsConnectorsPage, { global: { plugins: [router, createAppI18n({ getItem: () => language }, language)], provide: { [platformApiKey as symbol]: api } } });
     await flushPromises();
-    await wrapper.findAll("button").find((button) => button.text() === enableLabel)!.trigger("click");
+    await wrapper.get(`button[aria-label="${enableLabel}"]`).trigger("click");
     await flushPromises();
     expect(enableCLIConnector).toHaveBeenCalledWith(definition.id);
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(errorTitle);

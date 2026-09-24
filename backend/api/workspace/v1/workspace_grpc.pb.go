@@ -155,6 +155,7 @@ const (
 	AgentWorkspaceService_DeleteCLIConnectorDefinition_FullMethodName              = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
 	AgentWorkspaceService_ListCLIConnectorHealth_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
 	AgentWorkspaceService_EnableCLIConnector_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
+	AgentWorkspaceService_DisableCLIConnector_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/DisableCLIConnector"
 	AgentWorkspaceService_ListCLIConnectorEnablements_FullMethodName               = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
 	AgentWorkspaceService_ListCommandApprovals_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
 	AgentWorkspaceService_DecideCommandApproval_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
@@ -305,6 +306,7 @@ type AgentWorkspaceServiceClient interface {
 	DeleteCLIConnectorDefinition(ctx context.Context, in *DeleteCLIConnectorDefinitionRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListCLIConnectorHealth(ctx context.Context, in *ListCLIConnectorHealthRequest, opts ...grpc.CallOption) (*ListCLIConnectorHealthResponse, error)
 	EnableCLIConnector(ctx context.Context, in *EnableCLIConnectorRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error)
+	DisableCLIConnector(ctx context.Context, in *DisableCLIConnectorRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error)
 	ListCLIConnectorEnablements(ctx context.Context, in *ListCLIConnectorEnablementsRequest, opts ...grpc.CallOption) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(ctx context.Context, in *ListCommandApprovalsRequest, opts ...grpc.CallOption) (*ListCommandApprovalsResponse, error)
 	DecideCommandApproval(ctx context.Context, in *DecideCommandApprovalRequest, opts ...grpc.CallOption) (*CommandApproval, error)
@@ -1683,6 +1685,16 @@ func (c *agentWorkspaceServiceClient) EnableCLIConnector(ctx context.Context, in
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) DisableCLIConnector(ctx context.Context, in *DisableCLIConnectorRequest, opts ...grpc.CallOption) (*CLIConnectorEnablement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CLIConnectorEnablement)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DisableCLIConnector_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ListCLIConnectorEnablements(ctx context.Context, in *ListCLIConnectorEnablementsRequest, opts ...grpc.CallOption) (*ListCLIConnectorEnablementsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCLIConnectorEnablementsResponse)
@@ -1903,6 +1915,7 @@ type AgentWorkspaceServiceServer interface {
 	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
 	ListCLIConnectorHealth(context.Context, *ListCLIConnectorHealthRequest) (*ListCLIConnectorHealthResponse, error)
 	EnableCLIConnector(context.Context, *EnableCLIConnectorRequest) (*CLIConnectorEnablement, error)
+	DisableCLIConnector(context.Context, *DisableCLIConnectorRequest) (*CLIConnectorEnablement, error)
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
 	DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error)
@@ -2328,6 +2341,9 @@ func (UnimplementedAgentWorkspaceServiceServer) ListCLIConnectorHealth(context.C
 }
 func (UnimplementedAgentWorkspaceServiceServer) EnableCLIConnector(context.Context, *EnableCLIConnectorRequest) (*CLIConnectorEnablement, error) {
 	return nil, status.Error(codes.Unimplemented, "method EnableCLIConnector not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DisableCLIConnector(context.Context, *DisableCLIConnectorRequest) (*CLIConnectorEnablement, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableCLIConnector not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCLIConnectorEnablements not implemented")
@@ -4822,6 +4838,24 @@ func _AgentWorkspaceService_EnableCLIConnector_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_DisableCLIConnector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableCLIConnectorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DisableCLIConnector(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DisableCLIConnector_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DisableCLIConnector(ctx, req.(*DisableCLIConnectorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ListCLIConnectorEnablements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCLIConnectorEnablementsRequest)
 	if err := dec(in); err != nil {
@@ -5516,6 +5550,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EnableCLIConnector",
 			Handler:    _AgentWorkspaceService_EnableCLIConnector_Handler,
+		},
+		{
+			MethodName: "DisableCLIConnector",
+			Handler:    _AgentWorkspaceService_DisableCLIConnector_Handler,
 		},
 		{
 			MethodName: "ListCLIConnectorEnablements",
