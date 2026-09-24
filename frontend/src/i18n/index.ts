@@ -175,9 +175,11 @@ Object.assign(zh, { composer: {
   placeholder: "输入消息，/ 选择技能，{'@'} 引用对话文件", removeToken: "移除 {name}", useSkill: "去使用", summon: "召唤",
   manageSkills: "管理技能", manageConnectors: "管理连接器", moreExperts: "召唤更多专家", localFiles: "从本地添加文件", localSkill: "本地上传的技能",
   parentFolder: "返回上一级文件夹", conversationFiles: "对话文件", fileUnavailable: "文件已过期或不可用", resourceUnavailable: "资源不可用", version: "版本 {version}",
-  connectorUnavailable: "请先完成测试或启用", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", filesFailed: "无法读取对话文件，请重试。",
+  connectorUnavailable: "连接器当前不可用", connectorInactive: "打开右侧开关即可激活", connectorActivation: "激活{name}", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", filesFailed: "无法读取对话文件，请重试。",
   sendFailed: "发送未完成，草稿已保留，请检查资源或文件后重试。", reselectFiles: "这些文件尚未上传，请重新选择：{names}",
+  activationRequired: "{name} 需要完成应用激活", activationHint: "请在飞书页面完成应用创建；返回后系统会继续账号授权。",
   authorizationRequired: "{name} 需要飞书账号授权", authorizationHint: "点击打开飞书授权；完成后回到会话并回复“已授权”即可继续。",
+  activationAuthorizationHint: "请在飞书页面完成授权；完成后即可在当前会话中使用。", activationAuthorizationCompleted: "连接器已激活并完成授权", activationAuthorizationReady: "现在可以在当前会话中使用此连接器。",
   authorizationCompleted: "飞书授权已完成", authorizationContinue: "请在会话中回复“已授权”，助手会继续刚才的操作。",
 } });
 Object.assign(en, { composer: {
@@ -185,9 +187,11 @@ Object.assign(en, { composer: {
   placeholder: "Write a message, / to select Skills, {'@'} to reference conversation files", removeToken: "Remove {name}", useSkill: "Use Skill", summon: "Summon",
   manageSkills: "Manage Skills", manageConnectors: "Manage Connectors", moreExperts: "Discover more Experts", localFiles: "Add local files", localSkill: "Uploaded Skill",
   parentFolder: "Parent folder", conversationFiles: "Conversation files", fileUnavailable: "File expired or unavailable", resourceUnavailable: "Resource unavailable", version: "Version {version}",
-  connectorUnavailable: "Test or enable this Connector first", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", filesFailed: "Could not load conversation files. Please retry.",
+  connectorUnavailable: "This Connector is unavailable", connectorInactive: "Turn on the switch to activate", connectorActivation: "Activate {name}", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", filesFailed: "Could not load conversation files. Please retry.",
   sendFailed: "The message was not sent. Your draft is preserved; check its resources and files, then retry.", reselectFiles: "These files were not uploaded. Select them again: {names}",
+  activationRequired: "{name} needs application activation", activationHint: "Complete application creation in Feishu. Account authorization continues when you return.",
   authorizationRequired: "{name} needs Feishu account authorization", authorizationHint: "Open Feishu authorization, then return and reply “Authorized” to continue.",
+  activationAuthorizationHint: "Complete authorization in Feishu. The Connector will then be ready in this conversation.", activationAuthorizationCompleted: "Connector activated and authorized", activationAuthorizationReady: "This Connector is ready to use in the current conversation.",
   authorizationCompleted: "Feishu authorization completed", authorizationContinue: "Reply “Authorized” in this conversation and the assistant will continue the previous operation.",
 } });
 Object.assign(zh.sessions, { welcome: "从一个问题开始，随时添加专家、技能或连接器。" });

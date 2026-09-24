@@ -660,6 +660,11 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .composer-menu button > svg:last-child:not(:first-child) { margin-left: auto; }
 .composer-menu button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .composer-menu small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-connector-option { display: flex; align-items: center; gap: 8px; border-radius: 9px; }
+.composer-connector-option > button { flex: 1; min-width: 0; }
+.composer-connector-option > .el-switch { flex: 0 0 auto; margin-right: 10px; }
+.composer-connector-option:has(> button:hover:not(:disabled)) { background: var(--wash); }
+.composer-connector-option > button:hover:not(:disabled) { background: transparent; }
 .composer-menu-search { display: flex; align-items: center; gap: 7px; background: var(--wash); border-radius: 10px; padding-right: 8px; margin-bottom: 6px; }
 .composer-menu-search button { width: 32px; padding: 8px; }
 .composer-menu-search input { flex: 1; min-width: 0; width: 100%; border: 0; background: transparent; padding: 10px 2px; outline: none; }

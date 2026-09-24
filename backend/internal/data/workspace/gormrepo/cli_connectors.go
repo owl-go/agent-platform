@@ -301,6 +301,42 @@ func (repository *Repository) EnableCLIConnector(ctx context.Context, ownerID, d
 	return item, nil
 }
 
+func (repository *Repository) DisableCLIConnector(ctx context.Context, ownerID, definitionID string, expectedVersion int64) (cliconnector.Enablement, error) {
+	if ownerID == "" || definitionID == "" || expectedVersion < 1 {
+		return cliconnector.Enablement{}, domain.ErrInvalid
+	}
+	var row cliConnectorEnablementRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND definition_id = ?", ownerID, definitionID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if row.Version != expectedVersion {
+			return domain.ErrConflict
+		}
+		if row.State == "disabled" {
+			return nil
+		}
+		result := tx.Model(&cliConnectorEnablementRecord{}).Where("id = ? AND version = ?", row.ID, expectedVersion).Updates(map[string]any{
+			"state": "disabled", "action_url": nil, "action_expires_at": nil, "registration_device_code_ciphertext": nil,
+			"updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrConflict
+		}
+		if err := tx.Where("enablement_id = ?", row.ID).Delete(&cliConnectorAuthorizationAttemptRecord{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", row.ID).Take(&row).Error
+	})
+	if err != nil {
+		return cliconnector.Enablement{}, err
+	}
+	return cliEnablementDomain(row), nil
+}
+
 func (repository *Repository) BeginFeishuCLIConnectorEnablement(ctx context.Context, ownerID, definitionID, actionURL string, expiry time.Time, deviceCodeCiphertext []byte) (cliconnector.Enablement, error) {
 	if ownerID == "" || actionURL == "" || !expiry.After(time.Now().UTC()) || len(deviceCodeCiphertext) == 0 {
 		return cliconnector.Enablement{}, domain.ErrInvalid

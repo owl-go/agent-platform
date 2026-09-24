@@ -34,7 +34,8 @@ describe("ExtensionManager", () => {
     const beginCLIConnectorAuthorization = vi.fn(async () => ({ id: "flow-1", enablement_id: enabled.id, state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" }));
     const enableCLIConnector = vi.fn(async () => initialState === "enabled" ? enabled : waiting);
     const completeCLIConnectorEnablement = vi.fn(async () => enabled);
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), listCLIConnectorAuthorizations: vi.fn(async () => []), enableCLIConnector, completeCLIConnectorEnablement, beginCLIConnectorAuthorization, completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: enabled.id, state: "waiting_for_user" })) } as unknown as PlatformApi;
+    const disableCLIConnector = vi.fn(async () => ({ ...enabled, state: "disabled" as const, version: enabled.version + 1 }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), listCLIConnectorAuthorizations: vi.fn(async () => []), enableCLIConnector, disableCLIConnector, completeCLIConnectorEnablement, beginCLIConnectorAuthorization, completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: enabled.id, state: "waiting_for_user" })) } as unknown as PlatformApi;
     return { api, popup, open, waiting, enabled, enableCLIConnector, completeCLIConnectorEnablement, beginCLIConnectorAuthorization };
   }
 
@@ -44,7 +45,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       expect(flow.open).toHaveBeenCalledWith("about:blank", "_blank");
       expect(flow.open.mock.invocationCallOrder[0]).toBeLessThan(flow.enableCLIConnector.mock.invocationCallOrder[0]!);
@@ -68,7 +69,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledExactlyOnceWith(flow.enabled.id, "user", []);
       expect(flow.completeCLIConnectorEnablement).not.toHaveBeenCalled();
@@ -101,7 +102,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       await vi.advanceTimersByTimeAsync(18000);
       expect(flow.completeCLIConnectorEnablement).toHaveBeenCalledTimes(1);
@@ -118,7 +119,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       expect(flow.popup.close).toHaveBeenCalled();
       expect(document.body.querySelector('[role="alert"]')).not.toBeNull();
@@ -151,7 +152,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       flow.popup.closed = true;
       await vi.advanceTimersByTimeAsync(6000);
@@ -168,11 +169,25 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+      await wrapper.get('button[aria-label="启用"]').trigger("click");
       await flushPromises();
       expect(wrapper.text()).toContain("已启用");
       expect(flow.open).not.toHaveBeenCalled();
       expect(flow.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+
+  it("deactivates an enabled CLI Connector from its catalog card", async () => {
+    const flow = setupCLIFlow("enabled");
+    vi.mocked(flow.api.listCLIConnectorEnablements).mockResolvedValue([flow.enabled as Awaited<ReturnType<PlatformApi["enableCLIConnector"]>>]);
+    const wrapper = mountManager(flow.api);
+    try {
+      await flushPromises();
+      await wrapper.findAll("button").find((button) => button.text() === "停用")!.trigger("click");
+      await flushPromises();
+      expect(flow.api.disableCLIConnector).toHaveBeenCalledWith(flow.enabled.definition_id, flow.enabled.version);
+      expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[]]);
+      expect(wrapper.find('button[aria-label="启用"]').exists()).toBe(true);
     } finally { wrapper.unmount(); }
   });
 
@@ -236,7 +251,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), enableCLIConnector: vi.fn().mockRejectedValue(cause) } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
-    await wrapper.findAll("button").find((button) => button.text() === "启用")!.trigger("click");
+    await wrapper.get('button[aria-label="启用"]').trigger("click");
     await flushPromises();
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(message);
     expect(document.body.textContent).not.toContain("request_failed");

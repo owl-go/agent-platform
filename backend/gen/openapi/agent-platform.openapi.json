@@ -2203,6 +2203,56 @@
         ]
       }
     },
+    "/api/v1/connectors/cli/{definition_id}/disable": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DisableCLIConnector",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CLIConnectorEnablement"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "definition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceDisableCLIConnectorBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/connectors/cli/{definition_id}/enable": {
       "post": {
         "operationId": "AgentWorkspaceService_EnableCLIConnector",
@@ -6491,6 +6541,15 @@
           "identity": {
             "type": "string"
           },
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AgentWorkspaceServiceDisableCLIConnectorBody": {
+        "type": "object",
+        "properties": {
           "expected_version": {
             "type": "integer",
             "format": "int64"

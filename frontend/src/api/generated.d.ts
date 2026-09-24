@@ -692,6 +692,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/cli/{definition_id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DisableCLIConnector"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/cli/{definition_id}/enable": {
         parameters: {
             query?: never;
@@ -1808,6 +1824,10 @@ export interface components {
         AgentWorkspaceServiceDecideCommandApprovalBody: {
             decision?: string;
             identity?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDisableCLIConnectorBody: {
             /** Format: int64 */
             expected_version?: number;
         };
@@ -5017,6 +5037,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceCompleteCLIConnectorEnablementBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CLIConnectorEnablement"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DisableCLIConnector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDisableCLIConnectorBody"];
             };
         };
         responses: {
