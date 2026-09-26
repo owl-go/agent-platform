@@ -149,8 +149,9 @@ func validateCLIBundle(content []byte, executablePath string) error {
 	defer reader.Close()
 	tarReader := tar.NewReader(reader)
 	seen := map[string]struct{}{}
+	executables := map[string]bool{}
+	symlinks := map[string]string{}
 	var expanded int64
-	found := false
 	for {
 		header, err := tarReader.Next()
 		if errors.Is(err, io.EOF) {
@@ -160,6 +161,9 @@ func validateCLIBundle(content []byte, executablePath string) error {
 			return fmt.Errorf("read cli-bundle.tgz: %w", err)
 		}
 		name := path.Clean(strings.TrimPrefix(header.Name, "./"))
+		if name == "." && header.Typeflag == tar.TypeDir {
+			continue
+		}
 		if name == "." || path.IsAbs(header.Name) || name == ".." || strings.HasPrefix(name, "../") || strings.ContainsAny(header.Name, "\\\x00\r\n") {
 			return fmt.Errorf("cli-bundle.tgz contains an unsafe path")
 		}
@@ -167,7 +171,16 @@ func validateCLIBundle(content []byte, executablePath string) error {
 			return fmt.Errorf("cli-bundle.tgz contains duplicate paths")
 		}
 		seen[name] = struct{}{}
-		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA && header.Typeflag != tar.TypeDir {
+		switch header.Typeflag {
+		case tar.TypeReg, tar.TypeRegA, tar.TypeDir:
+		case tar.TypeSymlink:
+			link := path.Clean(header.Linkname)
+			resolved := path.Clean(path.Join(path.Dir(name), link))
+			if header.Linkname == "" || path.IsAbs(header.Linkname) || strings.ContainsAny(header.Linkname, "\\\x00\r\n") || resolved == ".." || strings.HasPrefix(resolved, "../") || header.Size != 0 {
+				return fmt.Errorf("cli-bundle.tgz contains an unsafe symlink")
+			}
+			symlinks[name] = resolved
+		default:
 			return fmt.Errorf("cli-bundle.tgz contains an unsupported entry")
 		}
 		if header.Size < 0 || header.Size > 256<<20 {
@@ -177,14 +190,22 @@ func validateCLIBundle(content []byte, executablePath string) error {
 		if expanded > 256<<20 {
 			return fmt.Errorf("cli-bundle.tgz expanded content is too large")
 		}
-		if name == cleaned && header.Typeflag == tar.TypeReg && header.Mode&0o111 != 0 {
-			found = true
+		if (header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA) && header.Mode&0o111 != 0 {
+			executables[name] = true
 		}
 	}
-	if !found {
-		return fmt.Errorf("cli-bundle.tgz is missing executable %s", cleaned)
+	target := cleaned
+	for index := 0; index <= len(symlinks); index++ {
+		if executables[target] {
+			return nil
+		}
+		next, ok := symlinks[target]
+		if !ok {
+			break
+		}
+		target = next
 	}
-	return nil
+	return fmt.Errorf("cli-bundle.tgz is missing executable %s", cleaned)
 }
 
 func readArchive(content []byte) ([]archiveFile, error) {
