@@ -14,6 +14,9 @@ const MaxJSONBody = 64 * 1024
 const MaxArchiveJSONBody = 4*((50*1024*1024+2)/3) + MaxJSONBody
 
 func JSONBodyLimit(request *http.Request) int {
+	if request.Method == http.MethodPost && request.URL.Path == "/api/v1/admin/connectors/packages" {
+		return MaxArchiveJSONBody
+	}
 	for _, collection := range []string{"/api/v1/skills", "/api/v1/admin/connectors/cli"} {
 		if request.Method == http.MethodPost && request.URL.Path == collection {
 			return MaxArchiveJSONBody

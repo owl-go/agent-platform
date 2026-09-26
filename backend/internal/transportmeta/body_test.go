@@ -7,6 +7,25 @@ import (
 )
 
 func TestJSONBodyLimitOnlyAllowsArchiveMutationRoutes(t *testing.T) {
+	for _, test := range []struct {
+		method string
+		path   string
+		large  bool
+	}{
+		{http.MethodPost, "/api/v1/admin/connectors/packages", true},
+		{http.MethodPost, "/api/v1/admin/connectors/packages/", false},
+		{http.MethodGet, "/api/v1/admin/connectors/packages", false},
+		{http.MethodPost, "/api/v1/admin/connectors/publications", false},
+	} {
+		request := httptest.NewRequest(test.method, test.path, nil)
+		want := MaxJSONBody
+		if test.large {
+			want = MaxArchiveJSONBody
+		}
+		if got := JSONBodyLimit(request); got != want {
+			t.Fatalf("%s %s limit=%d, want %d", test.method, test.path, got, want)
+		}
+	}
 	for _, path := range []string{"/api/v1/skills", "/api/v1/admin/connectors/cli"} {
 		for _, test := range []struct {
 			method string
