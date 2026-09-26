@@ -13,6 +13,7 @@ import (
 	"agent-platform/backend/internal/data/account/keycloak"
 	"agent-platform/backend/internal/data/account/tokenverifier"
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
+	"agent-platform/backend/internal/data/aiapplication/modelchat"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
@@ -39,6 +40,7 @@ var ProviderSet = wire.NewSet(
 	NewCreditsService,
 	aicreationwiring.NewApplication,
 	NewAIApplicationService,
+	NewAssistantChatModel,
 	NewSecretBox,
 	NewWorkspaceFiles,
 	NewSkillStore,
@@ -98,6 +100,8 @@ func NewAIApplicationService(database *gormdb.Database, box *secretcrypto.Box) (
 	service.SetEmbeddingProvider(repository)
 	return service, nil
 }
+
+func NewAssistantChatModel() aiapplication.ChatModel { return modelchat.New() }
 
 func NewSecretBox(config platformconfig.Config) (*secretcrypto.Box, error) {
 	return secretcrypto.New(config.Security.DataEncryptionKey)

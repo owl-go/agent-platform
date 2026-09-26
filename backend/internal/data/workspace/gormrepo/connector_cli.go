@@ -59,11 +59,18 @@ func connectorCLIServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 	if bundlePath == "" {
 		bundlePath = "bin/" + policy.CLI.Executable
 	}
-	authenticationDriver := "none"
-	if policy.AuthMode != "none" {
-		authenticationDriver = "connector_package"
+	authenticationDriver := policy.CLI.AuthenticationDriver
+	if authenticationDriver == "" {
+		authenticationDriver = "none"
+		if policy.AuthMode != "none" {
+			authenticationDriver = "connector_package"
+		}
 	}
-	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, PackageObjectKey: revision.ObjectKey, PackageSHA256: revision.PackageSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
+	authorizationID := ""
+	if installation.AuthorizationID != nil {
+		authorizationID = *installation.AuthorizationID
+	}
+	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, RevisionID: revision.ID, AuthorizationID: authorizationID, PackageSHA256: revision.PackageSHA256, PackageObjectKey: revision.ObjectKey, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
 }
 
 func connectorCLICapabilities(items []connectorpackage.CLICapability) (json.RawMessage, error) {
@@ -113,9 +120,12 @@ func (repository *Repository) ListConnectorPackageCLIDefinitions(ctx context.Con
 			var authorization connectorAuthorizationRecord
 			authorized = repository.db.WithContext(ctx).Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error == nil
 		}
-		authenticationDriver := "none"
-		if policy.AuthMode != "none" {
-			authenticationDriver = "connector_package"
+		authenticationDriver := policy.CLI.AuthenticationDriver
+		if authenticationDriver == "" {
+			authenticationDriver = "none"
+			if policy.AuthMode != "none" {
+				authenticationDriver = "connector_package"
+			}
 		}
 		state := cliconnector.StateAvailable
 		failureReason := ""

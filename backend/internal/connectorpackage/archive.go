@@ -77,6 +77,16 @@ func Parse(content []byte) (Package, error) {
 		if err := decodeStrict("cli.json", byName["cli.json"], &manifest); err != nil {
 			return Package{}, err
 		}
+		if manifest.AuthenticationDriver == "" {
+			if meta.AuthMode == "none" {
+				manifest.AuthenticationDriver = "none"
+			} else {
+				manifest.AuthenticationDriver = "connector_package"
+			}
+		}
+		if meta.AuthMode == "none" && manifest.AuthenticationDriver != "none" || meta.AuthMode != "none" && manifest.AuthenticationDriver == "none" {
+			return Package{}, fmt.Errorf("cli.json authentication_driver does not match connector auth_mode")
+		}
 		if err := validateCLI(manifest); err != nil {
 			return Package{}, err
 		}

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { ArrowLeft, Download, Eye, FileText, FolderOpen, Globe2, LayoutGrid, List as ListIcon, LockKeyhole, MoreHorizontal, Pencil, Plus, Trash2, Upload } from "@lucide/vue";
-import { platformApiKey, type KnowledgeBase, type KnowledgeCategory, type KnowledgeDocument } from "../api/client";
+import { ArrowLeft, Download, Eye, FileText, FolderOpen, Globe2, LayoutGrid, List as ListIcon, LockKeyhole, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload } from "@lucide/vue";
+import { platformApiKey, type KnowledgeBase, type KnowledgeCategory, type KnowledgeDocument, type KnowledgeSearchResult } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { useI18n } from "vue-i18n";
 import ToastMessage from "../components/ToastMessage.vue";
@@ -23,6 +23,12 @@ const activeCategory = ref<string | null>(null);
 const loading = ref(true);
 const busy = ref(false);
 const previewBusy = ref(false);
+const searchBusy = ref(false);
+const searchQuery = ref("");
+const searchResults = ref<KnowledgeSearchResult[]>([]);
+const searchRan = ref(false);
+const searchIndexReady = ref(true);
+const searchError = ref("");
 const error = ref("");
 const displayMode = ref<DisplayMode>((localStorage.getItem("knowledge-base-display") as DisplayMode) || "card");
 const showBaseDialog = ref(false);
@@ -71,6 +77,7 @@ async function refresh() {
 
 async function openBase(item: KnowledgeBase) {
   selected.value = item;
+  resetSearch();
   activeCategory.value = null;
   uploadCategory.value = "";
   error.value = "";
@@ -83,10 +90,39 @@ async function openBase(item: KnowledgeBase) {
 
 function closeBase() {
   selected.value = undefined;
+  resetSearch();
   categories.value = [];
   documents.value = [];
   activeCategory.value = null;
   uploadCategory.value = "";
+}
+
+function resetSearch() {
+  searchQuery.value = "";
+  searchResults.value = [];
+  searchRan.value = false;
+  searchIndexReady.value = true;
+  searchError.value = "";
+}
+
+async function searchKnowledge() {
+  const baseID = selected.value?.id;
+  const query = searchQuery.value.trim();
+  if (!baseID || !query || searchBusy.value) return;
+  searchBusy.value = true;
+  searchError.value = "";
+  searchRan.value = false;
+  try {
+    const response = await api.searchKnowledgeBase(baseID, query);
+    if (selected.value?.id !== baseID) return;
+    searchResults.value = response.items;
+    searchIndexReady.value = response.index_ready;
+    searchRan.value = true;
+  } catch {
+    if (selected.value?.id === baseID) searchError.value = t("knowledgeBases.searchFailed");
+  } finally {
+    searchBusy.value = false;
+  }
 }
 
 function setDisplayMode(mode: DisplayMode) {
@@ -296,6 +332,22 @@ onUnmounted(closePreview);
       <button class="back-link knowledge-back" @click="closeBase"><ArrowLeft :size="16" />{{ t("knowledgeBases.backToCatalog") }}</button>
       <header class="knowledge-detail-header"><div><div class="detail-title-line"><h2>{{ selected.name }}</h2><el-tag size="small" effect="plain">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></div><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><div v-if="canManageSelected" class="detail-actions"><el-button plain @click="openEdit(selected)"><Pencil :size="15" />{{ t("common.edit") }}</el-button><el-button type="danger" plain @click="deleteTarget = selected"><Trash2 :size="15" />{{ t("common.delete") }}</el-button><el-button type="primary" @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></div></header>
 
+      <section class="knowledge-search-panel" :aria-label="t('knowledgeBases.search')">
+        <form class="knowledge-search-controls" @submit.prevent="searchKnowledge">
+          <el-input v-model="searchQuery" :maxlength="500" :placeholder="t('knowledgeBases.searchPlaceholder')" :aria-label="t('knowledgeBases.search')" clearable />
+          <el-button type="primary" native-type="submit" :loading="searchBusy" :disabled="!searchQuery.trim()"><Search :size="16" />{{ t("knowledgeBases.search") }}</el-button>
+        </form>
+        <p v-if="searchError" class="knowledge-search-feedback" role="alert">{{ searchError }}</p>
+        <p v-else-if="searchRan && !searchIndexReady" class="knowledge-search-feedback">{{ t("knowledgeBases.searchNotReady") }}</p>
+        <p v-else-if="searchRan && !searchResults.length" class="knowledge-search-feedback">{{ t("knowledgeBases.searchEmpty") }}</p>
+        <ol v-else-if="searchRan" class="knowledge-search-results">
+          <li v-for="item in searchResults" :key="`${item.revision_id}-${item.document_id}-${item.text.slice(0, 30)}`">
+            <p>{{ item.text }}</p>
+            <small>{{ t("knowledgeBases.searchSource") }}：{{ item.document_name }}<span v-if="item.category_name"> · {{ item.category_name }}</span></small>
+          </li>
+        </ol>
+      </section>
+
       <section v-if="categories.length" class="category-section"><div class="section-heading"><div><h3>{{ t("knowledgeBases.categories") }}</h3><p>{{ t("knowledgeBases.categoriesHint") }}</p></div><el-button text @click="openCategory(null)">{{ t("knowledgeBases.viewAll") }}</el-button></div><div class="category-grid"><button class="category-card" :class="{ active: activeCategory === null }" @click="openCategory(null)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ t("knowledgeBases.allDocuments") }}</strong><small>{{ documents.length }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-for="category in categories" :key="category.id" class="category-card" :class="{ active: activeCategory === category.id }" @click="openCategory(category.id)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ category.name }}</strong><small>{{ categoryCounts.get(category.id) || 0 }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-if="unclassifiedCount" class="category-card" :class="{ active: activeCategory === 'unclassified' }" @click="openCategory('unclassified')"><span class="category-card-icon muted"><FileText :size="18" /></span><span><strong>{{ t("knowledgeBases.unclassified") }}</strong><small>{{ unclassifiedCount }} {{ t("knowledgeBases.documentCount") }}</small></span></button></div></section>
 
       <section class="documents-panel"><div class="section-heading"><div><p class="eyebrow">{{ t("knowledgeBases.document") }}</p><h3>{{ activeCategoryName }}</h3><p>{{ visibleDocuments.length }} {{ t("knowledgeBases.documentCount") }}</p></div><div v-if="canManageSelected" class="category-create"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div></div><div v-if="canManageSelected" class="source-controls"><el-select v-model="uploadCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL"><Globe2 :size="15" />{{ t("knowledgeBases.importURL") }}</el-button></div>
@@ -346,6 +398,14 @@ onUnmounted(closePreview);
 .detail-title-line { display: flex; align-items: center; gap: 10px; }
 .detail-title-line h2 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", serif; font-size: clamp(1.7rem, 2.5vw, 2.35rem); font-weight: 600; letter-spacing: -.035em; }
 .knowledge-detail-header p { margin: 7px 0 0; color: var(--muted); font-size: .85rem; }
+.knowledge-search-panel { margin: 0 0 28px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.75); }
+.knowledge-search-controls { display: flex; gap: 8px; }
+.knowledge-search-controls .el-input { flex: 1; }
+.knowledge-search-feedback { margin: 14px 0 0; color: var(--muted); font-size: .82rem; }
+.knowledge-search-results { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style-position: inside; }
+.knowledge-search-results li { padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.knowledge-search-results p { display: inline; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .86rem; line-height: 1.6; }
+.knowledge-search-results small { display: block; margin-top: 8px; color: var(--muted); }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
 .section-heading h3 { margin: 2px 0 4px; font-size: 1.05rem; }
 .section-heading p { margin: 0; color: var(--muted); font-size: .75rem; }
@@ -375,5 +435,5 @@ onUnmounted(closePreview);
 .preview-frame { width: 100%; height: 68vh; border: 0; }
 .preview-text { max-height: 68vh; margin: 0; padding: 16px; overflow: auto; border-radius: 9px; background: #f3f5f1; color: var(--ink); font: .78rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 @media (max-width: 1050px) { .knowledge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .knowledge-header-actions, .knowledge-detail-header, .section-heading { align-items: flex-start; flex-direction: column; } .knowledge-header-actions, .detail-actions { width: 100%; flex-wrap: wrap; } .knowledge-header-actions .el-button, .detail-actions .el-button { flex: 1; justify-content: center; } .knowledge-grid { grid-template-columns: 1fr; } .knowledge-grid.is-list .knowledge-card :deep(.el-card__body) { grid-template-columns: auto minmax(0, 1fr) auto; } .knowledge-grid.is-list .knowledge-card footer { flex-direction: column; align-items: flex-end; justify-content: flex-end; } .category-create { width: 100%; } .category-create .el-input { width: auto; flex: 1; } .source-controls { grid-template-columns: 1fr; } .documents-panel { padding: 16px; } .document-table { overflow-x: auto; } }
+@media (max-width: 760px) { .knowledge-header-actions, .knowledge-detail-header, .section-heading { align-items: flex-start; flex-direction: column; } .knowledge-header-actions, .detail-actions { width: 100%; flex-wrap: wrap; } .knowledge-header-actions .el-button, .detail-actions .el-button { flex: 1; justify-content: center; } .knowledge-grid { grid-template-columns: 1fr; } .knowledge-grid.is-list .knowledge-card :deep(.el-card__body) { grid-template-columns: auto minmax(0, 1fr) auto; } .knowledge-grid.is-list .knowledge-card footer { flex-direction: column; align-items: flex-end; justify-content: flex-end; } .category-create { width: 100%; } .category-create .el-input { width: auto; flex: 1; } .knowledge-search-controls { flex-direction: column; } .source-controls { grid-template-columns: 1fr; } .documents-panel { padding: 16px; } .document-table { overflow-x: auto; } }
 </style>

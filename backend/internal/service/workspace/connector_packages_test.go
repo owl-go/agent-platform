@@ -44,6 +44,17 @@ func TestBuildGuidedConnectorPackageProducesParserCompatibleZIP(t *testing.T) {
 	}
 }
 
+func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T) {
+	pkg := connectorpackage.Package{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}
+	if err := validatePrivateConnectorPackage(pkg); err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("validatePrivateConnectorPackage() error = %v", err)
+	}
+	pkg.CLI.AuthenticationDriver = "connector_package"
+	if err := validatePrivateConnectorPackage(pkg); err != nil {
+		t.Fatalf("generic private credentials were rejected: %v", err)
+	}
+}
+
 func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Helper()
 	for _, entry := range reader.File {

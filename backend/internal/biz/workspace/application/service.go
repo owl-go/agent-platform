@@ -83,6 +83,8 @@ type Repository interface {
 
 	ListKnowledgeBases(context.Context, string, bool, bool) ([]domain.KnowledgeBase, error)
 	GetKnowledgeBase(context.Context, string, string, bool, bool) (domain.KnowledgeBase, error)
+	ReadyKnowledgeSearchGeneration(context.Context, string, string, bool) (int64, error)
+	ResolveKnowledgeSearchSource(context.Context, string, string, string, bool) (domain.KnowledgeSearchSource, error)
 	CreateKnowledgeBase(context.Context, string, bool, domain.KnowledgeBaseInput) (domain.KnowledgeBase, error)
 	UpdateKnowledgeBase(context.Context, string, string, bool, domain.KnowledgeBaseInput, int64) (domain.KnowledgeBase, error)
 	DeleteKnowledgeBase(context.Context, string, string, bool) error

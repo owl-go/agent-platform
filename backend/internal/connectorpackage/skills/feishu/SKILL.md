@@ -1,11 +1,16 @@
 ---
 name: feishu-cli
+display_name: 飞书
 description: Use the selected Feishu CLI Connector to find a group and send a message.
+version: {{VERSION}}
+author: Agent Workspace
 ---
 
 # Feishu CLI in Agent Workspace
 
 Use the reviewed `agent-cli` commands shown in the current execution instruction. The Connector ID is specific to this conversation. Copy it from that instruction. The platform supplies credentials and handles authorization and approval; invoke the CLI through `agent-cli` only.
+
+Use each step only when its capability appears in the current execution instruction. If a capability is unavailable, report that limitation.
 
 ## Send a message to a named group
 
