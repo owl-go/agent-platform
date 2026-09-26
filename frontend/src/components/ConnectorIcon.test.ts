@@ -8,6 +8,9 @@ describe("ConnectorIcon", () => {
     const uploaded = mount(ConnectorIcon, { props: { icon: image, size: 24 } });
     expect(uploaded.find("img").attributes("src")).toBe(image);
 
+    const feishu = mount(ConnectorIcon, { props: { icon: "feishu" } });
+    expect(feishu.find("img").attributes("src")).toContain("feishu.png");
+
     const preset = mount(ConnectorIcon, { props: { icon: "terminal" } });
     expect(preset.find("img").exists()).toBe(false);
     expect(preset.find(".profile-icon").exists()).toBe(true);

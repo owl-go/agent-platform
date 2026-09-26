@@ -1023,7 +1023,7 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 	if name == "" {
 		name = item.PackageSource
 	}
-	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: "plug", RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
+	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
 	if policy.CLI != nil {
 		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
 		seenScopes := map[string]struct{}{}

@@ -15,6 +15,7 @@ import (
 type connectorCLIPolicy struct {
 	LegacyProjection bool                          `json:"legacy_projection"`
 	AuthMode         string                        `json:"auth_mode"`
+	Metadata         connectorpackage.Metadata     `json:"metadata"`
 	CLI              *connectorpackage.CLIManifest `json:"cli"`
 	BundleObjectKey  string                        `json:"cli_bundle_object_key"`
 	BundleSHA256     string                        `json:"cli_bundle_sha256"`
@@ -70,7 +71,11 @@ func connectorCLIServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 	if installation.AuthorizationID != nil {
 		authorizationID = *installation.AuthorizationID
 	}
-	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, RevisionID: revision.ID, AuthorizationID: authorizationID, PackageSHA256: revision.PackageSHA256, PackageObjectKey: revision.ObjectKey, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
+	name := policy.Metadata.Name
+	if name == "" {
+		name = installation.PackageSource
+	}
+	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: name, Icon: connectorpackage.DisplayIcon(installation.PackageSource), Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, RevisionID: revision.ID, AuthorizationID: authorizationID, PackageSHA256: revision.PackageSHA256, PackageObjectKey: revision.ObjectKey, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
 }
 
 func connectorCLICapabilities(items []connectorpackage.CLICapability) (json.RawMessage, error) {
@@ -135,7 +140,11 @@ func (repository *Repository) ListConnectorPackageCLIDefinitions(ctx context.Con
 		if policy.BundleObjectKey == "" || len(policy.BundleSHA256) != 64 || len(parsed) == 0 {
 			state, failureReason = cliconnector.StateDisabled, "connector package has no verified executable bundle or reviewed capability"
 		}
-		items = append(items, cliconnector.Definition{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Package: installation.PackageSource, Version: revision.Version, Executable: policy.CLI.Executable, AuthenticationDriver: authenticationDriver, State: state, FailureReason: failureReason, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: parsed, VersionNumber: installation.Version, ManagedInstallation: true, InstallationAuthorized: authorized, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses})
+		name := policy.Metadata.Name
+		if name == "" {
+			name = installation.PackageSource
+		}
+		items = append(items, cliconnector.Definition{ID: installation.ID, Name: name, Icon: connectorpackage.DisplayIcon(installation.PackageSource), Package: installation.PackageSource, Version: revision.Version, Executable: policy.CLI.Executable, AuthenticationDriver: authenticationDriver, State: state, FailureReason: failureReason, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: parsed, VersionNumber: installation.Version, ManagedInstallation: true, InstallationAuthorized: authorized, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses})
 	}
 	return items, nil
 }
