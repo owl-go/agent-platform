@@ -81,6 +81,39 @@ func TestMaterializeCLIConnectorsVerifiesRuntimeAndProtectsBundle(t *testing.T) 
 	}
 }
 
+func TestMaterializeManagedCLIConnectorUsesBundleRuntimeConformance(t *testing.T) {
+	provider := memory.New()
+	store, err := cliconnector.NewArtifactStore(provider)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle := runtimeConnectorBundle(t, "node_modules/.bin/tool", "#!/usr/bin/env node\n")
+	sum := sha256.Sum256(bundle)
+	bundleDigest := hex.EncodeToString(sum[:])
+	key := "cli-connectors/connector-1/v1/" + bundleDigest + ".tgz"
+	if err := store.PutImmutable(context.Background(), key, bundle, bundleDigest); err != nil {
+		t.Fatal(err)
+	}
+	selectedDigest := "sha256:" + strings.Repeat("a", 64)
+	runtimeDigest := "sha256:" + strings.Repeat("b", 64)
+	repository := &stubCLICredentialRepository{bundleVerified: true}
+	executor := &Executor{connectors: store, cliCredentials: repository}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{
+		ID: "installation-1", InstallationID: "installation-1", Name: "飞书", Executable: "tool",
+		BundleObjectKey: key, BundleSHA256: bundleDigest, RuntimeDigests: []string{selectedDigest},
+	}}}}
+	if _, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest); err != nil {
+		t.Fatalf("exact bundle and Runtime conformance should allow the managed Connector: %v", err)
+	}
+	if repository.bundleSHA256 != bundleDigest || repository.runtimeDigest != runtimeDigest || repository.definitionID != "" {
+		t.Fatalf("managed Connector looked up the wrong conformance identity: %#v", repository)
+	}
+	repository.bundleVerified = false
+	if _, err := executor.materializeCLIConnectors(context.Background(), job, t.TempDir(), "registry.example/runtime@"+runtimeDigest); err == nil || !strings.Contains(err.Error(), "not verified for Runtime") {
+		t.Fatalf("missing exact bundle conformance should fail closed, got %v", err)
+	}
+}
+
 func TestModelRuntimeConfigDoesNotExposeCLIConnectorBundle(t *testing.T) {
 	executor := &Executor{config: platformconfig.Config{
 		Sandbox: platformconfig.SandboxConfig{Runtime: "runsc", EgressNetwork: "public", ResolverConfig: "/etc/resolv.conf"},
@@ -262,6 +295,7 @@ type stubCLICredentialRepository struct {
 	identity              cliconnector.Identity
 	scopes                []string
 	runtimeVerified       bool
+	bundleVerified        bool
 	bundleSHA256          string
 	runtimeDigest         string
 }
@@ -274,6 +308,11 @@ func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCrede
 func (repository *stubCLICredentialRepository) HasCLIConnectorRuntimeConformance(_ context.Context, definitionID, bundleSHA256, runtimeDigest string) (bool, error) {
 	repository.definitionID, repository.bundleSHA256, repository.runtimeDigest = definitionID, bundleSHA256, runtimeDigest
 	return repository.runtimeVerified, nil
+}
+
+func (repository *stubCLICredentialRepository) HasConnectorBundleRuntimeConformance(_ context.Context, bundleSHA256, runtimeDigest string) (bool, error) {
+	repository.bundleSHA256, repository.runtimeDigest = bundleSHA256, runtimeDigest
+	return repository.bundleVerified, nil
 }
 
 func TestEnvironmentUsesDeepSeekAnthropicEndpointWithoutChangingOpenAIEndpoint(t *testing.T) {
