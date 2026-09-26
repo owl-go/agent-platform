@@ -885,7 +885,9 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 				return query.Error
 			}
 			if count != 1 {
-				return fmt.Errorf("%w: queued CLI Connector for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+				if _, err := connectorCLIServerSnapshot(tx, ownerID, connector.ID); err != nil {
+					return fmt.Errorf("%w: queued CLI Connector for Stage %d is unavailable: %w", domain.ErrInvalid, stage.Position, err)
+				}
 			}
 		}
 	}

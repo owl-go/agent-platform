@@ -7,8 +7,20 @@ import (
 	"strings"
 	"testing"
 
+	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
 )
+
+func TestConnectorInstallationResponseDoesNotTreatExpiredAuthorizationAsAuthorized(t *testing.T) {
+	item := domain.ConnectorInstallation{ID: "installation-1", AuthorizationID: "expired-authorization", Authorized: false}
+	if response := connectorInstallationResponse(item); response.Authorized {
+		t.Fatal("expired authorization was reported as active")
+	}
+	item.Authorized = true
+	if response := connectorInstallationResponse(item); !response.Authorized {
+		t.Fatal("active authorization was reported as inactive")
+	}
+}
 
 func TestConnectorRevisionFromPackageUsesImmutableChecksumKey(t *testing.T) {
 	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.2.3", Type: connectorpackage.TypeMCP, AuthMode: "oauth"}, SHA256: strings.Repeat("a", 64)}

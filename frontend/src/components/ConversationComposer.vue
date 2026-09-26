@@ -73,6 +73,27 @@ const visibleConnectors = computed(() => {
 });
 function isWorkspaceFile(file?: ConversationFile): boolean { return file?.kind === "workspace" || file?.kind === "directory"; }
 function connectorEnabled(key: string): boolean { return !!selection.value && visibleConnectors.value.some((item) => item.key === key) && !selection.value.disabled_connectors.includes(key); }
+function cliSelectionAvailable(id: string): boolean {
+  const definition = cli.value.find((item) => item.id === id);
+  if (!definition || definition.state !== "available") return false;
+  if (definition.managed_installation) {
+    const installation = managedInstallation(id);
+    return installation?.state === "active" && installation.authorized;
+  }
+  return cliEnablement(id)?.state === "enabled";
+}
+function selectionConnectorsAvailable(value: ConversationSelection): boolean {
+  return [...value.cli_connectors, ...value.inherited_cli_connectors].every((item) => value.disabled_connectors.includes(`cli:${item.id}`) || cliSelectionAvailable(item.id));
+}
+function recoveryInput(value: ConversationSelection): SelectionInput {
+  return {
+    previous_id: value.id,
+    skill_ids: value.skills.map((item) => item.id),
+    mcp_server_ids: value.mcp_servers.map((item) => item.id),
+    cli_connector_ids: value.cli_connectors.filter((item) => cliSelectionAvailable(item.id)).map((item) => item.id),
+    disabled_connectors: [...new Set([...value.disabled_connectors, ...value.inherited_cli_connectors.filter((item) => !cliSelectionAvailable(item.id)).map((item) => `cli:${item.id}`)])],
+  };
+}
 
 function persist() {
   if (storageKey.value) saveConversationDraft(storageKey.value, { parts: parts.value, selection: selection.value, attachments: uploaded.value, pendingFileNames: [...missingFiles.value, ...pending.value.map((file) => file.name)] });
@@ -218,6 +239,7 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
   cliActivationBusy.value.push(definition.id); error.value = "";
   const popup = active && definition.authentication_driver === "feishu" ? openCLIWindow() : null;
   try {
+    await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
     if (!installation) throw new Error("Connector installation is unavailable");
     if (!active) {
@@ -231,6 +253,17 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
     if (installation.state !== "active") {
       installation = await api.installPublishedConnector(installation.source);
       await refreshManagedInstallations();
+    }
+    if (!installation.authorized) {
+      const authorizations = await api.listConnectorAuthorizations(installation.id);
+      const selected = authorizations.find((item) => item.selected && (item.state === "active" || item.state === "expired"));
+      if (selected) {
+        try {
+          await api.refreshConnectorAuthorization(installation.id, selected.id, selected.version);
+          await refreshManagedInstallations();
+          installation = managedInstallation(definition.id) ?? installation;
+        } catch { /* An unrefreshable grant continues through account authorization. */ }
+      }
     }
     if (installation.authorized) {
       closeBlankCLIWindow(popup);
@@ -507,7 +540,19 @@ async function initialize() {
     const authorizations = await Promise.all(enablements.value.filter((item) => item.state === "enabled" && cli.value.some((definition) => definition.id === item.definition_id && definition.authentication_driver === "feishu")).map(async (item) => [item.id, await api.listCLIConnectorAuthorizations(item.id)] as const));
     if (disposed) return;
     cliAuthorizations.value = Object.fromEntries(authorizations);
-    if (!selection.value) selection.value = await api.getConversationSelection(props.scope);
+    const current = await api.getConversationSelection(props.scope);
+    if (disposed) return;
+    const restored = selection.value;
+    if (!restored || restored.id === current.id) selection.value = current;
+    else if (selectionConnectorsAvailable(restored)) {
+      try { selection.value = await api.resolveConversationSelection(props.scope, inputSelection({})); }
+      catch { selection.value = current; error.value = t("composer.selectionRecovered"); }
+    } else { selection.value = current; error.value = t("composer.selectionRecovered"); }
+    if (selection.value && !selectionConnectorsAvailable(selection.value)) {
+      try { selection.value = await api.resolveConversationSelection(props.scope, recoveryInput(selection.value)); }
+      catch { error.value = t("composer.selectionFailed"); }
+      if (!error.value) error.value = t("composer.selectionRecovered");
+    }
     if (props.initialSkillId) {
       const skill = skills.value.find((item) => item.id === props.initialSkillId);
       if (selection.value.skills.some((item) => item.id === props.initialSkillId)) emit("launchConsumed");
@@ -553,7 +598,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       <a v-else-if="!cliAuthorizationPrompt.completed" :href="cliAuthorizationPrompt.flow?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a>
       <small v-if="cliAuthorizationPrompt.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
     </section>
-    <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>
+    <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button v-if="error === t('composer.selectionRecovered')" text @click="openMenu('connectors')">{{ t('composer.connectors') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>
     <div v-if="missingFiles.length" class="composer-notice">{{ t('composer.reselectFiles', { names: missingFiles.join(', ') }) }}<el-button text @click="missingFiles = []; persist()">{{ t('common.close') }}</el-button></div>
     <div v-if="pending.length || uploaded.length" class="pending-attachments">
       <span v-for="(file, index) in pending" :key="`local-${index}`">{{ file.name }}<button type="button" :disabled="locked" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="pending.splice(index, 1); persist()"><X /></button></span>

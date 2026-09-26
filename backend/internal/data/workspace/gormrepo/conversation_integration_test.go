@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -191,6 +192,36 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 	exec(`UPDATE cli_connector_enablements SET state='disabled' WHERE definition_id=?`, connector)
 	if err = validateQueuedSnapshotAvailability(db, checked, owner); !errors.Is(err, domain.ErrInvalid) {
 		t.Fatal("retained Connector bypassed current disablement")
+	}
+	packageRevision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{
+		PackageSource: "package-cli", Version: "1.0.0", Mode: domain.ConnectorModeCLI,
+		PackageSHA256: strings.Repeat("d", 64), ObjectKey: "connectors/package-cli/1.0.0/package.zip",
+		RuntimePolicy: []byte(`{"auth_mode":"oauth","cli_bundle_object_key":"connectors/package-cli/bundle.zip","cli_bundle_sha256":"` + strings.Repeat("e", 64) + `","cli":{"executable":"package-cli","runtime":{"digest":"sha256:` + strings.Repeat("f", 64) + `"},"capabilities":[{"id":"read","argv_prefix":["read"],"risk":"low","identities":["user"],"egress_hosts":["example.com"],"timeout_seconds":30}]}}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	installation, err := repository.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "package-cli", ActiveRevisionID: packageRevision.ID, State: domain.ConnectorInstallationActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Now().UTC().Add(time.Hour)
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: installation.ID, IdentityRef: "user", CredentialCiphertext: []byte("test-only-ciphertext"), ExpiresAt: &expires})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked.Stages[0].CLIConnectors = []domain.CLIConnectorSnapshot{{ID: installation.ID}}
+	if err = validateQueuedSnapshotAvailability(db, checked, owner); err != nil {
+		t.Fatalf("active Connector Package was rejected by queued validation: %v", err)
+	}
+	exec(`UPDATE connector_authorizations SET expires_at=now()-interval '1 second' WHERE id=?`, authorization.ID)
+	if err = validateQueuedSnapshotAvailability(db, checked, owner); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatal("expired Connector authorization bypassed queued validation")
+	}
+	exec(`UPDATE connector_authorizations SET expires_at=now()+interval '1 hour' WHERE id=?`, authorization.ID)
+	exec(`UPDATE connector_installations SET state='disabled' WHERE id=?`, installation.ID)
+	if err = validateQueuedSnapshotAvailability(db, checked, owner); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatal("disabled Connector Package bypassed queued validation")
 	}
 	workflow, run := uuid.NewString(), uuid.NewString()
 	exec(`INSERT INTO workflows(id,owner_user_id,name,goal,workspace_path) VALUES(?,?,'Workflow','mutable goal','workspace/test')`, workflow, owner)
