@@ -981,7 +981,7 @@ func buildGuidedConnectorPackage(input guidedConnectorInput) ([]byte, error) {
 }
 
 func connectorInstallationResponse(item domain.ConnectorInstallation) *workspacev1.ConnectorInstallation {
-	return &workspacev1.ConnectorInstallation{Id: item.ID, Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Authorized: item.Authorized || item.AuthorizationID != "", Version: item.Version}
+	return &workspacev1.ConnectorInstallation{Id: item.ID, Source: item.PackageSource, ActiveRevisionId: item.ActiveRevisionID, State: string(item.State), Authorized: item.Authorized, Version: item.Version}
 }
 
 func decodeConnectorRevisionPolicy(revision domain.ConnectorRevision) (connectorRevisionPolicy, error) {
