@@ -2,7 +2,7 @@
     email {$ACME_EMAIL}
     servers {
         timeouts {
-            read_body 30s
+            read_body 5m
             read_header 10s
             idle 1h
         }

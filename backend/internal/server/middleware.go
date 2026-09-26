@@ -25,6 +25,7 @@ const (
 	defaultUnaryTimeout       = 30 * time.Second
 	defaultEventStreamTimeout = 30 * time.Minute
 	imageModelTestTimeout     = 4 * time.Minute
+	connectorPackageTimeout   = 5 * time.Minute
 )
 
 type httpMetrics struct {
@@ -63,6 +64,8 @@ func unaryTimeoutFilter(timeout time.Duration) kratoshttp.FilterFunc {
 			requestTimeout := timeout
 			if isImageModelTestRequest(request) {
 				requestTimeout = imageModelTestTimeout
+			} else if isConnectorPackageUploadRequest(request) {
+				requestTimeout = connectorPackageTimeout
 			} else if isEventStreamRequest(request) {
 				requestTimeout = defaultEventStreamTimeout
 			}
@@ -71,6 +74,10 @@ func unaryTimeoutFilter(timeout time.Duration) kratoshttp.FilterFunc {
 			next.ServeHTTP(writer, request.WithContext(ctx))
 		})
 	}
+}
+
+func isConnectorPackageUploadRequest(request *http.Request) bool {
+	return request.Method == http.MethodPost && request.URL.Path == "/api/v1/admin/connectors/packages"
 }
 
 func isImageModelTestRequest(request *http.Request) bool {
