@@ -106,7 +106,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         </div>
         <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="emit('downloadArtifact', $event)" />
         <section v-if="message.role === 'assistant' && message.resourceAction" class="resource-action-card" :class="`resource-action-${message.resourceAction.state}`" aria-live="polite">
-          <div class="resource-action-heading"><strong>{{ message.resourceAction.kind === 'skill' ? t('sessions.resourceActionSkill') : t('sessions.resourceActionExpert') }}</strong><span>{{ message.resourceAction.name }}</span></div>
+          <div class="resource-action-heading"><strong>{{ t(`sessions.${message.resourceAction.kind === 'skill' ? 'resourceActionSkill' : message.resourceAction.kind === 'connector' ? 'resourceActionConnector' : 'resourceActionExpert'}`) }}</strong><span>{{ message.resourceAction.name }}</span></div>
           <p v-if="message.resourceAction.description">{{ message.resourceAction.description }}</p>
           <div v-if="message.resourceAction.state === 'pending'" class="resource-action-actions"><el-button type="primary" @click="emit('resourceAction', message.id, 'confirm')">{{ t('sessions.resourceActionConfirm') }}</el-button><el-button @click="emit('resourceAction', message.id, 'cancel')">{{ t('common.cancel') }}</el-button></div>
           <small v-else-if="message.resourceAction.state === 'confirmed'">{{ t('sessions.resourceActionConfirmed') }}</small>

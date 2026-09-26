@@ -1136,6 +1136,8 @@ func resourceActionForJob(job application.ExecutionJob, content string) (string,
 		wanted = "create_skill"
 	} else if proposal.Kind == resourceaction.ExpertKind {
 		wanted = "create_expert"
+	} else if proposal.Kind == resourceaction.ConnectorKind {
+		wanted = "create_connector"
 	}
 	for _, stage := range job.Snapshot.Stages {
 		for _, skill := range stage.Skills {
