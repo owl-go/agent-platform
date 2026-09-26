@@ -70,6 +70,7 @@ type Executor struct {
 type cliExecutionRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
 	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
+	HasConnectorBundleRuntimeConformance(context.Context, string, string) (bool, error)
 }
 
 type cliLifecycleRepository interface {
@@ -897,6 +898,12 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 }
 
 func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {
+	if connector.InstallationID != "" {
+		if executor.cliCredentials == nil {
+			return false, nil
+		}
+		return executor.cliCredentials.HasConnectorBundleRuntimeConformance(ctx, connector.BundleSHA256, runtimeDigest)
+	}
 	if slices.Contains(connector.RuntimeDigests, runtimeDigest) {
 		return true, nil
 	}
