@@ -70,7 +70,7 @@ func connectorCLIServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 	if installation.AuthorizationID != nil {
 		authorizationID = *installation.AuthorizationID
 	}
-	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, RevisionID: revision.ID, AuthorizationID: authorizationID, PackageSHA256: revision.PackageSHA256, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
+	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, RevisionID: revision.ID, AuthorizationID: authorizationID, PackageSHA256: revision.PackageSHA256, PackageObjectKey: revision.ObjectKey, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
 }
 
 func connectorCLICapabilities(items []connectorpackage.CLICapability) (json.RawMessage, error) {

@@ -3,10 +3,19 @@ package connectorpackage
 import (
 	"archive/zip"
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 )
+
+//go:embed skills/feishu/SKILL.md
+var officialFeishuSkillTemplate string
+
+func OfficialFeishuSkill(version string) []byte {
+	return []byte(strings.ReplaceAll(officialFeishuSkillTemplate, "{{VERSION}}", version))
+}
 
 // OfficialFeishuInput is populated only from the reviewed @larksuite/cli build
 // result after its exact npm integrity and Runtime Conformance have passed.
@@ -35,7 +44,7 @@ func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
 		"icon.svg":               []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#3370ff" d="M4 4h16v16H4z"/></svg>`),
 		"cli.json":               manifest,
 		"cli-bundle.tgz":         input.Bundle,
-		"skills/feishu/SKILL.md": []byte("---\nname: feishu\ndisplay_name: 飞书\ndescription: 使用经过审核的飞书能力\nversion: " + input.Version + "\nauthor: Agent Workspace\n---\n\n仅使用连接器公开的结构化能力访问飞书。\n"),
+		"skills/feishu/SKILL.md": OfficialFeishuSkill(input.Version),
 	}
 	names := make([]string, 0, len(files))
 	for name := range files {

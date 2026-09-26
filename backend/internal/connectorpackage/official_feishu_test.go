@@ -2,6 +2,7 @@ package connectorpackage
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"strings"
@@ -21,6 +22,34 @@ func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 	}
 	if pkg.Metadata.Source != "feishu" || pkg.Metadata.Version != "1.0.93" || pkg.CLI == nil || pkg.CLI.AuthenticationDriver != "feishu" || pkg.CLI.Runtime.Digest != digest || len(pkg.CLIBundleSHA256) != 64 {
 		t.Fatalf("official package = %#v", pkg)
+	}
+	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundSkill := false
+	for _, entry := range reader.File {
+		if entry.Name != "skills/feishu/SKILL.md" {
+			continue
+		}
+		body, err := entry.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var contents bytes.Buffer
+		if _, err := contents.ReadFrom(body); err != nil {
+			t.Fatal(err)
+		}
+		if err := body.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(contents.String(), "im +chat-search --query") || !strings.Contains(contents.String(), "im +messages-send --chat-id") {
+			t.Fatalf("official Feishu Skill lacks the message flow: %q", contents.String())
+		}
+		foundSkill = true
+	}
+	if !foundSkill {
+		t.Fatal("official Feishu Skill is missing")
 	}
 }
 

@@ -2,6 +2,7 @@ package runtimeexecutor
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -471,6 +472,72 @@ func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
 	want := "agent-cli --connector connector-1 --capability identity --identity user [--target <target>] -- auth status"
 	if !strings.Contains(got, want) || strings.Contains(got, "/opt/agent-platform/connector") {
 		t.Fatalf("CLI Connector instruction = %q", got)
+	}
+}
+
+func TestSelectedFeishuConnectorProvidesSkillBeforeCLIUse(t *testing.T) {
+	capabilities, err := json.Marshal([]cliconnector.Capability{{ID: "im_messages_send", ArgvPrefix: []string{"im", "+messages-send"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Instruction: "Send a message", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "feishu-1", Name: "Feishu", AuthenticationDriver: "feishu", Capabilities: capabilities}}}}
+	files, _, _, err := (&Executor{}).extensionFiles(context.Background(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skill := string(files["connector-skills/feishu-1/SKILL.md"])
+	if !strings.Contains(skill, "im +chat-search --query") || !strings.Contains(skill, "im +messages-send --chat-id") {
+		t.Fatalf("Feishu Skill omits the group message flow: %q", skill)
+	}
+	instruction := buildInstruction(job, nil)
+	if !strings.Contains(instruction, "im +messages-send --chat-id") || strings.Index(instruction, "Feishu CLI Skill") > strings.Index(instruction, "Available isolated CLI Connectors") {
+		t.Fatalf("Feishu Skill was not loaded before CLI forms: %q", instruction)
+	}
+}
+
+func TestSelectedManagedCLIConnectorMountsFrozenPackageSkills(t *testing.T) {
+	var archive bytes.Buffer
+	writer := zip.NewWriter(&archive)
+	entries := map[string]string{
+		"connector-meta.json":  `{"source":"example-cli","version":"1.0.0","type":"cli","name":"Example","description":"Example CLI","examples_zh":["发送"],"examples_en":["Send"],"minPlatformVersion":"1.0.0","auth_mode":"none"}`,
+		"icon.svg":             `<svg xmlns="http://www.w3.org/2000/svg"></svg>`,
+		"cli.json":             `{"runtime":{"kind":"node","version":"22.14.0","digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"executable":"example","commands":{"init":{"argv":["setup"]},"auth":{"argv":["auth"]},"status":{"argv":["status"]},"unAuth":{"argv":["logout"]}},"status_match":{"json_path":"$.authenticated","equals":true},"egress_hosts":["api.example.com"],"timeout_seconds":60,"capabilities":[{"id":"send","argv_prefix":["message","send"],"risk":"high","identities":["user"],"egress_hosts":["api.example.com"],"timeout_seconds":30}]}`,
+		"skills/send/SKILL.md": "---\nname: example-send\ndisplay_name: Send\ndescription: Send messages\nversion: 1.0.0\nauthor: Example\n---\n\n# Send\nUse the reviewed send command.\n",
+	}
+	for name, content := range entries {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	provider := memory.New()
+	digest := sha256.Sum256(archive.Bytes())
+	sha := hex.EncodeToString(digest[:])
+	key := "connectors/example-cli/1.0.0/" + sha + ".zip"
+	if _, err := provider.Put(context.Background(), key, bytes.NewReader(archive.Bytes()), objectstore.PutOptions{Size: int64(archive.Len()), SHA256: sha, ContentType: "application/zip"}); err != nil {
+		t.Fatal(err)
+	}
+	connector := domain.CLIConnectorSnapshot{ID: "installed-1", Name: "Example", PackageObjectKey: key, PackageSHA256: sha}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{connector}}}
+	files, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(files["connector-skills/installed-1/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) || !bytes.Equal(files["connector-skills/installed-1/skills/send/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) {
+		t.Fatalf("mounted Connector Skills = %#v", files)
+	}
+	if !strings.Contains(buildInstruction(job, nil), "first read /run/agent-credentials/connector-skills/installed-1/SKILL.md") {
+		t.Fatal("managed Connector Skill was not prioritized")
+	}
+	job.Snapshot.CLIConnectors[0].PackageSHA256 = strings.Repeat("b", 64)
+	if _, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job); err == nil {
+		t.Fatal("expected a changed frozen package digest to be rejected")
 	}
 }
 
