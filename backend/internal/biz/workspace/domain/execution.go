@@ -220,6 +220,8 @@ type CLIConnectorSnapshot struct {
 	ChildProcesses       int             `json:"child_processes,omitempty"`
 	BundleObjectKey      string          `json:"bundle_object_key"`
 	BundleSHA256         string          `json:"bundle_sha256"`
+	PackageObjectKey     string          `json:"package_object_key,omitempty"`
+	PackageSHA256        string          `json:"package_sha256,omitempty"`
 	RuntimeDigests       []string        `json:"runtime_digests"`
 	Capabilities         json.RawMessage `json:"capabilities"`
 	Version              int64           `json:"version"`

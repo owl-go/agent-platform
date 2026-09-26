@@ -63,7 +63,7 @@ func connectorCLIServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 	if policy.AuthMode != "none" {
 		authenticationDriver = "connector_package"
 	}
-	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
+	return domain.CLIConnectorSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Executable: policy.CLI.Executable, ExecutablePath: bundlePath, AuthenticationDriver: authenticationDriver, InstallationID: installation.ID, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, PackageObjectKey: revision.ObjectKey, PackageSHA256: revision.PackageSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: capabilities, Version: installation.Version}, nil
 }
 
 func connectorCLICapabilities(items []connectorpackage.CLICapability) (json.RawMessage, error) {
