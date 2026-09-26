@@ -22,10 +22,14 @@ check_version() {
       test "$(id -u)" = "65532"
       test -w /workspace
       test -x /usr/local/bin/agent-cli
-      if agent-cli --connector test --capability test --identity user -- test >/dev/null 2>&1; then
+      if output="$(AGENT_PLATFORM_CLI_SOCKET=/tmp/agent-cli-protocol-smoke.sock agent-cli --connector test --capability test --identity user -- test 2>&1)"; then
         echo "agent-cli must fail closed without a broker socket" >&2
         exit 1
       fi
+      case "$output" in
+        *"connect ENOENT"*) ;;
+        *) echo "agent-cli does not accept the current broker command protocol: $output" >&2; exit 1 ;;
+      esac
       touch /workspace/runtime-write-probe
     '
 }

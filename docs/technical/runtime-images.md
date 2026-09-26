@@ -22,4 +22,4 @@ CLI Builder 使用 `deploy/runtimes/cli-builder/Dockerfile`。Worker 仅在 `wor
 
 Codex 调用会把本次 Run Scratch 中已校验的 `image/*` 只读附件逐个传给 `codex exec --image`；文件名和用户文本仍分别通过受控参数与 stdin 传递。其他 Runtime 当前仅通过公共 Instruction 中的只读路径读取附件，不声明图片输入已经通过固定镜像 Conformance。
 
-镜像变更至少执行：独立构建、CLI `--version`、非 root/只读 Rootfs、五 Runtime 最小真实模型调用、适用 Runtime 的 MCP 配置加载、声明兼容的 CLI Connector bundle、取消、输出脱敏和 Workspace 写入 smoke。某镜像没有这些证据时，对应 `available` 必须为 `false`。
+镜像变更至少执行：独立构建、CLI `--version`、非 root/只读 Rootfs、`agent-cli` 与当前 Worker broker 的 `-- <argv>` 协议 smoke、五 Runtime 最小真实模型调用、适用 Runtime 的 MCP 配置加载、声明兼容的 CLI Connector bundle、取消、输出脱敏和 Workspace 写入 smoke。仅检查 `agent-cli` 在没有 broker socket 时退出非零不足以证明协议兼容，必须确认它已解析命令并尝试连接 socket。某镜像没有这些证据时，对应 `available` 必须为 `false`。
