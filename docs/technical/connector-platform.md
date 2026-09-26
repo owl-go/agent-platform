@@ -4,6 +4,8 @@
 
 The package validator is the single boundary shared by ZIP upload and guided creation. It rejects empty or oversized archives, absolute or traversal paths, duplicate paths, symbolic links, hard-coded credential names or values, malformed JSON, missing required files, invalid semantic versions, and packages that declare both MCP and CLI manifests. A package must contain at least one `skills/<name>/SKILL.md`; every document must be UTF-8 with valid frontmatter and all referenced resources must stay inside that Skill directory.
 
+The outer Connector Package ZIP still rejects symbolic links. Its nested immutable CLI bundle may contain only relative symlinks that resolve within the bundle, matching the CLI bundle extractor; absolute and escaping links fail validation. This permits the verified npm `.bin` links used by `@larksuite/cli` without weakening the outer package or Runtime mount boundary.
+
 `connector-meta.json` owns the globally unique lower-case `source`, semantic `version`, package `type`, user-facing name and description, examples, platform compatibility, and `auth_mode`. `mcp.json` declares one remote HTTPS or local fixed-runtime server. `cli.json` declares the managed runtime, executable, structured lifecycle argv arrays, status matching, authorization-domain allowlist, reviewed capabilities, and optional resource limits. A CLI package may carry `cli-bundle.tgz`; its executable path, expanded tar contents, mode bits, and SHA-256 are verified before object storage. No manifest accepts a shell command string.
 
 ## Lifecycle

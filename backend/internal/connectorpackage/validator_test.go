@@ -91,6 +91,57 @@ func TestParseValidCLIExecutableBundle(t *testing.T) {
 	}
 }
 
+func TestParseCLIBundleAllowsOnlyContainedSymlinks(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		link      string
+		wantError bool
+	}{
+		{name: "contained npm bin link", link: "../../bin/example"},
+		{name: "escaping npm bin link", link: "../../../outside", wantError: true},
+		{name: "absolute npm bin link", link: "/outside", wantError: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var bundle bytes.Buffer
+			compressed := gzip.NewWriter(&bundle)
+			archive := tar.NewWriter(compressed)
+			if err := archive.WriteHeader(&tar.Header{Name: "./", Mode: 0o755, Typeflag: tar.TypeDir}); err != nil {
+				t.Fatal(err)
+			}
+			body := []byte("#!/bin/sh\nexit 0\n")
+			if err := archive.WriteHeader(&tar.Header{Name: "bin/example", Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := archive.Write(body); err != nil {
+				t.Fatal(err)
+			}
+			if err := archive.WriteHeader(&tar.Header{Name: "node_modules/.bin/example", Linkname: test.link, Typeflag: tar.TypeSymlink}); err != nil {
+				t.Fatal(err)
+			}
+			if err := archive.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := compressed.Close(); err != nil {
+				t.Fatal(err)
+			}
+			files := map[string][]byte{
+				"connector-meta.json": []byte(`{"source":"example-cli","version":"1.0.0","type":"cli","name":"Example","description":"Example CLI","examples_zh":["执行"],"examples_en":["Run"],"minPlatformVersion":"1.0.0","auth_mode":"none"}`),
+				"icon.svg":            []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`),
+				"cli.json":            []byte(`{"runtime":{"kind":"node","version":"22.22.0","digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"executable":"example","bundle_path":"node_modules/.bin/example","commands":{"init":{"argv":["setup"]},"auth":{"argv":["auth"]},"status":{"argv":["status"]},"unAuth":{"argv":["logout"]}},"status_match":{"json_path":"$.ok","equals":true},"egress_hosts":["api.example.com"],"timeout_seconds":60,"capabilities":[{"id":"run","argv_prefix":["run"],"risk":"low","identities":["user"],"egress_hosts":["api.example.com"],"timeout_seconds":30}]}`),
+				"cli-bundle.tgz":      bundle.Bytes(),
+				"skills/run/SKILL.md": []byte("---\nname: example-run\ndisplay_name: Run\ndescription: Run command\nversion: 1.0.0\nauthor: Example\n---\n\n# Run\nUse the reviewed command.\n"),
+			}
+			_, err := connectorpackage.Parse(packageZIPBytes(t, files))
+			if test.wantError && (err == nil || !strings.Contains(err.Error(), "unsafe symlink")) {
+				t.Fatalf("Parse() error = %v, want unsafe symlink", err)
+			}
+			if !test.wantError && err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+		})
+	}
+}
+
 func TestParseRejectsInvalidPackageBoundaries(t *testing.T) {
 	validMeta := `{"source":"example-service","version":"1.0.0","type":"mcp","name":"Example","description":"Example connector","examples_zh":["查询"],"examples_en":["Query"],"minPlatformVersion":"1.0.0","auth_mode":"oauth"}`
 	validSkill := "---\nname: example\ndisplay_name: Example\ndescription: Example skill\nversion: 1.0.0\nauthor: Example\n---\n\n# Example\nInstructions.\n"
