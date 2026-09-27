@@ -173,7 +173,7 @@ func (repository *Repository) ListConnectorPublicationHealth(ctx context.Context
 		if err := repository.db.WithContext(ctx).Model(&connectorInstallationRecord{}).Where("package_source = ? AND state = ?", publication.PackageSource, domain.ConnectorInstallationActive).Count(&activeInstallationCount).Error; err != nil {
 			return nil, err
 		}
-		if err := repository.db.WithContext(ctx).Table("connector_authorizations AS authorization").Joins("JOIN connector_installations AS installation ON installation.id = authorization.installation_id").Where("installation.package_source = ? AND authorization.state = ?", publication.PackageSource, domain.ConnectorAuthorizationActive).Count(&activeAuthorizationCount).Error; err != nil {
+		if err := repository.db.WithContext(ctx).Table("connector_authorizations AS auth").Joins("JOIN connector_installations AS installation ON installation.id = auth.installation_id").Where("installation.package_source = ? AND auth.state = ?", publication.PackageSource, domain.ConnectorAuthorizationActive).Count(&activeAuthorizationCount).Error; err != nil {
 			return nil, err
 		}
 		items = append(items, domain.ConnectorPublicationHealth{Publication: publication, Revision: revision, InstallationCount: installationCount, ActiveInstallationCount: activeInstallationCount, ActiveAuthorizationCount: activeAuthorizationCount})

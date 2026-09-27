@@ -76,6 +76,10 @@ func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	if len(items) != 2 || items[0].State != domain.ConnectorAuthorizationActive || items[1].State != domain.ConnectorAuthorizationActive {
 		t.Fatalf("multiple active authorizations were not preserved: %#v", items)
 	}
+	health, err := repository.ListConnectorPublicationHealth(ctx)
+	if err != nil || len(health) != 1 || health[0].InstallationCount != 1 || health[0].ActiveInstallationCount != 1 || health[0].ActiveAuthorizationCount != 2 {
+		t.Fatalf("Connector publication health = %#v, %v", health, err)
+	}
 	installation.Version++
 	selected, err := repository.SelectConnectorAuthorization(ctx, owner, installation.ID, first.ID, installation.Version)
 	if err != nil {
