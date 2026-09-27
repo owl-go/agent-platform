@@ -1463,7 +1463,13 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 	for _, connector := range job.Snapshot.CLIConnectors {
 		if connector.PackageObjectKey == "" {
 			if connector.AuthenticationDriver == "feishu" {
-				files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, "SKILL.md"))] = feishuCLISkill
+				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("load platform Feishu Skill: %w", err)
+				}
+				for name, body := range resources {
+					files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, name))] = body
+				}
 			}
 			continue
 		}

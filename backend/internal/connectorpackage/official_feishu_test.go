@@ -51,6 +51,43 @@ func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 	if !foundSkill {
 		t.Fatal("official Feishu Skill is missing")
 	}
+	for _, name := range []string{"skills/feishu/references/lark-task/SKILL.md", "skills/feishu/references/lark-calendar/SKILL.md", "skills/feishu/references/lark-base/SKILL.md", "skills/feishu/references/lark-shared/SKILL.md", "skills/feishu/references/LICENSE"} {
+		found := false
+		for _, entry := range reader.File {
+			if entry.Name == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("official Feishu reference %q is missing", name)
+		}
+	}
+}
+
+func TestOfficialFeishuSkillReferencesCoverPinnedCLIDomains(t *testing.T) {
+	resources, err := OfficialFeishuSkillResources("1.0.93")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resources) != 546 {
+		t.Fatalf("Feishu Skill resource count = %d", len(resources))
+	}
+	domains := 0
+	for name, body := range resources {
+		if strings.HasPrefix(name, "references/lark-") && strings.HasSuffix(name, "/SKILL.md") && strings.Count(name, "/") == 2 {
+			domains++
+			if len(body) == 0 || !strings.Contains(string(resources["SKILL.md"]), "("+name+")") {
+				t.Fatalf("Feishu Skill does not route to %q", name)
+			}
+		}
+	}
+	if domains != 28 {
+		t.Fatalf("official CLI domain count = %d", domains)
+	}
+	if _, err := OfficialFeishuSkillResources("1.0.94"); err == nil {
+		t.Fatal("unreviewed CLI version reused stale Skill references")
+	}
 }
 
 func TestBuildOfficialFeishuArchiveRejectsMissingEvidence(t *testing.T) {

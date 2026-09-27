@@ -549,6 +549,9 @@ func TestSelectedFeishuConnectorProvidesSkillBeforeCLIUse(t *testing.T) {
 	if !strings.Contains(skill, "im +chat-search --query") || !strings.Contains(skill, "im +messages-send --chat-id") {
 		t.Fatalf("Feishu Skill omits the group message flow: %q", skill)
 	}
+	if len(files["connector-skills/feishu-1/references/lark-task/SKILL.md"]) == 0 || len(files["connector-skills/feishu-1/references/lark-mail/SKILL.md"]) == 0 {
+		t.Fatal("pinned Feishu domain references were not mounted")
+	}
 	instruction := buildInstruction(job, nil)
 	if !strings.Contains(instruction, "im +messages-send --chat-id") || strings.Index(instruction, "Feishu CLI Skill") > strings.Index(instruction, "Available isolated CLI Connectors") {
 		t.Fatalf("Feishu Skill was not loaded before CLI forms: %q", instruction)
