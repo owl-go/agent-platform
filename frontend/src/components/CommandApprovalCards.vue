@@ -9,14 +9,28 @@ const { t } = useI18n();
 function changeIdentity(approvalID: string, event: Event) {
   emit("identity", approvalID, (event.target as HTMLSelectElement).value as "user" | "bot");
 }
+
+function isMessageSend(operation: string) {
+  return ["im_messages_send", "send message", "message send"].includes(operation.trim().toLowerCase());
+}
 </script>
 
 <template>
   <aside v-if="items.length" class="approval-inbox" :class="{ 'is-embedded': embedded }" aria-live="polite">
     <article v-for="item in items" :key="item.id" class="approval-card">
-      <div><strong>{{ t('approvals.title') }} · {{ item.connector_name }}</strong><p>{{ item.operation }} · {{ item.target }}</p><code>{{ item.redacted_arguments }}</code><small>{{ t('approvals.expires', { time: new Date(item.expires_at).toLocaleTimeString() }) }}</small></div>
-      <select :value="identities[item.id] ?? item.identity ?? 'user'" :disabled="Boolean(item.identity)" :aria-label="t('approvals.identity')" @change="changeIdentity(item.id, $event)"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select>
-      <el-button @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button><el-button type="primary" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
+      <div class="approval-card-content">
+        <strong>{{ t('approvals.title', { connector: item.connector_name }) }}</strong>
+        <p>{{ isMessageSend(item.operation) ? t('approvals.messageSendDescription', { connector: item.connector_name }) : t('approvals.otherDescription', { connector: item.connector_name }) }}</p>
+        <p><b>{{ t('approvals.operation') }}：</b>{{ isMessageSend(item.operation) ? t('approvals.sendMessage') : item.operation }}</p>
+        <p><b>{{ item.target.startsWith('oc_') ? t('approvals.groupTarget') : t('approvals.target') }}：</b>{{ item.target }}</p>
+        <p class="approval-card-caution">{{ t('approvals.hiddenArguments') }}</p>
+        <small>{{ t('approvals.expires', { time: new Date(item.expires_at).toLocaleTimeString() }) }}</small>
+      </div>
+      <div class="approval-card-actions">
+        <label class="approval-identity"><span>{{ t('approvals.identity') }}</span><select :value="identities[item.id] ?? item.identity ?? 'user'" :disabled="Boolean(item.identity)" @change="changeIdentity(item.id, $event)"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select></label>
+        <el-button @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button>
+        <el-button type="primary" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
+      </div>
     </article>
   </aside>
 </template>
