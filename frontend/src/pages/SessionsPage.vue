@@ -56,7 +56,11 @@ const activeAssistant = computed(() => {
 });
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
-  return cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  if (attempted) return attempted;
+  if (latestAssistant?.state !== "failed" || !latestAssistant.error?.includes("Connector authorization is unavailable")) return undefined;
+  const connector = latestAssistant.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []).find((item) => item.authentication_driver === "feishu");
+  return connector ? { connectorID: connector.id, capabilityID: "" } : undefined;
 });
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
