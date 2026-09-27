@@ -24,7 +24,7 @@ func TestUnifiedRuntimeDockerfilePinsFiveCLIsAndNonRootUser(t *testing.T) {
 		t.Fatalf("read unified Dockerfile: %v", err)
 	}
 	text := string(contents)
-	for _, required := range []string{`ENTRYPOINT ["/usr/local/bin/runtime-entrypoint"]`, "USER 65532:65532", "WORKDIR /workspace", "FROM public.ecr.aws/docker/library/node:24", "FROM public.ecr.aws/docker/library/python:3.13", "@sha256:"} {
+	for _, required := range []string{`ENTRYPOINT ["/usr/local/bin/runtime-entrypoint"]`, "USER 65532:65532", "WORKDIR /workspace", "FROM public.ecr.aws/docker/library/node:24", "FROM public.ecr.aws/docker/library/python:3.13", "@sha256:", "patch-openai-empty-sse.mjs"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("unified Dockerfile does not contain %q", required)
 		}

@@ -4,6 +4,7 @@ set -euo pipefail
 registry="${RUNTIME_IMAGE_REGISTRY:-agent-platform}"
 image="${RUNTIME_IMAGE_REF:-${registry}/runtime:${RUNTIME_IMAGE_TAG_OVERRIDE:-1.0.0}}"
 builder_image="${CLI_BUILDER_IMAGE_REF:-${registry}/cli-builder:1.0.0}"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 check_version() {
   local runtime="$1"
@@ -24,6 +25,12 @@ check_version codex 0.147.0
 check_version hermes 0.19.0
 check_version openclaw 2026.7.1-2
 check_version pi 0.84.4
+
+docker run --rm --network none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+  --mount type=volume,dst=/workspace \
+  --mount "type=bind,src=${repo_root}/scripts/conformance/pi-empty-sse-smoke.mjs,dst=/opt/pi-empty-sse-smoke.mjs,readonly" \
+  --entrypoint node "${image}" /opt/pi-empty-sse-smoke.mjs
 
 docker run --rm --network none --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
