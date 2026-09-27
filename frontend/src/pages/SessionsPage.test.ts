@@ -516,13 +516,33 @@ describe("SessionsPage conversation layout", () => {
   });
 
   it("offers managed Feishu recovery when authorization fails before any CLI command runs", async () => {
+    const authorizationError = "resource is invalid: queued CLI Connector for Stage 1 is unavailable: resource conflicts with current state: Connector authorization is unavailable";
     const failed: SessionMessage = {
       ...messages[1]!, state: "failed", content: "", activities: [],
-      error: "resource is invalid: queued CLI Connector for Stage 1 is unavailable: resource conflicts with current state: Connector authorization is unavailable",
+      error: authorizationError,
+      expert_stages: [{ expert_id: "expert-1", expert_name: "飞书专家", position: 1, total: 1, state: "failed", elapsed_ms: 1200, error: authorizationError }],
       response_snapshot: { provider_model_id: "model-1", connection_id: "connection-1", connection_name: "Provider", provider_type: "openai", model_id: "model", model_name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], runtime_engine: "codex", compatibility: "verified", connection_version: 1, stages: [{ position: 1, runtime_engine: "codex", provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" }, cli_connectors: [{ id: "installation-1", name: "飞书", executable: "lark-cli", authentication_driver: "feishu", bundle_sha256: "a".repeat(64), runtime_digests: [], version: 1 }] }] },
     };
     const wrapper = await mountPage([messages[0]!, failed]);
     expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "installation-1", capabilityID: "" });
+    const reply = wrapper.get(".message.assistant .message-content").text();
+    expect(reply).toContain("等待飞书授权");
+    expect(reply).toContain("完成授权后");
+    expect(reply).not.toContain("resource is invalid");
+    expect(reply).not.toContain("Connector authorization is unavailable");
+    expect(wrapper.text()).not.toContain("resource is invalid");
+    wrapper.unmount();
+  });
+
+  it("does not disguise an unrelated Feishu command failure as an authorization wait", async () => {
+    const failed: SessionMessage = {
+      ...messages[1]!, state: "failed", content: "", error: "Connector command failed unexpectedly",
+      activities: [{ type: "command.requested", detail: "agent-cli --connector feishu --capability im_messages_send --identity user -- im +messages-send" }],
+    };
+    const wrapper = await mountPage([messages[0]!, failed]);
+
+    expect(wrapper.get(".message.assistant .message-content").text()).toContain("Connector command failed unexpectedly");
+    expect(wrapper.text()).not.toContain("等待飞书授权");
     wrapper.unmount();
   });
 
