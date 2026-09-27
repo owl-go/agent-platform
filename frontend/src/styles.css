@@ -523,6 +523,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .approval-card-content b { font-weight: 600; }
 .approval-card-content small, .approval-card-caution { color: var(--muted); }
 .approval-card-actions { display: flex; align-items: end; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.approval-card-actions .el-button { display: inline-flex; flex: none; align-items: center; justify-content: center; width: auto; height: 36px; padding: 0 14px; border: 1px solid var(--el-button-border-color); border-radius: 9px; background: var(--el-button-bg-color); color: var(--el-button-text-color); font-size: .82rem; white-space: nowrap; }
 .approval-card-actions .el-button + .el-button { margin-left: 0; }
 .approval-identity { display: grid; gap: 4px; margin-right: auto; font-size: .72rem; }
 .approval-identity select { min-height: 32px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
