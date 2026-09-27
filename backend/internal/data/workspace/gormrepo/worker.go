@@ -566,8 +566,12 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	checkpoint := ""
 	stageCheckpoints := map[int]string(nil)
 	for index := len(prior) - 1; index >= 0; index-- {
-		if prior[index].State != "succeeded" || prior[index].NativeCheckpoint == "" {
+		if prior[index].State != "succeeded" {
 			continue
+		}
+		var previous domain.ExecutionSnapshot
+		if err := json.Unmarshal(prior[index].WorkflowSnapshot, &previous); err != nil || !sameStageRuntimes(snapshot, previous) {
+			break
 		}
 		checkpoint = prior[index].NativeCheckpoint
 		if stages, stageErr := snapshot.OrderedStages(); stageErr == nil && len(stages) > 1 && checkpoint != "" {
@@ -592,6 +596,32 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		workflowID = *row.WorkflowID
 	}
 	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, ConversationID: row.ConversationID, Instruction: instruction, Attachments: input.Attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
+}
+
+func sameStageRuntimes(current, previous domain.ExecutionSnapshot) bool {
+	currentStages, currentErr := current.OrderedStages()
+	previousStages, previousErr := previous.OrderedStages()
+	if currentErr != nil || previousErr != nil || len(currentStages) != len(previousStages) {
+		return false
+	}
+	for index := range currentStages {
+		if currentStages[index].RuntimeEngine != previousStages[index].RuntimeEngine {
+			return false
+		}
+	}
+	return true
+}
+
+func sameResponseStageRuntimes(current, previous domain.ResponseSnapshot) bool {
+	if len(current.Stages) == 0 || len(previous.Stages) != len(current.Stages) {
+		return false
+	}
+	for index := range current.Stages {
+		if current.Stages[index].RuntimeEngine != previous.Stages[index].RuntimeEngine {
+			return false
+		}
+	}
+	return true
 }
 
 func workflowRunInstruction(goal string, prior []runRecord, textInput *string, jsonInput map[string]any) string {
@@ -712,8 +742,16 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 			checkpoint = checkpointRow.NativeCheckpoint
 		}
 	} else if stages[0].SelectionKey == "" && len(stages) > 1 && session.NativeCheckpoint != "" {
-		if err := json.Unmarshal([]byte(session.NativeCheckpoint), &stageCheckpoints); err != nil {
-			return nil, fmt.Errorf("decode team native checkpoints: %w", err)
+		var previous messageRecord
+		if err := tx.Where("session_id = ? AND role = 'assistant' AND state = 'completed' AND id < ?", session.ID, assistant.ID).Order("id DESC").Take(&previous).Error; err == nil {
+			var previousSnapshot domain.ResponseSnapshot
+			if json.Unmarshal(previous.ResponseSnapshot, &previousSnapshot) == nil && sameResponseStageRuntimes(responseSnapshot, previousSnapshot) {
+				if err := json.Unmarshal([]byte(session.NativeCheckpoint), &stageCheckpoints); err != nil {
+					return nil, fmt.Errorf("decode team native checkpoints: %w", err)
+				}
+			}
+		} else if err != gorm.ErrRecordNotFound {
+			return nil, err
 		}
 	}
 	if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "generating", "progress_stage": "thinking"}).Error; err != nil {

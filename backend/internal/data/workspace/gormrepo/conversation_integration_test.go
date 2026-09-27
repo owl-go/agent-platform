@@ -66,6 +66,144 @@ func conversationTestDatabase(t *testing.T) *gorm.DB {
 	return db
 }
 
+func TestExistingConversationsUseCurrentExecutionDefaultsForNewTurns(t *testing.T) {
+	db := conversationTestDatabase(t)
+	ctx := context.Background()
+	repository := New(db, nil)
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if err := db.Exec(query, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	owner, connection, oldModel, newModel, sessionID, workflowID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner)
+	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses","openai_chat_completions","anthropic_messages"]','test')`, connection, owner)
+	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'test')`, connection)
+	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'old-model','Old Model')`, oldModel, connection)
+	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'new-model','New Model')`, newModel, connection)
+	oldDefaults, _ := json.Marshal(map[string]string{"codex": oldModel, "claude": newModel})
+	exec(`INSERT INTO personal_settings(user_id,default_runtime_engine,runtime_model_defaults) VALUES(?,'codex',?::jsonb)`, owner, string(oldDefaults))
+	exec(`INSERT INTO sessions(id,owner_user_id) VALUES(?,?)`, sessionID, owner)
+	exec(`INSERT INTO workflows(id,owner_user_id,name,goal,workspace_path) VALUES(?,?,'Workflow','original goal','workspace/test')`, workflowID, owner)
+	firstUser, firstAssistant, err := repository.CreateMessagePair(ctx, owner, sessionID, "first", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstRun, err := repository.CreateRun(ctx, owner, workflowID, "manual", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec(`UPDATE runs SET state='succeeded',native_checkpoint='old-run-checkpoint' WHERE id=?`, firstRun.ID)
+	exec(`UPDATE session_messages SET state='completed' WHERE id=?`, firstAssistant.ID)
+	exec(`UPDATE sessions SET runtime_engine='codex',native_checkpoint='old-session-checkpoint' WHERE id=?`, sessionID)
+	exec(`UPDATE personal_settings SET default_runtime_engine='claude' WHERE user_id=?`, owner)
+
+	_, nextAssistant, err := repository.CreateMessagePair(ctx, owner, sessionID, "second", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := nextAssistant.ResponseSnapshot.Stages[0]
+	if stage.RuntimeEngine != domain.RuntimeClaude || stage.ProviderModel.ID != newModel {
+		t.Fatalf("existing Session used %s/%s; want claude/%s", stage.RuntimeEngine, stage.ProviderModel.ID, newModel)
+	}
+	if firstAssistant.ResponseSnapshot.Stages[0].RuntimeEngine != domain.RuntimeCodex || firstAssistant.ResponseSnapshot.Stages[0].ProviderModel.ID != oldModel {
+		t.Fatal("new Session message rewrote the first Response Snapshot")
+	}
+	_, retry, err := repository.RetryMessage(ctx, owner, sessionID, firstUser.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.ResponseSnapshot.Stages[0].RuntimeEngine != domain.RuntimeCodex || retry.ResponseSnapshot.Stages[0].ProviderModel.ID != oldModel {
+		t.Fatal("retry did not retain its original execution configuration")
+	}
+	var sessionJob *application.ExecutionJob
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		var claimErr error
+		sessionJob, claimErr = claimSessionMessage(tx)
+		return claimErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if sessionJob == nil || sessionJob.CheckpointRef != "" {
+		t.Fatal("Session reused a checkpoint from the previous Runtime Engine")
+	}
+
+	follow, err := repository.ContinueRunConversation(ctx, owner, workflowID, firstRun.ID, "follow-up", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var followRow runRecord
+	if err := db.Where("id = ?", follow.ID).Take(&followRow).Error; err != nil {
+		t.Fatal(err)
+	}
+	var followPlan domain.ExecutionSnapshot
+	if err := json.Unmarshal(followRow.WorkflowSnapshot, &followPlan); err != nil {
+		t.Fatal(err)
+	}
+	stages, err := followPlan.OrderedStages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stages[0].RuntimeEngine != domain.RuntimeClaude || stages[0].ProviderModel.ID != newModel || followPlan.Goal != "original goal" {
+		t.Fatalf("existing Run Conversation used %s/%s with goal %q; want claude/%s and original goal", stages[0].RuntimeEngine, stages[0].ProviderModel.ID, followPlan.Goal, newModel)
+	}
+	var runJob *application.ExecutionJob
+	if err := db.Transaction(func(tx *gorm.DB) error { var claimErr error; runJob, claimErr = claimWorkflowRun(tx); return claimErr }); err != nil {
+		t.Fatal(err)
+	}
+	if runJob == nil || runJob.CheckpointRef != "" {
+		t.Fatal("Run Conversation reused a checkpoint from the previous Runtime Engine")
+	}
+	exec(`UPDATE personal_settings SET runtime_model_defaults=jsonb_build_object('codex',?::text,'claude',?::text) WHERE user_id=?`, oldModel, oldModel, owner)
+	_, modelOnlyAssistant, err := repository.CreateMessagePair(ctx, owner, sessionID, "third", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	modelOnlyStage := modelOnlyAssistant.ResponseSnapshot.Stages[0]
+	if modelOnlyStage.RuntimeEngine != domain.RuntimeClaude || modelOnlyStage.ProviderModel.ID != oldModel {
+		t.Fatal("existing Session did not pick up a model-only Settings change")
+	}
+	modelOnlyFollow, err := repository.ContinueRunConversation(ctx, owner, workflowID, firstRun.ID, "model-only follow-up", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var modelOnlyRow runRecord
+	if err := db.Where("id = ?", modelOnlyFollow.ID).Take(&modelOnlyRow).Error; err != nil {
+		t.Fatal(err)
+	}
+	var modelOnlyPlan domain.ExecutionSnapshot
+	if err := json.Unmarshal(modelOnlyRow.WorkflowSnapshot, &modelOnlyPlan); err != nil {
+		t.Fatal(err)
+	}
+	modelOnlyStages, err := modelOnlyPlan.OrderedStages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if modelOnlyStages[0].RuntimeEngine != domain.RuntimeClaude || modelOnlyStages[0].ProviderModel.ID != oldModel {
+		t.Fatal("existing Run Conversation did not pick up a model-only Settings change")
+	}
+	rerun, err := repository.Rerun(ctx, owner, workflowID, firstRun.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rerunRow runRecord
+	if err := db.Where("id = ?", rerun.ID).Take(&rerunRow).Error; err != nil {
+		t.Fatal(err)
+	}
+	var rerunPlan domain.ExecutionSnapshot
+	if err := json.Unmarshal(rerunRow.WorkflowSnapshot, &rerunPlan); err != nil {
+		t.Fatal(err)
+	}
+	rerunStages, err := rerunPlan.OrderedStages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rerunStages[0].RuntimeEngine != domain.RuntimeClaude || rerunStages[0].ProviderModel.ID != oldModel || rerunPlan.Goal != "original goal" {
+		t.Fatal("rerunning a historical Workflow ignored current execution settings")
+	}
+}
+
 func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 	db := conversationTestDatabase(t)
 	ctx := context.Background()
@@ -80,7 +218,7 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 	for _, id := range []string{owner, other} {
 		exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", id, id, id, id+"@example.test", id)
 	}
-	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses"]','test')`, connection, owner)
+	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses","anthropic_messages"]','test')`, connection, owner)
 	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'test')`, connection)
 	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'model','Model')`, model, connection)
 	defaults, _ := json.Marshal(map[string]string{"codex": model})
@@ -132,7 +270,7 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 		t.Fatal("accepted submit did not retain only persistent selection")
 	}
 	exec(`UPDATE session_messages SET state='failed' WHERE id=?`, assistant.ID)
-	exec(`UPDATE personal_settings SET default_runtime_engine='claude',runtime_model_defaults='{}' WHERE user_id=?`, owner)
+	exec(`UPDATE personal_settings SET default_runtime_engine='claude',runtime_model_defaults=jsonb_build_object('claude',?::text) WHERE user_id=?`, model, owner)
 	next, err := repository.ResolveConversationSelection(ctx, owner, scope, domain.ConversationSelectionInput{PreviousID: current.ID, ChangeExpert: true})
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +280,7 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	stage := nextAssistant.ResponseSnapshot.Stages[0]
-	if stage.Expert != nil || len(stage.Skills) != 0 || stage.ProviderModel.ID != model || stage.RuntimeEngine != domain.RuntimeCodex {
+	if stage.Expert != nil || len(stage.Skills) != 0 || stage.ProviderModel.ID != model || stage.RuntimeEngine != domain.RuntimeClaude {
 		t.Fatalf("configuration/resource separation failed: %#v", stage)
 	}
 	_, retry, err := repository.RetryMessage(ctx, owner, session, userMessage.ID)
@@ -252,8 +390,8 @@ func TestConversationSelectionPersistenceAndFollowUpIsolation(t *testing.T) {
 	if err = json.Unmarshal(followRow.WorkflowSnapshot, &followPlan); err != nil {
 		t.Fatal(err)
 	}
-	if followPlan.Goal != "original goal" || followPlan.Stages[0].Expert != nil || followPlan.Stages[0].RuntimeEngine != domain.RuntimeCodex {
-		t.Fatal("follow-up changed frozen goal/configuration or kept removed Expert")
+	if followPlan.Goal != "original goal" || followPlan.Stages[0].Expert != nil || followPlan.Stages[0].RuntimeEngine != domain.RuntimeClaude {
+		t.Fatal("follow-up changed frozen goal or current execution configuration, or kept removed Expert")
 	}
 	var rootPlan domain.ExecutionSnapshot
 	_ = json.Unmarshal(rootRow.WorkflowSnapshot, &rootPlan)
