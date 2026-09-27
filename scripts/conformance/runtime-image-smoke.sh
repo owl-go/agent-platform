@@ -2,7 +2,8 @@
 set -euo pipefail
 
 registry="${RUNTIME_IMAGE_REGISTRY:-agent-platform}"
-image="${registry}/runtime:${RUNTIME_IMAGE_TAG_OVERRIDE:-1.0.0}"
+image="${RUNTIME_IMAGE_REF:-${registry}/runtime:${RUNTIME_IMAGE_TAG_OVERRIDE:-1.0.0}}"
+builder_image="${CLI_BUILDER_IMAGE_REF:-${registry}/cli-builder:1.0.0}"
 
 check_version() {
   local runtime="$1"
@@ -45,7 +46,7 @@ docker run --rm --network none --read-only \
     touch /workspace/runtime-write-probe
   '
 
-builder_uid="$(docker run --rm --network none --entrypoint id "${registry}/cli-builder:1.0.0" -u)"
+builder_uid="$(docker run --rm --network none --entrypoint id "${builder_image}" -u)"
 if [[ "${builder_uid}" != "65532" ]]; then
   echo "CLI Builder image must run as UID 65532, got ${builder_uid}" >&2
   exit 1

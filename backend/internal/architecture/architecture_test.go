@@ -169,6 +169,25 @@ func TestPlatformDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
 	}
 }
 
+func TestPlatformDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	for _, required := range []string{
+		`--file deploy/runtimes/unified/Dockerfile`,
+		`docker push "$runtime_tag"`,
+		`RUNTIME_IMAGE_REF="$runtime_digest" CLI_BUILDER_IMAGE_REF="$builder_digest" scripts/conformance/runtime-image-smoke.sh`,
+		`RUNTIME_IMAGE={digest}`,
+	} {
+		if !strings.Contains(script, required) {
+			t.Errorf("deploy-platform.sh does not enforce %q", required)
+		}
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))
