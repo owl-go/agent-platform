@@ -13,7 +13,7 @@ Personal AI workspace for private Sessions, reusable Workflows, Experts, Extensi
 - `backend/internal/service` - generated API adapters and authenticated Run Event SSE
 - `backend/internal/server` - Kratos HTTP and Worker lifecycle servers
 - `backend/api` - authoritative Protobuf contracts and generated Go transports
-- `deploy/runtimes` - isolated Claude, Codex, Hermes, and OpenClaw images
+- `deploy/runtimes` - one isolated image containing the five Runtime Engines and a separate CLI Builder image
 - `docs/product` - Agent Workspace product requirements
 - `docs/technical` - implementation specifications
 - `docs/adr` - active architectural decisions

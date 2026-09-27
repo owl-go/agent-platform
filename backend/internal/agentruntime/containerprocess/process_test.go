@@ -79,11 +79,12 @@ func TestRunWrapsRuntimeCommandInHardenedContainer(t *testing.T) {
 		"--mount", "type=bind,src=/workspaces/run-1,dst=/workspace,readonly=false",
 		"--mount", "type=bind,src=/credentials/run-1,dst=/run/agent-credentials,readonly=true",
 		"--mount", "type=bind,src=/etc/agent-platform/sandbox-resolv.conf,dst=/etc/resolv.conf,readonly=true",
+		"--entrypoint", "/usr/local/bin/runtime-entrypoint",
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864",
 		"--workdir", "/workspace", "--env", "NON_SECRET", "--init",
 		"--label", "agent-platform.managed=true", "--label", "agent-platform.run-id=run-1",
 		"registry.example/runtime@sha256:" + strings.Repeat("a", 64),
-		"exec", "--json", "-",
+		"codex", "exec", "--json", "-",
 	}
 	if !reflect.DeepEqual(captured.Command, want) {
 		t.Fatalf("docker command:\n got: %#v\nwant: %#v", captured.Command, want)

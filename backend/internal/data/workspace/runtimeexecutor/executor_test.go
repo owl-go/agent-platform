@@ -676,7 +676,7 @@ func TestExecuteExpertTeamRunsInOrderAndCommitsOnlyTheFinalResult(t *testing.T) 
 
 func TestExecuteExpertTeamUsesEachStagesRuntimeAndModel(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
-	executor.config.Worker.Runtimes["claude"] = platformconfig.RuntimeEngineConfig{Available: true, ImageDigest: "registry.example/claude@sha256:" + strings.Repeat("1", 64), CLIVersion: "test"}
+	executor.config.Worker.Runtimes["claude"] = executor.config.Worker.Runtimes["codex"]
 	claudeSecret, err := executor.box.Encrypt([]byte("claude-key"), "model-provider:owner-1")
 	if err != nil {
 		t.Fatal(err)
@@ -718,7 +718,7 @@ func TestExecuteExpertTeamUsesEachStagesRuntimeAndModel(t *testing.T) {
 	if !reflect.DeepEqual(engines, []domain.RuntimeEngine{domain.RuntimeClaude, domain.RuntimeCodex}) || !reflect.DeepEqual(models, []string{"claude-model", "codex-model"}) {
 		t.Fatalf("stage runtime/model calls = %#v / %#v", engines, models)
 	}
-	if len(containerConfigs) != 2 || containerConfigs[0].RuntimeCommand != "claude" || containerConfigs[1].RuntimeCommand != "codex" || containerConfigs[0].Image == containerConfigs[1].Image {
+	if len(containerConfigs) != 2 || containerConfigs[0].RuntimeCommand != "claude" || containerConfigs[1].RuntimeCommand != "codex" || containerConfigs[0].Image != containerConfigs[1].Image {
 		t.Fatalf("stage container configs = %#v", containerConfigs)
 	}
 	if !reflect.DeepEqual(credentialKeys, []string{"claude-key", "codex-key"}) {
