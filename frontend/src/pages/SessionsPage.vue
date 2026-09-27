@@ -56,12 +56,28 @@ const activeAssistant = computed(() => {
 });
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
-  return cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  if (attempted) return attempted;
+  if (latestAssistant?.state !== "failed" || !latestAssistant.error?.includes("Connector authorization is unavailable")) return undefined;
+  const connector = latestAssistant.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []).find((item) => item.authentication_driver === "feishu");
+  return connector ? { connectorID: connector.id, capabilityID: "" } : undefined;
 });
+function authorizationUnavailable(error?: string) {
+  const normalized = error?.toLowerCase().replaceAll("_", " ") ?? "";
+  return normalized.includes("authorization unavailable") || normalized.includes("authorization is unavailable");
+}
+function waitingForFeishuAuthorization(message: SessionMessage) {
+  if (message.role !== "assistant" || message.state !== "failed" || !authorizationUnavailable(message.error)) return false;
+  const attempted = cliAuthorizationRequestFromActivities(message.activities);
+  if (attempted?.connectorID === "feishu") return true;
+  return message.response_snapshot?.stages?.some((stage) => stage.cli_connectors?.some((connector) => connector.authentication_driver === "feishu")) ?? false;
+}
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
   const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
   const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
+  const authorizationWait = waitingForFeishuAuthorization(message);
+  const authorizationMessage = authorizationWait ? t("sessions.feishuAuthorizationWait") : undefined;
   return {
     id: String(message.id),
     role: message.role,
@@ -70,7 +86,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     state: message.state,
     timestamp: message.created_at,
     elapsedMs: message.elapsed_ms,
-    error: message.error,
+    error: authorizationMessage ?? message.error,
     pending,
     finalizing: pending && message.progress_stage === "finalizing",
     streaming: pending && message.role === "assistant",
@@ -84,7 +100,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       state: summary.state,
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
-    stages: message.role === "assistant" ? message.expert_stages : undefined,
+    stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
     creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     attachments: message.attachments,
@@ -296,7 +312,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
   message.resource_action = snapshot.resource_action ?? message.resource_action;
-  if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
+  if (snapshot.state === "queued" || snapshot.state === "generating" || snapshot.state === "waiting_for_user") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
     if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
@@ -532,7 +548,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.id" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>

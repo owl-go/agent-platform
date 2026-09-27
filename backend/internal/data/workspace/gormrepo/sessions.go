@@ -544,7 +544,15 @@ func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord) (domain.ResponseSn
 		if err := json.Unmarshal(session.ExpertSnapshot, &frozen); err != nil {
 			return domain.ResponseSnapshot{}, fmt.Errorf("decode frozen Session execution plan: %w", err)
 		}
-		return responseSnapshotFromExecution(frozen)
+		stages, err := frozen.OrderedStages()
+		if err != nil {
+			return domain.ResponseSnapshot{}, err
+		}
+		configuration, err := currentExecutionStage(tx, session.OwnerID)
+		if err != nil {
+			return domain.ResponseSnapshot{}, err
+		}
+		return domain.ResponseSnapshot{SchemaVersion: 2, Stages: withCurrentExecutionConfiguration(stages, configuration)}, nil
 	}
 	fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
 	plan, err := loadExecutionSnapshot(tx, fake)
