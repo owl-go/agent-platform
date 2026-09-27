@@ -12,7 +12,7 @@
 
 五个 Dockerfile 位于 `deploy/runtimes/<runtime>/Dockerfile`。每个镜像只安装一种 Runtime Engine，并共同提供 Git、`npx`、`uvx` 与 MCP 运行依赖；进程固定以 UID/GID 65532 运行。生产配置只能引用 Registry `repository@sha256:<digest>`，不能使用 Tag 或本地 Image ID。
 
-公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型与 Connector 环境变量，并复制 Runtime 配置到 HOME。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
+公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型与 Connector 环境变量，并复制 Runtime 配置到 HOME。公共 `agent-cli` 客户端使用 CommonJS，确保 Node 18 的 Hermes 镜像与其他 Node 镜像都能直接执行无扩展名的 `/usr/local/bin/agent-cli`。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
 
 Third-party CLI 不烘焙进 Runtime 镜像，也不在 User Run 中动态安装。管理员提交的固定版本 npm 包或已校验 ZIP 包由隔离 Builder 生成不可变 bundle；可执行文件和执行策略从内置 profile 或包内 `agentWorkspace` 元数据解析并再次校验。Sandbox 只读挂载后由公共 CLI Connector Wrapper 调用。一个 Connector 组合只有在 exact bundle SHA-256 与 Runtime RepoDigest 的联合 Conformance 通过后才可标记 available。
 
