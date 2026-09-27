@@ -13,6 +13,7 @@ ARG UV_VERSION=0.8.13
 # rather than installing an unpinned distribution through apt.
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY deploy/runtimes/unified/patch-openai-empty-sse.mjs /tmp/patch-openai-empty-sse.mjs
 
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
@@ -21,6 +22,8 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && python -m pip install --no-cache-dir "hermes-agent[mcp,anthropic]==${HERMES_VERSION}" "uv==${UV_VERSION}" \
     && npm install --global "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" "@openai/codex@${CODEX_VERSION}" "openclaw@${OPENCLAW_VERSION}" \
     && npm install --global --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}" \
+    && node /tmp/patch-openai-empty-sse.mjs \
+    && rm /tmp/patch-openai-empty-sse.mjs \
     && npm cache clean --force \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 65532 agent \
