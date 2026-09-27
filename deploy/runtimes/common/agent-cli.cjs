@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import net from "node:net";
+const net = require("node:net");
 
 // The broker limits decoded stdout and stderr to 8 MiB; JSON/base64 adds overhead.
 const MAX_RESPONSE_BYTES = 12 * 1024 * 1024;
