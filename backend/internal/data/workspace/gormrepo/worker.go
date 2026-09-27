@@ -1548,8 +1548,13 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 			}
 			updates["runtime_activities"] = gorm.Expr("CASE WHEN jsonb_array_length(runtime_activities) >= 32 THEN (runtime_activities - 0) || ?::jsonb ELSE runtime_activities || ?::jsonb END", string(encoded), string(encoded))
 		}
+		if stage, ok := updates["progress_stage"].(string); ok {
+			// Approval may enter waiting_for_user before the Runtime reports the command.
+			// Keep the approval prompt visible while recording those in-flight events.
+			updates["progress_stage"] = gorm.Expr("CASE WHEN state = 'waiting_for_user' THEN progress_stage ELSE ? END", stage)
+		}
 		result := repository.db.WithContext(ctx).Model(&messageRecord{}).
-			Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).
+			Where("id = ? AND session_id = ? AND state IN ? AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID, []string{"generating", "waiting_for_user"}).
 			Updates(updates)
 		if result.Error != nil {
 			return fmt.Errorf("record Session response progress: %w", result.Error)
@@ -1567,7 +1572,7 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state").Where("id = ? AND owner_user_id = ?", job.ID, job.OwnerID).Take(&run).Error; err != nil {
 			return mapNotFound(err)
 		}
-		if run.State != "running" {
+		if run.State != "running" && run.State != "waiting_for_user" {
 			return domain.ErrConflict
 		}
 		var sequence int64
