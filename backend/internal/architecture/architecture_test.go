@@ -181,6 +181,7 @@ func TestPlatformDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
 		`docker push "$runtime_tag"`,
 		`RUNTIME_IMAGE_REF="$runtime_digest" CLI_BUILDER_IMAGE_REF="$builder_digest" scripts/conformance/runtime-image-smoke.sh`,
 		`RUNTIME_IMAGE={digest}`,
+		`expected zero or five legacy Runtime image references`,
 	} {
 		if !strings.Contains(script, required) {
 			t.Errorf("deploy-platform.sh does not enforce %q", required)
