@@ -65,6 +65,51 @@ func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 	}
 }
 
+func TestBuildOfficialFeishuArchiveKeepsCLIPinWhenPackageVersionChanges(t *testing.T) {
+	bundle := testExecutableBundle(t, "bin/lark-cli")
+	archive, err := BuildOfficialFeishuArchive(OfficialFeishuInput{
+		Version: "1.0.93", PackageVersion: "1.0.94", Bundle: bundle,
+		BundlePath: "bin/lark-cli", RuntimeVersion: "22.22.0",
+		RuntimeDigest: "sha256:" + strings.Repeat("a", 64),
+		Capabilities:  []CLICapability{{ID: "task_create", ArgvPrefix: []string{"task", "+create"}, Risk: "high", Identities: []string{"user"}, Scopes: []string{"task:task:write"}, EgressHosts: []string{"open.feishu.cn"}, TimeoutSeconds: 60}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Parse(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pkg.Metadata.Version != "1.0.94" {
+		t.Fatalf("package version = %q", pkg.Metadata.Version)
+	}
+	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range reader.File {
+		if entry.Name != "skills/feishu/SKILL.md" {
+			continue
+		}
+		body, err := entry.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var contents bytes.Buffer
+		if _, err := contents.ReadFrom(body); err != nil {
+			t.Fatal(err)
+		}
+		if err := body.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(contents.String(), "@larksuite/cli@1.0.93") {
+			t.Fatal("package revision changed the pinned CLI Skill references")
+		}
+		return
+	}
+	t.Fatal("official Feishu Skill is missing")
+}
+
 func TestOfficialFeishuSkillReferencesCoverPinnedCLIDomains(t *testing.T) {
 	resources, err := OfficialFeishuSkillResources("1.0.93")
 	if err != nil {

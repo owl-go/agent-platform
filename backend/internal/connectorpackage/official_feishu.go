@@ -80,7 +80,8 @@ func OfficialFeishuSkillResources(version string) (map[string][]byte, error) {
 // OfficialFeishuInput is populated only from the reviewed @larksuite/cli build
 // result after its exact npm integrity and Runtime Conformance have passed.
 type OfficialFeishuInput struct {
-	Version        string
+	Version        string // Reviewed @larksuite/cli version and Skill reference version.
+	PackageVersion string // Connector package revision; defaults to Version.
 	Bundle         []byte
 	BundlePath     string
 	RuntimeVersion string
@@ -103,7 +104,11 @@ func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
 			examplesZH, examplesEN = append(examplesZH, "创建飞书任务"), append(examplesEN, "Create a Feishu task")
 		}
 	}
-	metadata, _ := json.Marshal(Metadata{Source: "feishu", Version: input.Version, Type: TypeCLI, Name: "飞书", Description: "使用已审核的 CLI 能力操作飞书资源。", ExamplesZH: examplesZH, ExamplesEN: examplesEN, MinPlatformVersion: "1.0.0", AuthMode: "oauth"})
+	packageVersion := input.PackageVersion
+	if packageVersion == "" {
+		packageVersion = input.Version
+	}
+	metadata, _ := json.Marshal(Metadata{Source: "feishu", Version: packageVersion, Type: TypeCLI, Name: "飞书", Description: "使用已审核的 CLI 能力操作飞书资源。", ExamplesZH: examplesZH, ExamplesEN: examplesEN, MinPlatformVersion: "1.0.0", AuthMode: "oauth"})
 	manifest, _ := json.Marshal(CLIManifest{
 		Runtime: ManagedRuntime{Kind: "node", Version: input.RuntimeVersion, Digest: input.RuntimeDigest}, Executable: "lark-cli", BundlePath: input.BundlePath, AuthenticationDriver: "feishu",
 		Commands:    CLICommands{Init: LifecycleCommand{Argv: []string{"app", "status", "--output", "json"}}, Auth: LifecycleCommand{Argv: []string{"auth", "login", "--output", "json"}}, Status: LifecycleCommand{Argv: []string{"auth", "status", "--output", "json"}}, UnAuth: LifecycleCommand{Argv: []string{"auth", "logout", "--output", "json"}}},
