@@ -291,6 +291,7 @@ func TestCLIEnvironmentResolverInjectsOneRunFeishuCredentials(t *testing.T) {
 
 type stubCLICredentialRepository struct {
 	credentials           cliconnector.EncryptedExecutionCredentials
+	managedMaterial       domain.ConnectorAuthorizationMaterial
 	ownerID, definitionID string
 	identity              cliconnector.Identity
 	scopes                []string
@@ -298,6 +299,26 @@ type stubCLICredentialRepository struct {
 	bundleVerified        bool
 	bundleSHA256          string
 	runtimeDigest         string
+}
+
+func (repository *stubCLICredentialRepository) ValidateConnectorPackageCLIInvocation(context.Context, string, string, string, string) error {
+	return nil
+}
+
+func (repository *stubCLICredentialRepository) ResolveConnectorPackageAuthorization(context.Context, string, string, string, string, string) (domain.ConnectorAuthorizationMaterial, error) {
+	return repository.managedMaterial, nil
+}
+
+func TestManagedCLIConnectorRejectsMissingTaskScope(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{box: box, cliCredentials: &stubCLICredentialRepository{managedMaterial: domain.ConnectorAuthorizationMaterial{Scopes: []string{"im:message"}}}}
+	_, err = executor.cliEnvironmentResolver("owner")(context.Background(), cliconnector.Definition{ID: "installation", RevisionID: "revision", ManagedInstallation: true, AuthenticationDriver: "feishu"}, cliconnector.Capability{ID: "task_create", Scopes: []string{"task:task:write"}}, cliconnector.IdentityUser)
+	if err == nil || !strings.Contains(err.Error(), "lacks required capability scopes") {
+		t.Fatalf("missing task scope was accepted: %v", err)
+	}
 }
 
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {

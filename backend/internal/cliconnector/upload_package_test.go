@@ -52,12 +52,12 @@ func TestZIPPackageBuilderRejectsSymlinks(t *testing.T) {
 	}
 }
 
-func TestPackageDefinitionMetadataProvidesReviewedFeishuMessagingPolicy(t *testing.T) {
+func TestPackageDefinitionMetadataProvidesReviewedFeishuTaskPolicy(t *testing.T) {
 	metadata, err := packageDefinitionMetadata([]byte(`{"name":"@larksuite/cli","version":"1.0.93","bin":{"lark-cli":"scripts/run.js"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if metadata.Executable != "lark-cli" || metadata.AuthenticationDriver != "feishu" || len(metadata.Capabilities) != 2 {
+	if metadata.Executable != "lark-cli" || metadata.AuthenticationDriver != "feishu" || len(metadata.Capabilities) != 4 {
 		t.Fatalf("metadata = %#v", metadata)
 	}
 	search, send := metadata.Capabilities[0], metadata.Capabilities[1]
@@ -66,6 +66,13 @@ func TestPackageDefinitionMetadataProvidesReviewedFeishuMessagingPolicy(t *testi
 	}
 	if strings.Join(send.ArgvPrefix, " ") != "im +messages-send" || send.Risk != RiskHigh || strings.Join(send.Scopes, " ") != "im:message im:message.send_as_user" {
 		t.Fatalf("send policy = %#v", send)
+	}
+	contact, create := metadata.Capabilities[2], metadata.Capabilities[3]
+	if contact.ID != "contact_search_user" || strings.Join(contact.ArgvPrefix, " ") != "contact +search-user" || contact.Risk != RiskLow || strings.Join(contact.Scopes, " ") != "contact:user:search" {
+		t.Fatalf("contact policy = %#v", contact)
+	}
+	if create.ID != "task_create" || strings.Join(create.ArgvPrefix, " ") != "task +create" || create.Risk != RiskHigh || strings.Join(create.Scopes, " ") != "task:task:write" {
+		t.Fatalf("task policy = %#v", create)
 	}
 	for _, capability := range metadata.Capabilities {
 		if len(capability.Identities) != 1 || capability.Identities[0] != IdentityUser || strings.Join(capability.EgressHosts, " ") != "open.feishu.cn" {
