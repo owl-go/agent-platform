@@ -225,6 +225,16 @@ func TestSessionCommandApprovalEntersUserActionWait(t *testing.T) {
 	if state != "waiting_for_user" || progress != "using_tool" {
 		t.Fatalf("message state=%q progress=%q", state, progress)
 	}
+	job := application.ExecutionJob{Kind: application.JobSession, SessionID: session, AssistantMessageID: messageID}
+	if err := repository.RecordProgress(context.Background(), job, application.ExecutionEvent{Type: "command.requested", Payload: []byte(`{"command":"im +messages-send"}`)}); err != nil {
+		t.Fatalf("record Runtime command event while approval is pending: %v", err)
+	}
+	if err := db.Raw("SELECT state,progress_stage FROM session_messages WHERE id=?", messageID).Row().Scan(&state, &progress); err != nil {
+		t.Fatal(err)
+	}
+	if state != "waiting_for_user" || progress != "using_tool" {
+		t.Fatalf("Runtime event changed approval wait: state=%q progress=%q", state, progress)
+	}
 	cancel()
 	if err := <-result; !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled approval wait = %v", err)
@@ -234,6 +244,32 @@ func TestSessionCommandApprovalEntersUserActionWait(t *testing.T) {
 	}
 	if state != "generating" || progress != "using_tool" {
 		t.Fatalf("resumed message state=%q progress=%q", state, progress)
+	}
+}
+
+func TestWorkflowRuntimeEventsPersistWhileApprovalIsPending(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	owner, workflowID, runID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO workflows(id,owner_user_id,name,goal,workspace_path) VALUES(?,?,'Workflow','goal','workspace/test')", workflowID, owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO runs(id,conversation_id,turn_number,owner_user_id,workflow_id,workflow_name,trigger,state,workflow_snapshot) VALUES(?,?,1,?,?,'Workflow','manual','waiting_for_user','{}'::jsonb)`, runID, runID, owner, workflowID).Error; err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Kind: application.JobWorkflow, ID: runID, OwnerID: owner}
+	if err := repository.RecordProgress(context.Background(), job, application.ExecutionEvent{Type: "command.requested", Payload: []byte(`{"command":"im +messages-send"}`)}); err != nil {
+		t.Fatalf("record Workflow Runtime event while approval is pending: %v", err)
+	}
+	var count int64
+	if err := db.Table("run_events").Where("run_id = ? AND event_type = 'command.requested'", runID).Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("recorded Workflow Runtime events = %d, want 1", count)
 	}
 }
 

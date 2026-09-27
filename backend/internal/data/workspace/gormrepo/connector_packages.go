@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -879,14 +880,16 @@ func (repository *Repository) ResolveConnectorPackageAuthorization(ctx context.C
 	if material.CredentialAAD == "" {
 		material.CredentialAAD = "connector-authorization:" + ownerID
 	}
-	var application connectorProviderApplicationRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND installation_id = ?", ownerID, installationID).Take(&application).Error; err == nil {
-		material.AppIDCiphertext = append([]byte(nil), application.ProviderApplicationIDCiphertext...)
-		material.AppSecretCiphertext = append([]byte(nil), application.ProviderApplicationSecretCiphertext...)
-	} else if material.CredentialFormat == "access_token" {
-		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector provider application is unavailable", domain.ErrConflict)
-	} else if err != gorm.ErrRecordNotFound {
-		return domain.ConnectorAuthorizationMaterial{}, err
+	if installation.PackageSource == "feishu" || material.CredentialFormat == "access_token" {
+		application, err := repository.GetConnectorProviderApplication(ctx, ownerID, installationID)
+		if err == nil {
+			material.AppIDCiphertext = append([]byte(nil), application.AppIDCiphertext...)
+			material.AppSecretCiphertext = append([]byte(nil), application.AppSecretCiphertext...)
+		} else if material.CredentialFormat == "access_token" {
+			return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector provider application is unavailable: %w", domain.ErrConflict, err)
+		} else if !errors.Is(err, domain.ErrNotFound) {
+			return domain.ConnectorAuthorizationMaterial{}, err
+		}
 	}
 	return material, nil
 }
