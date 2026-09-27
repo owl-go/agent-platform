@@ -2,7 +2,7 @@
 import { useI18n } from "vue-i18n";
 import type { CommandApproval } from "../api/client";
 
-defineProps<{ items: CommandApproval[]; identities: Record<string, "user" | "bot">; embedded?: boolean }>();
+defineProps<{ items: CommandApproval[]; identities: Record<string, "user" | "bot">; decidingId?: string; embedded?: boolean }>();
 const emit = defineEmits<{ decide: [item: CommandApproval, decision: "approved" | "rejected"]; identity: [approvalID: string, identity: "user" | "bot"] }>();
 const { t } = useI18n();
 
@@ -35,9 +35,9 @@ function operationLabel(operation: string) {
         <small>{{ t('approvals.expires', { time: new Date(item.expires_at).toLocaleTimeString() }) }}</small>
       </div>
       <div class="approval-card-actions">
-        <label class="approval-identity"><span>{{ t('approvals.identity') }}</span><select :value="identities[item.id] ?? item.identity ?? 'user'" :disabled="Boolean(item.identity)" @change="changeIdentity(item.id, $event)"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select></label>
-        <el-button @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button>
-        <el-button type="primary" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
+        <label class="approval-identity"><span>{{ t('approvals.identity') }}</span><select :value="identities[item.id] ?? item.identity ?? 'user'" :disabled="Boolean(item.identity || decidingId)" @change="changeIdentity(item.id, $event)"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select></label>
+        <el-button :disabled="Boolean(decidingId)" @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button>
+        <el-button type="primary" :loading="decidingId === item.id" :disabled="Boolean(decidingId)" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
       </div>
     </article>
   </aside>

@@ -267,10 +267,18 @@ Object.assign((en as unknown as { aiApplications: { assistants: Record<string, u
 Object.assign((zh as unknown as { approvals: Record<string, unknown> }).approvals, {
   createTask: "创建任务",
   taskCreateDescription: "助手准备通过{connector}创建任务。请核对负责人；选择“仅批准本次”后才会创建，拒绝则不会创建。",
+  approvedNotice: "已批准本次操作，助手正在继续执行。请在会话中查看最终结果。",
+  rejectedNotice: "已拒绝本次操作，助手正在继续执行。",
+  staleNotice: "这项请求已处理或过期，已刷新审批状态。请查看会话中的最新结果。",
+  failedNotice: "提交失败，请检查网络后重试；本次操作尚未获得批准。",
 });
 Object.assign((en as unknown as { approvals: Record<string, unknown> }).approvals, {
   createTask: "Create task",
   taskCreateDescription: "The assistant is about to create a task through {connector}. Check the assignee; approving once creates it, and rejecting prevents it.",
+  approvedNotice: "Approved this action. The assistant is continuing; check the conversation for the final result.",
+  rejectedNotice: "Rejected this action. The assistant is continuing.",
+  staleNotice: "This request was already handled or expired. The approval status has been refreshed; check the conversation.",
+  failedNotice: "Submission failed. Check your connection and retry; this action has not been approved.",
 });
 
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
