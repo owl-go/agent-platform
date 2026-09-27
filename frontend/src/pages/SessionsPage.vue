@@ -62,10 +62,22 @@ const cliAuthorizationRequest = computed(() => {
   const connector = latestAssistant.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []).find((item) => item.authentication_driver === "feishu");
   return connector ? { connectorID: connector.id, capabilityID: "" } : undefined;
 });
+function authorizationUnavailable(error?: string) {
+  const normalized = error?.toLowerCase().replaceAll("_", " ") ?? "";
+  return normalized.includes("authorization unavailable") || normalized.includes("authorization is unavailable");
+}
+function waitingForFeishuAuthorization(message: SessionMessage) {
+  if (message.role !== "assistant" || message.state !== "failed" || !authorizationUnavailable(message.error)) return false;
+  const attempted = cliAuthorizationRequestFromActivities(message.activities);
+  if (attempted?.connectorID === "feishu") return true;
+  return message.response_snapshot?.stages?.some((stage) => stage.cli_connectors?.some((connector) => connector.authentication_driver === "feishu")) ?? false;
+}
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
   const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
   const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
+  const authorizationWait = waitingForFeishuAuthorization(message);
+  const authorizationMessage = authorizationWait ? t("sessions.feishuAuthorizationWait") : undefined;
   return {
     id: String(message.id),
     role: message.role,
@@ -74,7 +86,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     state: message.state,
     timestamp: message.created_at,
     elapsedMs: message.elapsed_ms,
-    error: message.error,
+    error: authorizationMessage ?? message.error,
     pending,
     finalizing: pending && message.progress_stage === "finalizing",
     streaming: pending && message.role === "assistant",
@@ -88,7 +100,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       state: summary.state,
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
-    stages: message.role === "assistant" ? message.expert_stages : undefined,
+    stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
     creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     attachments: message.attachments,
