@@ -12,7 +12,7 @@ import (
 func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 	bundle := testExecutableBundle(t, "bin/lark-cli")
 	digest := "sha256:" + strings.Repeat("a", 64)
-	archive, err := BuildOfficialFeishuArchive(OfficialFeishuInput{Version: "1.0.93", Bundle: bundle, BundlePath: "bin/lark-cli", RuntimeVersion: "22.22.0", RuntimeDigest: digest, Capabilities: []CLICapability{{ID: "messages_search", ArgvPrefix: []string{"im", "message", "search"}, Risk: "low", Identities: []string{"user"}, Scopes: []string{"im:message:readonly"}, EgressHosts: []string{"open.feishu.cn"}, TimeoutSeconds: 60}}})
+	archive, err := BuildOfficialFeishuArchive(OfficialFeishuInput{Version: "1.0.93", Bundle: bundle, BundlePath: "bin/lark-cli", RuntimeVersion: "22.22.0", RuntimeDigest: digest, Capabilities: []CLICapability{{ID: "task_create", ArgvPrefix: []string{"task", "+create"}, Risk: "high", Identities: []string{"user"}, Scopes: []string{"task:task:write"}, EgressHosts: []string{"open.feishu.cn"}, TimeoutSeconds: 60}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pkg.Metadata.Source != "feishu" || pkg.Metadata.Version != "1.0.93" || pkg.CLI == nil || pkg.CLI.AuthenticationDriver != "feishu" || pkg.CLI.Runtime.Digest != digest || len(pkg.CLIBundleSHA256) != 64 {
+	if pkg.Metadata.Source != "feishu" || pkg.Metadata.Version != "1.0.93" || pkg.CLI == nil || pkg.CLI.AuthenticationDriver != "feishu" || pkg.CLI.Runtime.Digest != digest || len(pkg.CLIBundleSHA256) != 64 || len(pkg.CLI.Capabilities) != 1 || pkg.CLI.Capabilities[0].ID != "task_create" {
 		t.Fatalf("official package = %#v", pkg)
 	}
 	reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
@@ -43,8 +43,8 @@ func TestBuildOfficialFeishuArchiveCarriesExactEvidence(t *testing.T) {
 		if err := body.Close(); err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(contents.String(), "im +chat-search --query") || !strings.Contains(contents.String(), "im +messages-send --chat-id") {
-			t.Fatalf("official Feishu Skill lacks the message flow: %q", contents.String())
+		if !strings.Contains(contents.String(), "im +chat-search --query") || !strings.Contains(contents.String(), "im +messages-send --chat-id") || !strings.Contains(contents.String(), "task +create --summary") || !strings.Contains(contents.String(), "contact +search-user --query") {
+			t.Fatalf("official Feishu Skill lacks a reviewed flow: %q", contents.String())
 		}
 		foundSkill = true
 	}

@@ -73,6 +73,8 @@ func packageDefinitionMetadata(raw []byte) (PackageDefinitionMetadata, error) {
 		metadata.Capabilities = []Capability{
 			{ID: "im_chat_search", ArgvPrefix: []string{"im", "+chat-search"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Scopes: []string{"im:chat:read"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
 			{ID: "im_messages_send", ArgvPrefix: []string{"im", "+messages-send"}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Scopes: []string{"im:message", "im:message.send_as_user"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
+			{ID: "contact_search_user", ArgvPrefix: []string{"contact", "+search-user"}, Risk: RiskLow, Identities: []Identity{IdentityUser}, Scopes: []string{"contact:user:search"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
+			{ID: "task_create", ArgvPrefix: []string{"task", "+create"}, Risk: RiskHigh, Identities: []Identity{IdentityUser}, Scopes: []string{"task:task:write"}, EgressHosts: []string{"open.feishu.cn"}, Timeout: time.Minute},
 		}
 	}
 	return metadata, nil

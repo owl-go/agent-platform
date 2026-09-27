@@ -406,11 +406,14 @@ async function refreshRequestedCLIAuthorization() {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;
-    const scopes = capability ? [...new Set(capability.scopes ?? [])] : cliUserScopes(definition);
+    const requiredScopes = capability ? capability.scopes ?? [] : cliUserScopes(definition);
     let authorizations: Awaited<ReturnType<typeof api.listConnectorAuthorizations>>;
     try { authorizations = await api.listConnectorAuthorizations(installation.id); }
     catch { return; }
     if (props.authorizationRequest !== request || disposed) return;
+    const allowedScopes = new Set(cliUserScopes(definition));
+    const selectedScopes = authorizations.find((item) => item.selected && item.state === "active")?.scopes ?? [];
+    const scopes = [...new Set([...selectedScopes.filter((scope) => allowedScopes.has(scope)), ...requiredScopes])];
     const authorized = authorizations.some((item) => item.selected && item.state === "active" && scopes.every((scope) => item.scopes.includes(scope)));
     const current = pendingManagedActivation.value;
     if (authorized) {

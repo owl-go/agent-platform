@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -200,7 +201,7 @@ func TestFeishuPublicationProjectsLegacyUsersAfterMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	material, err := repository.ResolveConnectorPackageAuthorization(ctx, owner, installationID, revision.ID, selectedAuthorizationID, "user")
-	if err != nil || string(material.AppIDCiphertext) != "app" || string(material.AppSecretCiphertext) != "secret" {
+	if err != nil || string(material.AppIDCiphertext) != "app" || string(material.AppSecretCiphertext) != "secret" || !slices.Contains(material.Scopes, "im:message") {
 		t.Fatalf("legacy application was not materialized with the selected authorization: app=%t secret=%t err=%v", string(material.AppIDCiphertext) == "app", string(material.AppSecretCiphertext) == "secret", err)
 	}
 	var connectorIDs string

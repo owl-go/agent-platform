@@ -264,6 +264,15 @@ Object.assign((en as unknown as { aiApplications: Record<string, unknown> }).aiA
 Object.assign((zh as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "已创建，可继续配置简介、提示词和知识库。" });
 Object.assign((en as unknown as { aiApplications: { assistants: Record<string, unknown> } }).aiApplications.assistants, { defaultIntro: "Created. Continue configuring the description, prompts, and knowledge bases." });
 
+Object.assign((zh as unknown as { approvals: Record<string, unknown> }).approvals, {
+  createTask: "创建任务",
+  taskCreateDescription: "助手准备通过{connector}创建任务。请核对负责人；选择“仅批准本次”后才会创建，拒绝则不会创建。",
+});
+Object.assign((en as unknown as { approvals: Record<string, unknown> }).approvals, {
+  createTask: "Create task",
+  taskCreateDescription: "The assistant is about to create a task through {connector}. Check the assignee; approving once creates it, and rejecting prevents it.",
+});
+
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
