@@ -69,7 +69,7 @@ _Avoid_: Image Credit Reservation, Credit Consumption, Provider prepayment
 ## Conversations
 
 **Session**:
-A private, continuing text conversation owned by one User. Each response may use one Expert, one Expert Team, or no specialist; the selected specialist persists until changed. It freezes its Personal Settings execution configuration when the first message starts.
+A private, continuing text conversation owned by one User. Each response may use one Expert, one Expert Team, or no specialist; the selected specialist persists until changed. Each new response resolves the current Personal Settings execution configuration and freezes it for that response.
 _Avoid_: Workflow Run, Coding Task, runtime process
 
 **Response Snapshot**:
@@ -317,7 +317,7 @@ A User-authored label describing one Team Member's responsibility within an Expe
 _Avoid_: Derived Expertise Tag, Expert capability
 
 **Subagent**:
-A platform-managed execution of one Team Member in its own isolated execution context inside an Expert Team. It uses the execution configuration frozen for the Session or Run Conversation; Runtime-specific native subagent support is not required for this behavior.
+A platform-managed execution of one Team Member in its own isolated execution context inside an Expert Team. It uses the execution configuration frozen for the current response or Run; Runtime-specific native subagent support is not required for this behavior.
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
@@ -424,7 +424,7 @@ The selected Claude Code, Codex, Hermes, OpenClaw, or PI Agent engine that gener
 _Avoid_: Provider Model, Expert, sandbox, Worker
 
 **Runtime Engine Setting**:
-A User's preference for one Runtime Engine, including that engine's default Provider Model. It supplies the execution configuration frozen when a Session or Run Conversation starts; Experts and Workflows do not override it.
+A User's preference for one Runtime Engine, including that engine's default Provider Model. It supplies the execution configuration frozen when a Session response or Run starts; Experts and Workflows do not override it.
 _Avoid_: global default model, Personality model, fixed Session model
 
 **Runtime Adapter**:

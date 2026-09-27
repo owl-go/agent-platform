@@ -515,12 +515,23 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("places a waiting Session approval in the active conversation composer", async () => {
-    const waiting: SessionMessage = { ...messages[1]!, state: "waiting_for_user", content: "", progress_stage: "using_tool" };
-    const wrapper = await mountPage([messages[0]!, waiting]);
+  it("offers managed Feishu recovery when authorization fails before any CLI command runs", async () => {
+    const failed: SessionMessage = {
+      ...messages[1]!, state: "failed", content: "", activities: [],
+      error: "resource is invalid: queued CLI Connector for Stage 1 is unavailable: resource conflicts with current state: Connector authorization is unavailable",
+      response_snapshot: { provider_model_id: "model-1", connection_id: "connection-1", connection_name: "Provider", provider_type: "openai", model_id: "model", model_name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], runtime_engine: "codex", compatibility: "verified", connection_version: 1, stages: [{ position: 1, runtime_engine: "codex", provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" }, cli_connectors: [{ id: "installation-1", name: "飞书", executable: "lark-cli", authentication_driver: "feishu", bundle_sha256: "a".repeat(64), runtime_digests: [], version: 1 }] }] },
+    };
+    const wrapper = await mountPage([messages[0]!, failed]);
+    expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "installation-1", capabilityID: "" });
+    wrapper.unmount();
+  });
 
-    expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(waiting.id);
-    expect(embeddedSessionApprovalID.value).toBe(String(waiting.id));
+  it.each(["generating", "waiting_for_user"] as const)("keeps a %s Session approval in the active conversation composer", async (state) => {
+    const active: SessionMessage = { ...messages[1]!, state, content: "", progress_stage: "using_tool" };
+    const wrapper = await mountPage([messages[0]!, active]);
+
+    expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(active.id);
+    expect(embeddedSessionApprovalID.value).toBe(String(active.id));
     expect(wrapper.find("#session-command-approval-slot").exists()).toBe(true);
     wrapper.unmount();
     expect(embeddedSessionApprovalID.value).toBeUndefined();

@@ -470,7 +470,20 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 		if err != nil {
 			return err
 		}
-		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, WorkflowSnapshot: append([]byte(nil), root.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+		var plan domain.ExecutionSnapshot
+		if err := json.Unmarshal(root.WorkflowSnapshot, &plan); err != nil {
+			return fmt.Errorf("decode initiating Workflow Snapshot: %w", err)
+		}
+		stages, err := plan.OrderedStages()
+		if err != nil {
+			return err
+		}
+		configuration, err := currentExecutionStage(tx, ownerID)
+		if err != nil {
+			return err
+		}
+		stages = withCurrentExecutionConfiguration(stages, configuration)
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		if selectionID == "" && root.SelectionID != nil {
 			selectionID = *root.SelectionID
 		}
@@ -480,37 +493,22 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 			if err != nil {
 				return err
 			}
-			var plan domain.ExecutionSnapshot
-			if err := json.Unmarshal(root.WorkflowSnapshot, &plan); err != nil {
-				return err
-			}
-			stages, err := plan.OrderedStages()
-			if err != nil {
-				return err
-			}
 			if len(stages) == 0 {
 				return domain.ErrInvalid
 			}
-			plan.SchemaVersion = 2
-			plan.Stages = selected.Apply(stages[0])
+			stages = selected.Apply(stages[0])
 			plan.TeamProfile = nil
 			if selected.ExpertTeamID != "" {
 				plan.TeamProfile = &domain.ExpertTeamProfileSnapshot{ID: selected.ExpertTeamID, Name: selected.Name, Icon: selected.Icon, IconBackground: selected.IconBackground}
 			}
-			plan.RuntimeEngine = ""
-			plan.ProviderModel = domain.ProviderModelSnapshot{}
-			plan.Expert = nil
-			plan.ExpertTeam = nil
-			plan.Skills = nil
-			plan.MCPServers = nil
-			plan.CLIConnectors = nil
-			created.WorkflowSnapshot, err = marshal(plan)
-			if err != nil {
-				return err
-			}
 			if err := retainConversationSelection(tx, ownerID, scope, selected); err != nil {
 				return err
 			}
+		}
+		setExecutionStages(&plan, stages)
+		created.WorkflowSnapshot, err = marshal(plan)
+		if err != nil {
+			return err
 		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
@@ -631,6 +629,43 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 	teamStages := snapshot.Stages
 	snapshot.Stages = nil
 	return application.PlanExecution(snapshot, application.ExecutionSelection{Team: teamStages})
+}
+
+// currentExecutionStage resolves only the User's current engine/model settings.
+// Retained conversation resources are applied separately by the caller.
+func currentExecutionStage(tx *gorm.DB, ownerID string) (domain.ExecutionStageSnapshot, error) {
+	plan, err := loadExecutionSnapshot(tx, workflowRecord{OwnerID: ownerID})
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	stages, err := plan.OrderedStages()
+	if err != nil {
+		return domain.ExecutionStageSnapshot{}, err
+	}
+	return stages[0], nil
+}
+
+func withCurrentExecutionConfiguration(stages []domain.ExecutionStageSnapshot, current domain.ExecutionStageSnapshot) []domain.ExecutionStageSnapshot {
+	updated := append([]domain.ExecutionStageSnapshot(nil), stages...)
+	for index := range updated {
+		updated[index].RuntimeEngine = current.RuntimeEngine
+		updated[index].ProviderModel = current.ProviderModel
+		updated[index].ModelProtocol = current.ModelProtocol
+		updated[index].CreditRate = current.CreditRate
+	}
+	return updated
+}
+
+func setExecutionStages(plan *domain.ExecutionSnapshot, stages []domain.ExecutionStageSnapshot) {
+	plan.SchemaVersion = 2
+	plan.Stages = stages
+	plan.RuntimeEngine = ""
+	plan.ProviderModel = domain.ProviderModelSnapshot{}
+	plan.Expert = nil
+	plan.ExpertTeam = nil
+	plan.Skills = nil
+	plan.MCPServers = nil
+	plan.CLIConnectors = nil
 }
 
 func loadExpertExecutionStage(tx *gorm.DB, ownerID string, expert expertRecord, providerModelID string, runtime domain.RuntimeEngine, position int) (domain.ExecutionStageSnapshot, error) {
@@ -935,6 +970,23 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 			return mapNotFound(err)
 		}
 		if err := ensureWorkflowQueueCapacity(tx, workflowID); err != nil {
+			return err
+		}
+		var plan domain.ExecutionSnapshot
+		if err := json.Unmarshal(source.WorkflowSnapshot, &plan); err != nil {
+			return fmt.Errorf("decode source Workflow Snapshot: %w", err)
+		}
+		stages, err := plan.OrderedStages()
+		if err != nil {
+			return err
+		}
+		configuration, err := currentExecutionStage(tx, ownerID)
+		if err != nil {
+			return err
+		}
+		setExecutionStages(&plan, withCurrentExecutionConfiguration(stages, configuration))
+		created.WorkflowSnapshot, err = marshal(plan)
+		if err != nil {
 			return err
 		}
 		var queued int64

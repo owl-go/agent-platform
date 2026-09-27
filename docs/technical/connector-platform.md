@@ -20,7 +20,7 @@ CLI package manifests may select only a built-in authentication driver: `none`, 
 
 ## Result and audit boundary
 
-The execution plane returns `{ok,data,request_id,warnings}` on success and `{ok:false,error:{type,message,retryable,next_action},request_id}` on failure. It redacts exact credential bytes before persistence. Audit records contain actor, Connector, revision, mode, operation, risk, identity reference, timing, outcome, error type, request ID, policy revision, and approval reference. They never contain tokens, secrets, authorization URLs, raw stdout/stderr, full arguments, or business results.
+The execution plane returns `{ok,data,request_id,warnings}` on success and `{ok:false,error:{type,message,retryable,next_action},request_id}` on failure. It redacts exact credential bytes before persistence. For a migrated Feishu installation, Runtime credential materialization uses the same owner-scoped provider-application lookup as account authorization, including its legacy application fallback when the new projection is absent; an active access token alone is insufficient for the official CLI. A Session or Run command that actually lacks the selected User scopes offers the managed Feishu authorization flow and a direct action link in its composer. Audit records contain actor, Connector, revision, mode, operation, risk, identity reference, timing, outcome, error type, request ID, policy revision, and approval reference. They never contain tokens, secrets, authorization URLs, raw stdout/stderr, full arguments, or business results.
 
 ## Migration
 
