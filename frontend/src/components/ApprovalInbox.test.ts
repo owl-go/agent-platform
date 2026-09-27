@@ -86,6 +86,19 @@ describe("ApprovalInbox", () => {
     wrapper.unmount();
   });
 
+  it("explains Feishu task creation before one-use approval", async () => {
+    vi.useFakeTimers();
+    const approval: CommandApproval = { id: "approval-task", execution_kind: "session", execution_id: "42", connector_name: "飞书", operation: "task_create", target: "ou_assignee", redacted_arguments: "task +create [arguments redacted]", state: "pending", identity: "user", expires_at: "2026-09-05T12:00:00Z", version: 1 };
+    const api = { listCommandApprovals: vi.fn().mockResolvedValue([approval]), decideCommandApproval: vi.fn() } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    expect(wrapper.text()).toContain("创建任务");
+    expect(wrapper.text()).toContain("负责人");
+    expect(wrapper.text()).toContain("ou_assignee");
+    expect(wrapper.text()).not.toContain("task_create");
+    wrapper.unmount();
+  });
+
   it("places the current Session approval inside the conversation composer and keeps background approvals global", async () => {
     const target = document.createElement("div");
     target.id = "session-command-approval-slot";

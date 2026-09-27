@@ -13,6 +13,14 @@ function changeIdentity(approvalID: string, event: Event) {
 function isMessageSend(operation: string) {
   return ["im_messages_send", "send message", "message send"].includes(operation.trim().toLowerCase());
 }
+
+function isTaskCreate(operation: string) { return operation.trim().toLowerCase() === "task_create"; }
+
+function operationLabel(operation: string) {
+  if (isMessageSend(operation)) return t("approvals.sendMessage");
+  if (isTaskCreate(operation)) return t("approvals.createTask");
+  return operation;
+}
 </script>
 
 <template>
@@ -20,8 +28,8 @@ function isMessageSend(operation: string) {
     <article v-for="item in items" :key="item.id" class="approval-card">
       <div class="approval-card-content">
         <strong>{{ t('approvals.title', { connector: item.connector_name }) }}</strong>
-        <p>{{ isMessageSend(item.operation) ? t('approvals.messageSendDescription', { connector: item.connector_name }) : t('approvals.otherDescription', { connector: item.connector_name }) }}</p>
-        <p><b>{{ t('approvals.operation') }}：</b>{{ isMessageSend(item.operation) ? t('approvals.sendMessage') : item.operation }}</p>
+        <p>{{ isMessageSend(item.operation) ? t('approvals.messageSendDescription', { connector: item.connector_name }) : isTaskCreate(item.operation) ? t('approvals.taskCreateDescription', { connector: item.connector_name }) : t('approvals.otherDescription', { connector: item.connector_name }) }}</p>
+        <p><b>{{ t('approvals.operation') }}：</b>{{ operationLabel(item.operation) }}</p>
         <p><b>{{ item.target.startsWith('oc_') ? t('approvals.groupTarget') : t('approvals.target') }}：</b>{{ item.target }}</p>
         <p class="approval-card-caution">{{ t('approvals.hiddenArguments') }}</p>
         <small>{{ t('approvals.expires', { time: new Date(item.expires_at).toLocaleTimeString() }) }}</small>

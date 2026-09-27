@@ -108,7 +108,7 @@ func TestResolvePackageDefinitionReplacesStaleBuiltInFeishuPolicy(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resolved.Capabilities) != 2 || resolved.Capabilities[0].ID != "im_chat_search" || resolved.Capabilities[1].ID != "im_messages_send" {
+	if len(resolved.Capabilities) != 4 || resolved.Capabilities[0].ID != "im_chat_search" || resolved.Capabilities[1].ID != "im_messages_send" || resolved.Capabilities[2].ID != "contact_search_user" || resolved.Capabilities[3].ID != "task_create" {
 		t.Fatalf("capabilities = %#v", resolved.Capabilities)
 	}
 }

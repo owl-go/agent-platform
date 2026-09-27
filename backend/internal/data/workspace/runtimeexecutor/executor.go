@@ -927,6 +927,9 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 			if err != nil {
 				return nil, err
 			}
+			if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
+				return nil, errors.New("Connector authorization lacks required capability scopes")
+			}
 			plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 			if err != nil {
 				return nil, err
@@ -974,6 +977,9 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 				if err != nil {
 					return nil, err
 				}
+				if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
+					return nil, errors.New("Connector authorization lacks required capability scopes")
+				}
 				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 				if err != nil {
 					return nil, err
@@ -1009,6 +1015,15 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 		}
 		return environment, nil
 	}
+}
+
+func hasAllConnectorScopes(granted, required []string) bool {
+	for _, scope := range required {
+		if !slices.Contains(granted, scope) {
+			return false
+		}
+	}
+	return true
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
@@ -1743,7 +1758,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 		feishuSkillLoaded := false
 		for _, connector := range job.Snapshot.CLIConnectors {
 			if connector.PackageObjectKey == "" && connector.AuthenticationDriver == "feishu" && !feishuSkillLoaded {
-				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow this procedure before sending a message):\n"+string(feishuCLISkill))
+				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow the relevant procedure before a command):\n"+string(feishuCLISkill))
 				feishuSkillLoaded = true
 			}
 			if connector.PackageObjectKey != "" {
