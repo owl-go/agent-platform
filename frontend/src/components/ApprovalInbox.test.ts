@@ -49,15 +49,22 @@ describe("ApprovalInbox", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
   });
-  it("shows redacted command details and submits one-use identity consent", async () => {
+  it("explains a Feishu message approval in Chinese without exposing raw command details", async () => {
     vi.useFakeTimers();
-    const approval: CommandApproval = { id: "approval-1", execution_kind: "run", execution_id: "run-1", connector_name: "Feishu CLI", operation: "send message", target: "chat-1", redacted_arguments: "--content [REDACTED]", state: "pending", expires_at: "2026-09-05T12:00:00Z", version: 4 };
+    const approval: CommandApproval = { id: "approval-1", execution_kind: "run", execution_id: "run-1", connector_name: "飞书", operation: "im_messages_send", target: "oc_chat-1", redacted_arguments: "im +messages-send [arguments redacted]", state: "pending", expires_at: "2026-09-05T12:00:00Z", version: 4 };
     const decideCommandApproval = vi.fn(async () => ({ ...approval, state: "approved" as const, identity: "bot" as const }));
     const api = { listCommandApprovals: vi.fn().mockResolvedValueOnce([approval]).mockResolvedValueOnce([]), decideCommandApproval } as unknown as PlatformApi;
-    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
     await flushPromises();
 
-    expect(wrapper.text()).toContain("[REDACTED]");
+    expect(wrapper.text()).toContain("请确认飞书操作");
+    expect(wrapper.text()).toContain("发送消息");
+    expect(wrapper.text()).toContain("目标群聊标识：oc_chat-1");
+    expect(wrapper.text()).toContain("拒绝则不会执行这次发送");
+    expect(wrapper.text()).toContain("消息内容及命令参数不会在此处展示");
+    expect(wrapper.text()).not.toContain("im_messages_send");
+    expect(wrapper.text()).not.toContain("im +messages-send");
+    expect(wrapper.text()).not.toContain("arguments redacted");
     await wrapper.get("select").setValue("bot");
     await wrapper.findAll("button")[1]!.trigger("click");
     await flushPromises();
@@ -79,7 +86,20 @@ describe("ApprovalInbox", () => {
     wrapper.unmount();
   });
 
-  it("places the current Session approval beside the conversation composer and keeps background approvals global", async () => {
+  it("explains Feishu task creation before one-use approval", async () => {
+    vi.useFakeTimers();
+    const approval: CommandApproval = { id: "approval-task", execution_kind: "session", execution_id: "42", connector_name: "飞书", operation: "task_create", target: "ou_assignee", redacted_arguments: "task +create [arguments redacted]", state: "pending", identity: "user", expires_at: "2026-09-05T12:00:00Z", version: 1 };
+    const api = { listCommandApprovals: vi.fn().mockResolvedValue([approval]), decideCommandApproval: vi.fn() } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    expect(wrapper.text()).toContain("创建任务");
+    expect(wrapper.text()).toContain("负责人");
+    expect(wrapper.text()).toContain("ou_assignee");
+    expect(wrapper.text()).not.toContain("task_create");
+    wrapper.unmount();
+  });
+
+  it("places the current Session approval inside the conversation composer and keeps background approvals global", async () => {
     const target = document.createElement("div");
     target.id = "session-command-approval-slot";
     document.body.append(target);

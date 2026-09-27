@@ -82,16 +82,15 @@ wait_for_container() {
   printf '%s' "${container}"
 }
 
-SANDBOX_TEST_IMAGE="${CONFORMANCE_CLAUDE_IMAGE}" \
+SANDBOX_TEST_IMAGE="${CONFORMANCE_RUNTIME_IMAGE}" \
   "${repo_root}/scripts/conformance/sandbox-linux.sh" >"${suite_root}/sandbox.log" 2>&1
 
 runtimes=(claude codex hermes openclaw pi)
 for runtime in "${runtimes[@]}"; do
   upper="${runtime^^}"
-  image_name="CONFORMANCE_${upper}_IMAGE"
   model_name="CONFORMANCE_${upper}_MODEL"
   credential_name="CONFORMANCE_${upper}_CREDENTIAL_DIR"
-  image="${!image_name}"
+  image="${CONFORMANCE_RUNTIME_IMAGE}"
   model="${!model_name}"
   credential_dir="${!credential_name}"
   canary="$(<"${credential_dir}/env/CONFORMANCE_CANARY_SECRET")"

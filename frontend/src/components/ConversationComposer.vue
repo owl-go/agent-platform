@@ -40,7 +40,7 @@ const cliAuthorizationPrompt = ref<{ definition: CLIConnectorDefinition; enablem
 const cliAuthorizationBusy = ref(false);
 const cliActivationBusy = ref<string[]>([]);
 const pendingCLIActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean }>();
-const pendingManagedActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean; setup?: ConnectorSetup; flow?: ConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
+const pendingManagedActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean; scopes?: string[]; recovery?: boolean; setup?: ConnectorSetup; flow?: ConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
 const owner = computed(() => auth?.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser.id : "");
 const storageKey = computed(() => owner.value ? conversationDraftKey(owner.value, props.scope) : "");
 const editorLocked = computed(() => props.disabled || sending.value || loading.value);
@@ -53,7 +53,7 @@ let disposed = false;
 let cliAuthorizationPoll: ReturnType<typeof setTimeout> | undefined;
 let cliActivationPoll: ReturnType<typeof setTimeout> | undefined;
 let managedActivationPoll: ReturnType<typeof setTimeout> | undefined;
-let managedCompletionBusy = false;
+const managedCompletionBusy = ref(false);
 const tokens = new WeakMap<Node, Exclude<DraftPart, { kind: "text" }>>();
 
 const matches = (name: string) => name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase());
@@ -195,7 +195,7 @@ async function beginManagedAuthorization() {
   if (!pending || disposed) return;
   const installation = managedInstallation(pending.definition.id);
   if (!installation) throw new Error("Connector installation is unavailable");
-  const scopes = cliUserScopes(pending.definition);
+  const scopes = pending.scopes ?? cliUserScopes(pending.definition);
   const authorizations = await api.listConnectorAuthorizations(installation.id);
   if (authorizations.some((item) => item.selected && item.state === "active" && scopes.every((scope) => item.scopes.includes(scope)))) {
     await finishManagedActivation(pending);
@@ -210,14 +210,34 @@ async function beginManagedAuthorization() {
 }
 async function finishManagedActivation(pending: NonNullable<typeof pendingManagedActivation.value>) {
   await refreshManagedInstallations();
+  if (pending.selectAfter && !await selectActivatedCLI(pending.definition.id)) { pending.failed = true; return; }
   pending.completed = true;
-  if (pending.selectAfter) await selectActivatedCLI(pending.definition.id);
   closeBlankCLIWindow(pending.popup);
+}
+async function beginRequestedManagedAuthorization() {
+  const pending = pendingManagedActivation.value;
+  if (!pending?.recovery || managedCompletionBusy.value || disposed) return;
+  pending.popup = openCLIWindow();
+  pending.failed = false;
+  pending.setup = undefined;
+  pending.flow = undefined;
+  managedCompletionBusy.value = true;
+  try {
+    const setup = await api.beginConnectorSetup(pending.definition.id);
+    if (disposed || pendingManagedActivation.value !== pending) { closeBlankCLIWindow(pending.popup); return; }
+    pending.setup = setup;
+    if (setup.state === "waiting_for_user") {
+      if (setup.action_url && pending.popup && !pending.popup.closed) pending.popup.location.href = setup.action_url;
+      scheduleManagedActivationPoll();
+    } else if (setup.state === "completed") await beginManagedAuthorization();
+    else pending.failed = true;
+  } catch { closeBlankCLIWindow(pending.popup); pending.failed = true; }
+  finally { managedCompletionBusy.value = false; }
 }
 async function completeManagedActivation() {
   const pending = pendingManagedActivation.value;
-  if (!pending || pending.failed || pending.completed || disposed || managedCompletionBusy) return;
-  managedCompletionBusy = true;
+  if (!pending || pending.failed || pending.completed || disposed || managedCompletionBusy.value) return;
+  managedCompletionBusy.value = true;
   try {
     if (pending.setup?.state === "waiting_for_user") {
       pending.setup = await api.completeConnectorSetup(pending.setup.id);
@@ -232,7 +252,7 @@ async function completeManagedActivation() {
     }
     if (pending.flow?.state === "completed") await finishManagedActivation(pending);
   } catch { scheduleManagedActivationPoll(); }
-  finally { managedCompletionBusy = false; }
+  finally { managedCompletionBusy.value = false; }
 }
 async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
   if (cliActivationBusy.value.includes(definition.id)) return;
@@ -375,13 +395,39 @@ async function setVisibleConnectorActive(kind: "mcp" | "cli", id: string, active
 
 async function refreshRequestedCLIAuthorization() {
   const request = props.authorizationRequest;
-  if (!selection.value || !request || disposed || !connectorEnabled(`cli:${request.connectorID}`)) {
+  if (!request || disposed) {
     cliAuthorizationPrompt.value = undefined;
+    if (pendingManagedActivation.value?.recovery && !pendingManagedActivation.value.completed) pendingManagedActivation.value = undefined;
     return;
   }
   const definition = cli.value.find((item) => item.id === request.connectorID);
-  const enablement = enablements.value.find((item) => item.definition_id === request.connectorID && item.state === "enabled");
   const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
+  if (definition?.managed_installation && definition.authentication_driver === "feishu" && (capability || !request.capabilityID)) {
+    cliAuthorizationPrompt.value = undefined;
+    const installation = managedInstallation(definition.id);
+    if (installation?.state !== "active") return;
+    const requiredScopes = capability ? capability.scopes ?? [] : cliUserScopes(definition);
+    let authorizations: Awaited<ReturnType<typeof api.listConnectorAuthorizations>>;
+    try { authorizations = await api.listConnectorAuthorizations(installation.id); }
+    catch { return; }
+    if (props.authorizationRequest !== request || disposed) return;
+    const allowedScopes = new Set(cliUserScopes(definition));
+    const selectedScopes = authorizations.find((item) => item.selected && item.state === "active")?.scopes ?? [];
+    const scopes = [...new Set([...selectedScopes.filter((scope) => allowedScopes.has(scope)), ...requiredScopes])];
+    const authorized = authorizations.some((item) => item.selected && item.state === "active" && scopes.every((scope) => item.scopes.includes(scope)));
+    const current = pendingManagedActivation.value;
+    if (authorized) {
+      if (current?.recovery && !current.completed) pendingManagedActivation.value = undefined;
+      return;
+    }
+    if (!current || current.recovery && current.definition.id !== definition.id) pendingManagedActivation.value = { definition, popup: null, selectAfter: true, scopes, recovery: true };
+    return;
+  }
+  if (!selection.value || !connectorEnabled(`cli:${request.connectorID}`)) {
+    cliAuthorizationPrompt.value = undefined;
+    return;
+  }
+  const enablement = enablements.value.find((item) => item.definition_id === request.connectorID && item.state === "enabled");
   if (!definition || definition.authentication_driver !== "feishu" || !enablement || !capability) {
     cliAuthorizationPrompt.value = undefined;
     return;
@@ -523,6 +569,7 @@ async function send() {
     while (pending.value.length) { const file = pending.value[0]; const attachment = await api.uploadAttachment(file); uploaded.value.push(attachment); pending.value.shift(); persist(); }
     await props.submit({ content: draftText(parts.value), attachmentIDs: uploaded.value.map((item) => item.id), input: { selection_id: selection.value.id, file_references: referencedFiles.value.map((file) => ({ kind: file.kind as "attachment" | "artifact" | "workspace", id: file.id, path: file.path })) } });
     if (cliAuthorizationPrompt.value?.completed) cliAuthorizationPrompt.value = undefined;
+    if (pendingManagedActivation.value?.recovery && pendingManagedActivation.value.completed) pendingManagedActivation.value = undefined;
     parts.value = []; uploaded.value = []; missingFiles.value = []; renderEditor();
     // The accepted selection is immutable. Resolve an empty explicit Skill set
     // for the next draft without modifying the historical message.
@@ -588,8 +635,9 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       <a :href="cliEnablement(pendingCLIActivation.definition.id)?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.continueSetup') }}</a>
     </section>
     <section v-if="pendingManagedActivation" class="composer-authorization" role="status" aria-live="polite">
-      <div><strong>{{ pendingManagedActivation.completed ? t('composer.activationAuthorizationCompleted') : t('composer.activationRequired', { name: pendingManagedActivation.definition.name }) }}</strong><small>{{ pendingManagedActivation.completed ? t('composer.activationAuthorizationReady') : pendingManagedActivation.flow ? t('composer.activationAuthorizationHint') : t('composer.activationHint') }}</small></div>
-      <a v-if="!pendingManagedActivation.completed && (pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url)" :href="pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url" target="_blank" rel="noopener noreferrer">{{ t(pendingManagedActivation.flow ? 'resources.authorizeNow' : 'resources.continueSetup') }}</a>
+      <div><strong>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationCompleted' : 'composer.activationAuthorizationCompleted') : t(pendingManagedActivation.recovery ? 'composer.authorizationRequired' : 'composer.activationRequired', { name: pendingManagedActivation.definition.name }) }}</strong><small>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationContinue' : 'composer.activationAuthorizationReady') : pendingManagedActivation.recovery ? t('composer.authorizationHint') : pendingManagedActivation.flow ? t('composer.activationAuthorizationHint') : t('composer.activationHint') }}</small></div>
+      <el-button v-if="pendingManagedActivation.recovery && !pendingManagedActivation.completed && (!pendingManagedActivation.flow?.action_url && !pendingManagedActivation.setup?.action_url || pendingManagedActivation.failed)" type="primary" :loading="managedCompletionBusy" @click="beginRequestedManagedAuthorization">{{ t('resources.authorizeNow') }}</el-button>
+      <a v-else-if="!pendingManagedActivation.completed && (pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url)" :href="pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url" target="_blank" rel="noopener noreferrer">{{ t(pendingManagedActivation.flow ? 'resources.authorizeNow' : 'resources.continueSetup') }}</a>
       <small v-if="pendingManagedActivation.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
     </section>
     <section v-if="cliAuthorizationPrompt" class="composer-authorization" role="status" aria-live="polite">

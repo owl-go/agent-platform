@@ -336,9 +336,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 	for _, directory := range scratchDirectories {
 		args = append(args, "--mount", "type=bind,src="+directory+",dst="+directory+",readonly=false")
 	}
-	if config.DirectCommand {
-		args = append(args, "--entrypoint", "/usr/local/bin/runtime-entrypoint")
-	}
+	// The image contains every Runtime Engine. Select the frozen command for
+	// each invocation instead of relying on an engine-specific image entrypoint.
+	args = append(args, "--entrypoint", "/usr/local/bin/runtime-entrypoint")
 	args = append(args,
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size="+strconv.FormatInt(config.Limits.TempBytes, 10),
 		"--workdir", config.ContainerWorkspace,
@@ -358,10 +358,7 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		"--label", "agent-platform.run-id="+config.RunID,
 		config.Image,
 	)
-	if config.DirectCommand {
-		return append(args, spec.Command...)
-	}
-	return append(args, spec.Command[1:]...)
+	return append(args, spec.Command...)
 }
 
 // RuntimeAttachmentDirectory is the read-only attachment mount inside the Workspace boundary.

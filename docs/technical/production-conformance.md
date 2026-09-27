@@ -14,7 +14,7 @@
 6. Expert 可见结构化指导、Derived Expertise Tags、Team Member 稳定身份与角色注入、Personal Settings 单一执行配置冻结；Git/ZIP Skill 安装；HTTPS/stdio MCP Connector 隔离测试；适用 Runtime 读取对应 MCP 配置。
 7. Administrator-only CLI Connector Definition、隔离 bundle 构建、完整性与 schema review、User-private enablement/authorization，以及公共 Wrapper 的 argv、identity、scope、Egress、Workspace、timeout、output 和 Secret 边界。
 8. Feishu CLI 对一个 User 只创建一个应用、多个 account authorization、User/Bot 身份、最小权限与恢复链接、Token 刷新/撤销；高风险命令批准、拒绝、超时、重复请求、`waiting_for_user`、取消、重启恢复和执行前重校验。
-9. Claude Code、Codex、Hermes、OpenClaw、PI Agent 各自使用固定 RepoDigest 进行真实模型调用，并验证取消、超时、输出边界和 Secret canary 不泄漏。每个 CLI Connector 可用性声明同时记录 exact bundle SHA-256 和 Runtime RepoDigest 的联合证据。
+9. Claude Code、Codex、Hermes、OpenClaw、PI Agent 共同使用 `CONFORMANCE_RUNTIME_IMAGE` 指定的固定 RepoDigest，但各自独立进行真实模型调用，并验证取消、超时、输出边界和 Secret canary 不泄漏。每个 CLI Connector 可用性声明同时记录 exact bundle SHA-256 和 Runtime RepoDigest 的联合证据。
 10. MinIO 完整上传/回读/签名下载；若生产选择阿里云 OSS，则额外执行真实 OSS Conformance。
 11. 中文/英文、桌面/移动端主要流程与刷新恢复。
 12. 数据库备份可恢复、增量 Expert/Connector Migration、API/Worker 健康检查和重启恢复。

@@ -32,7 +32,18 @@ func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
 	if len(input.Bundle) == 0 || input.BundlePath == "" || input.RuntimeVersion == "" || input.RuntimeDigest == "" || len(input.Capabilities) == 0 {
 		return nil, fmt.Errorf("official Feishu package requires the exact bundle, Runtime digest, and reviewed capabilities")
 	}
-	metadata, _ := json.Marshal(Metadata{Source: "feishu", Version: input.Version, Type: TypeCLI, Name: "飞书", Description: "读取、检索并操作飞书文档、日历、消息及其他开放平台资源。", ExamplesZH: []string{"查询飞书文档", "发送飞书消息"}, ExamplesEN: []string{"Search Feishu documents", "Send a Feishu message"}, MinPlatformVersion: "1.0.0", AuthMode: "oauth"})
+	examplesZH, examplesEN := []string{}, []string{}
+	for _, capability := range input.Capabilities {
+		switch capability.ID {
+		case "im_chat_search":
+			examplesZH, examplesEN = append(examplesZH, "搜索飞书群聊"), append(examplesEN, "Search Feishu chats")
+		case "im_messages_send":
+			examplesZH, examplesEN = append(examplesZH, "发送飞书消息"), append(examplesEN, "Send a Feishu message")
+		case "task_create":
+			examplesZH, examplesEN = append(examplesZH, "创建飞书任务"), append(examplesEN, "Create a Feishu task")
+		}
+	}
+	metadata, _ := json.Marshal(Metadata{Source: "feishu", Version: input.Version, Type: TypeCLI, Name: "飞书", Description: "使用已审核的 CLI 能力操作飞书资源。", ExamplesZH: examplesZH, ExamplesEN: examplesEN, MinPlatformVersion: "1.0.0", AuthMode: "oauth"})
 	manifest, _ := json.Marshal(CLIManifest{
 		Runtime: ManagedRuntime{Kind: "node", Version: input.RuntimeVersion, Digest: input.RuntimeDigest}, Executable: "lark-cli", BundlePath: input.BundlePath, AuthenticationDriver: "feishu",
 		Commands:    CLICommands{Init: LifecycleCommand{Argv: []string{"app", "status", "--output", "json"}}, Auth: LifecycleCommand{Argv: []string{"auth", "login", "--output", "json"}}, Status: LifecycleCommand{Argv: []string{"auth", "status", "--output", "json"}}, UnAuth: LifecycleCommand{Argv: []string{"auth", "logout", "--output", "json"}}},
