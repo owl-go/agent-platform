@@ -19,3 +19,21 @@ func TestParseRejectsIncompleteGeneratedSkill(t *testing.T) {
 		t.Fatalf("Parse() marked=%v err=%v, want validation error", marked, err)
 	}
 }
+
+func TestParseConnectorProposal(t *testing.T) {
+	content := `<platform-action>{"kind":"connector","user_message":"请确认","connector":{"source":"example-service","version":"1.0.0","name":"Example Service","description":"Query data","auth_mode":"none","mcp_json":"{\"transport\":\"streamable_http\",\"url\":\"https://example.com/mcp\",\"timeout_seconds\":30,\"egress_hosts\":[\"example.com\"]}","skill_name":"example-service","skill_markdown":"# Example Service\nQuery data."}}</platform-action>`
+	proposal, visible, marked, err := Parse(content)
+	if err != nil || !marked || proposal.Kind != ConnectorKind || visible != "请确认" {
+		t.Fatalf("Parse() proposal=%+v visible=%q marked=%v err=%v", proposal, visible, marked, err)
+	}
+	if name, _ := proposal.NameAndDescription(); name != "Example Service" {
+		t.Fatalf("NameAndDescription() name=%q", name)
+	}
+}
+
+func TestParseRejectsIncompleteConnector(t *testing.T) {
+	_, _, marked, err := Parse(`<platform-action>{"kind":"connector","connector":{"name":"Missing manifest"}}</platform-action>`)
+	if !marked || err == nil {
+		t.Fatalf("Parse() marked=%v err=%v, want validation error", marked, err)
+	}
+}

@@ -178,6 +178,10 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		service.handleFAQs(writer, request, owner, rest[0], rest[2:])
 		return
 	}
+	if len(rest) >= 2 && rest[1] == "conversations" {
+		service.handleAssistantConversations(writer, request, owner, rest[0], rest[2:])
+		return
+	}
 	if len(rest) == 2 && rest[1] == "icon" {
 		service.handleAssistantIcon(writer, request, owner, rest[0])
 		return

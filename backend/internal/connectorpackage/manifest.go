@@ -140,6 +140,9 @@ func validateCLI(manifest CLIManifest) error {
 	if !identifierPattern.MatchString(manifest.Executable) {
 		return fmt.Errorf("cli.json executable is invalid")
 	}
+	if manifest.AuthenticationDriver != "none" && manifest.AuthenticationDriver != "feishu" && manifest.AuthenticationDriver != "connector_package" {
+		return fmt.Errorf("cli.json authentication_driver is unsupported")
+	}
 	if manifest.BundlePath != "" {
 		cleaned := path.Clean(strings.TrimPrefix(manifest.BundlePath, "./"))
 		if cleaned == "." || path.IsAbs(manifest.BundlePath) || strings.HasPrefix(cleaned, "../") || strings.ContainsAny(manifest.BundlePath, "\\\x00\r\n") {

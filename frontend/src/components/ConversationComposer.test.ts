@@ -3,7 +3,8 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type CLIConnectorDefinition, type ConversationScope, type PlatformApi, type Skill } from "../api/client";
+import { ApiError, platformApiKey, type CLIConnectorDefinition, type ConversationScope, type PlatformApi, type Skill } from "../api/client";
+import { conversationDraftKey, saveConversationDraft } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
 import { authContextKey } from "../auth/session";
 import { createAppI18n } from "../i18n";
@@ -12,12 +13,25 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; noScopes?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
  const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: "feishu", name: "飞书 CLI", revision: "3" }] : [] };
- const definition = { id: "feishu", name: "飞书 CLI", state: "available", authentication_driver: "feishu", capabilities: [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] } as CLIConnectorDefinition;
- const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]), ...(options.authorization ? {
+ const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? "feishu" : "飞书 CLI", state: "available", authentication_driver: "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] } as CLIConnectorDefinition;
+ const enabled = { id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 };
+ let refreshed = false;
+ const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]), ...((options.authorization || options.activation || options.managed) ? {
   listCLIConnectorDefinitions: vi.fn(async () => [definition]),
-  listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled", version: 1 }]),
+  listCLIConnectorEnablements: vi.fn(async () => options.managed ? [] : options.activation ? [{ ...enabled, state: "disabled" as const }] : [enabled]),
+  enableCLIConnector: vi.fn(async () => { if (options.managed) throw new ApiError("not_found", 404, "not_found"); return enabled; }),
+  listConnectorInstallations: vi.fn(async () => options.managed ? [{ id: "installation-1", source: "feishu", active_revision_id: "revision-1", state: "active" as const, authorized: Boolean(options.managedAuthorized || refreshed), version: 1, package_version: "1.0.93", name: "飞书", description: "", authentication_driver: "feishu", upgrade_available: false }] : []),
+  listConnectorPublications: vi.fn(async () => options.managed ? [{ source: "feishu", active_revision_id: "revision-1", state: "available" as const, version: 1, revision: { id: "revision-1", source: "feishu", package_version: "1.0.93", mode: "cli" as const, sha256: "a".repeat(64), name: "飞书", description: "", icon: "plug", runtime_digests: [], conformance_available: true, authentication_driver: "feishu", required_scopes: ["im:message", "im:message.send_as_user"] } }] : []),
+  listConnectorAuthorizations: vi.fn(async () => options.managedAuthorized || options.managedRefreshable ? [{ id: "authorization-1", installation_id: "installation-1", identity_ref: "user", external_identity_id: "ou_test", external_display_name: "Tester", scopes: ["im:message", "im:message.send_as_user"], state: options.managedRefreshable ? "expired" as const : "active" as const, version: 1, selected: true }] : []),
+  refreshConnectorAuthorization: vi.fn(async () => { refreshed = true; return { id: "authorization-1", installation_id: "installation-1", identity_ref: "user", external_identity_id: "ou_test", external_display_name: "Tester", scopes: ["im:message", "im:message.send_as_user"], state: "active" as const, version: 2, selected: true }; }),
+  disableConnectorInstallation: vi.fn(async () => ({ id: "installation-1", source: "feishu", active_revision_id: "revision-1", state: "disabled" as const, authorized: Boolean(options.managedAuthorized), version: 2, package_version: "1.0.93", name: "飞书", description: "", authentication_driver: "feishu", upgrade_available: false })),
+  beginConnectorSetup: vi.fn(async () => ({ id: "setup-1", installation_id: "installation-1", state: options.managedSetupComplete ? "completed" as const : "waiting_for_user" as const, action_url: "https://open.feishu.cn/app" })),
+  completeConnectorSetup: vi.fn(async () => ({ id: "setup-1", installation_id: "installation-1", state: "waiting_for_user" as const, action_url: "https://open.feishu.cn/app" })),
+  beginConnectorAuthorizationFlow: vi.fn(async () => ({ id: "authorization-1", installation_id: "installation-1", identity: "user" as const, scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user" as const, action_url: "https://accounts.feishu.cn/authorize" })),
+  completeConnectorAuthorizationFlow: vi.fn(async () => ({ id: "authorization-1", installation_id: "installation-1", identity: "user" as const, scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user" as const, action_url: "https://accounts.feishu.cn/authorize" })),
+  disableCLIConnector: vi.fn(async () => ({ ...enabled, state: "disabled" as const, version: 2 })),
   listCLIConnectorAuthorizations: vi.fn(async () => []),
   beginCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
   completeCLIConnectorAuthorization: vi.fn(async () => ({ id: "flow-1", enablement_id: "enable-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "waiting_for_user", action_url: "https://accounts.feishu.cn/authorize" })),
@@ -88,6 +102,20 @@ describe("ConversationComposer", () => {
   const second = await setup({ session: "session-2" }); expect(second.wrapper.find(".composer-token").exists()).toBe(false); second.wrapper.unmount();
   const otherUser = await setup({ owner: "owner-2" }); expect(otherUser.wrapper.find(".composer-token").exists()).toBe(false); otherUser.wrapper.unmount();
  });
+ it("reconciles an expired saved Connector selection with the server while keeping draft text", async () => {
+  const scope = { session_id: "session-1" };
+  saveConversationDraft(conversationDraftKey("owner-1", scope), {
+   parts: [{ kind: "text", text: "继续" }],
+   selection: { ...emptySelection(), id: "saved-selection", cli_connectors: [{ id: "installation-1", name: "飞书", icon: "feishu", revision: "1" }] },
+   attachments: [], pendingFileNames: [],
+  });
+  const { wrapper, api } = await setup({ managed: true, managedAuthorized: false });
+  expect(api.getConversationSelection).toHaveBeenCalledWith(scope);
+  expect(wrapper.find('[aria-label="飞书"]').exists()).toBe(false);
+  expect(wrapper.get(".composer-editor").text()).toBe("继续");
+  expect(wrapper.get('[role="alert"]').text()).toContain("连接器选择已失效");
+  wrapper.unmount();
+ });
  it("does not submit when Enter is pressed in the Expert picker", async () => {
   const { wrapper, submit } = await setup({ initial: true }); await wrapper.get(".composer-specialist").trigger("click");
   await wrapper.get(".composer-menu-search input").trigger("keydown", { key: "Enter" }); await flushPromises(); expect(submit).not.toHaveBeenCalled(); wrapper.unmount();
@@ -120,7 +148,7 @@ describe("ConversationComposer", () => {
   vi.spyOn(window, "open").mockReturnValue(null);
   const { wrapper, api } = await setup({ authorization: true });
   expect(wrapper.find(".composer-authorization").exists()).toBe(false);
-  expect(api.listCLIConnectorAuthorizations).not.toHaveBeenCalled();
+  expect(api.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
   await wrapper.setProps({ authorizationRequest: { connectorID: "feishu", capabilityID: "send" } }); await flushPromises();
   expect(wrapper.get(".composer-authorization").text()).toContain("飞书 CLI 需要飞书账号授权");
   expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
@@ -131,6 +159,104 @@ describe("ConversationComposer", () => {
   document.dispatchEvent(new Event("visibilitychange")); await flushPromises();
   expect(wrapper.get(".composer-authorization").text()).toContain("飞书授权已完成");
   expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
+  wrapper.unmount();
+ });
+ it("activates, authorizes, selects, and deactivates a CLI Connector from the conversation picker", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ activation: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await flushPromises();
+  const option = wrapper.get(".composer-connector-option");
+  expect(option.text()).toContain("打开右侧开关即可激活");
+  await option.get(".el-switch").trigger("click");
+  await flushPromises();
+  expect(api.enableCLIConnector).toHaveBeenCalledWith("feishu");
+  expect(api.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: ["feishu"] }));
+  expect(wrapper.find('.composer-authorization a[href="https://accounts.feishu.cn/authorize"]').exists()).toBe(true);
+  await option.get(".el-switch").trigger("click");
+  await flushPromises();
+  expect(api.disableCLIConnector).toHaveBeenCalledWith("feishu", 1);
+  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: [] }));
+  wrapper.unmount();
+ });
+ it("offers activation in a conversation when the saved Feishu application has no authorization", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await flushPromises();
+  const option = wrapper.get(".composer-connector-option");
+  expect(option.text()).toContain("打开右侧开关即可激活");
+  expect(option.get(".el-switch").classes()).not.toContain("is-checked");
+  await option.get(".el-switch").trigger("click");
+  await flushPromises();
+  expect(api.enableCLIConnector).toHaveBeenCalledWith("feishu");
+  expect(api.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(option.get(".el-switch").classes()).toContain("is-checked");
+  wrapper.unmount();
+ });
+ it("starts Feishu account authorization even when the connector has no requested scopes", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ activation: true, noScopes: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await wrapper.get(".composer-connector-option .el-switch").trigger("click");
+  await flushPromises();
+  expect(api.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", []);
+  expect(wrapper.find('.composer-authorization a[href="https://accounts.feishu.cn/authorize"]').exists()).toBe(true);
+  wrapper.unmount();
+ });
+ it("opens setup for an installed Feishu package from the conversation switch", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ managed: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await wrapper.get(".composer-connector-option .el-switch").trigger("click");
+  await flushPromises();
+  expect(api.beginConnectorSetup).toHaveBeenCalledWith("installation-1");
+  expect(api.enableCLIConnector).not.toHaveBeenCalled();
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  wrapper.unmount();
+ });
+ it("selects an authorized Feishu package and deactivates it from the conversation switch", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ managed: true, managedAuthorized: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  const option = wrapper.get(".composer-connector-option");
+  expect(option.get(".el-switch").classes()).toContain("is-checked");
+  await option.get("button").trigger("click");
+  await flushPromises();
+  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: ["installation-1"] }));
+  await option.get(".el-switch").trigger("click");
+  await flushPromises();
+  expect(api.disableConnectorInstallation).toHaveBeenCalledWith("installation-1", 1);
+  expect(api.disableCLIConnector).not.toHaveBeenCalled();
+  wrapper.unmount();
+ });
+ it("refreshes an expired Feishu grant when the user activates the Connector", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ managed: true, managedRefreshable: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await wrapper.get(".composer-connector-option .el-switch").trigger("click");
+  await flushPromises();
+  expect(api.refreshConnectorAuthorization).toHaveBeenCalledWith("installation-1", "authorization-1", 1);
+  expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: ["installation-1"] }));
+  wrapper.unmount();
+ });
+ it("goes straight to account authorization when a managed Feishu application is already set up", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ managed: true, managedSetupComplete: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await wrapper.get(".composer-connector-option .el-switch").trigger("click");
+  await flushPromises();
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(wrapper.find('.composer-authorization a[href="https://accounts.feishu.cn/authorize"]').exists()).toBe(true);
   wrapper.unmount();
  });
 });

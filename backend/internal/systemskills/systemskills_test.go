@@ -7,15 +7,17 @@ import (
 	"encoding/hex"
 	"io"
 	"testing"
+
+	"agent-platform/backend/internal/resourceaction"
 )
 
 func TestDefinitionsAreStablePlatformSkills(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 2 {
-		t.Fatalf("Definitions() returned %d entries, want 2", len(definitions))
+	if len(definitions) != 3 {
+		t.Fatalf("Definitions() returned %d entries, want 3", len(definitions))
 	}
 	for _, definition := range definitions {
-		if definition.Name != "Create Skill" && definition.Name != "Create Expert" {
+		if definition.Name != "Create Skill" && definition.Name != "Create Expert" && definition.Name != "Create Connector" {
 			t.Fatalf("unexpected default Skill name %q", definition.Name)
 		}
 		archiveBytes, digest, err := Archive(definition.Key)
@@ -39,5 +41,16 @@ func TestDefinitionsAreStablePlatformSkills(t *testing.T) {
 		if err != nil || len(content) == 0 {
 			t.Fatalf("Archive(%q) contains an empty SKILL.md: %v", definition.Key, err)
 		}
+	}
+}
+
+func TestCreateConnectorExampleIsAValidAction(t *testing.T) {
+	definition, ok := DefinitionByKey(CreateConnectorKey)
+	if !ok {
+		t.Fatal("Create Connector Skill is missing")
+	}
+	proposal, _, marked, err := resourceaction.Parse(definition.Document)
+	if err != nil || !marked || proposal.Kind != resourceaction.ConnectorKind {
+		t.Fatalf("example proposal is invalid: marked=%v proposal=%+v err=%v", marked, proposal, err)
 	}
 }

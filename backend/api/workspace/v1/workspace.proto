@@ -124,12 +124,28 @@ service AgentWorkspaceService {
   rpc DeleteSkill(DeleteSkillRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/skills/{skill_id}"}; }
   rpc ListCLIConnectorDefinitions(ListCLIConnectorDefinitionsRequest) returns (ListCLIConnectorDefinitionsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli"}; }
   rpc ListConnectorInstallations(ListConnectorInstallationsRequest) returns (ListConnectorInstallationsResponse) { option (google.api.http) = {get: "/api/v1/connectors"}; }
+  rpc ListConnectorPublications(ListConnectorPublicationsRequest) returns (ListConnectorPublicationsResponse) { option (google.api.http) = {get: "/api/v1/connectors/catalog"}; }
+  rpc InstallPublishedConnector(InstallPublishedConnectorRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/catalog/{source}/install" body: "*"}; }
+  rpc UpgradeConnectorInstallation(UpgradeConnectorInstallationRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/upgrade" body: "*"}; }
+  rpc ListConnectorAuthorizations(ListConnectorAuthorizationsRequest) returns (ListConnectorAuthorizationsResponse) { option (google.api.http) = {get: "/api/v1/connectors/{installation_id}/authorizations"}; }
+  rpc SelectConnectorAuthorization(SelectConnectorAuthorizationRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/select" body: "*"}; }
+  rpc RefreshConnectorAuthorization(RefreshConnectorAuthorizationRequest) returns (ConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/authorizations/{authorization_id}/refresh" body: "*"}; }
+  rpc DisconnectPublishedConnectorAuthorization(DisconnectPublishedConnectorAuthorizationRequest) returns (ConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/authorizations/{authorization_id}/disconnect" body: "*"}; }
+  rpc BeginConnectorSetup(BeginConnectorSetupRequest) returns (ConnectorSetup) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/setup" body: "*"}; }
+  rpc CompleteConnectorSetup(CompleteConnectorSetupRequest) returns (ConnectorSetup) { option (google.api.http) = {post: "/api/v1/connectors/setup/{flow_id}/complete" body: "*"}; }
+  rpc BeginConnectorAuthorizationFlow(BeginConnectorAuthorizationFlowRequest) returns (ConnectorAuthorizationFlow) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/authorization-flows" body: "*"}; }
+  rpc CompleteConnectorAuthorizationFlow(CompleteConnectorAuthorizationFlowRequest) returns (ConnectorAuthorizationFlow) { option (google.api.http) = {post: "/api/v1/connectors/authorization-flows/{flow_id}/complete" body: "*"}; }
   rpc UploadConnectorPackage(UploadConnectorPackageRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/packages" body: "*"}; }
   rpc CreateConnectorPackage(CreateConnectorPackageRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/packages/guided" body: "*"}; }
   rpc DisableConnectorInstallation(DisableConnectorInstallationRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/disable" body: "*"}; }
   rpc UninstallConnector(UninstallConnectorRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/connectors/{installation_id}"}; }
   rpc ConnectConnector(ConnectConnectorRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/authorization" body: "*"}; }
   rpc DisconnectConnectorAuthorization(DisconnectConnectorAuthorizationRequest) returns (ConnectorInstallation) { option (google.api.http) = {post: "/api/v1/connectors/{installation_id}/authorization/disconnect" body: "*"}; }
+  rpc StageConnectorPackage(StageConnectorPackageRequest) returns (ConnectorRevision) { option (google.api.http) = {post: "/api/v1/admin/connectors/packages" body: "*"}; }
+  rpc ListConnectorPublicationRevisions(ListConnectorPublicationRevisionsRequest) returns (ListConnectorPublicationRevisionsResponse) { option (google.api.http) = {get: "/api/v1/admin/connectors/publications"}; }
+  rpc PublishConnectorRevision(PublishConnectorRevisionRequest) returns (ConnectorPublication) { option (google.api.http) = {post: "/api/v1/admin/connectors/publications/{revision_id}/publish" body: "*"}; }
+  rpc DisableConnectorPublication(DisableConnectorPublicationRequest) returns (ConnectorPublication) { option (google.api.http) = {post: "/api/v1/admin/connectors/publications/{source}/disable" body: "*"}; }
+  rpc ListConnectorPublicationHealth(ListConnectorPublicationHealthRequest) returns (ListConnectorPublicationHealthResponse) { option (google.api.http) = {get: "/api/v1/admin/connectors/publication-health"}; }
   rpc CreateCLIConnectorDefinition(CreateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli" body: "*"}; }
   rpc UpdateCLIConnectorDefinition(UpdateCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {patch: "/api/v1/admin/connectors/cli/{definition_id}" body: "*"}; }
   rpc PublishCLIConnectorDefinition(PublishCLIConnectorDefinitionRequest) returns (CLIConnectorDefinition) { option (google.api.http) = {post: "/api/v1/admin/connectors/cli/{definition_id}/publish" body: "*"}; }
@@ -137,6 +153,7 @@ service AgentWorkspaceService {
   rpc DeleteCLIConnectorDefinition(DeleteCLIConnectorDefinitionRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/admin/connectors/cli/{definition_id}"}; }
   rpc ListCLIConnectorHealth(ListCLIConnectorHealthRequest) returns (ListCLIConnectorHealthResponse) { option (google.api.http) = {get: "/api/v1/admin/connectors/cli-health"}; }
   rpc EnableCLIConnector(EnableCLIConnectorRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/{definition_id}/enable" body: "*"}; }
+  rpc DisableCLIConnector(DisableCLIConnectorRequest) returns (CLIConnectorEnablement) { option (google.api.http) = {post: "/api/v1/connectors/cli/{definition_id}/disable" body: "*"}; }
   rpc ListCLIConnectorEnablements(ListCLIConnectorEnablementsRequest) returns (ListCLIConnectorEnablementsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements"}; }
   rpc ListCommandApprovals(ListCommandApprovalsRequest) returns (ListCommandApprovalsResponse) { option (google.api.http) = {get: "/api/v1/command-approvals"}; }
   rpc DecideCommandApproval(DecideCommandApprovalRequest) returns (CommandApproval) { option (google.api.http) = {post: "/api/v1/command-approvals/{approval_id}/decision" body: "*"}; }
@@ -487,8 +504,34 @@ message DeleteCLIConnectorDefinitionRequest { string definition_id = 1; int64 ex
 message ListCLIConnectorHealthRequest {}
 message ListCLIConnectorHealthResponse { repeated CLIConnectorHealth items = 1; }
 message CLIConnectorHealth { string definition_id = 1; string definition_name = 2; string definition_state = 3; int64 enablement_count = 4; int64 enabled_count = 5; int64 waiting_for_user_count = 6; int64 active_authorization_count = 7; int64 attention_authorization_count = 8; }
-message ConnectorRevision { string id = 1; string source = 2; string package_version = 3; string mode = 4; string sha256 = 5; }
-message ConnectorInstallation { string id = 1; string source = 2; string active_revision_id = 3; string state = 4; bool authorized = 5; int64 version = 6; }
+message ConnectorRevision { string id = 1; string source = 2; string package_version = 3; string mode = 4; string sha256 = 5; string name = 6; string description = 7; string icon = 8; string authentication_driver = 9; optional string bundle_sha256 = 10; repeated string runtime_digests = 11; bool conformance_available = 12; repeated string required_scopes = 13; }
+message ConnectorPublication { string source = 1; string active_revision_id = 2; string state = 3; int64 version = 4; ConnectorRevision revision = 5; }
+message ConnectorPublicationRevision { ConnectorRevision revision = 1; optional ConnectorPublication publication = 2; }
+message ConnectorPublicationHealth { string source = 1; string state = 2; string active_revision_id = 3; string package_sha256 = 4; optional string bundle_sha256 = 5; repeated string runtime_digests = 6; bool conformance_available = 7; int64 installation_count = 8; int64 active_installation_count = 9; int64 active_authorization_count = 10; }
+message ConnectorInstallation { string id = 1; string source = 2; string active_revision_id = 3; string state = 4; bool authorized = 5; int64 version = 6; string package_version = 7; string name = 8; string description = 9; string authentication_driver = 10; optional string selected_authorization_id = 11; bool upgrade_available = 12; }
+message ConnectorAuthorization { string id = 1; string installation_id = 2; string identity_ref = 3; repeated string scopes = 4; string state = 5; optional google.protobuf.Timestamp expires_at = 6; int64 version = 7; bool selected = 8; string external_identity_id = 9; string external_display_name = 10; }
+message ListConnectorPublicationsRequest {}
+message ListConnectorPublicationsResponse { repeated ConnectorPublication items = 1; }
+message StageConnectorPackageRequest { bytes archive = 1; }
+message ListConnectorPublicationRevisionsRequest {}
+message ListConnectorPublicationRevisionsResponse { repeated ConnectorPublicationRevision items = 1; }
+message PublishConnectorRevisionRequest { string revision_id = 1; int64 expected_version = 2; }
+message DisableConnectorPublicationRequest { string source = 1; int64 expected_version = 2; }
+message ListConnectorPublicationHealthRequest {}
+message ListConnectorPublicationHealthResponse { repeated ConnectorPublicationHealth items = 1; }
+message InstallPublishedConnectorRequest { string source = 1; }
+message UpgradeConnectorInstallationRequest { string installation_id = 1; int64 expected_version = 2; }
+message ListConnectorAuthorizationsRequest { string installation_id = 1; }
+message ListConnectorAuthorizationsResponse { repeated ConnectorAuthorization items = 1; }
+message SelectConnectorAuthorizationRequest { string installation_id = 1; string authorization_id = 2; int64 expected_version = 3; }
+message RefreshConnectorAuthorizationRequest { string installation_id = 1; string authorization_id = 2; int64 expected_version = 3; }
+message DisconnectPublishedConnectorAuthorizationRequest { string authorization_id = 1; }
+message ConnectorSetup { string id = 1; string installation_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp expires_at = 5; optional string provider_name = 6; optional string developer_console_url = 7; }
+message BeginConnectorSetupRequest { string installation_id = 1; }
+message CompleteConnectorSetupRequest { string flow_id = 1; }
+message ConnectorAuthorizationFlow { string id = 1; string installation_id = 2; string identity = 3; repeated string scopes = 4; string state = 5; optional string action_url = 6; optional google.protobuf.Timestamp expires_at = 7; optional ConnectorAuthorization authorization = 8; }
+message BeginConnectorAuthorizationFlowRequest { string installation_id = 1; string identity = 2; repeated string scopes = 3; }
+message CompleteConnectorAuthorizationFlowRequest { string flow_id = 1; }
 message ListConnectorInstallationsRequest {}
 message ListConnectorInstallationsResponse { repeated ConnectorInstallation items = 1; }
 message UploadConnectorPackageRequest { bytes archive = 1; }
@@ -498,6 +541,7 @@ message UninstallConnectorRequest { string installation_id = 1; int64 expected_v
 message ConnectConnectorRequest { string installation_id = 1; string identity_ref = 2; repeated string scopes = 3; bytes credentials_json = 4; }
 message DisconnectConnectorAuthorizationRequest { string installation_id = 1; int64 expected_version = 2; }
 message EnableCLIConnectorRequest { string definition_id = 1; }
+message DisableCLIConnectorRequest { string definition_id = 1; int64 expected_version = 2; }
 message CLIConnectorEnablement { string id = 1; string definition_id = 2; string state = 3; optional string action_url = 4; optional google.protobuf.Timestamp action_expires_at = 5; int64 version = 6; optional string provider_name = 7; optional string developer_console_url = 8; }
 message ListCLIConnectorEnablementsRequest {}
 message ListCLIConnectorEnablementsResponse { repeated CLIConnectorEnablement items = 1; }

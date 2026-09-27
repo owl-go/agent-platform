@@ -7,8 +7,20 @@ import (
 	"strings"
 	"testing"
 
+	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
 )
+
+func TestConnectorInstallationResponseDoesNotTreatExpiredAuthorizationAsAuthorized(t *testing.T) {
+	item := domain.ConnectorInstallation{ID: "installation-1", AuthorizationID: "expired-authorization", Authorized: false}
+	if response := connectorInstallationResponse(item); response.Authorized {
+		t.Fatal("expired authorization was reported as active")
+	}
+	item.Authorized = true
+	if response := connectorInstallationResponse(item); !response.Authorized {
+		t.Fatal("active authorization was reported as inactive")
+	}
+}
 
 func TestConnectorRevisionFromPackageUsesImmutableChecksumKey(t *testing.T) {
 	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.2.3", Type: connectorpackage.TypeMCP, AuthMode: "oauth"}, SHA256: strings.Repeat("a", 64)}
@@ -41,6 +53,17 @@ func TestBuildGuidedConnectorPackageProducesParserCompatibleZIP(t *testing.T) {
 	}
 	if !strings.Contains(string(mustZipFile(t, reader, "connector-meta.json")), `"source":"example"`) {
 		t.Fatal("metadata missing")
+	}
+}
+
+func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T) {
+	pkg := connectorpackage.Package{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}
+	if err := validatePrivateConnectorPackage(pkg); err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("validatePrivateConnectorPackage() error = %v", err)
+	}
+	pkg.CLI.AuthenticationDriver = "connector_package"
+	if err := validatePrivateConnectorPackage(pkg); err != nil {
+		t.Fatalf("generic private credentials were rejected: %v", err)
 	}
 }
 

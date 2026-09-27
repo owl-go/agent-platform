@@ -37,6 +37,17 @@ type connectorRevisionRecord struct {
 
 func (connectorRevisionRecord) TableName() string { return "connector_revisions" }
 
+type connectorPublicationRecord struct {
+	PackageSource    string    `gorm:"column:package_source"`
+	ActiveRevisionID string    `gorm:"column:active_revision_id"`
+	State            string    `gorm:"column:state"`
+	AdministratorID  string    `gorm:"column:administrator_user_id"`
+	Version          int64     `gorm:"column:version"`
+	UpdatedAt        time.Time `gorm:"column:updated_at"`
+}
+
+func (connectorPublicationRecord) TableName() string { return "connector_package_publications" }
+
 type connectorInstallationRecord struct {
 	ID               string    `gorm:"column:id"`
 	OwnerID          string    `gorm:"column:owner_user_id"`
@@ -51,16 +62,22 @@ type connectorInstallationRecord struct {
 func (connectorInstallationRecord) TableName() string { return "connector_installations" }
 
 type connectorAuthorizationRecord struct {
-	ID                   string     `gorm:"column:id"`
-	OwnerID              string     `gorm:"column:owner_user_id"`
-	InstallationID       string     `gorm:"column:installation_id"`
-	IdentityRef          string     `gorm:"column:identity_ref"`
-	Scopes               []byte     `gorm:"column:scopes;type:jsonb"`
-	CredentialCiphertext []byte     `gorm:"column:credential_ciphertext"`
-	State                string     `gorm:"column:state"`
-	ExpiresAt            *time.Time `gorm:"column:expires_at"`
-	Version              int64      `gorm:"column:version"`
-	UpdatedAt            time.Time  `gorm:"column:updated_at"`
+	ID                          string     `gorm:"column:id"`
+	OwnerID                     string     `gorm:"column:owner_user_id"`
+	InstallationID              string     `gorm:"column:installation_id"`
+	IdentityRef                 string     `gorm:"column:identity_ref"`
+	ExternalIdentityID          string     `gorm:"column:external_identity_id"`
+	ExternalDisplayName         string     `gorm:"column:external_display_name"`
+	Scopes                      []byte     `gorm:"column:scopes;type:jsonb"`
+	CredentialCiphertext        []byte     `gorm:"column:credential_ciphertext"`
+	CredentialAAD               string     `gorm:"column:credential_aad"`
+	CredentialFormat            string     `gorm:"column:credential_format"`
+	RefreshCredentialCiphertext []byte     `gorm:"column:refresh_credential_ciphertext"`
+	RefreshCredentialAAD        string     `gorm:"column:refresh_credential_aad"`
+	State                       string     `gorm:"column:state"`
+	ExpiresAt                   *time.Time `gorm:"column:expires_at"`
+	Version                     int64      `gorm:"column:version"`
+	UpdatedAt                   time.Time  `gorm:"column:updated_at"`
 }
 
 func (connectorAuthorizationRecord) TableName() string { return "connector_authorizations" }

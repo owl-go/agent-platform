@@ -40,7 +40,9 @@ describe("ResourceCenterPage", () => {
 
     expect(router.currentRoute.value.query.tab).toBe("skills");
     expect(wrapper.find(".expert-catalog").exists()).toBe(false);
-    expect(wrapper.find(".resource-child-actions").exists()).toBe(true);
+    expect(wrapper.find(".resource-child-actions").exists()).toBe(false);
+    expect(wrapper.get(".extension-catalog-toolbar").text()).toContain("我的技能");
+    expect(wrapper.get(".extension-catalog-toolbar").text()).toContain("添加技能");
     expect(wrapper.find(".resource-tabs").exists()).toBe(false);
     wrapper.unmount();
   });

@@ -122,6 +122,50 @@ func TestBeginCLIConnectorAuthorizationReusesPendingAttempt(t *testing.T) {
 	}
 }
 
+func TestDisableCLIConnectorPreservesApplicationAndAuthorization(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner, definition, enablement := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if err := db.Exec(query, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner)
+	exec("INSERT INTO cli_connector_definitions(id,name,description,installation_type,npm_package,npm_version,npm_integrity,executable,state,authentication_driver,created_by_user_id) VALUES(?,?,?,'npm','@larksuite/cli','1.0.93','sha512-test','lark','available','feishu',?)", definition, "Feishu CLI", "Test", owner)
+	exec("INSERT INTO cli_connector_enablements(id,owner_user_id,definition_id,state,version) VALUES(?,?,?,'enabled',3)", enablement, owner, definition)
+	exec("INSERT INTO feishu_cli_applications(owner_user_id,enablement_id,provider_application_id_ciphertext,provider_application_secret_ciphertext,provider_name,developer_console_url) VALUES(?,?,'app','secret','Test','https://example.test')", owner, enablement)
+	exec("INSERT INTO cli_connector_authorizations(owner_user_id,enablement_id,identity,external_identity_id,external_display_name,token_ciphertext,refresh_token_ciphertext,state) VALUES(?,?,'user','ou_test','Test User','token','refresh','active')", owner, enablement)
+	exec("INSERT INTO cli_connector_authorization_attempts(owner_user_id,enablement_id,identity,device_code_ciphertext,action_url,expires_at) VALUES(?,?,'user','pending','https://accounts.feishu.cn/authorize',now()+interval '5 minutes')", owner, enablement)
+
+	if _, err := repository.DisableCLIConnector(ctx, owner, definition, 2); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("stale disable = %v", err)
+	}
+	disabled, err := repository.DisableCLIConnector(ctx, owner, definition, 3)
+	if err != nil || disabled.State != "disabled" || disabled.Version != 4 {
+		t.Fatalf("disable = %#v, %v", disabled, err)
+	}
+	var applications, activeAuthorizations, pendingAuthorizations int64
+	if err := db.Model(&feishuCLIApplicationRecord{}).Where("enablement_id = ?", enablement).Count(&applications).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&cliConnectorAuthorizationRecord{}).Where("enablement_id = ? AND state = 'active'", enablement).Count(&activeAuthorizations).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&cliConnectorAuthorizationAttemptRecord{}).Where("enablement_id = ?", enablement).Count(&pendingAuthorizations).Error; err != nil {
+		t.Fatal(err)
+	}
+	if applications != 1 || activeAuthorizations != 1 || pendingAuthorizations != 0 {
+		t.Fatalf("disable state: applications=%d active_authorizations=%d pending_authorizations=%d", applications, activeAuthorizations, pendingAuthorizations)
+	}
+	reenabled, err := repository.EnableCLIConnector(ctx, owner, definition)
+	if err != nil || reenabled.ID != enablement || reenabled.State != "enabled" || reenabled.Version != 5 || reenabled.ProviderName != "Test" {
+		t.Fatalf("reenable = %#v, %v", reenabled, err)
+	}
+}
+
 func TestSessionCommandApprovalEntersUserActionWait(t *testing.T) {
 	db := conversationTestDatabase(t)
 	repository := New(db, nil)

@@ -885,7 +885,9 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 				return query.Error
 			}
 			if count != 1 {
-				return fmt.Errorf("%w: queued CLI Connector for Stage %d is unavailable", domain.ErrInvalid, stage.Position)
+				if _, err := connectorCLIServerSnapshot(tx, ownerID, connector.ID); err != nil {
+					return fmt.Errorf("%w: queued CLI Connector for Stage %d is unavailable: %w", domain.ErrInvalid, stage.Position, err)
+				}
 			}
 		}
 	}
@@ -1136,6 +1138,8 @@ func resourceActionForJob(job application.ExecutionJob, content string) (string,
 		wanted = "create_skill"
 	} else if proposal.Kind == resourceaction.ExpertKind {
 		wanted = "create_expert"
+	} else if proposal.Kind == resourceaction.ConnectorKind {
+		wanted = "create_connector"
 	}
 	for _, stage := range job.Snapshot.Stages {
 		for _, skill := range stage.Skills {

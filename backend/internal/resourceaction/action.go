@@ -7,19 +7,34 @@ import (
 )
 
 const (
-	BeginMarker = "<platform-action>"
-	EndMarker   = "</platform-action>"
-	SkillKind   = "skill"
-	ExpertKind  = "expert"
+	BeginMarker   = "<platform-action>"
+	EndMarker     = "</platform-action>"
+	SkillKind     = "skill"
+	ExpertKind    = "expert"
+	ConnectorKind = "connector"
 )
 
 // Proposal is the only model output that the platform will treat as a write
 // request. The marker keeps ordinary assistant prose inert.
 type Proposal struct {
-	Kind        string          `json:"kind"`
-	UserMessage string          `json:"user_message"`
-	Skill       *SkillProposal  `json:"skill,omitempty"`
-	Expert      *ExpertProposal `json:"expert,omitempty"`
+	Kind        string             `json:"kind"`
+	UserMessage string             `json:"user_message"`
+	Skill       *SkillProposal     `json:"skill,omitempty"`
+	Expert      *ExpertProposal    `json:"expert,omitempty"`
+	Connector   *ConnectorProposal `json:"connector,omitempty"`
+}
+
+// ConnectorProposal contains the fields accepted by the guided private MCP
+// Connector Package creation path. CLI packages require a reviewed bundle.
+type ConnectorProposal struct {
+	Source        string `json:"source"`
+	Version       string `json:"version"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	AuthMode      string `json:"auth_mode"`
+	MCPJSON       string `json:"mcp_json"`
+	SkillName     string `json:"skill_name"`
+	SkillMarkdown string `json:"skill_markdown"`
 }
 
 type SkillProposal struct {
@@ -72,7 +87,7 @@ func Parse(content string) (Proposal, string, bool, error) {
 }
 
 func (proposal Proposal) Validate() error {
-	if proposal.Kind != SkillKind && proposal.Kind != ExpertKind {
+	if proposal.Kind != SkillKind && proposal.Kind != ExpertKind && proposal.Kind != ConnectorKind {
 		return fmt.Errorf("unsupported resource action kind %q", proposal.Kind)
 	}
 	switch proposal.Kind {
@@ -101,6 +116,19 @@ func (proposal Proposal) Validate() error {
 				return fmt.Errorf("Expert proposal requires %s", field)
 			}
 		}
+	case ConnectorKind:
+		if proposal.Connector == nil {
+			return fmt.Errorf("Connector proposal is required")
+		}
+		input := proposal.Connector
+		for field, value := range map[string]string{"source": input.Source, "version": input.Version, "name": input.Name, "description": input.Description, "mcp_json": input.MCPJSON, "skill_name": input.SkillName, "skill_markdown": input.SkillMarkdown} {
+			if strings.TrimSpace(value) == "" {
+				return fmt.Errorf("Connector proposal requires %s", field)
+			}
+		}
+		if input.AuthMode != "none" && input.AuthMode != "oauth" {
+			return fmt.Errorf("Connector proposal auth_mode must be none or oauth")
+		}
 	}
 	return nil
 }
@@ -110,6 +138,9 @@ func (proposal Proposal) JSON() ([]byte, error) { return json.Marshal(proposal) 
 func (proposal Proposal) NameAndDescription() (string, string) {
 	if proposal.Kind == SkillKind && proposal.Skill != nil {
 		return strings.TrimSpace(proposal.Skill.Name), strings.TrimSpace(proposal.Skill.Description)
+	}
+	if proposal.Kind == ConnectorKind && proposal.Connector != nil {
+		return strings.TrimSpace(proposal.Connector.Name), strings.TrimSpace(proposal.Connector.Description)
 	}
 	if proposal.Expert != nil {
 		return strings.TrimSpace(proposal.Expert.Name), strings.TrimSpace(proposal.Expert.Introduction)

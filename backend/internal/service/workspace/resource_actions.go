@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	workspacev1 "agent-platform/backend/api/workspace/v1"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/resourceaction"
 	"agent-platform/backend/internal/skillstore"
@@ -119,6 +120,13 @@ func (service *Service) executeResourceCreationAction(ctx context.Context, owner
 		}
 		item, err := service.workspace.Repository().CreateExpert(ctx, owner, expertInput)
 		return item.ID, err
+	case resourceaction.ConnectorKind:
+		input := proposal.Connector
+		item, err := service.CreateConnectorPackage(ctx, &workspacev1.CreateConnectorPackageRequest{Source: input.Source, Version: input.Version, Type: "mcp", Name: input.Name, Description: input.Description, AuthMode: input.AuthMode, McpJson: input.MCPJSON, SkillName: input.SkillName, SkillMarkdown: input.SkillMarkdown})
+		if err != nil {
+			return "", err
+		}
+		return item.Id, nil
 	default:
 		return "", fmt.Errorf("%w: unsupported resource action", workspacedomain.ErrInvalid)
 	}

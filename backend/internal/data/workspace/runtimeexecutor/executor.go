@@ -34,6 +34,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
+	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/objectstore"
@@ -45,6 +46,8 @@ import (
 )
 
 const runtimeWorkspaceDirectory = "/workspace"
+
+var feishuCLISkill = connectorpackage.OfficialFeishuSkill("1.0.93")
 
 type Executor struct {
 	config         platformconfig.Config
@@ -67,6 +70,7 @@ type Executor struct {
 type cliExecutionRepository interface {
 	ResolveCLIConnectorExecutionCredentials(context.Context, string, string, cliconnector.Identity, []string) (cliconnector.EncryptedExecutionCredentials, error)
 	HasCLIConnectorRuntimeConformance(context.Context, string, string, string) (bool, error)
+	HasConnectorBundleRuntimeConformance(context.Context, string, string) (bool, error)
 }
 
 type cliLifecycleRepository interface {
@@ -74,8 +78,8 @@ type cliLifecycleRepository interface {
 }
 
 type connectorPackageCLIRepository interface {
-	ValidateConnectorPackageCLIInvocation(context.Context, string, string) error
-	ResolveConnectorPackageAuthorization(context.Context, string, string, string) ([]byte, error)
+	ValidateConnectorPackageCLIInvocation(context.Context, string, string, string, string) error
+	ResolveConnectorPackageAuthorization(context.Context, string, string, string, string, string) (workspacedomain.ConnectorAuthorizationMaterial, error)
 }
 
 type mcpLifecycleRepository interface {
@@ -830,6 +834,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 			AuthenticationDriver: snapshot.AuthenticationDriver, State: cliconnector.StateAvailable, ManagedInstallation: snapshot.InstallationID != "",
 			BundleSHA256: snapshot.BundleSHA256, RuntimeDigests: runtimeDigests,
 			Capabilities: capabilities, VersionNumber: snapshot.Version, CPUMillis: snapshot.CPUMillis, MemoryMiB: snapshot.MemoryMiB, ChildProcesses: snapshot.ChildProcesses,
+			RevisionID: snapshot.RevisionID, AuthorizationID: snapshot.AuthorizationID, PackageSHA256: snapshot.PackageSHA256,
 		})
 		if snapshot.CPUMillis > 0 && float64(snapshot.CPUMillis)/1000 < containerLimits.CPUs {
 			containerLimits.CPUs = float64(snapshot.CPUMillis) / 1000
@@ -865,7 +870,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	lifecycle := func(checkCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
 		if definition.ManagedInstallation {
 			if repository, ok := executor.cliCredentials.(connectorPackageCLIRepository); ok {
-				return repository.ValidateConnectorPackageCLIInvocation(checkCtx, job.OwnerID, definition.ID)
+				return repository.ValidateConnectorPackageCLIInvocation(checkCtx, job.OwnerID, definition.ID, definition.RevisionID, definition.AuthorizationID)
 			}
 			return fmt.Errorf("Connector Package lifecycle repository is unavailable")
 		}
@@ -893,6 +898,12 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 }
 
 func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {
+	if connector.InstallationID != "" {
+		if executor.cliCredentials == nil {
+			return false, nil
+		}
+		return executor.cliCredentials.HasConnectorBundleRuntimeConformance(ctx, connector.BundleSHA256, runtimeDigest)
+	}
 	if slices.Contains(connector.RuntimeDigests, runtimeDigest) {
 		return true, nil
 	}
@@ -907,17 +918,63 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 		if definition.AuthenticationDriver == "none" {
 			return map[string]string{}, nil
 		}
+		if definition.ManagedInstallation {
+			repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
+			if !ok || definition.ID == "" {
+				return nil, errors.New("Connector Package credentials are unavailable")
+			}
+			material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
+			if err != nil {
+				return nil, err
+			}
+			plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
+			if err != nil {
+				return nil, err
+			}
+			if material.CredentialFormat == "access_token" || definition.AuthenticationDriver == "feishu" {
+				appID, appErr := executor.box.Decrypt(material.AppIDCiphertext, "feishu-cli-application:"+ownerID)
+				if appErr != nil {
+					clear(plaintext)
+					return nil, appErr
+				}
+				appSecret, appErr := executor.box.Decrypt(material.AppSecretCiphertext, "feishu-cli-application:"+ownerID)
+				if appErr != nil {
+					clear(plaintext)
+					clear(appID)
+					return nil, appErr
+				}
+				token := string(plaintext)
+				if material.CredentialFormat == "json" {
+					var credentials map[string]string
+					if jsonErr := json.Unmarshal(plaintext, &credentials); jsonErr != nil || credentials["access_token"] == "" {
+						clear(plaintext)
+						clear(appID)
+						clear(appSecret)
+						return nil, errors.New("Connector Package credentials are invalid")
+					}
+					token = credentials["access_token"]
+				}
+				environment := map[string]string{"LARKSUITE_CLI_APP_ID": string(appID), "LARKSUITE_CLI_APP_SECRET": string(appSecret), "LARKSUITE_CLI_USER_ACCESS_TOKEN": token, "LARKSUITE_CLI_BRAND": "feishu", "LARKSUITE_CLI_STRICT_MODE": string(identity)}
+				clear(plaintext)
+				clear(appID)
+				clear(appSecret)
+				return environment, nil
+			}
+			value := string(plaintext)
+			clear(plaintext)
+			return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
+		}
 		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
 			if definition.AuthenticationDriver == "connector_package" {
 				repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
 				if !ok || !definition.ManagedInstallation || definition.ID == "" {
 					return nil, errors.New("Connector Package credentials are unavailable")
 				}
-				ciphertext, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, string(identity))
+				material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
 				if err != nil {
 					return nil, err
 				}
-				plaintext, err := executor.box.Decrypt(ciphertext, "connector-authorization:"+ownerID)
+				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 				if err != nil {
 					return nil, err
 				}
@@ -1388,6 +1445,62 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			files[filepath.ToSlash(filepath.Join("skills", skill.ID, name))] = content
 		}
 	}
+	for _, connector := range job.Snapshot.CLIConnectors {
+		if connector.PackageObjectKey == "" {
+			if connector.AuthenticationDriver == "feishu" {
+				files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, "SKILL.md"))] = feishuCLISkill
+			}
+			continue
+		}
+		if len(connector.PackageSHA256) != 64 {
+			return nil, nil, nil, fmt.Errorf("Connector %q package digest is unavailable", connector.Name)
+		}
+		body, object, err := executor.objects.Get(ctx, connector.PackageObjectKey)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("load Connector %q Skill package: %w", connector.Name, err)
+		}
+		archive, readErr := io.ReadAll(io.LimitReader(body, 50<<20+1))
+		closeErr := body.Close()
+		if readErr != nil || closeErr != nil {
+			return nil, nil, nil, errors.Join(readErr, closeErr)
+		}
+		digest := sha256.Sum256(archive)
+		if len(archive) > 50<<20 || hex.EncodeToString(digest[:]) != connector.PackageSHA256 || object.SHA256 != connector.PackageSHA256 {
+			return nil, nil, nil, fmt.Errorf("Connector %q Skill package integrity check failed", connector.Name)
+		}
+		pkg, err := connectorpackage.Parse(archive)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is invalid: %w", connector.Name, err)
+		}
+		if pkg.CLI == nil {
+			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is not a CLI Connector", connector.Name)
+		}
+		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("open Connector %q Skill package: %w", connector.Name, err)
+		}
+		root := filepath.ToSlash(filepath.Join("connector-skills", connector.ID))
+		if len(pkg.Skills) > 1 {
+			index := []string{"# Connector Skills", "Read the relevant SKILL.md before invoking this Connector:"}
+			for _, skill := range pkg.Skills {
+				index = append(index, "- "+skill.Directory+"/SKILL.md")
+			}
+			files[root+"/SKILL.md"] = []byte(strings.Join(index, "\n") + "\n")
+		}
+		for _, entry := range reader.File {
+			if entry.FileInfo().IsDir() || !strings.HasPrefix(entry.Name, "skills/") {
+				continue
+			}
+			content, err := readZipFile(entry)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("read Connector %q Skill resource: %w", connector.Name, err)
+			}
+			files[root+"/"+entry.Name] = content
+			if len(pkg.Skills) == 1 && strings.HasPrefix(entry.Name, pkg.Skills[0].Directory+"/") {
+				files[root+"/"+strings.TrimPrefix(entry.Name, pkg.Skills[0].Directory+"/")] = content
+			}
+		}
+	}
 	return files, extensionVariables, redactValues, nil
 }
 
@@ -1627,7 +1740,15 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 	}
 	if len(job.Snapshot.CLIConnectors) > 0 {
 		commands := make([]string, 0)
+		feishuSkillLoaded := false
 		for _, connector := range job.Snapshot.CLIConnectors {
+			if connector.PackageObjectKey == "" && connector.AuthenticationDriver == "feishu" && !feishuSkillLoaded {
+				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow this procedure before sending a message):\n"+string(feishuCLISkill))
+				feishuSkillLoaded = true
+			}
+			if connector.PackageObjectKey != "" {
+				commands = append(commands, fmt.Sprintf("- %s: first read /run/agent-credentials/connector-skills/%s/SKILL.md and follow the relevant operation instructions", connector.Name, connector.ID))
+			}
 			var capabilities []cliconnector.Capability
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
@@ -1639,7 +1760,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors (copy the identity value literally from one of these reviewed agent-cli forms; append capability arguments after the shown prefix):\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors. For a Connector with a SKILL.md listed below, read it before the first command. Use the reviewed forms below, copying identity literally and appending operation arguments after the shown prefix. The Skill explains usage, while the broker enforces the command policy:\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

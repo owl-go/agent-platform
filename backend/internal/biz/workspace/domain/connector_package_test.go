@@ -5,6 +5,23 @@ import (
 	"time"
 )
 
+func TestConnectorPublicationTransitionsPreserveSource(t *testing.T) {
+	now := time.Now().UTC()
+	publication := ConnectorPublication{PackageSource: "feishu", Version: 0}
+	if err := publication.Publish("admin-1", "revision-1", now); err != nil {
+		t.Fatal(err)
+	}
+	if publication.State != ConnectorPublicationAvailable || publication.ActiveRevisionID != "revision-1" || publication.AdministratorID != "admin-1" || publication.Version != 1 || !publication.UpdatedAt.Equal(now) {
+		t.Fatalf("unexpected published projection: %#v", publication)
+	}
+	if err := publication.Disable("admin-2", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if publication.State != ConnectorPublicationDisabled || publication.PackageSource != "feishu" || publication.ActiveRevisionID != "revision-1" || publication.AdministratorID != "admin-2" || publication.Version != 2 {
+		t.Fatalf("unexpected disabled projection: %#v", publication)
+	}
+}
+
 func TestConnectorInstallationUpgradeFailureKeepsActiveRevisionAndAuthorization(t *testing.T) {
 	now := time.Date(2026, 9, 21, 0, 0, 0, 0, time.UTC)
 	installation := ConnectorInstallation{ID: "install-1", OwnerID: "user-1", PackageSource: "example", ActiveRevisionID: "rev-1", AuthorizationID: "auth-1", State: ConnectorInstallationActive}

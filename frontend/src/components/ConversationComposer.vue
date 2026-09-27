@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { ArrowUp, Check, ChevronLeft, ChevronRight, FilePlus2, FileText, Folder, Link, Plus, Search, Sparkles, Square, UserRound, Users, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
+import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorSetup, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
@@ -27,6 +27,8 @@ const uploaded = ref<Attachment[]>([]);
 const pending = ref<File[]>([]);
 const missingFiles = ref<string[]>([]);
 const experts = ref<Expert[]>([]), teams = ref<ExpertTeam[]>([]), skills = ref<Skill[]>([]), mcp = ref<MCPServer[]>([]), cli = ref<CLIConnectorDefinition[]>([]), enablements = ref<CLIConnectorEnablement[]>([]);
+const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
+const managedInstallations = ref<ConnectorInstallation[]>([]);
 const files = ref<ConversationFile[]>([]);
 const workspacePath = ref("");
 const menu = ref<"main" | "experts" | "skills" | "connectors" | "files" | "">("");
@@ -34,8 +36,11 @@ const query = ref("");
 const highlighted = ref(0);
 const loading = ref(true), updating = ref(false), sending = ref(false);
 const error = ref("");
-const cliAuthorizationPrompt = ref<{ definition: CLIConnectorDefinition; enablement: CLIConnectorEnablement; scopes: string[]; flow?: CLIConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
+const cliAuthorizationPrompt = ref<{ definition: CLIConnectorDefinition; enablement: CLIConnectorEnablement; scopes: string[]; flow?: CLIConnectorAuthorizationFlow; completed?: boolean; failed?: boolean; activation?: boolean }>();
 const cliAuthorizationBusy = ref(false);
+const cliActivationBusy = ref<string[]>([]);
+const pendingCLIActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean }>();
+const pendingManagedActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean; setup?: ConnectorSetup; flow?: ConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
 const owner = computed(() => auth?.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser.id : "");
 const storageKey = computed(() => owner.value ? conversationDraftKey(owner.value, props.scope) : "");
 const editorLocked = computed(() => props.disabled || sending.value || loading.value);
@@ -46,6 +51,9 @@ let caret: Range | undefined;
 let trigger: { node: Text; start: number; end: number } | undefined;
 let disposed = false;
 let cliAuthorizationPoll: ReturnType<typeof setTimeout> | undefined;
+let cliActivationPoll: ReturnType<typeof setTimeout> | undefined;
+let managedActivationPoll: ReturnType<typeof setTimeout> | undefined;
+let managedCompletionBusy = false;
 const tokens = new WeakMap<Node, Exclude<DraftPart, { kind: "text" }>>();
 
 const matches = (name: string) => name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase());
@@ -54,8 +62,8 @@ const filteredExperts = computed(() => experts.value.filter((item) => matches(`$
 const filteredTeams = computed(() => teams.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredFiles = computed(() => files.value.filter((item) => matches(`${item.name} ${item.path}`)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)));
 const connectorRows = computed(() => [
-  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, icon: item.icon, available: item.tested && !item.test_error })),
-  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, icon: item.icon, available: item.state === "available" && enablements.value.some((entry) => entry.definition_id === item.id && entry.state === "enabled") })),
+  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, icon: item.icon, available: item.tested && !item.test_error, active: item.tested && !item.test_error })),
+  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, icon: item.icon, available: item.state === "available" || (item.managed_installation && managedInstallation(item.id)?.state === "disabled"), active: cliActivationIsOn(item.id), definition: item })),
 ]);
 const visibleConnectors = computed(() => {
   const value = selection.value; if (!value) return [];
@@ -65,6 +73,27 @@ const visibleConnectors = computed(() => {
 });
 function isWorkspaceFile(file?: ConversationFile): boolean { return file?.kind === "workspace" || file?.kind === "directory"; }
 function connectorEnabled(key: string): boolean { return !!selection.value && visibleConnectors.value.some((item) => item.key === key) && !selection.value.disabled_connectors.includes(key); }
+function cliSelectionAvailable(id: string): boolean {
+  const definition = cli.value.find((item) => item.id === id);
+  if (!definition || definition.state !== "available") return false;
+  if (definition.managed_installation) {
+    const installation = managedInstallation(id);
+    return installation?.state === "active" && installation.authorized;
+  }
+  return cliEnablement(id)?.state === "enabled";
+}
+function selectionConnectorsAvailable(value: ConversationSelection): boolean {
+  return [...value.cli_connectors, ...value.inherited_cli_connectors].every((item) => value.disabled_connectors.includes(`cli:${item.id}`) || cliSelectionAvailable(item.id));
+}
+function recoveryInput(value: ConversationSelection): SelectionInput {
+  return {
+    previous_id: value.id,
+    skill_ids: value.skills.map((item) => item.id),
+    mcp_server_ids: value.mcp_servers.map((item) => item.id),
+    cli_connector_ids: value.cli_connectors.filter((item) => cliSelectionAvailable(item.id)).map((item) => item.id),
+    disabled_connectors: [...new Set([...value.disabled_connectors, ...value.inherited_cli_connectors.filter((item) => !cliSelectionAvailable(item.id)).map((item) => `cli:${item.id}`)])],
+  };
+}
 
 function persist() {
   if (storageKey.value) saveConversationDraft(storageKey.value, { parts: parts.value, selection: selection.value, attachments: uploaded.value, pendingFileNames: [...missingFiles.value, ...pending.value.map((file) => file.name)] });
@@ -134,6 +163,216 @@ async function toggleConnector(kind: "mcp" | "cli", id: string) {
   if (await changeSelection({ [field]: enabled ? ids : [...ids, id], disabled_connectors: enabled ? [...selection.value.disabled_connectors.filter((item) => item !== key), key] : selection.value.disabled_connectors.filter((item) => item !== key), refresh_ids: enabled ? [] : [key] })) await refreshRequestedCLIAuthorization();
 }
 
+function cliEnablement(definitionID: string) { return enablements.value.find((item) => item.definition_id === definitionID); }
+function cliActivationIsOn(definitionID: string) {
+  const definition = cli.value.find((item) => item.id === definitionID);
+  if (definition?.managed_installation) {
+    const installation = managedInstallation(definitionID);
+    if (installation?.state !== "active") return false;
+    return Boolean(installation.authorized || (pendingManagedActivation.value?.definition.id === definitionID && !pendingManagedActivation.value.failed));
+  }
+  const enablement = cliEnablement(definitionID);
+  if (enablement?.state === "waiting_for_user") return true;
+  if (enablement?.state !== "enabled") return false;
+  if (definition?.authentication_driver !== "feishu") return true;
+  if (cliAuthorizationPrompt.value?.definition.id === definitionID && cliAuthorizationPrompt.value.activation) return true;
+  const scopes = cliUserScopes(definition);
+  return (cliAuthorizations.value[enablement.id] ?? []).some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
+}
+function managedInstallation(id: string) { return managedInstallations.value.find((item) => item.id === id); }
+async function refreshManagedInstallations() {
+  const [installations, definitions] = await Promise.all([api.listConnectorInstallations(), api.listCLIConnectorDefinitions()]);
+  if (disposed) return;
+  managedInstallations.value = installations;
+  cli.value = definitions;
+}
+function scheduleManagedActivationPoll() {
+  if (managedActivationPoll) clearTimeout(managedActivationPoll);
+  managedActivationPoll = setTimeout(() => void completeManagedActivation(), 3000);
+}
+async function beginManagedAuthorization() {
+  const pending = pendingManagedActivation.value;
+  if (!pending || disposed) return;
+  const installation = managedInstallation(pending.definition.id);
+  if (!installation) throw new Error("Connector installation is unavailable");
+  const scopes = cliUserScopes(pending.definition);
+  const authorizations = await api.listConnectorAuthorizations(installation.id);
+  if (authorizations.some((item) => item.selected && item.state === "active" && scopes.every((scope) => item.scopes.includes(scope)))) {
+    await finishManagedActivation(pending);
+    return;
+  }
+  const flow = await api.beginConnectorAuthorizationFlow(installation.id, "user", scopes);
+  pending.flow = flow;
+  if (flow.action_url && pending.popup && !pending.popup.closed) pending.popup.location.href = flow.action_url;
+  if (flow.state === "waiting_for_user") scheduleManagedActivationPoll();
+  else if (flow.state === "completed") await finishManagedActivation(pending);
+  else pending.failed = true;
+}
+async function finishManagedActivation(pending: NonNullable<typeof pendingManagedActivation.value>) {
+  await refreshManagedInstallations();
+  pending.completed = true;
+  if (pending.selectAfter) await selectActivatedCLI(pending.definition.id);
+  closeBlankCLIWindow(pending.popup);
+}
+async function completeManagedActivation() {
+  const pending = pendingManagedActivation.value;
+  if (!pending || pending.failed || pending.completed || disposed || managedCompletionBusy) return;
+  managedCompletionBusy = true;
+  try {
+    if (pending.setup?.state === "waiting_for_user") {
+      pending.setup = await api.completeConnectorSetup(pending.setup.id);
+      if (pending.setup.state === "waiting_for_user") { scheduleManagedActivationPoll(); return; }
+      if (pending.setup.state === "invalid") { pending.failed = true; return; }
+    }
+    if (pending.setup?.state === "completed" && !pending.flow) { await beginManagedAuthorization(); return; }
+    if (pending.flow?.state === "waiting_for_user") {
+      pending.flow = await api.completeConnectorAuthorizationFlow(pending.flow.id);
+      if (pending.flow.state === "waiting_for_user") { scheduleManagedActivationPoll(); return; }
+      if (pending.flow.state === "invalid") { pending.failed = true; return; }
+    }
+    if (pending.flow?.state === "completed") await finishManagedActivation(pending);
+  } catch { scheduleManagedActivationPoll(); }
+  finally { managedCompletionBusy = false; }
+}
+async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
+  if (cliActivationBusy.value.includes(definition.id)) return;
+  cliActivationBusy.value.push(definition.id); error.value = "";
+  const popup = active && definition.authentication_driver === "feishu" ? openCLIWindow() : null;
+  try {
+    await refreshManagedInstallations();
+    let installation = managedInstallation(definition.id);
+    if (!installation) throw new Error("Connector installation is unavailable");
+    if (!active) {
+      if (connectorEnabled(`cli:${definition.id}`)) await toggleConnector("cli", definition.id);
+      await api.disableConnectorInstallation(installation.id, installation.version);
+      pendingManagedActivation.value = undefined;
+      if (managedActivationPoll) clearTimeout(managedActivationPoll);
+      await refreshManagedInstallations();
+      return;
+    }
+    if (installation.state !== "active") {
+      installation = await api.installPublishedConnector(installation.source);
+      await refreshManagedInstallations();
+    }
+    if (!installation.authorized) {
+      const authorizations = await api.listConnectorAuthorizations(installation.id);
+      const selected = authorizations.find((item) => item.selected && (item.state === "active" || item.state === "expired"));
+      if (selected) {
+        try {
+          await api.refreshConnectorAuthorization(installation.id, selected.id, selected.version);
+          await refreshManagedInstallations();
+          installation = managedInstallation(definition.id) ?? installation;
+        } catch { /* An unrefreshable grant continues through account authorization. */ }
+      }
+    }
+    if (installation.authorized) {
+      closeBlankCLIWindow(popup);
+      if (selectAfter) await selectActivatedCLI(installation.id);
+      return;
+    }
+    pendingManagedActivation.value = { definition, popup, selectAfter };
+    const setup = await api.beginConnectorSetup(installation.id);
+    pendingManagedActivation.value.setup = setup;
+    if (setup.state === "waiting_for_user") {
+      if (setup.action_url && popup && !popup.closed) popup.location.href = setup.action_url;
+      scheduleManagedActivationPoll();
+    } else if (setup.state === "completed") await beginManagedAuthorization();
+    else pendingManagedActivation.value.failed = true;
+  } catch { closeBlankCLIWindow(popup); pendingManagedActivation.value = undefined; error.value = t("composer.selectionFailed"); }
+  finally { cliActivationBusy.value = cliActivationBusy.value.filter((id) => id !== definition.id); }
+}
+function cliUserScopes(definition: CLIConnectorDefinition) {
+  return [...new Set((definition.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
+}
+function replaceCLIEnablement(value: CLIConnectorEnablement) {
+  enablements.value = [...enablements.value.filter((item) => item.definition_id !== value.definition_id), value];
+  if (value.state === "disabled") {
+    const { [value.id]: _removed, ...remaining } = cliAuthorizations.value;
+    cliAuthorizations.value = remaining;
+  }
+}
+async function selectActivatedCLI(definitionID: string) {
+  if (!selection.value || connectorEnabled(`cli:${definitionID}`)) return true;
+  const ids = selection.value.cli_connectors.map((item) => item.id).filter((id) => id !== definitionID);
+  return changeSelection({ cli_connector_ids: [...ids, definitionID], disabled_connectors: selection.value.disabled_connectors.filter((item) => item !== `cli:${definitionID}`), refresh_ids: [`cli:${definitionID}`] });
+}
+async function authorizeActivatedCLI(definition: CLIConnectorDefinition, enablement: CLIConnectorEnablement, popup: Window | null) {
+  const scopes = cliUserScopes(definition);
+  if (definition.authentication_driver !== "feishu") { closeBlankCLIWindow(popup); return; }
+  const authorizations = await api.listCLIConnectorAuthorizations(enablement.id);
+  cliAuthorizations.value = { ...cliAuthorizations.value, [enablement.id]: authorizations };
+  if (authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)))) { closeBlankCLIWindow(popup); return; }
+  const flow = await api.beginCLIConnectorAuthorization(enablement.id, "user", scopes);
+  cliAuthorizationPrompt.value = { definition, enablement, scopes, flow, activation: true };
+  if (popup && !popup.closed && flow.action_url) popup.location.href = flow.action_url;
+  scheduleCLIAuthorizationPoll();
+}
+async function finishCLIActivation(definition: CLIConnectorDefinition, enablement: CLIConnectorEnablement, popup: Window | null, selectAfter: boolean) {
+  replaceCLIEnablement(enablement);
+  if (selectAfter && !await selectActivatedCLI(definition.id)) { closeBlankCLIWindow(popup); return; }
+  await authorizeActivatedCLI(definition, enablement, popup);
+}
+function scheduleCLIActivationPoll() {
+  if (cliActivationPoll) clearTimeout(cliActivationPoll);
+  cliActivationPoll = setTimeout(() => void completeCLIActivation(), 3000);
+}
+async function completeCLIActivation() {
+  const pending = pendingCLIActivation.value;
+  const enablement = pending && cliEnablement(pending.definition.id);
+  if (!pending || !enablement || enablement.state !== "waiting_for_user" || disposed) return;
+  let completed: CLIConnectorEnablement;
+  try {
+    completed = await api.completeCLIConnectorEnablement(enablement.id);
+  } catch { scheduleCLIActivationPoll(); return; }
+  replaceCLIEnablement(completed);
+  if (completed.state === "waiting_for_user") { scheduleCLIActivationPoll(); return; }
+  pendingCLIActivation.value = undefined;
+  if (completed.state !== "enabled") { closeBlankCLIWindow(pending.popup); return; }
+  try { await finishCLIActivation(pending.definition, completed, pending.popup, pending.selectAfter); }
+  catch { closeBlankCLIWindow(pending.popup); error.value = t("composer.selectionFailed"); }
+}
+async function setCLIActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter = false) {
+  if (definition.managed_installation) { await setManagedActivation(definition, active, selectAfter); return; }
+  if (cliActivationBusy.value.includes(definition.id)) return;
+  cliActivationBusy.value.push(definition.id); error.value = "";
+  const popup = active && definition.authentication_driver === "feishu" ? openCLIWindow() : null;
+  try {
+    if (active) {
+      const enablement = await api.enableCLIConnector(definition.id);
+      replaceCLIEnablement(enablement);
+      if (enablement.state === "waiting_for_user") {
+        pendingCLIActivation.value = { definition, popup, selectAfter };
+        if (popup && !popup.closed && enablement.action_url) popup.location.href = enablement.action_url;
+        scheduleCLIActivationPoll();
+      } else if (enablement.state === "enabled") await finishCLIActivation(definition, enablement, popup, selectAfter);
+      else closeBlankCLIWindow(popup);
+    } else {
+      const enablement = cliEnablement(definition.id);
+      if (!enablement) return;
+      replaceCLIEnablement(await api.disableCLIConnector(definition.id, enablement.version));
+      if (pendingCLIActivation.value?.definition.id === definition.id) {
+        pendingCLIActivation.value = undefined;
+        if (cliActivationPoll) clearTimeout(cliActivationPoll);
+      }
+      if (connectorEnabled(`cli:${definition.id}`)) await toggleConnector("cli", definition.id);
+      if (cliAuthorizationPrompt.value?.definition.id === definition.id) cliAuthorizationPrompt.value = undefined;
+    }
+  } catch { closeBlankCLIWindow(popup); error.value = t("composer.selectionFailed"); }
+  finally { cliActivationBusy.value = cliActivationBusy.value.filter((id) => id !== definition.id); }
+}
+async function chooseConnector(item: (typeof connectorRows.value)[number]) {
+  if (item.kind === "cli" && !item.active) { await setCLIActivation(item.definition, true, true); return; }
+  await toggleConnector(item.kind, item.id);
+}
+async function setVisibleConnectorActive(kind: "mcp" | "cli", id: string, active: boolean) {
+  if (kind === "mcp") {
+    if (connectorEnabled(`mcp:${id}`) !== active) await toggleConnector(kind, id);
+    return;
+  }
+  const definition = cli.value.find((item) => item.id === id);
+  if (definition) await setCLIActivation(definition, active, active);
+}
+
 async function refreshRequestedCLIAuthorization() {
   const request = props.authorizationRequest;
   if (!selection.value || !request || disposed || !connectorEnabled(`cli:${request.connectorID}`)) {
@@ -156,6 +395,7 @@ async function refreshRequestedCLIAuthorization() {
   try { authorizations = await api.listCLIConnectorAuthorizations(enablement.id); }
   catch { return; }
   if (props.authorizationRequest !== request || disposed) return;
+  cliAuthorizations.value = { ...cliAuthorizations.value, [enablement.id]: authorizations };
   const authorized = authorizations.some((item) => item.state === "active" && scopes.every((scope) => (item.scopes ?? []).includes(scope)));
   if (authorized) {
     cliAuthorizationPrompt.value = undefined;
@@ -200,14 +440,17 @@ async function completeSelectedCLIAuthorization() {
   try {
     const flow = await api.completeCLIConnectorAuthorization(prompt.flow.id);
     prompt.flow = flow;
-    if (flow.state === "completed") prompt.completed = true;
+    if (flow.state === "completed") {
+      prompt.completed = true;
+      cliAuthorizations.value = { ...cliAuthorizations.value, [prompt.enablement.id]: await api.listCLIConnectorAuthorizations(prompt.enablement.id) };
+    }
     else if (flow.state === "invalid") prompt.failed = true;
     else scheduleCLIAuthorizationPoll();
   } catch { scheduleCLIAuthorizationPoll(); }
   finally { cliAuthorizationBusy.value = false; }
 }
 function handleAuthorizationReturn() {
-  if (document.visibilityState === "visible") void completeSelectedCLIAuthorization();
+  if (document.visibilityState === "visible") { void completeCLIActivation(); void completeSelectedCLIAuthorization(); void completeManagedActivation(); }
 }
 async function loadFiles(path = "") {
   try { files.value = await api.listConversationFiles(props.scope, path); workspacePath.value = path; }
@@ -291,10 +534,25 @@ function outside(event: PointerEvent) { if (!root.value?.contains(event.target a
 async function initialize() {
   loading.value = true; error.value = "";
   try {
-    const results = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listSkills(), api.listMCPServers(), api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements()]);
+    const results = await Promise.all([api.listExperts(), api.listExpertTeams(), api.listSkills(), api.listMCPServers(), api.listCLIConnectorDefinitions(), api.listCLIConnectorEnablements(), api.listConnectorInstallations?.() ?? Promise.resolve([])]);
     if (disposed) return;
-    [experts.value, teams.value, skills.value, mcp.value, cli.value, enablements.value] = results;
-    if (!selection.value) selection.value = await api.getConversationSelection(props.scope);
+    [experts.value, teams.value, skills.value, mcp.value, cli.value, enablements.value, managedInstallations.value] = results;
+    const authorizations = await Promise.all(enablements.value.filter((item) => item.state === "enabled" && cli.value.some((definition) => definition.id === item.definition_id && definition.authentication_driver === "feishu")).map(async (item) => [item.id, await api.listCLIConnectorAuthorizations(item.id)] as const));
+    if (disposed) return;
+    cliAuthorizations.value = Object.fromEntries(authorizations);
+    const current = await api.getConversationSelection(props.scope);
+    if (disposed) return;
+    const restored = selection.value;
+    if (!restored || restored.id === current.id) selection.value = current;
+    else if (selectionConnectorsAvailable(restored)) {
+      try { selection.value = await api.resolveConversationSelection(props.scope, inputSelection({})); }
+      catch { selection.value = current; error.value = t("composer.selectionRecovered"); }
+    } else { selection.value = current; error.value = t("composer.selectionRecovered"); }
+    if (selection.value && !selectionConnectorsAvailable(selection.value)) {
+      try { selection.value = await api.resolveConversationSelection(props.scope, recoveryInput(selection.value)); }
+      catch { error.value = t("composer.selectionFailed"); }
+      if (!error.value) error.value = t("composer.selectionRecovered");
+    }
     if (props.initialSkillId) {
       const skill = skills.value.find((item) => item.id === props.initialSkillId);
       if (selection.value.skills.some((item) => item.id === props.initialSkillId)) emit("launchConsumed");
@@ -319,19 +577,28 @@ watch(selection, (value) => { if (value) emit("selectionChanged", value); });
 watch(() => props.authorizationRequest, () => void refreshRequestedCLIAuthorization(), { deep: true });
 watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearSessionApproval(String(previous)); placeSessionApproval(current ? String(current) : undefined); });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
-onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
+onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
 </script>
 
 <template>
   <footer ref="root" class="composer resource-composer" :aria-busy="sending || updating || loading">
     <div id="session-command-approval-slot" class="composer-approval-slot"></div>
+    <section v-if="pendingCLIActivation && cliEnablement(pendingCLIActivation.definition.id)?.state === 'waiting_for_user'" class="composer-authorization" role="status" aria-live="polite">
+      <div><strong>{{ t('composer.activationRequired', { name: pendingCLIActivation.definition.name }) }}</strong><small>{{ t('composer.activationHint') }}</small></div>
+      <a :href="cliEnablement(pendingCLIActivation.definition.id)?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.continueSetup') }}</a>
+    </section>
+    <section v-if="pendingManagedActivation" class="composer-authorization" role="status" aria-live="polite">
+      <div><strong>{{ pendingManagedActivation.completed ? t('composer.activationAuthorizationCompleted') : t('composer.activationRequired', { name: pendingManagedActivation.definition.name }) }}</strong><small>{{ pendingManagedActivation.completed ? t('composer.activationAuthorizationReady') : pendingManagedActivation.flow ? t('composer.activationAuthorizationHint') : t('composer.activationHint') }}</small></div>
+      <a v-if="!pendingManagedActivation.completed && (pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url)" :href="pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url" target="_blank" rel="noopener noreferrer">{{ t(pendingManagedActivation.flow ? 'resources.authorizeNow' : 'resources.continueSetup') }}</a>
+      <small v-if="pendingManagedActivation.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
+    </section>
     <section v-if="cliAuthorizationPrompt" class="composer-authorization" role="status" aria-live="polite">
-      <div><strong>{{ cliAuthorizationPrompt.completed ? t('composer.authorizationCompleted') : t('composer.authorizationRequired', { name: cliAuthorizationPrompt.definition.name }) }}</strong><small>{{ cliAuthorizationPrompt.completed ? t('composer.authorizationContinue') : t('composer.authorizationHint') }}</small></div>
+      <div><strong>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationCompleted' : 'composer.authorizationCompleted') : t('composer.authorizationRequired', { name: cliAuthorizationPrompt.definition.name }) }}</strong><small>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationReady' : 'composer.authorizationContinue') : t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationHint' : 'composer.authorizationHint') }}</small></div>
       <el-button v-if="!cliAuthorizationPrompt.completed && !cliAuthorizationPrompt.flow?.action_url" type="primary" :loading="cliAuthorizationBusy" @click="beginSelectedCLIAuthorization">{{ t('resources.authorizeNow') }}</el-button>
       <a v-else-if="!cliAuthorizationPrompt.completed" :href="cliAuthorizationPrompt.flow?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a>
       <small v-if="cliAuthorizationPrompt.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
     </section>
-    <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>
+    <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button v-if="error === t('composer.selectionRecovered')" text @click="openMenu('connectors')">{{ t('composer.connectors') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>
     <div v-if="missingFiles.length" class="composer-notice">{{ t('composer.reselectFiles', { names: missingFiles.join(', ') }) }}<el-button text @click="missingFiles = []; persist()">{{ t('common.close') }}</el-button></div>
     <div v-if="pending.length || uploaded.length" class="pending-attachments">
       <span v-for="(file, index) in pending" :key="`local-${index}`">{{ file.name }}<button type="button" :disabled="locked" :aria-label="t('sessions.removeAttachment', { name: file.name })" @click="pending.splice(index, 1); persist()"><X /></button></span>
@@ -343,7 +610,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
       <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
         <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
-        <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="connectorEnabled(item.key)" :disabled="locked" :aria-label="item.name" @change="toggleConnector(item.kind, item.id)" /></div>
+        <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="item.kind === 'cli' ? cliActivationIsOn(item.id) : connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
         <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
       </el-popover>
       <span class="composer-spacer"></span>
@@ -367,7 +634,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
             <small>{{ t('experts.teams') }}</small><button v-for="item in filteredTeams" :key="item.id" type="button" :disabled="locked || !item.available" @click="chooseExpert('team', item.id)"><Users /><span>{{ item.name }}<small>{{ item.introduction }}</small></span><Check v-if="selection?.expert_team_id === item.id" /></button>
           </template>
           <template v-if="menu === 'skills'"><button v-for="(item, index) in filteredSkills" :key="item.id" type="button" role="option" :aria-selected="highlighted === index" :class="{ highlighted: highlighted === index }" :disabled="locked" @click="chooseSkill(item)"><Sparkles /><span>{{ item.name }}</span><Check v-if="parts.some((part) => part.kind === 'skill' && part.id === item.id)" /></button><p v-if="!filteredSkills.length">{{ t('composer.empty') }}</p></template>
-          <template v-if="menu === 'connectors'"><button v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" type="button" :disabled="locked || !item.available" @click="toggleConnector(item.kind, item.id)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button></template>
+          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t('composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
           <template v-if="menu === 'files'">
             <button type="button" @click="fileInput?.click()"><FilePlus2 />{{ t('composer.localFiles') }}</button>
             <button v-if="workspacePath" type="button" @click="loadFiles(workspacePath.split('/').slice(0, -1).join('/'))"><Folder />{{ t('composer.parentFolder') }}</button>

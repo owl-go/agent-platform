@@ -29,7 +29,7 @@ export interface ConversationFile { kind: FileReference["kind"] | "directory"; i
 export interface ConversationInput { selection_id?: string; file_references?: FileReference[] }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
-export interface ResourceCreationAction { id: string; kind: "skill" | "expert"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
+export interface ResourceCreationAction { id: string; kind: "skill" | "expert" | "connector"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
 export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction }
 export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; resource_action?: ResourceCreationAction }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
@@ -41,6 +41,8 @@ export interface KnowledgeBase { id: string; owner_id: string; name: string; des
 export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
 export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
+export interface KnowledgeSearchResult { document_id: string; revision_id: string; document_name: string; category_name?: string; text: string; relevance: number }
+export interface KnowledgeSearchResponse { index_ready: boolean; items: KnowledgeSearchResult[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
@@ -68,6 +70,10 @@ export interface AssistantShareConfiguration { enabled: boolean; token?: string;
 export interface SmartAssistant { id: string; name: string; icon: string; description?: string; introduction: string; scenario: string; prompt?: string; preprocess_prompt?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
 export interface SmartAssistantInput { name: string; icon?: string; description?: string; introduction?: string; scenario?: string; prompt?: string; preprocess_prompt?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
+export interface AssistantConversation { id: string; assistant_id: string; assistant_name: string; welcome: string; created_at: string; updated_at: string }
+export interface AssistantTurn { id: string; conversation_id: string; turn_number: number; question: string; answer: string; source: string; faq_id?: string; state: "generating" | "completed" | "failed" | "cancelled"; input_tokens: number; output_tokens: number; created_at: string; updated_at: string; completed_at?: string }
+export interface AssistantConversationDetail { conversation: AssistantConversation; turns: AssistantTurn[]; faqs: SmartAssistantFAQ[] }
+export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; message: string };
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "processing" | "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
 export interface EmbeddingConfiguration { endpoint: string; model: string; dimensions: number; api_key_configured: boolean; enabled: boolean; version: number; updated_at: string }
@@ -80,7 +86,12 @@ export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: s
 export interface CLIConnectorDefinitionInput { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_package: string; npm_version: string; archive?: string; npm_integrity?: string; executable?: string; authentication_driver?: "none" | "feishu" | "connector_package"; capabilities?: CLICapability[]; supported_architectures?: Array<"linux-amd64" | "linux-arm64">; recommended_skills?: CLIRecommendedSkill[]; recommended_skill_ids?: string[] }
 export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { npm_integrity: string; executable: string; authentication_driver: "none" | "feishu" | "connector_package"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skills: CLIRecommendedSkill[]; recommended_skill_ids: string[]; id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[]; managed_installation?: boolean; managed_authorized?: boolean }
 export interface CLIConnectorHealth { definition_id: string; definition_name: string; definition_state: CLIConnectorDefinition["state"]; enablement_count: number; enabled_count: number; waiting_for_user_count: number; active_authorization_count: number; attention_authorization_count: number }
-export interface ConnectorInstallation { id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number }
+export interface ConnectorRevision { id: string; source: string; package_version: string; mode: "mcp" | "cli"; sha256: string; name: string; description: string; icon: string; authentication_driver: string; bundle_sha256?: string; runtime_digests: string[]; conformance_available: boolean; required_scopes: string[] }
+export interface ConnectorPublication { source: string; active_revision_id: string; state: "available" | "disabled"; version: number; revision: ConnectorRevision }
+export interface ConnectorAuthorization { id: string; installation_id: string; identity_ref: string; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "expired" | "disconnected" | "revoked"; expires_at?: string; version: number; selected: boolean }
+export interface ConnectorSetup { id: string; installation_id: string; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; provider_name?: string; developer_console_url?: string }
+export interface ConnectorAuthorizationFlow { id: string; installation_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: ConnectorAuthorization }
+export interface ConnectorInstallation { id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number; package_version: string; name: string; description: string; authentication_driver: string; selected_authorization_id?: string; upgrade_available: boolean }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
@@ -187,6 +198,7 @@ export interface PlatformApi {
   deleteKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeCategory(knowledgeBaseID: string, categoryID: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeDocuments(id: string, signal?: AbortSignal): Promise<KnowledgeDocument[]>;
+  searchKnowledgeBase(id: string, query: string, signal?: AbortSignal): Promise<KnowledgeSearchResponse>;
   uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
@@ -235,6 +247,11 @@ export interface PlatformApi {
   deleteAssistantFAQ(assistantID: string, id: string, signal?: AbortSignal): Promise<void>;
   regenerateAssistantShareToken(id: string, version: number, signal?: AbortSignal): Promise<{ token: string; assistant: SmartAssistant }>;
   createAssistantSession(id: string, signal?: AbortSignal): Promise<Session>;
+  createAssistantConversation(id: string, signal?: AbortSignal): Promise<AssistantConversation>;
+  listAssistantConversations(id: string, signal?: AbortSignal): Promise<AssistantConversation[]>;
+  getAssistantConversation(assistantID: string, conversationID: string, signal?: AbortSignal): Promise<AssistantConversationDetail>;
+  streamAssistantTurn(assistantID: string, conversationID: string, question: string, faqID: string | undefined, onEvent: (event: AssistantStreamEvent) => void, signal?: AbortSignal): Promise<void>;
+  cancelAssistantTurn(assistantID: string, conversationID: string, turnID: string, signal?: AbortSignal): Promise<void>;
   listApplicationKnowledgeBases(signal?: AbortSignal): Promise<ApplicationKnowledgeBase[]>;
   createApplicationKnowledgeBase(input: { name: string; description?: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeBase>;
   listApplicationKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument[]>;
@@ -256,6 +273,17 @@ export interface PlatformApi {
   deleteSkill(id: string, confirmationToken: string, signal?: AbortSignal): Promise<void>;
   listCLIConnectorDefinitions(signal?: AbortSignal): Promise<CLIConnectorDefinition[]>;
   listConnectorInstallations(signal?: AbortSignal): Promise<ConnectorInstallation[]>;
+  listConnectorPublications(signal?: AbortSignal): Promise<ConnectorPublication[]>;
+  installPublishedConnector(source: string, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  upgradeConnectorInstallation(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  listConnectorAuthorizations(id: string, signal?: AbortSignal): Promise<ConnectorAuthorization[]>;
+  selectConnectorAuthorization(installationID: string, authorizationID: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
+  refreshConnectorAuthorization(installationID: string, authorizationID: string, version: number, signal?: AbortSignal): Promise<ConnectorAuthorization>;
+  disconnectPublishedConnectorAuthorization(id: string, signal?: AbortSignal): Promise<ConnectorAuthorization>;
+  beginConnectorSetup(id: string, signal?: AbortSignal): Promise<ConnectorSetup>;
+  completeConnectorSetup(flowID: string, signal?: AbortSignal): Promise<ConnectorSetup>;
+  beginConnectorAuthorizationFlow(id: string, identity: "user", scopes: string[], signal?: AbortSignal): Promise<ConnectorAuthorizationFlow>;
+  completeConnectorAuthorizationFlow(flowID: string, signal?: AbortSignal): Promise<ConnectorAuthorizationFlow>;
   uploadConnectorPackage(archive: File, signal?: AbortSignal): Promise<ConnectorInstallation>;
   createConnectorPackage(input: { source: string; version: string; type: "mcp" | "cli"; name: string; description: string; auth_mode: "none" | "oauth" | "cli"; mcp_json?: string; cli_json?: string; skill_name: string; skill_markdown: string }, signal?: AbortSignal): Promise<ConnectorInstallation>;
   disableConnectorInstallation(id: string, version: number, signal?: AbortSignal): Promise<ConnectorInstallation>;
@@ -269,6 +297,7 @@ export interface PlatformApi {
   disableCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorDefinition>;
   deleteCLIConnectorDefinition(id: string, version: number, signal?: AbortSignal): Promise<void>;
   enableCLIConnector(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
+  disableCLIConnector(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   completeCLIConnectorEnablement(id: string, signal?: AbortSignal): Promise<CLIConnectorEnablement>;
   listCLIConnectorEnablements(signal?: AbortSignal): Promise<CLIConnectorEnablement[]>;
   beginCLIConnectorAuthorization(enablementID: string, identity: "user", scopes: string[], signal?: AbortSignal): Promise<CLIConnectorAuthorizationFlow>;
@@ -504,6 +533,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteKnowledgeCategory(knowledgeBaseID, categoryID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}`, signal); },
     async restoreKnowledgeCategory(knowledgeBaseID, categoryID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseID)}/categories/${encodeURIComponent(categoryID)}/restore`, json("POST", {}, signal)); },
     async listKnowledgeDocuments(id, signal) { return (await call<{ items: KnowledgeDocument[] }>(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents`, { signal })).items ?? []; },
+    searchKnowledgeBase(id, query, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/search?q=${encodeURIComponent(query)}`, { signal }); },
     async uploadKnowledgeDocument(id, file, categoryID, signal) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
@@ -586,6 +616,47 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteAssistantFAQ(assistantID, id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, signal); },
     regenerateAssistantShareToken(id, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal)); },
     createAssistantSession(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/sessions`, json("POST", {}, signal)); },
+    createAssistantConversation(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/conversations`, json("POST", {}, signal)); },
+    async listAssistantConversations(id, signal) { return (await call<{ items: AssistantConversation[] }>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/conversations`, { signal })).items ?? []; },
+    getAssistantConversation(assistantID, conversationID, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/conversations/${encodeURIComponent(conversationID)}`, { signal }); },
+    async streamAssistantTurn(assistantID, conversationID, question, faqID, onEvent, signal) {
+      const token = getAccessToken();
+      if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
+      const path = `/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/conversations/${encodeURIComponent(conversationID)}/turns`;
+      const response = await fetch(path, { method: "POST", signal, headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream", "Content-Type": "application/json" }, body: JSON.stringify({ question, faq_id: faqID || undefined }) });
+      if (!response.ok || !response.body) throw new ApiError(response.status === 409 ? "conflict" : response.status === 422 ? "validation" : "unknown", response.status, "assistant_stream_failed");
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      let pending = "";
+      let completed = false;
+      const handleBlock = (block: string) => {
+        const fields = Object.fromEntries(block.split("\n").filter((line) => line.includes(":") && !line.startsWith(":"))
+          .map((line) => { const colon = line.indexOf(":"); return [line.slice(0, colon), line.slice(colon + 1).trimStart()]; }));
+        if (!fields.event || !fields.data) return;
+        let data: Record<string, unknown>;
+        try { data = JSON.parse(fields.data) as Record<string, unknown>; }
+        catch { throw new ApiError("unknown", 500, "assistant_stream_invalid"); }
+        if (fields.event === "thinking") onEvent({ type: "thinking", turn_id: String(data.turn_id), message: String(data.message) });
+        if (fields.event === "delta") onEvent({ type: "delta", turn_id: String(data.turn_id), text: String(data.text) });
+        if (fields.event === "done") { completed = true; onEvent({ type: "done", turn: data as unknown as AssistantTurn }); }
+        if (fields.event === "error") onEvent({ type: "error", message: String(data.message) });
+      };
+      while (true) {
+        const { value, done } = await reader.read();
+        pending = (pending + (value ?? "")).replace(/\r\n/g, "\n");
+        let boundary = pending.indexOf("\n\n");
+        while (boundary >= 0) {
+          handleBlock(pending.slice(0, boundary));
+          pending = pending.slice(boundary + 2);
+          boundary = pending.indexOf("\n\n");
+        }
+        if (done) {
+          if (pending.trim()) handleBlock(pending);
+          if (!completed) throw new ApiError("unknown", 502, "assistant_stream_interrupted");
+          return;
+        }
+      }
+    },
+    async cancelAssistantTurn(assistantID, conversationID, turnID, signal) { await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/conversations/${encodeURIComponent(conversationID)}/turns/${encodeURIComponent(turnID)}/cancel`, json("POST", {}, signal)); },
     async listApplicationKnowledgeBases(signal) { return await call<ApplicationKnowledgeBase[]>("/api/v1/ai-apps/knowledge-bases", { signal }); },
     createApplicationKnowledgeBase(input, signal) { return call("/api/v1/ai-apps/knowledge-bases", json("POST", input, signal)); },
     async listApplicationKnowledgeDocuments(baseID, signal) { return await call<ApplicationKnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },
@@ -610,6 +681,17 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     deleteSkill(id, confirmationToken, signal) { return remove(`/api/v1/skills/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listCLIConnectorDefinitions(signal) { return (await call<{ items: CLIConnectorDefinition[] }>("/api/v1/connectors/cli", { signal })).items ?? []; },
     async listConnectorInstallations(signal) { return (await call<{ items: ConnectorInstallation[] }>("/api/v1/connectors", { signal })).items ?? []; },
+    async listConnectorPublications(signal) { return (await call<{ items: ConnectorPublication[] }>("/api/v1/connectors/catalog", { signal })).items ?? []; },
+    installPublishedConnector(source, signal) { return call(`/api/v1/connectors/catalog/${encodeURIComponent(source)}/install`, json("POST", {}, signal)); },
+    upgradeConnectorInstallation(id, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/upgrade`, json("POST", { expected_version: version }, signal)); },
+    async listConnectorAuthorizations(id, signal) { return (await call<{ items: ConnectorAuthorization[] }>(`/api/v1/connectors/${encodeURIComponent(id)}/authorizations`, { signal })).items ?? []; },
+    selectConnectorAuthorization(installationID, authorizationID, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(installationID)}/authorizations/${encodeURIComponent(authorizationID)}/select`, json("POST", { expected_version: version }, signal)); },
+    refreshConnectorAuthorization(installationID, authorizationID, version, signal) { return call(`/api/v1/connectors/${encodeURIComponent(installationID)}/authorizations/${encodeURIComponent(authorizationID)}/refresh`, json("POST", { expected_version: version }, signal)); },
+    disconnectPublishedConnectorAuthorization(id, signal) { return call(`/api/v1/connectors/authorizations/${encodeURIComponent(id)}/disconnect`, json("POST", {}, signal)); },
+    beginConnectorSetup(id, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/setup`, json("POST", {}, signal)); },
+    completeConnectorSetup(flowID, signal) { return call(`/api/v1/connectors/setup/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
+    beginConnectorAuthorizationFlow(id, identity, scopes, signal) { return call(`/api/v1/connectors/${encodeURIComponent(id)}/authorization-flows`, json("POST", { identity, scopes }, signal)); },
+    completeConnectorAuthorizationFlow(flowID, signal) { return call(`/api/v1/connectors/authorization-flows/${encodeURIComponent(flowID)}/complete`, json("POST", {}, signal)); },
     async uploadConnectorPackage(archive, signal) {
       const bytes = new Uint8Array(await archive.arrayBuffer());
       let binary = "";
@@ -634,6 +716,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     disableCLIConnectorDefinition(id, version, signal) { return call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
     async deleteCLIConnectorDefinition(id, version, signal) { await call(`/api/v1/admin/connectors/cli/${encodeURIComponent(id)}?expected_version=${version}`, { method: "DELETE", signal }); },
     enableCLIConnector(id, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/enable`, json("POST", {}, signal)); },
+    disableCLIConnector(id, version, signal) { return call(`/api/v1/connectors/cli/${encodeURIComponent(id)}/disable`, json("POST", { expected_version: version }, signal)); },
     completeCLIConnectorEnablement(id, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(id)}/complete`, json("POST", {}, signal)); },
     async listCLIConnectorEnablements(signal) { return (await call<{ items: CLIConnectorEnablement[] }>("/api/v1/connectors/cli/enablements", { signal })).items ?? []; },
     beginCLIConnectorAuthorization(enablementID, identity, scopes, signal) { return call(`/api/v1/connectors/cli/enablements/${encodeURIComponent(enablementID)}/authorizations`, json("POST", { identity, scopes }, signal)); },

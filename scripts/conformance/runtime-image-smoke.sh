@@ -6,26 +6,31 @@ registry="${RUNTIME_IMAGE_REGISTRY:-agent-platform}"
 check_version() {
   local runtime="$1"
   local version="$2"
+  local image_tag="${RUNTIME_IMAGE_TAG_OVERRIDE:-$version}"
   local output
-  output="$(docker run --rm --network none "${registry}/${runtime}:${version}" --version)"
+  output="$(docker run --rm --network none "${registry}/${runtime}:${image_tag}" --version)"
   if [[ "${output}" != *"${version}"* ]]; then
     echo "${runtime} version mismatch: ${output}" >&2
     exit 1
   fi
-  uid="$(docker run --rm --network none --entrypoint id "${registry}/${runtime}:${version}" -u)"
+  uid="$(docker run --rm --network none --entrypoint id "${registry}/${runtime}:${image_tag}" -u)"
   if [[ "${uid}" == "0" ]]; then
     echo "${runtime} image runs as root" >&2
     exit 1
   fi
   docker run --rm --network none --mount type=volume,dst=/workspace \
-    --entrypoint sh "${registry}/${runtime}:${version}" -ceu '
+    --entrypoint sh "${registry}/${runtime}:${image_tag}" -ceu '
       test "$(id -u)" = "65532"
       test -w /workspace
       test -x /usr/local/bin/agent-cli
-      if agent-cli --connector test --capability test --identity user -- test >/dev/null 2>&1; then
+      if output="$(AGENT_PLATFORM_CLI_SOCKET=/tmp/agent-cli-protocol-smoke.sock agent-cli --connector test --capability test --identity user -- test 2>&1)"; then
         echo "agent-cli must fail closed without a broker socket" >&2
         exit 1
       fi
+      case "$output" in
+        *"connect ENOENT"*) ;;
+        *) echo "agent-cli does not accept the current broker command protocol: $output" >&2; exit 1 ;;
+      esac
       touch /workspace/runtime-write-probe
     '
 }
