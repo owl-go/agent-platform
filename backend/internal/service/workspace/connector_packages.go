@@ -1026,12 +1026,16 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
 	if policy.CLI != nil {
 		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
-		seenScopes := map[string]struct{}{}
-		for _, capability := range policy.CLI.Capabilities {
-			for _, scope := range capability.Scopes {
-				if _, exists := seenScopes[scope]; !exists {
-					seenScopes[scope] = struct{}{}
-					response.RequiredScopes = append(response.RequiredScopes, scope)
+		if len(policy.CLI.ActivationScopes) > 0 {
+			response.RequiredScopes = append(response.RequiredScopes, policy.CLI.ActivationScopes...)
+		} else {
+			seenScopes := map[string]struct{}{}
+			for _, capability := range policy.CLI.Capabilities {
+				for _, scope := range capability.Scopes {
+					if _, exists := seenScopes[scope]; !exists {
+						seenScopes[scope] = struct{}{}
+						response.RequiredScopes = append(response.RequiredScopes, scope)
+					}
 				}
 			}
 		}

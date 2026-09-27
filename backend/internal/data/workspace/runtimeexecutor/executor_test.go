@@ -558,6 +558,22 @@ func TestSelectedFeishuConnectorProvidesSkillBeforeCLIUse(t *testing.T) {
 	}
 }
 
+func TestManagedFeishuLargeCatalogUsesCompactSkillInstruction(t *testing.T) {
+	capabilities := make([]cliconnector.Capability, 41)
+	for i := range capabilities {
+		capabilities[i] = cliconnector.Capability{ID: fmt.Sprintf("command_%d", i), ArgvPrefix: []string{"docs", "+create"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}
+	}
+	encoded, err := json.Marshal(capabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "feishu-1", Name: "Feishu", AuthenticationDriver: "feishu", PackageObjectKey: "connectors/feishu/package.zip", Capabilities: encoded}}}}
+	instruction := buildInstruction(job, nil)
+	if !strings.Contains(instruction, "capabilities.json") || !strings.Contains(instruction, "SKILL.md") || strings.Contains(instruction, "command_40") {
+		t.Fatalf("managed Feishu instruction is not compact: %q", instruction)
+	}
+}
+
 func TestSelectedManagedCLIConnectorMountsFrozenPackageSkills(t *testing.T) {
 	var archive bytes.Buffer
 	writer := zip.NewWriter(&archive)

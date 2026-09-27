@@ -8,10 +8,10 @@ author: Agent Workspace
 
 # Feishu CLI in Agent Workspace
 
-This Skill is the entry point for the complete **documented** `@larksuite/cli@{{VERSION}}` feature set. Its pinned official references are under `references/`. They explain Feishu products and command syntax; the current execution instruction and `cli.json` are the source of truth for what this Connector revision may execute.
+This Skill routes the reviewed User shortcuts of `@larksuite/cli@{{VERSION}}`. Its pinned official references are under `references/`, and the exact reviewed command policy is in [capabilities.json](capabilities.json). The references explain Feishu products and syntax; they do not grant execution authority. Raw `lark-cli api` calls and Bot-only shortcuts are outside this revision.
 
 1. Match the user's intent to one domain below. Read its `SKILL.md` and the relevant linked reference before choosing arguments. Read [shared CLI conventions](references/lark-shared/SKILL.md) for output and parameter conventions. The platform, rather than the CLI's interactive instructions, handles application setup, login, OAuth, and approval.
-2. Find an exact capability in the current execution instruction whose argv prefix matches the chosen command. Copy the conversation's Connector ID and invoke only `agent-cli --connector <connector-id> --capability <capability-id> --identity <reviewed-identity> [--target <target>] -- <reviewed-prefix> <documented-arguments>`. Pass user text as quoted literal arguments; never construct an unreviewed `lark-cli` or raw API call. A domain's presence in this index does not grant its commands.
+2. Find the exact command in `capabilities.json` by its `argv_prefix` before invoking it. Read only the matching catalog entry instead of loading all entries. Copy its `id` and the conversation's Connector ID, then invoke only `agent-cli --connector <connector-id> --capability <capability-id> --identity user [--target <meaningful-target>] -- <reviewed-prefix> <documented-arguments>`. A high-risk command always needs a meaningful `--target` (for creation, use the intended title). Pass user text as quoted literal arguments; never construct an unreviewed `lark-cli` or raw API call. A domain's presence in this index does not grant its commands.
 3. If no matching capability exists, say that the upstream CLI documents the operation but this Connector revision has not made it available. If a scope is missing, use the conversation's authorization action. For high-risk writes, wait for the platform's one-use approval. Report success only from a successful CLI result; after an uncertain write, use the command's documented idempotency mechanism or inspect state before retrying.
 
 ## Official CLI domain index
@@ -46,7 +46,21 @@ This Skill is the entry point for the complete **documented** `@larksuite/cli@{{
 | Meeting summary workflow | [Meeting Summary](references/lark-workflow-meeting-summary/SKILL.md) |
 | Standup report workflow | [Standup Report](references/lark-workflow-standup-report/SKILL.md) |
 
-The upstream references describe more operations than this Connector currently reviews. For every operation, the exact capability check in step 2 decides whether the agent may proceed. The quick paths below cover common approved commands without an extra documentation lookup.
+The upstream references can describe Bot-only shortcuts and raw OpenAPI calls that this revision does not review. For every operation, the exact catalog check in step 2 decides whether the agent may proceed. The quick paths below cover common approved commands without an extra documentation lookup.
+
+## Create a cloud document
+
+1. Read [the document Skill](references/lark-doc/SKILL.md), then [the creation workflow](references/lark-doc/references/lark-doc-create-workflow.md) and [the create command](references/lark-doc/references/lark-doc-create.md). For XML content, also read [the XML format reference](references/lark-doc/references/lark-doc-xml.md). Do not infer that a documented command is unavailable without checking `docs_create` in `capabilities.json`.
+2. Prepare the document content in the Workspace as a relative file, such as `./draft.xml`, following the referenced format. Create it with:
+
+   `agent-cli --connector <connector-id> --capability docs_create --identity user --target '<document title>' -- docs +create --doc-format xml --content '@./draft.xml' --as user`
+
+   For a simple empty document, use `--title '<document title>'` instead of `--content`. The platform requests a one-use approval for the create command. If the selected Feishu account lacks the `docx:document:create` permission or the additional reviewed content permissions, use the conversation's authorization action and resume after the User authorizes.
+3. After `ok: true`, use `docs_fetch` to verify the returned document ID or URL:
+
+   `agent-cli --connector <connector-id> --capability docs_fetch --identity user -- docs +fetch --doc '<document ID or URL>' --as user`
+
+   Return the verified document link. Do not claim the document exists before the create command succeeds.
 
 ## Send a message to a named group
 

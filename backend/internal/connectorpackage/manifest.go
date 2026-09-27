@@ -176,6 +176,7 @@ func validateCLI(manifest CLIManifest) error {
 		return fmt.Errorf("cli.json %w", err)
 	}
 	seenCapabilities := map[string]struct{}{}
+	userScopes := map[string]struct{}{}
 	for _, capability := range manifest.Capabilities {
 		if capability.ID == "" || len(capability.ArgvPrefix) == 0 || capability.TimeoutSeconds < 1 || capability.TimeoutSeconds > 900 {
 			return fmt.Errorf("cli.json capability %s is invalid", capability.ID)
@@ -194,6 +195,11 @@ func validateCLI(manifest CLIManifest) error {
 			if identity != "user" && identity != "bot" {
 				return fmt.Errorf("cli.json capability %s has unsupported identity", capability.ID)
 			}
+			if identity == "user" {
+				for _, scope := range capability.Scopes {
+					userScopes[scope] = struct{}{}
+				}
+			}
 		}
 		for _, argument := range capability.ArgvPrefix {
 			if argument == "" || strings.ContainsAny(argument, "\x00\r\n") {
@@ -202,6 +208,19 @@ func validateCLI(manifest CLIManifest) error {
 		}
 		if err := validateHosts("cli.json capability egress_hosts", capability.EgressHosts); err != nil {
 			return err
+		}
+	}
+	seenActivationScopes := map[string]struct{}{}
+	for _, scope := range manifest.ActivationScopes {
+		if scope == "" {
+			return fmt.Errorf("cli.json activation_scopes contains an empty scope")
+		}
+		if _, exists := seenActivationScopes[scope]; exists {
+			return fmt.Errorf("cli.json activation_scopes contains a duplicate scope")
+		}
+		seenActivationScopes[scope] = struct{}{}
+		if _, reviewed := userScopes[scope]; !reviewed {
+			return fmt.Errorf("cli.json activation_scopes contains an unreviewed User scope")
 		}
 	}
 	return validateEnvironment("cli.json", manifest.Environment)

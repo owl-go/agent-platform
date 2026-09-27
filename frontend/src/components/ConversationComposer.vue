@@ -195,7 +195,7 @@ async function beginManagedAuthorization() {
   if (!pending || disposed) return;
   const installation = managedInstallation(pending.definition.id);
   if (!installation) throw new Error("Connector installation is unavailable");
-  const scopes = pending.scopes ?? cliUserScopes(pending.definition);
+  const scopes = pending.scopes ?? cliActivationScopes(pending.definition);
   const authorizations = await api.listConnectorAuthorizations(installation.id);
   if (authorizations.some((item) => item.selected && item.state === "active" && scopes.every((scope) => item.scopes.includes(scope)))) {
     await finishManagedActivation(pending);
@@ -304,6 +304,12 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
 function cliUserScopes(definition: CLIConnectorDefinition) {
   return [...new Set((definition.capabilities ?? []).filter((capability) => capability.identities?.includes("user")).flatMap((capability) => capability.scopes ?? []))];
 }
+function cliActivationScopes(definition: CLIConnectorDefinition) {
+  if (!definition.managed_installation || definition.authentication_driver !== "feishu") return cliUserScopes(definition);
+  const reviewed = new Set(cliUserScopes(definition));
+  const initial = ["im:chat:read", "im:message", "im:message.send_as_user", "contact:user:search", "task:task:write", "docx:document:create", "docx:document:readonly", "docx:document:write_only", "docs:document.media:upload"].filter((scope) => reviewed.has(scope));
+  return initial.length ? initial : cliUserScopes(definition);
+}
 function replaceCLIEnablement(value: CLIConnectorEnablement) {
   enablements.value = [...enablements.value.filter((item) => item.definition_id !== value.definition_id), value];
   if (value.state === "disabled") {
@@ -406,7 +412,7 @@ async function refreshRequestedCLIAuthorization() {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;
-    const requiredScopes = capability ? capability.scopes ?? [] : cliUserScopes(definition);
+    const requiredScopes = capability ? capability.scopes ?? [] : cliActivationScopes(definition);
     let authorizations: Awaited<ReturnType<typeof api.listConnectorAuthorizations>>;
     try { authorizations = await api.listConnectorAuthorizations(installation.id); }
     catch { return; }

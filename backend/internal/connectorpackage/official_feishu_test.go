@@ -115,8 +115,11 @@ func TestOfficialFeishuSkillReferencesCoverPinnedCLIDomains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(resources) != 546 {
+	if len(resources) != 547 {
 		t.Fatalf("Feishu Skill resource count = %d", len(resources))
+	}
+	if len(resources["capabilities.json"]) == 0 {
+		t.Fatal("pinned Feishu capability catalog is missing")
 	}
 	domains := 0
 	for name, body := range resources {
@@ -132,6 +135,61 @@ func TestOfficialFeishuSkillReferencesCoverPinnedCLIDomains(t *testing.T) {
 	}
 	if _, err := OfficialFeishuSkillResources("1.0.94"); err == nil {
 		t.Fatal("unreviewed CLI version reused stale Skill references")
+	}
+}
+
+func TestOfficialFeishuCatalogCoversPinnedUserShortcuts(t *testing.T) {
+	capabilities, err := OfficialFeishuCapabilities("1.0.93")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(capabilities) != 523 {
+		t.Fatalf("reviewed User shortcuts = %d, want 523", len(capabilities))
+	}
+	wanted := map[string]bool{"im_messages_send": false, "task_create": false, "docs_create": false, "docs_fetch": false, "docs_update": false, "drive_search": false}
+	for _, capability := range capabilities {
+		if _, ok := wanted[capability.ID]; ok {
+			wanted[capability.ID] = true
+		}
+		if len(capability.Identities) != 1 || capability.Identities[0] != "user" {
+			t.Fatalf("unexpected identity for %s: %v", capability.ID, capability.Identities)
+		}
+	}
+	for id, found := range wanted {
+		if !found {
+			t.Errorf("pinned shortcut %s is missing", id)
+		}
+	}
+	if _, err := OfficialFeishuCapabilities("1.0.94"); err == nil {
+		t.Fatal("unreviewed CLI version reused pinned capability catalog")
+	}
+}
+
+func TestBuildOfficialFeishuArchiveDefaultsToPinnedCatalogAndInitialScopes(t *testing.T) {
+	archive, err := BuildOfficialFeishuArchive(OfficialFeishuInput{
+		Version: "1.0.93", PackageVersion: "1.0.95", Bundle: testExecutableBundle(t, "bin/lark-cli"),
+		BundlePath: "bin/lark-cli", RuntimeVersion: "22.22.0", RuntimeDigest: "sha256:" + strings.Repeat("a", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg, err := Parse(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pkg.CLI == nil || len(pkg.CLI.Capabilities) != 523 || pkg.Metadata.Version != "1.0.95" {
+		t.Fatalf("official package catalog = %#v", pkg.Metadata)
+	}
+	if len(pkg.CLI.ActivationScopes) != len(officialFeishuActivationScopes) {
+		t.Fatalf("initial scopes = %v", pkg.CLI.ActivationScopes)
+	}
+	pkg.CLI.ActivationScopes = []string{"unreviewed:write"}
+	if err := validateCLI(*pkg.CLI); err == nil {
+		t.Fatal("unreviewed activation scope was accepted")
+	}
+	pkg.CLI.ActivationScopes = []string{"docx:document:create", "docx:document:create"}
+	if err := validateCLI(*pkg.CLI); err == nil {
+		t.Fatal("duplicate activation scope was accepted")
 	}
 }
 

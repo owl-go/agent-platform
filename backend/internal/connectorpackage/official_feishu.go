@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -21,7 +22,33 @@ var officialFeishuSkillTemplate string
 //go:embed skills/feishu/upstream-v1.0.93.tar.gz
 var officialFeishuReferences []byte
 
+//go:embed skills/feishu/capabilities-v1.0.93.json
+var officialFeishuCapabilityCatalog []byte
+
 const officialFeishuReferencesSHA256 = "a334fccef99e02628c631a8373fa5ed1fbe3ef8c459bc457d57b267cc29bc24b"
+const officialFeishuCapabilityCatalogSHA256 = "16c98518d4bf741cc78a71125b68f89880640741a3f017a796feebd48a6593da"
+
+var officialFeishuActivationScopes = []string{
+	"im:chat:read", "im:message", "im:message.send_as_user", "contact:user:search", "task:task:write",
+	"docx:document:create", "docx:document:readonly", "docx:document:write_only", "docs:document.media:upload",
+}
+
+// OfficialFeishuCapabilities is the pinned, reviewed user-shortcut policy for
+// @larksuite/cli@1.0.93. The upstream documentation is not an execution policy.
+func OfficialFeishuCapabilities(version string) ([]CLICapability, error) {
+	if version != "1.0.93" {
+		return nil, fmt.Errorf("Feishu capabilities are not reviewed for CLI version %q", version)
+	}
+	digest := sha256.Sum256(officialFeishuCapabilityCatalog)
+	if fmt.Sprintf("%x", digest) != officialFeishuCapabilityCatalogSHA256 {
+		return nil, fmt.Errorf("Feishu capability catalog has changed without review")
+	}
+	var capabilities []CLICapability
+	if err := json.Unmarshal(officialFeishuCapabilityCatalog, &capabilities); err != nil {
+		return nil, fmt.Errorf("decode Feishu capability catalog: %w", err)
+	}
+	return capabilities, nil
+}
 
 func OfficialFeishuSkill(version string) []byte {
 	return []byte(strings.ReplaceAll(officialFeishuSkillTemplate, "{{VERSION}}", version))
@@ -44,7 +71,7 @@ func OfficialFeishuSkillResources(version string) (map[string][]byte, error) {
 	}
 	defer compressed.Close()
 	reader := tar.NewReader(compressed)
-	files := map[string][]byte{"SKILL.md": OfficialFeishuSkill(version)}
+	files := map[string][]byte{"SKILL.md": OfficialFeishuSkill(version), "capabilities.json": officialFeishuCapabilityCatalog}
 	var total int64
 	for {
 		entry, err := reader.Next()
@@ -90,8 +117,29 @@ type OfficialFeishuInput struct {
 }
 
 func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
-	if len(input.Bundle) == 0 || input.BundlePath == "" || input.RuntimeVersion == "" || input.RuntimeDigest == "" || len(input.Capabilities) == 0 {
+	if len(input.Bundle) == 0 || input.BundlePath == "" || input.RuntimeVersion == "" || input.RuntimeDigest == "" {
 		return nil, fmt.Errorf("official Feishu package requires the exact bundle, Runtime digest, and reviewed capabilities")
+	}
+	if len(input.Capabilities) == 0 {
+		var err error
+		input.Capabilities, err = OfficialFeishuCapabilities(input.Version)
+		if err != nil {
+			return nil, err
+		}
+	}
+	availableScopes := map[string]bool{}
+	for _, capability := range input.Capabilities {
+		if slices.Contains(capability.Identities, "user") {
+			for _, scope := range capability.Scopes {
+				availableScopes[scope] = true
+			}
+		}
+	}
+	activationScopes := make([]string, 0, len(officialFeishuActivationScopes))
+	for _, scope := range officialFeishuActivationScopes {
+		if availableScopes[scope] {
+			activationScopes = append(activationScopes, scope)
+		}
 	}
 	examplesZH, examplesEN := []string{}, []string{}
 	for _, capability := range input.Capabilities {
@@ -102,6 +150,8 @@ func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
 			examplesZH, examplesEN = append(examplesZH, "发送飞书消息"), append(examplesEN, "Send a Feishu message")
 		case "task_create":
 			examplesZH, examplesEN = append(examplesZH, "创建飞书任务"), append(examplesEN, "Create a Feishu task")
+		case "docs_create":
+			examplesZH, examplesEN = append(examplesZH, "创建飞书云文档"), append(examplesEN, "Create a Feishu document")
 		}
 	}
 	packageVersion := input.PackageVersion
@@ -112,7 +162,7 @@ func BuildOfficialFeishuArchive(input OfficialFeishuInput) ([]byte, error) {
 	manifest, _ := json.Marshal(CLIManifest{
 		Runtime: ManagedRuntime{Kind: "node", Version: input.RuntimeVersion, Digest: input.RuntimeDigest}, Executable: "lark-cli", BundlePath: input.BundlePath, AuthenticationDriver: "feishu",
 		Commands:    CLICommands{Init: LifecycleCommand{Argv: []string{"app", "status", "--output", "json"}}, Auth: LifecycleCommand{Argv: []string{"auth", "login", "--output", "json"}}, Status: LifecycleCommand{Argv: []string{"auth", "status", "--output", "json"}}, UnAuth: LifecycleCommand{Argv: []string{"auth", "logout", "--output", "json"}}},
-		StatusMatch: StatusMatch{JSONPath: "$.authenticated", Equals: true}, Capabilities: input.Capabilities, AuthURLDomains: []string{"accounts.feishu.cn", "open.feishu.cn"}, EgressHosts: []string{"accounts.feishu.cn", "open.feishu.cn"}, TimeoutSeconds: 60,
+		StatusMatch: StatusMatch{JSONPath: "$.authenticated", Equals: true}, Capabilities: input.Capabilities, ActivationScopes: activationScopes, AuthURLDomains: []string{"accounts.feishu.cn", "open.feishu.cn"}, EgressHosts: []string{"accounts.feishu.cn", "open.feishu.cn"}, TimeoutSeconds: 60,
 		Limits: ResourceLimits{CPU: 1000, MemoryMiB: 1024, TimeoutSeconds: 900, Concurrency: 1, ChildProcesses: 64},
 	})
 	resources, err := OfficialFeishuSkillResources(input.Version)

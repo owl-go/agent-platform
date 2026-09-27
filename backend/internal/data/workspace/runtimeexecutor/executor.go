@@ -1774,6 +1774,10 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
 			}
+			if connector.PackageObjectKey != "" && connector.AuthenticationDriver == "feishu" && len(capabilities) > 40 {
+				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
+				continue
+			}
 			for _, capability := range capabilities {
 				for _, identity := range capability.Identities {
 					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, identity, strings.Join(capability.ArgvPrefix, " ")))
