@@ -295,7 +295,7 @@ os.replace(temporary, path)
 PY
 
 python3 - "$config_file" "$builder_digest" <<'PY'
-import os, pathlib, sys
+import os, pathlib, re, sys
 path = pathlib.Path(sys.argv[1])
 digest = sys.argv[2]
 lines = path.read_text().splitlines(keepends=True)
@@ -313,8 +313,14 @@ for index, line in enumerate(lines):
         break
 if updated != 1:
     raise SystemExit("CLI Builder image_digest could not be updated")
+text = "".join(lines)
+legacy_pattern = re.compile(r"\$\{(?:CLAUDE|CODEX|HERMES|OPENCLAW|PI)_RUNTIME_IMAGE\}")
+legacy_count = len(legacy_pattern.findall(text))
+if legacy_count not in (0, 5):
+    raise SystemExit(f"expected zero or five legacy Runtime image references, found {legacy_count}")
+text = legacy_pattern.sub("${RUNTIME_IMAGE}", text)
 temporary = path.with_name(path.name + ".next")
-temporary.write_text("".join(lines))
+temporary.write_text(text)
 original = path.stat()
 os.chown(temporary, original.st_uid, original.st_gid)
 os.chmod(temporary, original.st_mode)

@@ -1,4 +1,4 @@
-# Unified Runtime image candidate - 2026-09-27
+# Unified Runtime image deployment - 2026-09-27
 
 ## Built candidate
 
@@ -6,7 +6,7 @@ The five fixed Runtime Engine CLIs were built into one Linux image from
 `deploy/runtimes/unified/Dockerfile` on the production Worker host and pushed to
 the private registry.
 
-RepoDigest:
+The pre-activation build-and-smoke candidate used RepoDigest:
 
 `127.0.0.1:5000/agent-platform/runtime@sha256:b674584d47184ac55cefce639b2ba0cae98e8fda00155dff07019883e005c48d`
 
@@ -29,17 +29,48 @@ The candidate was built from `main_temp` commit
   Rootfs, writable Workspace, the common Entrypoint, and the current
   `agent-cli -- <argv>` broker protocol failing closed without a broker socket.
 
-## Activation boundary
+## Production activation
 
-The candidate was pushed but not written to the production `RUNTIME_IMAGE`
-setting, and API, Worker, Egress Controller, Caddy, and Web were not replaced.
-The existing five Runtime images remain active.
+Release `platform-20260927T090000Z-unified-runtime` rebuilt the same image
+contents with a new BuildKit attestation manifest and activated this final
+RepoDigest:
 
-The target host does not currently provide the Production Conformance
-environment and five Runtime-specific model credential directories required by
-`scripts/conformance/production-preflight.sh`. Consequently no real model call,
-cancel, timeout, MCP loading, Secret redaction, Workspace write, or exact
-Runtime RepoDigest plus CLI bundle Conformance was executed for this candidate.
-The shared Digest must not make any Runtime Engine available until that
-engine's required evidence passes. This candidate is therefore build-and-smoke
-evidence, not production activation or complete Production Conformance.
+`127.0.0.1:5000/agent-platform/runtime@sha256:b4ad4abd0356ae01129f2e75233c41b4c7833bab44dbd9895e9b3ed4b2a3df37`
+
+The active source is
+`/opt/agent-platform/src.release-platform-20260927T090000Z-unified-runtime`.
+API, Worker, Egress Controller, Caddy, AnythingLLM, the public Web origin, and
+OIDC discovery passed post-cutover health checks. The Administrator's original
+default Runtime Engine and model mappings were restored after validation.
+
+The first cutover exposed that the external production YAML still referenced
+the five legacy Runtime image variables while the new Compose file passed only
+`RUNTIME_IMAGE`. The deployment stopped with Worker intentionally down and the
+backup plus previous source intact. The YAML was migrated atomically, API was
+recovered, and the remaining cutover completed. The deployment script now
+migrates exactly zero or five legacy references and rejects partial drift.
+
+## Real model calls
+
+Five isolated Administrator Sessions exercised the normal OIDC, settings,
+Session, Worker, credential materialization, `runsc`, and Runtime paths against
+the active shared Digest:
+
+- Claude Code with Qwen Plus completed in 12.756 seconds and returned
+  `OK-CLAUDE`.
+- Codex with gpt-6-astra completed in 21.229 seconds and returned `OK-CODEX`.
+- Hermes with GPT 5.6 Sol completed in 30.498 seconds and returned `OK-HERMES`.
+- OpenClaw ran for 337.558 seconds and returned `LLM request failed` without
+  producing the requested content.
+- PI Agent failed in 11.632 seconds with `Unexpected end of JSON input`.
+
+Claude, Codex, and Hermes remain available. OpenClaw and PI were immediately
+set unavailable in the production YAML and API/Worker were recreated healthy;
+the public Runtime catalog confirms those two entries omit availability.
+
+This activation does not claim the complete `make production-conformance`
+matrix. The target host still lacks its dedicated Conformance environment and
+credential directories, and cancellation, timeout, MCP loading, Secret
+redaction, Workspace write, Connector bundle combinations, and recovery cases
+remain unverified for the shared Digest. Availability therefore remains
+fail-closed for the two failed engines.
