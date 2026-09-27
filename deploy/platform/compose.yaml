@@ -92,11 +92,7 @@ services:
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
       WORKSPACE_ROOT: ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
       CREDENTIAL_TEMP_ROOT: ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
-      CLAUDE_RUNTIME_IMAGE: ${CLAUDE_RUNTIME_IMAGE:?CLAUDE_RUNTIME_IMAGE is required}
-      CODEX_RUNTIME_IMAGE: ${CODEX_RUNTIME_IMAGE:?CODEX_RUNTIME_IMAGE is required}
-      HERMES_RUNTIME_IMAGE: ${HERMES_RUNTIME_IMAGE:?HERMES_RUNTIME_IMAGE is required}
-      OPENCLAW_RUNTIME_IMAGE: ${OPENCLAW_RUNTIME_IMAGE:?OPENCLAW_RUNTIME_IMAGE is required}
-      PI_RUNTIME_IMAGE: ${PI_RUNTIME_IMAGE:?PI_RUNTIME_IMAGE is required}
+      RUNTIME_IMAGE: ${RUNTIME_IMAGE:?RUNTIME_IMAGE is required}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro
@@ -150,11 +146,7 @@ services:
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
       WORKSPACE_ROOT: ${WORKSPACE_ROOT:?WORKSPACE_ROOT is required}
       CREDENTIAL_TEMP_ROOT: ${CREDENTIAL_TEMP_ROOT:?CREDENTIAL_TEMP_ROOT is required}
-      CLAUDE_RUNTIME_IMAGE: ${CLAUDE_RUNTIME_IMAGE:?CLAUDE_RUNTIME_IMAGE is required}
-      CODEX_RUNTIME_IMAGE: ${CODEX_RUNTIME_IMAGE:?CODEX_RUNTIME_IMAGE is required}
-      HERMES_RUNTIME_IMAGE: ${HERMES_RUNTIME_IMAGE:?HERMES_RUNTIME_IMAGE is required}
-      OPENCLAW_RUNTIME_IMAGE: ${OPENCLAW_RUNTIME_IMAGE:?OPENCLAW_RUNTIME_IMAGE is required}
-      PI_RUNTIME_IMAGE: ${PI_RUNTIME_IMAGE:?PI_RUNTIME_IMAGE is required}
+      RUNTIME_IMAGE: ${RUNTIME_IMAGE:?RUNTIME_IMAGE is required}
     command: ["-config", "/etc/agent-platform/platform.yaml"]
     volumes:
       - ${PLATFORM_CONFIG_FILE:-./config/platform.minio.yaml}:/etc/agent-platform/platform.yaml:ro

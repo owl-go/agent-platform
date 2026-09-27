@@ -209,7 +209,7 @@ rsync --archive --checksum \
   --exclude='coverage/' \
   "$repo_root/" "$deploy_host:$release_dir/"
 
-stage "Build CLI Builder and service images"
+stage "Build unified Runtime, CLI Builder, and service images"
 ssh "$deploy_host" bash -s -- "$release_dir" "$release_id" "$remote_env_file" "$remote_config_file" <<'REMOTE_BUILD'
 set -euo pipefail
 release_dir=$1
@@ -219,6 +219,28 @@ config_file=$4
 cd "$release_dir"
 test -s backend/go.mod
 test -s frontend/package.json
+set -a
+. "$env_file"
+set +a
+
+runtime_reference=${RUNTIME_IMAGE:-}
+if [[ -n "$runtime_reference" ]]; then
+    runtime_repository=${runtime_reference%@sha256:*}
+else
+    legacy_runtime_reference=${CODEX_RUNTIME_IMAGE:-}
+    test -n "$legacy_runtime_reference"
+    legacy_runtime_repository=${legacy_runtime_reference%@sha256:*}
+    test -n "$legacy_runtime_repository"
+    test "$legacy_runtime_repository" != "$legacy_runtime_reference"
+    runtime_repository=${legacy_runtime_repository%/*}/runtime
+fi
+[[ "$runtime_repository" =~ ^[^[:space:]@]+$ ]]
+runtime_tag="$runtime_repository:$release_id"
+docker build --pull --tag "$runtime_tag" --file deploy/runtimes/unified/Dockerfile .
+docker push "$runtime_tag"
+runtime_digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$runtime_tag" | awk -v prefix="$runtime_repository@" 'index($0, prefix) == 1 { print; exit }')
+[[ "$runtime_digest" =~ ^[^[:space:]@]+@sha256:[a-f0-9]{64}$ ]]
+
 builder_reference=$(python3 - "$config_file" <<'PY'
 import pathlib, sys
 lines = pathlib.Path(sys.argv[1]).read_text().splitlines()
@@ -243,6 +265,35 @@ docker build --pull --tag "$builder_tag" --file deploy/runtimes/cli-builder/Dock
 docker push "$builder_tag"
 builder_digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$builder_tag" | awk -v prefix="$builder_repository@" 'index($0, prefix) == 1 { print; exit }')
 test -n "$builder_digest"
+RUNTIME_IMAGE_REF="$runtime_digest" CLI_BUILDER_IMAGE_REF="$builder_digest" scripts/conformance/runtime-image-smoke.sh
+
+python3 - "$env_file" "$runtime_digest" <<'PY'
+import os, pathlib, re, sys
+path = pathlib.Path(sys.argv[1])
+digest = sys.argv[2]
+if not re.fullmatch(r"[^\s@]+@sha256:[a-f0-9]{64}", digest):
+    raise SystemExit("Runtime RepoDigest is invalid")
+lines = path.read_text().splitlines(keepends=True)
+replacement = f"RUNTIME_IMAGE={digest}\n"
+updated = 0
+for index, line in enumerate(lines):
+    if line.startswith("RUNTIME_IMAGE="):
+        lines[index] = replacement
+        updated += 1
+if updated > 1:
+    raise SystemExit("RUNTIME_IMAGE is defined more than once")
+if updated == 0:
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    lines.append(replacement)
+temporary = path.with_name(path.name + ".next")
+temporary.write_text("".join(lines))
+original = path.stat()
+os.chown(temporary, original.st_uid, original.st_gid)
+os.chmod(temporary, original.st_mode)
+os.replace(temporary, path)
+PY
+
 python3 - "$config_file" "$builder_digest" <<'PY'
 import os, pathlib, sys
 path = pathlib.Path(sys.argv[1])
