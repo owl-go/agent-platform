@@ -236,7 +236,9 @@ else
 fi
 [[ "$runtime_repository" =~ ^[^[:space:]@]+$ ]]
 runtime_tag="$runtime_repository:$release_id"
-docker build --pull --tag "$runtime_tag" --file deploy/runtimes/unified/Dockerfile .
+# Connector revisions pin the Runtime RepoDigest. Keep rebuilds of unchanged
+# Runtime inputs stable instead of publishing a new provenance attestation.
+docker build --pull --provenance=false --tag "$runtime_tag" --file deploy/runtimes/unified/Dockerfile .
 docker push "$runtime_tag"
 runtime_digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$runtime_tag" | awk -v prefix="$runtime_repository@" 'index($0, prefix) == 1 { print; exit }')
 [[ "$runtime_digest" =~ ^[^[:space:]@]+@sha256:[a-f0-9]{64}$ ]]
