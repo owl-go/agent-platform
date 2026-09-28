@@ -432,6 +432,39 @@ Object.assign((en as unknown as { resources: Record<string, unknown> }).resource
 Object.assign(zh.workflows, { readyKnowledgeDocuments: "{count} 份文档可检索", knowledgeBaseNotReady: "暂无可检索文档" });
 Object.assign(en.workflows, { readyKnowledgeDocuments: "{count} retrieval-ready documents", knowledgeBaseNotReady: "No retrieval-ready documents" });
 
+Object.assign(zh.common, { confirm: "确认" });
+Object.assign(en.common, { confirm: "Confirm" });
+Object.assign((zh as unknown as { credits: Record<string, string> }).credits, { groupBudget: "部门预算：{name}", groupBudgetRemaining: "今日部门剩余 ✧ {remaining} / 上限 ✧ {limit}；可用积分取个人与部门剩余中的较小值。" });
+Object.assign((en as unknown as { credits: Record<string, string> }).credits, { groupBudget: "Department budget: {name}", groupBudgetRemaining: "Department remaining today: ✧ {remaining} of ✧ {limit}. Available Credits use the lower of the personal and Department balance." });
+Object.assign(zh.users, {
+  tabs: { users: "用户", groups: "部门与群组", audit: "治理审计", rates: "模型倍率", codes: "兑换码" },
+  result: "操作结果", roles: "角色", bootstrapAdministrator: "初始管理员", bootstrapLocked: "初始管理员不可降级", resourcePublisher: "资源发布者", departments: "所属部门",
+  reason: "变更原因", disableUser: "停用账号", enableUser: "启用账号", syncGroups: "从身份源同步", groupSyncFailed: "身份群组同步失败；本地权限未变更。",
+  identityReadOnly: "群组与成员关系来自身份源，只能同步；平台不会反向修改企业目录。", group: "群组", groupPath: "身份源路径", groupType: "用途", department: "部门", identityGroup: "普通群组", memberCount: "成员数",
+  groupDailyBudget: "部门每日预算", unlimited: "不限制", budget: "预算", limitBudget: "设置上限", lastSynced: "最近同步", transfer: "移交部门资源", transferFrom: "离职/停用成员", transferTo: "接收发布者",
+  transferBoundary: "只移交该部门的知识库归属；不会读取、转移或暴露个人会话、文件和私有知识库。", transferCompleted: "已移交 {count} 个部门知识库", groupBudgetBound: "受 {name} 部门预算约束",
+  auditPrivacy: "审计记录只保留治理动作、目标标识、原因和计数，不记录私有内容。", occurredAt: "发生时间", action: "动作", target: "目标", metrics: "计数"
+});
+Object.assign(en.users, {
+  tabs: { users: "Users", groups: "Departments & groups", audit: "Governance audit", rates: "Model rates", codes: "Redemption codes" },
+  result: "Result", roles: "Roles", bootstrapAdministrator: "Bootstrap administrator", bootstrapLocked: "The Bootstrap Administrator cannot be demoted", resourcePublisher: "Resource Publisher", departments: "Departments",
+  reason: "Reason", disableUser: "Disable account", enableUser: "Enable account", syncGroups: "Sync identity source", groupSyncFailed: "Identity group sync failed. Local permissions were not changed.",
+  identityReadOnly: "Groups and memberships are read-only from the identity source. The platform never writes back to the enterprise directory.", group: "Group", groupPath: "Identity path", groupType: "Purpose", department: "Department", identityGroup: "Identity group", memberCount: "Members",
+  groupDailyBudget: "Department daily budget", unlimited: "Unlimited", budget: "Budget", limitBudget: "Set limit", lastSynced: "Last synced", transfer: "Transfer department resources", transferFrom: "Disabled member", transferTo: "Receiving publisher",
+  transferBoundary: "Only ownership of this Department's Knowledge Bases is transferred. Private Sessions, files, and private Knowledge Bases are never read, exposed, or transferred.", transferCompleted: "Transferred {count} Department Knowledge Bases", groupBudgetBound: "Limited by {name} Department budget",
+  auditPrivacy: "Audit records contain only governance actions, target identifiers, reasons, and counts—not private content.", occurredAt: "Occurred", action: "Action", target: "Target", metrics: "Metrics"
+});
+Object.assign((zh as unknown as { knowledgeBases: Record<string, unknown> }).knowledgeBases, {
+  scope: "归属范围", privateScope: "仅自己", departmentScope: "部门", platformScope: "全企业", department: "部门", departmentKnowledge: "部门知识库",
+  scopeImmutable: "创建后归属范围不可修改，避免绕过权限与审计边界。", scopeHint: { private: "只有你可以查看和维护。", group: "部门成员可读；该部门的资源发布者可维护。", platform: "全企业可读；仅创建它的管理员可维护。" },
+  departmentPublished: "{name} 发布", departmentReadPublisherEdit: "部门内可读 · 发布者可编辑", departmentReadOnly: "部门内只读"
+});
+Object.assign((en as unknown as { knowledgeBases: Record<string, unknown> }).knowledgeBases, {
+  scope: "Ownership scope", privateScope: "Only me", departmentScope: "Department", platformScope: "Enterprise", department: "Department", departmentKnowledge: "Department Knowledge Bases",
+  scopeImmutable: "Ownership scope cannot change after creation, preserving permission and audit boundaries.", scopeHint: { private: "Only you can view and maintain it.", group: "Department members can read it; Resource Publishers in the Department can maintain it.", platform: "Everyone can read it; only the Administrator who created it can maintain it." },
+  departmentPublished: "Published by {name}", departmentReadPublisherEdit: "Department-readable · Publisher-editable", departmentReadOnly: "Department read-only"
+});
+
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);
   document.documentElement.lang = locale;

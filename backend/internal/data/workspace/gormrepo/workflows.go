@@ -196,7 +196,15 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 	}
 	if len(input.KnowledgeBaseIDs) > 0 {
 		var available int64
-		if err := tx.Table("knowledge_bases").Where("id IN ? AND deleted_at IS NULL AND (owner_user_id = ? OR (platform = true AND visibility = 'public')) AND EXISTS (SELECT 1 FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready')", input.KnowledgeBaseIDs, ownerID).Count(&available).Error; err != nil {
+		if err := tx.Table("knowledge_bases").Where(`id IN ? AND deleted_at IS NULL AND (
+			(scope_type = 'private' AND owner_user_id = ?)
+			OR (scope_type = 'platform' AND visibility = 'public')
+			OR (scope_type = 'group' AND EXISTS (
+				SELECT 1 FROM identity_group_memberships membership
+				JOIN identity_groups identity_group ON identity_group.id = membership.group_id AND identity_group.deleted_at IS NULL AND identity_group.department = true
+				WHERE membership.group_id = knowledge_bases.group_id AND membership.user_id = ?
+			))
+		) AND EXISTS (SELECT 1 FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready')`, input.KnowledgeBaseIDs, ownerID, ownerID).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(input.KnowledgeBaseIDs)) {

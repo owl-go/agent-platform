@@ -142,11 +142,21 @@ const (
 	KnowledgeURL    KnowledgeSourceType = "url"
 )
 
+type KnowledgeScope string
+
+const (
+	KnowledgeScopePrivate  KnowledgeScope = "private"
+	KnowledgeScopeGroup    KnowledgeScope = "group"
+	KnowledgeScopePlatform KnowledgeScope = "platform"
+)
+
 type KnowledgeBaseInput struct {
 	Name        string
 	Description string
 	Visibility  KnowledgeVisibility
 	Platform    bool
+	Scope       KnowledgeScope
+	GroupID     *string
 }
 
 func (input KnowledgeBaseInput) Validate(administrator bool) error {
@@ -160,11 +170,28 @@ func (input KnowledgeBaseInput) Validate(administrator bool) error {
 	if input.Visibility != KnowledgePrivate && input.Visibility != KnowledgePublic {
 		return fmt.Errorf("%w: Knowledge Base visibility must be private or public", ErrInvalid)
 	}
-	if input.Platform && !administrator {
+	scope := input.Scope
+	if scope == "" {
+		if input.Platform {
+			scope = KnowledgeScopePlatform
+		} else {
+			scope = KnowledgeScopePrivate
+		}
+	}
+	if scope != KnowledgeScopePrivate && scope != KnowledgeScopeGroup && scope != KnowledgeScopePlatform {
+		return fmt.Errorf("%w: Knowledge Base scope is invalid", ErrInvalid)
+	}
+	if scope == KnowledgeScopePlatform && !administrator {
 		return fmt.Errorf("%w: only the Administrator may create a Platform Knowledge Base", ErrInvalid)
 	}
-	if !input.Platform && input.Visibility == KnowledgePublic {
-		return fmt.Errorf("%w: User-owned Knowledge Bases must be private", ErrInvalid)
+	if scope == KnowledgeScopePlatform && (!input.Platform || input.Visibility != KnowledgePublic || input.GroupID != nil) {
+		return fmt.Errorf("%w: Platform Knowledge Bases must be public and have no Group", ErrInvalid)
+	}
+	if scope == KnowledgeScopePrivate && (input.Platform || input.Visibility != KnowledgePrivate || input.GroupID != nil) {
+		return fmt.Errorf("%w: private Knowledge Bases cannot be public, Platform, or Group-scoped", ErrInvalid)
+	}
+	if scope == KnowledgeScopeGroup && (input.Platform || input.Visibility != KnowledgePrivate || input.GroupID == nil || strings.TrimSpace(*input.GroupID) == "") {
+		return fmt.Errorf("%w: Group Knowledge Bases require one Group and private visibility", ErrInvalid)
 	}
 	return nil
 }
@@ -176,6 +203,9 @@ type KnowledgeBase struct {
 	Name               string
 	Description        string
 	Visibility         KnowledgeVisibility
+	Scope              KnowledgeScope
+	GroupID            *string
+	GroupName          string
 	DeletedAt          *time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

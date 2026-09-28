@@ -28,7 +28,7 @@
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办定位回原任务；不读取用户内容 | 已完成代码、本地门禁与 PostgreSQL owner-scope Integration；真实部署待验证 |
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 已完成代码、本地门禁与 PostgreSQL Integration；生产用量分布与部署浏览器闭环待验证 |
 | EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 已完成代码、本地门禁与 PostgreSQL Integration；真实部署发现效率待验证 |
-| EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 待设计伙伴验证 |
+| EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 已完成代码、本地门禁与 PostgreSQL Integration；真实 Keycloak 和设计伙伴演练待验证 |
 | EP-13 | Smart Assistant 受控发布 | 将已验证问答发布给内部或受控访客 | EP-03/08/10/12 | FAQ/Knowledge 来源、安全、额度和 iframe 审计闭环 | 待核心指标连续四周达标 |
 
 ## 3. EP-02 详细任务
@@ -188,7 +188,17 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - Knowledge Base 的摘要由当前未删除 Document 和 Ready Revision 计算，不新增可漂移的状态列。工作流选择器禁用未就绪资源，Repository 事务再次校验访问范围和至少一个 Ready Document，避免客户端绕过。
 - 目标前后端测试、类型检查、生成协议、完整门禁和临时 PostgreSQL 17 的完整迁移链均为本地证据。该结果不等于生产目录搜索成功率、真实资源可用率或用户发现效率；这些指标仍待部署后采集。
 
-## 9. 发布与回滚
+## 9. EP-12 企业治理
+
+- 删除单一 Administrator 约束，保留唯一且不可降级的 Bootstrap Administrator，并支持带原因、Version CAS 和审计的 Administrator / Resource Publisher 委派。Administrator 必须先降级才能停用，确保身份源与本地权限不会出现半完成状态。
+- Keycloak Group、层级、成员和 `agent_workspace_department=true` 属性通过 Admin API 只读同步。完整同步在一个事务内替换 Membership；身份源中消失的 Group 变为 inactive，所有资源读取、Workflow 绑定和写入查询都要求 active Group，避免陈旧成员关系继续授权。
+- Knowledge Base 增加不可变的 private、group、platform scope。Department 成员可读，Department Resource Publisher 可维护；非成员 Administrator 也得到与不存在资源一致的 Not Found，不能借治理权限读取私有或其他部门内容。
+- Department Credit Budget 在文本 Admission 和图片 Reservation 前，以 Group + Credit Day Advisory Lock 串行聚合当前成员的已结算消费与活动预留。用户和管理员界面显示实际限制 Available Credit 的 Department，不把部门预算冒充个人 Credit Balance。
+- 离职移交只接受已停用源 User 和目标 Department 当前的 enabled Resource Publisher；源 User 可已从最新 Membership 删除，事务只转移其持有的该 Department Knowledge Base owner，同名冲突时整体失败。User 私有 Session、Workflow、文件和 private Knowledge Base 不查询、不列出、不转移。
+- 用户状态、角色、身份同步、预算和移交写入仅包含 actor、target、reason、time 与安全计数的 Governance Audit Event。管理页不展示提示词、回复、文件名、Object Key、外部 Token 或私有资源内容。
+- 本批已通过 Keycloak Adapter 单测、前后端目标测试、类型检查、完整构建，以及一次性 PostgreSQL 17 的完整迁移和跨范围集成测试。真实 Keycloak 目录规模/分页、生产身份映射、设计伙伴离职演练、浏览器端权限验收与生产审计导出仍未验证。
+
+## 10. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

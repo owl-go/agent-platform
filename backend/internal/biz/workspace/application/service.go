@@ -100,6 +100,7 @@ type Repository interface {
 	RestoreKnowledgeBase(context.Context, string, string, bool) error
 	RestoreKnowledgeCategory(context.Context, string, string, string, bool) error
 	RestoreKnowledgeDocument(context.Context, string, string, string, bool) error
+	TransferGroupResources(context.Context, string, string, string, string, string) (int64, error)
 }
 
 // SessionWorkflowRepository is an optional atomic conversion seam. Keeping it

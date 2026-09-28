@@ -42,10 +42,12 @@ const uploadCategory = ref("");
 const sourceURL = ref("");
 const fileInput = ref<HTMLInputElement>();
 const preview = ref<{ document: KnowledgeDocument; kind: PreviewKind; url?: string; text?: string }>();
-const form = ref({ name: "", description: "", visibility: "private" as "private" | "public" });
+const form = ref({ name: "", description: "", scope: "private" as "private" | "group" | "platform", group_id: "" });
 
 const currentUser = computed(() => auth.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser : undefined);
 const canCreatePlatform = computed(() => Boolean(currentUser.value?.administrator));
+const departmentGroups = computed(() => (currentUser.value?.groups ?? []).filter((group) => group.department));
+const canCreateGroup = computed(() => Boolean(currentUser.value?.resource_publisher && departmentGroups.value.length));
 const canManageSelected = computed(() => selected.value ? canManageBase(selected.value) : false);
 const activeCategoryName = computed(() => {
   if (activeCategory.value === null) return t("knowledgeBases.allDocuments");
@@ -67,8 +69,9 @@ const visibleBases = computed(() => {
   });
 });
 const baseSections = computed(() => [
-  { key: "platform", title: t("resources.platformKnowledge"), items: visibleBases.value.filter((item) => item.platform) },
-  { key: "mine", title: t("resources.myKnowledge"), items: visibleBases.value.filter((item) => !item.platform) },
+  { key: "platform", title: t("resources.platformKnowledge"), items: visibleBases.value.filter((item) => knowledgeScope(item) === "platform") },
+  { key: "department", title: t("knowledgeBases.departmentKnowledge"), items: visibleBases.value.filter((item) => knowledgeScope(item) === "group") },
+  { key: "mine", title: t("resources.myKnowledge"), items: visibleBases.value.filter((item) => knowledgeScope(item) === "private") },
 ].filter((section) => section.items.length));
 
 async function refresh() {
@@ -145,18 +148,20 @@ function setDisplayMode(mode: DisplayMode) {
 }
 
 function canManageBase(item: KnowledgeBase) {
-  return !item.platform || item.owner_id === currentUser.value?.id;
+  const scope = knowledgeScope(item);
+  if (scope === "private" || scope === "platform") return item.owner_id === currentUser.value?.id;
+  return Boolean(currentUser.value?.resource_publisher && currentUser.value.groups?.some((group) => group.id === item.group_id));
 }
 
 function openCreate() {
   editingBase.value = undefined;
-  form.value = { name: "", description: "", visibility: "private" };
+  form.value = { name: "", description: "", scope: "private", group_id: "" };
   showBaseDialog.value = true;
 }
 
 function openEdit(item: KnowledgeBase) {
   editingBase.value = item;
-  form.value = { name: item.name, description: item.description, visibility: item.visibility };
+  form.value = { name: item.name, description: item.description, scope: knowledgeScope(item), group_id: item.group_id ?? "" };
   showBaseDialog.value = true;
 }
 
@@ -170,7 +175,8 @@ async function saveBase() {
   if (!name || busy.value) return;
   busy.value = true;
   try {
-    const input = { name, description: form.value.description.trim(), visibility: form.value.visibility, platform: editingBase.value?.platform ?? canCreatePlatform.value };
+    const scope = form.value.scope;
+    const input = { name, description: form.value.description.trim(), scope, group_id: scope === "group" ? form.value.group_id : undefined, visibility: scope === "platform" ? "public" as const : "private" as const, platform: scope === "platform" };
     if (editingBase.value) {
       const updated = await api.updateKnowledgeBase(editingBase.value.id, input, editingBase.value.version);
       bases.value = bases.value.map((item) => item.id === updated.id ? updated : item);
@@ -317,6 +323,22 @@ async function deleteDocument(document: KnowledgeDocument) {
 }
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString(); }
+function knowledgeScope(item: KnowledgeBase): "private" | "group" | "platform" { return item.scope ?? (item.platform ? "platform" : "private"); }
+function scopeLabel(item: KnowledgeBase) {
+  if (knowledgeScope(item) === "platform") return t("knowledgeBases.platformScope");
+  if (knowledgeScope(item) === "group") return item.group_name || t("knowledgeBases.departmentScope");
+  return t("knowledgeBases.private");
+}
+function trustSource(item: KnowledgeBase) {
+  if (knowledgeScope(item) === "platform") return t("resources.platformPublished");
+  if (knowledgeScope(item) === "group") return t("knowledgeBases.departmentPublished", { name: item.group_name || t("knowledgeBases.departmentScope") });
+  return t("resources.userPublished");
+}
+function trustPermission(item: KnowledgeBase) {
+  if (knowledgeScope(item) === "platform") return canManageBase(item) ? t("resources.allReadOwnerEdit") : t("resources.allReadOnly");
+  if (knowledgeScope(item) === "group") return canManageBase(item) ? t("knowledgeBases.departmentReadPublisherEdit") : t("knowledgeBases.departmentReadOnly");
+  return t("resources.ownerOnly");
+}
 function readyDocumentCount(item: KnowledgeBase) { return Number(item.ready_document_count || 0); }
 function documentCount(item: KnowledgeBase) { return Number(item.document_count || 0); }
 function knowledgeStatus(item: KnowledgeBase) {
@@ -379,8 +401,8 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
       <div v-else class="catalog-groups knowledge-catalog-groups">
       <section v-for="section in baseSections" :key="section.key" class="catalog-group"><h2 class="catalog-group-title">{{ section.title }}</h2><div class="knowledge-grid" :class="`is-${displayMode}`">
         <el-card v-for="item in section.items" :key="item.id" class="knowledge-card" shadow="never" role="button" tabindex="0" @click="openBase(item)" @keydown.enter="openBase(item)" @keydown.space.prevent="openBase(item)">
-          <div class="knowledge-card-head"><div class="knowledge-icon"><FolderOpen :size="20" /></div><div class="knowledge-card-top-actions"><el-tag size="small" effect="plain"><Globe2 v-if="item.visibility === 'public'" :size="12" /><LockKeyhole v-else :size="12" />{{ item.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag><el-dropdown v-if="canManageBase(item)" trigger="click" @command="handleBaseAction($event, item)"><el-button class="card-more" text circle :aria-label="t('common.more')" :title="t('common.more')" @click.stop><MoreHorizontal :size="18" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="edit"><Pencil :size="14" />{{ t("common.edit") }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t("common.delete") }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></div>
-          <div class="knowledge-card-copy"><div class="knowledge-card-title"><h2>{{ item.name }}</h2></div><p>{{ item.description || t("knowledgeBases.noDescription") }}</p><ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.visibility === 'public' ? canManageBase(item) ? t('resources.allReadOwnerEdit') : t('resources.allReadOnly') : t('resources.ownerOnly')" :status="knowledgeStatus(item).label" :status-tone="knowledgeStatus(item).tone" :detail="knowledgeEvidence(item)" /></div>
+          <div class="knowledge-card-head"><div class="knowledge-icon"><FolderOpen :size="20" /></div><div class="knowledge-card-top-actions"><el-tag size="small" effect="plain"><Globe2 v-if="knowledgeScope(item) === 'platform'" :size="12" /><LockKeyhole v-else :size="12" />{{ scopeLabel(item) }}</el-tag><el-dropdown v-if="canManageBase(item)" trigger="click" @command="handleBaseAction($event, item)"><el-button class="card-more" text circle :aria-label="t('common.more')" :title="t('common.more')" @click.stop><MoreHorizontal :size="18" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="edit"><Pencil :size="14" />{{ t("common.edit") }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t("common.delete") }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></div>
+          <div class="knowledge-card-copy"><div class="knowledge-card-title"><h2>{{ item.name }}</h2></div><p>{{ item.description || t("knowledgeBases.noDescription") }}</p><ResourceTrustMeta :source="trustSource(item)" :permission="trustPermission(item)" :status="knowledgeStatus(item).label" :status-tone="knowledgeStatus(item).tone" :detail="knowledgeEvidence(item)" /></div>
           <footer><span>{{ formatDate(item.updated_at) }}</span></footer>
         </el-card>
       </div></section></div>
@@ -389,7 +411,7 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
     <template v-else>
       <input ref="fileInput" type="file" hidden @change="upload" />
       <button class="back-link knowledge-back" @click="closeBase"><ArrowLeft :size="16" />{{ t("knowledgeBases.backToCatalog") }}</button>
-      <header class="knowledge-detail-header"><div><div class="detail-title-line"><h2>{{ selected.name }}</h2><el-tag size="small" effect="plain">{{ selected.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag></div><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><div v-if="canManageSelected" class="detail-actions"><el-button plain @click="openEdit(selected)"><Pencil :size="15" />{{ t("common.edit") }}</el-button><el-button type="danger" plain @click="deleteTarget = selected"><Trash2 :size="15" />{{ t("common.delete") }}</el-button><el-button type="primary" @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></div></header>
+      <header class="knowledge-detail-header"><div><div class="detail-title-line"><h2>{{ selected.name }}</h2><el-tag size="small" effect="plain">{{ scopeLabel(selected) }}</el-tag></div><p>{{ selected.description || t("knowledgeBases.noDescription") }}</p></div><div v-if="canManageSelected" class="detail-actions"><el-button plain @click="openEdit(selected)"><Pencil :size="15" />{{ t("common.edit") }}</el-button><el-button type="danger" plain @click="deleteTarget = selected"><Trash2 :size="15" />{{ t("common.delete") }}</el-button><el-button type="primary" @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></div></header>
 
       <section class="knowledge-search-panel" :aria-label="t('knowledgeBases.search')">
         <form class="knowledge-search-controls" @submit.prevent="searchKnowledge">
@@ -415,7 +437,7 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
     </template>
   </section>
 
-  <el-dialog v-model="showBaseDialog" class="resource-dialog" width="min(560px, calc(100vw - 32px))" align-center :title="editingBase ? t('knowledgeBases.edit') : t('knowledgeBases.new')"><el-form label-position="top" @submit.prevent="saveBase"><el-form-item :label="t('common.name')" required><el-input v-model="form.name" maxlength="100" autofocus /></el-form-item><el-form-item :label="t('knowledgeBases.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item><el-form-item v-if="canCreatePlatform" :label="t('knowledgeBases.visibility')"><el-select v-model="form.visibility"><el-option value="private" :label="t('knowledgeBases.private')" /><el-option value="public" :label="t('knowledgeBases.public')" /></el-select></el-form-item></el-form><template #footer><el-button @click="showBaseDialog = false">{{ t("common.cancel") }}</el-button><el-button type="primary" :loading="busy" :disabled="!form.name.trim()" @click="saveBase">{{ t("common.save") }}</el-button></template></el-dialog>
+  <el-dialog v-model="showBaseDialog" class="resource-dialog" width="min(560px, calc(100vw - 32px))" align-center :title="editingBase ? t('knowledgeBases.edit') : t('knowledgeBases.new')"><el-form label-position="top" @submit.prevent="saveBase"><el-form-item :label="t('common.name')" required><el-input v-model="form.name" maxlength="100" autofocus /></el-form-item><el-form-item :label="t('knowledgeBases.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item><el-form-item :label="t('knowledgeBases.scope')"><el-select v-model="form.scope" :disabled="Boolean(editingBase)"><el-option value="private" :label="t('knowledgeBases.privateScope')" /><el-option v-if="canCreateGroup" value="group" :label="t('knowledgeBases.departmentScope')" /><el-option v-if="canCreatePlatform" value="platform" :label="t('knowledgeBases.platformScope')" /></el-select><small class="scope-hint">{{ editingBase ? t('knowledgeBases.scopeImmutable') : t(`knowledgeBases.scopeHint.${form.scope}`) }}</small></el-form-item><el-form-item v-if="form.scope === 'group'" :label="t('knowledgeBases.department')" required><el-select v-model="form.group_id"><el-option v-for="group in departmentGroups" :key="group.id" :value="group.id" :label="group.name" /></el-select></el-form-item></el-form><template #footer><el-button @click="showBaseDialog = false">{{ t("common.cancel") }}</el-button><el-button type="primary" :loading="busy" :disabled="!form.name.trim() || (form.scope === 'group' && !form.group_id)" @click="saveBase">{{ t("common.save") }}</el-button></template></el-dialog>
   <ConfirmDialog :open="Boolean(deleteTarget)" :title="t('knowledgeBases.deleteBase')" :message="deleteTarget ? `${t('common.delete')} “${deleteTarget.name}”?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger :busy="busy" @cancel="deleteTarget = undefined" @confirm="removeBase" />
   <el-dialog v-model="previewOpen" class="document-preview-dialog" width="min(980px, calc(100vw - 32px))" align-center :title="preview?.document.name" @close="closePreview"><div v-if="previewBusy" class="preview-loading">{{ t("common.loading") }}</div><template v-else-if="preview"><img v-if="preview.kind === 'image'" :src="preview.url" :alt="preview.document.name" class="preview-image" /><iframe v-else-if="preview.kind === 'pdf'" :src="preview.url" :title="preview.document.name" class="preview-frame" /><pre v-else-if="preview.kind === 'text'" class="preview-text">{{ preview.text }}</pre><div v-else class="preview-unsupported"><FileText :size="32" /><p>{{ t("knowledgeBases.previewUnsupported") }}</p><el-button type="primary" @click="downloadDocument(preview.document)"><Download :size="15" />{{ t("common.download") }}</el-button></div></template></el-dialog>
 </template>
@@ -495,6 +517,7 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
 .preview-image { display: block; max-width: 100%; max-height: 68vh; margin: 0 auto; object-fit: contain; }
 .preview-frame { width: 100%; height: 68vh; border: 0; }
 .preview-text { max-height: 68vh; margin: 0; padding: 16px; overflow: auto; border-radius: 9px; background: var(--aw-n2); color: var(--ink); font: .78rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+.scope-hint { display: block; margin-top: 7px; color: var(--muted); line-height: 1.45; }
 @media (max-width: 1050px) { .knowledge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .knowledge-header-actions, .knowledge-detail-header, .section-heading { align-items: flex-start; flex-direction: column; } .knowledge-header-actions, .detail-actions { width: 100%; flex-wrap: wrap; } .knowledge-header-actions .el-button, .detail-actions .el-button { flex: 1; justify-content: center; } .knowledge-grid { grid-template-columns: 1fr; } .knowledge-grid.is-list .knowledge-card :deep(.el-card__body) { grid-template-columns: auto minmax(0, 1fr) auto; } .knowledge-grid.is-list .knowledge-card footer { flex-direction: column; align-items: flex-end; justify-content: flex-end; } .category-create { width: 100%; } .category-create .el-input { width: auto; flex: 1; } .knowledge-search-controls { flex-direction: column; } .source-controls { grid-template-columns: 1fr; } .documents-panel { padding: 16px; } .document-table { overflow-x: auto; } }
 </style>

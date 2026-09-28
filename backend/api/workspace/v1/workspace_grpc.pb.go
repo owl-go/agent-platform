@@ -29,6 +29,12 @@ const (
 	AgentWorkspaceService_CreateUser_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/CreateUser"
 	AgentWorkspaceService_SetUserEnabled_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
 	AgentWorkspaceService_ResetUserPassword_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
+	AgentWorkspaceService_SetUserRoles_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/SetUserRoles"
+	AgentWorkspaceService_ListIdentityGroups_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListIdentityGroups"
+	AgentWorkspaceService_SyncIdentityGroups_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SyncIdentityGroups"
+	AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateIdentityGroupBudget"
+	AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListGovernanceAuditEvents"
+	AgentWorkspaceService_TransferGroupResources_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/TransferGroupResources"
 	AgentWorkspaceService_GetCreditBalance_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
 	AgentWorkspaceService_GetCreditPolicy_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetCreditPolicy"
 	AgentWorkspaceService_UpdateCreditPolicy_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/UpdateCreditPolicy"
@@ -190,6 +196,12 @@ type AgentWorkspaceServiceClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	SetUserEnabled(ctx context.Context, in *SetUserEnabledRequest, opts ...grpc.CallOption) (*UserAccount, error)
 	ResetUserPassword(ctx context.Context, in *ResetUserPasswordRequest, opts ...grpc.CallOption) (*ResetUserPasswordResponse, error)
+	SetUserRoles(ctx context.Context, in *SetUserRolesRequest, opts ...grpc.CallOption) (*UserAccount, error)
+	ListIdentityGroups(ctx context.Context, in *ListIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error)
+	SyncIdentityGroups(ctx context.Context, in *SyncIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error)
+	UpdateIdentityGroupBudget(ctx context.Context, in *UpdateIdentityGroupBudgetRequest, opts ...grpc.CallOption) (*IdentityGroup, error)
+	ListGovernanceAuditEvents(ctx context.Context, in *ListGovernanceAuditEventsRequest, opts ...grpc.CallOption) (*ListGovernanceAuditEventsResponse, error)
+	TransferGroupResources(ctx context.Context, in *TransferGroupResourcesRequest, opts ...grpc.CallOption) (*TransferGroupResourcesResponse, error)
 	GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*CreditBalance, error)
 	GetCreditPolicy(ctx context.Context, in *GetCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error)
 	UpdateCreditPolicy(ctx context.Context, in *UpdateCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error)
@@ -439,6 +451,66 @@ func (c *agentWorkspaceServiceClient) ResetUserPassword(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResetUserPasswordResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_ResetUserPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SetUserRoles(ctx context.Context, in *SetUserRolesRequest, opts ...grpc.CallOption) (*UserAccount, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserAccount)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetUserRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListIdentityGroups(ctx context.Context, in *ListIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIdentityGroupsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListIdentityGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SyncIdentityGroups(ctx context.Context, in *SyncIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIdentityGroupsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SyncIdentityGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateIdentityGroupBudget(ctx context.Context, in *UpdateIdentityGroupBudgetRequest, opts ...grpc.CallOption) (*IdentityGroup, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IdentityGroup)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListGovernanceAuditEvents(ctx context.Context, in *ListGovernanceAuditEventsRequest, opts ...grpc.CallOption) (*ListGovernanceAuditEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListGovernanceAuditEventsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) TransferGroupResources(ctx context.Context, in *TransferGroupResourcesRequest, opts ...grpc.CallOption) (*TransferGroupResourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferGroupResourcesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_TransferGroupResources_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1909,6 +1981,12 @@ type AgentWorkspaceServiceServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
+	SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error)
+	ListIdentityGroups(context.Context, *ListIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
+	SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
+	UpdateIdentityGroupBudget(context.Context, *UpdateIdentityGroupBudgetRequest) (*IdentityGroup, error)
+	ListGovernanceAuditEvents(context.Context, *ListGovernanceAuditEventsRequest) (*ListGovernanceAuditEventsResponse, error)
+	TransferGroupResources(context.Context, *TransferGroupResourcesRequest) (*TransferGroupResourcesResponse, error)
 	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
 	GetCreditPolicy(context.Context, *GetCreditPolicyRequest) (*CreditPolicy, error)
 	UpdateCreditPolicy(context.Context, *UpdateCreditPolicyRequest) (*CreditPolicy, error)
@@ -2093,6 +2171,24 @@ func (UnimplementedAgentWorkspaceServiceServer) SetUserEnabled(context.Context, 
 }
 func (UnimplementedAgentWorkspaceServiceServer) ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetUserPassword not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetUserRoles not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListIdentityGroups(context.Context, *ListIdentityGroupsRequest) (*ListIdentityGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListIdentityGroups not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SyncIdentityGroups not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateIdentityGroupBudget(context.Context, *UpdateIdentityGroupBudgetRequest) (*IdentityGroup, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateIdentityGroupBudget not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListGovernanceAuditEvents(context.Context, *ListGovernanceAuditEventsRequest) (*ListGovernanceAuditEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListGovernanceAuditEvents not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) TransferGroupResources(context.Context, *TransferGroupResourcesRequest) (*TransferGroupResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferGroupResources not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCreditBalance not implemented")
@@ -2726,6 +2822,114 @@ func _AgentWorkspaceService_ResetUserPassword_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).ResetUserPassword(ctx, req.(*ResetUserPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SetUserRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetUserRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetUserRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetUserRoles(ctx, req.(*SetUserRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListIdentityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListIdentityGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListIdentityGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListIdentityGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListIdentityGroups(ctx, req.(*ListIdentityGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SyncIdentityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncIdentityGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SyncIdentityGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SyncIdentityGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SyncIdentityGroups(ctx, req.(*SyncIdentityGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateIdentityGroupBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateIdentityGroupBudgetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateIdentityGroupBudget(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateIdentityGroupBudget(ctx, req.(*UpdateIdentityGroupBudgetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListGovernanceAuditEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGovernanceAuditEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListGovernanceAuditEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListGovernanceAuditEvents(ctx, req.(*ListGovernanceAuditEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_TransferGroupResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferGroupResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).TransferGroupResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_TransferGroupResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).TransferGroupResources(ctx, req.(*TransferGroupResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5386,6 +5590,30 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResetUserPassword",
 			Handler:    _AgentWorkspaceService_ResetUserPassword_Handler,
+		},
+		{
+			MethodName: "SetUserRoles",
+			Handler:    _AgentWorkspaceService_SetUserRoles_Handler,
+		},
+		{
+			MethodName: "ListIdentityGroups",
+			Handler:    _AgentWorkspaceService_ListIdentityGroups_Handler,
+		},
+		{
+			MethodName: "SyncIdentityGroups",
+			Handler:    _AgentWorkspaceService_SyncIdentityGroups_Handler,
+		},
+		{
+			MethodName: "UpdateIdentityGroupBudget",
+			Handler:    _AgentWorkspaceService_UpdateIdentityGroupBudget_Handler,
+		},
+		{
+			MethodName: "ListGovernanceAuditEvents",
+			Handler:    _AgentWorkspaceService_ListGovernanceAuditEvents_Handler,
+		},
+		{
+			MethodName: "TransferGroupResources",
+			Handler:    _AgentWorkspaceService_TransferGroupResources_Handler,
 		},
 		{
 			MethodName: "GetCreditBalance",

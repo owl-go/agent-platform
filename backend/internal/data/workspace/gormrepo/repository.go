@@ -240,6 +240,9 @@ type knowledgeBaseRecord struct {
 	Name               string     `gorm:"column:name"`
 	Description        string     `gorm:"column:description"`
 	Visibility         string     `gorm:"column:visibility"`
+	Scope              string     `gorm:"column:scope_type"`
+	GroupID            *string    `gorm:"column:group_id"`
+	GroupName          string     `gorm:"column:group_name;->"`
 	DeletedAt          *time.Time `gorm:"column:deleted_at"`
 	CreatedAt          time.Time  `gorm:"column:created_at"`
 	UpdatedAt          time.Time  `gorm:"column:updated_at"`

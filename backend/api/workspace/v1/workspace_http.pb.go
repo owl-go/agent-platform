@@ -108,6 +108,8 @@ const OperationAgentWorkspaceServiceListConversationFiles = "/workspace.v1.Agent
 const OperationAgentWorkspaceServiceListCreditLedger = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 const OperationAgentWorkspaceServiceListExpertTeams = "/workspace.v1.AgentWorkspaceService/ListExpertTeams"
 const OperationAgentWorkspaceServiceListExperts = "/workspace.v1.AgentWorkspaceService/ListExperts"
+const OperationAgentWorkspaceServiceListGovernanceAuditEvents = "/workspace.v1.AgentWorkspaceService/ListGovernanceAuditEvents"
+const OperationAgentWorkspaceServiceListIdentityGroups = "/workspace.v1.AgentWorkspaceService/ListIdentityGroups"
 const OperationAgentWorkspaceServiceListImageGenerationOptions = "/workspace.v1.AgentWorkspaceService/ListImageGenerationOptions"
 const OperationAgentWorkspaceServiceListImageGenerations = "/workspace.v1.AgentWorkspaceService/ListImageGenerations"
 const OperationAgentWorkspaceServiceListImageModels = "/workspace.v1.AgentWorkspaceService/ListImageModels"
@@ -152,15 +154,19 @@ const OperationAgentWorkspaceServiceSetPlatformExecutionDefault = "/workspace.v1
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
 const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
+const OperationAgentWorkspaceServiceSetUserRoles = "/workspace.v1.AgentWorkspaceService/SetUserRoles"
 const OperationAgentWorkspaceServiceStageConnectorPackage = "/workspace.v1.AgentWorkspaceService/StageConnectorPackage"
 const OperationAgentWorkspaceServiceStopImageGeneration = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
 const OperationAgentWorkspaceServiceSubmitImageGeneration = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
+const OperationAgentWorkspaceServiceSyncIdentityGroups = "/workspace.v1.AgentWorkspaceService/SyncIdentityGroups"
 const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
+const OperationAgentWorkspaceServiceTransferGroupResources = "/workspace.v1.AgentWorkspaceService/TransferGroupResources"
 const OperationAgentWorkspaceServiceUninstallConnector = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceUpdateCreditPolicy = "/workspace.v1.AgentWorkspaceService/UpdateCreditPolicy"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
 const OperationAgentWorkspaceServiceUpdateExpertTeam = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
+const OperationAgentWorkspaceServiceUpdateIdentityGroupBudget = "/workspace.v1.AgentWorkspaceService/UpdateIdentityGroupBudget"
 const OperationAgentWorkspaceServiceUpdateKnowledgeBase = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
 const OperationAgentWorkspaceServiceUpdateMCPConnector = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
 const OperationAgentWorkspaceServiceUpdateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
@@ -265,6 +271,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	ListExpertTeams(context.Context, *ListExpertTeamsRequest) (*ListExpertTeamsResponse, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
+	ListGovernanceAuditEvents(context.Context, *ListGovernanceAuditEventsRequest) (*ListGovernanceAuditEventsResponse, error)
+	ListIdentityGroups(context.Context, *ListIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
 	ListImageGenerationOptions(context.Context, *ListImageGenerationOptionsRequest) (*ListImageGenerationOptionsResponse, error)
 	ListImageGenerations(context.Context, *ListImageGenerationsRequest) (*ListImageGenerationsResponse, error)
 	ListImageModels(context.Context, *ListImageModelsRequest) (*ListImageModelsResponse, error)
@@ -309,15 +317,19 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
 	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
+	SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error)
 	StageConnectorPackage(context.Context, *StageConnectorPackageRequest) (*ConnectorRevision, error)
 	StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error)
 	SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error)
+	SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
 	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
+	TransferGroupResources(context.Context, *TransferGroupResourcesRequest) (*TransferGroupResourcesResponse, error)
 	UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	UpdateCreditPolicy(context.Context, *UpdateCreditPolicyRequest) (*CreditPolicy, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
 	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
+	UpdateIdentityGroupBudget(context.Context, *UpdateIdentityGroupBudgetRequest) (*IdentityGroup, error)
 	UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error)
 	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
 	UpdateModelProviderConnection(context.Context, *UpdateModelProviderConnectionRequest) (*ModelProviderConnection, error)
@@ -343,6 +355,12 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/admin/users", _AgentWorkspaceService_CreateUser0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/enabled", _AgentWorkspaceService_SetUserEnabled0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/users/{user_id}/password-reset", _AgentWorkspaceService_ResetUserPassword0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/roles", _AgentWorkspaceService_SetUserRoles0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/identity-groups", _AgentWorkspaceService_ListIdentityGroups0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/identity-groups/synchronization", _AgentWorkspaceService_SyncIdentityGroups0_HTTP_Handler(srv))
+	r.Handle("PATCH", "/api/v1/admin/identity-groups/{group_id}/budget", _AgentWorkspaceService_UpdateIdentityGroupBudget0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/governance-audit-events", _AgentWorkspaceService_ListGovernanceAuditEvents0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/admin/identity-groups/{group_id}/resource-transfers", _AgentWorkspaceService_TransferGroupResources0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/credits/balance", _AgentWorkspaceService_GetCreditBalance0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/admin/credit-policy", _AgentWorkspaceService_GetCreditPolicy0_HTTP_Handler(srv))
 	r.Handle("PUT", "/api/v1/admin/credit-policy", _AgentWorkspaceService_UpdateCreditPolicy0_HTTP_Handler(srv))
@@ -685,6 +703,129 @@ func _AgentWorkspaceService_ResetUserPassword0_HTTP_Handler(srv AgentWorkspaceSe
 			return err
 		}
 		reply := out.(*ResetUserPasswordResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SetUserRoles0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetUserRolesRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSetUserRoles)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetUserRoles(ctx, req.(*SetUserRolesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*UserAccount)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListIdentityGroups0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListIdentityGroupsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListIdentityGroups)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListIdentityGroups(ctx, req.(*ListIdentityGroupsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListIdentityGroupsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SyncIdentityGroups0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SyncIdentityGroupsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSyncIdentityGroups)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SyncIdentityGroups(ctx, req.(*SyncIdentityGroupsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListIdentityGroupsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_UpdateIdentityGroupBudget0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateIdentityGroupBudgetRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateIdentityGroupBudget)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateIdentityGroupBudget(ctx, req.(*UpdateIdentityGroupBudgetRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*IdentityGroup)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListGovernanceAuditEvents0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListGovernanceAuditEventsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListGovernanceAuditEvents)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListGovernanceAuditEvents(ctx, req.(*ListGovernanceAuditEventsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListGovernanceAuditEventsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_TransferGroupResources0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in TransferGroupResourcesRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceTransferGroupResources)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.TransferGroupResources(ctx, req.(*TransferGroupResourcesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*TransferGroupResourcesResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -3818,6 +3959,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCreditLedger(ctx context.Context, req *ListCreditLedgerRequest, opts ...http.CallOption) (rsp *ListCreditLedgerResponse, err error)
 	ListExpertTeams(ctx context.Context, req *ListExpertTeamsRequest, opts ...http.CallOption) (rsp *ListExpertTeamsResponse, err error)
 	ListExperts(ctx context.Context, req *ListExpertsRequest, opts ...http.CallOption) (rsp *ListExpertsResponse, err error)
+	ListGovernanceAuditEvents(ctx context.Context, req *ListGovernanceAuditEventsRequest, opts ...http.CallOption) (rsp *ListGovernanceAuditEventsResponse, err error)
+	ListIdentityGroups(ctx context.Context, req *ListIdentityGroupsRequest, opts ...http.CallOption) (rsp *ListIdentityGroupsResponse, err error)
 	ListImageGenerationOptions(ctx context.Context, req *ListImageGenerationOptionsRequest, opts ...http.CallOption) (rsp *ListImageGenerationOptionsResponse, err error)
 	ListImageGenerations(ctx context.Context, req *ListImageGenerationsRequest, opts ...http.CallOption) (rsp *ListImageGenerationsResponse, err error)
 	ListImageModels(ctx context.Context, req *ListImageModelsRequest, opts ...http.CallOption) (rsp *ListImageModelsResponse, err error)
@@ -3862,15 +4005,19 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
+	SetUserRoles(ctx context.Context, req *SetUserRolesRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
 	StageConnectorPackage(ctx context.Context, req *StageConnectorPackageRequest, opts ...http.CallOption) (rsp *ConnectorRevision, err error)
 	StopImageGeneration(ctx context.Context, req *StopImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	SubmitImageGeneration(ctx context.Context, req *SubmitImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
+	SyncIdentityGroups(ctx context.Context, req *SyncIdentityGroupsRequest, opts ...http.CallOption) (rsp *ListIdentityGroupsResponse, err error)
 	TestMCPConnector(ctx context.Context, req *TestMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
+	TransferGroupResources(ctx context.Context, req *TransferGroupResourcesRequest, opts ...http.CallOption) (rsp *TransferGroupResourcesResponse, err error)
 	UninstallConnector(ctx context.Context, req *UninstallConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	UpdateCreditPolicy(ctx context.Context, req *UpdateCreditPolicyRequest, opts ...http.CallOption) (rsp *CreditPolicy, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	UpdateExpertTeam(ctx context.Context, req *UpdateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	UpdateIdentityGroupBudget(ctx context.Context, req *UpdateIdentityGroupBudgetRequest, opts ...http.CallOption) (rsp *IdentityGroup, err error)
 	UpdateKnowledgeBase(ctx context.Context, req *UpdateKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	UpdateMCPConnector(ctx context.Context, req *UpdateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateModelProviderConnection(ctx context.Context, req *UpdateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
@@ -5393,6 +5540,38 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListExperts(ctx context.Context, i
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListGovernanceAuditEvents(ctx context.Context, in *ListGovernanceAuditEventsRequest, opts ...http.CallOption) (*ListGovernanceAuditEventsResponse, error) {
+	var out ListGovernanceAuditEventsResponse
+	pattern := "/api/v1/admin/governance-audit-events"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListGovernanceAuditEvents),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListIdentityGroups(ctx context.Context, in *ListIdentityGroupsRequest, opts ...http.CallOption) (*ListIdentityGroupsResponse, error) {
+	var out ListIdentityGroupsResponse
+	pattern := "/api/v1/admin/identity-groups"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListIdentityGroups),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListImageGenerationOptions(ctx context.Context, in *ListImageGenerationOptionsRequest, opts ...http.CallOption) (*ListImageGenerationOptionsResponse, error) {
 	var out ListImageGenerationOptionsResponse
 	pattern := "/api/v1/ai-creation/image-generation/options"
@@ -6118,6 +6297,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserEnabled(ctx context.Context
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) SetUserRoles(ctx context.Context, in *SetUserRolesRequest, opts ...http.CallOption) (*UserAccount, error) {
+	var out UserAccount
+	pattern := "/api/v1/admin/users/{user_id}/roles"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSetUserRoles),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) StageConnectorPackage(ctx context.Context, in *StageConnectorPackageRequest, opts ...http.CallOption) (*ConnectorRevision, error) {
 	var out ConnectorRevision
 	pattern := "/api/v1/admin/connectors/packages"
@@ -6169,6 +6365,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SubmitImageGeneration(ctx context.
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) SyncIdentityGroups(ctx context.Context, in *SyncIdentityGroupsRequest, opts ...http.CallOption) (*ListIdentityGroupsResponse, error) {
+	var out ListIdentityGroupsResponse
+	pattern := "/api/v1/admin/identity-groups/synchronization"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSyncIdentityGroups),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) TestMCPConnector(ctx context.Context, in *TestMCPConnectorRequest, opts ...http.CallOption) (*MCPConnector, error) {
 	var out MCPConnector
 	pattern := "/api/v1/connectors/mcp/{mcp_connector_id}/test"
@@ -6177,6 +6390,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) TestMCPConnector(ctx context.Conte
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceTestMCPConnector),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) TransferGroupResources(ctx context.Context, in *TransferGroupResourcesRequest, opts ...http.CallOption) (*TransferGroupResourcesResponse, error) {
+	var out TransferGroupResourcesResponse
+	pattern := "/api/v1/admin/identity-groups/{group_id}/resource-transfers"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceTransferGroupResources),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -6261,6 +6491,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateExpertTeam(ctx context.Conte
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceUpdateExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateIdentityGroupBudget(ctx context.Context, in *UpdateIdentityGroupBudgetRequest, opts ...http.CallOption) (*IdentityGroup, error) {
+	var out IdentityGroup
+	pattern := "/api/v1/admin/identity-groups/{group_id}/budget"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceUpdateIdentityGroupBudget),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)

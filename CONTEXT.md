@@ -9,12 +9,28 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. Every User may also select Administrator-created Platform Resources, the platform-wide Model Catalog, and available CLI Connectors.
+An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. A User may also access Platform Resources and Department Resources within their current Identity Group memberships.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
-The single bootstrap identity that manages User accounts, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption.
+An authorized User who manages accounts, read-only Identity Group synchronization, governance roles, Department budgets, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption. One immutable Bootstrap Administrator guarantees that the deployment cannot lose its final Administrator.
 _Avoid_: Platform operator, Organization administrator, support user
+
+**Resource Publisher**:
+An authorized User who may create and maintain Department Resources only inside a Department where they currently hold Identity Group membership. The role does not grant Administrator access, access to another Department, or access to any User's private content.
+_Avoid_: Administrator, resource owner bypass, global editor
+
+**Identity Group**:
+A read-only local projection of one group and its memberships from the configured enterprise identity source. A Group marked as a Department may scope shared resources and a daily Credit budget; the product never maintains a second writable organization tree.
+_Avoid_: product-managed Team, role grant, local mailing list
+
+**Department Resource**:
+A shared resource bound to exactly one active Department. Department members may read it and Resource Publishers in that Department may maintain it; access is revoked when the Group or membership disappears from the latest identity synchronization. A disabled former custodian may be outside the current membership snapshot while an Administrator transfers only that Department's resources to a current Resource Publisher.
+_Avoid_: Platform Resource, public resource, User-private resource
+
+**Governance Audit Event**:
+An append-only record of an Administrator governance mutation containing the actor, action, target identifier, required reason, bounded numeric metrics, and occurrence time. It never stores prompts, replies, filenames, private resource contents, credentials, or external tokens.
+_Avoid_: Product Event, Runtime Event, private-content transcript
 
 **Product Event**:
 An append-only, privacy-bounded measurement record derived from a confirmed product transition. It contains only a stable anonymous User key, an optional anonymous subject key, an allowlisted event name, coarse state or duration attributes, and occurrence time; prompts, replies, filenames, Object Keys, external accounts, credentials, and signed URLs are forbidden.
@@ -31,8 +47,12 @@ The sum of one User's remaining Daily Credit Allocation and Redeemed Credit Bala
 _Avoid_: Daily Credit Limit, Provider balance, Token balance
 
 **Available Credit**:
-The portion of one User's Credit Balance not withheld by active Image Credit Reservations and therefore available to admit another execution. It is the balance shown in the product's compact account surfaces.
+The portion of one User's Credit Balance not withheld by active Image or Execution Credit Reservations and available to admit another execution. When any current Department membership has a daily Credit budget, Available Credit is capped by the smallest remaining applicable Department budget and the limiting Department is shown to the User.
 _Avoid_: Credit Balance, reserved Credit, Provider balance
+
+**Department Credit Budget**:
+An optional daily aggregate admission limit for all current members of one Department. It counts settled Credit Consumption and active reservations for the Credit Day, is enforced transactionally before model or image execution, and never replaces a User's own Credit Balance.
+_Avoid_: User Daily Credit Allocation, Provider budget, accounting invoice
 
 **Daily Credit Allocation**:
 A User-specific amount of expiring Credits restored at the start of each calendar day in that User's configured time zone. Unused daily Credits do not carry forward and are consumed before redeemed Credits.
@@ -243,7 +263,7 @@ A message's explicit reference to an attachment or Artifact from its own convers
 _Avoid_: Mutable Workspace path, signed download URL, filename mention
 
 **Knowledge Base**:
-A logical collection of knowledge documents owned by one User or created by the Administrator as a Platform Resource. A User-owned Knowledge Base is private; an Administrator-created Knowledge Base is explicitly private to the Administrator or public, and a public one is readable, searchable, and downloadable by every authenticated User without mutation rights.
+A logical collection of knowledge documents with one immutable ownership scope: private to one User, a Department Resource, or an enterprise-wide Platform Resource. Private content remains visible only to its owner; a Department Knowledge Base is readable by current Department members and maintainable by current Resource Publishers in that Department; a Platform Knowledge Base is readable by every authenticated User and maintainable only by its Administrator owner.
 _Avoid_: Workspace, Artifact collection, shared file folder
 
 **Knowledge Category**:

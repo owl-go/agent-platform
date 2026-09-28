@@ -19,6 +19,12 @@ service AgentWorkspaceService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
   rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
   rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/password-reset" body: "*"}; }
+  rpc SetUserRoles(SetUserRolesRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/roles" body: "*"}; }
+  rpc ListIdentityGroups(ListIdentityGroupsRequest) returns (ListIdentityGroupsResponse) { option (google.api.http) = {get: "/api/v1/admin/identity-groups"}; }
+  rpc SyncIdentityGroups(SyncIdentityGroupsRequest) returns (ListIdentityGroupsResponse) { option (google.api.http) = {post: "/api/v1/admin/identity-groups/synchronization" body: "*"}; }
+  rpc UpdateIdentityGroupBudget(UpdateIdentityGroupBudgetRequest) returns (IdentityGroup) { option (google.api.http) = {patch: "/api/v1/admin/identity-groups/{group_id}/budget" body: "*"}; }
+  rpc ListGovernanceAuditEvents(ListGovernanceAuditEventsRequest) returns (ListGovernanceAuditEventsResponse) { option (google.api.http) = {get: "/api/v1/admin/governance-audit-events"}; }
+  rpc TransferGroupResources(TransferGroupResourcesRequest) returns (TransferGroupResourcesResponse) { option (google.api.http) = {post: "/api/v1/admin/identity-groups/{group_id}/resource-transfers" body: "*"}; }
   rpc GetCreditBalance(GetCreditBalanceRequest) returns (CreditBalance) { option (google.api.http) = {get: "/api/v1/credits/balance"}; }
   rpc GetCreditPolicy(GetCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {get: "/api/v1/admin/credit-policy"}; }
   rpc UpdateCreditPolicy(UpdateCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {put: "/api/v1/admin/credit-policy" body: "*"}; }
@@ -181,18 +187,31 @@ message HomeWorkflow { string id = 1; string name = 2; int64 run_count = 3; goog
 message HomeAction { string kind = 1; string id = 2; string execution_kind = 3; string execution_id = 4; string parent_id = 5; string title = 6; string state = 7; google.protobuf.Timestamp created_at = 8; }
 
 message GetCurrentUserRequest {}
-message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; }
+message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; bool bootstrap_administrator = 8; bool resource_publisher = 9; repeated IdentityGroup groups = 10; }
 message ListUsersRequest {}
 message ListUsersResponse { repeated UserAccount items = 1; }
 message CreateUserRequest { string username = 1; string display_name = 2; string email = 3; }
 message CreateUserResponse { UserAccount user = 1; string temporary_password = 2; }
-message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; }
+message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; string reason = 4; }
 message ResetUserPasswordRequest { string user_id = 1; }
 message ResetUserPasswordResponse { string temporary_password = 1; }
-message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; }
+message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; bool bootstrap_administrator = 10; bool resource_publisher = 11; repeated IdentityGroup groups = 12; }
+message SetUserRolesRequest { string user_id = 1; bool administrator = 2; bool resource_publisher = 3; int64 expected_version = 4; string reason = 5; }
+message ListIdentityGroupsRequest {}
+message SyncIdentityGroupsRequest {}
+message ListIdentityGroupsResponse { repeated IdentityGroup items = 1; }
+message UpdateIdentityGroupBudgetRequest { string group_id = 1; optional int64 daily_credit_limit_hundredths = 2; int64 expected_version = 3; string reason = 4; }
+message IdentityGroup { string id = 1; string external_id = 2; string name = 3; string path = 4; bool department = 5; optional int64 daily_credit_limit_hundredths = 6; int64 member_count = 7; google.protobuf.Timestamp last_synced_at = 8; int64 version = 9; }
+message ListGovernanceAuditEventsRequest { optional int32 limit = 1; }
+message ListGovernanceAuditEventsResponse { repeated GovernanceAuditEvent items = 1; }
+message GovernanceAuditMetric { string key = 1; int64 value = 2; }
+message GovernanceAuditEvent { int64 id = 1; string actor_user_id = 2; string action = 3; string target_type = 4; string target_id = 5; string reason = 6; repeated GovernanceAuditMetric metrics = 7; google.protobuf.Timestamp occurred_at = 8; }
+message TransferGroupResourcesRequest { string group_id = 1; string from_user_id = 2; string to_user_id = 3; string reason = 4; }
+message TransferGroupResourcesResponse { int64 knowledge_base_count = 1; }
 
 message GetCreditBalanceRequest {}
-message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; int32 warning_threshold_percent = 14; bool redemption_codes_enabled = 15; }
+message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; int32 warning_threshold_percent = 14; bool redemption_codes_enabled = 15; optional GroupCreditBudget group_budget = 16; }
+message GroupCreditBudget { string group_id = 1; string group_name = 2; int64 limit_hundredths = 3; int64 consumed_hundredths = 4; int64 reserved_hundredths = 5; int64 available_hundredths = 6; }
 message GetCreditPolicyRequest {}
 message UpdateCreditPolicyRequest { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 expected_version = 4; }
 message CreditPolicy { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 version = 4; google.protobuf.Timestamp updated_at = 5; optional string updated_by_user_id = 6; }
@@ -416,8 +435,8 @@ message CreateKnowledgeBaseRequest { KnowledgeBaseInput knowledge_base = 1; }
 message GetKnowledgeBaseRequest { string knowledge_base_id = 1; }
 message UpdateKnowledgeBaseRequest { string knowledge_base_id = 1; KnowledgeBaseInput knowledge_base = 2; int64 expected_version = 3; }
 message DeleteKnowledgeBaseRequest { string knowledge_base_id = 1; }
-message KnowledgeBaseInput { string name = 1; string description = 2; string visibility = 3; bool platform = 4; }
-message KnowledgeBase { string id = 1; string owner_id = 2; string name = 3; string description = 4; string visibility = 5; bool platform = 6; bool deleted = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; int64 version = 10; int64 document_count = 11; int64 ready_document_count = 12; optional google.protobuf.Timestamp last_ready_at = 13; }
+message KnowledgeBaseInput { string name = 1; string description = 2; string visibility = 3; bool platform = 4; string scope = 5; optional string group_id = 6; }
+message KnowledgeBase { string id = 1; string owner_id = 2; string name = 3; string description = 4; string visibility = 5; bool platform = 6; bool deleted = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; int64 version = 10; int64 document_count = 11; int64 ready_document_count = 12; optional google.protobuf.Timestamp last_ready_at = 13; string scope = 14; optional string group_id = 15; optional string group_name = 16; }
 message ListKnowledgeCategoriesRequest { string knowledge_base_id = 1; }
 message ListKnowledgeCategoriesResponse { repeated KnowledgeCategory items = 1; }
 message CreateKnowledgeCategoryRequest { string knowledge_base_id = 1; string name = 2; }

@@ -68,6 +68,7 @@ defineExpose({ load });
     <template v-else-if="balance">
       <section class="credit-hero"><span class="credit-spark">✧</span><div><small>{{ t('credits.available') }}</small><strong>{{ credits(balance.available_hundredths) }}</strong></div></section>
       <el-alert v-if="budgetState" :type="budgetState === 'exhausted' ? 'error' : 'warning'" :closable="false" :title="budgetState === 'warning' ? t('credits.warning', { percent: balance.warning_threshold_percent || 80 }) : t('credits.exhausted')" :description="t('credits.contactAdministrator')" />
+      <el-alert v-if="balance.group_budget" type="info" :closable="false" :title="t('credits.groupBudget', { name: balance.group_budget.group_name })" :description="t('credits.groupBudgetRemaining', { remaining: credits(balance.group_budget.available_hundredths), limit: credits(balance.group_budget.limit_hundredths) })" />
       <dl class="credit-grid">
         <div><dt>{{ t('credits.dailyRemaining') }}</dt><dd>{{ credits(balance.daily_remaining_hundredths) }}</dd></div>
         <div><dt>{{ t('credits.reserved') }}</dt><dd>{{ credits(balance.reserved_hundredths) }}</dd></div>

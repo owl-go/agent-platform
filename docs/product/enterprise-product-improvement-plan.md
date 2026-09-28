@@ -482,7 +482,7 @@ Knowledge Base 是供 Workflow 和 Smart Assistant 使用的资料源，不应�
 
 ### 10.2 创建与文档管理
 
-- 创建只要求名称和用途说明；可见范围在 P0 只有“个人”或“平台”。
+- 创建只要求名称和用途说明，并明确选择“个人 / 部门 / 全企业”归属范围；部门选项只对当前部门的资源发布者可见，全企业选项只对管理员可见。归属范围创建后不可修改。
 - 上传前展示支持格式、100 MiB 限制和数据将用于检索的说明。
 - 上传接受与 Ingestion 完成分开；每个文档显示 accepted、processing、ready、failed 或 blocked。
 - 失败保留源文件并提供重试；新 Revision 失败不替换最后可用 Revision。
@@ -498,9 +498,13 @@ Knowledge Base 是供 Workflow 和 Smart Assistant 使用的资料源，不应�
 - Workflow 或 Assistant 绑定前提示当前 Ready 文档数和最近一次成功索引时间。
 - 无检索结果时不得默默假装使用了知识库；结果中明确说明是否有依据。
 
-### 10.4 企业共享（P2 决策门）
+### 10.4 企业共享（P2 已通过代码决策门）
 
-只有完成用户组、部门范围、读写权限、离职转移和审计后，才能引入部门 Knowledge Base。不得用 Administrator 公共资源冒充部门协作。
+- Identity Group 和成员关系只从 Keycloak 读取，不在产品内编辑组织树；停用或同步删除群组后，部门访问立即 fail closed。
+- 部门 Knowledge Base 对当前部门成员可读，对当前部门 Resource Publisher 可维护。Administrator 若不是部门成员也不能越权读取，更不能读取任何 User 私有 Knowledge Base。
+- 离职移交只允许从已停用的原 custodian 转给该部门当前已启用的 Resource Publisher；源账号可已从身份源成员快照中移除，事务仍只按其持有的该部门 Knowledge Base 改变 custody。Session、文件和私有 Knowledge Base 不读取、不展示、不转移。
+- 角色、账号状态、身份同步、部门预算和资源移交均记录 actor、target、reason、time 与有界计数，不记录用户内容。
+- 本地 PostgreSQL 访问边界和迁移已验证；真实 Keycloak、设计伙伴权限演练与生产审计仍待验证，不能据此宣称生产可用。
 
 ## 11. Smart Assistants
 
@@ -641,10 +645,10 @@ Smart Assistant 从“通用 AI 应用”收窄为“把经过验证的问答能
 
 ### 15.1 用户管理
 
-- 支持创建、禁用、启用、重置密码和查看最后登录；优先接企业身份源自动供应。
+- 支持创建、禁用、启用、重置密码和委派 Administrator / Resource Publisher；Bootstrap Administrator 不可降级，管理员账号必须先降级再停用。
 - 禁用前显示将取消运行、暂停 Schedule 和撤销 Workflow API 的影响。
 - 多管理员操作必须有操作者、时间、目标和原因审计。
-- P1 引入用户组时先支持只读身份源同步，避免在产品内维护第二套组织树。
+- 用户组和成员关系通过只读身份源同步；产品只配置 Department 标记与预算投影，不反向写入企业目录。
 
 ### 15.2 模型与 Runtime
 

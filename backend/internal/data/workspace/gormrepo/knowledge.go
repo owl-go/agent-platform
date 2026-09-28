@@ -18,7 +18,13 @@ import (
 var knowledgeSHA256Pattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 func knowledgeBaseAccess(query *gorm.DB, ownerID string, includeDeleted bool) *gorm.DB {
-	query = query.Where("(knowledge_bases.owner_user_id = ? OR (knowledge_bases.platform = true AND knowledge_bases.visibility = 'public'))", ownerID)
+	query = query.Where(`((knowledge_bases.scope_type = 'private' AND knowledge_bases.owner_user_id = ?)
+		OR (knowledge_bases.scope_type = 'platform' AND knowledge_bases.visibility = 'public')
+		OR (knowledge_bases.scope_type = 'group' AND EXISTS (
+			SELECT 1 FROM identity_group_memberships membership
+			JOIN identity_groups identity_group ON identity_group.id = membership.group_id AND identity_group.deleted_at IS NULL AND identity_group.department = true
+			WHERE membership.group_id = knowledge_bases.group_id AND membership.user_id = ?
+		)))`, ownerID, ownerID)
 	if !includeDeleted {
 		query = query.Where("knowledge_bases.deleted_at IS NULL")
 	}
@@ -30,7 +36,8 @@ var _ workspaceapplication.KnowledgeIngestionRepository = (*Repository)(nil)
 const knowledgeBaseSummarySelect = `knowledge_bases.*,
 	(SELECT COUNT(*) FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL) AS document_count,
 	(SELECT COUNT(*) FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready') AS ready_document_count,
-	(SELECT MAX(revision.ready_at) FROM knowledge_document_revisions revision JOIN knowledge_documents document ON document.id = revision.document_id WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND revision.state = 'ready') AS last_ready_at`
+	(SELECT MAX(revision.ready_at) FROM knowledge_document_revisions revision JOIN knowledge_documents document ON document.id = revision.document_id WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND revision.state = 'ready') AS last_ready_at,
+	(SELECT identity_group.name FROM identity_groups identity_group WHERE identity_group.id = knowledge_bases.group_id AND identity_group.deleted_at IS NULL) AS group_name`
 
 func (repository *Repository) SupersededKnowledgeRevisions(ctx context.Context, documentID, currentRevisionID string) ([]string, error) {
 	var ids []string
@@ -134,10 +141,17 @@ func backoffForKnowledgeIngestion(attempts int) time.Duration {
 }
 
 func knowledgeMutationAccess(query *gorm.DB, ownerID string, administrator bool) *gorm.DB {
-	if administrator {
-		return query.Where("knowledge_bases.owner_user_id = ?", ownerID)
-	}
-	return query.Where("knowledge_bases.owner_user_id = ? AND knowledge_bases.platform = false", ownerID)
+	return query.Where(`(
+		(knowledge_bases.scope_type = 'private' AND knowledge_bases.owner_user_id = ?)
+		OR (knowledge_bases.scope_type = 'platform' AND knowledge_bases.owner_user_id = ? AND ?)
+		OR (knowledge_bases.scope_type = 'group' AND EXISTS (
+			SELECT 1 FROM identity_group_memberships membership
+			JOIN identity_groups identity_group ON identity_group.id = membership.group_id AND identity_group.deleted_at IS NULL AND identity_group.department = true
+			JOIN users publisher ON publisher.id = membership.user_id
+			WHERE membership.group_id = knowledge_bases.group_id AND membership.user_id = ?
+				AND publisher.resource_publisher = true AND publisher.disabled_at IS NULL
+		))
+	)`, ownerID, ownerID, administrator, ownerID)
 }
 
 func (repository *Repository) ListKnowledgeBases(ctx context.Context, ownerID string, administrator, includeDeleted bool) ([]domain.KnowledgeBase, error) {
@@ -173,23 +187,34 @@ func (repository *Repository) GetKnowledgeBase(ctx context.Context, ownerID, kno
 }
 
 func (repository *Repository) CreateKnowledgeBase(ctx context.Context, ownerID string, administrator bool, input domain.KnowledgeBaseInput) (domain.KnowledgeBase, error) {
+	input = normalizedKnowledgeBaseInput(input)
 	if err := input.Validate(administrator); err != nil {
 		return domain.KnowledgeBase{}, err
 	}
-	row := knowledgeBaseRecord{ID: uuid.NewString(), OwnerID: ownerID, Platform: input.Platform, Name: strings.TrimSpace(input.Name), Description: strings.TrimSpace(input.Description), Visibility: string(input.Visibility), Version: 1}
+	if input.Scope == domain.KnowledgeScopeGroup {
+		var authorized int64
+		if err := repository.db.WithContext(ctx).Table("identity_group_memberships membership").Joins("JOIN identity_groups identity_group ON identity_group.id = membership.group_id AND identity_group.deleted_at IS NULL AND identity_group.department = true").Joins("JOIN users publisher ON publisher.id = membership.user_id AND publisher.resource_publisher = true AND publisher.disabled_at IS NULL").Where("membership.user_id = ? AND membership.group_id = ?", ownerID, *input.GroupID).Count(&authorized).Error; err != nil {
+			return domain.KnowledgeBase{}, err
+		}
+		if authorized != 1 {
+			return domain.KnowledgeBase{}, fmt.Errorf("%w: Group Knowledge Base requires Department membership and Resource Publisher role", domain.ErrInvalid)
+		}
+	}
+	row := knowledgeBaseRecord{ID: uuid.NewString(), OwnerID: ownerID, Platform: input.Platform, Name: strings.TrimSpace(input.Name), Description: strings.TrimSpace(input.Description), Visibility: string(input.Visibility), Scope: string(input.Scope), GroupID: input.GroupID, Version: 1}
 	if err := repository.db.WithContext(ctx).Create(&row).Error; err != nil {
 		return domain.KnowledgeBase{}, fmt.Errorf("create Knowledge Base: %w", err)
 	}
-	return knowledgeBaseDomain(row)
+	return repository.GetKnowledgeBase(ctx, ownerID, row.ID, administrator, false)
 }
 
 func (repository *Repository) UpdateKnowledgeBase(ctx context.Context, ownerID, knowledgeBaseID string, administrator bool, input domain.KnowledgeBaseInput, expectedVersion int64) (domain.KnowledgeBase, error) {
+	input = normalizedKnowledgeBaseInput(input)
 	if err := input.Validate(administrator); err != nil {
 		return domain.KnowledgeBase{}, err
 	}
 	updates := map[string]any{"name": strings.TrimSpace(input.Name), "description": strings.TrimSpace(input.Description), "visibility": string(input.Visibility), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
 	result := knowledgeMutationAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, administrator).
-		Where("knowledge_bases.id = ? AND knowledge_bases.deleted_at IS NULL AND knowledge_bases.version = ?", knowledgeBaseID, expectedVersion).
+		Where("knowledge_bases.id = ? AND knowledge_bases.deleted_at IS NULL AND knowledge_bases.version = ? AND knowledge_bases.scope_type = ? AND knowledge_bases.group_id IS NOT DISTINCT FROM ?", knowledgeBaseID, expectedVersion, input.Scope, input.GroupID).
 		Updates(updates)
 	if result.Error != nil {
 		return domain.KnowledgeBase{}, fmt.Errorf("update Knowledge Base: %w", result.Error)
@@ -564,7 +589,23 @@ func knowledgeBaseDomain(row knowledgeBaseRecord) (domain.KnowledgeBase, error) 
 	if visibility != domain.KnowledgePrivate && visibility != domain.KnowledgePublic {
 		return domain.KnowledgeBase{}, fmt.Errorf("%w: invalid Knowledge Base visibility", domain.ErrInvalid)
 	}
-	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Description: row.Description, Visibility: visibility, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, DocumentCount: row.DocumentCount, ReadyDocumentCount: row.ReadyDocumentCount, LastReadyAt: row.LastReadyAt}, nil
+	scope := domain.KnowledgeScope(row.Scope)
+	if scope != domain.KnowledgeScopePrivate && scope != domain.KnowledgeScopeGroup && scope != domain.KnowledgeScopePlatform {
+		return domain.KnowledgeBase{}, fmt.Errorf("%w: invalid Knowledge Base scope", domain.ErrInvalid)
+	}
+	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Description: row.Description, Visibility: visibility, Scope: scope, GroupID: row.GroupID, GroupName: row.GroupName, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, DocumentCount: row.DocumentCount, ReadyDocumentCount: row.ReadyDocumentCount, LastReadyAt: row.LastReadyAt}, nil
+}
+
+func normalizedKnowledgeBaseInput(input domain.KnowledgeBaseInput) domain.KnowledgeBaseInput {
+	if input.Scope == "" {
+		if input.Platform && input.Visibility == domain.KnowledgePublic {
+			input.Scope = domain.KnowledgeScopePlatform
+		} else {
+			input.Scope = domain.KnowledgeScopePrivate
+			input.Platform = false
+		}
+	}
+	return input
 }
 
 func knowledgeCategoryDomain(row knowledgeCategoryRecord) domain.KnowledgeCategory {

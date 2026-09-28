@@ -10,7 +10,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 
 当前实现包含以下限界上下文：
 
-- Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
+- Account：OIDC 身份、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、Administrator-owned Connector Publication、User-private Connector Installation/Authorization、兼容期 CLI Definition/Enablement/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 - Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建、第二次成功运行和执行流重连生成追加式 Product Event。执行流重连只记录流类型与恢复方式，并按匿名对象的五分钟窗口去重；所有事件都只保存匿名 User/对象 Key 和白名单粗粒度属性，采集失败不改变业务操作结果。
@@ -18,13 +18,13 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 - AI Creation：具有独立 Endpoint 和加密 API Key 的 Image Model、单一 Prompt Optimization 设置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；不引用 Workspace 的 Model Provider Connection 或 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
 - AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。认证用户的 Assistant Conversation 拥有独立于 Workspace Session 的持久回合和完整审计记录；API 请求内通过独立 Model Provider Adapter 执行预处理和 SSE 生成，每个模型阶段走 Credits 准入与结算。External Conversation 仍是独立的匿名分享链路；真实数字人供应商和完整外部会话审计仍按产品规格分阶段实现。
 
-Account 只向 Credits 提供 User 身份，不拥有积分状态。Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
+Account 拥有 User、治理角色、Identity Group 投影和 Governance Audit Event，不拥有积分状态。Credits 只读取当前 Group membership 与 Department Credit Budget 完成聚合准入；Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
 
 ## 所有权
 
-Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval、Personal Settings 和 Image Generation Record 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Model Provider Connection、Provider Model、Image Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取可用投影，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement、Authorization 和最近图片模型选择。管理员可以查看账号级余额、今日用量、每日额度、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、图片提示词、Reference Image、Generated Image、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
+Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval、Personal Settings 和 Image Generation Record 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Knowledge Base 另有不可变的 private、group、platform 三种 scope：group 读取要求当前 active Department membership，写入还要求 Resource Publisher；Platform Resource 继续按全企业只读投影。Administrator 权限不会绕过 private 或 group membership 查询。Model Provider Connection、Provider Model、Image Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取可用投影，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement、Authorization 和最近图片模型选择。管理员可以查看账号级余额、今日用量、每日额度、Department budget、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、图片提示词、Reference Image、Generated Image、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。
 
 ## 事务与并发
 
@@ -34,7 +34,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 - Worker 按 Session 或 Run Conversation、冻结 Team Member 身份（没有成员时为 Expert 或匿名 Stage）、Runtime Engine 和实际资源集合摘要维护隔离的 Warm Runtime Container 租约。动态资源选择的轮次关闭 Native Resume，始终使用平台消息与摘要续接，避免旧上下文保留已移除的指导与工具。租约不共享执行上下文、User 或资源边界；同一 Expert 的不同 Team Member 也只按顺序挂载同一轮 Workflow 临时 Workspace。执行结束立即停止并清理单次凭证，空闲 30 分钟后回收 Container 定义。
 - CLI Connector bundle 在无 User 凭证的 Builder 中生成并通过 Object Storage 发布；不可变 Revision 与 Administrator Publication 只在 exact bundle/Runtime Digest Conformance 完整时进入目录。User 安装和多账号授权归属私有 Installation。公共 Wrapper 是所有 Runtime 的唯一 direct CLI 入口，负责 argv 与权限策略。`waiting_for_user`、一次性 Approval、nonce consumption 和执行前对 Publication、冻结 Revision、Installation 与 Authorization 的重校验由 Workspace Application 协调并持久化；每个 Stage 同时只有一个 active Approval。
 - Run 状态与终态 Event 在同一 Repository 事务提交；Event Sequence 从 1 单调递增且只有一个终态。User Action Wait event 为非终态；拒绝或过期作为结构化 CLI 错误交回 Runtime，不绕过终态规则。
-- Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。
+- Credits 上下文以不可变 Credit Ledger 为事实来源，并在同一事务维护 Credit Balance、每日额度剩余和今日用量投影。Daily Credit Allocation 以 `(user_id, credit_day)` 唯一，消费结算以 `(execution_id, stage_position)` 唯一；重试只能重放原结算，不能重复发放或扣减。Department Credit Budget 在文本与图片准入事务内按 Group + Credit Day 获取 Advisory Lock，汇总当前成员已结算消费与活动预留，并以所有适用部门中最小剩余值限制个人 Available Credit。
 - Runtime-backed text invocation 按 Workflow 串行而非按 User 串行。Stage 开始前在 Credits 事务中锁定 User 余额并创建等于冻结 Model Credit Rate fallback 的 Execution Credit Reservation；实际输入/输出 Token 用量在终态精确结算，超出预留时沿用负余额语义。Expert Team 成员逐个 reservation/settlement，未启动成员不收费；Stage 终态、Reservation、Credit Ledger 消费记录和余额投影在一个 Repository 事务中提交。不同 Workflow 的 Stage 可并行，互不共享执行锁。
 - Image Generation 是上述串行规则的受控例外：提交时在 Credits 上下文按 User 锁定余额，为完整输出数量创建归属提交 Credit Day 的 Image Credit Reservation，并分别记录来自当日额度与兑换余额的来源；同一 User 最多一个非终态图片批次，但可与一个 Runtime-backed 调用并行。后续任何准入都使用扣除未结算预留的 Available Credit。图片终态、成功输出元数据、Credit Consumption 和预留释放在一个事务提交；释放时已过期的旧 Daily Credit Allocation 不带入次日，未使用的 Redeemed Credit Balance 回到原余额。删除私有记录不退款，只留下不含执行内容的通用账本金额与时间。
 - Image Generation Record 由 Worker 通过 `FOR UPDATE SKIP LOCKED` 和租约领取。未发给供应商的工作可在进程重启后恢复；已发出但结果不确定的工作进入 `outcome_unknown`，不盲目重试。User 停止后拒收迟到输出，且只对停止前已验证持久化的图片结算。
@@ -47,6 +47,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
 Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、预留汇总和 Credit Ledger，并允许 Administrator 管理企业默认额度、提醒阈值、账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订和带原因的 Credit Adjustment。Redemption Code 是默认关闭的可选渠道；关闭时普通用户和管理员 API 都 fail closed。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；准入按所有余额桶减去活动预留后的净 Available Credit 判定，返回当前 Available Credit 与下一次每日额度时间，不返回其他 User 或内部费率数据。
+
+治理 API 只对当前 Administrator 开放：角色与账号状态更新、Identity Group 完整同步、Department Credit Budget、Department Knowledge Base custody 移交和 Governance Audit Event 列表。所有 mutation 要求 1–500 字符 reason 和适用资源的 Version CAS。Keycloak Adapter 只使用 Admin API 的 GET 读取 Group、层级和成员；Access Token 请求除外，不执行 Group/member mutation。Audit response 只返回 action、actor/target identifier、reason、time 与有界数值指标。
 
 工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run，即使同一 Conversation 已有 queued/running turn 也不返回冲突。创建请求立即返回 `202` 和稳定 Run ID；GET/SSE 返回权威状态与动态 queue position，API 继续使用 `Idempotency-Key`。队列超过五个 queued Run 时手动/API 返回 `429 queue_full` 且不创建 Run，定时触发记录失败历史 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
 
@@ -85,3 +87,5 @@ Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 C
 Conversation Selection 使用追加式 Migration `000027_conversation_selections.sql`，按 owner 与 Session / 根 Run 约束修订；删除所属对话时数据库级联删除修订。本地 PostgreSQL 17 临时数据库已验证完整迁移链与会话/工作流选择事务，生产迁移及 Linux + runsc 证据须单独取得。
 
 Product Analytics 使用追加式 Migration `000057_product_analytics.sql`。事件名、对象类型和属性在写入前经过代码白名单，User ID 与 Session/Workflow ID 只以带命名空间的 SHA-256 匿名 Key 保存；唯一 Dedup Key 保证重复请求、轮询和 Worker 重试不重复计算漏斗。该表不保存提示词、回答、文件名、文件内容、外部账号、Secret、Object Key 或签名 URL。第二次成功运行由终态 Run 持久化后读取权威成功次数产生，不由前端点击推测。
+
+企业治理使用追加式 Migration `000064_enterprise_governance.sql`：移除单一 Administrator 索引，增加唯一 Bootstrap Administrator、Resource Publisher、Identity Group/Membership、Governance Audit Event，以及 Knowledge Base scope/group 外键。Migration 将既有最早 Administrator 标为 Bootstrap Administrator，把既有 public Platform Knowledge Base 回填为 platform scope，并把旧的 Administrator-private Platform Knowledge Base 收敛为 owner-private scope；不会猜测 Department 或成员关系。完整 Migration 链与治理边界已在一次性 PostgreSQL 17 验证，生产 Migration 和真实 Keycloak 同步仍需单独证据。

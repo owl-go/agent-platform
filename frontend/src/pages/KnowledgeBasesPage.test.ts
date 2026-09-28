@@ -31,6 +31,16 @@ function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], docu
 }
 
 describe("KnowledgeBasesPage search", () => {
+  it("separates Department Knowledge Bases from personal content and keeps non-Publishers read-only", async () => {
+    const department: KnowledgeBase = { ...base, id: "base-group", owner_id: "publisher-1", name: "财务制度", scope: "group", group_id: "group-1", group_name: "财务部" };
+    const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [department, base]);
+    await flushPromises();
+    expect(wrapper.text()).toContain("部门知识库");
+    expect(wrapper.text()).toContain("财务部");
+    expect(wrapper.findAll(".knowledge-card")[0]!.find(".card-more").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("recommends only knowledge bases with retrieval-ready documents", async () => {
     const unready: KnowledgeBase = { ...base, id: "base-2", name: "处理中", document_count: 1, ready_document_count: 0, last_ready_at: undefined };
     const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [base, unready], { availableOnly: true });

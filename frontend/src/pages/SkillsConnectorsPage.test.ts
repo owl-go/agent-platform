@@ -50,7 +50,7 @@ describe("SkillsConnectorsPage", () => {
   });
 
   it.each([["zh-CN", "启用", "操作失败"], ["en", "Enable", "Operation failed"]])("shows failed enablement requests in the catalog (%s)", async (language, enableLabel, errorTitle) => {
-    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [] };
+    const definition = { id: "cli-1", name: "Feishu CLI", state: "available", capabilities: [], conformance_runtime_digests: ["sha256:" + "a".repeat(64)] };
     const enableCLIConnector = vi.fn().mockRejectedValue(new Error("request_failed"));
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), enableCLIConnector } as unknown as PlatformApi;
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });

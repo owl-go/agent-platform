@@ -114,6 +114,16 @@ type Balance struct {
 	PendingEffectiveDay    string
 	NextAllocationAt       time.Time
 	Version                int64
+	GroupBudget            *GroupBudgetStatus
+}
+
+type GroupBudgetStatus struct {
+	GroupID   string
+	Name      string
+	Limit     Amount
+	Consumed  Amount
+	Reserved  Amount
+	Available Amount
 }
 
 type Policy struct {

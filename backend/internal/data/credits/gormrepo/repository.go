@@ -195,6 +195,13 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if account.DailyRemaining+account.Persistent-imageDaily-imagePersistent-stageDaily-stagePersistent < admission.Rate.Fallback {
 			return domain.ErrInsufficientCredits
 		}
+		groupBudget, err := limitingGroupBudget(tx, admission.UserID, account.CreditDay, true)
+		if err != nil {
+			return err
+		}
+		if groupBudget != nil && groupBudget.Available < admission.Rate.Fallback {
+			return domain.ErrInsufficientCredits
+		}
 		dailyAvailable := account.DailyRemaining - imageDaily - stageDaily
 		persistentAvailable := account.Persistent - imagePersistent - stagePersistent
 		if dailyAvailable < 0 {
@@ -301,6 +308,14 @@ func (repository *Repository) Balance(ctx context.Context, userID, timezone stri
 			reserved := imageDaily + imagePersistent + stageDaily + stagePersistent
 			balance.Reserved = reserved
 			balance.Available = balance.Total - reserved
+			groupBudget, budgetErr := limitingGroupBudget(tx, userID, account.CreditDay, false)
+			if budgetErr != nil {
+				return budgetErr
+			}
+			balance.GroupBudget = groupBudget
+			if groupBudget != nil && groupBudget.Available < balance.Available {
+				balance.Available = groupBudget.Available
+			}
 		}
 		return err
 	})
@@ -329,6 +344,48 @@ func activeStageReservations(tx *gorm.DB, userID string, creditDay time.Time) (d
 		Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END), 0) AS daily, COALESCE(SUM(persistent_reserved_hundredths), 0) AS persistent", creditDay).
 		Scan(&result).Error
 	return result.Daily, result.Persistent, err
+}
+
+func limitingGroupBudget(tx *gorm.DB, userID string, creditDay time.Time, lock bool) (*domain.GroupBudgetStatus, error) {
+	type groupBudgetRow struct {
+		ID    string        `gorm:"column:id"`
+		Name  string        `gorm:"column:name"`
+		Limit domain.Amount `gorm:"column:daily_credit_limit_hundredths"`
+	}
+	var groups []groupBudgetRow
+	if err := tx.Table("identity_groups identity_group").Select("identity_group.id, identity_group.name, identity_group.daily_credit_limit_hundredths").Joins("JOIN identity_group_memberships membership ON membership.group_id = identity_group.id").Where("membership.user_id = ? AND identity_group.deleted_at IS NULL AND identity_group.department = true AND identity_group.daily_credit_limit_hundredths IS NOT NULL", userID).Order("identity_group.id").Scan(&groups).Error; err != nil {
+		return nil, err
+	}
+	var limiting *domain.GroupBudgetStatus
+	for _, group := range groups {
+		if lock {
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?))", "group-credit-budget:"+group.ID+":"+creditDay.Format(time.DateOnly)).Error; err != nil {
+				return nil, err
+			}
+		}
+		var usage struct {
+			Consumed domain.Amount `gorm:"column:consumed"`
+			Reserved domain.Amount `gorm:"column:reserved"`
+		}
+		query := `SELECT
+			COALESCE((SELECT SUM(-ledger.amount_hundredths) FROM credit_ledger ledger
+				JOIN identity_group_memberships member ON member.user_id = ledger.user_id
+				WHERE member.group_id = ? AND ledger.credit_day = ? AND ledger.entry_type = 'consumption'), 0) AS consumed,
+			COALESCE((SELECT SUM(admission.reserved_hundredths) FROM credit_stage_admissions admission
+				JOIN identity_group_memberships member ON member.user_id = admission.user_id
+				WHERE member.group_id = ? AND admission.credit_day = ? AND admission.settled_at IS NULL), 0)
+			+ COALESCE((SELECT SUM(reservation.amount_hundredths) FROM image_credit_reservations reservation
+				JOIN identity_group_memberships member ON member.user_id = reservation.user_id
+				WHERE member.group_id = ? AND reservation.credit_day = ? AND reservation.settled_at IS NULL), 0) AS reserved`
+		if err := tx.Raw(query, group.ID, creditDay, group.ID, creditDay, group.ID, creditDay).Scan(&usage).Error; err != nil {
+			return nil, err
+		}
+		status := &domain.GroupBudgetStatus{GroupID: group.ID, Name: group.Name, Limit: group.Limit, Consumed: usage.Consumed, Reserved: usage.Reserved, Available: group.Limit - usage.Consumed - usage.Reserved}
+		if limiting == nil || status.Available < limiting.Available {
+			limiting = status
+		}
+	}
+	return limiting, nil
 }
 
 func (repository *Repository) ReserveImage(ctx context.Context, reservation domain.ImageReservation) (domain.ImageReservation, error) {
@@ -366,6 +423,13 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		dailyReserved := imageDaily + stageDaily
 		persistentReserved := imagePersistent + stagePersistent
 		if account.DailyRemaining+account.Persistent-dailyReserved-persistentReserved < reservation.Amount {
+			return domain.ErrInsufficientCredits
+		}
+		groupBudget, err := limitingGroupBudget(tx, reservation.UserID, account.CreditDay, true)
+		if err != nil {
+			return err
+		}
+		if groupBudget != nil && groupBudget.Available < reservation.Amount {
 			return domain.ErrInsufficientCredits
 		}
 		dailyAvailable := account.DailyRemaining - dailyReserved

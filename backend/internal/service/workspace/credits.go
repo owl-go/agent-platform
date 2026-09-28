@@ -253,6 +253,9 @@ func (service *Service) userTimezone(ctx context.Context, userID string) string 
 
 func creditBalanceResponse(balance creditsdomain.Balance, policy creditsdomain.Policy) *workspacev1.CreditBalance {
 	response := &workspacev1.CreditBalance{TotalHundredths: int64(balance.Total), ReservedHundredths: int64(balance.Reserved), AvailableHundredths: int64(balance.Available), DailyRemainingHundredths: int64(balance.DailyRemaining), PersistentHundredths: int64(balance.Persistent), TodayConsumedHundredths: int64(balance.TodayConsumed), DailyAllocationHundredths: int64(balance.DailyAllocation), CreditDay: balance.CreditDay, Timezone: balance.Timezone, NextAllocationAt: timestamppb.New(balance.NextAllocationAt), PendingEffectiveDay: optionalString(balance.PendingEffectiveDay), Version: balance.Version, WarningThresholdPercent: int32(policy.WarningThresholdPercent), RedemptionCodesEnabled: policy.RedemptionCodesEnabled}
+	if balance.GroupBudget != nil {
+		response.GroupBudget = &workspacev1.GroupCreditBudget{GroupId: balance.GroupBudget.GroupID, GroupName: balance.GroupBudget.Name, LimitHundredths: int64(balance.GroupBudget.Limit), ConsumedHundredths: int64(balance.GroupBudget.Consumed), ReservedHundredths: int64(balance.GroupBudget.Reserved), AvailableHundredths: int64(balance.GroupBudget.Available)}
+	}
 	if balance.PendingDailyAllocation != nil {
 		value := int64(*balance.PendingDailyAllocation)
 		response.PendingDailyAllocationHundredths = &value

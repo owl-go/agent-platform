@@ -679,6 +679,167 @@
         ]
       }
     },
+    "/api/v1/admin/governance-audit-events": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListGovernanceAuditEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGovernanceAuditEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListIdentityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIdentityGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/synchronization": {
+      "post": {
+        "operationId": "AgentWorkspaceService_SyncIdentityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIdentityGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SyncIdentityGroupsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/{group_id}/budget": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateIdentityGroupBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IdentityGroup"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateIdentityGroupBudgetBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/{group_id}/resource-transfers": {
+      "post": {
+        "operationId": "AgentWorkspaceService_TransferGroupResources",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferGroupResourcesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceTransferGroupResourcesBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/model-credit-rates": {
       "get": {
         "operationId": "AgentWorkspaceService_ListModelCreditRates",
@@ -1086,6 +1247,44 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceResetUserPasswordBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/roles": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetUserRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSetUserRolesBody"
             }
           }
         ],
@@ -5662,6 +5861,27 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSetUserRolesBody": {
+      "type": "object",
+      "properties": {
+        "administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     },
@@ -5670,6 +5890,20 @@
     },
     "AgentWorkspaceServiceTestMCPConnectorBody": {
       "type": "object"
+    },
+    "AgentWorkspaceServiceTransferGroupResourcesBody": {
+      "type": "object",
+      "properties": {
+        "from_user_id": {
+          "type": "string"
+        },
+        "to_user_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
     },
     "AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody": {
       "type": "object",
@@ -5704,6 +5938,22 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateIdentityGroupBudgetBody": {
+      "type": "object",
+      "properties": {
+        "daily_credit_limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     },
@@ -7065,6 +7315,9 @@
         },
         "redemption_codes_enabled": {
           "type": "boolean"
+        },
+        "group_budget": {
+          "$ref": "#/definitions/v1GroupCreditBudget"
         }
       }
     },
@@ -7211,6 +7464,19 @@
         },
         "credit_balance": {
           "$ref": "#/definitions/v1CreditBalance"
+        },
+        "bootstrap_administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
+          }
         }
       }
     },
@@ -7894,6 +8160,80 @@
         }
       }
     },
+    "v1GovernanceAuditEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "actor_user_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "target_type": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GovernanceAuditMetric"
+          }
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GovernanceAuditMetric": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1GroupCreditBudget": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "group_name": {
+          "type": "string"
+        },
+        "limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "consumed_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reserved_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "available_hundredths": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1HealthResponse": {
       "type": "object",
       "properties": {
@@ -7998,6 +8338,42 @@
         "updated_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1IdentityGroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "external_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "department": {
+          "type": "boolean"
+        },
+        "daily_credit_limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "member_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "last_synced_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -8237,6 +8613,15 @@
         "last_ready_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "group_name": {
+          "type": "string"
         }
       }
     },
@@ -8254,6 +8639,12 @@
         },
         "platform": {
           "type": "boolean"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
         }
       }
     },
@@ -8554,6 +8945,30 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Expert"
+          }
+        }
+      }
+    },
+    "v1ListGovernanceAuditEventsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GovernanceAuditEvent"
+          }
+        }
+      }
+    },
+    "v1ListIdentityGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
           }
         }
       }
@@ -10117,6 +10532,18 @@
         }
       }
     },
+    "v1SyncIdentityGroupsRequest": {
+      "type": "object"
+    },
+    "v1TransferGroupResourcesResponse": {
+      "type": "object",
+      "properties": {
+        "knowledge_base_count": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1UpdateCreditPolicyRequest": {
       "type": "object",
       "properties": {
@@ -10211,6 +10638,19 @@
         },
         "credit_balance": {
           "$ref": "#/definitions/v1CreditBalance"
+        },
+        "bootstrap_administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
+          }
         }
       }
     },

@@ -1,6 +1,6 @@
 import type { InjectionKey } from "vue";
 
-export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean }
+export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean; group_budget?: { group_id: string; group_name: string; limit_hundredths: number; consumed_hundredths: number; reserved_hundredths: number; available_hundredths: number } }
 export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
 export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
 export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
@@ -16,7 +16,9 @@ export interface ImageGenerationInput { request_id?: string; original_prompt?: s
 export interface ImageGenerationEvent { sequence: number; type: string }
 export interface ReferenceImageUpload { id: string; media_type: string; encoded_size: number; width: number; height: number; expires_at: string }
 export interface PromptOptimizationCandidate { provider_model_id: string; display_name: string; api_protocol: "openai_chat"; endpoint?: string; api_key_configured: boolean; instruction: string }
-export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
+export interface IdentityGroup { id: string; external_id: string; name: string; path: string; department: boolean; daily_credit_limit_hundredths?: number; member_count: number; last_synced_at: string; version: number }
+export interface GovernanceAuditEvent { id: number; actor_user_id: string; action: string; target_type: string; target_id: string; reason: string; metrics: Array<{ key: string; value: number }>; occurred_at: string }
+export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; assistant_welcome?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; skills?: Array<{ id: string; name: string; object_key: string; sha256: string }>; mcp_servers?: Array<{ id: string; name: string; transport: string; icon?: string }>; cli_connectors?: Array<{ id: string; name: string; icon?: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
@@ -44,7 +46,7 @@ export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "w
 export interface GitConfigEntry { key: string; value: string }
 export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; ssh_config?: string; credential_configured: boolean }
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[]; ssh_config?: string }
-export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; document_count?: number; ready_document_count?: number; last_ready_at?: string }
+export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; scope?: "private" | "group" | "platform"; group_id?: string; group_name?: string; deleted: boolean; created_at: string; updated_at: string; version: number; document_count?: number; ready_document_count?: number; last_ready_at?: string }
 export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
 export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
@@ -113,7 +115,7 @@ export interface CLIConnectorEnablement { id: string; definition_id: string; sta
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
 export interface CommandApproval { id: string; execution_kind: "session" | "run"; execution_id: string; connector_name: string; operation: string; target: string; redacted_arguments: string; state: "pending" | "approved" | "rejected" | "consumed" | "expired" | "closed"; identity?: "user" | "bot"; expires_at: string; version: number }
-export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
+export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
 export function runtimeEngineDisplayName(runtime?: RuntimeEngine | string | null): string {
@@ -214,8 +216,8 @@ export interface PlatformApi {
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
   configureWorkflowGitSource(id: string, input: GitSourceInput, signal?: AbortSignal): Promise<Workflow>;
   listKnowledgeBases(deleted?: boolean, signal?: AbortSignal): Promise<KnowledgeBase[]>;
-  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, signal?: AbortSignal): Promise<KnowledgeBase>;
-  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
+  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean; scope?: "private" | "group" | "platform"; group_id?: string }, signal?: AbortSignal): Promise<KnowledgeBase>;
+  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean; scope?: "private" | "group" | "platform"; group_id?: string }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
   deleteKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeCategories(id: string, signal?: AbortSignal): Promise<KnowledgeCategory[]>;
@@ -335,8 +337,14 @@ export interface PlatformApi {
   decideCommandApproval(id: string, decision: "approved" | "rejected", identity: "user" | "bot" | undefined, version: number, signal?: AbortSignal): Promise<CommandApproval>;
   listUsers(signal?: AbortSignal): Promise<UserAccount[]>;
   createUser(input: { username: string; email: string; display_name: string }, signal?: AbortSignal): Promise<{ user: UserAccount; temporary_password: string }>;
-  setUserEnabled(id: string, enabled: boolean, version: number, signal?: AbortSignal): Promise<UserAccount>;
+  setUserEnabled(id: string, enabled: boolean, version: number, reason: string, signal?: AbortSignal): Promise<UserAccount>;
   resetUserPassword(id: string, signal?: AbortSignal): Promise<{ temporary_password: string }>;
+  setUserRoles(id: string, input: { administrator: boolean; resource_publisher: boolean; expected_version: number; reason: string }, signal?: AbortSignal): Promise<UserAccount>;
+  listIdentityGroups(signal?: AbortSignal): Promise<IdentityGroup[]>;
+  syncIdentityGroups(signal?: AbortSignal): Promise<IdentityGroup[]>;
+  updateIdentityGroupBudget(id: string, input: { daily_credit_limit_hundredths?: number; expected_version: number; reason: string }, signal?: AbortSignal): Promise<IdentityGroup>;
+  listGovernanceAuditEvents(limit?: number, signal?: AbortSignal): Promise<GovernanceAuditEvent[]>;
+  transferGroupResources(groupID: string, input: { from_user_id: string; to_user_id: string; reason: string }, signal?: AbortSignal): Promise<{ knowledge_base_count: number }>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-workspace-api");
@@ -771,8 +779,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
-    setUserEnabled(id, enabled, version, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version }, signal)); },
+    setUserEnabled(id, enabled, version, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version, reason }, signal)); },
     resetUserPassword(id, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/password-reset`, json("POST", {}, signal)); },
+    setUserRoles(id, input, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/roles`, json("PATCH", input, signal)); },
+    async listIdentityGroups(signal) { return (await call<{ items: IdentityGroup[] }>("/api/v1/admin/identity-groups", { signal })).items ?? []; },
+    async syncIdentityGroups(signal) { return (await call<{ items: IdentityGroup[] }>("/api/v1/admin/identity-groups/synchronization", json("POST", {}, signal))).items ?? []; },
+    updateIdentityGroupBudget(id, input, signal) { return call(`/api/v1/admin/identity-groups/${encodeURIComponent(id)}/budget`, json("PATCH", input, signal)); },
+    async listGovernanceAuditEvents(limit = 100, signal) { return (await call<{ items: GovernanceAuditEvent[] }>(`/api/v1/admin/governance-audit-events?limit=${limit}`, { signal })).items ?? []; },
+    transferGroupResources(groupID, input, signal) { return call(`/api/v1/admin/identity-groups/${encodeURIComponent(groupID)}/resource-transfers`, json("POST", input, signal)); },
   };
 }
 
