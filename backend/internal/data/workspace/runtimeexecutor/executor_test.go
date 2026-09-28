@@ -321,6 +321,33 @@ func TestManagedCLIConnectorRejectsMissingTaskScope(t *testing.T) {
 	}
 }
 
+func TestManagedCLIConnectorDeliversCredentialsOnlyToTheirDriver(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerID := "owner-1"
+	credential, err := box.Encrypt([]byte(`{"token":"provided"}`), "connector-authorization:"+ownerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := &stubCLICredentialRepository{managedMaterial: domain.ConnectorAuthorizationMaterial{CredentialCiphertext: credential, CredentialAAD: "connector-authorization:" + ownerID, CredentialFormat: "json"}}
+	executor := &Executor{box: box, cliCredentials: repository}
+	definition := cliconnector.Definition{ID: "installation", RevisionID: "revision", ManagedInstallation: true, AuthenticationDriver: "connector_package"}
+	environment, err := executor.cliEnvironmentResolver(ownerID)(context.Background(), definition, cliconnector.Capability{ID: "read"}, cliconnector.IdentityUser)
+	if err != nil || environment["CONNECTOR_CREDENTIALS_JSON"] != `{"token":"provided"}` || len(environment) != 1 {
+		t.Fatalf("provided credential delivery failed: %v", err)
+	}
+	repository.managedMaterial.CredentialFormat = "access_token"
+	if _, err := executor.cliEnvironmentResolver(ownerID)(context.Background(), definition, cliconnector.Capability{ID: "read"}, cliconnector.IdentityUser); err == nil {
+		t.Fatal("Feishu access token was accepted by a generic CLI")
+	}
+	definition.AuthenticationDriver = "unavailable"
+	if _, err := executor.cliEnvironmentResolver(ownerID)(context.Background(), definition, cliconnector.Capability{ID: "read"}, cliconnector.IdentityUser); err == nil {
+		t.Fatal("unsupported authorization driver received credentials")
+	}
+}
+
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
 	repository.ownerID, repository.definitionID, repository.identity, repository.scopes = ownerID, definitionID, identity, append([]string(nil), scopes...)
 	return repository.credentials, nil

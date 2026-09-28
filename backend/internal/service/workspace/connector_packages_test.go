@@ -84,6 +84,48 @@ func TestInteractiveConnectorAuthorizationRejectsOtherDrivers(t *testing.T) {
 	}
 }
 
+func TestProvidedConnectorCredentialsFollowReviewedPolicy(t *testing.T) {
+	manual := connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{
+		AuthenticationDriver: "connector_package",
+		Capabilities:         []connectorpackage.CLICapability{{Scopes: []string{"tasks:write"}}},
+	}}
+	if err := validateProvidedConnectorCredentials(manual, []string{"tasks:write"}); err != nil {
+		t.Fatalf("reviewed scope rejected: %v", err)
+	}
+	if err := validateProvidedConnectorCredentials(manual, []string{"admin:write"}); err == nil {
+		t.Fatal("unreviewed scope accepted")
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, nil); err == nil {
+		t.Fatal("provider-managed authorization accepted arbitrary JSON")
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, nil); err != nil {
+		t.Fatalf("MCP credentials rejected: %v", err)
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, nil); err == nil {
+		t.Fatal("unauthenticated MCP accepted credentials")
+	}
+}
+
+func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy connectorRevisionPolicy
+		want   string
+	}{
+		{"Feishu device flow", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, "interactive"},
+		{"reviewed CLI credentials", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "provided"},
+		{"reviewed MCP credentials", connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, "provided"},
+		{"no authorization", connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, "none"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := connectorAuthorizationMode(test.policy); got != test.want {
+				t.Fatalf("mode = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
 	pkg := connectorpackage.Package{
 		Metadata: connectorpackage.Metadata{Source: "feishu", Version: "1.0.95", Type: connectorpackage.TypeCLI, Name: "飞书", AuthMode: "oauth"},

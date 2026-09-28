@@ -934,7 +934,12 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 			if err != nil {
 				return nil, err
 			}
-			if material.CredentialFormat == "access_token" || definition.AuthenticationDriver == "feishu" {
+			switch definition.AuthenticationDriver {
+			case "feishu":
+				if material.CredentialFormat != "access_token" && material.CredentialFormat != "json" {
+					clear(plaintext)
+					return nil, errors.New("Feishu Connector credential format is invalid")
+				}
 				appID, appErr := executor.box.Decrypt(material.AppIDCiphertext, "feishu-cli-application:"+ownerID)
 				if appErr != nil {
 					clear(plaintext)
@@ -962,32 +967,20 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 				clear(appID)
 				clear(appSecret)
 				return environment, nil
-			}
-			value := string(plaintext)
-			clear(plaintext)
-			return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
-		}
-		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
-			if definition.AuthenticationDriver == "connector_package" {
-				repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
-				if !ok || !definition.ManagedInstallation || definition.ID == "" {
-					return nil, errors.New("Connector Package credentials are unavailable")
-				}
-				material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
-				if err != nil {
-					return nil, err
-				}
-				if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
-					return nil, errors.New("Connector authorization lacks required capability scopes")
-				}
-				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
-				if err != nil {
-					return nil, err
+			case "connector_package":
+				if material.CredentialFormat != "json" || !json.Valid(plaintext) {
+					clear(plaintext)
+					return nil, errors.New("Connector Package credentials are invalid")
 				}
 				value := string(plaintext)
 				clear(plaintext)
 				return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
+			default:
+				clear(plaintext)
+				return nil, errors.New("CLI Connector authorization driver is unavailable")
 			}
+		}
+		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
 			return nil, errors.New("CLI Connector credentials are unavailable")
 		}
 		credentials, err := executor.cliCredentials.ResolveCLIConnectorExecutionCredentials(ctx, ownerID, definition.ID, identity, capability.Scopes)

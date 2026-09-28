@@ -21,6 +21,9 @@ how to complete or refresh a grant, and how that grant is materialized for one
 Runtime invocation. Driver selection comes from the validated revision policy,
 never from a caller-supplied provider name or URL. An unavailable driver fails
 before contacting a provider or marking an Installation authorized.
+The existing provided-credentials path remains available only for a reviewed
+`connector_package` CLI or authenticated MCP revision; it cannot synthesize a
+provider-managed OAuth grant or assert scopes absent from the revision policy.
 
 Credential delivery is part of the driver contract, not an assumption that
 every CLI reads `CONNECTOR_CREDENTIALS_JSON`. An OAuth token can be delivered
