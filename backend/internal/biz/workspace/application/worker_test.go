@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 type cancellationRepository struct {
 	claimed   atomic.Bool
 	requested atomic.Bool
+	failed    atomic.Bool
 	finished  chan struct{}
 }
 
@@ -26,7 +28,8 @@ func (*cancellationRepository) FinishSucceeded(context.Context, ExecutionJob, Ex
 	return nil
 }
 
-func (*cancellationRepository) FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error {
+func (repository *cancellationRepository) FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error {
+	repository.failed.Store(true)
 	return nil
 }
 
@@ -124,5 +127,44 @@ func TestWorkerStopsActiveExecutionAfterCancellationRequest(t *testing.T) {
 	}
 	if err := <-done; err != nil {
 		t.Fatalf("ProcessNext: %v", err)
+	}
+}
+
+func TestWorkerLeavesActiveExecutionForRecoveryWhenParentStops(t *testing.T) {
+	repository := &cancellationRepository{finished: make(chan struct{})}
+	executor := &cancellationExecutor{started: make(chan struct{})}
+	worker, err := NewWorker(repository, executor)
+	if err != nil {
+		t.Fatalf("NewWorker: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, processErr := worker.ProcessNext(ctx)
+		done <- processErr
+	}()
+
+	select {
+	case <-executor.started:
+	case <-time.After(time.Second):
+		t.Fatal("executor did not start")
+	}
+	cancel()
+
+	select {
+	case processErr := <-done:
+		if !errors.Is(processErr, context.Canceled) {
+			t.Fatalf("ProcessNext error = %v, want context cancellation", processErr)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("worker did not stop after parent cancellation")
+	}
+	if repository.failed.Load() {
+		t.Fatal("Worker shutdown persisted an ordinary execution failure")
+	}
+	select {
+	case <-repository.finished:
+		t.Fatal("Worker shutdown persisted a User-requested cancellation")
+	default:
 	}
 }

@@ -168,6 +168,11 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	cancel()
 	if executeErr != nil {
 		discardSuccessCommit(result)
+		if ctx.Err() != nil {
+			// A Worker shutdown must leave the execution non-terminal so startup
+			// recovery can safely requeue it or close an already-consumed command.
+			return true, ctx.Err()
+		}
 		cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job)
 		if checkErr == nil && cancelled {
 			return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job, result)
