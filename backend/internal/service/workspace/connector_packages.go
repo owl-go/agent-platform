@@ -715,8 +715,24 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	}
 	if err != nil {
 		if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+			if errors.Is(err, dingtalkcli.ErrApprovalConsumed) {
+				// DingTalk authorization codes are single-use. A failed exchange or
+				// CLI permission check cannot be repaired by polling this flow again.
+				if deleteErr := repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID); deleteErr != nil {
+					return nil, publicError(deleteErr)
+				}
+			}
 			slog.WarnContext(ctx, "DingTalk Connector authorization failed", "cause", err.Error())
+			var restriction *dingtalkcli.CLIRestrictionError
 			switch {
+			case errors.As(err, &restriction) && restriction.Reason == "enterprise_not_authorized":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_enterprise_denied", "DingTalk organization denied CLI access")
+			case errors.As(err, &restriction) && (restriction.Reason == "user_forbidden" || restriction.Reason == "user_not_allowed"):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_user_denied", "DingTalk user is outside CLI access scope")
+			case errors.As(err, &restriction) && restriction.Reason == "channel_required":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_channel_required", "DingTalk organization requires a CLI channel")
+			case errors.As(err, &restriction) && restriction.Reason == "no_auth":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_auth_expired", "DingTalk CLI authorization is unavailable")
 			case errors.Is(err, dingtalkcli.ErrCLIAuthDisabled):
 				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_access_disabled", "DingTalk organization has not enabled CLI access")
 			case errors.Is(err, dingtalkcli.ErrIdentityMismatch):

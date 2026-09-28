@@ -2,6 +2,7 @@ package dingtalkcli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -163,5 +164,52 @@ func TestDeviceAuthorizationReportsCLIRestriction(t *testing.T) {
 	client := &Client{httpClient: server.Client(), mcpBase: server.URL}
 	if _, err := client.exchange(context.Background(), "client-1", "one-use-code"); !errors.Is(err, ErrCLIAuthDisabled) {
 		t.Fatalf("CLI restriction error = %v", err)
+	}
+}
+
+func TestCLIRestrictionReason(t *testing.T) {
+	tests := []struct {
+		name, response, want string
+	}{
+		{"enterprise", `{"success":false,"errorCode":"ENTERPRISE_NOT_AUTHORIZED"}`, "enterprise_not_authorized"},
+		{"channel", `{"success":false,"errorCode":"CHANNEL_REQUIRED"}`, "channel_required"},
+		{"no auth", `{"success":false,"errorCode":"NO_AUTH"}`, "no_auth"},
+		{"user forbidden", `{"success":true,"result":{"cliAuthEnabled":false,"userScope":"forbidden"}}`, "user_forbidden"},
+		{"channel restricted", `{"success":true,"result":{"cliAuthEnabled":false,"channelScope":"specified"}}`, "channel_required"},
+		{"user excluded", `{"success":true,"result":{"cliAuthEnabled":false,"userScope":"specified"}}`, "user_not_allowed"},
+		{"unspecified restriction", `{"success":true,"result":{"cliAuthEnabled":false}}`, "cli_not_enabled"},
+		{"allowed", `{"success":true,"result":{"cliAuthEnabled":true}}`, ""},
+		{"unavailable", `{"success":false,"errorCode":"SERVER_ERROR"}`, ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var status cliAuthStatus
+			if err := json.Unmarshal([]byte(test.response), &status); err != nil {
+				t.Fatal(err)
+			}
+			if got := cliRestrictionReason(status); got != test.want {
+				t.Fatalf("reason = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestApprovedDeviceFlowMarksExchangeFailureAsConsumed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/cli/oauth/device/poll":
+			_, _ = w.Write([]byte(`{"success":true,"result":{"status":"APPROVED","authCode":"one-use-code"}}`))
+		case "/oauth2/getToken":
+			_, _ = w.Write([]byte(`{"errorCode":"AUTH_CODE_USED"}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	client := &Client{httpClient: server.Client(), mcpBase: server.URL, pollBase: server.URL}
+	_, err := client.Poll(context.Background(), `{"client_id":"client-1","device_code":"device-secret","flow_id":"flow-1"}`)
+	if !errors.Is(err, ErrApprovalConsumed) {
+		t.Fatalf("approved one-use code must be terminal: %v", err)
 	}
 }

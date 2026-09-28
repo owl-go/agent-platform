@@ -63,7 +63,7 @@ const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
 function reportError(cause?: unknown, validationKey = "invalidInput") {
   const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
-  const authorizationErrors: Record<string, string> = { dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
+  const authorizationErrors: Record<string, string> = { dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_cli_enterprise_denied: "dingtalkCLIEnterpriseDenied", dingtalk_cli_user_denied: "dingtalkCLIUserDenied", dingtalk_cli_channel_required: "dingtalkCLIChannelRequired", dingtalk_cli_auth_expired: "dingtalkCLIAuthExpired", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
   const key = cause instanceof ApiError ? authorizationErrors[cause.code] ?? (cause.status === 413 ? "uploadTooLarge" : keys[cause.kind]) : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
@@ -235,6 +235,13 @@ async function completePublishedConnectorFlows() {
       connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
       if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
     } catch (cause) {
+      if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
+        const remaining = { ...connectorAuthorizationFlows.value };
+        delete remaining[installationID];
+        connectorAuthorizationFlows.value = remaining;
+        closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null);
+        connectorFlowWindows.delete(installationID);
+      }
       if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
     }
   }
