@@ -36,6 +36,20 @@ func (processor *Processor) ProcessNext(ctx context.Context) (bool, error) {
 	if finishErr != nil {
 		return true, finishErr
 	}
+	if processingErr == nil {
+		// Commit the new Ready revision before removing the previous provider
+		// vectors. A cleanup failure cannot roll the committed job backward;
+		// source validation still rejects superseded vectors at query time.
+		previous, err := processor.repository.SupersededKnowledgeRevisions(ctx, job.DocumentID, job.RevisionID)
+		if err != nil {
+			return true, fmt.Errorf("find superseded Knowledge revisions: %w", err)
+		}
+		for _, revisionID := range previous {
+			if err := processor.provider.RemoveRevision(ctx, job.KnowledgeBaseID, revisionID); err != nil {
+				return true, fmt.Errorf("remove superseded Knowledge revision: %w", err)
+			}
+		}
+	}
 	return true, nil
 }
 

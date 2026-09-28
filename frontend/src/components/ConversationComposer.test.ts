@@ -13,9 +13,9 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; noScopes?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
- const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: "feishu", name: "飞书 CLI", revision: "3" }] : [] };
- const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? "feishu" : "飞书 CLI", state: "available", authentication_driver: "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] } as CLIConnectorDefinition;
+async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+ const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: options.managed ? "installation-1" : "feishu", name: "飞书 CLI", revision: "3" }] : [] };
+ const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? "feishu" : "飞书 CLI", state: "available", authentication_driver: "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }, ...(options.taskCapability ? [{ id: "task_create", argv_prefix: ["task", "+create"], risk: "high", identities: ["user"], scopes: ["task:task:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] : []), ...(options.documentCapability ? [{ id: "docs_create", argv_prefix: ["docs", "+create"], risk: "high", identities: ["user"], scopes: ["docx:document:create", "docx:document:write_only"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }, { id: "mail_send", argv_prefix: ["mail", "+send"], risk: "high", identities: ["user"], scopes: ["mail:mail:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }] : [])] } as CLIConnectorDefinition;
  const enabled = { id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 };
  let refreshed = false;
  const api = { ...conversationApiStub(initial), listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []), listSkills: vi.fn(async () => [skill]), ...((options.authorization || options.activation || options.managed) ? {
@@ -161,6 +161,49 @@ describe("ConversationComposer", () => {
   expect(wrapper.get(".composer-authorization").text()).toContain("回复“已授权”");
   wrapper.unmount();
  });
+ it("opens the managed Feishu authorization link from a failed conversation command", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedSetupComplete: true });
+  await wrapper.setProps({ authorizationRequest: { connectorID: "installation-1", capabilityID: "send" } }); await flushPromises();
+  expect(wrapper.get(".composer-authorization").text()).toContain("feishu 需要飞书账号授权");
+  await wrapper.get(".composer-authorization button").trigger("click"); await flushPromises();
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user"]);
+  expect(wrapper.get(".composer-authorization a").attributes("href")).toBe("https://accounts.feishu.cn/authorize");
+  vi.mocked(api.completeConnectorAuthorizationFlow).mockResolvedValue({ id: "authorization-1", installation_id: "installation-1", identity: "user", scopes: ["im:message", "im:message.send_as_user"], state: "completed" });
+  document.dispatchEvent(new Event("visibilitychange")); await flushPromises();
+  expect(wrapper.get(".composer-authorization").text()).toContain("飞书授权已完成");
+  wrapper.unmount();
+ });
+ it("does not ask to reauthorize a managed Feishu Connector with the required scopes", async () => {
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedAuthorized: true });
+  await wrapper.setProps({ authorizationRequest: { connectorID: "installation-1", capabilityID: "send" } }); await flushPromises();
+  expect(wrapper.find(".composer-authorization").exists()).toBe(false);
+  expect(api.beginConnectorAuthorizationFlow).not.toHaveBeenCalled();
+  wrapper.unmount();
+ });
+ it("preserves existing message scopes when requesting task creation authorization", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedAuthorized: true, managedSetupComplete: true, taskCapability: true });
+  await wrapper.setProps({ authorizationRequest: { connectorID: "installation-1", capabilityID: "task_create" } }); await flushPromises();
+  await wrapper.get(".composer-authorization button").trigger("click"); await flushPromises();
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user", "task:task:write"]);
+  wrapper.unmount();
+ });
+ it("requests cloud-document scopes from the conversation without requesting unrelated domains", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedAuthorized: true, managedSetupComplete: true, documentCapability: true });
+  await wrapper.setProps({ authorizationRequest: { connectorID: "installation-1", capabilityID: "docs_create" } }); await flushPromises();
+  await wrapper.get(".composer-authorization button").trigger("click"); await flushPromises();
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user", "docx:document:create", "docx:document:write_only"]);
+  wrapper.unmount();
+ });
+ it("recovers a managed Feishu grant that expired before the command started", async () => {
+  const { wrapper, api } = await setup({ authorization: true, managed: true });
+  await wrapper.setProps({ authorizationRequest: { connectorID: "installation-1", capabilityID: "" } }); await flushPromises();
+  expect(wrapper.get(".composer-authorization").text()).toContain("需要飞书账号授权");
+  expect(api.listConnectorAuthorizations).toHaveBeenCalledWith("installation-1");
+  wrapper.unmount();
+ });
  it("activates, authorizes, selects, and deactivates a CLI Connector from the conversation picker", async () => {
   vi.spyOn(window, "open").mockReturnValue(null);
   const { wrapper, api } = await setup({ activation: true });
@@ -257,6 +300,16 @@ describe("ConversationComposer", () => {
   await flushPromises();
   expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user"]);
   expect(wrapper.find('.composer-authorization a[href="https://accounts.feishu.cn/authorize"]').exists()).toBe(true);
+  wrapper.unmount();
+ });
+ it("activates managed Feishu with document scopes while leaving unrelated domains on demand", async () => {
+  vi.spyOn(window, "open").mockReturnValue(null);
+  const { wrapper, api } = await setup({ managed: true, managedSetupComplete: true, documentCapability: true });
+  await wrapper.get(".composer-plus").trigger("click");
+  await wrapper.findAll(".composer-menu button").find((button) => button.text() === "连接器")!.trigger("click");
+  await wrapper.get(".composer-connector-option .el-switch").trigger("click");
+  await flushPromises();
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user", "docx:document:create", "docx:document:write_only"]);
   wrapper.unmount();
  });
 });

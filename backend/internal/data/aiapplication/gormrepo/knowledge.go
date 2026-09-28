@@ -71,7 +71,7 @@ func (aiKnowledgeJobRecord) TableName() string           { return "ai_applicatio
 
 func (r *Repository) ListKnowledgeBases(ctx context.Context, owner string) ([]domain.KnowledgeBase, error) {
 	var rows []knowledgeBaseRecord
-	if err := r.db.WithContext(ctx).Where("owner_user_id = ? AND deleted_at IS NULL", owner).Order("updated_at DESC").Find(&rows).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("(owner_user_id = ? OR (platform = true AND visibility = 'public')) AND deleted_at IS NULL", owner).Order("updated_at DESC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	result := make([]domain.KnowledgeBase, 0, len(rows))
@@ -82,7 +82,7 @@ func (r *Repository) ListKnowledgeBases(ctx context.Context, owner string) ([]do
 }
 func (r *Repository) GetKnowledgeBase(ctx context.Context, owner, id string) (domain.KnowledgeBase, error) {
 	var row knowledgeBaseRecord
-	err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", owner, id).Take(&row).Error
+	err := r.db.WithContext(ctx).Where("(owner_user_id = ? OR (platform = true AND visibility = 'public')) AND id = ? AND deleted_at IS NULL", owner, id).Take(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.KnowledgeBase{}, domain.ErrNotFound
 	}

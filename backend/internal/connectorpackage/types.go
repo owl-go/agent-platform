@@ -100,6 +100,7 @@ type CLIManifest struct {
 	Commands             CLICommands           `json:"commands"`
 	StatusMatch          StatusMatch           `json:"status_match"`
 	Capabilities         []CLICapability       `json:"capabilities,omitempty"`
+	ActivationScopes     []string              `json:"activation_scopes,omitempty"`
 	AuthURLDomains       []string              `json:"auth_url_domains,omitempty"`
 	Environment          []EnvironmentVariable `json:"environment,omitempty"`
 	EgressHosts          []string              `json:"egress_hosts"`

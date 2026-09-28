@@ -65,13 +65,20 @@ async function copy(value: string, id: string) {
 function messageAriaLabel(message: ConversationMessage) {
   return message.role === "user" ? t("sessions.copyQuestion") : t("sessions.copyAnswer");
 }
+function messageTime(timestamp: string) {
+  return new Date(timestamp).toLocaleTimeString(locale.value as SupportedLocale, { hour: "2-digit", minute: "2-digit" });
+}
 onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
 
 <template>
   <div class="conversation-thread">
     <div v-for="message in props.messages" :key="message.id" class="message" :class="message.role">
+      <span v-if="message.role === 'assistant'" class="agent-avatar" aria-hidden="true">AI</span>
       <div class="message-content">
+        <div v-if="message.role === 'assistant'" class="message-identity">
+          <strong>{{ message.meta?.label || 'Agent Workspace' }}</strong><span>Agent</span><time :datetime="message.timestamp">{{ messageTime(message.timestamp) }}</time><small v-if="message.elapsedMs">{{ t('sessions.elapsed', { value: formatDuration(message.elapsedMs, locale as SupportedLocale) }) }}</small>
+        </div>
         <div v-if="message.role === 'assistant' && isPending(message) && !message.finalizing" class="thinking-state">
           <span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           <strong>{{ message.state === 'waiting_for_user' ? t('common.waitingForUser') : (message.progressTitle || t('sessions.thinking')) }}</strong>
@@ -98,7 +105,12 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
         <div v-if="message.content && message.role === 'assistant'" class="markdown-body" :class="{ streaming: message.streaming }" v-html="renderMarkdown(displayArtifactNames(message.content, message.artifacts))"></div>
         <p v-else-if="message.content">{{ message.content }}</p>
-        <p v-else-if="message.state !== 'cancelled' && (message.error || message.state === 'failed')">{{ message.error || stateLabel(message) }}</p>
+        <section v-if="message.role === 'assistant' && message.state === 'failed'" class="failure-card" role="alert">
+          <header>{{ t('sessions.failureTitle') }}</header>
+          <dl><div><dt>{{ t('sessions.failureLocation') }}</dt><dd>{{ message.progressDetail || t('sessions.failureResponse') }}</dd></div><div><dt>{{ t('sessions.failureReason') }}</dt><dd>{{ message.error || stateLabel(message) }}</dd></div><div><dt>{{ t('sessions.failureCompleted') }}</dt><dd>{{ message.content ? t('sessions.failurePartialKept') : t('sessions.failureNoResult') }}</dd></div></dl>
+          <footer v-if="message.retryable"><el-button type="primary" @click="emit('retry', message.id)">{{ t('sessions.retryStep') }}</el-button></footer>
+        </section>
+        <p v-else-if="message.role !== 'assistant' && message.state !== 'cancelled' && (message.error || message.state === 'failed')">{{ message.error || stateLabel(message) }}</p>
         <p v-else-if="!isPending(message) && message.stateLabel" class="muted">{{ message.stateLabel }}</p>
 
         <div v-if="message.role === 'user' && message.skills?.length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')">
@@ -127,9 +139,8 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         </div>
         <CreditConsumption v-if="message.role === 'assistant'" :value="message.creditConsumption" />
         <div class="message-actions">
-          <small class="message-meta">{{ new Date(message.timestamp).toLocaleTimeString() }}<template v-if="message.elapsedMs"> · {{ t('sessions.elapsed', { value: formatDuration(message.elapsedMs, locale as SupportedLocale) }) }}</template><span v-if="message.meta" class="message-model" :title="message.meta.title"> · {{ message.meta.label }}</span></small>
+          <small v-if="message.role === 'user'" class="message-meta">{{ messageTime(message.timestamp) }}</small>
           <button v-if="message.copyText || message.content" type="button" class="message-copy" :class="{ copied: isCopied(`message:${message.id}`) }" :aria-label="messageAriaLabel(message)" @click="copy(message.copyText || message.content, `message:${message.id}`)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ isCopied(`message:${message.id}`) ? t('common.copied') : t('common.copy') }}</span></button>
-          <el-button v-if="message.retryable" text type="primary" @click="emit('retry', message.id)">{{ t('common.retry') }}</el-button>
         </div>
       </div>
     </div>

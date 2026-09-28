@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import ProfileIcon from "./ProfileIcon.vue";
 import feishuIcon from "../assets/feishu.png";
+import dingtalkIcon from "../assets/dingtalk.png";
 
 const props = withDefaults(defineProps<{ icon?: string; size?: number }>(), { size: 28 });
-const isImage = (value?: string) => Boolean(value?.startsWith("data:image/"));
+const imageSource = computed(() => {
+  if (props.icon === "feishu") return feishuIcon;
+  if (props.icon === "dingtalk") return dingtalkIcon;
+  return props.icon?.startsWith("data:image/") ? props.icon : undefined;
+});
 </script>
 
 <template>
   <span class="connector-icon" :style="{ width: `${size}px`, height: `${size}px` }" aria-hidden="true">
-    <img v-if="props.icon === 'feishu' || isImage(props.icon)" :src="props.icon === 'feishu' ? feishuIcon : props.icon" alt="" />
+    <img v-if="imageSource" :src="imageSource" alt="" />
     <ProfileIcon v-else :icon="props.icon || 'terminal'" />
   </span>
 </template>

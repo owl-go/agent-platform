@@ -23,6 +23,8 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/knowledgebase/anythingllm"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
@@ -47,6 +49,7 @@ type Service struct {
 	files                    *workspacefs.Store
 	skills                   *skillstore.Store
 	objects                  objectstore.Provider
+	knowledgeSearch          retrieval.Searcher
 	config                   platformconfig.Config
 	feishu                   feishuApplicationRegistrar
 	removeNativeSessionState func(string, string, string) error
@@ -67,6 +70,7 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/search", http.HandlerFunc(service.searchKnowledgeBase))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/import", http.HandlerFunc(service.importKnowledgeDocument))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/retry", http.HandlerFunc(service.retryKnowledgeDocument))
+	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}/regenerate", http.HandlerFunc(service.regenerateKnowledgeDocument))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/restore", http.HandlerFunc(service.restoreKnowledgeBase))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}/restore", http.HandlerFunc(service.restoreKnowledgeCategory))
 	server.Handle("/api/v1/knowledge-bases/{knowledge_base_id}/documents/{document_id}", http.HandlerFunc(service.mutateKnowledgeDocument))
@@ -109,7 +113,18 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
-	return &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}, nil
+	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
+	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
+		provider, err := anythingllm.NewClient(config.AnythingLLM.Endpoint, config.AnythingLLM.APIKey, config.AnythingLLM.Timeout.Value())
+		if err != nil {
+			return nil, err
+		}
+		service.knowledgeSearch, err = retrieval.New(workspace.Repository(), provider)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return service, nil
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {

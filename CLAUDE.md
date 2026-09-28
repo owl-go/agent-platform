@@ -44,6 +44,7 @@
 
 - **领域命名或模型关系**：读 `CONTEXT.md`。修改术语、实体边界或持久语义时同步更新它。
 - **产品行为、账号、会话、工作流或界面边界**：读 `docs/product/agent-workspace-requirements.md`。
+- **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
 - **Runtime 契约、事件、错误或恢复**：读 `docs/technical/runtime-adapter.md`。
 - **CLI 参数、镜像版本或 Capability**：读 `docs/technical/runtime-images.md`，同时检查对应 Driver、Dockerfile 和镜像测试。
 - **Container 隔离、挂载、Egress 或 Reconcile**：读 `docs/technical/sandbox-runner.md`。
@@ -91,7 +92,7 @@
 
 ### Web 变更
 
-沿用 Vue Composition API 和 `<script setup lang="ts">`，保持桌面与移动端布局可用。组件行为放在 `.vue` 文件，当前全局视觉规则位于 `frontend/src/styles.css`；完成前至少运行 typecheck 和生产构建。
+沿用 Vue Composition API 和 `<script setup lang="ts">`，保持桌面与移动端布局可用。组件行为放在 `.vue` 文件，视觉实现遵循 `docs/standards/frontend-ui.md`，设计 Token 位于 `frontend/src/design-tokens.css`，全局样式位于 `frontend/src/styles.css`；完成前至少运行 typecheck 和生产构建。
 界面文案与交互以用户明确提出或规格要求为准，保持信息精简；每个新增标签、分类提示或其他 UI 元素都必须有明确需求依据。
 
 ## 代码与测试约定

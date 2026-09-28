@@ -3,6 +3,7 @@ package ingestion
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"testing"
 	"time"
@@ -13,8 +14,17 @@ import (
 )
 
 type fakeRepository struct {
-	job      *workspaceapplication.KnowledgeIngestionJob
-	finished error
+	job          *workspaceapplication.KnowledgeIngestionJob
+	finished     error
+	finishCalled bool
+	previous     []string
+}
+
+func (fake *fakeRepository) SupersededKnowledgeRevisions(context.Context, string, string) ([]string, error) {
+	if !fake.finishCalled {
+		return nil, fmt.Errorf("cleanup before Ready commit")
+	}
+	return fake.previous, nil
 }
 
 func (fake *fakeRepository) ClaimKnowledgeIngestionJob(context.Context) (*workspaceapplication.KnowledgeIngestionJob, error) {
@@ -24,6 +34,7 @@ func (fake *fakeRepository) ClaimKnowledgeIngestionJob(context.Context) (*worksp
 }
 func (fake *fakeRepository) FinishKnowledgeIngestionJob(_ context.Context, _ workspaceapplication.KnowledgeIngestionJob, err error) error {
 	fake.finished = err
+	fake.finishCalled = true
 	return nil
 }
 
@@ -46,7 +57,10 @@ func (fake fakeObjects) DeleteExpired(context.Context, objectstore.LifecycleQuer
 	return 0, nil
 }
 
-type fakeProvider struct{ uploaded bool }
+type fakeProvider struct {
+	uploaded bool
+	removed  []string
+}
 
 func (fake *fakeProvider) EnsureWorkspace(context.Context, string) error { return nil }
 func (fake *fakeProvider) DeleteWorkspace(context.Context, string) error { return nil }
@@ -54,20 +68,23 @@ func (fake *fakeProvider) UpsertRevision(context.Context, string, string, string
 	fake.uploaded = true
 	return nil
 }
-func (fake *fakeProvider) RemoveRevision(context.Context, string, string) error { return nil }
+func (fake *fakeProvider) RemoveRevision(_ context.Context, _, revisionID string) error {
+	fake.removed = append(fake.removed, revisionID)
+	return nil
+}
 func (fake *fakeProvider) Query(context.Context, string, int64, string, int, int) (anythingllm.Retrieval, error) {
 	return anythingllm.Retrieval{}, nil
 }
 
 func TestProcessorAcceptsSourceOnlyAfterProviderIndexing(t *testing.T) {
-	repository := &fakeRepository{job: &workspaceapplication.KnowledgeIngestionJob{ID: "job", KnowledgeBaseID: "base", RevisionID: "revision", ObjectKey: "knowledge/object", ContentType: "text/plain"}}
+	repository := &fakeRepository{job: &workspaceapplication.KnowledgeIngestionJob{ID: "job", KnowledgeBaseID: "base", RevisionID: "revision", ObjectKey: "knowledge/object", ContentType: "text/plain"}, previous: []string{"old-revision"}}
 	provider := &fakeProvider{}
 	processor, err := New(repository, fakeObjects{content: []byte("hello")}, provider)
 	if err != nil {
 		t.Fatal(err)
 	}
 	worked, err := processor.ProcessNext(context.Background())
-	if err != nil || !worked || !provider.uploaded || repository.finished != nil {
+	if err != nil || !worked || !provider.uploaded || repository.finished != nil || len(provider.removed) != 1 || provider.removed[0] != "old-revision" {
 		t.Fatalf("ProcessNext() = worked=%t err=%v uploaded=%t finished=%v", worked, err, provider.uploaded, repository.finished)
 	}
 }

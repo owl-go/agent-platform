@@ -67,6 +67,84 @@ func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T
 	}
 }
 
+func TestInteractiveConnectorAuthorizationRejectsOtherDrivers(t *testing.T) {
+	for _, driver := range []string{"connector_package", "none", "dingtalk"} {
+		t.Run(driver, func(t *testing.T) {
+			policy := connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: driver}}
+			if err := validateInteractiveConnectorDriver(policy); err == nil || !strings.Contains(err.Error(), "no interactive authorization adapter") {
+				t.Fatalf("driver %q error = %v", driver, err)
+			}
+		})
+	}
+	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}); err != nil {
+		t.Fatalf("Feishu driver rejected: %v", err)
+	}
+	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{MCP: &connectorpackage.MCPManifest{}}); err == nil {
+		t.Fatal("MCP revision entered the CLI authorization flow")
+	}
+}
+
+func TestProvidedConnectorCredentialsFollowReviewedPolicy(t *testing.T) {
+	manual := connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{
+		AuthenticationDriver: "connector_package",
+		Capabilities:         []connectorpackage.CLICapability{{Scopes: []string{"tasks:write"}}},
+	}}
+	if err := validateProvidedConnectorCredentials(manual, []string{"tasks:write"}); err != nil {
+		t.Fatalf("reviewed scope rejected: %v", err)
+	}
+	if err := validateProvidedConnectorCredentials(manual, []string{"admin:write"}); err == nil {
+		t.Fatal("unreviewed scope accepted")
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, nil); err == nil {
+		t.Fatal("provider-managed authorization accepted arbitrary JSON")
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, nil); err != nil {
+		t.Fatalf("MCP credentials rejected: %v", err)
+	}
+	if err := validateProvidedConnectorCredentials(connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, nil); err == nil {
+		t.Fatal("unauthenticated MCP accepted credentials")
+	}
+}
+
+func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy connectorRevisionPolicy
+		want   string
+	}{
+		{"Feishu device flow", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, "interactive"},
+		{"reviewed CLI credentials", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "provided"},
+		{"reviewed MCP credentials", connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, "provided"},
+		{"no authorization", connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, "none"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := connectorAuthorizationMode(test.policy); got != test.want {
+				t.Fatalf("mode = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
+	pkg := connectorpackage.Package{
+		Metadata: connectorpackage.Metadata{Source: "feishu", Version: "1.0.95", Type: connectorpackage.TypeCLI, Name: "飞书", AuthMode: "oauth"},
+		CLI: &connectorpackage.CLIManifest{
+			AuthenticationDriver: "feishu",
+			ActivationScopes:     []string{"docx:document:create"},
+			Capabilities: []connectorpackage.CLICapability{
+				{ID: "docs_create", Identities: []string{"user"}, Scopes: []string{"docx:document:create"}},
+				{ID: "mail_send", Identities: []string{"user"}, Scopes: []string{"mail:mail:write"}},
+			},
+		},
+	}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	response := connectorRevisionResponse(revision)
+	if len(response.RequiredScopes) != 1 || response.RequiredScopes[0] != "docx:document:create" {
+		t.Fatalf("activation scopes = %v", response.RequiredScopes)
+	}
+}
+
 func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Helper()
 	for _, entry := range reader.File {

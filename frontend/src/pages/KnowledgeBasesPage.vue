@@ -279,8 +279,11 @@ function closePreview() {
 async function retryDocument(document: KnowledgeDocument) {
   if (!selected.value) return;
   try {
-    await api.retryKnowledgeDocument(selected.value.id, document.id);
-    await openBase(selected.value);
+    const baseID = selected.value.id;
+    if (documentState(document) === "ready") await api.regenerateKnowledgeDocument(baseID, document.id);
+    else await api.retryKnowledgeDocument(baseID, document.id);
+    const updated = await api.listKnowledgeDocuments(baseID);
+    if (selected.value?.id === baseID) documents.value = updated;
     ElMessage.success(t("knowledgeBases.retryAccepted"));
   } catch {
     error.value = t("knowledgeBases.retryFailed");
@@ -300,9 +303,37 @@ async function deleteDocument(document: KnowledgeDocument) {
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString(); }
 function formatSize(size?: number) { if (!size) return "—"; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; }
+function documentState(document: KnowledgeDocument) { return document.latest_revision?.state || document.state; }
+function documentStatusType(document: KnowledgeDocument): "success" | "danger" | "warning" | "info" {
+  switch (documentState(document)) {
+    case "ready": return "success";
+    case "failed": return "danger";
+    case "blocked": return "warning";
+    default: return "info";
+  }
+}
+function documentStatusLabel(document: KnowledgeDocument) {
+  switch (documentState(document)) {
+    case "ready": return t("common.success");
+    case "failed": return t("common.failed");
+    case "blocked": return t("knowledgeBases.blocked");
+    case "accepted": return t("common.queued");
+    default: return t("common.running");
+  }
+}
 
-onMounted(() => void refresh());
-onUnmounted(closePreview);
+let statusTimer: ReturnType<typeof setInterval> | undefined;
+async function refreshPendingDocuments() {
+  const baseID = selected.value?.id;
+  if (!baseID || !documents.value.some((document) => ["accepted", "processing"].includes(documentState(document)))) return;
+  try {
+    const updated = await api.listKnowledgeDocuments(baseID);
+    if (selected.value?.id === baseID) documents.value = updated;
+  } catch { /* Retry on the next poll. */ }
+}
+
+onMounted(() => { void refresh(); statusTimer = setInterval(() => void refreshPendingDocuments(), 5000); });
+onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview(); });
 </script>
 
 <template>
@@ -351,7 +382,7 @@ onUnmounted(closePreview);
       <section v-if="categories.length" class="category-section"><div class="section-heading"><div><h3>{{ t("knowledgeBases.categories") }}</h3><p>{{ t("knowledgeBases.categoriesHint") }}</p></div><el-button text @click="openCategory(null)">{{ t("knowledgeBases.viewAll") }}</el-button></div><div class="category-grid"><button class="category-card" :class="{ active: activeCategory === null }" @click="openCategory(null)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ t("knowledgeBases.allDocuments") }}</strong><small>{{ documents.length }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-for="category in categories" :key="category.id" class="category-card" :class="{ active: activeCategory === category.id }" @click="openCategory(category.id)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ category.name }}</strong><small>{{ categoryCounts.get(category.id) || 0 }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-if="unclassifiedCount" class="category-card" :class="{ active: activeCategory === 'unclassified' }" @click="openCategory('unclassified')"><span class="category-card-icon muted"><FileText :size="18" /></span><span><strong>{{ t("knowledgeBases.unclassified") }}</strong><small>{{ unclassifiedCount }} {{ t("knowledgeBases.documentCount") }}</small></span></button></div></section>
 
       <section class="documents-panel"><div class="section-heading"><div><p class="eyebrow">{{ t("knowledgeBases.document") }}</p><h3>{{ activeCategoryName }}</h3><p>{{ visibleDocuments.length }} {{ t("knowledgeBases.documentCount") }}</p></div><div v-if="canManageSelected" class="category-create"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div></div><div v-if="canManageSelected" class="source-controls"><el-select v-model="uploadCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL"><Globe2 :size="15" />{{ t("knowledgeBases.importURL") }}</el-button></div>
-        <el-table v-if="visibleDocuments.length" :data="visibleDocuments" class="document-table"><el-table-column min-width="280" :label="t('knowledgeBases.document')"><template #default="scope"><div class="document-name"><span class="document-icon"><FileText :size="16" /></span><span><strong>{{ (scope.row as KnowledgeDocument).name }}</strong><small>{{ formatSize((scope.row as KnowledgeDocument).latest_revision?.size) }}</small></span></div></template></el-table-column><el-table-column prop="state" :label="t('knowledgeBases.state')" width="130" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="100" /><el-table-column :label="t('knowledgeBases.updated')" width="130"><template #default="scope">{{ formatDate((scope.row as KnowledgeDocument).updated_at) }}</template></el-table-column><el-table-column width="280"><template #default="scope"><div class="document-actions"><el-button text @click="previewDocument(scope.row as KnowledgeDocument)"><Eye :size="15" />{{ t("knowledgeBases.preview") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)"><Download :size="15" />{{ t("common.download") }}</el-button><el-button v-if="canManageSelected && (scope.row as KnowledgeDocument).state === 'failed'" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ t("knowledgeBases.retry") }}</el-button><el-button v-if="canManageSelected" type="danger" text @click="deleteDocument(scope.row as KnowledgeDocument)"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div></template></el-table-column></el-table><el-empty v-else :description="t('knowledgeBases.noDocuments')"><el-button v-if="canManageSelected" type="primary" plain @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></el-empty>
+        <el-table v-if="visibleDocuments.length" :data="visibleDocuments" class="document-table"><el-table-column min-width="280" :label="t('knowledgeBases.document')"><template #default="scope"><div class="document-name"><span class="document-icon"><FileText :size="16" /></span><span><strong>{{ (scope.row as KnowledgeDocument).name }}</strong><small>{{ formatSize((scope.row as KnowledgeDocument).latest_revision?.size) }}</small></span></div></template></el-table-column><el-table-column :label="t('knowledgeBases.state')" width="130"><template #default="scope"><el-tag size="small" :type="documentStatusType(scope.row as KnowledgeDocument)" :title="(scope.row as KnowledgeDocument).latest_revision?.error || (scope.row as KnowledgeDocument).error || ''">{{ documentStatusLabel(scope.row as KnowledgeDocument) }}</el-tag></template></el-table-column><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="100" /><el-table-column :label="t('knowledgeBases.updated')" width="130"><template #default="scope">{{ formatDate((scope.row as KnowledgeDocument).updated_at) }}</template></el-table-column><el-table-column width="280"><template #default="scope"><div class="document-actions"><el-button text @click="previewDocument(scope.row as KnowledgeDocument)"><Eye :size="15" />{{ t("knowledgeBases.preview") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)"><Download :size="15" />{{ t("common.download") }}</el-button><el-button v-if="canManageSelected && ['ready', 'failed'].includes(documentState(scope.row as KnowledgeDocument))" text :aria-label="documentState(scope.row as KnowledgeDocument) === 'ready' ? t('knowledgeBases.regenerate') : t('knowledgeBases.retry')" @click="retryDocument(scope.row as KnowledgeDocument)">{{ documentState(scope.row as KnowledgeDocument) === 'ready' ? t('knowledgeBases.regenerate') : t('knowledgeBases.retry') }}</el-button><el-button v-if="canManageSelected" type="danger" text @click="deleteDocument(scope.row as KnowledgeDocument)"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div></template></el-table-column></el-table><el-empty v-else :description="t('knowledgeBases.noDocuments')"><el-button v-if="canManageSelected" type="primary" plain @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></el-empty>
       </section>
     </template>
   </section>
@@ -364,21 +395,21 @@ onUnmounted(closePreview);
 <style scoped>
 .knowledge-page { max-width: 1480px; }
 .knowledge-header-actions, .detail-actions, .view-toggle, .document-actions, .category-create { display: flex; align-items: center; gap: 8px; }
-.view-toggle { padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.72); }
+.view-toggle { padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--aw-n0) 72%, transparent); }
 .view-toggle button { width: 32px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 7px; color: var(--muted); background: transparent; }
-.view-toggle button.active { color: var(--green); background: #e5efe8; }
+.view-toggle button.active { color: var(--aw-primary); background: var(--aw-primary-soft); }
 .catalog-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .catalog-heading > div { display: flex; align-items: center; gap: 9px; }
 .catalog-heading > div span { color: var(--muted); font-size: .75rem; }
 .catalog-heading small { color: var(--muted); font-size: .73rem; }
 .knowledge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .knowledge-grid.is-list { grid-template-columns: 1fr; }
-.knowledge-card { min-width: 0; border-color: #d9e0da; border-radius: 15px; background: rgba(255,255,255,.86); cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
-.knowledge-card:hover, .knowledge-card:focus-visible { border-color: #91ad9b; box-shadow: 0 12px 30px rgba(25,58,43,.08); transform: translateY(-2px); outline: none; }
+.knowledge-card { min-width: 0; border-color: var(--aw-n5); border-radius: 15px; background: color-mix(in srgb, var(--aw-n0) 86%, transparent); cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.knowledge-card:hover, .knowledge-card:focus-visible { border-color: var(--aw-primary-border); box-shadow: var(--aw-shadow-overlay); transform: translateY(-2px); outline: none; }
 .knowledge-card :deep(.el-card__body) { display: flex; flex-direction: column; min-height: 186px; padding: 20px; }
 .knowledge-card-head, .knowledge-card-title, .knowledge-card footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .knowledge-card-head { width: 100%; }
-.knowledge-icon, .category-card-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--green); background: #e5efe8; }
+.knowledge-icon, .category-card-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--aw-primary); background: var(--aw-primary-soft); }
 .knowledge-card-top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
 .card-more { color: var(--muted); }
 .knowledge-card-copy { min-width: 0; margin-top: 18px; }
@@ -398,12 +429,12 @@ onUnmounted(closePreview);
 .detail-title-line { display: flex; align-items: center; gap: 10px; }
 .detail-title-line h2 { margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", serif; font-size: clamp(1.7rem, 2.5vw, 2.35rem); font-weight: 600; letter-spacing: -.035em; }
 .knowledge-detail-header p { margin: 7px 0 0; color: var(--muted); font-size: .85rem; }
-.knowledge-search-panel { margin: 0 0 28px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.75); }
+.knowledge-search-panel { margin: 0 0 28px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: color-mix(in srgb, var(--aw-n0) 75%, transparent); }
 .knowledge-search-controls { display: flex; gap: 8px; }
 .knowledge-search-controls .el-input { flex: 1; }
 .knowledge-search-feedback { margin: 14px 0 0; color: var(--muted); font-size: .82rem; }
 .knowledge-search-results { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style-position: inside; }
-.knowledge-search-results li { padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.knowledge-search-results li { padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--aw-n0); }
 .knowledge-search-results p { display: inline; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .86rem; line-height: 1.6; }
 .knowledge-search-results small { display: block; margin-top: 8px; color: var(--muted); }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
@@ -411,15 +442,15 @@ onUnmounted(closePreview);
 .section-heading p { margin: 0; color: var(--muted); font-size: .75rem; }
 .category-section { margin-bottom: 30px; }
 .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-.category-card { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: rgba(255,255,255,.7); text-align: left; transition: border-color .18s ease, background .18s ease; }
-.category-card:hover, .category-card.active { border-color: #8daf9b; background: #eef6ef; }
+.category-card { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: color-mix(in srgb, var(--aw-n0) 70%, transparent); text-align: left; transition: border-color .18s ease, background .18s ease; }
+.category-card:hover, .category-card.active { border-color: var(--aw-primary-border); background: var(--aw-primary-soft); }
 .category-card-icon { width: 36px; height: 36px; flex: 0 0 auto; }
-.category-card-icon.muted { color: var(--muted); background: #eef0ed; }
+.category-card-icon.muted { color: var(--muted); background: var(--aw-n3); }
 .category-card > span:last-child { min-width: 0; display: grid; gap: 3px; }
 .category-card strong, .category-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .category-card strong { font-size: .78rem; }
 .category-card small { color: var(--muted); font-size: .68rem; }
-.documents-panel { padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.58); }
+.documents-panel { padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--aw-n0) 58%, transparent); }
 .category-create .el-input { width: 230px; }
 .source-controls { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 9px; margin-bottom: 15px; }
 .document-table { background: transparent; }
@@ -427,13 +458,13 @@ onUnmounted(closePreview);
 .document-name > span:last-child { min-width: 0; display: grid; gap: 3px; }
 .document-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .document-name small { color: var(--muted); font-size: .68rem; }
-.document-icon { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 auto; border-radius: 8px; color: var(--green); background: #e9f0ea; }
+.document-icon { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 auto; border-radius: 8px; color: var(--aw-primary); background: var(--aw-primary-soft); }
 .document-actions { justify-content: flex-end; flex-wrap: wrap; }
 .document-actions .el-button { margin-left: 0; }
 .preview-loading, .preview-unsupported { display: grid; place-items: center; min-height: 300px; gap: 12px; color: var(--muted); text-align: center; }
 .preview-image { display: block; max-width: 100%; max-height: 68vh; margin: 0 auto; object-fit: contain; }
 .preview-frame { width: 100%; height: 68vh; border: 0; }
-.preview-text { max-height: 68vh; margin: 0; padding: 16px; overflow: auto; border-radius: 9px; background: #f3f5f1; color: var(--ink); font: .78rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+.preview-text { max-height: 68vh; margin: 0; padding: 16px; overflow: auto; border-radius: 9px; background: var(--aw-n2); color: var(--ink); font: .78rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
 @media (max-width: 1050px) { .knowledge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .knowledge-header-actions, .knowledge-detail-header, .section-heading { align-items: flex-start; flex-direction: column; } .knowledge-header-actions, .detail-actions { width: 100%; flex-wrap: wrap; } .knowledge-header-actions .el-button, .detail-actions .el-button { flex: 1; justify-content: center; } .knowledge-grid { grid-template-columns: 1fr; } .knowledge-grid.is-list .knowledge-card :deep(.el-card__body) { grid-template-columns: auto minmax(0, 1fr) auto; } .knowledge-grid.is-list .knowledge-card footer { flex-direction: column; align-items: flex-end; justify-content: flex-end; } .category-create { width: 100%; } .category-create .el-input { width: auto; flex: 1; } .knowledge-search-controls { flex-direction: column; } .source-controls { grid-template-columns: 1fr; } .documents-panel { padding: 16px; } .document-table { overflow-x: auto; } }
 </style>

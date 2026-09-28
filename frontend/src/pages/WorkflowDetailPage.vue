@@ -9,6 +9,7 @@ import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
 import ConversationThread from "../components/ConversationThread.vue";
+import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromEvents } from "../cliAuthorization";
 import type { ConversationMessage } from "../conversationThread";
@@ -44,6 +45,8 @@ const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
 const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"));
+const statusConversationRun = computed(() => activeConversationRun.value ?? latestConversationRun.value);
+const statusConversationModel = computed(() => statusConversationRun.value?.expert_stages?.at(-1)?.provider_model_name);
 const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => {
   const stored = Number.isFinite(item.elapsed_ms) ? Math.max(0, item.elapsed_ms) : 0;
   if (item.state !== "queued" && item.state !== "running") return total + stored;
@@ -385,11 +388,12 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
     <div v-if="selectedRun" class="run-page">
-      <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><el-tag :type="latestConversationRun.state === 'succeeded' ? 'success' : latestConversationRun.state === 'failed' ? 'danger' : 'primary'" size="small">{{ stateLabel(latestConversationRun.state) }}</el-tag><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ formatDuration(conversationElapsed, locale as SupportedLocale) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
+      <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
+      <ExecutionStatusBar v-if="statusConversationRun" :state="statusConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="statusConversationRun.credit_consumption" :can-stop="Boolean(activeConversationRun)" @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
         <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
-      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
+      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
       <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>

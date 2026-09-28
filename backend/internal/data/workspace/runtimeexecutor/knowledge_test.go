@@ -6,26 +6,20 @@ import (
 	"testing"
 
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 )
 
 type retrievalFake struct{ calls int }
 
-func (fake *retrievalFake) EnsureWorkspace(context.Context, string) error { return nil }
-func (fake *retrievalFake) DeleteWorkspace(context.Context, string) error { return nil }
-func (fake *retrievalFake) UpsertRevision(context.Context, string, string, string, []byte) error {
-	return nil
-}
-func (fake *retrievalFake) RemoveRevision(context.Context, string, string) error { return nil }
-func (fake *retrievalFake) Query(_ context.Context, base string, _ int64, _ string, _ int, _ int) (anythingllm.Retrieval, error) {
+func (fake *retrievalFake) Search(_ context.Context, _, _ string, _ int64, _ string, _, _ int) ([]retrieval.Hit, error) {
 	fake.calls++
-	return anythingllm.Retrieval{Citations: []anythingllm.Citation{{KnowledgeBaseID: base, Text: "same evidence", SourceLocation: "source.md", Relevance: .9}}}, nil
+	return []retrieval.Hit{{Text: "same evidence", Relevance: .9, Source: workspacedomain.KnowledgeSearchSource{DocumentName: "source.md", RevisionID: "revision"}}}, nil
 }
 
 func TestInjectKnowledgeContextBoundsAndDeduplicatesCitations(t *testing.T) {
 	fake := &retrievalFake{}
 	executor := &Executor{knowledge: fake}
-	result, err := executor.injectKnowledgeContext(context.Background(), workspacedomain.ExecutionSnapshot{Goal: "answer", KnowledgeBaseIDs: []string{"base-1", "base-2"}, KnowledgeIndexGenerations: map[string]int64{"base-1": 1, "base-2": 1}}, "question")
+	result, err := executor.injectKnowledgeContext(context.Background(), "owner", workspacedomain.ExecutionSnapshot{Goal: "answer", KnowledgeBaseIDs: []string{"base-1", "base-2"}, KnowledgeIndexGenerations: map[string]int64{"base-1": 1, "base-2": 1}}, "question")
 	if err != nil {
 		t.Fatal(err)
 	}

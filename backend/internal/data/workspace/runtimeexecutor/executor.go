@@ -36,7 +36,7 @@ import (
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/credentials"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/runworker"
@@ -64,7 +64,7 @@ type Executor struct {
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
 	executionTTL   time.Duration
 	credits        *creditsapplication.Service
-	knowledge      anythingllm.Adapter
+	knowledge      retrieval.Searcher
 }
 
 type cliExecutionRepository interface {
@@ -126,11 +126,11 @@ func (executor *Executor) EnableMCPLifecycle(repository mcpLifecycleRepository) 
 	return nil
 }
 
-func (executor *Executor) EnableKnowledgeRetrieval(provider anythingllm.Adapter) error {
-	if provider == nil {
-		return fmt.Errorf("AnythingLLM adapter is required")
+func (executor *Executor) EnableKnowledgeRetrieval(searcher retrieval.Searcher) error {
+	if searcher == nil {
+		return fmt.Errorf("Knowledge retrieval searcher is required")
 	}
-	executor.knowledge = provider
+	executor.knowledge = searcher
 	return nil
 }
 
@@ -421,7 +421,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(describeErr)
 		}
 		instruction := buildInstruction(memberJob, stageAttachments)
-		instruction, err = executor.injectKnowledgeContext(executionCtx, memberJob.Snapshot, instruction)
+		instruction, err = executor.injectKnowledgeContext(executionCtx, job.OwnerID, memberJob.Snapshot, instruction)
 		if err != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()
@@ -927,11 +927,19 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 			if err != nil {
 				return nil, err
 			}
+			if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
+				return nil, errors.New("Connector authorization lacks required capability scopes")
+			}
 			plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 			if err != nil {
 				return nil, err
 			}
-			if material.CredentialFormat == "access_token" || definition.AuthenticationDriver == "feishu" {
+			switch definition.AuthenticationDriver {
+			case "feishu":
+				if material.CredentialFormat != "access_token" && material.CredentialFormat != "json" {
+					clear(plaintext)
+					return nil, errors.New("Feishu Connector credential format is invalid")
+				}
 				appID, appErr := executor.box.Decrypt(material.AppIDCiphertext, "feishu-cli-application:"+ownerID)
 				if appErr != nil {
 					clear(plaintext)
@@ -959,29 +967,20 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 				clear(appID)
 				clear(appSecret)
 				return environment, nil
-			}
-			value := string(plaintext)
-			clear(plaintext)
-			return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
-		}
-		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
-			if definition.AuthenticationDriver == "connector_package" {
-				repository, ok := executor.cliCredentials.(connectorPackageCLIRepository)
-				if !ok || !definition.ManagedInstallation || definition.ID == "" {
-					return nil, errors.New("Connector Package credentials are unavailable")
-				}
-				material, err := repository.ResolveConnectorPackageAuthorization(ctx, ownerID, definition.ID, definition.RevisionID, definition.AuthorizationID, string(identity))
-				if err != nil {
-					return nil, err
-				}
-				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
-				if err != nil {
-					return nil, err
+			case "connector_package":
+				if material.CredentialFormat != "json" || !json.Valid(plaintext) {
+					clear(plaintext)
+					return nil, errors.New("Connector Package credentials are invalid")
 				}
 				value := string(plaintext)
 				clear(plaintext)
 				return map[string]string{"CONNECTOR_CREDENTIALS_JSON": value}, nil
+			default:
+				clear(plaintext)
+				return nil, errors.New("CLI Connector authorization driver is unavailable")
 			}
+		}
+		if definition.AuthenticationDriver != "feishu" || executor.cliCredentials == nil {
 			return nil, errors.New("CLI Connector credentials are unavailable")
 		}
 		credentials, err := executor.cliCredentials.ResolveCLIConnectorExecutionCredentials(ctx, ownerID, definition.ID, identity, capability.Scopes)
@@ -1009,6 +1008,15 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 		}
 		return environment, nil
 	}
+}
+
+func hasAllConnectorScopes(granted, required []string) bool {
+	for _, scope := range required {
+		if !slices.Contains(granted, scope) {
+			return false
+		}
+	}
+	return true
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
@@ -1448,7 +1456,13 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 	for _, connector := range job.Snapshot.CLIConnectors {
 		if connector.PackageObjectKey == "" {
 			if connector.AuthenticationDriver == "feishu" {
-				files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, "SKILL.md"))] = feishuCLISkill
+				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("load platform Feishu Skill: %w", err)
+				}
+				for name, body := range resources {
+					files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, name))] = body
+				}
 			}
 			continue
 		}
@@ -1743,7 +1757,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 		feishuSkillLoaded := false
 		for _, connector := range job.Snapshot.CLIConnectors {
 			if connector.PackageObjectKey == "" && connector.AuthenticationDriver == "feishu" && !feishuSkillLoaded {
-				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow this procedure before sending a message):\n"+string(feishuCLISkill))
+				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow the relevant procedure before a command):\n"+string(feishuCLISkill))
 				feishuSkillLoaded = true
 			}
 			if connector.PackageObjectKey != "" {
@@ -1751,6 +1765,10 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			}
 			var capabilities []cliconnector.Capability
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
+				continue
+			}
+			if connector.PackageObjectKey != "" && connector.AuthenticationDriver == "feishu" && len(capabilities) > 40 {
+				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
 				continue
 			}
 			for _, capability := range capabilities {

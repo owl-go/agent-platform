@@ -423,6 +423,14 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if current.ID == "" {
 		return nil, publicError(domain.ErrNotFound)
 	}
+	_, _, policy, err := connectorInstallationPolicy(ctx, repository, principal.UserID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	driver, err := service.interactiveConnectorDriver(policy, repository)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	refreshToken := ""
 	switch current.CredentialFormat {
 	case "json":
@@ -451,15 +459,11 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if strings.TrimSpace(refreshToken) == "" {
 		return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
 	}
-	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, request.InstallationId)
+	appID, appSecret, err := driver.Application(ctx, principal.UserID, request.InstallationId)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	result, err := service.feishu.RefreshAuthorization(ctx, appID, appSecret, refreshToken)
+	result, err := driver.Refresh(ctx, appID, appSecret, refreshToken)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -609,6 +613,10 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
+	driver, err := service.interactiveConnectorDriver(policy, repository)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	allowedScopes := map[string]struct{}{}
 	if policy.CLI != nil {
 		for _, capability := range policy.CLI.Capabilities {
@@ -626,19 +634,15 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 			return nil, publicError(fmt.Errorf("%w: requested scope is outside the reviewed Connector policy", domain.ErrInvalid))
 		}
 	}
-	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, installation.ID)
+	appID, appSecret, err := driver.Application(ctx, principal.UserID, installation.ID)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
+	providerFlow, err := driver.Begin(ctx, appID, appSecret, request.Scopes)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	providerFlow, err := service.feishu.BeginAuthorization(ctx, appID, appSecret, request.Scopes)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	deviceCode, err := service.box.Encrypt([]byte(providerFlow.DeviceCode), connectorAuthorizationFlowAAD(principal.UserID, installation.ID, request.Identity))
+	deviceCode, err := service.box.Encrypt([]byte(providerFlow.State), connectorAuthorizationFlowAAD(principal.UserID, installation.ID, request.Identity))
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -662,11 +666,15 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, flow.InstallationID)
+	_, _, policy, err := connectorInstallationPolicy(ctx, repository, principal.UserID, flow.InstallationID)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	appID, appSecret, err := service.decryptConnectorApplication(principal.UserID, application)
+	driver, err := service.interactiveConnectorDriver(policy, repository)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	appID, appSecret, err := driver.Application(ctx, principal.UserID, flow.InstallationID)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -674,11 +682,11 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	result, err := service.feishu.PollAuthorization(ctx, appID, appSecret, string(deviceCode))
-	if errors.Is(err, feishucli.ErrPending) {
+	result, err := driver.Poll(ctx, appID, appSecret, string(deviceCode))
+	if errors.Is(err, errConnectorAuthorizationPending) {
 		return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
 	}
-	if errors.Is(err, feishucli.ErrDenied) || errors.Is(err, feishucli.ErrExpired) {
+	if errors.Is(err, errConnectorAuthorizationDenied) || errors.Is(err, errConnectorAuthorizationExpired) {
 		_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
@@ -727,16 +735,26 @@ func connectorInstallationPolicy(ctx context.Context, repository connectorPackag
 	return installation, revision, policy, err
 }
 
-func (service *Service) decryptConnectorApplication(ownerID string, application domain.ConnectorProviderApplication) (string, string, error) {
-	appID, err := service.box.Decrypt(application.AppIDCiphertext, feishuApplicationAAD(ownerID))
-	if err != nil {
-		return "", "", err
+func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
+	if connectorAuthorizationMode(policy) == "interactive" {
+		return nil
 	}
-	appSecret, err := service.box.Decrypt(application.AppSecretCiphertext, feishuApplicationAAD(ownerID))
-	if err != nil {
-		return "", "", err
+	return fmt.Errorf("%w: this Connector revision has no interactive authorization adapter", domain.ErrInvalid)
+}
+
+func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
+	if policy.CLI != nil {
+		switch policy.CLI.AuthenticationDriver {
+		case "feishu":
+			return "interactive"
+		case "connector_package":
+			return "provided"
+		}
 	}
-	return string(appID), string(appSecret), nil
+	if policy.MCP != nil && policy.AuthMode != "none" {
+		return "provided"
+	}
+	return "none"
 }
 
 func connectorSetupAAD(ownerID, installationID string) string {
@@ -875,29 +893,22 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, publicError(err)
 	}
+	installation, _, policy, err := connectorInstallationPolicy(ctx, repository, ownerID, request.InstallationId)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := validateProvidedConnectorCredentials(policy, request.Scopes); err != nil {
+		return nil, publicError(err)
+	}
 	ciphertext, err := service.box.Encrypt(request.CredentialsJson, "connector-authorization:"+ownerID)
 	if err != nil {
 		return nil, publicError(err)
-	}
-	items, err := repository.ListConnectorInstallations(ctx, ownerID)
-	if err != nil {
-		return nil, publicError(err)
-	}
-	var installation domain.ConnectorInstallation
-	for _, item := range items {
-		if item.ID == request.InstallationId {
-			installation = item
-			break
-		}
-	}
-	if installation.ID == "" {
-		return nil, publicError(domain.ErrNotFound)
 	}
 	_, err = repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: ownerID, InstallationID: request.InstallationId, IdentityRef: strings.TrimSpace(request.IdentityRef), Scopes: append([]string(nil), request.Scopes...), CredentialCiphertext: ciphertext, CredentialAAD: "connector-authorization:" + ownerID, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive}, domain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: installation.ID, RevisionID: installation.ActiveRevisionID, Operation: "authorize", IdentityRef: strings.TrimSpace(request.IdentityRef), Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
-	items, err = repository.ListConnectorInstallations(ctx, ownerID)
+	items, err := repository.ListConnectorInstallations(ctx, ownerID)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -907,6 +918,30 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 		}
 	}
 	return nil, publicError(fmt.Errorf("%w: connector installation not found after authorization", domain.ErrNotFound))
+}
+
+func validateProvidedConnectorCredentials(policy connectorRevisionPolicy, requestedScopes []string) error {
+	if connectorAuthorizationMode(policy) != "provided" {
+		return fmt.Errorf("%w: this Connector revision does not accept provided credentials", domain.ErrInvalid)
+	}
+	if policy.MCP != nil {
+		if len(requestedScopes) == 0 {
+			return nil
+		}
+		return fmt.Errorf("%w: MCP Connector package has no reviewed scopes", domain.ErrInvalid)
+	}
+	allowed := make(map[string]struct{})
+	for _, capability := range policy.CLI.Capabilities {
+		for _, scope := range capability.Scopes {
+			allowed[scope] = struct{}{}
+		}
+	}
+	for _, scope := range requestedScopes {
+		if _, ok := allowed[scope]; !ok {
+			return fmt.Errorf("%w: provided Connector scope is outside the reviewed policy", domain.ErrInvalid)
+		}
+	}
+	return nil
 }
 
 func (service *Service) DisconnectConnectorAuthorization(ctx context.Context, request *workspacev1.DisconnectConnectorAuthorizationRequest) (*workspacev1.ConnectorInstallation, error) {
@@ -1026,12 +1061,16 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
 	if policy.CLI != nil {
 		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
-		seenScopes := map[string]struct{}{}
-		for _, capability := range policy.CLI.Capabilities {
-			for _, scope := range capability.Scopes {
-				if _, exists := seenScopes[scope]; !exists {
-					seenScopes[scope] = struct{}{}
-					response.RequiredScopes = append(response.RequiredScopes, scope)
+		if len(policy.CLI.ActivationScopes) > 0 {
+			response.RequiredScopes = append(response.RequiredScopes, policy.CLI.ActivationScopes...)
+		} else {
+			seenScopes := map[string]struct{}{}
+			for _, capability := range policy.CLI.Capabilities {
+				for _, scope := range capability.Scopes {
+					if _, exists := seenScopes[scope]; !exists {
+						seenScopes[scope] = struct{}{}
+						response.RequiredScopes = append(response.RequiredScopes, scope)
+					}
 				}
 			}
 		}

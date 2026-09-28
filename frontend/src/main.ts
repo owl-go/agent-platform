@@ -5,6 +5,7 @@ import { createBrowserOIDC } from "./auth/oidc";
 import { authContextKey, createAuthSession, createUnavailableAuthSession, type AuthContext } from "./auth/session";
 import { createAppI18n } from "./i18n";
 import { createAppRouter } from "./router";
+import "./design-tokens.css";
 import "./styles.css";
 
 let authContext: AuthContext;

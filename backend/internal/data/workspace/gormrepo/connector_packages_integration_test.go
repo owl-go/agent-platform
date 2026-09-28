@@ -3,6 +3,7 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -74,6 +75,10 @@ func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	}
 	if len(items) != 2 || items[0].State != domain.ConnectorAuthorizationActive || items[1].State != domain.ConnectorAuthorizationActive {
 		t.Fatalf("multiple active authorizations were not preserved: %#v", items)
+	}
+	health, err := repository.ListConnectorPublicationHealth(ctx)
+	if err != nil || len(health) != 1 || health[0].InstallationCount != 1 || health[0].ActiveInstallationCount != 1 || health[0].ActiveAuthorizationCount != 2 {
+		t.Fatalf("Connector publication health = %#v, %v", health, err)
 	}
 	installation.Version++
 	selected, err := repository.SelectConnectorAuthorization(ctx, owner, installation.ID, first.ID, installation.Version)
@@ -174,7 +179,7 @@ func TestFeishuPublicationProjectsLegacyUsersAfterMigration(t *testing.T) {
 	if err := db.Exec("INSERT INTO experts(id,owner_user_id,name,cli_connector_definition_ids) VALUES(?,?,'Legacy Expert',jsonb_build_array(?::text))", expert, owner, definition).Error; err != nil {
 		t.Fatal(err)
 	}
-	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "feishu", Version: "1.0.93", Mode: domain.ConnectorModeCLI, PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"oauth","cli":{"authentication_driver":"feishu"}}`), ObjectKey: "connectors/feishu/package.zip"})
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "feishu", Version: "1.0.93", Mode: domain.ConnectorModeCLI, PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"oauth","cli":{"authentication_driver":"feishu"},"cli_bundle_object_key":"bundle","cli_bundle_sha256":"` + strings.Repeat("b", 64) + `"}`), ObjectKey: "connectors/feishu/package.zip"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,6 +197,16 @@ func TestFeishuPublicationProjectsLegacyUsersAfterMigration(t *testing.T) {
 	}
 	if err := db.Raw("SELECT provider_name FROM connector_provider_applications WHERE installation_id=?", installationID).Scan(&providerName).Error; err != nil || providerName != "Legacy App" {
 		t.Fatalf("projected provider application = %q, %v", providerName, err)
+	}
+	// A legacy application can still be the source of truth when the new
+	// provider-application projection is absent. Runtime materialization must
+	// use the same owner-scoped fallback as the authorization flow.
+	if err := db.Exec("DELETE FROM connector_provider_applications WHERE installation_id=?", installationID).Error; err != nil {
+		t.Fatal(err)
+	}
+	material, err := repository.ResolveConnectorPackageAuthorization(ctx, owner, installationID, revision.ID, selectedAuthorizationID, "user")
+	if err != nil || string(material.AppIDCiphertext) != "app" || string(material.AppSecretCiphertext) != "secret" || !slices.Contains(material.Scopes, "im:message") {
+		t.Fatalf("legacy application was not materialized with the selected authorization: app=%t secret=%t err=%v", string(material.AppIDCiphertext) == "app", string(material.AppSecretCiphertext) == "secret", err)
 	}
 	var connectorIDs string
 	if err := db.Raw("SELECT cli_connector_definition_ids FROM experts WHERE id=?", expert).Scan(&connectorIDs).Error; err != nil || !strings.Contains(string(connectorIDs), installationID) || strings.Contains(string(connectorIDs), definition) {

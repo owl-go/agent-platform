@@ -100,6 +100,7 @@ type SmartAssistant struct {
 	Scenario         string             `json:"scenario"`
 	Prompt           string             `json:"prompt"`
 	PreprocessPrompt string             `json:"preprocess_prompt"`
+	ProviderModelID  string             `json:"provider_model_id"`
 	ServiceGoal      string             `json:"service_goal"`
 	AnswerScope      string             `json:"answer_scope"`
 	OperatingRules   string             `json:"operating_rules"`
@@ -127,7 +128,7 @@ func (assistant SmartAssistant) Validate() error {
 			return fmt.Errorf("%w: unsupported assistant scenario", ErrInvalid)
 		}
 	}
-	if len([]rune(assistant.Description)) > 5000 || len([]rune(assistant.Prompt)) > 10000 || len([]rune(assistant.PreprocessPrompt)) > 10000 || len([]rune(assistant.ServiceGoal)) > 5000 || len([]rune(assistant.AnswerScope)) > 10000 || len([]rune(assistant.OperatingRules)) > 10000 || len([]rune(assistant.ResponseStyle)) > 2000 {
+	if len([]rune(assistant.Description)) > 5000 || len([]rune(assistant.Prompt)) > 10000 || len([]rune(assistant.PreprocessPrompt)) > 10000 || len([]rune(assistant.ServiceGoal)) > 5000 || len([]rune(assistant.AnswerScope)) > 10000 || len([]rune(assistant.OperatingRules)) > 10000 || len([]rune(assistant.ResponseStyle)) > 2000 || len(assistant.ProviderModelID) > 128 {
 		return fmt.Errorf("%w: assistant instructions are too long", ErrInvalid)
 	}
 	if assistant.Share.Width != "" && assistant.Share.Width != "100%" {

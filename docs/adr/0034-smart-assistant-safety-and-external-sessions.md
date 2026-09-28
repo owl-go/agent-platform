@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0037
 ---
 
 # Use platform-owned Assistant sessions with layered safety

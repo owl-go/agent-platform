@@ -8,6 +8,7 @@ import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
 import ConversationThread from "../components/ConversationThread.vue";
+import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
 import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
@@ -39,6 +40,7 @@ const cancellingMessageID = ref<number>();
 const resourceActionBusy = ref<string>();
 const creating = ref(false);
 const showArchived = ref(false);
+const sessionQuery = ref("");
 const error = ref("");
 const messageStream = ref<HTMLElement>();
 const composerLayer = ref<HTMLElement>();
@@ -47,6 +49,10 @@ const showJumpToLatest = ref(false);
 const keepAtLatest = ref(true);
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
 const setupRequired = computed(() => messages.value.length > 0 ? false : selectableModels.value.length === 0 || !settings.value?.runtime_model_defaults.some((item) => item.runtime_engine === settings.value?.default_runtime_engine) || !runtimes.value.some((item) => item.name === settings.value?.default_runtime_engine && item.available));
+const filteredSessions = computed(() => {
+  const query = sessionQuery.value.trim().toLocaleLowerCase();
+  return query ? sessions.value.filter((item) => item.title.toLocaleLowerCase().includes(query)) : sessions.value;
+});
 const activeAssistant = computed(() => {
   for (let index = messages.value.length - 1; index >= 0; index--) {
     const message = messages.value[index];
@@ -54,14 +60,32 @@ const activeAssistant = computed(() => {
   }
   return undefined;
 });
+const statusMessage = computed(() => activeAssistant.value ?? [...messages.value].reverse().find((message) => message.role === "assistant"));
+const statusIdentity = computed(() => statusMessage.value ? responseIdentity(statusMessage.value) : undefined);
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
-  return cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
+  if (attempted) return attempted;
+  if (latestAssistant?.state !== "failed" || !latestAssistant.error?.includes("Connector authorization is unavailable")) return undefined;
+  const connector = latestAssistant.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []).find((item) => item.authentication_driver === "feishu");
+  return connector ? { connectorID: connector.id, capabilityID: "" } : undefined;
 });
+function authorizationUnavailable(error?: string) {
+  const normalized = error?.toLowerCase().replaceAll("_", " ") ?? "";
+  return normalized.includes("authorization unavailable") || normalized.includes("authorization is unavailable");
+}
+function waitingForFeishuAuthorization(message: SessionMessage) {
+  if (message.role !== "assistant" || message.state !== "failed" || !authorizationUnavailable(message.error)) return false;
+  const attempted = cliAuthorizationRequestFromActivities(message.activities);
+  if (attempted?.connectorID === "feishu") return true;
+  return message.response_snapshot?.stages?.some((stage) => stage.cli_connectors?.some((connector) => connector.authentication_driver === "feishu")) ?? false;
+}
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
   const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
   const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
+  const authorizationWait = waitingForFeishuAuthorization(message);
+  const authorizationMessage = authorizationWait ? t("sessions.feishuAuthorizationWait") : undefined;
   return {
     id: String(message.id),
     role: message.role,
@@ -70,7 +94,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     state: message.state,
     timestamp: message.created_at,
     elapsedMs: message.elapsed_ms,
-    error: message.error,
+    error: authorizationMessage ?? message.error,
     pending,
     finalizing: pending && message.progress_stage === "finalizing",
     streaming: pending && message.role === "assistant",
@@ -84,7 +108,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       state: summary.state,
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
-    stages: message.role === "assistant" ? message.expert_stages : undefined,
+    stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
     creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     attachments: message.attachments,
@@ -296,7 +320,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
   message.resource_action = snapshot.resource_action ?? message.resource_action;
-  if (snapshot.state === "queued" || snapshot.state === "generating") message.state = snapshot.state;
+  if (snapshot.state === "queued" || snapshot.state === "generating" || snapshot.state === "waiting_for_user") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
     if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
@@ -499,9 +523,10 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <p class="muted collection-subtitle">{{ t('sessions.subtitle') }}</p>
       <el-skeleton v-if="loading" :rows="6" animated class="collection-loading" />
       <div v-else class="session-groups">
+        <label v-if="sessions.length > 10" class="session-search"><span class="visually-hidden">{{ t('sessions.search') }}</span><input v-model="sessionQuery" type="search" :placeholder="t('sessions.searchPlaceholder')"></label>
         <p class="group-label">{{ t('sessions.active') }} · {{ sessions.length }}</p>
-        <div v-for="item in sessions" :key="item.id" class="session-row" :class="{ active: selected?.id === item.id, editing: editingSessionID === item.id }" role="button" tabindex="0" @click="open(item)" @keydown.enter="open(item)">
-          <span class="session-glyph">◌</span><span><input v-if="editingSessionID === item.id" v-model="editingTitle" class="session-title-input" maxlength="120" @click.stop @keydown.enter.stop.prevent="saveRename(item)" @keydown.esc.stop.prevent="cancelRename" @blur="saveRename(item)"><strong v-else>{{ item.title }}</strong><small>{{ new Date(item.updated_at).toLocaleString() }}</small></span>
+        <div v-for="item in filteredSessions" :key="item.id" class="session-row" :class="{ active: selected?.id === item.id, editing: editingSessionID === item.id, running: selected?.id === item.id && Boolean(activeAssistant) }" role="button" tabindex="0" @click="open(item)" @keydown.enter="open(item)">
+          <span class="session-glyph" aria-hidden="true"></span><span class="session-title"><input v-if="editingSessionID === item.id" v-model="editingTitle" class="session-title-input" maxlength="120" @click.stop @keydown.enter.stop.prevent="saveRename(item)" @keydown.esc.stop.prevent="cancelRename" @blur="saveRename(item)"><strong v-else>{{ item.title }}</strong></span><small class="session-time">{{ new Date(item.updated_at).toLocaleDateString() }}</small>
           <span class="row-actions">
             <ActionIconButton :label="t('common.rename')" @click.stop="startRename(item)"><Pencil aria-hidden="true" /></ActionIconButton>
             <ActionIconButton :label="t('common.archive')" @click.stop="archive(item)"><Archive aria-hidden="true" /></ActionIconButton>
@@ -511,7 +536,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <el-button class="archive-toggle" text @click="showArchived = !showArchived"><span>▸</span>{{ t('sessions.archived') }} · {{ archived.length }}</el-button>
         <div v-if="showArchived">
           <div v-for="item in archived" :key="item.id" class="session-row archived" role="button" tabindex="0" @click="open(item)" @keydown.enter="open(item)">
-            <span class="session-glyph">□</span><span><strong>{{ item.title }}</strong><small>{{ new Date(item.updated_at).toLocaleDateString() }}</small></span>
+            <span class="session-glyph archived" aria-hidden="true"></span><span class="session-title"><strong>{{ item.title }}</strong></span><small class="session-time">{{ new Date(item.updated_at).toLocaleDateString() }}</small>
             <span class="row-actions">
               <ActionIconButton :label="t('common.unarchive')" @click.stop="archive(item)"><ArchiveRestore aria-hidden="true" /></ActionIconButton>
               <ActionIconButton :label="t('sessions.deleteAction', { title: item.title })" :tooltip="t('common.delete')" tone="danger" @click.stop="requestRemove(item, $event)"><Trash2 aria-hidden="true" /></ActionIconButton>
@@ -525,6 +550,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
         <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
+        <ExecutionStatusBar v-if="statusMessage" :state="statusMessage.state" :elapsed-ms="statusMessage.elapsed_ms" :model="statusIdentity?.modelName" :credit-consumption="statusMessage.credit_consumption" :can-stop="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" @stop="cancelGeneration" />
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
@@ -532,7 +558,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
-          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.state === 'waiting_for_user' ? activeAssistant.id : undefined" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
+          <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.id" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
         </div>
       </template>
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>

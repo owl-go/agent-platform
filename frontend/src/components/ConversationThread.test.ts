@@ -54,7 +54,8 @@ describe("ConversationThread", () => {
       stages: [{ ...stage, state: "failed", final_text: undefined, error }],
     }]);
 
-    expect(wrapper.findAll(".message.assistant p").filter((item) => item.text() === error)).toHaveLength(1);
+    expect(wrapper.get(".failure-card").text()).toContain(error);
+    expect(wrapper.findAll(".failure-card dd").filter((item) => item.text() === error)).toHaveLength(1);
     expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -72,6 +73,19 @@ describe("ConversationThread", () => {
 
     expect(wrapper.get(".message.assistant").text()).toContain("已中止生成");
     expect(wrapper.get(".message.assistant").text()).not.toContain("runtime event stream closed");
+    wrapper.unmount();
+  });
+
+  it("distinguishes Agent responses from user bubbles with an identity row", () => {
+    const wrapper = mountThread([
+      { id: "user-1", role: "user", content: "问题", state: "succeeded", timestamp: "2026-08-25T12:00:00Z" },
+      { id: "assistant-1", role: "assistant", content: "回答", state: "succeeded", timestamp: "2026-08-25T12:00:01Z", meta: { label: "架构专家" } },
+    ]);
+
+    expect(wrapper.find(".message.user .agent-avatar").exists()).toBe(false);
+    expect(wrapper.get(".message.assistant .agent-avatar").text()).toBe("AI");
+    expect(wrapper.get(".message-identity").text()).toContain("架构专家");
+    expect(wrapper.get(".message-identity").text()).toContain("Agent");
     wrapper.unmount();
   });
 });
