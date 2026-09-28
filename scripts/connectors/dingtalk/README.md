@@ -1,6 +1,6 @@
 # 钉钉 CLI Connector Package 构建与上架
 
-本工具把固定钉钉 `dingtalk-workspace-cli@1.0.62` 源码构建的 Linux amd64/arm64 二进制及同版 MultiSkill 打入项目的 CLI Connector Package。它从同一版 CLI 的 `schema --all` 生成命令策略：保留 1,409 个 `available` 工具，读操作为低风险，其余操作一律经过平台单次批准。另开放 `version`、`schema`、`profile list` 和 `auth status` 四个只读诊断命令。`--include-admin` 包含开发者应用、PAT、审计、事件等管理命令；省略时只保留业务产品。
+本工具把固定钉钉 `dingtalk-workspace-cli@1.0.62` 源码构建的 Linux amd64/arm64 二进制及同版 MultiSkill 打入版本为 `1.0.63` 的 CLI Connector Package。它从同一版 CLI 的 `schema --all` 生成命令策略：保留 1,409 个 `available` 工具，读操作为低风险，其余操作一律经过平台单次批准，另开放 `version` 和 `schema` 两个只读诊断命令。托管连接器不开放 `profile list` 和 `auth status`，因为它们只检查 CLI 本地 Profile，无法反映平台注入的短期令牌，会把有效平台授权误报为未登录。`--include-admin` 包含开发者应用、PAT、审计、事件等管理命令；省略时只保留业务产品。
 
 上游来源固定为 [钉钉 Workspace CLI](https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli) 的 npm 1.0.62 发布包。构建时校验 npm SHA-512 和包内三个资产的 SHA-256，不执行 npm 安装脚本。`schema --all` 必须由同版二进制导出，构建器校验其 catalog hash 和工具数。产出的 ZIP 还必须经仓库的 `connectorpackage.Parse` 验证。
 
@@ -26,8 +26,8 @@ python3 scripts/connectors/dingtalk/build.py \
   --include-admin \
   --amd64-binary /tmp/dingtalk-patched/dws-linux-amd64 \
   --arm64-binary /tmp/dingtalk-patched/dws-linux-arm64 \
-  --output /tmp/dingtalk-1.0.62.zip
-go -C backend run ./cmd/connector-package-validate /tmp/dingtalk-1.0.62.zip
+  --output /tmp/dingtalk-1.0.63.zip
+go -C backend run ./cmd/connector-package-validate /tmp/dingtalk-1.0.63.zip
 ```
 
 先从钉钉仓库固定提交 `70323e1486e64b1ca823fa2bd9c48b9b07f88519` 执行 `build-patched-cli.sh <upstream-checkout> /tmp/dingtalk-patched`。该构建只增加受审查的环境变量令牌入口，不把 Secret 写入参数。平台的钉钉授权适配器执行设备流并校验组织 CLI 可用状态；换票结果缺少用户 ID 时用新令牌查询当前用户身份。刷新凭证保存在平台加密存储中，单次 CLI 进程只接收短期令牌。
