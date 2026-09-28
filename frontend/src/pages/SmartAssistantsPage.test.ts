@@ -120,6 +120,16 @@ describe("SmartAssistantsPage lifecycle", () => {
     wrapper.unmount();
   });
 
+  it("uses the action button itself as the dropdown trigger", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.find(".application-card-actions .el-dropdown > [data-testid=assistant-more]").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("starts a conversation from the card chat action", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");
