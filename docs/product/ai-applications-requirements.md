@@ -54,7 +54,7 @@ The editable configuration contains:
 
 - Name, uploaded icon, short description, and welcome message
 - Scenario type, Assistant prompt, and question pre-processing prompt
-- One available Provider Model whose connection has a configured API Key and supports `openai_chat`
+- One available Provider Model whose connection has a configured API Key and supports `openai_responses`
 - Response style
 - Optional Knowledge Base selection
 - Optional Expert or Expert Team selection

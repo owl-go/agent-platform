@@ -2,6 +2,7 @@ package modelchat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -81,6 +82,68 @@ func TestAssistantModelRejectsNonStreamingFallback(t *testing.T) {
 	_, err := New().Generate(context.Background(), application.ChatRequest{Endpoint: server.URL, Protocol: "openai_chat", ModelID: "test-model", APIKey: []byte("secret"), Messages: []application.ChatMessage{{Role: "user", Content: "hello"}}, Stream: true}, nil)
 	if err == nil || !strings.Contains(err.Error(), "streaming response") {
 		t.Fatalf("non-streaming fallback = %v", err)
+	}
+}
+
+func TestAssistantModelUsesStreamingTransportForInternalOpenAIChatStages(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		var payload struct {
+			Stream bool `json:"stream"`
+		}
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if !payload.Stream {
+			writer.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprint(writer, `{"detail":"Stream must be set to true"}`)
+			return
+		}
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = fmt.Fprint(writer, "data: {\"choices\":[{\"delta\":{\"content\":\"OK\"}}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer server.Close()
+
+	result, err := New().Generate(context.Background(), application.ChatRequest{
+		Endpoint: server.URL,
+		Protocol: "openai_chat",
+		ModelID:  "gpt-6-sol",
+		APIKey:   []byte("secret"),
+		Messages: []application.ChatMessage{{Role: "user", Content: "ping"}},
+		Stream:   false,
+	}, nil)
+	if err != nil || result.Text != "OK" {
+		t.Fatalf("internal OpenAI Chat stage = %+v, %v", result, err)
+	}
+}
+
+func TestAssistantModelUsesStreamingTransportForInternalResponsesStages(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		var payload struct {
+			Stream bool `json:"stream"`
+		}
+		if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if request.URL.Path != "/responses" || !payload.Stream {
+			writer.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprint(writer, `{"detail":"Stream must be set to true"}`)
+			return
+		}
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = fmt.Fprint(writer, "data: {\"type\":\"response.output_text.delta\",\"delta\":\"OK\"}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":2,\"output_tokens\":1}}}\n\n")
+	}))
+	defer server.Close()
+
+	result, err := New().Generate(context.Background(), application.ChatRequest{
+		Endpoint: server.URL,
+		Protocol: "openai_responses",
+		ModelID:  "gpt-6-sol",
+		APIKey:   []byte("secret"),
+		Messages: []application.ChatMessage{{Role: "user", Content: "ping"}},
+		Stream:   false,
+	}, nil)
+	if err != nil || result.Text != "OK" || !result.UsageKnown {
+		t.Fatalf("internal Responses stage = %+v, %v", result, err)
 	}
 }
 
