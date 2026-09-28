@@ -64,13 +64,13 @@ describe("App navigation", () => {
 
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
-      ["/sessions", "/workflows", "/ai-apps/assistants", "/ai-apps/digital-humans", "/ai-apps/image-creation", "/knowledge-bases"],
+      ["/sessions", "/workflows", "/ai-apps/assistants", "/ai-apps/image-creation", "/knowledge-bases"],
       ["/resources"],
       ["/settings"],
     ]);
     expect(wrapper.get(".nav-parent").text()).toContain("AI 应用");
     expect(wrapper.get(".nav-parent").attributes("aria-expanded")).toBe("true");
-    expect(wrapper.findAll(".nav-submenu a").map((link) => link.text())).toEqual(["智能助手", "数字人", "图片创作"]);
+    expect(wrapper.findAll(".nav-submenu a").map((link) => link.text())).toEqual(["智能助手", "图片创作"]);
     expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
     expect(wrapper.find(".ai-applications-tabs").exists()).toBe(false);
     expect(wrapper.get('a[href="/resources"]').text()).toContain("专家/技能/连接器");

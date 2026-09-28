@@ -65,10 +65,14 @@ func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T
 	if err := validatePrivateConnectorPackage(pkg); err != nil {
 		t.Fatalf("generic private credentials were rejected: %v", err)
 	}
+	pkg.CLI.AuthenticationDriver = "dingtalk"
+	if err := validatePrivateConnectorPackage(pkg); err == nil {
+		t.Fatal("DingTalk platform authentication driver was accepted for a private package")
+	}
 }
 
 func TestInteractiveConnectorAuthorizationRejectsOtherDrivers(t *testing.T) {
-	for _, driver := range []string{"connector_package", "none", "dingtalk"} {
+	for _, driver := range []string{"connector_package", "none"} {
 		t.Run(driver, func(t *testing.T) {
 			policy := connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: driver}}
 			if err := validateInteractiveConnectorDriver(policy); err == nil || !strings.Contains(err.Error(), "no interactive authorization adapter") {
@@ -78,6 +82,9 @@ func TestInteractiveConnectorAuthorizationRejectsOtherDrivers(t *testing.T) {
 	}
 	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}); err != nil {
 		t.Fatalf("Feishu driver rejected: %v", err)
+	}
+	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "dingtalk"}}); err != nil {
+		t.Fatalf("DingTalk driver rejected: %v", err)
 	}
 	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{MCP: &connectorpackage.MCPManifest{}}); err == nil {
 		t.Fatal("MCP revision entered the CLI authorization flow")

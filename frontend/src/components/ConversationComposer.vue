@@ -223,6 +223,10 @@ async function beginRequestedManagedAuthorization() {
   pending.flow = undefined;
   managedCompletionBusy.value = true;
   try {
+    if (pending.definition.authentication_driver === "dingtalk") {
+      await beginManagedAuthorization();
+      return;
+    }
     const setup = await api.beginConnectorSetup(pending.definition.id);
     if (disposed || pendingManagedActivation.value !== pending) { closeBlankCLIWindow(pending.popup); return; }
     pending.setup = setup;
@@ -257,7 +261,7 @@ async function completeManagedActivation() {
 async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
   if (cliActivationBusy.value.includes(definition.id)) return;
   cliActivationBusy.value.push(definition.id); error.value = "";
-  const popup = active && definition.authentication_driver === "feishu" ? openCLIWindow() : null;
+  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") ? openCLIWindow() : null;
   try {
     await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
@@ -291,6 +295,10 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       return;
     }
     pendingManagedActivation.value = { definition, popup, selectAfter };
+    if (definition.authentication_driver === "dingtalk") {
+      await beginManagedAuthorization();
+      return;
+    }
     const setup = await api.beginConnectorSetup(installation.id);
     pendingManagedActivation.value.setup = setup;
     if (setup.state === "waiting_for_user") {
@@ -309,6 +317,9 @@ function cliActivationScopes(definition: CLIConnectorDefinition) {
   const reviewed = new Set(cliUserScopes(definition));
   const initial = ["im:chat:read", "im:message", "im:message.send_as_user", "contact:user:search", "task:task:write", "docx:document:create", "docx:document:readonly", "docx:document:write_only", "docs:document.media:upload"].filter((scope) => reviewed.has(scope));
   return initial.length ? initial : cliUserScopes(definition);
+}
+function authorizationProvider(definition: CLIConnectorDefinition) {
+  return t(definition.authentication_driver === "dingtalk" ? "composer.providerDingtalk" : "composer.providerFeishu");
 }
 function replaceCLIEnablement(value: CLIConnectorEnablement) {
   enablements.value = [...enablements.value.filter((item) => item.definition_id !== value.definition_id), value];
@@ -408,7 +419,7 @@ async function refreshRequestedCLIAuthorization() {
   }
   const definition = cli.value.find((item) => item.id === request.connectorID);
   const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
-  if (definition?.managed_installation && definition.authentication_driver === "feishu" && (capability || !request.capabilityID)) {
+  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") && (capability || !request.capabilityID)) {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;
@@ -641,15 +652,15 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       <a :href="cliEnablement(pendingCLIActivation.definition.id)?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.continueSetup') }}</a>
     </section>
     <section v-if="pendingManagedActivation" class="composer-authorization" role="status" aria-live="polite">
-      <div><strong>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationCompleted' : 'composer.activationAuthorizationCompleted') : t(pendingManagedActivation.recovery ? 'composer.authorizationRequired' : 'composer.activationRequired', { name: pendingManagedActivation.definition.name }) }}</strong><small>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationContinue' : 'composer.activationAuthorizationReady') : pendingManagedActivation.recovery ? t('composer.authorizationHint') : pendingManagedActivation.flow ? t('composer.activationAuthorizationHint') : t('composer.activationHint') }}</small></div>
-      <el-button v-if="pendingManagedActivation.recovery && !pendingManagedActivation.completed && (!pendingManagedActivation.flow?.action_url && !pendingManagedActivation.setup?.action_url || pendingManagedActivation.failed)" type="primary" :loading="managedCompletionBusy" @click="beginRequestedManagedAuthorization">{{ t('resources.authorizeNow') }}</el-button>
-      <a v-else-if="!pendingManagedActivation.completed && (pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url)" :href="pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url" target="_blank" rel="noopener noreferrer">{{ t(pendingManagedActivation.flow ? 'resources.authorizeNow' : 'resources.continueSetup') }}</a>
+      <div><strong>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationCompleted' : 'composer.activationAuthorizationCompleted', { provider: authorizationProvider(pendingManagedActivation.definition) }) : t(pendingManagedActivation.recovery ? 'composer.authorizationRequired' : 'composer.activationRequired', { name: pendingManagedActivation.definition.name, provider: authorizationProvider(pendingManagedActivation.definition) }) }}</strong><small>{{ pendingManagedActivation.completed ? t(pendingManagedActivation.recovery ? 'composer.authorizationContinue' : 'composer.activationAuthorizationReady') : pendingManagedActivation.recovery ? t('composer.authorizationHint', { provider: authorizationProvider(pendingManagedActivation.definition) }) : pendingManagedActivation.flow ? t('composer.activationAuthorizationHint', { provider: authorizationProvider(pendingManagedActivation.definition) }) : t('composer.activationHint') }}</small></div>
+      <el-button v-if="pendingManagedActivation.recovery && !pendingManagedActivation.completed && (!pendingManagedActivation.flow?.action_url && !pendingManagedActivation.setup?.action_url || pendingManagedActivation.failed)" type="primary" :loading="managedCompletionBusy" @click="beginRequestedManagedAuthorization">{{ t('composer.authorizeNow', { provider: authorizationProvider(pendingManagedActivation.definition) }) }}</el-button>
+      <a v-else-if="!pendingManagedActivation.completed && (pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url)" :href="pendingManagedActivation.flow?.action_url || pendingManagedActivation.setup?.action_url" target="_blank" rel="noopener noreferrer">{{ pendingManagedActivation.flow ? t('composer.authorizeNow', { provider: authorizationProvider(pendingManagedActivation.definition) }) : t('resources.continueSetup') }}</a>
       <small v-if="pendingManagedActivation.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
     </section>
     <section v-if="cliAuthorizationPrompt" class="composer-authorization" role="status" aria-live="polite">
-      <div><strong>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationCompleted' : 'composer.authorizationCompleted') : t('composer.authorizationRequired', { name: cliAuthorizationPrompt.definition.name }) }}</strong><small>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationReady' : 'composer.authorizationContinue') : t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationHint' : 'composer.authorizationHint') }}</small></div>
-      <el-button v-if="!cliAuthorizationPrompt.completed && !cliAuthorizationPrompt.flow?.action_url" type="primary" :loading="cliAuthorizationBusy" @click="beginSelectedCLIAuthorization">{{ t('resources.authorizeNow') }}</el-button>
-      <a v-else-if="!cliAuthorizationPrompt.completed" :href="cliAuthorizationPrompt.flow?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a>
+      <div><strong>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationCompleted' : 'composer.authorizationCompleted', { provider: authorizationProvider(cliAuthorizationPrompt.definition) }) : t('composer.authorizationRequired', { name: cliAuthorizationPrompt.definition.name, provider: authorizationProvider(cliAuthorizationPrompt.definition) }) }}</strong><small>{{ cliAuthorizationPrompt.completed ? t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationReady' : 'composer.authorizationContinue') : t(cliAuthorizationPrompt.activation ? 'composer.activationAuthorizationHint' : 'composer.authorizationHint', { provider: authorizationProvider(cliAuthorizationPrompt.definition) }) }}</small></div>
+      <el-button v-if="!cliAuthorizationPrompt.completed && !cliAuthorizationPrompt.flow?.action_url" type="primary" :loading="cliAuthorizationBusy" @click="beginSelectedCLIAuthorization">{{ t('composer.authorizeNow', { provider: authorizationProvider(cliAuthorizationPrompt.definition) }) }}</el-button>
+      <a v-else-if="!cliAuthorizationPrompt.completed" :href="cliAuthorizationPrompt.flow?.action_url" target="_blank" rel="noopener noreferrer">{{ t('composer.authorizeNow', { provider: authorizationProvider(cliAuthorizationPrompt.definition) }) }}</a>
       <small v-if="cliAuthorizationPrompt.failed" class="authorization-error">{{ t('resources.authorizationInvalidInput') }}</small>
     </section>
     <div v-if="error" class="composer-error" role="alert">{{ error }}<el-button v-if="!selection" text :disabled="loading" @click="initialize">{{ t('common.retry') }}</el-button><el-button v-if="error === t('composer.selectionRecovered')" text @click="openMenu('connectors')">{{ t('composer.connectors') }}</el-button><el-button text @click="error = ''">{{ t('common.close') }}</el-button></div>

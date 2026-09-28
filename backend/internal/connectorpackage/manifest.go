@@ -140,7 +140,7 @@ func validateCLI(manifest CLIManifest) error {
 	if !identifierPattern.MatchString(manifest.Executable) {
 		return fmt.Errorf("cli.json executable is invalid")
 	}
-	if manifest.AuthenticationDriver != "none" && manifest.AuthenticationDriver != "feishu" && manifest.AuthenticationDriver != "connector_package" {
+	if manifest.AuthenticationDriver != "none" && manifest.AuthenticationDriver != "feishu" && manifest.AuthenticationDriver != "dingtalk" && manifest.AuthenticationDriver != "connector_package" {
 		return fmt.Errorf("cli.json authentication_driver is unsupported")
 	}
 	if manifest.BundlePath != "" {

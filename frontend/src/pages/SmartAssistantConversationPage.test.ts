@@ -76,6 +76,18 @@ describe("SmartAssistantConversationPage", () => {
     wrapper.unmount();
   });
 
+  it("explains when the selected model credential is no longer accepted", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const api = apiStub();
+    api.getAssistantConversation = vi.fn(async () => ({ conversation, turns: [{ ...completedTurn, id: "failed-auth-turn", state: "failed" as const, answer: "", failure_code: "model_authentication" }], faqs: [faq] }));
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    expect(wrapper.get(".assistant-conversation-message--failed [role='alert']").text()).toContain("模型服务凭证已失效");
+    wrapper.unmount();
+  });
+
   it("keeps the text input and send action together in the chat composer", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");

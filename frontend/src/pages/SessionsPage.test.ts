@@ -534,6 +534,20 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("offers managed DingTalk recovery when authorization fails before any CLI command runs", async () => {
+    const authorizationError = "resource is invalid: queued CLI Connector is unavailable: Connector authorization is unavailable";
+    const failed: SessionMessage = {
+      ...messages[1]!, state: "failed", content: "", activities: [], error: authorizationError,
+      response_snapshot: { provider_model_id: "model-1", connection_id: "connection-1", connection_name: "Provider", provider_type: "openai", model_id: "model", model_name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], runtime_engine: "codex", compatibility: "verified", connection_version: 1, stages: [{ position: 1, runtime_engine: "codex", provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" }, cli_connectors: [{ id: "installation-1", name: "钉钉", executable: "dws", authentication_driver: "dingtalk", bundle_sha256: "a".repeat(64), runtime_digests: [], version: 1 }] }] },
+    };
+    const wrapper = await mountPage([messages[0]!, failed]);
+    expect(wrapper.getComponent(ConversationComposer).props("authorizationRequest")).toEqual({ connectorID: "installation-1", capabilityID: "" });
+    const reply = wrapper.get(".message.assistant .message-content").text();
+    expect(reply).toContain("等待钉钉授权");
+    expect(reply).not.toContain("Connector authorization is unavailable");
+    wrapper.unmount();
+  });
+
   it("does not disguise an unrelated Feishu command failure as an authorization wait", async () => {
     const failed: SessionMessage = {
       ...messages[1]!, state: "failed", content: "", error: "Connector command failed unexpectedly",

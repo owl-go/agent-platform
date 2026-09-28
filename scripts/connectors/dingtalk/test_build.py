@@ -38,6 +38,12 @@ class DingTalkBuilderTest(unittest.TestCase):
         self.assertIn(("doc", "search"), paths)
         self.assertNotIn(("pat", "token", "revoke"), paths)
 
+    def test_managed_package_omits_local_profile_auth_diagnostics(self):
+        capabilities = builder.reviewed_capabilities(self.schema([self.tool("chat create")]), include_admin=False)
+        paths = {tuple(item["argv_prefix"]) for item in capabilities}
+        self.assertNotIn(("auth", "status"), paths)
+        self.assertNotIn(("profile", "list"), paths)
+
     def test_overlapping_command_cannot_weaken_policy(self):
         schema = self.schema([self.tool("doc read"), self.tool("doc read hidden", effect="write")])
         with self.assertRaisesRegex(ValueError, "overlapping"):

@@ -15,7 +15,7 @@ const previousConversation: AssistantConversation = { id: "previous-conversation
 function apiStub(): PlatformApi {
   return {
     listSmartAssistants: vi.fn(async () => [source]),
-    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_chat"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
+    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_responses"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
     setSmartAssistantState: vi.fn(async (_id, state) => ({ ...source, state })),
     updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...source, ...input, version: version + 1 })),
     deleteSmartAssistant: vi.fn(async () => {}),
@@ -120,6 +120,16 @@ describe("SmartAssistantsPage lifecycle", () => {
     wrapper.unmount();
   });
 
+  it("uses the action button itself as the dropdown trigger", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
+    await flushPromises();
+
+    expect(wrapper.find(".application-card-actions .el-dropdown > [data-testid=assistant-more]").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("starts a conversation from the card chat action", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");
@@ -198,7 +208,7 @@ describe("SmartAssistantsPage lifecycle", () => {
     await wrapper.get("[data-testid=assistant-chat]").trigger("click");
     await flushPromises();
 
-    expect(wrapper.get(".el-alert").text()).toContain("请为智能助手选择支持 openai_chat 的可用模型");
+    expect(wrapper.get(".el-alert").text()).toContain("请为智能助手选择支持 openai_responses 的可用模型");
     wrapper.unmount();
   });
 });

@@ -10,8 +10,8 @@ const connection = (protocols: string[], available: boolean, api_key_configured 
 });
 
 describe("assistantModelOptions", () => {
-  it("offers only available models with keys and openai_chat support", () => {
-    expect(assistantModelOptions([connection(["openai_responses"], true), connection(["openai_chat"], false), connection(["openai_chat"], true, false)])).toEqual([]);
-    expect(assistantModelOptions([connection(["openai_chat", "openai_responses"], true)])).toEqual([{ value: "model-1", label: "模型服务 / 聊天模型" }]);
+  it("offers only available models with keys and openai_responses support", () => {
+		expect(assistantModelOptions([connection(["openai_chat"], true), connection(["openai_responses"], false), connection(["openai_responses"], true, false)])).toEqual([]);
+		expect(assistantModelOptions([connection(["openai_chat", "openai_responses"], true)])).toEqual([{ value: "model-1", label: "模型服务 / 聊天模型" }]);
   });
 });

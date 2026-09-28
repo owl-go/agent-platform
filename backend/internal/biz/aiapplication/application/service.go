@@ -20,11 +20,6 @@ type Repository interface {
 	CreateAssistant(context.Context, string, domain.SmartAssistant) (domain.SmartAssistant, error)
 	UpdateAssistant(context.Context, string, string, domain.SmartAssistant, int64) (domain.SmartAssistant, error)
 	DeleteAssistant(context.Context, string, string) error
-	ListDigitalHumans(context.Context, string) ([]domain.DigitalHuman, error)
-	GetDigitalHuman(context.Context, string, string) (domain.DigitalHuman, error)
-	CreateDigitalHuman(context.Context, string, domain.DigitalHuman) (domain.DigitalHuman, error)
-	UpdateDigitalHuman(context.Context, string, string, domain.DigitalHuman, int64) (domain.DigitalHuman, error)
-	DeleteDigitalHuman(context.Context, string, string) error
 	ListFAQs(context.Context, string, string) ([]domain.FAQ, error)
 	CreateFAQ(context.Context, string, string, domain.FAQ) (domain.FAQ, error)
 	UpdateFAQ(context.Context, string, string, string, domain.FAQ, int64) (domain.FAQ, error)
@@ -170,11 +165,6 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 		assistant.Share.TokenHash = hashShareToken(token)
 		assistant.Share.TokenRevision = 1
 	}
-	if assistant.DigitalHumanID != nil {
-		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
-			return domain.SmartAssistant{}, err
-		}
-	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
 			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
@@ -285,11 +275,6 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	} else {
 		assistant.Share.Token, assistant.Share.TokenHash, assistant.Share.TokenRevision = "", "", current.Share.TokenRevision
 	}
-	if assistant.DigitalHumanID != nil {
-		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
-			return domain.SmartAssistant{}, err
-		}
-	}
 	if len(assistant.KnowledgeBaseIDs) > 0 && service.knowledge != nil {
 		for _, baseID := range assistant.KnowledgeBaseIDs {
 			if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
@@ -368,112 +353,6 @@ func (service *Service) DeleteAssistant(ctx context.Context, owner, id string) e
 	return service.repository.DeleteAssistant(ctx, owner, id)
 }
 
-func (service *Service) ListDigitalHumans(ctx context.Context, owner string) ([]domain.DigitalHuman, error) {
-	return service.repository.ListDigitalHumans(ctx, owner)
-}
-func (service *Service) GetDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
-	return service.repository.GetDigitalHuman(ctx, owner, id)
-}
-func (service *Service) CreateDigitalHuman(ctx context.Context, owner string, human domain.DigitalHuman) (domain.DigitalHuman, error) {
-	human.OwnerID = owner
-	if human.State == "" {
-		human.State = domain.StateEnabled
-	}
-	if err := human.Validate(); err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	return service.repository.CreateDigitalHuman(ctx, owner, human)
-}
-func (service *Service) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
-	human.OwnerID = owner
-	current, err := service.repository.GetDigitalHuman(ctx, owner, id)
-	if err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	if human.State == "" {
-		human.State = current.State
-		if human.State == "" {
-			human.State = domain.StateEnabled
-		}
-	}
-	if err := human.Validate(); err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
-}
-func (service *Service) DeleteDigitalHuman(ctx context.Context, owner, id string) error {
-	return service.DeleteDigitalHumanWithOptions(ctx, owner, id, false)
-}
-
-func (service *Service) DeleteDigitalHumanWithOptions(ctx context.Context, owner, id string, detach bool) error {
-	if _, err := service.repository.GetDigitalHuman(ctx, owner, id); err != nil {
-		return err
-	}
-	assistants, err := service.repository.ListAssistants(ctx, owner)
-	if err != nil {
-		return err
-	}
-	for _, assistant := range assistants {
-		if assistant.DigitalHumanID == nil || *assistant.DigitalHumanID != id {
-			continue
-		}
-		if !detach {
-			return fmt.Errorf("%w: digital human is referenced by assistant", domain.ErrConflict)
-		}
-		assistant.DigitalHumanID = nil
-		if _, err := service.repository.UpdateAssistant(ctx, owner, assistant.ID, assistant, assistant.Version); err != nil {
-			return err
-		}
-	}
-	return service.repository.DeleteDigitalHuman(ctx, owner, id)
-}
-
-func (service *Service) CopyDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
-	source, err := service.repository.GetDigitalHuman(ctx, owner, id)
-	if err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	copy := source
-	copy.ID, copy.OwnerID, copy.CreatedAt, copy.UpdatedAt, copy.Version = "", "", time.Time{}, time.Time{}, 0
-	copy.State = domain.StateEnabled
-	return service.repository.CreateDigitalHuman(ctx, owner, copy)
-}
-
-func (service *Service) SetDigitalHumanState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.DigitalHuman, error) {
-	if state != domain.StateEnabled && state != domain.StateDisabled {
-		return domain.DigitalHuman{}, fmt.Errorf("%w: unsupported digital human state", domain.ErrInvalid)
-	}
-	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
-	if err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	human.State = state
-	return service.repository.UpdateDigitalHuman(ctx, owner, id, human, version)
-}
-
-func (service *Service) PreviewDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHumanPreview, error) {
-	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
-	if err != nil {
-		return domain.DigitalHumanPreview{}, err
-	}
-	state := human.State
-	if state == "" {
-		state = domain.StateEnabled
-	}
-	return domain.DigitalHumanPreview{ID: human.ID, Name: human.Name, AvatarObjectKey: human.AvatarObjectKey, Voice: human.Voice, Language: human.Language, ExpressionStyle: human.ExpressionStyle, SceneDescription: human.SceneDescription, State: state, PreviewText: fmt.Sprintf("%s · %s · %s", human.Name, human.Language, human.Voice)}, nil
-}
-
-func (service *Service) validateDigitalHumanBinding(ctx context.Context, owner, id string) error {
-	human, err := service.repository.GetDigitalHuman(ctx, owner, id)
-	if err != nil {
-		return err
-	}
-	if human.State == domain.StateDisabled {
-		return fmt.Errorf("%w: digital human is disabled", domain.ErrInvalid)
-	}
-	return nil
-}
-
 func (service *Service) validateKnowledgeBinding(ctx context.Context, owner, id string) error {
 	if service.knowledge == nil {
 		return fmt.Errorf("%w: knowledge repository is unavailable", domain.ErrInvalid)
@@ -489,11 +368,6 @@ func (service *Service) validateKnowledgeBinding(ctx context.Context, owner, id 
 }
 
 func (service *Service) validateAssistantResources(ctx context.Context, owner string, assistant domain.SmartAssistant) error {
-	if assistant.DigitalHumanID != nil {
-		if err := service.validateDigitalHumanBinding(ctx, owner, *assistant.DigitalHumanID); err != nil {
-			return err
-		}
-	}
 	for _, baseID := range assistant.KnowledgeBaseIDs {
 		if err := service.validateKnowledgeBinding(ctx, owner, baseID); err != nil {
 			return err

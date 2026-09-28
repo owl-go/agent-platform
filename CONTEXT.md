@@ -141,19 +141,17 @@ _Avoid_: Restorable Workflow, archived Workflow
 ## AI Applications
 
 **AI Applications**:
-The product area in which a User creates and uses durable AI capabilities and task-specific creation tools outside a continuing Session or Workflow. Its first entries are Smart Assistants, Digital Humans, and Image Creation.
+The product area in which a User creates and uses durable AI capabilities and task-specific creation tools outside a continuing Session or Workflow. Its entries are Smart Assistants and Image Creation.
 _Avoid_: AI Creation as a top-level area, Session, Workflow, generic AI tools
 
 **Smart Assistant**:
-A reusable, User-owned AI application for one scenario, combining a selected Provider Model, visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
+A reusable, User-owned AI application for one scenario, combining a selected Provider Model, visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection and Expert or Expert Team references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
 _Avoid_: AI Customer Service, Expert, Session, Workflow
 
 **Smart Assistant FAQ**:
 An ordered, User-authored question and Markdown answer attached to one Smart Assistant. A direct selection returns its safety-checked answer without a model invocation; uncertain free-text questions may be classified against enabled FAQs before Knowledge Base retrieval.
 _Avoid_: Knowledge Document, canned Session message, generated answer
 
-**Digital Human**:
-A reusable, User-owned presentation identity describing an AI interaction's avatar, voice, language, and supported expression or scene settings. A Digital Human does not own business knowledge or answer logic and may be referenced by multiple Smart Assistants.
 _Avoid_: Smart Assistant, Avatar-only upload, Expert
 
 **Answer Safety Policy**:
@@ -165,7 +163,7 @@ The per-Smart-Assistant public-use configuration containing an unpredictable sha
 _Avoid_: Public Session, API Key, User Access Token
 
 **External Conversation**:
-An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Digital Human, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.
+An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.
 _Avoid_: Session, visitor account, public chat transcript
 
 **Assistant Conversation**:
@@ -173,7 +171,7 @@ An authenticated User's private conversation with a Smart Assistant, separate fr
 _Avoid_: Session, External Conversation, temporary chat
 
 **Image Creation**:
-The task-specific image-generation tool nested under AI Applications. It owns no Smart Assistant or Digital Human and uses Image Generation Records for its submitted requests and results.
+The task-specific image-generation tool nested under AI Applications. It owns no Smart Assistant and uses Image Generation Records for its submitted requests and results.
 _Avoid_: AI Creation, Smart Assistant, Image Artifact
 
 **Retrieval Provider**:

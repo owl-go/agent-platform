@@ -36,6 +36,7 @@ import (
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/credentials"
+	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
@@ -935,6 +936,54 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 				return nil, err
 			}
 			switch definition.AuthenticationDriver {
+			case "dingtalk":
+				if material.CredentialFormat != "json" {
+					clear(plaintext)
+					return nil, errors.New("DingTalk Connector credential format is invalid")
+				}
+				var token dingtalkcli.Credentials
+				if err := json.Unmarshal(plaintext, &token); err != nil {
+					clear(plaintext)
+					return nil, errors.New("DingTalk Connector credential is invalid")
+				}
+				clear(plaintext)
+				if token.AccessToken == "" || token.ClientID == "" || token.RefreshToken == "" || token.AccessExpiresAt.IsZero() {
+					return nil, errors.New("DingTalk Connector credential is incomplete")
+				}
+				if time.Until(token.AccessExpiresAt) <= 5*time.Minute {
+					refresher, ok := repository.(interface {
+						RefreshConnectorAuthorization(context.Context, workspacedomain.ConnectorAuthorization, int64, workspacedomain.ConnectorAuditRecord) (workspacedomain.ConnectorAuthorization, error)
+					})
+					if !ok || material.Authorization.ID == "" {
+						return nil, errors.New("DingTalk credential refresh is unavailable")
+					}
+					grant, refreshErr := dingtalkcli.NewClient().Refresh(ctx, token.ClientID, token.RefreshToken)
+					if refreshErr != nil {
+						return nil, errors.New("DingTalk authorization must be renewed")
+					}
+					if grant.ExternalID != "" && grant.ExternalID != material.Authorization.ExternalIdentityID {
+						return nil, errors.New("DingTalk authorization changed account")
+					}
+					token = dingtalkcli.Credentials{AccessToken: grant.AccessToken, RefreshToken: grant.RefreshToken, ClientID: grant.ClientID, AccessExpiresAt: grant.ExpiresAt}
+					encoded, marshalErr := json.Marshal(token)
+					if marshalErr != nil {
+						return nil, marshalErr
+					}
+					ciphertext, encryptErr := executor.box.Encrypt(encoded, material.CredentialAAD)
+					clear(encoded)
+					if encryptErr != nil {
+						return nil, encryptErr
+					}
+					updated := material.Authorization
+					updated.CredentialCiphertext = ciphertext
+					updated.CredentialAAD = material.CredentialAAD
+					updated.CredentialFormat = "json"
+					updated.ExpiresAt = &grant.RefreshExpiresAt
+					if _, refreshErr = refresher.RefreshConnectorAuthorization(ctx, updated, updated.Version, workspacedomain.ConnectorAuditRecord{OwnerID: ownerID, InstallationID: definition.ID, Operation: "refresh_authorization", IdentityRef: updated.IdentityRef, Outcome: "succeeded", CreatedAt: time.Now().UTC()}); refreshErr != nil {
+						return nil, errors.New("DingTalk authorization refresh could not be saved")
+					}
+				}
+				return map[string]string{"AGENT_PLATFORM_DWS_ACCESS_TOKEN": token.AccessToken, "DO_NOT_TRACK": "1"}, nil
 			case "feishu":
 				if material.CredentialFormat != "access_token" && material.CredentialFormat != "json" {
 					clear(plaintext)
@@ -1767,7 +1816,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
 			}
-			if connector.PackageObjectKey != "" && connector.AuthenticationDriver == "feishu" && len(capabilities) > 40 {
+			if connector.PackageObjectKey != "" && (connector.AuthenticationDriver == "feishu" || connector.AuthenticationDriver == "dingtalk") && len(capabilities) > 40 {
 				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
 				continue
 			}
