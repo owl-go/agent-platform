@@ -4,7 +4,7 @@ import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Expert, type ExpertTeam, type GitSourceInput, type KnowledgeBase, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Evidence, type Expert, type ExpertTeam, type GitSourceInput, type KnowledgeBase, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
@@ -101,6 +101,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       stages: turn.expert_stages,
       creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
+      evidence: turn.evidence,
     },
   ];
 }));
@@ -438,6 +439,7 @@ function setWorkflowSpecialist(value: string) { settingsForm.value.expert_id = v
 function teamSelectionLabel(team: ExpertTeam): string { const compatibility = team.experts.some((item) => item.compatibility === "incompatible") ? t("experts.incompatible") : team.experts.some((item) => item.compatibility === "unverified") ? t("settings.unverified") : t("settings.verified"); return `${team.name} · ${compatibility}`; }
 function enableSchedule() { settingsForm.value.schedule = settingsForm.value.schedule ?? { enabled: true, frequency: "daily", hour: 9, minute: 0, weekday: 1, timezone: "Asia/Shanghai" }; }
 async function openArtifact(item: Artifact) { if (item.kind === "file" && !item.expired) { try { const blob = await api.getArtifactDownload(workflowID.value, item.id); const url = URL.createObjectURL(blob); triggerBrowserDownload(url, item.name); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("errors.generic"); } } }
+async function openEvidence(evidence: Evidence) { if (!evidence.container_id || !evidence.citation?.revision_id) return; try { const blob = await api.downloadKnowledgeEvidence(evidence.container_id, evidence.source_id, evidence.citation.revision_id); const url = URL.createObjectURL(blob); triggerBrowserDownload(url, evidence.source_name); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("sessions.executionEvidence.sourceUnavailable"); } }
 function triggerBrowserDownload(url: string, name: string) { const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.rel = "noopener noreferrer"; anchor.click(); }
 function formatFileSize(size: number) { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB`; }
 function stateLabel(state: Run["state"]) { return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "running" ? t("common.running") : state === "waiting_for_user" ? t("common.waitingForUser") : state === "queued" ? t("common.queued") : state; }
@@ -455,7 +457,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
       <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
-        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>

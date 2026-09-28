@@ -6810,6 +6810,57 @@
         }
       }
     },
+    "v1Evidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_name": {
+          "type": "string"
+        },
+        "container_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "stage_position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "citation": {
+          "$ref": "#/definitions/v1EvidenceCitation"
+        }
+      }
+    },
+    "v1EvidenceCitation": {
+      "type": "object",
+      "properties": {
+        "revision_id": {
+          "type": "string"
+        },
+        "category_name": {
+          "type": "string"
+        },
+        "source_location": {
+          "type": "string"
+        },
+        "relevance": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
     "v1ExecutionActivity": {
       "type": "object",
       "properties": {
@@ -8912,6 +8963,13 @@
         "queue_position": {
           "type": "integer",
           "format": "int32"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Evidence"
+          }
         }
       }
     },
@@ -9109,6 +9167,13 @@
         },
         "resource_action": {
           "$ref": "#/definitions/v1ResourceCreationAction"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Evidence"
+          }
         }
       }
     },

@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, type Artifact, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Evidence, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
@@ -122,6 +122,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
     creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
+    evidence: message.evidence,
     attachments: message.attachments,
     skills: message.role === "user" ? messageSkills(index) : undefined,
     resourceAction: message.resource_action,
@@ -268,6 +269,15 @@ async function downloadSessionArtifact(artifact: Artifact) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   } catch { error.value = t("errors.generic"); }
 }
+async function openEvidence(evidence: Evidence) {
+  if (!evidence.container_id || !evidence.citation?.revision_id) return;
+  try {
+    const blob = await api.downloadKnowledgeEvidence(evidence.container_id, evidence.source_id, evidence.citation.revision_id);
+    const url = URL.createObjectURL(blob);
+    triggerBrowserDownload(url, evidence.source_name);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch { error.value = t("sessions.executionEvidence.sourceUnavailable"); }
+}
 function triggerBrowserDownload(url: string, name: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -330,7 +340,7 @@ async function streamAssistant(sessionID: string, messageID: number, generation:
   }
 }
 function sessionMessageRevision(message?: SessionMessage) {
-  return message ? JSON.stringify([message.state, message.content, message.progress_stage, message.elapsed_ms, message.error, message.activities?.length, message.expert_stages?.map((stage) => [stage.position, stage.state])]) : "";
+  return message ? JSON.stringify([message.state, message.content, message.progress_stage, message.elapsed_ms, message.error, message.activities?.length, message.evidence, message.expert_stages?.map((stage) => [stage.position, stage.state])]) : "";
 }
 function replaceSessionMessages(latest: SessionMessage[], messageID: number) {
   const previousRevision = sessionMessageRevision(messages.value.find((item) => item.id === messageID));
@@ -379,6 +389,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
   message.credit_consumption = snapshot.credit_consumption ?? message.credit_consumption;
   message.activities = snapshot.activities ?? message.activities;
+  message.evidence = snapshot.evidence ?? message.evidence;
   message.resource_action = snapshot.resource_action ?? message.resource_action;
   if (snapshot.state === "queued" || snapshot.state === "generating" || snapshot.state === "waiting_for_user") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
@@ -625,7 +636,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
-          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>

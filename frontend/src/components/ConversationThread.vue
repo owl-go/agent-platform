@@ -8,7 +8,7 @@ import { displayArtifactNames } from "../artifactDisplay";
 import ArtifactDisclosure from "./ArtifactDisclosure.vue";
 import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
-import { runtimeEngineDisplayName, type Artifact, type ExpertStage } from "../api/client";
+import { runtimeEngineDisplayName, type Artifact, type Evidence, type ExpertStage } from "../api/client";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 
 const props = defineProps<{
@@ -17,6 +17,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   downloadArtifact: [artifact: Artifact];
+  openEvidence: [evidence: Evidence];
   retry: [messageID: string];
   resourceAction: [messageID: string, decision: "confirm" | "cancel"];
   attachmentError: [];
@@ -78,7 +79,7 @@ function activityKindLabel(kind?: ConversationActivityKind) {
   return t(`sessions.executionEvidence.kind.${kind ?? "activity"}`);
 }
 function hasExecutionEvidence(message: ConversationMessage) {
-  return Boolean(message.activities?.length || message.stages?.length || message.artifacts?.length);
+  return Boolean(message.activities?.length || message.stages?.length || message.artifacts?.length || message.evidence?.length);
 }
 function executionEvidenceSummary(message: ConversationMessage) {
   const groups = message.activities ?? [];
@@ -86,12 +87,35 @@ function executionEvidenceSummary(message: ConversationMessage) {
   const fileCount = message.executionEvidenceCounts?.fileChanges ?? groups.reduce((total, group) => total + (group.fileChangeCount ?? (group.kind === "file" ? 1 : 0)), 0);
   const stageCount = message.stages?.length ?? 0;
   const artifactCount = message.artifacts?.length ?? 0;
+  const evidenceCount = message.evidence?.filter((item) => item.state === "succeeded").length ?? 0;
   const parts: string[] = [];
   if (toolCount) parts.push(t("sessions.executionEvidence.tools", { count: toolCount }));
   if (fileCount) parts.push(t("sessions.executionEvidence.files", { count: fileCount }));
   if (stageCount) parts.push(t("sessions.executionEvidence.stages", { count: stageCount }));
   if (artifactCount) parts.push(t("sessions.executionEvidence.artifacts", { count: artifactCount }));
+  if (evidenceCount) parts.push(t("sessions.executionEvidence.sources", { count: evidenceCount }));
   return parts.length ? parts.join(" · ") : t("sessions.executionEvidence.noExternal");
+}
+function evidenceKindLabel(evidence: Evidence) {
+  return t(`sessions.executionEvidence.sourceKind.${evidence.kind}`);
+}
+function evidenceStateLabel(evidence: Evidence) {
+  return t(`sessions.executionEvidence.sourceState.${evidence.state}`);
+}
+function evidenceActionLabel(evidence: Evidence) {
+  const known: Record<string, string> = {
+    "retrieved indexed source": "retrieved",
+    "no relevant indexed source": "noMatch",
+    "retrieval failed": "retrievalFailed",
+    "retrieval unavailable": "retrievalUnavailable",
+    "ready index unavailable": "indexUnavailable",
+    "not invoked": "notInvoked",
+  };
+  const key = known[evidence.action];
+  return key ? t(`sessions.executionEvidence.sourceAction.${key}`) : evidence.action;
+}
+function canOpenEvidence(evidence: Evidence) {
+  return evidence.kind === "knowledge" && evidence.state === "succeeded" && Boolean(evidence.container_id && evidence.citation?.revision_id);
 }
 onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
@@ -124,6 +148,12 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
                   <li v-for="activity in group.items" :key="`${message.id}-${group.id}-${activity.id}`"><span></span><div><strong>{{ activity.label }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li>
                 </ol>
               </details>
+              <article v-for="evidence in message.evidence" :key="`${message.id}-evidence-${evidence.id}`" class="execution-source" :class="`is-${evidence.state}`">
+                <div class="execution-source-heading"><span>{{ evidenceKindLabel(evidence) }}</span><strong>{{ evidence.source_name }}</strong><small>{{ evidenceStateLabel(evidence) }}</small></div>
+                <p>{{ evidenceActionLabel(evidence) }} · {{ t('sessions.executionEvidence.stage', { position: evidence.stage_position }) }}</p>
+                <p v-if="evidence.citation?.source_location" class="execution-source-location">{{ evidence.citation.source_location }}</p>
+                <button v-if="canOpenEvidence(evidence)" type="button" class="text-button" @click="emit('openEvidence', evidence)">{{ t('sessions.executionEvidence.openSource') }}</button>
+              </article>
             </div>
           </details>
         </div>

@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
-
 	"github.com/google/uuid"
 )
 
@@ -80,23 +78,30 @@ func (service *Service) downloadKnowledgeDocument(writer http.ResponseWriter, re
 		http.NotFound(writer, request)
 		return
 	}
-	documents, err := service.workspace.Repository().ListKnowledgeDocuments(request.Context(), owner, baseID, administrator)
+	revisionID := strings.TrimSpace(request.URL.Query().Get("revision_id"))
+	if revisionID == "" {
+		documents, listErr := service.workspace.Repository().ListKnowledgeDocuments(request.Context(), owner, baseID, administrator)
+		if listErr != nil {
+			writeAuthError(writer, publicStatus(listErr), publicReason(listErr))
+			return
+		}
+		for _, document := range documents {
+			if document.ID == documentID && document.LatestRevision != nil {
+				revisionID = document.LatestRevision.ID
+				break
+			}
+		}
+	}
+	if revisionID == "" {
+		http.NotFound(writer, request)
+		return
+	}
+	documentName, revision, err := service.workspace.Repository().GetKnowledgeDocumentRevisionSource(request.Context(), owner, baseID, documentID, revisionID, administrator)
 	if err != nil {
 		writeAuthError(writer, publicStatus(err), publicReason(err))
 		return
 	}
-	var document *workspacedomain.KnowledgeDocument
-	for index := range documents {
-		if documents[index].ID == documentID {
-			document = &documents[index]
-			break
-		}
-	}
-	if document == nil || document.LatestRevision == nil || document.LatestRevision.ObjectKey == "" {
-		http.NotFound(writer, request)
-		return
-	}
-	reader, object, err := service.objects.Get(request.Context(), document.LatestRevision.ObjectKey)
+	reader, object, err := service.objects.Get(request.Context(), revision.ObjectKey)
 	if err != nil {
 		http.NotFound(writer, request)
 		return
@@ -104,7 +109,7 @@ func (service *Service) downloadKnowledgeDocument(writer http.ResponseWriter, re
 	defer reader.Close()
 	writer.Header().Set("Content-Type", object.ContentType)
 	writer.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
-	writer.Header().Set("Content-Disposition", `attachment; filename="`+strings.ReplaceAll(document.Name, `"`, "")+`"`)
+	writer.Header().Set("Content-Disposition", `attachment; filename="`+strings.ReplaceAll(documentName, `"`, "")+`"`)
 	writer.Header().Set("Cache-Control", "private, no-store")
 	_, _ = io.Copy(writer, reader)
 }

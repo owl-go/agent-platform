@@ -83,6 +83,7 @@ type Message struct {
 	ExpertStages      []ExpertStage
 	CreditConsumption *CreditConsumption
 	Activities        []ExecutionActivity
+	Evidence          []Evidence
 	Artifacts         []Artifact
 	ResourceAction    *ResourceCreationAction
 }
@@ -1172,6 +1173,7 @@ type Run struct {
 	StartedAt         *time.Time
 	EndedAt           *time.Time
 	CreditConsumption *CreditConsumption
+	Evidence          []Evidence
 }
 
 type ExpertStage struct {

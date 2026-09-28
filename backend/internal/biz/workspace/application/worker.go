@@ -50,6 +50,7 @@ type ExecutionResult struct {
 	Events              []ExecutionEvent
 	Artifacts           []ExecutionArtifact
 	ExpertStages        []domain.ExpertStage
+	Evidence            []domain.Evidence
 	CreditConsumption   *domain.CreditConsumption
 	CreditSettlements   []CreditSettlement
 	SuccessCommit       SuccessCommit

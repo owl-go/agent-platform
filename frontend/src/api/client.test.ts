@@ -4,6 +4,15 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("downloads the exact cited Knowledge revision", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("source", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").downloadKnowledgeEvidence("base/1", "document 1", "revision?1");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/knowledge-bases/base%2F1/documents/document%201/download?revision_id=revision%3F1");
+  });
+
   it("classifies oversized Skill uploads as validation errors", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "request_body_too_large" }), { status: 413 })));
     await expect(createPlatformApi(() => "token").createUploadSkill({ archive: "YQ==" })).rejects.toMatchObject({ kind: "validation", status: 413 });

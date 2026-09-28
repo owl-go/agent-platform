@@ -19,7 +19,7 @@
 | EP-00 | 建立基线 | 可以测量首次任务、失败阶段和 Workflow 二次运行 | 产品事件最小字段约束 | 不采集提示词、结果、文件名和 Secret；事件单测与隐私检查 | 已完成代码与本地门禁；待真实部署形成基线 |
 | EP-01 | 持续状态与停止 | 长任务在任意滚动位置可见状态、耗时、模型、消耗和停止 | 现有 Session/Run 状态与取消 API | Session、Run Conversation、移动端和停止测试 | 已完成代码与本地门禁；生产重连率待部署后形成基线 |
 | EP-02 | 本次执行证据 | 用户能确认实际调用了哪些工具、产生了哪些文件和阶段结果 | 现有 public Activity、Artifact、Expert Stage、Credits | 不把“可用资源”显示为“已使用”；Session/Run 共用组件；中英文测试 | 已完成展示层；来源证据转 EP-03 |
-| EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的文件、Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 待开始 |
+| EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的 Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 已完成代码与无数据库本地门禁；PostgreSQL Integration、真实 Provider 与生产历史证据待验证 |
 | EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 待 EP-00/02 |
 | EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 待 EP-02/03/04 |
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 待 EP-00/02 |
@@ -54,7 +54,7 @@
 - 使用现有 Design Token；桌面和移动端不新增未经需求支持的常驻面板。
 - 运行相关 Vitest、`make web-typecheck`、`make web-build` 和 `git diff --check`。
 
-## 4. EP-03 后端协议预案
+## 4. EP-03 来源证据
 
 EP-02 不解决 Knowledge Citation 和“结果是否采用某次调用”的完整证据。EP-03 需要新增最小公开 Evidence：
 
@@ -69,6 +69,24 @@ Evidence
 ```
 
 Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret、原始 Tool Output、完整敏感输入、Provider response 和 Chain-of-Thought 不进入协议。
+
+### EP-03.1 公开 Evidence 与持久化
+
+- Assistant Message 和 Run 追加同一组 `Evidence`；旧记录按空数组读取。
+- 单次执行最多保留 64 条，安全名称、动作和位置均有长度上限；协议不存在原始 Tool Output、参数、凭证、Prompt 或 Provider Response 字段。
+- Worker 只在终态事务中随 Message/Run 一起写入 Evidence；中断恢复重新执行时清空未完成 Evidence，避免把旧尝试误当成本次结果。
+
+### EP-03.2 平台证据来源
+
+- Knowledge Retrieval 命中由权限校验后的 Retrieval seam 生成 `succeeded` Citation；无命中为 `not_used`，索引或 Provider 不可用为 `failed`。
+- CLI Connector 只在服务端 Broker 通过 Definition 和 Capability 校验后记录调用；成功、失败和已选择但未调用分别显示，参数、Target、输出和外部账号标识不进入 Evidence。
+- 附件、可用 Skill/MCP 和仅出现在快照中的资源不等于“已使用”，本批次不为它们伪造来源。
+
+### EP-03.3 来源打开与界面
+
+- Session 与 Run Conversation 复用同一来源列表，区分“已使用”“调用失败”“未采用”；折叠摘要只统计 `succeeded` Evidence。
+- 只有成功的 Knowledge Citation 提供“打开来源”。下载请求携带执行时的 Document Revision ID，服务端在同一次查询中重新校验当前用户对 Knowledge Base、Document 和该不可变 Revision 的权限；删除、私有化或权限撤销后显示不可用，不改写历史 Evidence，也不会把更新后的 Revision 冒充旧来源。
+- 当前代码可证明 bounded contract、owner-scoped download seam、状态展示和精确 Revision 拒绝行为；AnythingLLM、真实 CLI Connector、生产迁移及历史记录仍需部署环境验收，不能记作已验证。
 
 ## 5. 发布与回滚
 

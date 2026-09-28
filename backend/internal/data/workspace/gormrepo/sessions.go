@@ -408,11 +408,11 @@ func sessionMessagePairRecords(sessionID, content string, attachments, responseS
 	emptyJSONList := []byte("[]")
 	user := messageRecord{
 		SessionID: sessionID, Role: "user", State: "completed", Content: content,
-		Attachments: attachments, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList,
+		Attachments: attachments, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList, Evidence: emptyJSONList,
 	}
 	assistant := messageRecord{
 		SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing",
-		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList,
+		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList, Evidence: emptyJSONList,
 	}
 	return user, assistant
 }
@@ -534,6 +534,9 @@ func messageDomain(row messageRecord) domain.Message {
 	}
 	if len(row.RuntimeActivities) > 0 && string(row.RuntimeActivities) != "null" {
 		_ = json.Unmarshal(row.RuntimeActivities, &value.Activities)
+	}
+	if len(row.Evidence) > 0 && string(row.Evidence) != "null" {
+		_ = json.Unmarshal(row.Evidence, &value.Evidence)
 	}
 	return value
 }

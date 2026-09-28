@@ -2469,6 +2469,25 @@ export interface components {
             secret?: boolean;
             configured?: boolean;
         };
+        v1Evidence: {
+            id?: string;
+            kind?: string;
+            source_id?: string;
+            source_name?: string;
+            container_id?: string;
+            state?: string;
+            action?: string;
+            /** Format: int32 */
+            stage_position?: number;
+            citation?: components["schemas"]["v1EvidenceCitation"];
+        };
+        v1EvidenceCitation: {
+            revision_id?: string;
+            category_name?: string;
+            source_location?: string;
+            /** Format: float */
+            relevance?: number;
+        };
         v1ExecutionActivity: {
             type?: string;
             detail?: string;
@@ -3148,6 +3167,7 @@ export interface components {
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
             /** Format: int32 */
             queue_position?: number;
+            evidence?: components["schemas"]["v1Evidence"][];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -3217,6 +3237,7 @@ export interface components {
             activities?: components["schemas"]["v1ExecutionActivity"][];
             artifacts?: components["schemas"]["v1Artifact"][];
             resource_action?: components["schemas"]["v1ResourceCreationAction"];
+            evidence?: components["schemas"]["v1Evidence"][];
         };
         v1Skill: {
             id?: string;

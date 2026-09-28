@@ -63,9 +63,19 @@ func TestKnowledgeSearchUsesAuthorizedCurrentSources(t *testing.T) {
 	if err != nil || source.DocumentName != "guide.txt" || source.CategoryName != "Manual" || source.DocumentID != document {
 		t.Fatalf("current source = %#v, %v", source, err)
 	}
+	name, retained, err := repository.GetKnowledgeDocumentRevisionSource(ctx, owner, base, document, oldRevision, false)
+	if err != nil || name != "guide.txt" || retained.ID != oldRevision || retained.ObjectKey != "knowledge/"+oldRevision {
+		t.Fatalf("retained source = %q, %#v, %v", name, retained, err)
+	}
+	if _, _, err := repository.GetKnowledgeDocumentRevisionSource(ctx, reader, base, document, oldRevision, false); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("reader downloaded private retained source: %v", err)
+	}
 	exec("UPDATE knowledge_categories SET deleted_at = now() WHERE id = ?", category)
 	if _, err := repository.ResolveKnowledgeSearchSource(ctx, owner, base, currentRevision, false); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("deleted Category source was cited: %v", err)
+	}
+	if _, _, err := repository.GetKnowledgeDocumentRevisionSource(ctx, owner, base, document, oldRevision, false); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("deleted Category retained source remained downloadable: %v", err)
 	}
 	exec("UPDATE knowledge_categories SET deleted_at = NULL WHERE id = ?", category)
 	exec("UPDATE knowledge_documents SET deleted_at = now() WHERE id = ?", document)

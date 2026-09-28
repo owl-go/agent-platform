@@ -42,6 +42,16 @@ type BrokerResponse struct {
 
 type EnvironmentResolver func(context.Context, Definition, Capability, Identity) (map[string]string, error)
 
+// InvocationEvidence is the bounded result of one server-validated Connector
+// capability invocation. It intentionally excludes arguments, target, output,
+// credentials, and external account identifiers.
+type InvocationEvidence struct {
+	ConnectorID   string
+	ConnectorName string
+	Capability    string
+	Succeeded     bool
+}
+
 type BrokerConfig struct {
 	Definitions        []Definition
 	RuntimeDigest      string
@@ -54,6 +64,7 @@ type BrokerConfig struct {
 	GenerateNonce      func() (string, error)
 	RequestLimit       int64
 	OutputLimit        int
+	ObserveInvocation  func(InvocationEvidence)
 }
 
 type ApprovalContext struct {
@@ -74,6 +85,7 @@ type Broker struct {
 	generateNonce      func() (string, error)
 	requestLimit       int64
 	outputLimit        int
+	observeInvocation  func(InvocationEvidence)
 	mu                 sync.Mutex
 }
 
@@ -114,10 +126,11 @@ func NewBroker(config BrokerConfig) (*Broker, error) {
 		resolveEnvironment: config.ResolveEnvironment, approval: config.Approval,
 		approvalContext: config.ApprovalContext, approvalTimeout: approvalTimeout,
 		now: now, generateNonce: generateNonce, requestLimit: config.RequestLimit, outputLimit: config.OutputLimit,
+		observeInvocation: config.ObserveInvocation,
 	}, nil
 }
 
-func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerResponse {
+func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) (response BrokerResponse) {
 	broker.mu.Lock()
 	defer broker.mu.Unlock()
 	if command.Identity == "me" {
@@ -133,6 +146,11 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) BrokerR
 	capability := findCapability(definition, command.Capability)
 	if capability == nil {
 		return brokerFailure("capability_unavailable", "CLI capability is unavailable")
+	}
+	if broker.observeInvocation != nil {
+		defer func() {
+			broker.observeInvocation(InvocationEvidence{ConnectorID: definition.ID, ConnectorName: definition.Name, Capability: capability.ID, Succeeded: response.ErrorCode == "" && response.ExitCode == 0})
+		}()
 	}
 	request := Request{
 		CapabilityID: command.Capability, RuntimeDigest: broker.runtimeDigest,

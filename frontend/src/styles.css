@@ -938,6 +938,15 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .runtime-activity .activity-state { margin-left: auto; color: var(--aw-n6); font-size: 10px; white-space: nowrap; }
 .runtime-activity .activity-summary-group.is-running > summary { border-color: var(--aw-running-border); background: var(--aw-running-soft); }
 .runtime-activity .activity-detail-list { max-height: 180px; overflow-y: auto; border-color: var(--aw-n5); background: var(--aw-n2); }
+.execution-source { display: grid; gap: 4px; padding: 9px 12px; border: 1px solid var(--aw-n4); border-radius: var(--aw-radius-input); background: var(--aw-n1); }
+.execution-source-heading { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 7px; align-items: center; }
+.execution-source-heading > span { padding: 1px 5px; border: 1px solid var(--aw-n5); border-radius: 3px; background: var(--aw-n0); color: var(--aw-n7); font-size: 10px; font-weight: 600; }
+.execution-source-heading strong { min-width: 0; overflow-wrap: anywhere; color: var(--aw-n10); font: 600 12.5px/1.5 var(--aw-font-mono); }
+.execution-source-heading small { color: var(--aw-n6); font-size: 10px; }
+.execution-source p { margin: 0; color: var(--aw-n7); font-size: 11px; overflow-wrap: anywhere; }
+.execution-source-location { font-family: var(--aw-font-mono); }
+.execution-source.is-failed,.execution-source.is-not_used { opacity: .72; }
+.execution-source .text-button { justify-self: start; margin-top: 2px; }
 
 .failure-card { margin: 12px 0; overflow: hidden; border: 1.5px solid var(--aw-danger-border); border-radius: var(--aw-radius-card); background: var(--aw-n0); }
 .failure-card > header { min-height: 40px; display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--aw-danger-border); background: var(--aw-danger-soft); color: var(--aw-danger); font-size: 13px; font-weight: 600; }

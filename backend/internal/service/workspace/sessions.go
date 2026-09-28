@@ -237,11 +237,22 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	for _, activity := range item.Activities {
 		response.Activities = append(response.Activities, &workspacev1.ExecutionActivity{Type: activity.Type, Detail: activity.Detail})
 	}
+	for _, evidence := range item.Evidence {
+		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
+	}
 	for _, artifact := range item.Artifacts {
 		response.Artifacts = append(response.Artifacts, artifactResponse(artifact))
 	}
 	if action := item.ResourceAction; action != nil {
 		response.ResourceAction = resourceCreationActionResponse(*action)
+	}
+	return response
+}
+
+func evidenceResponse(item workspacedomain.Evidence) *workspacev1.Evidence {
+	response := &workspacev1.Evidence{Id: item.ID, Kind: item.Kind, SourceId: item.SourceID, SourceName: item.SourceName, ContainerId: item.ContainerID, State: item.State, Action: item.Action, StagePosition: int32(item.StagePosition)}
+	if item.Citation != nil {
+		response.Citation = &workspacev1.EvidenceCitation{RevisionId: item.Citation.RevisionID, CategoryName: item.Citation.CategoryName, SourceLocation: item.Citation.SourceLocation, Relevance: item.Citation.Relevance}
 	}
 	return response
 }

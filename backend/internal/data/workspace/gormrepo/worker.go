@@ -226,7 +226,7 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 			if err := tx.Model(&messageRecord{}).Where("id = ?", message.ID).Updates(map[string]any{
 				"state": "queued", "content": "", "error": nil, "progress_stage": "preparing",
 				"cancel_requested_at": nil, "completed_at": nil, "expert_stages": []byte("[]"),
-				"runtime_activities": []byte("[]"), "credit_consumption": nil,
+				"runtime_activities": []byte("[]"), "evidence": []byte("[]"), "credit_consumption": nil,
 			}).Error; err != nil {
 				return err
 			}
@@ -303,7 +303,7 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 		default:
 			if err := tx.Model(&runRecord{}).Where("id = ?", run.ID).Updates(map[string]any{
 				"state": "queued", "started_at": nil, "ended_at": nil, "cancel_requested_at": nil,
-				"final_result": nil, "terminal_error": nil, "expert_stages": []byte("[]"),
+				"final_result": nil, "terminal_error": nil, "expert_stages": []byte("[]"), "evidence": []byte("[]"),
 				"credit_consumption": nil, "version": gorm.Expr("version + 1"),
 			}).Error; err != nil {
 				return err
@@ -512,7 +512,7 @@ func createFailedScheduledRun(tx *gorm.DB, workflow workflowRecord, cause error,
 	if len(message) > 4_096 {
 		message = message[:4_096]
 	}
-	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: workflow.OwnerID, WorkflowID: &workflow.ID, WorkflowName: workflow.Name, Trigger: "scheduled", State: "failed", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), TerminalError: &message, QueuedAt: now, EndedAt: &now, Version: 1}
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: workflow.OwnerID, WorkflowID: &workflow.ID, WorkflowName: workflow.Name, Trigger: "scheduled", State: "failed", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), Evidence: []byte("[]"), TerminalError: &message, QueuedAt: now, EndedAt: &now, Version: 1}
 	if err := tx.Create(&created).Error; err != nil {
 		return err
 	}
@@ -1058,6 +1058,10 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 		if err != nil {
 			return err
 		}
+		evidence, err := marshalExecutionEvidence(result.Evidence)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			finalMessage, proposal, shouldCreateAction, actionErr := resourceActionForJob(job, result.FinalMessage)
 			if actionErr != nil {
@@ -1076,7 +1080,7 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 				}
 			}
 			stages, _ := marshal(result.ExpertStages)
-			updates := map[string]any{"state": "completed", "content": finalMessage, "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			updates := map[string]any{"state": "completed", "content": finalMessage, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
 			if actionID != "" {
 				updates["resource_creation_action_id"] = actionID
 			}
@@ -1128,7 +1132,7 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 			}
 			checkpoint = string(encoded)
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "credit_consumption": credit, "native_checkpoint": checkpoint, "ended_at": now, "version": gorm.Expr("version + 1")})
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "native_checkpoint": checkpoint, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return fmt.Errorf("complete Workflow Run: %w", update.Error)
 		}
@@ -1274,13 +1278,17 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		if err != nil {
 			return err
 		}
+		evidence, err := marshalExecutionEvidence(executionResult.Evidence)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
 			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stageState, terminalState := "failed", "failed"
-			updates := map[string]any{"state": terminalState, "error": message, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			updates := map[string]any{"state": terminalState, "error": message, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
 			if row.CancelRequested != nil {
 				stageState, terminalState = "cancelled", "cancelled"
 				updates["state"], updates["error"] = terminalState, nil
@@ -1300,7 +1308,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "credit_consumption": credit, "ended_at": now, "version": gorm.Expr("version + 1")})
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1318,6 +1326,10 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 		if err != nil {
 			return err
 		}
+		evidence, err := marshalExecutionEvidence(executionResult.Evidence)
+		if err != nil {
+			return err
+		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
 			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
@@ -1327,7 +1339,7 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 			if err != nil {
 				return err
 			}
-			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}).Error
+			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}).Error
 		}
 		var row runRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
@@ -1337,7 +1349,7 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "ended_at": now, "version": gorm.Expr("version + 1")})
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")})
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1402,9 +1414,13 @@ func finishCancelledSessionMessage(tx *gorm.DB, job application.ExecutionJob, ex
 	if err != nil {
 		return err
 	}
+	evidence, err := marshalExecutionEvidence(executionResult.Evidence)
+	if err != nil {
+		return err
+	}
 	result := tx.Model(&messageRecord{}).
 		Where("id = ? AND session_id = ? AND state = 'generating' AND cancel_requested_at IS NOT NULL", job.AssistantMessageID, job.SessionID).
-		Updates(map[string]any{"state": "cancelled", "credit_consumption": credit, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
+		Updates(map[string]any{"state": "cancelled", "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -1412,6 +1428,16 @@ func finishCancelledSessionMessage(tx *gorm.DB, job application.ExecutionJob, ex
 		return domain.ErrConflict
 	}
 	return nil
+}
+
+func marshalExecutionEvidence(items []domain.Evidence) ([]byte, error) {
+	if items == nil {
+		items = []domain.Evidence{}
+	}
+	if err := domain.ValidateEvidence(items); err != nil {
+		return nil, err
+	}
+	return marshal(items)
 }
 
 func (repository *Repository) FinishMCPTest(ctx context.Context, job application.ExecutionJob, message string) error {

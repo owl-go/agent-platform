@@ -434,6 +434,9 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
 	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	for _, evidence := range item.Evidence {
+		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
+	}
 	if item.StartedAt != nil {
 		end := time.Now()
 		if item.EndedAt != nil {

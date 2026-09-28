@@ -429,7 +429,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 		return runRecord{}, err
 	}
 	id := uuid.NewString()
-	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 	if err := tx.Create(&created).Error; err != nil {
 		return runRecord{}, err
 	}
@@ -483,7 +483,7 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 			return err
 		}
 		stages = withCurrentExecutionConfiguration(stages, configuration)
-		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		if selectionID == "" && root.SelectionID != nil {
 			selectionID = *root.SelectionID
 		}
@@ -960,7 +960,7 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 	created := runRecord{
 		ID: uuid.NewString(), OwnerID: ownerID, WorkflowID: source.WorkflowID, WorkflowName: source.WorkflowName,
 		Trigger: "manual", State: "queued", Input: append([]byte(nil), source.Input...),
-		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1,
+		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1,
 	}
 	created.ConversationID = created.ID
 	created.TurnNumber = 1
@@ -1220,6 +1220,9 @@ func runDomain(row runRecord) domain.Run {
 		if err := json.Unmarshal(row.CreditConsumption, item.CreditConsumption); err != nil {
 			item.CreditConsumption = nil
 		}
+	}
+	if len(row.Evidence) > 0 && string(row.Evidence) != "null" {
+		_ = json.Unmarshal(row.Evidence, &item.Evidence)
 	}
 	if row.TerminalError != nil {
 		item.Error = *row.TerminalError

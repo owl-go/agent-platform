@@ -270,6 +270,10 @@ _Avoid_: AnythingLLM workspace, mutable search state, Workflow Snapshot
 A bounded, permission-checked provenance record for a Retrieval Context excerpt, identifying its Knowledge Base, Category, Document Revision, source location, relevance, and safe display text. It remains auditable in Run history without becoming an Artifact or granting unconditional source access.
 _Avoid_: Raw provider response, full document copy, download URL
 
+**Evidence**:
+A bounded, owner-visible execution fact retained with an Assistant Message or Run, derived only from a platform-controlled boundary such as Knowledge Retrieval or the CLI Connector Broker. It identifies a safe source, action, owning stage, and requested/succeeded/failed/not-used state; an optional Knowledge Citation may add provenance. Evidence never contains raw Tool Output, arguments, prompts, model responses, credentials, unrestricted external payloads, or private reasoning.
+_Avoid_: Runtime log, model claim, Response Snapshot, Artifact
+
 ## Experts, Skills, And Connectors
 
 **Platform Resource**:

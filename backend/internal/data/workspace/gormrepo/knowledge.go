@@ -278,6 +278,41 @@ func (repository *Repository) ListKnowledgeDocuments(ctx context.Context, ownerI
 	return items, nil
 }
 
+type knowledgeRevisionSourceRecord struct {
+	DocumentName string     `gorm:"column:document_name"`
+	RevisionID   string     `gorm:"column:revision_id"`
+	DocumentID   string     `gorm:"column:document_id"`
+	Revision     int        `gorm:"column:revision"`
+	ObjectKey    string     `gorm:"column:object_key"`
+	SHA256       string     `gorm:"column:sha256"`
+	Size         int64      `gorm:"column:size_bytes"`
+	ContentType  string     `gorm:"column:content_type"`
+	State        string     `gorm:"column:state"`
+	Error        string     `gorm:"column:error"`
+	CreatedAt    time.Time  `gorm:"column:created_at"`
+	ReadyAt      *time.Time `gorm:"column:ready_at"`
+}
+
+func (repository *Repository) GetKnowledgeDocumentRevisionSource(ctx context.Context, ownerID, knowledgeBaseID, documentID, revisionID string, administrator bool) (string, domain.KnowledgeDocumentRevision, error) {
+	query := repository.db.WithContext(ctx).Table("knowledge_document_revisions AS revision").
+		Select("knowledge_documents.name AS document_name, revision.id AS revision_id, revision.document_id, revision.revision, revision.object_key, revision.sha256, revision.size_bytes, revision.content_type, revision.state, revision.error, revision.created_at, revision.ready_at").
+		Joins("JOIN knowledge_documents ON knowledge_documents.id = revision.document_id").
+		Joins("JOIN knowledge_bases ON knowledge_bases.id = knowledge_documents.knowledge_base_id").
+		Joins("LEFT JOIN knowledge_categories ON knowledge_categories.id = knowledge_documents.category_id")
+	query = knowledgeBaseAccess(query, ownerID, false).
+		Where("knowledge_documents.knowledge_base_id = ? AND knowledge_documents.id = ? AND knowledge_documents.deleted_at IS NULL", knowledgeBaseID, documentID).
+		Where("(knowledge_documents.category_id IS NULL OR knowledge_categories.deleted_at IS NULL)").
+		Where("revision.id = ? AND revision.object_key <> ''", revisionID)
+	if !administrator {
+		query = query.Where("knowledge_bases.platform = false OR knowledge_bases.visibility = 'public'")
+	}
+	var row knowledgeRevisionSourceRecord
+	if err := query.Take(&row).Error; err != nil {
+		return "", domain.KnowledgeDocumentRevision{}, mapNotFound(err)
+	}
+	return row.DocumentName, domain.KnowledgeDocumentRevision{ID: row.RevisionID, DocumentID: row.DocumentID, Revision: row.Revision, ObjectKey: row.ObjectKey, SHA256: row.SHA256, Size: row.Size, ContentType: row.ContentType, State: domain.KnowledgeDocumentState(row.State), Error: row.Error, CreatedAt: row.CreatedAt, ReadyAt: row.ReadyAt}, nil
+}
+
 func (repository *Repository) CreateKnowledgeDocument(ctx context.Context, ownerID string, administrator bool, input domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error) {
 	name := strings.TrimSpace(input.Name)
 	if len(name) < 1 || len(name) > 255 || strings.TrimSpace(input.NormalizedSource) == "" || strings.TrimSpace(input.ObjectKey) == "" || strings.TrimSpace(input.ContentType) == "" || input.Size < 0 || !knowledgeSHA256Pattern.MatchString(input.SHA256) {

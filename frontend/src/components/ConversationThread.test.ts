@@ -112,7 +112,7 @@ describe("ConversationThread", () => {
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个产物");
     expect(wrapper.findAll(".activity-kind").map((item) => item.text())).toEqual(["工具", "文件"]);
     expect(wrapper.findAll(".activity-state").map((item) => item.text())).toEqual(["已完成", "已完成"]);
-    expect(wrapper.text()).not.toContain("知识来源");
+    expect(wrapper.text()).not.toContain("打开来源");
     wrapper.unmount();
   });
 
@@ -126,7 +126,7 @@ describe("ConversationThread", () => {
       activities: [{ id: "runtime", kind: "runtime", label: "运行环境已准备", state: "completed", items: [{ id: 1, label: "运行环境已准备" }] }],
     }]);
 
-    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("未记录外部工具或文件变化");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("未记录外部工具、文件变化或依据");
     expect(wrapper.get(".runtime-activity-history > summary").text()).not.toContain("未使用知识库");
     wrapper.unmount();
   });
@@ -144,6 +144,27 @@ describe("ConversationThread", () => {
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("This execution");
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 tool call");
     expect(wrapper.get(".activity-kind").text()).toBe("Tool");
+    wrapper.unmount();
+  });
+
+  it("shows verified source states and only opens a succeeded Knowledge citation", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-1", role: "assistant", content: "回答", state: "succeeded", timestamp: "2026-08-25T12:00:01Z",
+      evidence: [
+        { id: "knowledge-1", kind: "knowledge", source_id: "document-1", source_name: "制度.pdf", container_id: "base-1", state: "succeeded", action: "retrieved", stage_position: 1, citation: { revision_id: "revision-1", source_location: "第 2 页", relevance: .91 } },
+        { id: "connector-1", kind: "connector", source_id: "crm", source_name: "CRM", state: "failed", action: "contact.search", stage_position: 1 },
+        { id: "connector-2", kind: "connector", source_id: "mail", source_name: "邮箱", state: "not_used", action: "selected", stage_position: 1 },
+      ],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项依据");
+    expect(wrapper.findAll(".execution-source")).toHaveLength(3);
+    expect(wrapper.text()).toContain("已使用");
+    expect(wrapper.text()).toContain("调用失败");
+    expect(wrapper.text()).toContain("未采用");
+    expect(wrapper.findAll(".execution-source .text-button")).toHaveLength(1);
+    await wrapper.get(".execution-source .text-button").trigger("click");
+    expect(wrapper.emitted("openEvidence")?.[0]?.[0]).toMatchObject({ id: "knowledge-1", source_id: "document-1" });
     wrapper.unmount();
   });
 });
