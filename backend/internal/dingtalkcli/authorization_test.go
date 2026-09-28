@@ -83,7 +83,7 @@ func TestDeviceAuthorizationResolvesIdentityWhenTokenHasNoUserID(t *testing.T) {
 			if r.Header.Get("Authorization") != "Bearer access" {
 				t.Error("contact lookup did not use the new token")
 			}
-			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"result\":[{\"orgEmployeeModel\":{\"corpId\":\"corp-1\",\"userId\":\"user-1\",\"orgUserName\":\"Alice\"}}]}"}]}}`))
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"result\":[{\"orgEmployeeModel\":{\"orgUserId\":\"user-1\",\"orgUserName\":\"Alice\"}}]}"}]}}`))
 		case "/cli/cliAuthEnabled":
 			_, _ = w.Write([]byte(`{"success":true,"result":{"cliAuthEnabled":true}}`))
 		default:
@@ -96,5 +96,72 @@ func TestDeviceAuthorizationResolvesIdentityWhenTokenHasNoUserID(t *testing.T) {
 	grant, err := client.exchange(context.Background(), "client-1", "one-use-code")
 	if err != nil || grant.ExternalID != "corp-1:user-1" || grant.DisplayName != "Alice" {
 		t.Fatalf("grant identity = %q / %q, error %v", grant.ExternalID, grant.DisplayName, err)
+	}
+}
+
+func TestDeviceAuthorizationKeepsOrganizationGrantWhenContactProfileIsUnavailable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth2/getToken":
+			_, _ = w.Write([]byte(`{"accessToken":"access","refreshToken":"refresh","corpId":"corp-1","expiresIn":7200}`))
+		case "/contact":
+			w.WriteHeader(http.StatusForbidden)
+		case "/cli/cliAuthEnabled":
+			_, _ = w.Write([]byte(`{"success":true,"result":{"cliAuthEnabled":true}}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	client := &Client{httpClient: server.Client(), mcpBase: server.URL, contactURL: server.URL + "/contact"}
+	grant, err := client.exchange(context.Background(), "client-1", "one-use-code")
+	if err != nil || grant.ExternalID != "corp:corp-1" || grant.DisplayName != "corp-1" {
+		t.Fatalf("organization grant = %q / %q, error %v", grant.ExternalID, grant.DisplayName, err)
+	}
+}
+
+func TestDeviceAuthorizationRejectsContactIdentityFromAnotherOrganization(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth2/getToken":
+			_, _ = w.Write([]byte(`{"accessToken":"access","refreshToken":"refresh","corpId":"corp-1","expiresIn":7200}`))
+		case "/contact":
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"result\":[{\"orgEmployeeModel\":{\"corpId\":\"corp-2\",\"orgUserId\":\"user-1\"}}]}"}]}}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	client := &Client{httpClient: server.Client(), mcpBase: server.URL, contactURL: server.URL + "/contact"}
+	if _, err := client.exchange(context.Background(), "client-1", "one-use-code"); !errors.Is(err, ErrIdentityMismatch) {
+		t.Fatalf("mismatched organization error = %v", err)
+	}
+}
+
+func TestAccessOnlyTokenUsesAccessExpiry(t *testing.T) {
+	grant, err := (tokenResponse{AccessToken: "access", CorpID: "corp-1", UserID: "user-1", ExpiresIn: 7200}).grant("client-1")
+	if err != nil || grant.AccessToken != "access" || !grant.RefreshExpiresAt.IsZero() {
+		t.Fatalf("access-only grant expiry = %v, error %v", grant.RefreshExpiresAt, err)
+	}
+}
+
+func TestDeviceAuthorizationReportsCLIRestriction(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth2/getToken":
+			_, _ = w.Write([]byte(`{"accessToken":"access","refreshToken":"refresh","corpId":"corp-1","userId":"user-1","expiresIn":7200}`))
+		case "/cli/cliAuthEnabled":
+			_, _ = w.Write([]byte(`{"success":false,"errorCode":"ENTERPRISE_NOT_AUTHORIZED"}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	client := &Client{httpClient: server.Client(), mcpBase: server.URL}
+	if _, err := client.exchange(context.Background(), "client-1", "one-use-code"); !errors.Is(err, ErrCLIAuthDisabled) {
+		t.Fatalf("CLI restriction error = %v", err)
 	}
 }
