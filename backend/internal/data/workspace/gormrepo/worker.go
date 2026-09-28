@@ -486,7 +486,7 @@ func enqueueDueSchedule(tx *gorm.DB, now time.Time) error {
 	if err := json.Unmarshal(workflow.Schedule, &schedule); err != nil {
 		return fmt.Errorf("decode due Workflow schedule: %w", err)
 	}
-	if _, err := createRunOnTx(tx, workflow.OwnerID, workflow.ID, "scheduled", nil, nil); err != nil {
+	if _, err := createRunOnTx(tx, workflow.OwnerID, workflow.ID, "scheduled", nil, nil, "", false); err != nil {
 		if !errors.Is(err, domain.ErrInvalid) && !errors.Is(err, domain.ErrNotFound) && !errors.Is(err, domain.ErrQueueFull) {
 			return err
 		}
@@ -549,6 +549,9 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err := hydrateStageCredentials(tx, &snapshot); err != nil {
 		return nil, err
 	}
+	if executionPlanDirectAnswer(row.ExecutionPlan) {
+		snapshot = withoutExternalOperations(snapshot)
+	}
 	var input struct {
 		Text        *string             `json:"text"`
 		JSON        map[string]any      `json:"json"`
@@ -584,7 +587,13 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		break
 	}
 	instruction := workflowRunInstruction(snapshot.Goal, prior, input.Text, input.JSON)
-	result := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "running", "started_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	updates := map[string]any{"state": "running", "started_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+	if plan, planErr := executionPlanStarted(row.ExecutionPlan); planErr != nil {
+		return nil, planErr
+	} else if plan != nil {
+		updates["execution_plan"] = plan
+	}
+	result := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(updates)
 	if result.Error != nil || result.RowsAffected != 1 {
 		return nil, result.Error
 	}
@@ -720,6 +729,9 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if err != nil {
 		return nil, err
 	}
+	if executionPlanDirectAnswer(assistant.ExecutionPlan) {
+		snapshot = withoutExternalOperations(snapshot)
+	}
 	if err := validateQueuedSnapshotAvailability(tx, snapshot, session.OwnerID); err != nil {
 		now, message := time.Now().UTC(), err.Error()
 		if updateErr := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "failed", "error": message, "progress_stage": "", "completed_at": now}).Error; updateErr != nil {
@@ -754,7 +766,13 @@ func claimSessionMessage(tx *gorm.DB) (*application.ExecutionJob, error) {
 			return nil, err
 		}
 	}
-	if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(map[string]any{"state": "generating", "progress_stage": "thinking"}).Error; err != nil {
+	updates := map[string]any{"state": "generating", "progress_stage": "thinking"}
+	if plan, planErr := executionPlanStarted(assistant.ExecutionPlan); planErr != nil {
+		return nil, planErr
+	} else if plan != nil {
+		updates["execution_plan"] = plan
+	}
+	if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'queued'", assistant.ID).Updates(updates).Error; err != nil {
 		return nil, err
 	}
 	instruction := sessionInstruction(session.RollingSummary, recent, user.Content, checkpoint != "")
@@ -1081,6 +1099,15 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 			}
 			stages, _ := marshal(result.ExpertStages)
 			updates := map[string]any{"state": "completed", "content": finalMessage, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			var current messageRecord
+			if err := tx.Select("execution_plan").Where("id = ?", job.AssistantMessageID).Take(&current).Error; err != nil {
+				return err
+			}
+			if plan, planErr := executionPlanFinished(current.ExecutionPlan, "completed"); planErr != nil {
+				return planErr
+			} else if plan != nil {
+				updates["execution_plan"] = plan
+			}
 			if actionID != "" {
 				updates["resource_creation_action_id"] = actionID
 			}
@@ -1132,7 +1159,17 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 			}
 			checkpoint = string(encoded)
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "native_checkpoint": checkpoint, "ended_at": now, "version": gorm.Expr("version + 1")})
+		runUpdates := map[string]any{"state": "succeeded", "final_result": finalResult, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "native_checkpoint": checkpoint, "ended_at": now, "version": gorm.Expr("version + 1")}
+		var current runRecord
+		if err := tx.Select("execution_plan").Where("id = ?", job.ID).Take(&current).Error; err != nil {
+			return err
+		}
+		if plan, planErr := executionPlanFinished(current.ExecutionPlan, "completed"); planErr != nil {
+			return planErr
+		} else if plan != nil {
+			runUpdates["execution_plan"] = plan
+		}
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(runUpdates)
 		if update.Error != nil || update.RowsAffected != 1 {
 			return fmt.Errorf("complete Workflow Run: %w", update.Error)
 		}
@@ -1284,7 +1321,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stageState, terminalState := "failed", "failed"
@@ -1298,17 +1335,28 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 				return err
 			}
 			updates["expert_stages"] = stages
+			if plan, planErr := executionPlanFinished(row.ExecutionPlan, terminalState); planErr != nil {
+				return planErr
+			} else if plan != nil {
+				updates["execution_plan"] = plan
+			}
 			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(updates).Error
 		}
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "failed", message, now)
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")})
+		updates := map[string]any{"state": "failed", "terminal_error": message, "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")}
+		if plan, planErr := executionPlanFinished(row.ExecutionPlan, "failed"); planErr != nil {
+			return planErr
+		} else if plan != nil {
+			updates["execution_plan"] = plan
+		}
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(updates)
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1332,24 +1380,36 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
 			if err != nil {
 				return err
 			}
-			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}).Error
+			updates := map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "progress_stage": "", "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now), "completed_at": now}
+			if plan, planErr := executionPlanFinished(row.ExecutionPlan, "cancelled"); planErr != nil {
+				return planErr
+			} else if plan != nil {
+				updates["execution_plan"] = plan
+			}
+			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(updates).Error
 		}
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
 		if err != nil {
 			return err
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")})
+		updates := map[string]any{"state": "cancelled", "expert_stages": stages, "credit_consumption": credit, "evidence": evidence, "ended_at": now, "version": gorm.Expr("version + 1")}
+		if plan, planErr := executionPlanFinished(row.ExecutionPlan, "cancelled"); planErr != nil {
+			return planErr
+		} else if plan != nil {
+			updates["execution_plan"] = plan
+		}
+		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(updates)
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1670,18 +1730,19 @@ func (repository *Repository) recordExpertStage(ctx context.Context, job applica
 
 func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.ExecutionJob, event application.ExecutionEvent, stage domain.ExpertStage) error {
 	var encoded []byte
+	var executionPlan []byte
 	if job.Kind == application.JobSession {
 		var row messageRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		encoded = row.ExpertStages
+		encoded, executionPlan = row.ExpertStages, row.ExecutionPlan
 	} else if job.Kind == application.JobWorkflow {
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
-		encoded = row.ExpertStages
+		encoded, executionPlan = row.ExpertStages, row.ExecutionPlan
 	} else {
 		return nil
 	}
@@ -1706,12 +1767,23 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 	}
 	if job.Kind == application.JobSession {
 		updates := map[string]any{"expert_stages": encoded, "progress_stage": "thinking"}
+		if plan, planErr := executionPlanStageUpdated(executionPlan, stage.Position, stage.State); planErr != nil {
+			return planErr
+		} else if plan != nil {
+			updates["execution_plan"] = plan
+		}
 		if stage.State == "running" {
 			updates["content"] = ""
 		}
 		return tx.Model(&messageRecord{}).Where("id = ?", job.AssistantMessageID).Updates(updates).Error
 	}
-	if err := tx.Model(&runRecord{}).Where("id = ?", job.ID).Update("expert_stages", encoded).Error; err != nil {
+	updates := map[string]any{"expert_stages": encoded}
+	if plan, planErr := executionPlanStageUpdated(executionPlan, stage.Position, stage.State); planErr != nil {
+		return planErr
+	} else if plan != nil {
+		updates["execution_plan"] = plan
+	}
+	if err := tx.Model(&runRecord{}).Where("id = ?", job.ID).Updates(updates).Error; err != nil {
 		return err
 	}
 	var sequence int64

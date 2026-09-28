@@ -3838,6 +3838,51 @@
         ]
       }
     },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DecideSessionExecutionPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SessionMessage"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDecideSessionExecutionPlanBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
       "post": {
         "operationId": "AgentWorkspaceService_RetrySessionMessage",
@@ -4591,6 +4636,50 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DecideRunExecutionPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDecideRunExecutionPlanBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
       "post": {
         "operationId": "AgentWorkspaceService_RerunWorkflow",
@@ -4976,6 +5065,9 @@
             "type": "object",
             "$ref": "#/definitions/v1FileReference"
           }
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -5002,6 +5094,30 @@
           "type": "string"
         },
         "identity": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDecideRunExecutionPlanBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDecideSessionExecutionPlanBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
           "type": "string"
         },
         "expected_version": {
@@ -5204,6 +5320,9 @@
         },
         "json_input": {
           "type": "object"
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -5237,6 +5356,9 @@
             "type": "object",
             "$ref": "#/definitions/v1FileReference"
           }
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -6868,6 +6990,108 @@
           "type": "string"
         },
         "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExecutionPlan": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExecutionPlanStep"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExecutionPlanResource"
+          }
+        },
+        "side_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "estimated_model_calls": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "estimated_credit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "generation_credit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "generator": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExecutionPlanResource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExecutionPlanStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
           "type": "string"
         }
       }
@@ -8970,6 +9194,9 @@
             "type": "object",
             "$ref": "#/definitions/v1Evidence"
           }
+        },
+        "execution_plan": {
+          "$ref": "#/definitions/v1ExecutionPlan"
         }
       }
     },
@@ -9174,6 +9401,9 @@
             "type": "object",
             "$ref": "#/definitions/v1Evidence"
           }
+        },
+        "execution_plan": {
+          "$ref": "#/definitions/v1ExecutionPlan"
         }
       }
     },

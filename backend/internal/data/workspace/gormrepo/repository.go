@@ -150,6 +150,7 @@ type messageRecord struct {
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
 	RuntimeActivities []byte     `gorm:"column:runtime_activities;type:jsonb"`
 	Evidence          []byte     `gorm:"column:evidence;type:jsonb"`
+	ExecutionPlan     []byte     `gorm:"column:execution_plan;type:jsonb"`
 	ResourceActionID  *string    `gorm:"column:resource_creation_action_id"`
 }
 
@@ -572,6 +573,7 @@ type runRecord struct {
 	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
 	Evidence          []byte     `gorm:"column:evidence;type:jsonb"`
+	ExecutionPlan     []byte     `gorm:"column:execution_plan;type:jsonb"`
 	NativeCheckpoint  string     `gorm:"column:native_checkpoint"`
 	Version           int64      `gorm:"column:version"`
 }

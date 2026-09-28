@@ -20,6 +20,8 @@ const emit = defineEmits<{
   openEvidence: [evidence: Evidence];
   retry: [messageID: string];
   resourceAction: [messageID: string, decision: "confirm" | "cancel"];
+  planDecision: [messageID: string, decision: "start" | "direct" | "cancel"];
+  editPlan: [messageID: string];
   attachmentError: [];
   copyError: [];
 }>();
@@ -117,6 +119,9 @@ function evidenceActionLabel(evidence: Evidence) {
 function canOpenEvidence(evidence: Evidence) {
   return evidence.kind === "knowledge" && evidence.state === "succeeded" && Boolean(evidence.container_id && evidence.citation?.revision_id);
 }
+function planStateLabel(state: string) { return t(`sessions.executionPlan.states.${state}`); }
+function planStepStateLabel(state: string) { return t(`sessions.executionPlan.stepStates.${state}`); }
+function planCodeLabel(group: "reasons" | "sideEffects", code: string) { return t(`sessions.executionPlan.${group}.${code}`); }
 onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
 
@@ -134,6 +139,26 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
           <small>{{ message.progressDetail || t('sessions.progress.thinking') }}</small>
         </div>
         <div v-else-if="message.role === 'assistant' && isPending(message) && message.finalizing" class="finalizing-state">{{ message.progressTitle || t('sessions.progress.finalizing') }}</div>
+
+        <section v-if="message.role === 'assistant' && message.executionPlan" class="execution-plan-card" :class="`is-${message.executionPlan.state}`" aria-live="polite">
+          <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan.state) }}</span></header>
+          <ol class="execution-plan-steps">
+            <li v-for="step in message.executionPlan.steps" :key="step.id" :class="`is-${step.state}`"><span>{{ step.position }}</span><div><strong>{{ step.label }}</strong><small>{{ planStepStateLabel(step.state) }}</small></div></li>
+          </ol>
+          <dl class="execution-plan-meta">
+            <div v-if="message.executionPlan.resources.length"><dt>{{ t('sessions.executionPlan.resources') }}</dt><dd>{{ message.executionPlan.resources.map((item) => item.name).join(' · ') }}</dd></div>
+            <div v-if="message.executionPlan.side_effects.length"><dt>{{ t('sessions.executionPlan.sideEffectsTitle') }}</dt><dd>{{ message.executionPlan.side_effects.map((item) => planCodeLabel('sideEffects', item)).join(' · ') }}</dd></div>
+            <div><dt>{{ t('sessions.executionPlan.estimate') }}</dt><dd>{{ t('sessions.executionPlan.estimateValue', { calls: message.executionPlan.estimated_model_calls, credits: (message.executionPlan.estimated_credit_hundredths / 100).toFixed(2) }) }}</dd></div>
+            <div><dt>{{ t('sessions.executionPlan.generationCost') }}</dt><dd>{{ t('sessions.executionPlan.generationCostValue', { credits: (message.executionPlan.generation_credit_hundredths / 100).toFixed(2) }) }}</dd></div>
+          </dl>
+          <small class="execution-plan-reasons">{{ message.executionPlan.reasons.map((item) => planCodeLabel('reasons', item)).join(' · ') }}</small>
+          <footer v-if="message.executionPlan.state === 'pending'">
+            <el-button type="primary" @click="emit('planDecision', message.id, 'start')">{{ t('sessions.executionPlan.start') }}</el-button>
+            <el-button @click="emit('editPlan', message.id)">{{ t('sessions.executionPlan.edit') }}</el-button>
+            <el-button v-if="!message.executionPlan.side_effects.length" @click="emit('planDecision', message.id, 'direct')">{{ t('sessions.executionPlan.direct') }}</el-button>
+            <el-button text @click="emit('planDecision', message.id, 'cancel')">{{ t('common.cancel') }}</el-button>
+          </footer>
+        </section>
 
         <div v-if="message.role === 'assistant' && hasExecutionEvidence(message)" class="runtime-activity" aria-live="polite">
           <div v-if="message.currentActivity" class="runtime-activity-current">

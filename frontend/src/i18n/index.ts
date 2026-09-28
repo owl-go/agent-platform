@@ -306,6 +306,25 @@ export function resolveInitialLocale(stored: string | null, browserLanguage: str
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
 }
 
+Object.assign((zh as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "先制定计划", planFirstHint: "无论任务复杂度，先展示可编辑的执行计划并等待确认" });
+Object.assign((en as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "Plan first", planFirstHint: "Show an execution plan and wait for confirmation before starting" });
+Object.assign(zh.sessions, { executionPlan: {
+  title: "执行计划", resources: "将使用", sideEffectsTitle: "可能产生的变更", estimate: "预计消耗", generationCost: "制定计划", start: "按计划开始", edit: "修改要求", direct: "直接回答，不执行外部操作",
+  estimateValue: "{calls} 次模型调用 · 最多约 {credits} Credits", generationCostValue: "平台规则生成 · {credits} Credits",
+  states: { pending: "等待确认", approved: "已确认", executing: "执行中", completed: "已完成", failed: "未完成", cancelled: "已取消", skipped: "已跳过" },
+  stepStates: { pending: "待执行", running: "进行中", completed: "已完成", skipped: "已跳过", failed: "失败" },
+  reasons: { user_requested: "你要求先制定计划", multiple_stages: "包含多个执行阶段", multiple_external_sources: "将读取多个外部资源", external_side_effect: "可能修改外部系统", workflow_execution: "这是工作流执行", workspace_change: "可能修改工作区文件" },
+  sideEffects: { external_connector_operation: "可能调用连接器修改外部系统", workspace_files_may_change: "可能修改工作区文件" },
+} });
+Object.assign(en.sessions, { executionPlan: {
+  title: "Execution plan", resources: "Resources", sideEffectsTitle: "Possible changes", estimate: "Estimate", generationCost: "Plan generation", start: "Start plan", edit: "Edit requirements", direct: "Answer directly without external actions",
+  estimateValue: "{calls} model calls · up to about {credits} Credits", generationCostValue: "Platform rules · {credits} Credits",
+  states: { pending: "Awaiting confirmation", approved: "Approved", executing: "Running", completed: "Completed", failed: "Incomplete", cancelled: "Cancelled", skipped: "Skipped" },
+  stepStates: { pending: "Pending", running: "Running", completed: "Completed", skipped: "Skipped", failed: "Failed" },
+  reasons: { user_requested: "You requested a plan first", multiple_stages: "Multiple execution stages", multiple_external_sources: "Uses multiple external resources", external_side_effect: "May change an external system", workflow_execution: "Workflow execution", workspace_change: "May change workspace files" },
+  sideEffects: { external_connector_operation: "May use a Connector to change an external system", workspace_files_may_change: "May change workspace files" },
+} });
+
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);
   document.documentElement.lang = locale;

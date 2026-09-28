@@ -76,6 +76,15 @@ describe("ConversationComposer", () => {
   wrapper.unmount();
   const restored = await setup(); expect(restored.wrapper.find(".composer-token").exists()).toBe(false); restored.wrapper.unmount();
  });
+ it("sends an explicit Plan preference only when Plan first is selected", async () => {
+  const { wrapper, submit } = await setup();
+  await wrapper.get(".composer-plan-toggle").trigger("click");
+  expect(wrapper.get(".composer-plan-toggle").attributes("aria-pressed")).toBe("true");
+  const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.textContent = "先列计划"; await editor.trigger("input");
+  await wrapper.get('[aria-label="发送"]').trigger("click"); await flushPromises();
+  expect(submit).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ plan_preference: "always" }) }));
+  wrapper.unmount();
+ });
  it("keeps the exact Skill and draft after submit failure and restores it after reload", async () => {
   const { wrapper, submit } = await setup({ initial: true, fail: true });
   const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.append(document.createTextNode("创建 PDF")); await editor.trigger("input");

@@ -28,6 +28,7 @@ const revealApiSecret = ref(false);
 const nowMS = ref(Date.now());
 const lastWorkflowActivityAt = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
+const runEditPrompt = ref("");
 const integrationGuideOpen = ref(false);
 type CopyTarget = "api_key" | "api_secret" | "token" | "run" | "stream" | "full";
 const copiedTarget = ref<CopyTarget>();
@@ -102,6 +103,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
       evidence: turn.evidence,
+      executionPlan: turn.execution_plan,
     },
   ];
 }));
@@ -274,7 +276,7 @@ async function openRun(item: Run) {
 	eventRunID.value = "";
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
-	if (active) { lastWorkflowActivityAt.value = Date.now(); void streamConversationTurn(active); }
+	if (active?.state === "queued" || active?.state === "running") { lastWorkflowActivityAt.value = Date.now(); void streamConversationTurn(active); }
 	void loadRunHistoryEvents(conversationRuns.value, item.id);
 }
 async function loadRunHistoryEvents(turns: Run[], conversationID: string) {
@@ -401,8 +403,27 @@ async function sendFollowUp(message: ComposerSubmission) {
     if (selectedRun.value?.id !== rootID) return;
     conversationRuns.value.push(created);
     await scrollConversationToEnd();
-    void streamConversationTurn(created);
+    if (created.state === "queued" || created.state === "running") void streamConversationTurn(created);
   } finally { sendingFollowUp.value = false; }
+}
+async function decideExecutionPlan(runID: string, decision: "start" | "direct" | "cancel") {
+  const current = conversationRuns.value.find((item) => item.id === runID);
+  if (!current?.execution_plan || current.execution_plan.state !== "pending") return;
+  try {
+    const updated = await api.decideRunExecutionPlan(workflowID.value, runID, decision, current.execution_plan.version);
+    const index = conversationRuns.value.findIndex((item) => item.id === runID);
+    if (index >= 0) conversationRuns.value[index] = updated;
+    if (updated.state === "queued" || updated.state === "running") void streamConversationTurn(updated);
+  } catch { error.value = t("errors.conflict"); }
+}
+async function editExecutionPlan(runID: string) {
+  const current = conversationRuns.value.find((item) => item.id === runID);
+  await decideExecutionPlan(runID, "cancel");
+  if (current) {
+    runEditPrompt.value = "";
+    await nextTick();
+    runEditPrompt.value = current.turn_number === 1 ? workflow.value?.goal ?? "" : current.text_input || (current.json_input ? JSON.stringify(current.json_input, null, 2) : "");
+  }
 }
 
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; if (streamReconnectTimer) clearTimeout(streamReconnectTimer); await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
@@ -457,9 +478,9 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
       <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
-        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
-      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
+      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
       <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>

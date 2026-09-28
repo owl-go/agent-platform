@@ -1428,6 +1428,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DecideSessionExecutionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
         parameters: {
             query?: never;
@@ -1668,6 +1684,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DecideRunExecutionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
         parameters: {
             query?: never;
@@ -1814,6 +1846,7 @@ export interface components {
             attachment_ids?: string[];
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
+            plan_preference?: string;
         };
         AgentWorkspaceServiceCreateKnowledgeCategoryBody: {
             name?: string;
@@ -1824,6 +1857,16 @@ export interface components {
         AgentWorkspaceServiceDecideCommandApprovalBody: {
             decision?: string;
             identity?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDecideRunExecutionPlanBody: {
+            decision?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDecideSessionExecutionPlanBody: {
+            decision?: string;
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1896,6 +1939,7 @@ export interface components {
         AgentWorkspaceServiceRunWorkflowBody: {
             text_input?: string;
             json_input?: Record<string, never>;
+            plan_preference?: string;
         };
         AgentWorkspaceServiceSelectConnectorAuthorizationBody: {
             /** Format: int64 */
@@ -1906,6 +1950,7 @@ export interface components {
             attachment_ids?: string[];
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
+            plan_preference?: string;
         };
         AgentWorkspaceServiceSetImageModelAvailabilityBody: {
             available?: boolean;
@@ -2491,6 +2536,41 @@ export interface components {
         v1ExecutionActivity: {
             type?: string;
             detail?: string;
+        };
+        v1ExecutionPlan: {
+            id?: string;
+            state?: string;
+            objective?: string;
+            steps?: components["schemas"]["v1ExecutionPlanStep"][];
+            resources?: components["schemas"]["v1ExecutionPlanResource"][];
+            side_effects?: string[];
+            reasons?: string[];
+            /** Format: int32 */
+            estimated_model_calls?: number;
+            /** Format: int64 */
+            estimated_credit_hundredths?: number;
+            /** Format: int64 */
+            generation_credit_hundredths?: number;
+            generator?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            decided_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ExecutionPlanResource: {
+            kind?: string;
+            id?: string;
+            name?: string;
+        };
+        v1ExecutionPlanStep: {
+            id?: string;
+            kind?: string;
+            label?: string;
+            /** Format: int32 */
+            position?: number;
+            state?: string;
         };
         v1ExecutionStageSnapshot: {
             /** Format: int32 */
@@ -3168,6 +3248,7 @@ export interface components {
             /** Format: int32 */
             queue_position?: number;
             evidence?: components["schemas"]["v1Evidence"][];
+            execution_plan?: components["schemas"]["v1ExecutionPlan"];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -3238,6 +3319,7 @@ export interface components {
             artifacts?: components["schemas"]["v1Artifact"][];
             resource_action?: components["schemas"]["v1ResourceCreationAction"];
             evidence?: components["schemas"]["v1Evidence"][];
+            execution_plan?: components["schemas"]["v1ExecutionPlan"];
         };
         v1Skill: {
             id?: string;
@@ -7217,6 +7299,42 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_DecideSessionExecutionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDecideSessionExecutionPlanBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SessionMessage"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_RetrySessionMessage: {
         parameters: {
             query?: never;
@@ -7946,6 +8064,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceCancelRunBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DecideRunExecutionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDecideRunExecutionPlanBody"];
             };
         };
         responses: {

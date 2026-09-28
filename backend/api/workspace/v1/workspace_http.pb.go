@@ -48,6 +48,8 @@ const OperationAgentWorkspaceServiceCreateSkill = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceService/CreateUser"
 const OperationAgentWorkspaceServiceCreateWorkflow = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 const OperationAgentWorkspaceServiceDecideCommandApproval = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
+const OperationAgentWorkspaceServiceDecideRunExecutionPlan = "/workspace.v1.AgentWorkspaceService/DecideRunExecutionPlan"
+const OperationAgentWorkspaceServiceDecideSessionExecutionPlan = "/workspace.v1.AgentWorkspaceService/DecideSessionExecutionPlan"
 const OperationAgentWorkspaceServiceDeleteCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/DeleteCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceDeleteExpert = "/workspace.v1.AgentWorkspaceService/DeleteExpert"
 const OperationAgentWorkspaceServiceDeleteExpertTeam = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
@@ -195,6 +197,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error)
+	DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error)
+	DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error)
 	DeleteCLIConnectorDefinition(context.Context, *DeleteCLIConnectorDefinitionRequest) (*DeleteResponse, error)
 	DeleteExpert(context.Context, *DeleteExpertRequest) (*DeleteResponse, error)
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
@@ -359,6 +363,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages", _AgentWorkspaceService_SendSessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/retry", _AgentWorkspaceService_RetrySessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation", _AgentWorkspaceService_CancelSessionMessage0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision", _AgentWorkspaceService_DecideSessionExecutionPlan0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows", _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows", _AgentWorkspaceService_CreateWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_GetWorkflow0_HTTP_Handler(srv))
@@ -374,6 +379,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns", _AgentWorkspaceService_ContinueRunConversation0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation", _AgentWorkspaceService_CancelRun0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun", _AgentWorkspaceService_RerunWorkflow0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision", _AgentWorkspaceService_DecideRunExecutionPlan0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/artifacts", _AgentWorkspaceService_ListArtifacts0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace", _AgentWorkspaceService_ListWorkspaceEntries0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/workspace/file", _AgentWorkspaceService_GetWorkspaceFile0_HTTP_Handler(srv))
@@ -1403,6 +1409,28 @@ func _AgentWorkspaceService_CancelSessionMessage0_HTTP_Handler(srv AgentWorkspac
 	}
 }
 
+func _AgentWorkspaceService_DecideSessionExecutionPlan0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DecideSessionExecutionPlanRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDecideSessionExecutionPlan)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DecideSessionExecutionPlan(ctx, req.(*DecideSessionExecutionPlanRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SessionMessage)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListWorkflowsRequest
@@ -1717,6 +1745,28 @@ func _AgentWorkspaceService_RerunWorkflow0_HTTP_Handler(srv AgentWorkspaceServic
 		http.SetOperation(ctx, OperationAgentWorkspaceServiceRerunWorkflow)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
 			return srv.RerunWorkflow(ctx, req.(*RerunWorkflowRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*Run)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_DecideRunExecutionPlan0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in DecideRunExecutionPlanRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceDecideRunExecutionPlan)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.DecideRunExecutionPlan(ctx, req.(*DecideRunExecutionPlanRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -3523,6 +3573,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateUser(ctx context.Context, req *CreateUserRequest, opts ...http.CallOption) (rsp *CreateUserResponse, err error)
 	CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	DecideCommandApproval(ctx context.Context, req *DecideCommandApprovalRequest, opts ...http.CallOption) (rsp *CommandApproval, err error)
+	DecideRunExecutionPlan(ctx context.Context, req *DecideRunExecutionPlanRequest, opts ...http.CallOption) (rsp *Run, err error)
+	DecideSessionExecutionPlan(ctx context.Context, req *DecideSessionExecutionPlanRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
 	DeleteCLIConnectorDefinition(ctx context.Context, req *DeleteCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpert(ctx context.Context, req *DeleteExpertRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	DeleteExpertTeam(ctx context.Context, req *DeleteExpertTeamRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
@@ -4165,6 +4217,40 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) DecideCommandApproval(ctx context.
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceDecideCommandApproval),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DecideRunExecutionPlan(ctx context.Context, in *DecideRunExecutionPlanRequest, opts ...http.CallOption) (*Run, error) {
+	var out Run
+	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDecideRunExecutionPlan),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...http.CallOption) (*SessionMessage, error) {
+	var out SessionMessage
+	pattern := "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceDecideSessionExecutionPlan),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)

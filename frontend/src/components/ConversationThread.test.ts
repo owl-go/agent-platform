@@ -167,4 +167,24 @@ describe("ConversationThread", () => {
     expect(wrapper.emitted("openEvidence")?.[0]?.[0]).toMatchObject({ id: "knowledge-1", source_id: "document-1" });
     wrapper.unmount();
   });
+
+  it("shows a pending execution plan and emits only allowed decisions", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "更新 CRM 中的客户记录", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "销售运营", position: 1, state: "pending" }],
+        resources: [{ kind: "connector", id: "crm", name: "CRM" }], side_effects: ["external_connector_operation"], reasons: ["external_side_effect"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 125, generation_credit_hundredths: 0,
+      },
+    }]);
+
+    expect(wrapper.get(".execution-plan-card").text()).toContain("更新 CRM 中的客户记录");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("最多约 1.25 Credits");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("平台规则生成 · 0.00 Credits");
+    expect(wrapper.text()).not.toContain("直接回答，不执行外部操作");
+    await wrapper.get(".execution-plan-card footer .el-button--primary").trigger("click");
+    expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
+    wrapper.unmount();
+  });
 });

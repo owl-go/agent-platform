@@ -165,16 +165,11 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, publicError(err)
 	}
-	var user, assistant workspacedomain.Message
-	if request.SelectionId != "" {
-		repository, portErr := service.conversationRepository()
-		if portErr != nil {
-			return nil, publicError(portErr)
-		}
-		user, assistant, err = repository.CreateSelectedMessagePair(ctx, owner, request.SessionId, request.Content, attachments, request.SelectionId)
-	} else {
-		user, assistant, err = service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, attachments)
+	repository, portErr := service.executionPlanRepository()
+	if portErr != nil {
+		return nil, publicError(portErr)
 	}
+	user, assistant, err := repository.CreatePlannedMessagePair(ctx, owner, request.SessionId, request.Content, attachments, request.SelectionId, request.PlanPreference)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -246,6 +241,7 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	if action := item.ResourceAction; action != nil {
 		response.ResourceAction = resourceCreationActionResponse(*action)
 	}
+	response.ExecutionPlan = executionPlanResponse(item.ExecutionPlan)
 	return response
 }
 

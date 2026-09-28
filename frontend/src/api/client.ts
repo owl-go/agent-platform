@@ -26,14 +26,18 @@ export interface ConversationSelection { id: string; expert_id: string; expert_t
 export interface SelectionInput { previous_id?: string; change_expert?: boolean; expert_id?: string; expert_team_id?: string; skill_ids: string[]; mcp_server_ids: string[]; cli_connector_ids: string[]; disabled_connectors: string[]; refresh_ids?: string[] }
 export interface FileReference { kind: "attachment" | "artifact" | "workspace"; id: string; path: string }
 export interface ConversationFile { kind: FileReference["kind"] | "directory"; id: string; path: string; name: string; size: number; available: boolean; unavailable_reason: string }
-export interface ConversationInput { selection_id?: string; file_references?: FileReference[] }
+export type PlanPreference = "auto" | "always";
+export interface ConversationInput { selection_id?: string; file_references?: FileReference[]; plan_preference?: PlanPreference }
+export interface ExecutionPlanStep { id: string; kind: string; label: string; position: number; state: "pending" | "running" | "completed" | "skipped" | "failed" }
+export interface ExecutionPlanResource { kind: string; id: string; name: string }
+export interface ExecutionPlan { id: string; state: "pending" | "approved" | "executing" | "completed" | "failed" | "cancelled" | "skipped"; objective: string; steps: ExecutionPlanStep[]; resources: ExecutionPlanResource[]; side_effects: string[]; reasons: string[]; estimated_model_calls: number; estimated_credit_hundredths: number; generation_credit_hundredths: number; generator: string; created_at: string; decided_at?: string; version: number }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
 export interface EvidenceCitation { revision_id: string; category_name?: string; source_location?: string; relevance?: number }
 export interface Evidence { id: string; kind: "file" | "knowledge" | "connector" | "artifact"; source_id: string; source_name: string; container_id?: string; state: "requested" | "succeeded" | "failed" | "not_used"; action: string; stage_position: number; citation?: EvidenceCitation }
 export interface ResourceCreationAction { id: string; kind: "skill" | "expert" | "connector"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; resource_action?: ResourceCreationAction }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
@@ -47,7 +51,7 @@ export interface KnowledgeSearchResult { document_id: string; revision_id: strin
 export interface KnowledgeSearchResponse { index_ready: boolean; items: KnowledgeSearchResult[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[] }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -166,6 +170,7 @@ export interface PlatformApi {
   sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
+  decideSessionExecutionPlan(sessionID: string, messageID: number, decision: "start" | "direct" | "cancel", version: number, signal?: AbortSignal): Promise<SessionMessage>;
   decideResourceCreationAction(actionID: string, decision: "confirm" | "cancel", signal?: AbortSignal): Promise<ResourceCreationAction>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -175,11 +180,12 @@ export interface PlatformApi {
   deleteWorkflow(id: string, signal?: AbortSignal): Promise<void>;
   generateWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at: string }>;
   getWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at?: string }>;
-  runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown> }, signal?: AbortSignal): Promise<Run>;
+  runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown>; plan_preference?: PlanPreference }, signal?: AbortSignal): Promise<Run>;
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
   continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<Run>;
+  decideRunExecutionPlan(workflowID: string, runID: string, decision: "start" | "direct" | "cancel", version: number, signal?: AbortSignal): Promise<Run>;
   streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal, options?: { afterSequence?: number; reconnect?: boolean }): Promise<void>;
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
@@ -466,6 +472,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     sendSessionMessage(id, content, attachmentIDs = [], signal, input) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
+    decideSessionExecutionPlan(sessionID, messageID, decision, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/plan-decision`, json("POST", { decision, expected_version: version }, signal)); },
     decideResourceCreationAction(actionID, decision, signal) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`, json("POST", { decision }, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
@@ -480,6 +487,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
     async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal, input) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal))); },
+    async decideRunExecutionPlan(workflowID, runID, decision, version, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/plan-decision`, json("POST", { decision, expected_version: version }, signal))); },
     async streamRunEvents(workflowID, runID, onEvent, signal, options) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");

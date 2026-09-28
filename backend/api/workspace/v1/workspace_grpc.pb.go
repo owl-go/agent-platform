@@ -65,6 +65,7 @@ const (
 	AgentWorkspaceService_SendSessionMessage_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 	AgentWorkspaceService_RetrySessionMessage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 	AgentWorkspaceService_CancelSessionMessage_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+	AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName                = "/workspace.v1.AgentWorkspaceService/DecideSessionExecutionPlan"
 	AgentWorkspaceService_ListWorkflows_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 	AgentWorkspaceService_CreateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 	AgentWorkspaceService_GetWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
@@ -80,6 +81,7 @@ const (
 	AgentWorkspaceService_ContinueRunConversation_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 	AgentWorkspaceService_CancelRun_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/CancelRun"
 	AgentWorkspaceService_RerunWorkflow_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
+	AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DecideRunExecutionPlan"
 	AgentWorkspaceService_ListArtifacts_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 	AgentWorkspaceService_GetWorkspaceFile_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
@@ -216,6 +218,7 @@ type AgentWorkspaceServiceClient interface {
 	SendSessionMessage(ctx context.Context, in *SendSessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(ctx context.Context, in *RetrySessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(ctx context.Context, in *CancelSessionMessageRequest, opts ...grpc.CallOption) (*SessionMessage, error)
+	DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...grpc.CallOption) (*SessionMessage, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
@@ -231,6 +234,7 @@ type AgentWorkspaceServiceClient interface {
 	ContinueRunConversation(ctx context.Context, in *ContinueRunConversationRequest, opts ...grpc.CallOption) (*Run, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*Run, error)
 	RerunWorkflow(ctx context.Context, in *RerunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
+	DecideRunExecutionPlan(ctx context.Context, in *DecideRunExecutionPlanRequest, opts ...grpc.CallOption) (*Run, error)
 	ListArtifacts(ctx context.Context, in *ListArtifactsRequest, opts ...grpc.CallOption) (*ListArtifactsResponse, error)
 	ListWorkspaceEntries(ctx context.Context, in *ListWorkspaceEntriesRequest, opts ...grpc.CallOption) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(ctx context.Context, in *GetWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceFile, error)
@@ -785,6 +789,16 @@ func (c *agentWorkspaceServiceClient) CancelSessionMessage(ctx context.Context, 
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...grpc.CallOption) (*SessionMessage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionMessage)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListWorkflowsResponse)
@@ -929,6 +943,16 @@ func (c *agentWorkspaceServiceClient) RerunWorkflow(ctx context.Context, in *Rer
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Run)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_RerunWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DecideRunExecutionPlan(ctx context.Context, in *DecideRunExecutionPlanRequest, opts ...grpc.CallOption) (*Run, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Run)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1825,6 +1849,7 @@ type AgentWorkspaceServiceServer interface {
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
@@ -1840,6 +1865,7 @@ type AgentWorkspaceServiceServer interface {
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
+	DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
@@ -2072,6 +2098,9 @@ func (UnimplementedAgentWorkspaceServiceServer) RetrySessionMessage(context.Cont
 func (UnimplementedAgentWorkspaceServiceServer) CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelSessionMessage not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error) {
+	return nil, status.Error(codes.Unimplemented, "method DecideSessionExecutionPlan not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkflows not implemented")
 }
@@ -2116,6 +2145,9 @@ func (UnimplementedAgentWorkspaceServiceServer) CancelRun(context.Context, *Canc
 }
 func (UnimplementedAgentWorkspaceServiceServer) RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method RerunWorkflow not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error) {
+	return nil, status.Error(codes.Unimplemented, "method DecideRunExecutionPlan not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListArtifacts not implemented")
@@ -3218,6 +3250,24 @@ func _AgentWorkspaceService_CancelSessionMessage_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_DecideSessionExecutionPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideSessionExecutionPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DecideSessionExecutionPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DecideSessionExecutionPlan(ctx, req.(*DecideSessionExecutionPlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ListWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListWorkflowsRequest)
 	if err := dec(in); err != nil {
@@ -3484,6 +3534,24 @@ func _AgentWorkspaceService_RerunWorkflow_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).RerunWorkflow(ctx, req.(*RerunWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DecideRunExecutionPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideRunExecutionPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DecideRunExecutionPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DecideRunExecutionPlan(ctx, req.(*DecideRunExecutionPlanRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5192,6 +5260,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_CancelSessionMessage_Handler,
 		},
 		{
+			MethodName: "DecideSessionExecutionPlan",
+			Handler:    _AgentWorkspaceService_DecideSessionExecutionPlan_Handler,
+		},
+		{
 			MethodName: "ListWorkflows",
 			Handler:    _AgentWorkspaceService_ListWorkflows_Handler,
 		},
@@ -5250,6 +5322,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RerunWorkflow",
 			Handler:    _AgentWorkspaceService_RerunWorkflow_Handler,
+		},
+		{
+			MethodName: "DecideRunExecutionPlan",
+			Handler:    _AgentWorkspaceService_DecideRunExecutionPlan_Handler,
 		},
 		{
 			MethodName: "ListArtifacts",

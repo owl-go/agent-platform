@@ -138,6 +138,14 @@ _Avoid_: Workflow, Run Conversation, Session response, Worker process
 A non-terminal execution state in which a Session response or Run is paused until the User completes Connector authorization or approves a high-risk Connector command before a fixed deadline. No protected action executes without the required confirmation.
 _Avoid_: queued execution, indefinite pause, automatic approval
 
+**Execution Plan**:
+The immutable, platform-generated objective, ordered Plan Steps, selected resource identities, bounded side-effect categories, and execution estimate shown before a qualifying Session response or manual Run begins. It is confirmed, skipped only for a direct answer with no external operation, or cancelled as one versioned decision; it does not replace a high-risk Connector command approval.
+_Avoid_: model chain-of-thought, Workflow definition, command approval
+
+**Plan Step**:
+One user-visible unit in an Execution Plan whose state is pending, running, completed, skipped, or failed. Worker-owned transitions project actual execution progress and are not inferred from generated prose.
+_Avoid_: Runtime Event, Expert Stage Snapshot, hidden reasoning step
+
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
 _Avoid_: Restorable Workflow, archived Workflow

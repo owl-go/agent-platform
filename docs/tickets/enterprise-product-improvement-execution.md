@@ -20,7 +20,7 @@
 | EP-01 | 持续状态与停止 | 长任务在任意滚动位置可见状态、耗时、模型、消耗和停止 | 现有 Session/Run 状态与取消 API | Session、Run Conversation、移动端和停止测试 | 已完成代码与本地门禁；生产重连率待部署后形成基线 |
 | EP-02 | 本次执行证据 | 用户能确认实际调用了哪些工具、产生了哪些文件和阶段结果 | 现有 public Activity、Artifact、Expert Stage、Credits | 不把“可用资源”显示为“已使用”；Session/Run 共用组件；中英文测试 | 已完成展示层；来源证据转 EP-03 |
 | EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的 Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 已完成代码与无数据库本地门禁；PostgreSQL Integration、真实 Provider 与生产历史证据待验证 |
-| EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 待 EP-00/02 |
+| EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 已完成代码与本地门禁；真实 Provider、浏览器断点与 PostgreSQL Integration 待验证 |
 | EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 待 EP-02/03/04 |
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 待 EP-00/02 |
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 待 EP-06 |
@@ -88,7 +88,28 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 只有成功的 Knowledge Citation 提供“打开来源”。下载请求携带执行时的 Document Revision ID，服务端在同一次查询中重新校验当前用户对 Knowledge Base、Document 和该不可变 Revision 的权限；删除、私有化或权限撤销后显示不可用，不改写历史 Evidence，也不会把更新后的 Revision 冒充旧来源。
 - 当前代码可证明 bounded contract、owner-scoped download seam、状态展示和精确 Revision 拒绝行为；AnythingLLM、真实 CLI Connector、生产迁移及历史记录仍需部署环境验收，不能记作已验证。
 
-## 5. 发布与回滚
+## 5. EP-04 条件式计划确认
+
+### EP-04.1 判定与冻结
+
+- Session 仅在用户显式选择、多个 Execution Stage、两个以上不同外部资源或可能产生副作用的 Connector 存在时生成 Execution Plan；普通单阶段问答不增加等待。
+- 手动 Workflow Run 和交互式 follow-up 必须先生成 Plan，因为 Runtime 可能修改持久 Workspace；Scheduled/API Run 保持非交互执行，不伪造人工确认。
+- Plan 与 Message/Run 在一个事务中持久化，冻结目标、步骤、资源、安全副作用类别、模型调用数和 fallback Credit 估算。当前生成器为确定性平台规则，生成消耗明确为 0 Credits。
+
+### EP-04.2 决策与执行边界
+
+- `开始执行`、`直接回答`、`取消` 使用 owner-scoped、versioned 决策 API；并发或重复决策返回 conflict。
+- `直接回答` 只对无副作用的 Session Plan 开放，Worker 同时移除 MCP/CLI Connector 配置，不能只在界面上跳过 Plan 后继续外部调用。
+- `修改要求` 先取消当前冻结 Plan，再把原请求作为新的可编辑输入；不原地修改隐藏状态。Workflow、MCP 或高风险 CLI 的副作用在执行前可见，高风险命令仍经过独立的一次性审批。
+- pending Workflow Plan 占用有限队列容量；取消形成终态记录。Worker 中断恢复沿用已确认的冻结输入，但重置本次尝试的可见步骤进度。
+
+### EP-04.3 状态与界面
+
+- Session 与 Run Conversation 复用计划卡，显示目标、步骤、资源、副作用、模型调用和 Credits 估算；仅允许的动作才出现。
+- Plan Step 状态由 Worker claim、Expert Stage 和终态事务回写为 pending/running/completed/skipped/failed，不从模型文字推断。
+- 本地可验证内容包括领域判定、去重资源、side-effect direct-answer 拒绝、API contract、共享组件和完整前端测试。真实 Provider 的首次副作用时序、数据库迁移、1280/1440/1920/390px 浏览器布局仍需目标环境验证，不能记作已通过。
+
+## 6. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

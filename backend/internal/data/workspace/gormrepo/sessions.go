@@ -317,14 +317,18 @@ func sessionArtifactDomain(row sessionArtifactRecord) domain.Artifact {
 }
 
 func (repository *Repository) CreateMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment) (domain.Message, domain.Message, error) {
-	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, "")
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, "", "", false)
 }
 
 func (repository *Repository) CreateSelectedMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, selectionID string) (domain.Message, domain.Message, error) {
-	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, selectionID)
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, selectionID, "", false)
 }
 
-func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot, selectionID string) (domain.Message, domain.Message, error) {
+func (repository *Repository) CreatePlannedMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, selectionID, preference string) (domain.Message, domain.Message, error) {
+	return repository.createMessagePair(ctx, ownerID, sessionID, content, attachments, nil, selectionID, preference, true)
+}
+
+func (repository *Repository) createMessagePair(ctx context.Context, ownerID, sessionID, content string, attachments []domain.Attachment, frozen *domain.ResponseSnapshot, selectionID, preference string, conditionalPlan bool) (domain.Message, domain.Message, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Message{}, domain.Message{}, fmt.Errorf("%w: message must contain text or an attachment", domain.ErrInvalid)
@@ -376,7 +380,20 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 		if err != nil {
 			return err
 		}
-		user, assistant = sessionMessagePairRecords(sessionID, content, encodedAttachments, encodedSnapshot)
+		var executionPlan []byte
+		if conditionalPlan {
+			plan, err := domain.BuildExecutionPlan(domain.ExecutionPlanContext{Objective: content, Preference: preference, Stages: snapshot.Stages}, time.Now().UTC())
+			if err != nil {
+				return err
+			}
+			if plan != nil {
+				executionPlan, err = marshal(plan)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		user, assistant = sessionMessagePairRecords(sessionID, content, encodedAttachments, encodedSnapshot, executionPlan)
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
@@ -404,7 +421,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 	return messageDomain(user), messageDomain(assistant), nil
 }
 
-func sessionMessagePairRecords(sessionID, content string, attachments, responseSnapshot []byte) (messageRecord, messageRecord) {
+func sessionMessagePairRecords(sessionID, content string, attachments, responseSnapshot, executionPlan []byte) (messageRecord, messageRecord) {
 	emptyJSONList := []byte("[]")
 	user := messageRecord{
 		SessionID: sessionID, Role: "user", State: "completed", Content: content,
@@ -412,7 +429,11 @@ func sessionMessagePairRecords(sessionID, content string, attachments, responseS
 	}
 	assistant := messageRecord{
 		SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing",
-		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList, Evidence: emptyJSONList,
+		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList, Evidence: emptyJSONList, ExecutionPlan: executionPlan,
+	}
+	if len(executionPlan) > 0 {
+		assistant.State = "waiting_for_user"
+		assistant.ProgressStage = "plan_review"
 	}
 	return user, assistant
 }
@@ -449,7 +470,7 @@ func (repository *Repository) RetryMessage(ctx context.Context, ownerID, session
 	if len(original.Attachments) > 0 {
 		_ = json.Unmarshal(original.Attachments, &attachments)
 	}
-	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, attachments, &snapshot, "")
+	return repository.createMessagePair(ctx, ownerID, sessionID, original.Content, attachments, &snapshot, "", "", false)
 }
 
 func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessionID string, messageID int64) (domain.Message, error) {
@@ -474,7 +495,28 @@ func (repository *Repository) CancelMessage(ctx context.Context, ownerID, sessio
 			}).Error; err != nil {
 				return err
 			}
-		case "generating", "waiting_for_user":
+		case "waiting_for_user":
+			if len(row.ExecutionPlan) > 0 {
+				var plan domain.ExecutionPlan
+				if err := json.Unmarshal(row.ExecutionPlan, &plan); err != nil {
+					return err
+				}
+				if plan.State == "pending" {
+					if err := decideExecutionPlan(&plan, "cancel", plan.Version, now); err != nil {
+						return err
+					}
+					encoded, err := marshal(plan)
+					if err != nil {
+						return err
+					}
+					if err := tx.Model(&messageRecord{}).Where("id = ? AND state = 'waiting_for_user'", row.ID).Updates(map[string]any{"state": "cancelled", "progress_stage": "", "execution_plan": encoded, "cancel_requested_at": now, "completed_at": now, "elapsed_ms": gorm.Expr("GREATEST(0, EXTRACT(EPOCH FROM (? - created_at)) * 1000)::bigint", now)}).Error; err != nil {
+						return err
+					}
+					return tx.Where("id = ?", row.ID).Take(&row).Error
+				}
+			}
+			fallthrough
+		case "generating":
 			if row.CancelRequested == nil {
 				if err := tx.Model(&messageRecord{}).Where("id = ? AND state IN ?", row.ID, []string{"generating", "waiting_for_user"}).Update("cancel_requested_at", now).Error; err != nil {
 					return err
@@ -537,6 +579,12 @@ func messageDomain(row messageRecord) domain.Message {
 	}
 	if len(row.Evidence) > 0 && string(row.Evidence) != "null" {
 		_ = json.Unmarshal(row.Evidence, &value.Evidence)
+	}
+	if len(row.ExecutionPlan) > 0 && string(row.ExecutionPlan) != "null" {
+		value.ExecutionPlan = &domain.ExecutionPlan{}
+		if json.Unmarshal(row.ExecutionPlan, value.ExecutionPlan) != nil {
+			value.ExecutionPlan = nil
+		}
 	}
 	return value
 }

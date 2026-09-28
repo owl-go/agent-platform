@@ -35,6 +35,7 @@ const menu = ref<"main" | "experts" | "skills" | "connectors" | "files" | "">(""
 const query = ref("");
 const highlighted = ref(0);
 const loading = ref(true), updating = ref(false), sending = ref(false);
+const planFirst = ref(false);
 const error = ref("");
 const cliAuthorizationPrompt = ref<{ definition: CLIConnectorDefinition; enablement: CLIConnectorEnablement; scopes: string[]; flow?: CLIConnectorAuthorizationFlow; completed?: boolean; failed?: boolean; activation?: boolean }>();
 const cliAuthorizationBusy = ref(false);
@@ -573,10 +574,10 @@ async function send() {
       if (!await changeSelection({ skill_ids: skillIDs })) throw new Error("selection_not_saved");
     }
     while (pending.value.length) { const file = pending.value[0]; const attachment = await api.uploadAttachment(file); uploaded.value.push(attachment); pending.value.shift(); persist(); }
-    await props.submit({ content: draftText(parts.value), attachmentIDs: uploaded.value.map((item) => item.id), input: { selection_id: selection.value.id, file_references: referencedFiles.value.map((file) => ({ kind: file.kind as "attachment" | "artifact" | "workspace", id: file.id, path: file.path })) } });
+    await props.submit({ content: draftText(parts.value), attachmentIDs: uploaded.value.map((item) => item.id), input: { selection_id: selection.value.id, file_references: referencedFiles.value.map((file) => ({ kind: file.kind as "attachment" | "artifact" | "workspace", id: file.id, path: file.path })), ...(planFirst.value ? { plan_preference: "always" as const } : {}) } });
     if (cliAuthorizationPrompt.value?.completed) cliAuthorizationPrompt.value = undefined;
     if (pendingManagedActivation.value?.recovery && pendingManagedActivation.value.completed) pendingManagedActivation.value = undefined;
-    parts.value = []; uploaded.value = []; missingFiles.value = []; renderEditor();
+    parts.value = []; uploaded.value = []; missingFiles.value = []; planFirst.value = false; renderEditor();
     // The accepted selection is immutable. Resolve an empty explicit Skill set
     // for the next draft without modifying the historical message.
     await changeSelection({ skill_ids: [] }); persist();
@@ -628,6 +629,11 @@ onMounted(async () => {
 });
 watch(selection, (value) => { if (value) emit("selectionChanged", value); });
 watch(() => props.authorizationRequest, () => void refreshRequestedCLIAuthorization(), { deep: true });
+watch(() => props.initialPrompt, async (value, previous) => {
+  if (!value || value === previous) return;
+  parts.value = [{ kind: "text", text: value }];
+  await nextTick(); renderEditor(); persist(); editor.value?.focus();
+});
 watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearSessionApproval(String(previous)); placeSessionApproval(current ? String(current) : undefined); });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
 onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
@@ -668,6 +674,9 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
         <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
       </el-popover>
       <span class="composer-spacer"></span>
+      <el-tooltip :content="t('composer.planFirstHint')" placement="top">
+        <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
+      </el-tooltip>
       <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
       <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
     </div>

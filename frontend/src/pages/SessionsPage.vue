@@ -123,6 +123,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     evidence: message.evidence,
+    executionPlan: message.execution_plan,
     attachments: message.attachments,
     skills: message.role === "user" ? messageSkills(index) : undefined,
     resourceAction: message.resource_action,
@@ -257,8 +258,30 @@ async function send(message: ComposerSubmission) {
     if (selected.value?.id !== sessionID || generation !== pollGeneration) return;
     messages.value.push(pair.user_message, pair.assistant_message);
     lastSessionActivityAt.value = Date.now();
-    void streamAssistant(sessionID, pair.assistant_message.id, generation);
+    if (pair.assistant_message.state === "queued" || pair.assistant_message.state === "generating") void streamAssistant(sessionID, pair.assistant_message.id, generation);
   } finally { sending.value = false; }
+}
+async function decideExecutionPlan(messageID: string, decision: "start" | "direct" | "cancel") {
+  if (!selected.value) return;
+  const numericID = Number(messageID);
+  const current = messages.value.find((item) => item.id === numericID);
+  if (!current?.execution_plan || current.execution_plan.state !== "pending") return;
+  try {
+    const updated = await api.decideSessionExecutionPlan(selected.value.id, numericID, decision, current.execution_plan.version);
+    const index = messages.value.findIndex((item) => item.id === numericID);
+    if (index >= 0) messages.value[index] = updated;
+    if (updated.state === "queued" || updated.state === "generating") void streamAssistant(selected.value.id, updated.id, pollGeneration);
+  } catch { error.value = t("errors.conflict"); }
+}
+async function editExecutionPlan(messageID: string) {
+  const index = messages.value.findIndex((item) => String(item.id) === messageID);
+  const user = [...messages.value.slice(0, index)].reverse().find((item) => item.role === "user");
+  await decideExecutionPlan(messageID, "cancel");
+  if (selected.value && user) {
+    launchPrompt.value = undefined;
+    await nextTick();
+    launchPrompt.value = { sessionID: selected.value.id, text: user.content };
+  }
 }
 async function downloadSessionArtifact(artifact: Artifact) {
   if (!selected.value || artifact.expired) return;
@@ -391,6 +414,7 @@ function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   message.activities = snapshot.activities ?? message.activities;
   message.evidence = snapshot.evidence ?? message.evidence;
   message.resource_action = snapshot.resource_action ?? message.resource_action;
+  message.execution_plan = snapshot.execution_plan ?? message.execution_plan;
   if (snapshot.state === "queued" || snapshot.state === "generating" || snapshot.state === "waiting_for_user") message.state = snapshot.state;
   else if (snapshot.state === "cancelled") {
     message.state = "cancelled";
@@ -636,7 +660,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
-          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>

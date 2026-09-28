@@ -203,7 +203,11 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 			}
 		}
 	} else {
-		item, err = service.workspace.Repository().CreateRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput)
+		repository, portErr := service.executionPlanRepository()
+		if portErr != nil {
+			return nil, publicError(portErr)
+		}
+		item, err = repository.CreatePlannedRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput, request.PlanPreference)
 	}
 	if err != nil {
 		return nil, publicError(err)
@@ -293,16 +297,11 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 	if err != nil {
 		return nil, publicError(err)
 	}
-	var item workspacedomain.Run
-	if request.SelectionId != "" {
-		repository, portErr := service.conversationRepository()
-		if portErr != nil {
-			return nil, publicError(portErr)
-		}
-		item, err = repository.ContinueSelectedRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments, request.SelectionId)
-	} else {
-		item, err = service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments)
+	repository, portErr := service.executionPlanRepository()
+	if portErr != nil {
+		return nil, publicError(portErr)
 	}
+	item, err := repository.ContinuePlannedRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments, request.SelectionId, request.PlanPreference)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -437,6 +436,7 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 	for _, evidence := range item.Evidence {
 		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
 	}
+	response.ExecutionPlan = executionPlanResponse(item.ExecutionPlan)
 	if item.StartedAt != nil {
 		end := time.Now()
 		if item.EndedAt != nil {

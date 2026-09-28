@@ -57,6 +57,7 @@ service AgentWorkspaceService {
   rpc SendSessionMessage(SendSessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages" body: "*"}; }
   rpc RetrySessionMessage(RetrySessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/retry" body: "*"}; }
   rpc CancelSessionMessage(CancelSessionMessageRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation" body: "*"}; }
+  rpc DecideSessionExecutionPlan(DecideSessionExecutionPlanRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision" body: "*"}; }
 
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
@@ -73,6 +74,7 @@ service AgentWorkspaceService {
   rpc ContinueRunConversation(ContinueRunConversationRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns" body: "*"}; }
   rpc CancelRun(CancelRunRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation" body: "*"}; }
   rpc RerunWorkflow(RerunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun" body: "*"}; }
+  rpc DecideRunExecutionPlan(DecideRunExecutionPlanRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision" body: "*"}; }
   rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts"}; }
 
   rpc ListWorkspaceEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace"}; }
@@ -354,11 +356,12 @@ message DeleteSessionRequest { string session_id = 1; }
 message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; reserved 8; reserved "current_provider_model_id"; optional string expert_team_id = 9; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
-message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; string plan_preference = 7; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
-message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; repeated Artifact artifacts = 14; optional ResourceCreationAction resource_action = 15; repeated Evidence evidence = 16; }
+message DecideSessionExecutionPlanRequest { string session_id = 1; int64 message_id = 2; string decision = 3; int64 expected_version = 4; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; repeated Artifact artifacts = 14; optional ResourceCreationAction resource_action = 15; repeated Evidence evidence = 16; optional ExecutionPlan execution_plan = 17; }
 message ResourceCreationAction { string id = 1; string kind = 2; string state = 3; string name = 4; string description = 5; string resource_id = 6; optional string error = 7; google.protobuf.Timestamp expires_at = 8; int64 version = 9; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; int32 schema_version = 12; repeated ExecutionStageSnapshot stages = 13; }
 message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; optional string team_member_id = 7; optional string team_member_name = 8; repeated string team_member_labels = 9; repeated CLIConnectorSnapshot cli_connectors = 10; }
@@ -403,15 +406,16 @@ message WorkflowCredential { string api_key = 1; string api_secret = 2; google.p
 message ExchangeWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowAccessToken { string jwt_token = 1; string token_type = 2; google.protobuf.Timestamp expires_at = 3; }
 
-message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; }
+message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; string plan_preference = 4; }
 message ListRunsRequest { string workflow_id = 1; }
 message ListRunsResponse { repeated Run items = 1; }
 message GetRunRequest { string workflow_id = 1; string run_id = 2; }
 message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
-message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
+message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; string plan_preference = 7; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; repeated Evidence evidence = 22; }
+message DecideRunExecutionPlanRequest { string workflow_id = 1; string run_id = 2; string decision = 3; int64 expected_version = 4; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; repeated Evidence evidence = 22; optional ExecutionPlan execution_plan = 23; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -562,6 +566,9 @@ message Attachment { string id = 1; string name = 2; string content_type = 3; in
 message ExecutionActivity { string type = 1; string detail = 2; }
 message EvidenceCitation { string revision_id = 1; string category_name = 2; string source_location = 3; float relevance = 4; }
 message Evidence { string id = 1; string kind = 2; string source_id = 3; string source_name = 4; string container_id = 5; string state = 6; string action = 7; int32 stage_position = 8; optional EvidenceCitation citation = 9; }
+message ExecutionPlanStep { string id = 1; string kind = 2; string label = 3; int32 position = 4; string state = 5; }
+message ExecutionPlanResource { string kind = 1; string id = 2; string name = 3; }
+message ExecutionPlan { string id = 1; string state = 2; string objective = 3; repeated ExecutionPlanStep steps = 4; repeated ExecutionPlanResource resources = 5; repeated string side_effects = 6; repeated string reasons = 7; int32 estimated_model_calls = 8; int64 estimated_credit_hundredths = 9; int64 generation_credit_hundredths = 10; string generator = 11; google.protobuf.Timestamp created_at = 12; optional google.protobuf.Timestamp decided_at = 13; int64 version = 14; }
 message GetSessionArtifactDownloadRequest { string session_id = 1; string artifact_id = 2; }
 message CompleteCLIConnectorEnablementRequest { string enablement_id = 1; }
 

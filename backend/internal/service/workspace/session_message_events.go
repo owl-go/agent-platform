@@ -20,6 +20,7 @@ type sessionMessageSnapshot struct {
 	CreditConsumption *domain.CreditConsumption      `json:"credit_consumption,omitempty"`
 	Activities        []domain.ExecutionActivity     `json:"activities,omitempty"`
 	Evidence          []domain.Evidence              `json:"evidence,omitempty"`
+	ExecutionPlan     *domain.ExecutionPlan          `json:"execution_plan,omitempty"`
 	ResourceAction    *domain.ResourceCreationAction `json:"resource_action,omitempty"`
 }
 
@@ -94,7 +95,7 @@ func (service *Service) streamSessionMessage(writer http.ResponseWriter, request
 }
 
 func snapshotOf(message domain.Message) sessionMessageSnapshot {
-	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption, Activities: message.Activities, Evidence: message.Evidence, ResourceAction: message.ResourceAction}
+	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption, Activities: message.Activities, Evidence: message.Evidence, ExecutionPlan: message.ExecutionPlan, ResourceAction: message.ResourceAction}
 }
 
 func terminalMessageState(state string) bool {
