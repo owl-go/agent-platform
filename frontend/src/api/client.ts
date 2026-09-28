@@ -71,9 +71,9 @@ export interface SmartAssistant { id: string; name: string; icon: string; descri
 export interface SmartAssistantInput { name: string; icon?: string; description?: string; introduction?: string; scenario?: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface AssistantConversation { id: string; assistant_id: string; assistant_name: string; welcome: string; created_at: string; updated_at: string }
-export interface AssistantTurn { id: string; conversation_id: string; turn_number: number; question: string; answer: string; source: string; faq_id?: string; state: "generating" | "completed" | "failed" | "cancelled"; input_tokens: number; output_tokens: number; created_at: string; updated_at: string; completed_at?: string }
+export interface AssistantTurn { id: string; conversation_id: string; turn_number: number; question: string; answer: string; source: string; faq_id?: string; state: "generating" | "completed" | "failed" | "cancelled"; failure_code?: string; input_tokens: number; output_tokens: number; created_at: string; updated_at: string; completed_at?: string }
 export interface AssistantConversationDetail { conversation: AssistantConversation; turns: AssistantTurn[]; faqs: SmartAssistantFAQ[] }
-export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; message: string };
+export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; code: string; message: string };
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "processing" | "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
 export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; state: "enabled" | "disabled"; created_at: string; updated_at: string; version: number }
@@ -637,7 +637,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         if (fields.event === "thinking") onEvent({ type: "thinking", turn_id: String(data.turn_id), message: String(data.message) });
         if (fields.event === "delta") onEvent({ type: "delta", turn_id: String(data.turn_id), text: String(data.text) });
         if (fields.event === "done") { completed = true; onEvent({ type: "done", turn: data as unknown as AssistantTurn }); }
-        if (fields.event === "error") onEvent({ type: "error", message: String(data.message) });
+        if (fields.event === "error") onEvent({ type: "error", code: String(data.code ?? "assistant_failed"), message: String(data.message) });
       };
       while (true) {
         const { value, done } = await reader.read();

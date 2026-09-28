@@ -748,13 +748,13 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-card-action-menu svg { margin-right: 8px; }
 .assistant-card-delete-action { color: var(--aw-danger); }
 .assistant-card-delete-action { color: var(--el-color-danger); }
-.assistant-conversation-page { display: flex; flex-direction: column; width: min(100%, 1040px); min-height: calc(100vh - 120px); margin: 0 auto; }
-.assistant-conversation-header { display: flex; align-items: center; gap: 16px; padding: 12px 0 20px; border-bottom: 1px solid var(--line); }
+.assistant-conversation-page { display: flex; flex-direction: column; width: min(100%, 1040px); height: 100vh; min-height: 0; margin: 0 auto; overflow: hidden; }
+.assistant-conversation-header { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; padding: 12px 0 20px; border-bottom: 1px solid var(--line); }
 .assistant-conversation-header h2 { flex: 1; margin: 0; font-size: 1.35rem; }
 .assistant-conversation-actions { display: flex; align-items: center; gap: 8px; }
 .assistant-conversation-history { width: 190px; }
 .assistant-conversation-history-label { color: var(--muted); font-size: .74rem; white-space: nowrap; }
-.assistant-conversation-thread { flex: 1; min-height: 300px; padding: 24px 4px; }
+.assistant-conversation-thread { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 24px 4px 28px; }
 .assistant-conversation-message { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
 .assistant-conversation-message--assistant { justify-content: flex-start; }
 .assistant-conversation-message--user { justify-content: flex-end; }
@@ -773,12 +773,13 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-conversation-message--failed .assistant-conversation-bubble { border-color: var(--aw-danger-border); background: var(--aw-danger-soft); }
 .assistant-conversation-failure { display: flex; align-items: center; gap: 7px; color: var(--aw-danger); font-size: .82rem; font-weight: 700; }
 .assistant-conversation-failure + .markdown-body { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--aw-n4); color: var(--muted); }
-.assistant-conversation-composer { position: sticky; bottom: 0; padding: 14px 0 16px; background: var(--paper); }
-.assistant-conversation-composer-shell { padding: 8px 10px 10px; border: 1px solid var(--aw-n5); border-radius: var(--aw-radius-overlay); background: var(--paper); box-shadow: 0 6px 22px color-mix(in srgb, var(--aw-n10) 7%, transparent); transition: border-color .18s ease, box-shadow .18s ease; }
+.assistant-conversation-composer { flex: 0 0 auto; padding: 12px 4px 16px; background: transparent; }
+.assistant-conversation-composer-shell { padding: 8px 10px 10px; border: 1px solid var(--aw-n5); border-radius: var(--aw-radius-overlay); background: color-mix(in srgb, var(--aw-n0) 88%, transparent); box-shadow: 0 6px 22px color-mix(in srgb, var(--aw-n10) 7%, transparent); transition: border-color .18s ease, box-shadow .18s ease; }
 .assistant-conversation-composer-shell:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--aw-n9) 10%, transparent), 0 6px 22px color-mix(in srgb, var(--aw-n10) 7%, transparent); }
 .assistant-conversation-composer .el-textarea__inner, .assistant-conversation-composer .el-textarea__inner:hover, .assistant-conversation-composer .el-textarea__inner:focus { padding: 8px 9px; border: 0; border-radius: 0; background: transparent; box-shadow: none; resize: none; }
 .assistant-conversation-composer-actions { display: flex; justify-content: flex-end; padding-top: 3px; }
 .assistant-conversation-send { min-width: 82px; border-radius: 10px; }
+@media (max-width: 1023px) { .assistant-conversation-page { height: calc(100vh - 56px); } }
 @media (max-width: 700px) { .assistant-conversation-header { flex-wrap: wrap; } .assistant-conversation-header h2 { order: -1; width: 100%; flex: auto; } .assistant-conversation-actions { margin-left: auto; } .assistant-conversation-history { width: 140px; } .assistant-conversation-composer { padding-bottom: 10px; } }
 .application-card h3 { margin: 0 0 8px; }
 .application-card p { margin: 0 0 14px; color: var(--muted); }
