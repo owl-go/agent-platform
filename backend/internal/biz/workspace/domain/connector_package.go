@@ -152,6 +152,7 @@ type ConnectorAuthorization struct {
 }
 
 type ConnectorAuthorizationMaterial struct {
+	Authorization        ConnectorAuthorization
 	CredentialCiphertext []byte
 	CredentialAAD        string
 	CredentialFormat     string
