@@ -16,7 +16,7 @@ import zipfile
 from pathlib import Path
 
 
-VERSION = "1.0.62"
+VERSION = "1.0.63"
 NPM_SHA512 = "j4B+Daqil+mvVSKHPeBdBeGxNPuSWoXjgT5fu/R3WQUeAQHw0cWmMuqtLNjjwgW7eZfT98JN2yJ+j3TF5cEsBg=="
 ASSET_SHA256 = {
     "dws-linux-amd64.tar.gz": "6198a86570ea52f24d88a58dfe65514540793c4dd64410cb133a8ff7b3b008a8",
@@ -39,7 +39,7 @@ SKILL = """---
 name: dingtalk
 display_name: 钉钉 CLI
 description: 使用已审核的 DingTalk Workspace CLI 命令操作钉钉业务资源。
-version: 1.0.62
+version: 1.0.63
 author: DingTalk-Real-AI / Agent Workspace
 ---
 
@@ -51,7 +51,7 @@ author: DingTalk-Real-AI / Agent Workspace
 
 所有业务命令使用当前用户身份和 `--format json`。查找接收人、群、文档、待办等目标时先读取真实 ID；零命中或多候选时请用户消歧。写入前核对组织、账号、对象和内容，高风险命令遵守平台一次性批准；CLI 自身要求确认时再加 `--yes`。写后读取结果或对象验证，超时或结果不明时先对账，不盲目重发。
 
-遇到鉴权错误，检查当前 Installation 的授权状态并通过平台钉钉设备授权链接重新授权。平台在单次隔离进程环境中提供短期 Access Token，Refresh Token 保留在平台加密存储中；不得把凭证写入命令参数、Skill 或工作区文件。
+平台会在每条业务命令执行前检查 Installation 授权，并在缺失或过期时由会话输入区提供钉钉授权入口。不要调用 `dws auth status` 或 `dws profile list` 判断平台授权：它们只检查 CLI 本地 Profile，会把平台注入的短期令牌误报为未登录。平台在单次隔离进程环境中提供短期 Access Token，Refresh Token 保留在平台加密存储中；不得把凭证写入命令参数、Skill 或工作区文件。
 
 官方资料：[DWS CLI](https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli)、[用户指南](https://open.dingtalk.com/document/development/dingtalk-cli-performing-tasks-within)、[应用管理指南](https://open.dingtalk.com/document/development/dev-cli-app-management-guide)。
 """
@@ -137,8 +137,6 @@ def reviewed_capabilities(schema, include_admin):
     capabilities.extend([
         {"id": "dws_version", "argv_prefix": ["version"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 30},
         {"id": "dws_schema", "argv_prefix": ["schema"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
-        {"id": "dws_profile_list", "argv_prefix": ["profile", "list"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
-        {"id": "dws_auth_status", "argv_prefix": ["auth", "status"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
     ])
     return sorted(capabilities, key=lambda item: item["argv_prefix"])
 

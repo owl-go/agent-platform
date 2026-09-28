@@ -66,7 +66,7 @@ const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
   const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
   if (attempted) return attempted;
-  if (latestAssistant?.state !== "failed" || !latestAssistant.error?.includes("Connector authorization is unavailable")) return undefined;
+  if (latestAssistant?.state !== "failed" || !authorizationUnavailable(latestAssistant.error)) return undefined;
   const connector = latestAssistant.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []).find((item) => item.authentication_driver === "feishu" || item.authentication_driver === "dingtalk");
   return connector ? { connectorID: connector.id, capabilityID: "" } : undefined;
 });
@@ -74,18 +74,22 @@ function authorizationUnavailable(error?: string) {
   const normalized = error?.toLowerCase().replaceAll("_", " ") ?? "";
   return normalized.includes("authorization unavailable") || normalized.includes("authorization is unavailable");
 }
-function waitingForFeishuAuthorization(message: SessionMessage) {
-  if (message.role !== "assistant" || message.state !== "failed" || !authorizationUnavailable(message.error)) return false;
+function authorizationProvider(message: SessionMessage) {
+  if (message.role !== "assistant" || message.state !== "failed" || !authorizationUnavailable(message.error)) return undefined;
   const attempted = cliAuthorizationRequestFromActivities(message.activities);
-  if (attempted?.connectorID === "feishu") return true;
-  return message.response_snapshot?.stages?.some((stage) => stage.cli_connectors?.some((connector) => connector.authentication_driver === "feishu")) ?? false;
+  const connectors = message.response_snapshot?.stages?.flatMap((stage) => stage.cli_connectors ?? []) ?? [];
+  const connector = attempted ? connectors.find((item) => item.id === attempted.connectorID) : connectors.find((item) => item.authentication_driver === "feishu" || item.authentication_driver === "dingtalk");
+  const driver = connector?.authentication_driver ?? (attempted?.connectorID === "feishu" || attempted?.connectorID === "dingtalk" ? attempted.connectorID : undefined);
+  if (driver === "dingtalk") return t("composer.providerDingtalk");
+  if (driver === "feishu") return t("composer.providerFeishu");
+  return undefined;
 }
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
   const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
   const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
-  const authorizationWait = waitingForFeishuAuthorization(message);
-  const authorizationMessage = authorizationWait ? t("sessions.feishuAuthorizationWait") : undefined;
+  const provider = authorizationProvider(message);
+  const authorizationMessage = provider ? t("sessions.connectorAuthorizationWait", { provider }) : undefined;
   return {
     id: String(message.id),
     role: message.role,
