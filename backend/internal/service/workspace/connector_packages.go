@@ -423,6 +423,9 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if current.ID == "" {
 		return nil, publicError(domain.ErrNotFound)
 	}
+	if err := requireInteractiveConnectorDriver(ctx, repository, principal.UserID, request.InstallationId); err != nil {
+		return nil, publicError(err)
+	}
 	refreshToken := ""
 	switch current.CredentialFormat {
 	case "json":
@@ -609,6 +612,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if err := validateInteractiveConnectorDriver(policy); err != nil {
+		return nil, publicError(err)
+	}
 	allowedScopes := map[string]struct{}{}
 	if policy.CLI != nil {
 		for _, capability := range policy.CLI.Capabilities {
@@ -660,6 +666,9 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	}
 	flow, err := repository.GetConnectorAuthorizationFlow(ctx, principal.UserID, request.FlowId)
 	if err != nil {
+		return nil, publicError(err)
+	}
+	if err := requireInteractiveConnectorDriver(ctx, repository, principal.UserID, flow.InstallationID); err != nil {
 		return nil, publicError(err)
 	}
 	application, err := repository.GetConnectorProviderApplication(ctx, principal.UserID, flow.InstallationID)
@@ -725,6 +734,24 @@ func connectorInstallationPolicy(ctx context.Context, repository connectorPackag
 	}
 	policy, err := decodeConnectorRevisionPolicy(revision)
 	return installation, revision, policy, err
+}
+
+// Interactive authorization currently has one implemented provider adapter.
+// Resolve the active revision before reading provider secrets or polling an
+// existing flow so a different CLI can never be sent through Feishu OAuth.
+func requireInteractiveConnectorDriver(ctx context.Context, repository connectorPackageRepository, ownerID, installationID string) error {
+	_, _, policy, err := connectorInstallationPolicy(ctx, repository, ownerID, installationID)
+	if err != nil {
+		return err
+	}
+	return validateInteractiveConnectorDriver(policy)
+}
+
+func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
+	if policy.CLI != nil && policy.CLI.AuthenticationDriver == "feishu" {
+		return nil
+	}
+	return fmt.Errorf("%w: this Connector revision has no interactive authorization adapter", domain.ErrInvalid)
 }
 
 func (service *Service) decryptConnectorApplication(ownerID string, application domain.ConnectorProviderApplication) (string, string, error) {

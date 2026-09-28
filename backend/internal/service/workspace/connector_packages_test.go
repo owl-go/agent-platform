@@ -67,6 +67,23 @@ func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T
 	}
 }
 
+func TestInteractiveConnectorAuthorizationRejectsOtherDrivers(t *testing.T) {
+	for _, driver := range []string{"connector_package", "none", "dingtalk"} {
+		t.Run(driver, func(t *testing.T) {
+			policy := connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: driver}}
+			if err := validateInteractiveConnectorDriver(policy); err == nil || !strings.Contains(err.Error(), "no interactive authorization adapter") {
+				t.Fatalf("driver %q error = %v", driver, err)
+			}
+		})
+	}
+	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}); err != nil {
+		t.Fatalf("Feishu driver rejected: %v", err)
+	}
+	if err := validateInteractiveConnectorDriver(connectorRevisionPolicy{MCP: &connectorpackage.MCPManifest{}}); err == nil {
+		t.Fatal("MCP revision entered the CLI authorization flow")
+	}
+}
+
 func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
 	pkg := connectorpackage.Package{
 		Metadata: connectorpackage.Metadata{Source: "feishu", Version: "1.0.95", Type: connectorpackage.TypeCLI, Name: "飞书", AuthMode: "oauth"},
