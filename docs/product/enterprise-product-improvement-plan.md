@@ -35,7 +35,7 @@ Agent Workspace 第一阶段应定位为：
 
 - 不宣称企业协作平台；当前 User-owned 私有资源模型不足以支撑部门协作。
 - 不新增顶层产品区域、Runtime 品牌、模型协议或第三方 Connector。
-- 不把 Digital Human 和 Image Creation 作为默认导航或销售主张。
+- 不把 Image Creation 作为默认导航或销售主张。
 - 不建设任意 DAG、可视化编排器、应用市场或跨企业分享。
 - 不为没有真实使用证据的功能增加复杂筛选、标签和管理字段。
 
@@ -80,7 +80,7 @@ Agent Workspace 第一阶段应定位为：
 | 应用发布 | Smart Assistants | P1 默认隐藏；仅对已启用此能力的部署显示 |
 | 设置 | 个人模型、语言、时区、个性与额度 | 保留，但将基础项与高级项分层 |
 
-Digital Human 和 Image Creation 不进入第一阶段默认一级或二级导航。已部署能力可通过 Feature Flag 保留，入口标记为“实验功能”，不得与已验证主路径同等展示。
+Image Creation 不进入第一阶段默认一级或二级导航。已部署能力可通过 Feature Flag 保留，入口标记为“实验功能”，不得与已验证主路径同等展示。
 
 ### 3.2 管理端导航
 
@@ -118,7 +118,7 @@ Digital Human 和 Image Creation 不进入第一阶段默认一级或二级导�
 | 平台资源 | 提供零个或最多三个经过验证的起始模板，不强制先建 Expert | 新用户无需额外配置即可运行首个任务 |
 | 邀请试点用户 | 按名单或用户组开放，显示试点范围 | 用户能登录，管理员不能查看其私有内容 |
 
-部署向导不得在基础闭环未完成时推荐 Digital Human、图片模型或更多 Connector。
+部署向导不得在基础闭环未完成时推荐图片模型或更多 Connector。
 
 ### 4.2 普通用户首次使用
 
@@ -518,7 +518,7 @@ Smart Assistant 从“通用 AI 应用”收窄为“把经过验证的问答能
 ### 11.2 编辑器
 
 - 基础信息、回答内容、知识与专家、对话外观、分享与限制分区展示。
-- 先配置文本问答；Digital Human 选择只在实验能力启用时出现。
+- 先配置文本问答；非必要的展示配置不进入发布前置条件。
 - 提供“以访客身份预览”，但预览不污染真实历史与用量统计。
 - 每次保存显示配置 Revision；并发编辑使用明确冲突提示，不覆盖他人更改。
 
@@ -556,23 +556,7 @@ Smart Assistant 从“通用 AI 应用”收窄为“把经过验证的问答能
 - 只保存最小安全审计：Assistant、时间、访问来源、结果、策略版本和 Credit outcome；普通日志不保存完整敏感输入。
 - FAQ 直答标识 `FAQ`，有依据的模型回答展示 Citation，无命中时明确标识“未使用知识库依据”。
 
-## 12. Digital Humans 与 Image Creation
-
-### 12.1 Digital Humans
-
-处理决定：P2 实验能力，默认隐藏，不作为第一阶段销售范围。
-
-若保留实验入口：
-
-- 明确标记“身份配置与预览”，不能宣称实时数字人；
-- Provider 未确定或真实验证未完成时禁止 Enable；
-- Preview 明示可能产生的供应商成本，但不创建 Assistant Conversation；
-- 删除前显示被哪些 Assistant 引用；
-- 不允许 Digital Human 持有知识、Expert、模型或对话。
-
-进入正式范围的门槛：至少一个确定 Provider、真实音视频闭环、延迟和失败指标、内容安全、授权素材证明、成本模型以及三家设计伙伴的重复使用证据。
-
-### 12.2 Image Creation
+## 12. Image Creation
 
 处理决定：保留已实现能力，但默认放入实验功能，不作为核心留存链路。
 
@@ -749,7 +733,7 @@ Smart Assistant 从“通用 AI 应用”收窄为“把经过验证的问答能
 
 ### P3：受控应用发布
 
-范围：Smart Assistant、FAQ、Knowledge grounding 和受控 iframe。Digital Human 和 Image Creation 继续独立按证据决定，不自动进入 P3。
+范围：Smart Assistant、FAQ、Knowledge grounding 和受控 iframe。Image Creation 继续独立按证据决定，不自动进入 P3。
 
 进入条件：核心 Workflow 北极星指标连续四周稳定；至少三家设计伙伴明确提出发布型问答需求；外部访问的安全、成本和审计模型完成。
 
@@ -774,7 +758,6 @@ Smart Assistant 从“通用 AI 应用”收窄为“把经过验证的问答能
 | Redemption Codes | 企业部署默认隐藏 | 暂停 |
 | Smart Assistants | 受控应用发布 | P3 |
 | iframe 分享 | Smart Assistant 验证后启用 | P3 |
-| Digital Humans | 默认隐藏的实验能力 | 暂停 |
 | Image Creation | 已实现则实验性保留，不做核心增长 | 暂停扩展 |
 | 更多 Runtime/模型/Connector | 停止横向扩张 | 暂停 |
 | 部门共享与 RBAC | 通过治理决策门后实施 | P2 |

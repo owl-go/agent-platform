@@ -41,7 +41,6 @@ const navGroups = [
         path: "/ai-apps",
         children: [
           { id: "ai-applications-assistants", path: "/ai-apps/assistants" },
-          { id: "ai-applications-digital-humans", path: "/ai-apps/digital-humans" },
           { id: "ai-applications-image-creation", path: "/ai-apps/image-creation" },
         ],
       },

@@ -108,7 +108,6 @@ type SmartAssistant struct {
 	KnowledgeBaseIDs []string           `json:"knowledge_base_ids"`
 	ExpertID         *string            `json:"expert_id,omitempty"`
 	ExpertTeamID     *string            `json:"expert_team_id,omitempty"`
-	DigitalHumanID   *string            `json:"digital_human_id,omitempty"`
 	Share            ShareConfiguration `json:"share"`
 	State            ApplicationState   `json:"state"`
 	CreatedAt        time.Time          `json:"created_at"`
@@ -205,41 +204,4 @@ func (faq FAQ) Validate() error {
 		return fmt.Errorf("%w: FAQ fields are outside allowed limits", ErrInvalid)
 	}
 	return nil
-}
-
-type DigitalHuman struct {
-	ID               string           `json:"id"`
-	OwnerID          string           `json:"owner_id,omitempty"`
-	Name             string           `json:"name"`
-	AvatarObjectKey  string           `json:"avatar_object_key"`
-	Voice            string           `json:"voice"`
-	Language         string           `json:"language"`
-	ExpressionStyle  string           `json:"expression_style"`
-	SceneDescription string           `json:"scene_description"`
-	State            ApplicationState `json:"state"`
-	CreatedAt        time.Time        `json:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at"`
-	Version          int64            `json:"version"`
-}
-
-func (human DigitalHuman) Validate() error {
-	if strings.TrimSpace(human.Name) == "" || len([]rune(human.Name)) > 100 {
-		return fmt.Errorf("%w: name is required", ErrInvalid)
-	}
-	if human.State != "" && human.State != StateEnabled && human.State != StateDisabled {
-		return fmt.Errorf("%w: unsupported digital human state", ErrInvalid)
-	}
-	return nil
-}
-
-type DigitalHumanPreview struct {
-	ID               string           `json:"id"`
-	Name             string           `json:"name"`
-	AvatarObjectKey  string           `json:"avatar_object_key"`
-	Voice            string           `json:"voice"`
-	Language         string           `json:"language"`
-	ExpressionStyle  string           `json:"expression_style"`
-	SceneDescription string           `json:"scene_description"`
-	State            ApplicationState `json:"state"`
-	PreviewText      string           `json:"preview_text"`
 }
