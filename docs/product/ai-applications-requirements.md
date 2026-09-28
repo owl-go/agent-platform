@@ -63,7 +63,7 @@ The editable configuration contains:
 - Optional public Share Configuration
 - Draft, Enabled, or Disabled state
 
-User-authored prompts remain visible and are included in the conversation snapshot. Provider credentials never enter snapshots or responses. The backend repeats Provider Model validation on create, update, enable, and conversation creation.
+User-authored prompts remain visible. Every accepted turn reads the Smart Assistant's current saved configuration; historical conversation snapshots remain audit evidence only and never configure a later turn. Provider credentials never enter snapshots or responses. The backend repeats Provider Model validation on create, update, enable, conversation creation, and turn execution.
 
 ### 4.2 Lifecycle
 
@@ -73,14 +73,14 @@ A User can create, edit, copy, enable, disable, and delete a Smart Assistant; op
 Draft -> Enabled -> Disabled
 ```
 
-An incomplete Assistant remains editable but cannot start a conversation. A disabled Assistant cannot accept new conversations. Deletion removes mutable configuration and prevents new conversations but does not delete referenced resources or historical conversation snapshots.
+An incomplete Assistant remains editable but cannot start a conversation. A disabled Assistant cannot accept new conversations. Deletion removes mutable configuration and prevents new conversations but does not delete referenced resources or historical conversation transcripts and audit evidence.
 
 ### 4.3 Conversation Execution
 
 - Opening an enabled Assistant reopens its latest authenticated Assistant Conversation or creates one. It never creates a Workspace Session.
 - Selecting an FAQ returns its stored answer without model invocation or Credits.
 - Free text is safety-checked, preprocessed for FAQ and scope classification, optionally grounded with Knowledge Base results, and then streamed through the selected Provider Model.
-- A conversation freezes the Assistant's selected Provider Model identifier and Assistant configuration when created. Each model-backed turn resolves that Provider Model's current Model Provider Connection, including its Endpoint, protocol, model identifier, connection version, and protected current credential. Later Assistant edits affect only new conversations, except enabled FAQ answers are read at answer time.
+- Each accepted turn resolves the Smart Assistant's current saved configuration, including its prompts, response style, Knowledge Base selection, enabled FAQs, and selected Provider Model. It then resolves that Provider Model's current Model Provider Connection, including its Endpoint, protocol, model identifier, connection version, and protected current credential. A saved Assistant edit therefore applies to the next turn in both existing and new conversations; once execution starts, the resolved configuration and execution identity remain fixed for that turn's audit evidence.
 - Only one turn generates at a time. The User may stop it or create a new conversation without deleting history.
 - Failed and cancelled turns, including partial output, remain in the audit transcript. Credential rejection, rate limiting, provider availability, invalid configuration, and invalid provider responses use stable credential-safe categories with actionable localized guidance; raw upstream response bodies and internal errors are never exposed.
 - The message thread scrolls independently while the composer remains stationary at the bottom. The growing question field and send or stop action stay in one focused input surface without a contrasting outer background panel.
@@ -154,7 +154,7 @@ Acceptance covers:
 - AI Applications navigation, responsive layout, and Image Creation route migration
 - Smart Assistant create, edit, copy, list, search, enable, disable, delete, owner isolation, and incomplete-state handling
 - Smart Assistant Provider Model and resource validation
-- Assistant conversation snapshots, Credit admission, cancellation, history, and later-edit isolation
+- Current Assistant configuration on every new turn, per-turn execution evidence, Credit admission, cancellation, and durable conversation history
 - FAQ CRUD, ordering, safe Markdown, import/export, direct-answer no-Credit behavior, and publication checks
 - Answer Safety Policy, fixed localized refusal, classifier charging, minimum audit, and no sensitive-content leakage
 - Share Token rotation and revocation, Origin and iframe validation, visitor isolation, owner Credit charging, and rate limits

@@ -42,12 +42,12 @@ func (service *Service) resolveAssistantModel(ctx context.Context, owner, modelI
 	return selectAssistantModel(connections, modelID)
 }
 
-func (service *Service) resolveAssistantTurnModel(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation) (aiappdomain.AssistantModel, error) {
-	modelID := conversation.ModelSnapshot.ProviderModelID
-	if modelID == "" {
-		modelID = conversation.AssistantSnapshot.ProviderModelID
-	}
-	return service.resolveAssistantModel(ctx, owner, modelID)
+func (service *Service) loadAssistantTurnConfiguration(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation) (aiappdomain.SmartAssistant, error) {
+	return service.aiapplications.GetAssistant(ctx, owner, conversation.AssistantID)
+}
+
+func (service *Service) resolveAssistantTurnModel(ctx context.Context, owner string, assistant aiappdomain.SmartAssistant) (aiappdomain.AssistantModel, error) {
+	return service.resolveAssistantModel(ctx, owner, assistant.ProviderModelID)
 }
 
 func selectAssistantModel(connections []workspacedomain.ModelProviderConnection, modelID string) (aiappdomain.AssistantModel, error) {
@@ -107,7 +107,10 @@ func (service *Service) runAssistantModel(ctx context.Context, owner, turnID str
 
 func (service *Service) answerAssistantTurn(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turn aiappdomain.AssistantTurn, requestedFAQID, auditSource string, emit func(string) error) (assistantAnswer, error) {
 	result := assistantAnswer{}
-	assistant := conversation.AssistantSnapshot
+	assistant, err := service.loadAssistantTurnConfiguration(ctx, owner, conversation)
+	if err != nil {
+		return result, err
+	}
 	if aiappdomain.DefaultSafetyPolicy().Decide(turn.Question) == aiappdomain.SafetyRefuse {
 		_ = service.aiapplications.RecordSafetyAudit(ctx, owner, assistant.ID, auditSource, aiappdomain.SafetyRefuse, "not_charged")
 		result.text, result.source = aiappdomain.SafetyRefusal, "safety"
@@ -138,7 +141,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		faqChoices = append(faqChoices, map[string]string{"id": faq.ID, "question": faq.Question})
 	}
 	choices, _ := json.Marshal(faqChoices)
-	model, err := service.resolveAssistantTurnModel(ctx, owner, conversation)
+	model, err := service.resolveAssistantTurnModel(ctx, owner, assistant)
 	if err != nil {
 		return result, err
 	}
@@ -201,7 +204,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if err != nil {
 		return result, err
 	}
-	system := "你是智能助手“" + conversation.AssistantName + "”。遵循以下助手提示词：\n" + assistant.Prompt + "\n回答风格：" + assistant.ResponseStyle
+	system := "你是智能助手“" + assistant.Name + "”。遵循以下助手提示词：\n" + assistant.Prompt + "\n回答风格：" + assistant.ResponseStyle
 	if knowledge != "" {
 		system += "\n只在相关时使用以下知识库结果；若与问题不符可忽略：" + knowledge
 	}
