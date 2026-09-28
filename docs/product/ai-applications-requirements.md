@@ -329,7 +329,7 @@ Image Creation = a separate tool for creating images
 
 ### 8.1 Knowledge Retrieval
 
-The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry.
+The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry. A missing or disabled Embedding configuration fails the AI Application ingestion job explicitly rather than marking an unembedded document Ready.
 
 Retrieval uses the platform-controlled AnythingLLM Knowledge Base workspace for candidate chunks. Its embedding model and secret are deployment configuration, not a second per-Assistant or browser setting. The same retrieval path serves the Knowledge Base test search, Workflow Runs, and authenticated/new shared Smart Assistant conversations. Platform authorization and the latest Ready Document Revision are checked before any candidate is returned or cited.
 

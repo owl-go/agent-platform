@@ -62,6 +62,19 @@ func TestKnowledgeRegenerationKeepsReadySourceAndQueuesNewRevision(t *testing.T)
 	if err := db.Table("knowledge_ingestion_jobs").Where("revision_id = ? AND state = 'queued'", newRevision.ID).Count(&queued).Error; err != nil || queued != 1 {
 		t.Fatalf("queued jobs = %d, %v", queued, err)
 	}
+	if err := db.Table("knowledge_document_revisions").Where("id = ?", newRevision.ID).Update("state", string(domain.KnowledgeFailed)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Table("knowledge_ingestion_jobs").Where("revision_id = ?", newRevision.ID).Update("state", "failed").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RetryKnowledgeDocument(ctx, owner, baseID, documentID, false); err != nil {
+		t.Fatal(err)
+	}
+	var documentState string
+	if err := db.Table("knowledge_documents").Select("state").Where("id = ?", documentID).Scan(&documentState).Error; err != nil || documentState != string(domain.KnowledgeReady) {
+		t.Fatalf("document state during retry = %q, err = %v", documentState, err)
+	}
 }
 
 func TestUnifiedKnowledgeMigrationRequeuesUnverifiedReadySources(t *testing.T) {

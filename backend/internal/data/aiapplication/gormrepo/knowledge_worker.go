@@ -42,17 +42,25 @@ func (r *Repository) ProcessNextKnowledgeDocument(ctx context.Context) (bool, er
 		return true, r.failKnowledgeDocument(ctx, job, err)
 	}
 	chunks := aiChunkDocument(document.Content)
-	if configuration, configurationErr := r.GetEmbeddingConfiguration(ctx); configurationErr == nil && configuration.Enabled {
-		vectors, embedErr := r.Embed(ctx, chunkTextsForRecords(chunks))
-		if embedErr != nil {
-			return true, r.failKnowledgeDocument(ctx, job, embedErr)
-		}
-		if len(vectors) != len(chunks) {
-			return true, r.failKnowledgeDocument(ctx, job, fmt.Errorf("embedding count mismatch: got %d, want %d", len(vectors), len(chunks)))
-		}
-		for index := range chunks {
-			chunks[index].Embedding = vectorLiteral(vectors[index])
-		}
+	configuration, configurationErr := r.GetEmbeddingConfiguration(ctx)
+	if configurationErr != nil {
+		return true, r.failKnowledgeDocument(ctx, job, configurationErr)
+	}
+	if !configuration.Enabled || !configuration.APIKeyConfigured {
+		return true, r.failKnowledgeDocument(ctx, job, fmt.Errorf("embedding provider is not configured"))
+	}
+	if len(chunks) == 0 {
+		return true, r.failKnowledgeDocument(ctx, job, fmt.Errorf("Knowledge Document has no text to embed"))
+	}
+	vectors, embedErr := r.Embed(ctx, chunkTextsForRecords(chunks))
+	if embedErr != nil {
+		return true, r.failKnowledgeDocument(ctx, job, embedErr)
+	}
+	if len(vectors) != len(chunks) {
+		return true, r.failKnowledgeDocument(ctx, job, fmt.Errorf("embedding count mismatch: got %d, want %d", len(vectors), len(chunks)))
+	}
+	for index := range chunks {
+		chunks[index].Embedding = vectorLiteral(vectors[index])
 	}
 
 	if err := r.activateKnowledgeGeneration(ctx, document, job, chunks); err != nil {
