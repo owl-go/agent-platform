@@ -13,7 +13,7 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; dingtalk?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; installationVersion?: number; dingtalk?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
  const connectorName = options.dingtalk ? "钉钉" : "飞书 CLI";
  const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: options.managed ? "installation-1" : "feishu", name: connectorName, revision: "3" }] : [] };
  const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? connectorName : "飞书 CLI", state: "available", authentication_driver: options.dingtalk ? "dingtalk" : "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: options.dingtalk ? [] : ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }, ...(options.taskCapability ? [{ id: "task_create", argv_prefix: ["task", "+create"], risk: "high", identities: ["user"], scopes: ["task:task:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] : []), ...(options.documentCapability ? [{ id: "docs_create", argv_prefix: ["docs", "+create"], risk: "high", identities: ["user"], scopes: ["docx:document:create", "docx:document:write_only"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }, { id: "mail_send", argv_prefix: ["mail", "+send"], risk: "high", identities: ["user"], scopes: ["mail:mail:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }] : [])] } as CLIConnectorDefinition;
@@ -23,7 +23,7 @@ async function setup(options: { fail?: boolean; initial?: boolean; session?: str
   listCLIConnectorDefinitions: vi.fn(async () => [definition]),
   listCLIConnectorEnablements: vi.fn(async () => options.managed ? [] : options.activation ? [{ ...enabled, state: "disabled" as const }] : [enabled]),
   enableCLIConnector: vi.fn(async () => { if (options.managed) throw new ApiError("not_found", 404, "not_found"); return enabled; }),
-  listConnectorInstallations: vi.fn(async () => options.managed ? [{ id: "installation-1", source: options.dingtalk ? "dingtalk" : "feishu", active_revision_id: "revision-1", state: "active" as const, authorized: Boolean(options.managedAuthorized || refreshed), version: 1, package_version: "1.0.93", name: options.dingtalk ? "钉钉" : "飞书", description: "", authentication_driver: options.dingtalk ? "dingtalk" : "feishu", upgrade_available: false }] : []),
+  listConnectorInstallations: vi.fn(async () => options.managed ? [{ id: "installation-1", source: options.dingtalk ? "dingtalk" : "feishu", active_revision_id: "revision-1", state: "active" as const, authorized: Boolean(options.managedAuthorized || refreshed), version: options.installationVersion ?? 1, package_version: "1.0.93", name: options.dingtalk ? "钉钉" : "飞书", description: "", authentication_driver: options.dingtalk ? "dingtalk" : "feishu", upgrade_available: false }] : []),
   listConnectorPublications: vi.fn(async () => options.managed ? [{ source: options.dingtalk ? "dingtalk" : "feishu", active_revision_id: "revision-1", state: "available" as const, version: 1, revision: { id: "revision-1", source: options.dingtalk ? "dingtalk" : "feishu", package_version: "1.0.93", mode: "cli" as const, sha256: "a".repeat(64), name: options.dingtalk ? "钉钉" : "飞书", description: "", icon: "plug", runtime_digests: [], conformance_available: true, authentication_driver: options.dingtalk ? "dingtalk" : "feishu", required_scopes: options.dingtalk ? [] : ["im:message", "im:message.send_as_user"] } }] : []),
   listConnectorAuthorizations: vi.fn(async () => options.managedAuthorized || options.managedRefreshable ? [{ id: "authorization-1", installation_id: "installation-1", identity_ref: "user", external_identity_id: "ou_test", external_display_name: "Tester", scopes: ["im:message", "im:message.send_as_user"], state: options.managedRefreshable ? "expired" as const : "active" as const, version: 1, selected: true }] : []),
   refreshConnectorAuthorization: vi.fn(async () => { refreshed = true; return { id: "authorization-1", installation_id: "installation-1", identity_ref: "user", external_identity_id: "ou_test", external_display_name: "Tester", scopes: ["im:message", "im:message.send_as_user"], state: "active" as const, version: 2, selected: true }; }),
@@ -115,6 +115,22 @@ describe("ConversationComposer", () => {
   expect(wrapper.find('[aria-label="飞书"]').exists()).toBe(false);
   expect(wrapper.get(".composer-editor").text()).toBe("继续");
   expect(wrapper.get('[role="alert"]').text()).toContain("连接器选择已失效");
+  wrapper.unmount();
+ });
+ it("refreshes an upgraded managed Connector before restoring a saved draft selection", async () => {
+  const scope = { session_id: "session-1" };
+  saveConversationDraft(conversationDraftKey("owner-1", scope), {
+   parts: [{ kind: "text", text: "继续" }],
+   selection: { ...emptySelection(), id: "saved-selection", cli_connectors: [{ id: "installation-1", name: "钉钉", icon: "dingtalk", revision: "2" }] },
+   attachments: [], pendingFileNames: [],
+  });
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedAuthorized: true, installationVersion: 4, dingtalk: true });
+  expect(api.resolveConversationSelection).toHaveBeenCalledWith(scope, expect.objectContaining({
+   previous_id: "saved-selection",
+   cli_connector_ids: ["installation-1"],
+   refresh_ids: ["cli:installation-1"],
+  }));
+  expect(wrapper.get(".composer-editor").text()).toBe("继续");
   wrapper.unmount();
  });
  it("does not submit when Enter is pressed in the Expert picker", async () => {

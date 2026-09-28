@@ -85,6 +85,13 @@ function cliSelectionAvailable(id: string): boolean {
 function selectionConnectorsAvailable(value: ConversationSelection): boolean {
   return [...value.cli_connectors, ...value.inherited_cli_connectors].every((item) => value.disabled_connectors.includes(`cli:${item.id}`) || cliSelectionAvailable(item.id));
 }
+function staleCLIConnectorRefreshIDs(value: ConversationSelection): string[] {
+  return value.cli_connectors.flatMap((item) => {
+    const definition = cli.value.find((candidate) => candidate.id === item.id);
+    const version = definition?.managed_installation ? managedInstallation(item.id)?.version : definition?.version;
+    return version !== undefined && item.revision !== String(version) ? [`cli:${item.id}`] : [];
+  });
+}
 function recoveryInput(value: ConversationSelection): SelectionInput {
   return {
     previous_id: value.id,
@@ -607,9 +614,13 @@ async function initialize() {
     const current = await api.getConversationSelection(props.scope);
     if (disposed) return;
     const restored = selection.value;
-    if (!restored || restored.id === current.id) selection.value = current;
+    if (!restored || restored.id === current.id) {
+      selection.value = current;
+      const refreshIDs = staleCLIConnectorRefreshIDs(current);
+      if (refreshIDs.length) selection.value = await api.resolveConversationSelection(props.scope, inputSelection({ refresh_ids: refreshIDs }));
+    }
     else if (selectionConnectorsAvailable(restored)) {
-      try { selection.value = await api.resolveConversationSelection(props.scope, inputSelection({})); }
+      try { selection.value = await api.resolveConversationSelection(props.scope, inputSelection({ refresh_ids: staleCLIConnectorRefreshIDs(restored) })); }
       catch { selection.value = current; error.value = t("composer.selectionRecovered"); }
     } else { selection.value = current; error.value = t("composer.selectionRecovered"); }
     if (selection.value && !selectionConnectorsAvailable(selection.value)) {
