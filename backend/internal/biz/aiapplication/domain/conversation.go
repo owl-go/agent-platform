@@ -4,6 +4,7 @@ import "time"
 
 // AssistantConversation is a separate, owner-private transcript. Its snapshots
 // contain no credential; later Assistant edits do not rewrite this conversation.
+// Model execution resolves the selected Provider Model's current connection.
 type AssistantConversation struct {
 	ID                 string         `json:"id"`
 	OwnerID            string         `json:"-"`
