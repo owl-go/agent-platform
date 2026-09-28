@@ -38,11 +38,11 @@ worker:
     egress_network: ""
     timeout: 10m
   runtimes:
-    claude: {available: true, native_resume: false, image_digest: "${CLAUDE_RUNTIME_IMAGE}", cli_version: "2.1.233"}
-    codex: {available: true, native_resume: true, image_digest: "${CODEX_RUNTIME_IMAGE}", cli_version: "0.147.0"}
-    hermes: {available: true, native_resume: false, image_digest: "${HERMES_RUNTIME_IMAGE}", cli_version: "0.19.0"}
-    openclaw: {available: true, native_resume: false, image_digest: "${OPENCLAW_RUNTIME_IMAGE}", cli_version: "2026.7.1-2"}
-    pi: {available: true, native_resume: false, image_digest: "${PI_RUNTIME_IMAGE}", cli_version: "0.84.4"}
+    claude: {available: true, native_resume: false, image_digest: "${RUNTIME_IMAGE}", cli_version: "2.1.233"}
+    codex: {available: true, native_resume: true, image_digest: "${RUNTIME_IMAGE}", cli_version: "0.147.0"}
+    hermes: {available: true, native_resume: false, image_digest: "${RUNTIME_IMAGE}", cli_version: "0.19.0"}
+    openclaw: {available: true, native_resume: false, image_digest: "${RUNTIME_IMAGE}", cli_version: "2026.7.1-2"}
+    pi: {available: true, native_resume: false, image_digest: "${RUNTIME_IMAGE}", cli_version: "0.84.4"}
 
 database:
   dsn: "${DATABASE_URL}"

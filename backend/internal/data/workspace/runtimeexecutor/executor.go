@@ -927,6 +927,9 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 			if err != nil {
 				return nil, err
 			}
+			if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
+				return nil, errors.New("Connector authorization lacks required capability scopes")
+			}
 			plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 			if err != nil {
 				return nil, err
@@ -974,6 +977,9 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 				if err != nil {
 					return nil, err
 				}
+				if !hasAllConnectorScopes(material.Scopes, capability.Scopes) {
+					return nil, errors.New("Connector authorization lacks required capability scopes")
+				}
 				plaintext, err := executor.box.Decrypt(material.CredentialCiphertext, material.CredentialAAD)
 				if err != nil {
 					return nil, err
@@ -1009,6 +1015,15 @@ func (executor *Executor) cliEnvironmentResolver(ownerID string) cliconnector.En
 		}
 		return environment, nil
 	}
+}
+
+func hasAllConnectorScopes(granted, required []string) bool {
+	for _, scope := range required {
+		if !slices.Contains(granted, scope) {
+			return false
+		}
+	}
+	return true
 }
 
 func prepareRuntimeAttachmentMountpoint(workspace string, uid, gid int) error {
@@ -1448,7 +1463,13 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 	for _, connector := range job.Snapshot.CLIConnectors {
 		if connector.PackageObjectKey == "" {
 			if connector.AuthenticationDriver == "feishu" {
-				files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, "SKILL.md"))] = feishuCLISkill
+				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("load platform Feishu Skill: %w", err)
+				}
+				for name, body := range resources {
+					files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, name))] = body
+				}
 			}
 			continue
 		}
@@ -1743,7 +1764,7 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 		feishuSkillLoaded := false
 		for _, connector := range job.Snapshot.CLIConnectors {
 			if connector.PackageObjectKey == "" && connector.AuthenticationDriver == "feishu" && !feishuSkillLoaded {
-				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow this procedure before sending a message):\n"+string(feishuCLISkill))
+				sections = append(sections, "Feishu CLI Skill (loaded from the platform-bundled SKILL.md; follow the relevant procedure before a command):\n"+string(feishuCLISkill))
 				feishuSkillLoaded = true
 			}
 			if connector.PackageObjectKey != "" {
@@ -1751,6 +1772,10 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			}
 			var capabilities []cliconnector.Capability
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
+				continue
+			}
+			if connector.PackageObjectKey != "" && connector.AuthenticationDriver == "feishu" && len(capabilities) > 40 {
+				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
 				continue
 			}
 			for _, capability := range capabilities {

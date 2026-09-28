@@ -155,6 +155,7 @@ type ConnectorAuthorizationMaterial struct {
 	CredentialCiphertext []byte
 	CredentialAAD        string
 	CredentialFormat     string
+	Scopes               []string
 	AppIDCiphertext      []byte
 	AppSecretCiphertext  []byte
 }

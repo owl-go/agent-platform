@@ -67,6 +67,25 @@ func TestPrivateConnectorPackageRejectsPlatformAuthenticationDriver(t *testing.T
 	}
 }
 
+func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
+	pkg := connectorpackage.Package{
+		Metadata: connectorpackage.Metadata{Source: "feishu", Version: "1.0.95", Type: connectorpackage.TypeCLI, Name: "飞书", AuthMode: "oauth"},
+		CLI: &connectorpackage.CLIManifest{
+			AuthenticationDriver: "feishu",
+			ActivationScopes:     []string{"docx:document:create"},
+			Capabilities: []connectorpackage.CLICapability{
+				{ID: "docs_create", Identities: []string{"user"}, Scopes: []string{"docx:document:create"}},
+				{ID: "mail_send", Identities: []string{"user"}, Scopes: []string{"mail:mail:write"}},
+			},
+		},
+	}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	response := connectorRevisionResponse(revision)
+	if len(response.RequiredScopes) != 1 || response.RequiredScopes[0] != "docx:document:create" {
+		t.Fatalf("activation scopes = %v", response.RequiredScopes)
+	}
+}
+
 func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Helper()
 	for _, entry := range reader.File {

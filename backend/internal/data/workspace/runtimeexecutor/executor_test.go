@@ -291,6 +291,7 @@ func TestCLIEnvironmentResolverInjectsOneRunFeishuCredentials(t *testing.T) {
 
 type stubCLICredentialRepository struct {
 	credentials           cliconnector.EncryptedExecutionCredentials
+	managedMaterial       domain.ConnectorAuthorizationMaterial
 	ownerID, definitionID string
 	identity              cliconnector.Identity
 	scopes                []string
@@ -298,6 +299,26 @@ type stubCLICredentialRepository struct {
 	bundleVerified        bool
 	bundleSHA256          string
 	runtimeDigest         string
+}
+
+func (repository *stubCLICredentialRepository) ValidateConnectorPackageCLIInvocation(context.Context, string, string, string, string) error {
+	return nil
+}
+
+func (repository *stubCLICredentialRepository) ResolveConnectorPackageAuthorization(context.Context, string, string, string, string, string) (domain.ConnectorAuthorizationMaterial, error) {
+	return repository.managedMaterial, nil
+}
+
+func TestManagedCLIConnectorRejectsMissingTaskScope(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &Executor{box: box, cliCredentials: &stubCLICredentialRepository{managedMaterial: domain.ConnectorAuthorizationMaterial{Scopes: []string{"im:message"}}}}
+	_, err = executor.cliEnvironmentResolver("owner")(context.Background(), cliconnector.Definition{ID: "installation", RevisionID: "revision", ManagedInstallation: true, AuthenticationDriver: "feishu"}, cliconnector.Capability{ID: "task_create", Scopes: []string{"task:task:write"}}, cliconnector.IdentityUser)
+	if err == nil || !strings.Contains(err.Error(), "lacks required capability scopes") {
+		t.Fatalf("missing task scope was accepted: %v", err)
+	}
 }
 
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
@@ -528,9 +549,28 @@ func TestSelectedFeishuConnectorProvidesSkillBeforeCLIUse(t *testing.T) {
 	if !strings.Contains(skill, "im +chat-search --query") || !strings.Contains(skill, "im +messages-send --chat-id") {
 		t.Fatalf("Feishu Skill omits the group message flow: %q", skill)
 	}
+	if len(files["connector-skills/feishu-1/references/lark-task/SKILL.md"]) == 0 || len(files["connector-skills/feishu-1/references/lark-mail/SKILL.md"]) == 0 {
+		t.Fatal("pinned Feishu domain references were not mounted")
+	}
 	instruction := buildInstruction(job, nil)
 	if !strings.Contains(instruction, "im +messages-send --chat-id") || strings.Index(instruction, "Feishu CLI Skill") > strings.Index(instruction, "Available isolated CLI Connectors") {
 		t.Fatalf("Feishu Skill was not loaded before CLI forms: %q", instruction)
+	}
+}
+
+func TestManagedFeishuLargeCatalogUsesCompactSkillInstruction(t *testing.T) {
+	capabilities := make([]cliconnector.Capability, 41)
+	for i := range capabilities {
+		capabilities[i] = cliconnector.Capability{ID: fmt.Sprintf("command_%d", i), ArgvPrefix: []string{"docs", "+create"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}
+	}
+	encoded, err := json.Marshal(capabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "feishu-1", Name: "Feishu", AuthenticationDriver: "feishu", PackageObjectKey: "connectors/feishu/package.zip", Capabilities: encoded}}}}
+	instruction := buildInstruction(job, nil)
+	if !strings.Contains(instruction, "capabilities.json") || !strings.Contains(instruction, "SKILL.md") || strings.Contains(instruction, "command_40") {
+		t.Fatalf("managed Feishu instruction is not compact: %q", instruction)
 	}
 }
 
@@ -676,7 +716,7 @@ func TestExecuteExpertTeamRunsInOrderAndCommitsOnlyTheFinalResult(t *testing.T) 
 
 func TestExecuteExpertTeamUsesEachStagesRuntimeAndModel(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
-	executor.config.Worker.Runtimes["claude"] = platformconfig.RuntimeEngineConfig{Available: true, ImageDigest: "registry.example/claude@sha256:" + strings.Repeat("1", 64), CLIVersion: "test"}
+	executor.config.Worker.Runtimes["claude"] = executor.config.Worker.Runtimes["codex"]
 	claudeSecret, err := executor.box.Encrypt([]byte("claude-key"), "model-provider:owner-1")
 	if err != nil {
 		t.Fatal(err)
@@ -718,7 +758,7 @@ func TestExecuteExpertTeamUsesEachStagesRuntimeAndModel(t *testing.T) {
 	if !reflect.DeepEqual(engines, []domain.RuntimeEngine{domain.RuntimeClaude, domain.RuntimeCodex}) || !reflect.DeepEqual(models, []string{"claude-model", "codex-model"}) {
 		t.Fatalf("stage runtime/model calls = %#v / %#v", engines, models)
 	}
-	if len(containerConfigs) != 2 || containerConfigs[0].RuntimeCommand != "claude" || containerConfigs[1].RuntimeCommand != "codex" || containerConfigs[0].Image == containerConfigs[1].Image {
+	if len(containerConfigs) != 2 || containerConfigs[0].RuntimeCommand != "claude" || containerConfigs[1].RuntimeCommand != "codex" || containerConfigs[0].Image != containerConfigs[1].Image {
 		t.Fatalf("stage container configs = %#v", containerConfigs)
 	}
 	if !reflect.DeepEqual(credentialKeys, []string{"claude-key", "codex-key"}) {

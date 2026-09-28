@@ -12,7 +12,7 @@ Status: implemented with local validation. Production and exact-image conformanc
 - One Expert, one Expert Team, or no specialist may be selected. The User may switch during a conversation; the selection applies to the next sent message and remains selected for subsequent messages.
 - Explicitly selected Skills apply to the message being sent and clear for the next message. Selected Connectors remain selected until changed. Skills and Connectors may be used without an Expert.
 - A composer Connector switch controls selection for the current conversation. Account-level Connector Enablement and Authorization remain separate management actions.
-- Each sent message preserves its actual specialist and resource configuration. Later selection changes do not change historical execution or its retry configuration. Personal Settings execution configuration remains frozen for the Session or Run Conversation.
+- Each sent message preserves its actual specialist, resource, and execution configuration. Later selection or Personal Settings changes affect new turns without changing historical execution or its retry configuration.
 - File suggestions include the current conversation's uploaded attachments and available generated Artifacts. Workflow follow-ups additionally expose files from that Workflow's Workspace in a clearly labeled group. Unavailable files show a reason. A selected reference must make the actual file available to that execution, rather than merely inserting its name.
 
 ## Resource Selection
