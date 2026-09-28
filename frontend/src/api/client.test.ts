@@ -4,6 +4,18 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("loads the metadata-only Home overview and normalizes omitted collections", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ recent_tasks: [{ kind: "session", id: "session-1", title: "Report", state: "completed", updated_at: "2026-09-28T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const item = await createPlatformApi(() => "token").getHomeOverview();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/home-overview");
+    expect(item.recent_tasks).toHaveLength(1);
+    expect(item.action_items).toEqual([]);
+    expect(item.common_workflows).toEqual([]);
+  });
+
   it("downloads the exact cited Knowledge revision", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("source", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

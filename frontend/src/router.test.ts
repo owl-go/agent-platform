@@ -7,6 +7,16 @@ describe("application routes", () => {
     document.body.innerHTML = "";
   });
 
+  it("uses Home as the authenticated entry route", async () => {
+    const router = createAppRouter(createMemoryHistory());
+
+    await router.push("/");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe("home");
+    expect(router.currentRoute.value.meta.surface).toBe("home");
+  });
+
   it("redirects the deployed legacy image route to Image Creation", async () => {
     const router = createAppRouter(createMemoryHistory());
 

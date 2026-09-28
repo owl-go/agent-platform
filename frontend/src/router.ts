@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
 
-export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
+export type Surface = "home" | "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -13,7 +13,8 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
   return createRouter({
     history,
     routes: [
-      { path: "/", redirect: "/sessions" },
+      { path: "/", redirect: "/home" },
+      { path: "/home", name: "home", component: () => import("./pages/HomePage.vue"), meta: { surface: "home" } },
       { path: "/sessions", name: "sessions", component: SessionsPage, meta: { surface: "sessions" } },
       { path: "/workflows", name: "workflows", component: () => import("./pages/WorkflowsPage.vue"), meta: { surface: "workflows" } },
       { path: "/workflows/:workflowId", name: "workflow-detail", component: () => import("./pages/WorkflowDetailPage.vue"), meta: { surface: "workflows" } },
@@ -44,7 +45,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
-      { path: "/:pathMatch(.*)*", redirect: "/sessions" },
+      { path: "/:pathMatch(.*)*", redirect: "/home" },
     ],
   });
 }

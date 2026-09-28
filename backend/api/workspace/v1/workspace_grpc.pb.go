@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AgentWorkspaceService_GetHomeOverview_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetHomeOverview"
 	AgentWorkspaceService_GetConversationSelection_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
 	AgentWorkspaceService_ResolveConversationSelection_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
 	AgentWorkspaceService_ListConversationFiles_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
@@ -177,6 +178,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentWorkspaceServiceClient interface {
+	GetHomeOverview(ctx context.Context, in *GetHomeOverviewRequest, opts ...grpc.CallOption) (*HomeOverview, error)
 	GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
 	ResolveConversationSelection(ctx context.Context, in *ResolveConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
 	ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...grpc.CallOption) (*ListConversationFilesResponse, error)
@@ -337,6 +339,16 @@ type agentWorkspaceServiceClient struct {
 
 func NewAgentWorkspaceServiceClient(cc grpc.ClientConnInterface) AgentWorkspaceServiceClient {
 	return &agentWorkspaceServiceClient{cc}
+}
+
+func (c *agentWorkspaceServiceClient) GetHomeOverview(ctx context.Context, in *GetHomeOverviewRequest, opts ...grpc.CallOption) (*HomeOverview, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HomeOverview)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetHomeOverview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentWorkspaceServiceClient) GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error) {
@@ -1863,6 +1875,7 @@ func (c *agentWorkspaceServiceClient) DisconnectCLIConnectorAuthorization(ctx co
 // All implementations must embed UnimplementedAgentWorkspaceServiceServer
 // for forward compatibility.
 type AgentWorkspaceServiceServer interface {
+	GetHomeOverview(context.Context, *GetHomeOverviewRequest) (*HomeOverview, error)
 	GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error)
 	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
 	ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error)
@@ -2025,6 +2038,9 @@ type AgentWorkspaceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAgentWorkspaceServiceServer struct{}
 
+func (UnimplementedAgentWorkspaceServiceServer) GetHomeOverview(context.Context, *GetHomeOverviewRequest) (*HomeOverview, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetHomeOverview not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConversationSelection not implemented")
 }
@@ -2500,6 +2516,24 @@ func RegisterAgentWorkspaceServiceServer(s grpc.ServiceRegistrar, srv AgentWorks
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AgentWorkspaceService_ServiceDesc, srv)
+}
+
+func _AgentWorkspaceService_GetHomeOverview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHomeOverviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetHomeOverview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetHomeOverview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetHomeOverview(ctx, req.(*GetHomeOverviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AgentWorkspaceService_GetConversationSelection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -5245,6 +5279,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "workspace.v1.AgentWorkspaceService",
 	HandlerType: (*AgentWorkspaceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetHomeOverview",
+			Handler:    _AgentWorkspaceService_GetHomeOverview_Handler,
+		},
 		{
 			MethodName: "GetConversationSelection",
 			Handler:    _AgentWorkspaceService_GetConversationSelection_Handler,

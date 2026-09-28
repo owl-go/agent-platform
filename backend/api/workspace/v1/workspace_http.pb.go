@@ -78,6 +78,7 @@ const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorks
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
+const OperationAgentWorkspaceServiceGetHomeOverview = "/workspace.v1.AgentWorkspaceService/GetHomeOverview"
 const OperationAgentWorkspaceServiceGetImageGeneration = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
 const OperationAgentWorkspaceServiceGetKnowledgeBase = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
@@ -232,6 +233,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
+	GetHomeOverview(context.Context, *GetHomeOverviewRequest) (*HomeOverview, error)
 	GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error)
 	GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error)
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
@@ -327,6 +329,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 
 func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceServiceHTTPServer) {
 	r := s.Route("/")
+	r.Handle("GET", "/api/v1/home-overview", _AgentWorkspaceService_GetHomeOverview0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/conversation-selection", _AgentWorkspaceService_GetConversationSelection0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/conversation-selection", _AgentWorkspaceService_ResolveConversationSelection0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/conversation-files", _AgentWorkspaceService_ListConversationFiles0_HTTP_Handler(srv))
@@ -479,6 +482,25 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/connectors/cli/authorization-flows/{flow_id}/complete", _AgentWorkspaceService_CompleteCLIConnectorAuthorization0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations", _AgentWorkspaceService_ListCLIConnectorAuthorizations0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect", _AgentWorkspaceService_DisconnectCLIConnectorAuthorization0_HTTP_Handler(srv))
+}
+
+func _AgentWorkspaceService_GetHomeOverview0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetHomeOverviewRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetHomeOverview)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetHomeOverview(ctx, req.(*GetHomeOverviewRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*HomeOverview)
+		return ctx.Result(200, reply)
+	}
 }
 
 func _AgentWorkspaceService_GetConversationSelection0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
@@ -3722,6 +3744,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
+	GetHomeOverview(ctx context.Context, req *GetHomeOverviewRequest, opts ...http.CallOption) (rsp *HomeOverview, err error)
 	GetImageGeneration(ctx context.Context, req *GetImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	GetKnowledgeBase(ctx context.Context, req *GetKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
@@ -4834,6 +4857,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetExpertTeam(ctx context.Context,
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetExpertTeam),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetHomeOverview(ctx context.Context, in *GetHomeOverviewRequest, opts ...http.CallOption) (*HomeOverview, error) {
+	var out HomeOverview
+	pattern := "/api/v1/home-overview"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetHomeOverview),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)

@@ -1156,6 +1156,22 @@ export interface paths {
         patch: operations["AgentWorkspaceService_UpdateExpert"];
         trace?: never;
     };
+    "/api/v1/home-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetHomeOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge-bases": {
         parameters: {
             query?: never;
@@ -2808,6 +2824,39 @@ export interface components {
         };
         v1HealthResponse: {
             status?: string;
+        };
+        v1HomeAction: {
+            kind?: string;
+            id?: string;
+            execution_kind?: string;
+            execution_id?: string;
+            parent_id?: string;
+            title?: string;
+            state?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1HomeOverview: {
+            recent_tasks?: components["schemas"]["v1HomeTask"][];
+            common_workflows?: components["schemas"]["v1HomeWorkflow"][];
+            action_items?: components["schemas"]["v1HomeAction"][];
+        };
+        v1HomeTask: {
+            kind?: string;
+            id?: string;
+            parent_id?: string;
+            title?: string;
+            state?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        v1HomeWorkflow: {
+            id?: string;
+            name?: string;
+            /** Format: int64 */
+            run_count?: number;
+            /** Format: date-time */
+            updated_at?: string;
         };
         v1ImageCreditRate: {
             size?: string;
@@ -6572,6 +6621,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Expert"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetHomeOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1HomeOverview"];
                 };
             };
             /** @description An unexpected error response. */

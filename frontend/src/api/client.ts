@@ -71,6 +71,10 @@ export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Exper
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
 export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
 export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; updated_by_user_id: string; version: number; updated_at: string }
+export interface HomeOverview { recent_tasks: HomeTask[]; common_workflows: HomeWorkflow[]; action_items: HomeAction[] }
+export interface HomeTask { kind: "session" | "run"; id: string; parent_id: string; title: string; state: string; updated_at: string }
+export interface HomeWorkflow { id: string; name: string; run_count: number; updated_at: string }
+export interface HomeAction { kind: "approval" | "plan" | "failed"; id: string; execution_kind: "session" | "run"; execution_id: string; parent_id: string; title: string; state: string; created_at: string }
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
 export type CompatibilityStatus = "verified" | "unverified" | "incompatible";
 export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; status: CompatibilityStatus; reason?: string }
@@ -129,6 +133,7 @@ export class ApiError extends Error {
 }
 
 export interface PlatformApi {
+  getHomeOverview(signal?: AbortSignal): Promise<HomeOverview>;
   getConversationSelection(scope: ConversationScope, signal?: AbortSignal): Promise<ConversationSelection>;
   resolveConversationSelection(scope: ConversationScope, input: SelectionInput, signal?: AbortSignal): Promise<ConversationSelection>;
   listConversationFiles(scope: ConversationScope, workspacePath?: string, signal?: AbortSignal): Promise<ConversationFile[]>;
@@ -359,6 +364,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
   };
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
+    async getHomeOverview(signal) { const item = await call<HomeOverview>("/api/v1/home-overview", { signal }); return { recent_tasks: item.recent_tasks ?? [], common_workflows: item.common_workflows ?? [], action_items: item.action_items ?? [] }; },
     async getConversationSelection(scope, signal) { return normalizeSelection(await call(`/api/v1/conversation-selection?${scopeQuery(scope)}`, { signal })); },
     async resolveConversationSelection(scope, input, signal) { return normalizeSelection(await call("/api/v1/conversation-selection", json("POST", { ...scope, ...input }, signal))); },
     async listConversationFiles(scope, workspacePath = "", signal) { const result = await call<{ items?: ConversationFile[] }>(`/api/v1/conversation-files?${scopeQuery(scope)}&workspace_path=${encodeURIComponent(workspacePath)}`, { signal }); return (result.items ?? []).map((item) => ({ ...item, size: Number(item.size), id: item.id ?? "", path: item.path ?? "" })); },

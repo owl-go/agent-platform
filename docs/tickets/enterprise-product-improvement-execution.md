@@ -25,7 +25,7 @@
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 已完成代码、本地门禁与临时 PostgreSQL Integration；真实部署闭环待验证 |
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 已完成代码与本地门禁 |
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 已完成代码、本地门禁与 PostgreSQL Integration；生产 Provider 证据待验证 |
-| EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办完成后返回原任务；不读取用户内容 | 待 EP-06/08 |
+| EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办定位回原任务；不读取用户内容 | 已完成代码、本地门禁与 PostgreSQL owner-scope Integration；真实部署待验证 |
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 待 EP-00 |
 | EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 待核心闭环 |
 | EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 待设计伙伴验证 |
@@ -164,6 +164,13 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - Personal Settings 默认继承企业组合。更新企业默认时原子同步所有仍在继承的账号，新账号通过数据库触发器继承；用户保存个性、语言和时区不会隐式退出继承，也可显式切换为个人执行设置。
 - 未配置企业默认或组合不可用时沿用现有 setup blocking，绝不从目录中静默挑选另一个 Runtime 或模型。管理员界面允许用成功 Run 验证 unverified 组合，但不展示 incompatible 组合。
 - `make test`、`make build`、前端目标测试、typecheck、build 和临时 PostgreSQL 17 的完整 migration/integration 是本地证据。它们不等于真实 Provider 或生产镜像执行证据；生产设默认前仍必须先获得真实成功 Run。
+
+### EP-09 首页与统一待办
+
+- 登录和未知路径进入 Home。Home 只聚合 owner-scoped 的 Session 标题、Workflow 名称、执行状态、时间和 Run 次数，不查询消息正文、生成结果、Runtime 错误、执行参数、文件名或外部账号。
+- 待办按命令审批、计划确认、失败恢复排序；同一执行同时有 Plan 和命令审批时只保留审批。过期审批、归档或 external Session、已删除 Workflow 和其他账号的数据不出现。
+- 待办不复制决策逻辑。点击后打开所属 Session 或精确 Workflow Run，由已有 Plan、命令审批和恢复控件处理；最近任务和常用 Workflow 也只提供原对象入口。
+- 前端覆盖聚合区、空状态、原 Run 定位和 API repeated-field 兼容；PostgreSQL Integration 运行完整 migration chain，验证 owner 隔离、待办去重与内容/错误不进入返回 contract。真实 OIDC、生产数据分布和部署浏览器闭环仍待验证。
 
 ## 8. 发布与回滚
 

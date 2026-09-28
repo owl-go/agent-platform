@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 option go_package = "agent-platform/backend/api/workspace/v1;workspacev1";
 
 service AgentWorkspaceService {
+  rpc GetHomeOverview(GetHomeOverviewRequest) returns (HomeOverview) { option (google.api.http) = {get: "/api/v1/home-overview"}; }
   rpc GetConversationSelection(GetConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {get: "/api/v1/conversation-selection"}; }
   rpc ResolveConversationSelection(ResolveConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {post: "/api/v1/conversation-selection" body: "*"}; }
   rpc ListConversationFiles(ListConversationFilesRequest) returns (ListConversationFilesResponse) { option (google.api.http) = {get: "/api/v1/conversation-files"}; }
@@ -170,6 +171,12 @@ service AgentWorkspaceService {
   rpc ListCLIConnectorAuthorizations(ListCLIConnectorAuthorizationsRequest) returns (ListCLIConnectorAuthorizationsResponse) { option (google.api.http) = {get: "/api/v1/connectors/cli/enablements/{enablement_id}/authorizations"}; }
   rpc DisconnectCLIConnectorAuthorization(DisconnectCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect" body: "*"}; }
 }
+
+message GetHomeOverviewRequest {}
+message HomeOverview { repeated HomeTask recent_tasks = 1; repeated HomeWorkflow common_workflows = 2; repeated HomeAction action_items = 3; }
+message HomeTask { string kind = 1; string id = 2; string parent_id = 3; string title = 4; string state = 5; google.protobuf.Timestamp updated_at = 6; }
+message HomeWorkflow { string id = 1; string name = 2; int64 run_count = 3; google.protobuf.Timestamp updated_at = 4; }
+message HomeAction { string kind = 1; string id = 2; string execution_kind = 3; string execution_id = 4; string parent_id = 5; string title = 6; string state = 7; google.protobuf.Timestamp created_at = 8; }
 
 message GetCurrentUserRequest {}
 message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; }

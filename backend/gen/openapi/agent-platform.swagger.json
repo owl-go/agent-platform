@@ -2989,6 +2989,28 @@
         ]
       }
     },
+    "/api/v1/home-overview": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetHomeOverview",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HomeOverview"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/knowledge-bases": {
       "get": {
         "operationId": "AgentWorkspaceService_ListKnowledgeBases",
@@ -7791,6 +7813,105 @@
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "v1HomeAction": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "execution_kind": {
+          "type": "string"
+        },
+        "execution_id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1HomeOverview": {
+      "type": "object",
+      "properties": {
+        "recent_tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeTask"
+          }
+        },
+        "common_workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeWorkflow"
+          }
+        },
+        "action_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeAction"
+          }
+        }
+      }
+    },
+    "v1HomeTask": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1HomeWorkflow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "run_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

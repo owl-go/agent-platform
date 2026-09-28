@@ -65,16 +65,19 @@ Transient operation success and failure feedback uses one standardized Toast pat
 
 ## 3. Navigation And First Use
 
-The main navigation contains exactly:
+The main navigation contains:
 
-1. Sessions
-2. Workflows
-3. AI Applications
-4. Experts
-5. Skills & Connectors
-6. Settings
+1. Home
+2. Sessions
+3. Workflows
+4. AI Applications
+5. Knowledge Bases
+6. Resource Center for Experts, Skills, and Connectors
+7. Settings
 
-The AI Applications entry (Chinese: `AI 应用`) contains `Smart Assistants` (`智能助手`), `Digital Humans` (`数字人`), and `Image Creation` (`图片创作`). Smart Assistants and Digital Humans are independently created User-owned objects; Image Creation is a task-oriented workbench. Smart Assistants may define ordered FAQs, an Answer Safety Policy, Knowledge Base retrieval, and an optional public iframe Share Configuration; external conversations remain isolated from the owner's private Session list. Image Creation uses a dedicated workbench rather than a Session or Workflow: its left side contains request settings and its right side displays generated results. An Administrator can manage the available image models from Image Creation settings, while every User may select one of those configured models for a request. The AI Applications entry remains visible when no verified Image Model exists: ordinary Users see setup guidance for Image Creation, while the Administrator receives an action that opens Image Creation settings. The Experts entry (Chinese: `专家`) contains `Experts` and `Expert Teams` tabs. The Skills & Connectors entry (Chinese: `技能·连接器`, not Capability) contains `Skills` and `Connectors` tabs. Login opens Sessions. A User inherits the verified Platform Execution Default and can start without understanding Runtime or Provider settings. Until an Administrator establishes that default, or when the inherited configuration is unavailable, starting a Session, Workflow, or Smart Assistant conversation is explicitly blocked with setup guidance; the platform never silently substitutes another Runtime or model. Expert, Skill, Connector, Smart Assistant, and Digital Human setup is optional and never blocks first use. Detailed AI Applications requirements are recorded in `docs/product/ai-applications-requirements.md`.
+The AI Applications entry (Chinese: `AI 应用`) contains `Smart Assistants` (`智能助手`), `Digital Humans` (`数字人`), and `Image Creation` (`图片创作`). Smart Assistants and Digital Humans are independently created User-owned objects; Image Creation is a task-oriented workbench. Smart Assistants may define ordered FAQs, an Answer Safety Policy, Knowledge Base retrieval, and an optional public iframe Share Configuration; external conversations remain isolated from the owner's private Session list. Image Creation uses a dedicated workbench rather than a Session or Workflow: its left side contains request settings and its right side displays generated results. An Administrator can manage the available image models from Image Creation settings, while every User may select one of those configured models for a request. The AI Applications entry remains visible when no verified Image Model exists: ordinary Users see setup guidance for Image Creation, while the Administrator receives an action that opens Image Creation settings. The Resource Center contains Experts, Expert Teams, Skills, and Connectors. Login opens Home. A User inherits the verified Platform Execution Default and can start without understanding Runtime or Provider settings. Until an Administrator establishes that default, or when the inherited configuration is unavailable, starting a Session, Workflow, or Smart Assistant conversation is explicitly blocked with setup guidance; the platform never silently substitutes another Runtime or model. Expert, Skill, Connector, Smart Assistant, and Digital Human setup is optional and never blocks first use. Detailed AI Applications requirements are recorded in `docs/product/ai-applications-requirements.md`.
+
+Home is an owner-scoped task index, not a second conversation store. It shows pending command approvals, pending Execution Plans, failed executions that can be recovered, recently updated Sessions and Workflow Runs, and frequently run Workflows. Home may read only task identity, title or Workflow name, state, timestamps, and aggregate Run counts; it must not read or return message content, generated results, Runtime errors, execution arguments, filenames, or external account identities. An action opens the owning Session or exact Workflow Run so the existing in-place Plan, approval, and recovery controls remain authoritative. Archived Sessions, external Smart Assistant conversations, deleted Workflows, expired approvals, and another User's resources do not appear.
 
 ## 4. Sessions
 

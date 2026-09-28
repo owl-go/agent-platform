@@ -118,6 +118,10 @@ type PlatformExecutionDefaultRepository interface {
 	SetPlatformExecutionDefault(context.Context, string, domain.RuntimeEngine, string, string, int64) (domain.PlatformExecutionDefault, error)
 }
 
+type HomeOverviewRepository interface {
+	GetHomeOverview(context.Context, string) (domain.HomeOverview, error)
+}
+
 type ModelCatalog interface {
 	Discover(context.Context, domain.ModelProviderConnection, string) (ModelCatalogResult, error)
 }
