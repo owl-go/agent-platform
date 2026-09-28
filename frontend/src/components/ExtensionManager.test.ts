@@ -53,7 +53,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
     await vi.advanceTimersByTimeAsync(12000);
     await flushPromises();
-    expect(completeConnectorAuthorizationFlow.mock.calls.length).toBeGreaterThan(1);
+    expect(completeConnectorAuthorizationFlow).toHaveBeenCalledTimes(1);
     expect(document.body.querySelector(".app-toast")?.textContent).toContain("企业或账号尚未获得 CLI 使用权限");
     expect(wrapper.emitted("error")).toHaveLength(1);
     wrapper.unmount();

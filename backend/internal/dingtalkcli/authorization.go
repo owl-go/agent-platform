@@ -19,7 +19,51 @@ var (
 	ErrExpired          = errors.New("DingTalk authorization expired")
 	ErrIdentityMismatch = errors.New("DingTalk contact identity belongs to another organization")
 	ErrCLIAuthDisabled  = errors.New("DingTalk organization has not enabled CLI access")
+	ErrApprovalConsumed = errors.New("DingTalk device approval was already exchanged")
 )
+
+// CLIRestrictionError preserves the provider's non-secret denial category.
+// The device authorization code has already been exchanged when this is returned.
+type CLIRestrictionError struct{ Reason string }
+
+func (err *CLIRestrictionError) Error() string { return "DingTalk CLI access denied: " + err.Reason }
+func (err *CLIRestrictionError) Unwrap() error { return ErrCLIAuthDisabled }
+
+type cliAuthStatus struct {
+	Success   bool   `json:"success"`
+	ErrorCode string `json:"errorCode"`
+	Result    *struct {
+		CLIAuthEnabled bool   `json:"cliAuthEnabled"`
+		UserScope      string `json:"userScope"`
+		ChannelScope   string `json:"channelScope"`
+	} `json:"result"`
+}
+
+func cliRestrictionReason(status cliAuthStatus) string {
+	switch status.ErrorCode {
+	case "CHANNEL_REQUIRED":
+		return "channel_required"
+	case "ENTERPRISE_NOT_AUTHORIZED":
+		return "enterprise_not_authorized"
+	case "NO_AUTH":
+		return "no_auth"
+	}
+	if !status.Success || status.Result == nil || status.Result.CLIAuthEnabled {
+		return ""
+	}
+	if status.Result.UserScope == "forbidden" {
+		return "user_forbidden"
+	}
+	// This platform does not provide a DWS_CHANNEL. A restricted channel cannot
+	// be selected by repeating the same device authorization.
+	if status.Result.ChannelScope == "specified" {
+		return "channel_required"
+	}
+	if status.Result.UserScope == "specified" {
+		return "user_not_allowed"
+	}
+	return "cli_not_enabled"
+}
 
 // Client implements the OAuth device protocol used by pinned DWS v1.0.62.
 // It never accepts provider endpoints from a package or an API request.
@@ -157,7 +201,11 @@ func (client *Client) Poll(ctx context.Context, encodedState string) (Grant, err
 	if code == "" {
 		return Grant{}, errors.New("DingTalk authorization returned no code")
 	}
-	return client.exchange(ctx, state.ClientID, code)
+	grant, err := client.exchange(ctx, state.ClientID, code)
+	if err != nil {
+		return Grant{}, errors.Join(ErrApprovalConsumed, err)
+	}
+	return grant, nil
 }
 
 func (client *Client) exchange(ctx context.Context, clientID, code string) (Grant, error) {
@@ -184,16 +232,12 @@ func (client *Client) exchange(ctx context.Context, clientID, code string) (Gran
 			grant.ExternalID, grant.DisplayName = "corp:"+result.CorpID, result.CorpID
 		}
 	}
-	var permission struct {
-		Success   bool   `json:"success"`
-		ErrorCode string `json:"errorCode"`
-		Result    *struct {
-			CLIAuthEnabled bool `json:"cliAuthEnabled"`
-		} `json:"result"`
-	}
+	var permission cliAuthStatus
 	if err := client.call(ctx, http.MethodGet, client.mcpBase+"/cli/cliAuthEnabled", nil, map[string]string{"x-user-access-token": grant.AccessToken}, &permission); err != nil || !permission.Success || permission.Result == nil || !permission.Result.CLIAuthEnabled {
-		if err == nil && (permission.Success && permission.Result != nil && !permission.Result.CLIAuthEnabled || permission.ErrorCode == "ENTERPRISE_NOT_AUTHORIZED" || permission.ErrorCode == "NO_AUTH" || permission.ErrorCode == "CHANNEL_REQUIRED") {
-			return Grant{}, ErrCLIAuthDisabled
+		if err == nil {
+			if reason := cliRestrictionReason(permission); reason != "" {
+				return Grant{}, &CLIRestrictionError{Reason: reason}
+			}
 		}
 		return Grant{}, errors.New("DingTalk CLI access check is unavailable")
 	}

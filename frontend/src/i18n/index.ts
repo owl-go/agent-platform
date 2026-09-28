@@ -184,12 +184,20 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
   connectorAuthorizeNow: "打开授权页面", connectorAuthorizationPending: "等待在对应应用中完成授权", connectorAuthorizationInvalidInput: "无法发起账号授权，请刷新页面后重试。",
   dingtalkCLIAccessDisabled: "钉钉账号已确认授权，但当前企业或账号尚未获得 CLI 使用权限。请联系钉钉企业管理员检查开放范围，处理后再点击“继续完成授权”。",
+  dingtalkCLIEnterpriseDenied: "钉钉账号已确认授权，但未通过企业的 CLI 安全认证。请联系钉钉企业管理员开放 CLI 使用权限；处理后重新授权。",
+  dingtalkCLIUserDenied: "钉钉账号已确认授权，但当前账号不在企业允许使用 CLI 的人员范围内。请联系钉钉企业管理员调整开放范围；处理后重新授权。",
+  dingtalkCLIChannelRequired: "钉钉账号已确认授权，但企业启用了 CLI 渠道管控，当前连接器没有可用的授权渠道。请联系平台管理员核对渠道配置和企业开放范围；处理后重新授权。",
+  dingtalkCLIAuthExpired: "钉钉账号已确认授权，但钉钉未接受本次 CLI 权限凭证。请重新授权；若仍失败，请联系钉钉企业管理员检查账号权限。",
   dingtalkIdentityMismatch: "钉钉返回的账号与本次授权企业不一致。请确认当前登录的企业账号，然后重新授权。",
   dingtalkAuthorizationFailed: "钉钉已确认授权，但连接器未能完成账号连接。请点击“继续完成授权”重新授权；若仍失败，请联系管理员检查服务日志。"
 });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
   connectorAuthorizeNow: "Open authorization page", connectorAuthorizationPending: "Waiting for authorization in the connected app", connectorAuthorizationInvalidInput: "Could not start account authorization. Refresh and retry.",
   dingtalkCLIAccessDisabled: "DingTalk authorization was approved, but this organization or account does not have CLI access. Ask your DingTalk administrator to check access, then continue authorization.",
+  dingtalkCLIEnterpriseDenied: "DingTalk approved the account sign-in but denied enterprise CLI security access. Ask your DingTalk administrator to enable CLI access, then authorize again.",
+  dingtalkCLIUserDenied: "DingTalk approved the account sign-in, but this account is outside the enterprise CLI access scope. Ask your DingTalk administrator to include it, then authorize again.",
+  dingtalkCLIChannelRequired: "DingTalk approved the account sign-in, but this enterprise restricts CLI channels and this Connector has no approved channel. Ask your platform administrator to check channel configuration and enterprise access, then authorize again.",
+  dingtalkCLIAuthExpired: "DingTalk approved the account sign-in but rejected the CLI credential. Authorize again; if this continues, ask your DingTalk administrator to check account access.",
   dingtalkIdentityMismatch: "DingTalk returned an account from a different organization. Confirm the signed-in organization and authorize again.",
   dingtalkAuthorizationFailed: "DingTalk authorization was approved, but the account could not be connected. Continue authorization to retry; if it still fails, ask an administrator to check the service logs."
 });
