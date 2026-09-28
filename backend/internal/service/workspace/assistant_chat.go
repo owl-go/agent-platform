@@ -149,7 +149,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	classification := strings.TrimSpace(classified.Text)
 	classification = strings.TrimPrefix(strings.TrimSuffix(strings.TrimPrefix(classification, "```json"), "```"), "```")
 	if err := json.Unmarshal([]byte(strings.TrimSpace(classification)), &decision); err != nil {
-		return result, fmt.Errorf("Assistant preprocessing returned invalid classification: %w", err)
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned invalid classification", Cause: err}
 	}
 	switch decision.Decision {
 	case "faq":
@@ -159,13 +159,13 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 				return result, nil
 			}
 		}
-		return result, fmt.Errorf("Assistant preprocessing returned an unknown FAQ")
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown FAQ"}
 	case "out_of_scope":
 		result.text, result.source = assistantScopeRefusal, "scope"
 		return result, nil
 	case "continue":
 	default:
-		return result, fmt.Errorf("Assistant preprocessing returned an unknown decision")
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown decision"}
 	}
 	question := strings.TrimSpace(decision.Question)
 	if question == "" || len([]rune(question)) > 4000 {
@@ -312,4 +312,14 @@ func assistantTurnState(err error) string {
 		return "cancelled"
 	}
 	return "failed"
+}
+
+func assistantTurnFailureCode(err error) string {
+	if err == nil || errors.Is(err, context.Canceled) {
+		return ""
+	}
+	if code := aiapp.ChatFailureCode(err); code != "" {
+		return code
+	}
+	return "assistant_failed"
 }

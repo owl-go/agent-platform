@@ -73,7 +73,7 @@ func TestAssistantConversationAuditAndSingleActiveTurn(t *testing.T) {
 	if _, err := repository.BeginAssistantTurn(ctx, owner, conversation.ID, "第二问"); err != nil {
 		t.Fatal(err)
 	}
-	completed, err := repository.FinishAssistantTurn(ctx, owner, conversation.ID, turn.ID, "completed", "model", "", "partial", 3, 4)
+	completed, err := repository.FinishAssistantTurn(ctx, owner, conversation.ID, turn.ID, "completed", "model", "", "partial", "", 3, 4)
 	if err != nil || completed.State != "cancelled" {
 		t.Fatalf("cancelled finish: %+v, %v", completed, err)
 	}
@@ -100,6 +100,14 @@ func TestAssistantConversationAuditAndSingleActiveTurn(t *testing.T) {
 	history, err = repository.ListAssistantTurns(ctx, owner, conversation.ID)
 	if err != nil || history[1].Error != "credits_released" {
 		t.Fatalf("released credit marker: %+v, %v", history, err)
+	}
+	failed, err := repository.FinishAssistantTurn(ctx, owner, conversation.ID, history[2].ID, "failed", "", "", "", "model_authentication", 0, 0)
+	if err != nil || failed.Error != "model_authentication" {
+		t.Fatalf("safe failure code was not persisted: %+v, %v", failed, err)
+	}
+	history, err = repository.ListAssistantTurns(ctx, owner, conversation.ID)
+	if err != nil || history[2].Error != "model_authentication" {
+		t.Fatalf("safe failure code was not restored: %+v, %v", history, err)
 	}
 }
 
@@ -161,7 +169,7 @@ func TestPublicAssistantConversationIsVisitorScopedAndHiddenFromPrivateHistory(t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repository.FinishAssistantTurn(ctx, owner, created.ID, turn.ID, "completed", "model", "", "答案", 2, 3); err != nil {
+	if _, err := repository.FinishAssistantTurn(ctx, owner, created.ID, turn.ID, "completed", "model", "", "答案", "", 2, 3); err != nil {
 		t.Fatal(err)
 	}
 	turns, err := repository.ListAssistantTurns(ctx, owner, created.ID)

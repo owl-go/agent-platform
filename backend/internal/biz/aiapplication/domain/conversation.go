@@ -41,7 +41,7 @@ type AssistantTurn struct {
 	Source         string     `json:"source"`
 	FAQID          string     `json:"faq_id,omitempty"`
 	State          string     `json:"state"`
-	Error          string     `json:"-"`
+	Error          string     `json:"failure_code,omitempty"`
 	InputTokens    int64      `json:"input_tokens"`
 	OutputTokens   int64      `json:"output_tokens"`
 	CreatedAt      time.Time  `json:"created_at"`

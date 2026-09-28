@@ -7,10 +7,21 @@ import (
 	"strings"
 	"testing"
 
+	aiapp "agent-platform/backend/internal/biz/aiapplication/application"
 	aiappdomain "agent-platform/backend/internal/biz/aiapplication/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/knowledgebase/retrieval"
 )
+
+func TestAssistantTurnFailureCodeKeepsOnlySafeModelCategory(t *testing.T) {
+	providerFailure := &aiapp.ChatError{Code: aiapp.ChatFailureAuthentication, Message: "upstream rejected credential"}
+	if code := assistantTurnFailureCode(providerFailure); code != aiapp.ChatFailureAuthentication {
+		t.Fatalf("provider failure code = %q", code)
+	}
+	if code := assistantTurnFailureCode(errors.New("private internal detail")); code != "assistant_failed" {
+		t.Fatalf("internal failure code = %q", code)
+	}
+}
 
 type assistantKnowledgeSearcher struct {
 	hits  []retrieval.Hit
