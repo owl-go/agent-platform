@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
 
-export type Surface = "home" | "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
+export type Surface = "home" | "sessions" | "workflows" | "experts" | "resources" | "ai-creation" | "ai-applications" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -25,7 +25,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "resources" } },
       { path: "/resources", name: "resources", component: () => import("./pages/ResourceCenterPage.vue"), meta: { surface: "resources" } },
       { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
-      { path: "/knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "knowledge-bases" } },
+      { path: "/knowledge-bases", redirect: (to) => ({ path: "/resources", query: { ...to.query, tab: "knowledge" } }) },
       { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
       {
         path: "/ai-apps",
@@ -37,7 +37,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
           { path: "assistants", name: "smart-assistants", component: () => import("./pages/SmartAssistantsPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId", name: "smart-assistant-detail", component: () => import("./pages/SmartAssistantDetailPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId/conversations/:conversationId", name: "smart-assistant-conversation", component: () => import("./pages/SmartAssistantConversationPage.vue"), meta: { surface: "ai-applications" } },
-          { path: "knowledge-bases", name: "ai-application-knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "knowledge-bases", redirect: () => ({ path: "/resources", query: { tab: "knowledge" } }) },
           { path: "digital-humans", name: "digital-humans", component: () => import("./pages/DigitalHumansPage.vue"), meta: { surface: "ai-applications" } },
           { path: "digital-humans/:digitalHumanId", name: "digital-human-detail", component: () => import("./pages/DigitalHumanDetailPage.vue"), meta: { surface: "ai-applications" } },
         ],

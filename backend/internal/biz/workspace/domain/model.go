@@ -170,16 +170,19 @@ func (input KnowledgeBaseInput) Validate(administrator bool) error {
 }
 
 type KnowledgeBase struct {
-	ID          string
-	OwnerID     string
-	Platform    bool
-	Name        string
-	Description string
-	Visibility  KnowledgeVisibility
-	DeletedAt   *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Version     int64
+	ID                 string
+	OwnerID            string
+	Platform           bool
+	Name               string
+	Description        string
+	Visibility         KnowledgeVisibility
+	DeletedAt          *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Version            int64
+	DocumentCount      int64
+	ReadyDocumentCount int64
+	LastReadyAt        *time.Time
 }
 
 type KnowledgeCategory struct {

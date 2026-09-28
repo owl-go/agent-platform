@@ -7,6 +7,9 @@ import { authContextKey } from "../auth/session";
 import { useI18n } from "vue-i18n";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import ResourceTrustMeta from "../components/ResourceTrustMeta.vue";
+
+const props = withDefaults(defineProps<{ embedded?: boolean; catalogQuery?: string; availableOnly?: boolean }>(), { embedded: false, catalogQuery: "", availableOnly: false });
 
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey)!;
@@ -56,6 +59,17 @@ const visibleDocuments = computed(() => {
 const categoryCounts = computed(() => new Map(categories.value.map((category) => [category.id, documents.value.filter((document) => document.category_id === category.id).length])));
 const unclassifiedCount = computed(() => documents.value.filter((document) => !document.category_id).length);
 const previewOpen = computed({ get: () => Boolean(preview.value), set: (open: boolean) => { if (!open) closePreview(); } });
+const visibleBases = computed(() => {
+  const needle = props.catalogQuery.trim().toLocaleLowerCase();
+  return bases.value.filter((item) => {
+    if (props.availableOnly && readyDocumentCount(item) === 0) return false;
+    return !needle || `${item.name} ${item.description}`.toLocaleLowerCase().includes(needle);
+  });
+});
+const baseSections = computed(() => [
+  { key: "platform", title: t("resources.platformKnowledge"), items: visibleBases.value.filter((item) => item.platform) },
+  { key: "mine", title: t("resources.myKnowledge"), items: visibleBases.value.filter((item) => !item.platform) },
+].filter((section) => section.items.length));
 
 async function refresh() {
   loading.value = true;
@@ -164,6 +178,7 @@ async function saveBase() {
     } else {
       const created = await api.createKnowledgeBase(input);
       bases.value = [created, ...bases.value];
+      await openBase(created);
     }
     showBaseDialog.value = false;
   } catch {
@@ -302,6 +317,17 @@ async function deleteDocument(document: KnowledgeDocument) {
 }
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString(); }
+function readyDocumentCount(item: KnowledgeBase) { return Number(item.ready_document_count || 0); }
+function documentCount(item: KnowledgeBase) { return Number(item.document_count || 0); }
+function knowledgeStatus(item: KnowledgeBase) {
+  if (readyDocumentCount(item) > 0) return { label: t("resources.retrievalReady"), tone: "success" as const };
+  if (documentCount(item) > 0) return { label: t("resources.indexNotReady"), tone: "warning" as const };
+  return { label: t("resources.emptyKnowledge"), tone: "info" as const };
+}
+function knowledgeEvidence(item: KnowledgeBase) {
+  const counts = t("resources.knowledgeDocumentEvidence", { ready: readyDocumentCount(item), total: documentCount(item) });
+  return item.last_ready_at ? `${counts} · ${t("resources.lastIndexed", { date: formatDate(item.last_ready_at) })}` : counts;
+}
 function formatSize(size?: number) { if (!size) return "—"; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; }
 function documentState(document: KnowledgeDocument) { return document.latest_revision?.state || document.state; }
 function documentStatusType(document: KnowledgeDocument): "success" | "danger" | "warning" | "info" {
@@ -338,24 +364,26 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
 
 <template>
   <section class="page-surface knowledge-page">
-    <header class="page-header">
+    <header v-if="!props.embedded" class="page-header">
       <div><p class="eyebrow">{{ t("knowledgeBases.eyebrow") }}</p><h1>{{ t("knowledgeBases.title") }}</h1><p>{{ t("knowledgeBases.subtitle") }}</p></div>
       <div v-if="!selected" class="knowledge-header-actions"><div class="view-toggle" role="group" :aria-label="t('knowledgeBases.displayMode')"><button :class="{ active: displayMode === 'card' }" :aria-label="t('knowledgeBases.cardView')" :title="t('knowledgeBases.cardView')" @click="setDisplayMode('card')"><LayoutGrid :size="16" /></button><button :class="{ active: displayMode === 'list' }" :aria-label="t('knowledgeBases.listView')" :title="t('knowledgeBases.listView')" @click="setDisplayMode('list')"><ListIcon :size="16" /></button></div><el-button type="primary" @click="openCreate"><Plus :size="16" />{{ t("knowledgeBases.new") }}</el-button></div>
     </header>
+    <div v-else-if="!selected" class="resource-toolbar knowledge-embedded-toolbar"><div class="view-toggle" role="group" :aria-label="t('knowledgeBases.displayMode')"><button :class="{ active: displayMode === 'card' }" :aria-label="t('knowledgeBases.cardView')" :title="t('knowledgeBases.cardView')" @click="setDisplayMode('card')"><LayoutGrid :size="16" /></button><button :class="{ active: displayMode === 'list' }" :aria-label="t('knowledgeBases.listView')" :title="t('knowledgeBases.listView')" @click="setDisplayMode('list')"><ListIcon :size="16" /></button></div><el-button type="primary" @click="openCreate"><Plus :size="16" />{{ t("knowledgeBases.new") }}</el-button></div>
 
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <el-skeleton v-if="loading" :rows="8" animated class="page-loading" />
 
     <template v-else-if="!selected">
-      <div class="catalog-heading"><div><strong>{{ t("knowledgeBases.catalog") }}</strong><span>{{ bases.length }}</span></div><small>{{ t("knowledgeBases.catalogHint") }}</small></div>
-      <el-empty v-if="!bases.length" :description="t('knowledgeBases.empty')"><el-button type="primary" @click="openCreate">{{ t("knowledgeBases.new") }}</el-button></el-empty>
-      <div v-else class="knowledge-grid" :class="`is-${displayMode}`">
-        <el-card v-for="item in bases" :key="item.id" class="knowledge-card" shadow="never" role="button" tabindex="0" @click="openBase(item)" @keydown.enter="openBase(item)" @keydown.space.prevent="openBase(item)">
+      <div class="catalog-heading"><div><strong>{{ t("knowledgeBases.catalog") }}</strong><span>{{ visibleBases.length }}</span></div><small>{{ t("knowledgeBases.catalogHint") }}</small></div>
+      <el-empty v-if="!visibleBases.length" :description="props.catalogQuery ? t('resources.noMatchingResources') : t('knowledgeBases.empty')"><el-button v-if="!props.catalogQuery" type="primary" @click="openCreate">{{ t("knowledgeBases.new") }}</el-button></el-empty>
+      <div v-else class="catalog-groups knowledge-catalog-groups">
+      <section v-for="section in baseSections" :key="section.key" class="catalog-group"><h2 class="catalog-group-title">{{ section.title }}</h2><div class="knowledge-grid" :class="`is-${displayMode}`">
+        <el-card v-for="item in section.items" :key="item.id" class="knowledge-card" shadow="never" role="button" tabindex="0" @click="openBase(item)" @keydown.enter="openBase(item)" @keydown.space.prevent="openBase(item)">
           <div class="knowledge-card-head"><div class="knowledge-icon"><FolderOpen :size="20" /></div><div class="knowledge-card-top-actions"><el-tag size="small" effect="plain"><Globe2 v-if="item.visibility === 'public'" :size="12" /><LockKeyhole v-else :size="12" />{{ item.visibility === "public" ? t("knowledgeBases.public") : t("knowledgeBases.private") }}</el-tag><el-dropdown v-if="canManageBase(item)" trigger="click" @command="handleBaseAction($event, item)"><el-button class="card-more" text circle :aria-label="t('common.more')" :title="t('common.more')" @click.stop><MoreHorizontal :size="18" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="edit"><Pencil :size="14" />{{ t("common.edit") }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t("common.delete") }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div></div>
-          <div class="knowledge-card-copy"><div class="knowledge-card-title"><h2>{{ item.name }}</h2></div><p>{{ item.description || t("knowledgeBases.noDescription") }}</p></div>
+          <div class="knowledge-card-copy"><div class="knowledge-card-title"><h2>{{ item.name }}</h2></div><p>{{ item.description || t("knowledgeBases.noDescription") }}</p><ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.visibility === 'public' ? canManageBase(item) ? t('resources.allReadOwnerEdit') : t('resources.allReadOnly') : t('resources.ownerOnly')" :status="knowledgeStatus(item).label" :status-tone="knowledgeStatus(item).tone" :detail="knowledgeEvidence(item)" /></div>
           <footer><span>{{ formatDate(item.updated_at) }}</span></footer>
         </el-card>
-      </div>
+      </div></section></div>
     </template>
 
     <template v-else>
@@ -394,6 +422,8 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
 
 <style scoped>
 .knowledge-page { max-width: 1480px; }
+.knowledge-embedded-toolbar { justify-content: flex-end; margin-bottom: 18px; }
+.knowledge-catalog-groups { gap: 24px; }
 .knowledge-header-actions, .detail-actions, .view-toggle, .document-actions, .category-create { display: flex; align-items: center; gap: 8px; }
 .view-toggle { padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--aw-n0) 72%, transparent); }
 .view-toggle button { width: 32px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 7px; color: var(--muted); background: transparent; }

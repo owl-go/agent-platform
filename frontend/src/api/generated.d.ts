@@ -2968,6 +2968,12 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            /** Format: int64 */
+            document_count?: number;
+            /** Format: int64 */
+            ready_document_count?: number;
+            /** Format: date-time */
+            last_ready_at?: string;
         };
         v1KnowledgeBaseInput: {
             name?: string;

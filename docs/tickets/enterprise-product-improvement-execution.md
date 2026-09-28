@@ -27,7 +27,7 @@
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 已完成代码、本地门禁与 PostgreSQL Integration；生产 Provider 证据待验证 |
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办定位回原任务；不读取用户内容 | 已完成代码、本地门禁与 PostgreSQL owner-scope Integration；真实部署待验证 |
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 已完成代码、本地门禁与 PostgreSQL Integration；生产用量分布与部署浏览器闭环待验证 |
-| EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 待核心闭环 |
+| EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 已完成代码、本地门禁与 PostgreSQL Integration；真实部署发现效率待验证 |
 | EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 待设计伙伴验证 |
 | EP-13 | Smart Assistant 受控发布 | 将已验证问答发布给内部或受控访客 | EP-03/08/10/12 | FAQ/Knowledge 来源、安全、额度和 iframe 审计闭环 | 待核心指标连续四周达标 |
 
@@ -180,7 +180,15 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 文本 Admission 和图片 Reservation 改为使用跨 daily/persistent bucket 的净 Available Credit。一个正余额 bucket 不能再掩盖另一个 bucket 的债务；真实 PostgreSQL 回归覆盖过量结算形成负余额、后续拒绝、新账号继承策略、策略 CAS 和兑换渠道开关。
 - 本地门禁不等于生产用量分布或部署浏览器闭环证据；本批仅提供产品内阈值提示，不提供站外通知。部门预算和跨用户组策略依赖 EP-12 的组织授权模型，不在本批次伪造。
 
-## 8. 发布与回滚
+## 8. EP-11 资源库收敛
+
+- 原 Expert、Skill、Connector 入口收敛为一个资源库，并增加 Knowledge Base Tab；旧知识库 URL 保持兼容重定向。全局搜索只作用于当前资源类型，目录继续按 Platform 与个人资源分组。
+- 默认“可直接使用”筛选排除不完整 Expert、无效 Team、未测试 MCP、不可用 CLI、无 Conformance 的发布 Connector，以及没有 Ready 文档的 Knowledge Base；“全部状态”用于管理这些资源，不把安装、可访问或测试中状态写成已验证。
+- 所有目录卡统一显示来源、当前权限、可用性和具体证据。Skill 只声明包校验，MCP 只声明连接测试，CLI Publication 只声明精确 Runtime Digest Conformance；Knowledge Base 使用服务端计算的总文档数、Ready 文档数和最近就绪时间。
+- Knowledge Base 的摘要由当前未删除 Document 和 Ready Revision 计算，不新增可漂移的状态列。工作流选择器禁用未就绪资源，Repository 事务再次校验访问范围和至少一个 Ready Document，避免客户端绕过。
+- 目标前后端测试、类型检查、生成协议、完整门禁和临时 PostgreSQL 17 的完整迁移链均为本地证据。该结果不等于生产目录搜索成功率、真实资源可用率或用户发现效率；这些指标仍待部署后采集。
+
+## 9. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

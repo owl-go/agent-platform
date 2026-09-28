@@ -36,15 +36,16 @@ describe("application routes", () => {
     expect(router.currentRoute.value.name).toBe("digital-human-detail");
   });
 
-  it("keeps the top-level Knowledge Bases route distinct from the AI Applications route", async () => {
+  it("converges legacy Knowledge Base routes into the Resource Library", async () => {
     const router = createAppRouter(createMemoryHistory());
 
     await router.push("/knowledge-bases");
-    expect(router.currentRoute.value.name).toBe("knowledge-bases");
-    expect(router.currentRoute.value.meta.surface).toBe("knowledge-bases");
+    expect(router.currentRoute.value.name).toBe("resources");
+    expect(router.currentRoute.value.fullPath).toBe("/resources?tab=knowledge");
+    expect(router.currentRoute.value.meta.surface).toBe("resources");
 
     await router.push("/ai-apps/knowledge-bases");
-    expect(router.currentRoute.value.name).toBe("ai-application-knowledge-bases");
-    expect(router.currentRoute.value.meta.surface).toBe("ai-applications");
+    expect(router.currentRoute.value.name).toBe("resources");
+    expect(router.currentRoute.value.fullPath).toBe("/resources?tab=knowledge");
   });
 });

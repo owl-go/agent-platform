@@ -27,17 +27,22 @@ describe("ExpertsPage", () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts");
     const platformExpert = { ...expert, id: "platform-expert", name: "平台研究专家", platform: true };
+    const unverifiedExpert = { ...expert, id: "unverified-expert", name: "待验证专家", compatibility: "unverified" as const };
     const testApi = api();
-    testApi.listExperts = vi.fn(async () => [platformExpert, expert]);
+    testApi.listExperts = vi.fn(async () => [platformExpert, expert, unverifiedExpert]);
     const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: testApi } } });
     await flushPromises();
 
     const groups = wrapper.findAll(".catalog-group");
-    expect(groups).toHaveLength(1);
+    expect(groups).toHaveLength(2);
     expect(groups[0]!.text()).toContain("平台专家");
     expect(groups[0]!.text()).toContain("平台研究专家");
-    expect(groups[0]!.text()).not.toContain("架构专家");
-    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的专家");
+    expect(groups[0]!.text()).toContain("平台发布");
+    expect(groups[0]!.text()).toContain("已验证可用");
+    expect(groups[1]!.text()).toContain("我的专家");
+    expect(groups[1]!.text()).toContain("架构专家");
+    expect(groups[1]!.text()).toContain("仅我可见");
+    expect(wrapper.text()).not.toContain("待验证专家");
   });
 
   it("shows searchable Expert cards with capability and expertise tags", async () => {

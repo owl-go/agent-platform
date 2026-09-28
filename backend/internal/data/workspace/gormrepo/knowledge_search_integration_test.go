@@ -37,6 +37,25 @@ func TestKnowledgeSearchUsesAuthorizedCurrentSources(t *testing.T) {
 		}
 		exec("INSERT INTO knowledge_document_revisions(id,document_id,revision,object_key,sha256,size_bytes,content_type,state) VALUES(?,?,?,?,?,12,'text/plain',?)", revisionID, document, number+1, "knowledge/"+revisionID, strings.Repeat("a", 64), state)
 	}
+	bases, err := repository.ListKnowledgeBases(ctx, owner, false, false)
+	if err != nil || len(bases) != 2 || (bases[0].ID != publicBase && bases[1].ID != publicBase) {
+		t.Fatalf("Knowledge Base summaries = %#v, %v", bases, err)
+	}
+	var privateSummary domain.KnowledgeBase
+	for _, item := range bases {
+		if item.ID == base {
+			privateSummary = item
+		}
+	}
+	if privateSummary.DocumentCount != 1 || privateSummary.ReadyDocumentCount != 1 {
+		t.Fatalf("private Knowledge Base summary = %#v", privateSummary)
+	}
+	if _, err := repository.CreateWorkflow(ctx, owner, domain.WorkflowInput{Name: "Grounded", Goal: "Use ready knowledge", KnowledgeBaseIDs: []string{base}}, nil); err != nil {
+		t.Fatalf("create Workflow with retrieval-ready Knowledge Base: %v", err)
+	}
+	if _, err := repository.CreateWorkflow(ctx, owner, domain.WorkflowInput{Name: "Unready", Goal: "Reject empty knowledge", KnowledgeBaseIDs: []string{publicBase}}, nil); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("create Workflow with empty Knowledge Base = %v", err)
+	}
 	if _, err := repository.ReadyKnowledgeSearchGeneration(ctx, owner, base, false); err != nil {
 		t.Fatal(err)
 	}

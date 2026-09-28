@@ -424,8 +424,8 @@ describe("WorkflowDetailPage", () => {
 
   it("lets a Workflow explicitly choose zero or more Knowledge Bases without a default", async () => {
     const knowledgeBases: KnowledgeBase[] = [
-      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
-      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1, document_count: 2, ready_document_count: 2 },
+      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1, document_count: 1, ready_document_count: 0 },
     ];
     const updateWorkflow = vi.fn(async (_id: string, input: Parameters<PlatformApi["updateWorkflow"]>[1], _version: number) => ({ ...workflow, ...input }));
     const api = apiStub({ listKnowledgeBases: vi.fn(async () => knowledgeBases), updateWorkflow });
@@ -437,6 +437,10 @@ describe("WorkflowDetailPage", () => {
     const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
     expect(choices).toHaveLength(2);
     expect(choices.every((choice) => !choice.element.checked)).toBe(true);
+    expect(choices[0]!.element.disabled).toBe(false);
+    expect(choices[1]!.element.disabled).toBe(true);
+    expect(wrapper.get(".knowledge-base-options").text()).toContain("2 份文档可检索");
+    expect(wrapper.get(".knowledge-base-options").text()).toContain("暂无可检索文档");
 
     await choices[0]!.setValue(true);
     expect(choices[0]!.element.checked).toBe(true);

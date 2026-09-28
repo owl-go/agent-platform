@@ -27,6 +27,11 @@ func knowledgeBaseAccess(query *gorm.DB, ownerID string, includeDeleted bool) *g
 
 var _ workspaceapplication.KnowledgeIngestionRepository = (*Repository)(nil)
 
+const knowledgeBaseSummarySelect = `knowledge_bases.*,
+	(SELECT COUNT(*) FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL) AS document_count,
+	(SELECT COUNT(*) FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready') AS ready_document_count,
+	(SELECT MAX(revision.ready_at) FROM knowledge_document_revisions revision JOIN knowledge_documents document ON document.id = revision.document_id WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND revision.state = 'ready') AS last_ready_at`
+
 func (repository *Repository) SupersededKnowledgeRevisions(ctx context.Context, documentID, currentRevisionID string) ([]string, error) {
 	var ids []string
 	err := repository.db.WithContext(ctx).Table("knowledge_document_revisions").Where("document_id = ? AND revision < (SELECT revision FROM knowledge_document_revisions WHERE id = ?)", documentID, currentRevisionID).Pluck("id", &ids).Error
@@ -136,7 +141,7 @@ func knowledgeMutationAccess(query *gorm.DB, ownerID string, administrator bool)
 }
 
 func (repository *Repository) ListKnowledgeBases(ctx context.Context, ownerID string, administrator, includeDeleted bool) ([]domain.KnowledgeBase, error) {
-	query := knowledgeBaseAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, includeDeleted)
+	query := knowledgeBaseAccess(repository.db.WithContext(ctx).Table("knowledge_bases").Select(knowledgeBaseSummarySelect), ownerID, includeDeleted)
 	if !administrator {
 		query = query.Where("knowledge_bases.platform = false OR knowledge_bases.visibility = 'public'")
 	}
@@ -156,7 +161,7 @@ func (repository *Repository) ListKnowledgeBases(ctx context.Context, ownerID st
 }
 
 func (repository *Repository) GetKnowledgeBase(ctx context.Context, ownerID, knowledgeBaseID string, administrator, includeDeleted bool) (domain.KnowledgeBase, error) {
-	query := knowledgeBaseAccess(repository.db.WithContext(ctx).Table("knowledge_bases"), ownerID, includeDeleted).Where("knowledge_bases.id = ?", knowledgeBaseID)
+	query := knowledgeBaseAccess(repository.db.WithContext(ctx).Table("knowledge_bases").Select(knowledgeBaseSummarySelect), ownerID, includeDeleted).Where("knowledge_bases.id = ?", knowledgeBaseID)
 	if !administrator {
 		query = query.Where("knowledge_bases.platform = false OR knowledge_bases.visibility = 'public'")
 	}
@@ -559,7 +564,7 @@ func knowledgeBaseDomain(row knowledgeBaseRecord) (domain.KnowledgeBase, error) 
 	if visibility != domain.KnowledgePrivate && visibility != domain.KnowledgePublic {
 		return domain.KnowledgeBase{}, fmt.Errorf("%w: invalid Knowledge Base visibility", domain.ErrInvalid)
 	}
-	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Description: row.Description, Visibility: visibility, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}, nil
+	return domain.KnowledgeBase{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, Name: row.Name, Description: row.Description, Visibility: visibility, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, DocumentCount: row.DocumentCount, ReadyDocumentCount: row.ReadyDocumentCount, LastReadyAt: row.LastReadyAt}, nil
 }
 
 func knowledgeCategoryDomain(row knowledgeCategoryRecord) domain.KnowledgeCategory {

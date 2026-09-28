@@ -234,16 +234,19 @@ type workflowSessionOriginRecord struct {
 func (workflowSessionOriginRecord) TableName() string { return "workflow_session_origins" }
 
 type knowledgeBaseRecord struct {
-	ID          string     `gorm:"column:id"`
-	OwnerID     string     `gorm:"column:owner_user_id"`
-	Platform    bool       `gorm:"column:platform"`
-	Name        string     `gorm:"column:name"`
-	Description string     `gorm:"column:description"`
-	Visibility  string     `gorm:"column:visibility"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at"`
-	CreatedAt   time.Time  `gorm:"column:created_at"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at"`
-	Version     int64      `gorm:"column:version"`
+	ID                 string     `gorm:"column:id"`
+	OwnerID            string     `gorm:"column:owner_user_id"`
+	Platform           bool       `gorm:"column:platform"`
+	Name               string     `gorm:"column:name"`
+	Description        string     `gorm:"column:description"`
+	Visibility         string     `gorm:"column:visibility"`
+	DeletedAt          *time.Time `gorm:"column:deleted_at"`
+	CreatedAt          time.Time  `gorm:"column:created_at"`
+	UpdatedAt          time.Time  `gorm:"column:updated_at"`
+	Version            int64      `gorm:"column:version"`
+	DocumentCount      int64      `gorm:"column:document_count;->"`
+	ReadyDocumentCount int64      `gorm:"column:ready_document_count;->"`
+	LastReadyAt        *time.Time `gorm:"column:last_ready_at;->"`
 }
 
 func (knowledgeBaseRecord) TableName() string { return "knowledge_bases" }

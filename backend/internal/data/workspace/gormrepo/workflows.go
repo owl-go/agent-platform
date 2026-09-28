@@ -196,11 +196,11 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 	}
 	if len(input.KnowledgeBaseIDs) > 0 {
 		var available int64
-		if err := tx.Table("knowledge_bases").Where("id IN ? AND deleted_at IS NULL AND (owner_user_id = ? OR (platform = true AND visibility = 'public'))", input.KnowledgeBaseIDs, ownerID).Count(&available).Error; err != nil {
+		if err := tx.Table("knowledge_bases").Where("id IN ? AND deleted_at IS NULL AND (owner_user_id = ? OR (platform = true AND visibility = 'public')) AND EXISTS (SELECT 1 FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready')", input.KnowledgeBaseIDs, ownerID).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(input.KnowledgeBaseIDs)) {
-			return fmt.Errorf("%w: selected Knowledge Base does not belong to the User", domain.ErrInvalid)
+			return fmt.Errorf("%w: selected Knowledge Base is inaccessible or has no retrieval-ready Document", domain.ErrInvalid)
 		}
 	}
 	return nil
