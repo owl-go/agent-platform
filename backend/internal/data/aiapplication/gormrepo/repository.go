@@ -41,7 +41,6 @@ type assistantRecord struct {
 	KnowledgeBaseIDs   []byte    `gorm:"column:knowledge_base_ids;type:jsonb"`
 	ExpertID           *string   `gorm:"column:expert_id"`
 	ExpertTeamID       *string   `gorm:"column:expert_team_id"`
-	DigitalHumanID     *string   `gorm:"column:digital_human_id"`
 	Share              []byte    `gorm:"column:share;type:jsonb"`
 	ShareTokenHash     *string   `gorm:"column:share_token_hash"`
 	ShareTokenRevision int64     `gorm:"column:share_token_revision"`
@@ -52,23 +51,6 @@ type assistantRecord struct {
 }
 
 func (assistantRecord) TableName() string { return "smart_assistants" }
-
-type humanRecord struct {
-	ID               string    `gorm:"column:id"`
-	OwnerID          string    `gorm:"column:owner_user_id"`
-	Name             string    `gorm:"column:name"`
-	AvatarObjectKey  string    `gorm:"column:avatar_object_key"`
-	Voice            string    `gorm:"column:voice"`
-	Language         string    `gorm:"column:language"`
-	ExpressionStyle  string    `gorm:"column:expression_style"`
-	SceneDescription string    `gorm:"column:scene_description"`
-	State            string    `gorm:"column:state"`
-	CreatedAt        time.Time `gorm:"column:created_at"`
-	UpdatedAt        time.Time `gorm:"column:updated_at"`
-	Version          int64     `gorm:"column:version"`
-}
-
-func (humanRecord) TableName() string { return "digital_humans" }
 
 type faqRecord struct {
 	ID             string    `gorm:"column:id"`
@@ -172,7 +154,7 @@ func (r *Repository) CreateAssistant(ctx context.Context, owner string, assistan
 func (r *Repository) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
 	share := assistant.Share
 	share.Token = ""
-	updates := map[string]any{"name": assistant.Name, "icon": assistant.Icon, "description": assistant.Description, "introduction": assistant.Introduction, "scenario": assistant.Scenario, "prompt": assistant.Prompt, "preprocess_prompt": assistant.PreprocessPrompt, "provider_model_id": assistant.ProviderModelID, "service_goal": assistant.ServiceGoal, "answer_scope": assistant.AnswerScope, "operating_rules": assistant.OperatingRules, "response_style": assistant.ResponseStyle, "knowledge_base_ids": encode(assistant.KnowledgeBaseIDs), "expert_id": assistant.ExpertID, "expert_team_id": assistant.ExpertTeamID, "digital_human_id": assistant.DigitalHumanID, "share": encode(share), "share_token_hash": optionalString(assistant.Share.TokenHash), "share_token_revision": assistant.Share.TokenRevision, "state": assistant.State, "updated_at": time.Now().UTC(), "version": version + 1}
+	updates := map[string]any{"name": assistant.Name, "icon": assistant.Icon, "description": assistant.Description, "introduction": assistant.Introduction, "scenario": assistant.Scenario, "prompt": assistant.Prompt, "preprocess_prompt": assistant.PreprocessPrompt, "provider_model_id": assistant.ProviderModelID, "service_goal": assistant.ServiceGoal, "answer_scope": assistant.AnswerScope, "operating_rules": assistant.OperatingRules, "response_style": assistant.ResponseStyle, "knowledge_base_ids": encode(assistant.KnowledgeBaseIDs), "expert_id": assistant.ExpertID, "expert_team_id": assistant.ExpertTeamID, "share": encode(share), "share_token_hash": optionalString(assistant.Share.TokenHash), "share_token_revision": assistant.Share.TokenRevision, "state": assistant.State, "updated_at": time.Now().UTC(), "version": version + 1}
 	result := r.db.WithContext(ctx).Model(&assistantRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", owner, id, version).Updates(updates)
 	if result.Error != nil {
 		return domain.SmartAssistant{}, mapDBError(result.Error)
@@ -186,67 +168,6 @@ func (r *Repository) DeleteAssistant(ctx context.Context, owner, id string) erro
 	result := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", owner, id).Delete(&assistantRecord{})
 	if result.Error != nil {
 		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
-}
-
-func (r *Repository) ListDigitalHumans(ctx context.Context, owner string) ([]domain.DigitalHuman, error) {
-	var rows []humanRecord
-	if err := r.db.WithContext(ctx).Where("owner_user_id = ?", owner).Order("updated_at DESC").Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	result := make([]domain.DigitalHuman, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, humanFromRecord(row))
-	}
-	return result, nil
-}
-func (r *Repository) GetDigitalHuman(ctx context.Context, owner, id string) (domain.DigitalHuman, error) {
-	var row humanRecord
-	err := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", owner, id).Take(&row).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.DigitalHuman{}, domain.ErrNotFound
-	}
-	if err != nil {
-		return domain.DigitalHuman{}, err
-	}
-	return humanFromRecord(row), nil
-}
-func (r *Repository) CreateDigitalHuman(ctx context.Context, owner string, human domain.DigitalHuman) (domain.DigitalHuman, error) {
-	now := time.Now().UTC()
-	human.ID = uuid.NewString()
-	human.OwnerID = owner
-	human.CreatedAt = now
-	human.UpdatedAt = now
-	human.Version = 1
-	row := humanRecordFromDomain(human)
-	if err := r.db.WithContext(ctx).Create(&row).Error; err != nil {
-		return domain.DigitalHuman{}, mapDBError(err)
-	}
-	return human, nil
-}
-func (r *Repository) UpdateDigitalHuman(ctx context.Context, owner, id string, human domain.DigitalHuman, version int64) (domain.DigitalHuman, error) {
-	state := human.State
-	if state == "" {
-		state = domain.StateEnabled
-	}
-	updates := map[string]any{"name": human.Name, "avatar_object_key": human.AvatarObjectKey, "voice": human.Voice, "language": human.Language, "expression_style": human.ExpressionStyle, "scene_description": human.SceneDescription, "state": state, "updated_at": time.Now().UTC(), "version": version + 1}
-	result := r.db.WithContext(ctx).Model(&humanRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", owner, id, version).Updates(updates)
-	if result.Error != nil {
-		return domain.DigitalHuman{}, mapDBError(result.Error)
-	}
-	if result.RowsAffected != 1 {
-		return domain.DigitalHuman{}, domain.ErrVersionConflict
-	}
-	return r.GetDigitalHuman(ctx, owner, id)
-}
-func (r *Repository) DeleteDigitalHuman(ctx context.Context, owner, id string) error {
-	result := r.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", owner, id).Delete(&humanRecord{})
-	if result.Error != nil {
-		return mapDBError(result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return domain.ErrNotFound
@@ -335,7 +256,7 @@ func assistantFromRecord(row assistantRecord) domain.SmartAssistant {
 		share.TokenHash = *row.ShareTokenHash
 	}
 	share.TokenRevision = row.ShareTokenRevision
-	return domain.SmartAssistant{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Icon: row.Icon, Description: row.Description, Introduction: row.Introduction, Scenario: row.Scenario, Prompt: row.Prompt, PreprocessPrompt: row.PreprocessPrompt, ProviderModelID: row.ProviderModelID, ServiceGoal: row.ServiceGoal, AnswerScope: row.AnswerScope, OperatingRules: row.OperatingRules, ResponseStyle: row.ResponseStyle, KnowledgeBaseIDs: ids, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, DigitalHumanID: row.DigitalHumanID, Share: share, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	return domain.SmartAssistant{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Icon: row.Icon, Description: row.Description, Introduction: row.Introduction, Scenario: row.Scenario, Prompt: row.Prompt, PreprocessPrompt: row.PreprocessPrompt, ProviderModelID: row.ProviderModelID, ServiceGoal: row.ServiceGoal, AnswerScope: row.AnswerScope, OperatingRules: row.OperatingRules, ResponseStyle: row.ResponseStyle, KnowledgeBaseIDs: ids, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, Share: share, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 }
 func assistantRecordFromDomain(value domain.SmartAssistant) assistantRecord {
 	state := string(value.State)
@@ -344,7 +265,7 @@ func assistantRecordFromDomain(value domain.SmartAssistant) assistantRecord {
 	}
 	share := value.Share
 	share.Token = ""
-	return assistantRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: encode(value.KnowledgeBaseIDs), ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, Share: encode(share), ShareTokenHash: optionalString(value.Share.TokenHash), ShareTokenRevision: value.Share.TokenRevision, State: state, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
+	return assistantRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: encode(value.KnowledgeBaseIDs), ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, Share: encode(share), ShareTokenHash: optionalString(value.Share.TokenHash), ShareTokenRevision: value.Share.TokenRevision, State: state, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 
 func optionalString(value string) *string {
@@ -352,20 +273,6 @@ func optionalString(value string) *string {
 		return nil
 	}
 	return &value
-}
-func humanFromRecord(row humanRecord) domain.DigitalHuman {
-	state := domain.ApplicationState(row.State)
-	if state == "" {
-		state = domain.StateEnabled
-	}
-	return domain.DigitalHuman{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, AvatarObjectKey: row.AvatarObjectKey, Voice: row.Voice, Language: row.Language, ExpressionStyle: row.ExpressionStyle, SceneDescription: row.SceneDescription, State: state, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
-}
-func humanRecordFromDomain(value domain.DigitalHuman) humanRecord {
-	state := value.State
-	if state == "" {
-		state = domain.StateEnabled
-	}
-	return humanRecord{ID: value.ID, OwnerID: value.OwnerID, Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, State: string(state), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Version: value.Version}
 }
 func faqFromRecord(row faqRecord) domain.FAQ {
 	return domain.FAQ{ID: row.ID, AssistantID: row.AssistantID, Question: row.Question, AnswerMarkdown: row.AnswerMarkdown, DisplayOrder: row.DisplayOrder, Category: row.Category, Tag: row.Tag, Icon: row.Icon, Enabled: row.Enabled, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}

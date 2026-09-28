@@ -17,13 +17,18 @@ describe("application routes", () => {
     expect(router.currentRoute.value.fullPath).toBe("/ai-apps/image-creation");
   });
 
-  it("keeps canonical assistant and digital human detail routes under AI Applications", async () => {
+  it("keeps the canonical assistant detail route under AI Applications", async () => {
     const router = createAppRouter(createMemoryHistory());
 
     await router.push("/ai-apps/assistants/assistant-1");
     expect(router.currentRoute.value.name).toBe("smart-assistant-detail");
+  });
+
+  it("does not expose the removed Digital Human routes", async () => {
+    const router = createAppRouter(createMemoryHistory());
+
     await router.push("/ai-apps/digital-humans/human-1");
-    expect(router.currentRoute.value.name).toBe("digital-human-detail");
+    expect(router.currentRoute.value.fullPath).toBe("/sessions");
   });
 
   it("keeps the top-level Knowledge Bases route distinct from the AI Applications route", async () => {

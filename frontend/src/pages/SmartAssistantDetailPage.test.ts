@@ -19,8 +19,7 @@ function apiStub() {
     getSmartAssistant: vi.fn(async () => ({ ...assistant })),
     listAssistantFAQs: vi.fn(async () => [existingFAQ]),
     listApplicationKnowledgeBases: vi.fn(async () => []),
-    listDigitalHumans: vi.fn(async () => []),
-    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_chat"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
+    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_responses"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
     uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...assistant, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
     updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...assistant, ...input, version: version + 1 })),
     createAssistantFAQ: vi.fn(async (_id, input) => ({ ...existingFAQ, ...input, id: "faq-2", question: input.question, answer_markdown: input.answer_markdown, version: 1 })),
@@ -80,7 +79,7 @@ describe("SmartAssistantDetailPage", () => {
     await wrapper.get(".assistant-detail-footer .el-button--primary").trigger("click");
     await flushPromises();
 
-    expect(api.updateSmartAssistant).toHaveBeenLastCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", description: "尚未保存的简介", prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt, provider_model_id: "model-1", digital_human_id: undefined }), 3);
+    expect(api.updateSmartAssistant).toHaveBeenLastCalledWith("assistant-1", expect.objectContaining({ name: "更新后的助手", description: "尚未保存的简介", prompt: assistant.prompt, preprocess_prompt: assistant.preprocess_prompt, provider_model_id: "model-1" }), 3);
     wrapper.unmount();
   });
 

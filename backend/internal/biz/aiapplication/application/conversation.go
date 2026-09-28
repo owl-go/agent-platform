@@ -18,7 +18,7 @@ type AssistantConversationRepository interface {
 	ListAssistantTurns(context.Context, string, string) ([]domain.AssistantTurn, error)
 	BeginAssistantTurn(context.Context, string, string, string) (domain.AssistantTurn, error)
 	SaveAssistantTurnProgress(context.Context, string, string, string, string) error
-	FinishAssistantTurn(context.Context, string, string, string, string, string, string, string, int64, int64) (domain.AssistantTurn, error)
+	FinishAssistantTurn(context.Context, string, string, string, string, string, string, string, string, int64, int64) (domain.AssistantTurn, error)
 	CancelAssistantTurn(context.Context, string, string, string) error
 	SaveAssistantSummary(context.Context, string, string, int, string) error
 	MarkAssistantInterruptedCreditsReleased(context.Context, string, string, string) error
@@ -121,12 +121,12 @@ func (service *Service) BeginAssistantTurn(ctx context.Context, owner, conversat
 	return repository.BeginAssistantTurn(ctx, owner, conversationID, question)
 }
 
-func (service *Service) FinishAssistantTurn(ctx context.Context, owner, conversationID, turnID, state, source, faqID, answer string, inputTokens, outputTokens int64) (domain.AssistantTurn, error) {
+func (service *Service) FinishAssistantTurn(ctx context.Context, owner, conversationID, turnID, state, source, faqID, answer, failureCode string, inputTokens, outputTokens int64) (domain.AssistantTurn, error) {
 	repository, err := service.conversations()
 	if err != nil {
 		return domain.AssistantTurn{}, err
 	}
-	return repository.FinishAssistantTurn(ctx, owner, conversationID, turnID, state, source, faqID, answer, inputTokens, outputTokens)
+	return repository.FinishAssistantTurn(ctx, owner, conversationID, turnID, state, source, faqID, answer, failureCode, inputTokens, outputTokens)
 }
 
 func (service *Service) SaveAssistantTurnProgress(ctx context.Context, owner, conversationID, turnID, answer string) error {

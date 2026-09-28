@@ -16,7 +16,7 @@ import zipfile
 from pathlib import Path
 
 
-VERSION = "1.0.62"
+VERSION = "1.0.63"
 NPM_SHA512 = "j4B+Daqil+mvVSKHPeBdBeGxNPuSWoXjgT5fu/R3WQUeAQHw0cWmMuqtLNjjwgW7eZfT98JN2yJ+j3TF5cEsBg=="
 ASSET_SHA256 = {
     "dws-linux-amd64.tar.gz": "6198a86570ea52f24d88a58dfe65514540793c4dd64410cb133a8ff7b3b008a8",
@@ -39,7 +39,7 @@ SKILL = """---
 name: dingtalk
 display_name: 钉钉 CLI
 description: 使用已审核的 DingTalk Workspace CLI 命令操作钉钉业务资源。
-version: 1.0.62
+version: 1.0.63
 author: DingTalk-Real-AI / Agent Workspace
 ---
 
@@ -47,11 +47,11 @@ author: DingTalk-Real-AI / Agent Workspace
 
 本包固定 DingTalk Workspace CLI v1.0.62。先确认 Connector Installation 已启用、账号授权有效、当前 Runtime Digest 已通过该 bundle 的 Conformance。未满足任一条件时停止，不尝试在会话中重新安装 CLI 或绕过授权。
 
-按产品读取同包的[钉钉官方 MultiSkill 入口](reference/dingtalk-shared/SKILL.md)及对应产品 Skill。官方技能是使用说明；最终可调用命令以本修订 `cli.json` 的 capability 白名单为准。先查目标命令的精确 `dws <path> --help`；参数或风险不明确时查 `dws schema --cli-path "<path>" --compact --format json`。不要猜命令或参数，尤其不要沿用其他版本的指南。
+按产品读取同包的[钉钉官方 MultiSkill 入口](reference/dingtalk-shared/SKILL.md)及对应产品 Skill。官方技能是使用说明；最终可调用命令以本修订 [capabilities.json](capabilities.json) 的能力白名单为准。先查目标命令的精确 `dws <path> --help`；参数或风险不明确时查 `dws schema --cli-path "<path>" --compact --format json`。不要猜命令或参数，尤其不要沿用其他版本的指南。
 
 所有业务命令使用当前用户身份和 `--format json`。查找接收人、群、文档、待办等目标时先读取真实 ID；零命中或多候选时请用户消歧。写入前核对组织、账号、对象和内容，高风险命令遵守平台一次性批准；CLI 自身要求确认时再加 `--yes`。写后读取结果或对象验证，超时或结果不明时先对账，不盲目重发。
 
-遇到鉴权错误，检查当前 Installation 的授权状态；DWS 的本地 OAuth profile 不能由一般连接器凭证 JSON 自动恢复。当前平台未提供钉钉专用授权适配时，本包只是待接入的构建产物，不能宣称已可在会话中使用。
+平台会在每条业务命令执行前检查 Installation 授权，并在缺失或过期时由会话输入区提供钉钉授权入口。不要调用 `dws auth status` 或 `dws profile list` 判断平台授权：它们只检查 CLI 本地 Profile，会把平台注入的短期令牌误报为未登录。平台在单次隔离进程环境中提供短期 Access Token，Refresh Token 保留在平台加密存储中；不得把凭证写入命令参数、Skill 或工作区文件。
 
 官方资料：[DWS CLI](https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli)、[用户指南](https://open.dingtalk.com/document/development/dingtalk-cli-performing-tasks-within)、[应用管理指南](https://open.dingtalk.com/document/development/dev-cli-app-management-guide)。
 """
@@ -137,8 +137,6 @@ def reviewed_capabilities(schema, include_admin):
     capabilities.extend([
         {"id": "dws_version", "argv_prefix": ["version"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 30},
         {"id": "dws_schema", "argv_prefix": ["schema"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
-        {"id": "dws_profile_list", "argv_prefix": ["profile", "list"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
-        {"id": "dws_auth_status", "argv_prefix": ["auth", "status"], "risk": "low", "identities": ["user"], "scopes": [], "egress_hosts": EGRESS_HOSTS, "timeout_seconds": 60},
     ])
     return sorted(capabilities, key=lambda item: item["argv_prefix"])
 
@@ -160,11 +158,19 @@ def skills(assets):
     return result
 
 
-def bundle(assets):
+def verified_platform_binary(binary, machine):
+    if not binary.startswith(b"\x7fELF") or int.from_bytes(binary[18:20], "little") != machine:
+        raise ValueError("patched DingTalk executable has the wrong ELF architecture")
+    if b"AGENT_PLATFORM_DWS_ACCESS_TOKEN" not in binary:
+        raise ValueError("DingTalk executable lacks the reviewed environment token bridge")
+    return binary
+
+
+def bundle(amd64_binary, arm64_binary):
     files = {
         "node_modules/.bin/dws": LAUNCHER,
-        "node_modules/.bin/dws-linux-amd64": linux_binary(assets["dws-linux-amd64.tar.gz"]),
-        "node_modules/.bin/dws-linux-arm64": linux_binary(assets["dws-linux-arm64.tar.gz"]),
+        "node_modules/.bin/dws-linux-amd64": verified_platform_binary(amd64_binary, 62),
+        "node_modules/.bin/dws-linux-arm64": verified_platform_binary(arm64_binary, 183),
     }
     output = io.BytesIO()
     with gzip.GzipFile(fileobj=output, mode="wb", mtime=0) as compressed:
@@ -178,7 +184,7 @@ def bundle(assets):
     return output.getvalue()
 
 
-def build(package_bytes, schema, runtime_image, runtime_version, include_admin):
+def build(package_bytes, schema, runtime_image, runtime_version, include_admin, amd64_binary, arm64_binary):
     match = re.fullmatch(r"[^\s@]+(?:/[^\s@]+)*@sha256:([a-f0-9]{64})", runtime_image)
     if not match or not re.fullmatch(r"\d+\.\d+\.\d+", runtime_version):
         raise ValueError("require a digest-pinned Runtime image reference and exact Runtime version")
@@ -190,7 +196,7 @@ def build(package_bytes, schema, runtime_image, runtime_version, include_admin):
     icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><image width="128" height="128" href="data:image/png;base64,' + base64.b64encode(icon).decode() + '"/></svg>'
     meta = {
         "source": "dingtalk", "version": VERSION, "type": "cli", "name": "钉钉",
-        "description": "DingTalk Workspace CLI 业务操作；使用前须完成钉钉授权与指定 Runtime Conformance。",
+        "description": "DingTalk Workspace CLI 业务操作；安装后通过钉钉设备授权连接账号。",
         "examples_zh": ["查询钉钉待办", "搜索钉钉文档"],
         "examples_en": ["List DingTalk tasks", "Search DingTalk documents"],
         "minPlatformVersion": "1.0.0", "auth_mode": "cli",
@@ -198,7 +204,7 @@ def build(package_bytes, schema, runtime_image, runtime_version, include_admin):
     manifest = {
         "runtime": {"kind": "node", "version": runtime_version, "digest": "sha256:" + match.group(1)},
         "executable": "dws", "bundle_path": "node_modules/.bin/dws",
-        "authentication_driver": "connector_package",
+        "authentication_driver": "dingtalk",
         "commands": {
             "init": {"argv": ["version"]},
             "auth": {"argv": ["auth", "login", "--device", "--format", "json"]},
@@ -212,11 +218,12 @@ def build(package_bytes, schema, runtime_image, runtime_version, include_admin):
         "resource_limits": {"cpu_millis": 1000, "memory_mib": 1024, "timeout_seconds": 900, "concurrency": 1, "child_processes": 64},
     }
     files = skills(assets)
+    files["skills/dingtalk/capabilities.json"] = json.dumps(reviewed, ensure_ascii=False, sort_keys=True).encode()
     files.update({
         "connector-meta.json": json.dumps(meta, ensure_ascii=False, sort_keys=True).encode(),
         "icon.svg": icon_svg.encode(),
         "cli.json": json.dumps(manifest, ensure_ascii=False, sort_keys=True).encode(),
-        "cli-bundle.tgz": bundle(assets),
+        "cli-bundle.tgz": bundle(amd64_binary, arm64_binary),
     })
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
@@ -235,12 +242,14 @@ def main():
     parser.add_argument("--runtime-image", required=True, help="Runtime repository@sha256:<64 lowercase hex>; publication requires a Registry RepoDigest")
     parser.add_argument("--runtime-version", required=True)
     parser.add_argument("--include-admin", action="store_true", help="also allow development, PAT, audit and event commands")
+    parser.add_argument("--amd64-binary", type=Path, required=True, help="pinned-source DWS binary with the reviewed environment token bridge")
+    parser.add_argument("--arm64-binary", type=Path, required=True, help="pinned-source DWS binary with the reviewed environment token bridge")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    archive, count, bundle_sha = build(args.npm_tgz.read_bytes(), json.loads(args.schema.read_text()), args.runtime_image, args.runtime_version, args.include_admin)
+    archive, count, bundle_sha = build(args.npm_tgz.read_bytes(), json.loads(args.schema.read_text()), args.runtime_image, args.runtime_version, args.include_admin, args.amd64_binary.read_bytes(), args.arm64_binary.read_bytes())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(archive)
-    print(json.dumps({"output": str(args.output), "bytes": len(archive), "sha256": sha256(archive), "bundle_sha256": bundle_sha, "capabilities": count, "conformance": "not_run", "authorization": "not_integrated"}, ensure_ascii=False))
+    print(json.dumps({"output": str(args.output), "bytes": len(archive), "sha256": sha256(archive), "bundle_sha256": bundle_sha, "capabilities": count, "conformance": "not_run", "authorization": "dingtalk_device_flow"}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

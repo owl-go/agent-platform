@@ -32,7 +32,7 @@ func (service *Service) enqueueDirectPublicAnswer(ctx context.Context, assistant
 		return conversation, turn, err
 	}
 	if err := service.releaseInterruptedAssistantCredits(ctx, assistant.OwnerID, conversation.ID); err != nil {
-		_, _ = service.aiapplications.FinishAssistantTurn(context.WithoutCancel(ctx), assistant.OwnerID, conversation.ID, turn.ID, "failed", "", "", "", 0, 0)
+		_, _ = service.aiapplications.FinishAssistantTurn(context.WithoutCancel(ctx), assistant.OwnerID, conversation.ID, turn.ID, "failed", "", "", "", "assistant_failed", 0, 0)
 		return conversation, turn, err
 	}
 	go service.finishDirectPublicAnswer(context.WithoutCancel(ctx), conversation, turn)
@@ -46,7 +46,7 @@ func (service *Service) finishDirectPublicAnswer(parent context.Context, convers
 	state := assistantTurnState(answerErr)
 	finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer finishCancel()
-	_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, conversation.OwnerID, conversation.ID, turn.ID, state, answer.source, answer.faqID, answer.text, answer.inputTokens, answer.outputTokens)
+	_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, conversation.OwnerID, conversation.ID, turn.ID, state, answer.source, answer.faqID, answer.text, assistantTurnFailureCode(answerErr), answer.inputTokens, answer.outputTokens)
 }
 
 func (service *Service) directPublicResponse(ctx context.Context, assistant aiappdomain.SmartAssistant, visitorHash, conversationID, turnID string) (map[string]any, error) {
