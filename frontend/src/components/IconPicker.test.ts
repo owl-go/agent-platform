@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import IconPicker from "./IconPicker.vue";
 
 describe("IconPicker", () => {
@@ -31,9 +31,9 @@ describe("IconPicker", () => {
 
     await input.trigger("change");
     await flushPromises();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toMatch(/^data:image\/png;base64,/);
+    await vi.waitFor(() => {
+      expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toMatch(/^data:image\/png;base64,/);
+    });
     wrapper.unmount();
   });
 
