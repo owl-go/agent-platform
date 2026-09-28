@@ -63,7 +63,8 @@ const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
 function reportError(cause?: unknown, validationKey = "invalidInput") {
   const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
-  const key = cause instanceof ApiError ? cause.status === 413 ? "uploadTooLarge" : keys[cause.kind] : cause instanceof TypeError ? "networkFailed" : "operationFailed";
+  const authorizationErrors: Record<string, string> = { dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
+  const key = cause instanceof ApiError ? authorizationErrors[cause.code] ?? (cause.status === 413 ? "uploadTooLarge" : keys[cause.kind]) : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
 }
@@ -84,6 +85,7 @@ const connectorBusy = ref<string[]>([]);
 const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
 const connectorFlowWindows = new Map<string, Window | null>();
+const reportedAuthorizationFlowErrors = new Set<string>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const cliAuthorizations = ref<Record<string, CLIConnectorAuthorization[]>>({});
 const cliAuthorizationFlow = ref<CLIConnectorAuthorizationFlow>();
@@ -203,7 +205,7 @@ async function setupPublishedConnector(item: ConnectorInstallation, publication?
     connectorSetups.value = { ...connectorSetups.value, [item.id]: setup };
     if (setup.state === "waiting_for_user" && setup.action_url) popup?.location.replace(setup.action_url);
     else await beginPublishedConnectorAuthorization(item, publication, popup);
-  } catch (cause) { closeBlankCLIWindow(popup); reportError(cause, "authorizationInvalidInput"); }
+  } catch (cause) { closeBlankCLIWindow(popup); reportError(cause, "connectorAuthorizationInvalidInput"); }
   finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== item.source); }
 }
 async function beginPublishedConnectorAuthorization(item: ConnectorInstallation, publication?: ConnectorPublication, popup?: Window | null) {
@@ -229,9 +231,12 @@ async function completePublishedConnectorFlows() {
     if (flow.state !== "waiting_for_user") continue;
     try {
       const completed = await api.completeConnectorAuthorizationFlow(flow.id);
+      reportedAuthorizationFlowErrors.delete(flow.id);
       connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
       if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
-    } catch (cause) { reportError(cause); }
+    } catch (cause) {
+      if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
+    }
   }
 }
 async function refreshSkillDocuments() {
@@ -598,7 +603,7 @@ async function fileToBase64(file: File): Promise<string> {
             <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
             <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
-            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.authorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a></small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
             <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions">
               <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
             </div>

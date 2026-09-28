@@ -14,9 +14,11 @@ import (
 )
 
 var (
-	ErrPending = errors.New("DingTalk authorization is pending")
-	ErrDenied  = errors.New("DingTalk authorization was denied")
-	ErrExpired = errors.New("DingTalk authorization expired")
+	ErrPending          = errors.New("DingTalk authorization is pending")
+	ErrDenied           = errors.New("DingTalk authorization was denied")
+	ErrExpired          = errors.New("DingTalk authorization expired")
+	ErrIdentityMismatch = errors.New("DingTalk contact identity belongs to another organization")
+	ErrCLIAuthDisabled  = errors.New("DingTalk organization has not enabled CLI access")
 )
 
 // Client implements the OAuth device protocol used by pinned DWS v1.0.62.
@@ -171,19 +173,29 @@ func (client *Client) exchange(ctx context.Context, clientID, code string) (Gran
 	}
 	if grant.ExternalID == "" {
 		userID, userName, lookupErr := client.currentUser(ctx, grant.AccessToken, result.CorpID)
-		if lookupErr != nil {
+		if errors.Is(lookupErr, ErrIdentityMismatch) {
 			return Grant{}, lookupErr
 		}
-		grant.ExternalID, grant.DisplayName = result.CorpID+":"+userID, userName
+		if lookupErr == nil {
+			grant.ExternalID, grant.DisplayName = result.CorpID+":"+userID, userName
+		} else {
+			// The official DWS CLI retains valid organization grants when the
+			// contact service cannot resolve an external-worker user ID.
+			grant.ExternalID, grant.DisplayName = "corp:"+result.CorpID, result.CorpID
+		}
 	}
 	var permission struct {
-		Success bool `json:"success"`
-		Result  *struct {
+		Success   bool   `json:"success"`
+		ErrorCode string `json:"errorCode"`
+		Result    *struct {
 			CLIAuthEnabled bool `json:"cliAuthEnabled"`
 		} `json:"result"`
 	}
 	if err := client.call(ctx, http.MethodGet, client.mcpBase+"/cli/cliAuthEnabled", nil, map[string]string{"x-user-access-token": grant.AccessToken}, &permission); err != nil || !permission.Success || permission.Result == nil || !permission.Result.CLIAuthEnabled {
-		return Grant{}, errors.New("DingTalk organization has not enabled CLI access")
+		if err == nil && (permission.Success && permission.Result != nil && !permission.Result.CLIAuthEnabled || permission.ErrorCode == "ENTERPRISE_NOT_AUTHORIZED" || permission.ErrorCode == "NO_AUTH" || permission.ErrorCode == "CHANNEL_REQUIRED") {
+			return Grant{}, ErrCLIAuthDisabled
+		}
+		return Grant{}, errors.New("DingTalk CLI access check is unavailable")
 	}
 	return grant, nil
 }
@@ -221,11 +233,14 @@ type tokenResponse struct {
 }
 
 func (result tokenResponse) grant(clientID string) (Grant, error) {
-	if result.ErrorCode != "" || result.AccessToken == "" || result.RefreshToken == "" || result.CorpID == "" || result.ExpiresIn < 60 || result.ExpiresIn > 86400 {
+	if result.ErrorCode != "" || result.AccessToken == "" || result.CorpID == "" || result.ExpiresIn < 60 || result.ExpiresIn > 86400 {
 		return Grant{}, errors.New("DingTalk token response is incomplete")
 	}
 	now := time.Now().UTC()
-	grant := Grant{DisplayName: result.UserName, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken, ClientID: clientID, ExpiresAt: now.Add(time.Duration(result.ExpiresIn) * time.Second), RefreshExpiresAt: now.Add(30 * 24 * time.Hour)}
+	grant := Grant{DisplayName: result.UserName, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken, ClientID: clientID, ExpiresAt: now.Add(time.Duration(result.ExpiresIn) * time.Second)}
+	if result.RefreshToken != "" {
+		grant.RefreshExpiresAt = now.Add(30 * 24 * time.Hour)
+	}
 	if result.UserID != "" {
 		grant.ExternalID = result.CorpID + ":" + result.UserID
 	}
@@ -251,7 +266,9 @@ func (client *Client) currentUser(ctx context.Context, token, corpID string) (st
 	if err := client.call(ctx, http.MethodPost, client.contactURL, request, map[string]string{"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer " + token, "x-user-access-token": token}, &response); err != nil || len(response.Error) != 0 {
 		return "", "", errors.New("DingTalk current-user lookup failed")
 	}
-	var matches []struct{ userID, name string }
+	var matches, withoutCorp []struct{ userID, name string }
+	resultCount := 0
+	foreignCorp := false
 	for _, block := range response.Result.Content {
 		if block.Type != "text" {
 			continue
@@ -259,28 +276,54 @@ func (client *Client) currentUser(ctx context.Context, token, corpID string) (st
 		var payload struct {
 			Result []struct {
 				Employee struct {
-					CorpID      string `json:"corpId"`
-					UserID      string `json:"userId"`
-					UserIDLower string `json:"userid"`
-					Name        string `json:"orgUserName"`
+					CorpID       string `json:"corpId"`
+					UserID       string `json:"userId"`
+					UserIDLower  string `json:"userid"`
+					OrgUserID    string `json:"orgUserId"`
+					Name         string `json:"orgUserName"`
+					FallbackName string `json:"name"`
 				} `json:"orgEmployeeModel"`
 			} `json:"result"`
 		}
 		if json.Unmarshal([]byte(block.Text), &payload) != nil {
 			continue
 		}
+		resultCount += len(payload.Result)
 		for _, item := range payload.Result {
 			userID := strings.TrimSpace(item.Employee.UserID)
 			lower := strings.TrimSpace(item.Employee.UserIDLower)
+			orgUserID := strings.TrimSpace(item.Employee.OrgUserID)
 			if userID == "" {
 				userID = lower
 			}
-			if item.Employee.CorpID == corpID && userID != "" && (lower == "" || lower == userID) {
-				matches = append(matches, struct{ userID, name string }{userID, item.Employee.Name})
+			if userID == "" {
+				userID = orgUserID
+			}
+			if userID == "" || (lower != "" && lower != userID) || (orgUserID != "" && orgUserID != userID) {
+				continue
+			}
+			name := strings.TrimSpace(item.Employee.Name)
+			if name == "" {
+				name = strings.TrimSpace(item.Employee.FallbackName)
+			}
+			candidate := struct{ userID, name string }{userID, name}
+			switch strings.TrimSpace(item.Employee.CorpID) {
+			case corpID:
+				matches = append(matches, candidate)
+			case "":
+				withoutCorp = append(withoutCorp, candidate)
+			default:
+				foreignCorp = true
 			}
 		}
 	}
+	if len(matches) == 0 && len(withoutCorp) == 1 && resultCount == 1 {
+		matches = withoutCorp
+	}
 	if len(matches) != 1 {
+		if foreignCorp {
+			return "", "", ErrIdentityMismatch
+		}
 		return "", "", errors.New("DingTalk current-user identity is missing or ambiguous")
 	}
 	return matches[0].userID, matches[0].name, nil

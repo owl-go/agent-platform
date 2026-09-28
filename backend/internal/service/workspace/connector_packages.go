@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -14,8 +16,10 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
+	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
+	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -710,6 +714,17 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
+		if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+			slog.WarnContext(ctx, "DingTalk Connector authorization failed", "cause", err.Error())
+			switch {
+			case errors.Is(err, dingtalkcli.ErrCLIAuthDisabled):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_access_disabled", "DingTalk organization has not enabled CLI access")
+			case errors.Is(err, dingtalkcli.ErrIdentityMismatch):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_identity_mismatch", "DingTalk authorization returned a different organization")
+			default:
+				return nil, kratoserrors.New(http.StatusBadGateway, "dingtalk_authorization_failed", "DingTalk authorization could not be completed")
+			}
+		}
 		return nil, publicError(err)
 	}
 	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
