@@ -279,8 +279,11 @@ function closePreview() {
 async function retryDocument(document: KnowledgeDocument) {
   if (!selected.value) return;
   try {
-    await api.retryKnowledgeDocument(selected.value.id, document.id);
-    await openBase(selected.value);
+    const baseID = selected.value.id;
+    if (documentState(document) === "ready") await api.regenerateKnowledgeDocument(baseID, document.id);
+    else await api.retryKnowledgeDocument(baseID, document.id);
+    const updated = await api.listKnowledgeDocuments(baseID);
+    if (selected.value?.id === baseID) documents.value = updated;
     ElMessage.success(t("knowledgeBases.retryAccepted"));
   } catch {
     error.value = t("knowledgeBases.retryFailed");
@@ -300,9 +303,37 @@ async function deleteDocument(document: KnowledgeDocument) {
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString(); }
 function formatSize(size?: number) { if (!size) return "—"; if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / 1024 / 1024).toFixed(1)} MB`; }
+function documentState(document: KnowledgeDocument) { return document.latest_revision?.state || document.state; }
+function documentStatusType(document: KnowledgeDocument): "success" | "danger" | "warning" | "info" {
+  switch (documentState(document)) {
+    case "ready": return "success";
+    case "failed": return "danger";
+    case "blocked": return "warning";
+    default: return "info";
+  }
+}
+function documentStatusLabel(document: KnowledgeDocument) {
+  switch (documentState(document)) {
+    case "ready": return t("common.success");
+    case "failed": return t("common.failed");
+    case "blocked": return t("knowledgeBases.blocked");
+    case "accepted": return t("common.queued");
+    default: return t("common.running");
+  }
+}
 
-onMounted(() => void refresh());
-onUnmounted(closePreview);
+let statusTimer: ReturnType<typeof setInterval> | undefined;
+async function refreshPendingDocuments() {
+  const baseID = selected.value?.id;
+  if (!baseID || !documents.value.some((document) => ["accepted", "processing"].includes(documentState(document)))) return;
+  try {
+    const updated = await api.listKnowledgeDocuments(baseID);
+    if (selected.value?.id === baseID) documents.value = updated;
+  } catch { /* Retry on the next poll. */ }
+}
+
+onMounted(() => { void refresh(); statusTimer = setInterval(() => void refreshPendingDocuments(), 5000); });
+onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview(); });
 </script>
 
 <template>
@@ -351,7 +382,7 @@ onUnmounted(closePreview);
       <section v-if="categories.length" class="category-section"><div class="section-heading"><div><h3>{{ t("knowledgeBases.categories") }}</h3><p>{{ t("knowledgeBases.categoriesHint") }}</p></div><el-button text @click="openCategory(null)">{{ t("knowledgeBases.viewAll") }}</el-button></div><div class="category-grid"><button class="category-card" :class="{ active: activeCategory === null }" @click="openCategory(null)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ t("knowledgeBases.allDocuments") }}</strong><small>{{ documents.length }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-for="category in categories" :key="category.id" class="category-card" :class="{ active: activeCategory === category.id }" @click="openCategory(category.id)"><span class="category-card-icon"><FolderOpen :size="18" /></span><span><strong>{{ category.name }}</strong><small>{{ categoryCounts.get(category.id) || 0 }} {{ t("knowledgeBases.documentCount") }}</small></span></button><button v-if="unclassifiedCount" class="category-card" :class="{ active: activeCategory === 'unclassified' }" @click="openCategory('unclassified')"><span class="category-card-icon muted"><FileText :size="18" /></span><span><strong>{{ t("knowledgeBases.unclassified") }}</strong><small>{{ unclassifiedCount }} {{ t("knowledgeBases.documentCount") }}</small></span></button></div></section>
 
       <section class="documents-panel"><div class="section-heading"><div><p class="eyebrow">{{ t("knowledgeBases.document") }}</p><h3>{{ activeCategoryName }}</h3><p>{{ visibleDocuments.length }} {{ t("knowledgeBases.documentCount") }}</p></div><div v-if="canManageSelected" class="category-create"><el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" @keyup.enter="createCategory" /><el-button @click="createCategory">{{ t("knowledgeBases.addCategory") }}</el-button></div></div><div v-if="canManageSelected" class="source-controls"><el-select v-model="uploadCategory" :placeholder="t('knowledgeBases.unclassified')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select><el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" @keyup.enter="importURL" /><el-button :loading="busy" @click="importURL"><Globe2 :size="15" />{{ t("knowledgeBases.importURL") }}</el-button></div>
-        <el-table v-if="visibleDocuments.length" :data="visibleDocuments" class="document-table"><el-table-column min-width="280" :label="t('knowledgeBases.document')"><template #default="scope"><div class="document-name"><span class="document-icon"><FileText :size="16" /></span><span><strong>{{ (scope.row as KnowledgeDocument).name }}</strong><small>{{ formatSize((scope.row as KnowledgeDocument).latest_revision?.size) }}</small></span></div></template></el-table-column><el-table-column prop="state" :label="t('knowledgeBases.state')" width="130" /><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="100" /><el-table-column :label="t('knowledgeBases.updated')" width="130"><template #default="scope">{{ formatDate((scope.row as KnowledgeDocument).updated_at) }}</template></el-table-column><el-table-column width="280"><template #default="scope"><div class="document-actions"><el-button text @click="previewDocument(scope.row as KnowledgeDocument)"><Eye :size="15" />{{ t("knowledgeBases.preview") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)"><Download :size="15" />{{ t("common.download") }}</el-button><el-button v-if="canManageSelected && (scope.row as KnowledgeDocument).state === 'failed'" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ t("knowledgeBases.retry") }}</el-button><el-button v-if="canManageSelected" type="danger" text @click="deleteDocument(scope.row as KnowledgeDocument)"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div></template></el-table-column></el-table><el-empty v-else :description="t('knowledgeBases.noDocuments')"><el-button v-if="canManageSelected" type="primary" plain @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></el-empty>
+        <el-table v-if="visibleDocuments.length" :data="visibleDocuments" class="document-table"><el-table-column min-width="280" :label="t('knowledgeBases.document')"><template #default="scope"><div class="document-name"><span class="document-icon"><FileText :size="16" /></span><span><strong>{{ (scope.row as KnowledgeDocument).name }}</strong><small>{{ formatSize((scope.row as KnowledgeDocument).latest_revision?.size) }}</small></span></div></template></el-table-column><el-table-column :label="t('knowledgeBases.state')" width="130"><template #default="scope"><el-tag size="small" :type="documentStatusType(scope.row as KnowledgeDocument)" :title="(scope.row as KnowledgeDocument).latest_revision?.error || (scope.row as KnowledgeDocument).error || ''">{{ documentStatusLabel(scope.row as KnowledgeDocument) }}</el-tag></template></el-table-column><el-table-column prop="source_type" :label="t('knowledgeBases.source')" width="100" /><el-table-column :label="t('knowledgeBases.updated')" width="130"><template #default="scope">{{ formatDate((scope.row as KnowledgeDocument).updated_at) }}</template></el-table-column><el-table-column width="280"><template #default="scope"><div class="document-actions"><el-button text @click="previewDocument(scope.row as KnowledgeDocument)"><Eye :size="15" />{{ t("knowledgeBases.preview") }}</el-button><el-button text @click="downloadDocument(scope.row as KnowledgeDocument)"><Download :size="15" />{{ t("common.download") }}</el-button><el-button v-if="canManageSelected && ['ready', 'failed'].includes(documentState(scope.row as KnowledgeDocument))" text @click="retryDocument(scope.row as KnowledgeDocument)">{{ documentState(scope.row as KnowledgeDocument) === 'ready' ? t('knowledgeBases.regenerate') : t('knowledgeBases.retry') }}</el-button><el-button v-if="canManageSelected" type="danger" text @click="deleteDocument(scope.row as KnowledgeDocument)"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div></template></el-table-column></el-table><el-empty v-else :description="t('knowledgeBases.noDocuments')"><el-button v-if="canManageSelected" type="primary" plain @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button></el-empty>
       </section>
     </template>
   </section>

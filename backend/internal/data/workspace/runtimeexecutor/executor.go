@@ -36,7 +36,7 @@ import (
 	"agent-platform/backend/internal/cliconnector"
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/credentials"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/runworker"
@@ -64,7 +64,7 @@ type Executor struct {
 	newAdapter     func(workspacedomain.RuntimeEngine, cliadapter.Config) (agentruntime.Adapter, error)
 	executionTTL   time.Duration
 	credits        *creditsapplication.Service
-	knowledge      anythingllm.Adapter
+	knowledge      retrieval.Searcher
 }
 
 type cliExecutionRepository interface {
@@ -126,11 +126,11 @@ func (executor *Executor) EnableMCPLifecycle(repository mcpLifecycleRepository) 
 	return nil
 }
 
-func (executor *Executor) EnableKnowledgeRetrieval(provider anythingllm.Adapter) error {
-	if provider == nil {
-		return fmt.Errorf("AnythingLLM adapter is required")
+func (executor *Executor) EnableKnowledgeRetrieval(searcher retrieval.Searcher) error {
+	if searcher == nil {
+		return fmt.Errorf("Knowledge retrieval searcher is required")
 	}
-	executor.knowledge = provider
+	executor.knowledge = searcher
 	return nil
 }
 
@@ -421,7 +421,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(describeErr)
 		}
 		instruction := buildInstruction(memberJob, stageAttachments)
-		instruction, err = executor.injectKnowledgeContext(executionCtx, memberJob.Snapshot, instruction)
+		instruction, err = executor.injectKnowledgeContext(executionCtx, job.OwnerID, memberJob.Snapshot, instruction)
 		if err != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()

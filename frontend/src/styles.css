@@ -766,6 +766,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-conversation-avatar { display: grid; flex: 0 0 36px; place-items: center; width: 36px; height: 36px; overflow: hidden; border-radius: 50%; color: var(--green); background: var(--wash); }
 .assistant-conversation-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .assistant-conversation-bubble { max-width: min(80%, 680px); padding: 11px 15px; border: 1px solid var(--line); border-radius: 4px 14px 14px 14px; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-conversation-bubble .markdown-body { white-space: normal; }
+.assistant-conversation-bubble .markdown-body > :last-child { margin-bottom: 0; }
 .assistant-conversation-message--user .assistant-conversation-bubble { border-color: transparent; border-radius: 14px 14px 4px 14px; background: var(--wash); }
 .assistant-conversation-faqs { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 24px 46px; }
 .assistant-conversation-faq-label { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; color: var(--muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }

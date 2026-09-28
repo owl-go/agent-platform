@@ -145,7 +145,7 @@ The product area in which a User creates and uses durable AI capabilities and ta
 _Avoid_: AI Creation as a top-level area, Session, Workflow, generic AI tools
 
 **Smart Assistant**:
-A reusable, User-owned AI application for one scenario, combining visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
+A reusable, User-owned AI application for one scenario, combining a selected Provider Model, visible service rules, Frequently Asked Questions, an Answer Safety Policy, and optional Knowledge Selection, Expert or Expert Team, and Digital Human references. One User may create many Smart Assistants; customer service is one scenario type rather than the entity name.
 _Avoid_: AI Customer Service, Expert, Session, Workflow
 
 **Smart Assistant FAQ**:
@@ -177,7 +177,7 @@ The task-specific image-generation tool nested under AI Applications. It owns no
 _Avoid_: AI Creation, Smart Assistant, Image Artifact
 
 **Retrieval Provider**:
-The replaceable indexing and recall boundary used by a Knowledge Base, initially backed by PostgreSQL full-text and `pgvector` search. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations.
+The indexing and recall boundary used by a Knowledge Base, currently backed by the platform-controlled AnythingLLM deployment. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations. All product search paths use one permission-checked retrieval seam; the platform validates every candidate against the latest Ready revision.
 _Avoid_: Knowledge Base, RAG application, Provider Model
 
 **Image Model**:
@@ -259,7 +259,7 @@ A bounded set of source excerpts returned for one Run from its frozen Knowledge 
 _Avoid_: Model memory, full document dump, Artifact
 
 **Knowledge Index Generation**:
-The coherent searchable generation produced from the ready revisions in a Knowledge Base at a point in time. A queued Run freezes the generation it is allowed to query, while a later generation affects only later Runs or an explicit retry.
+The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion. A queued Run freezes its generation; because the current AnythingLLM workspace is mutable, a Run whose generation is no longer current fails closed rather than querying later content as if it were historical.
 _Avoid_: AnythingLLM workspace, mutable search state, Workflow Snapshot
 
 **Knowledge Citation**:

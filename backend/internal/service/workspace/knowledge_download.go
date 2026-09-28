@@ -38,6 +38,32 @@ func (service *Service) retryKnowledgeDocument(writer http.ResponseWriter, reque
 	_ = json.NewEncoder(writer).Encode(map[string]any{"accepted": true})
 }
 
+func (service *Service) regenerateKnowledgeDocument(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodPost {
+		writer.Header().Set("Allow", http.MethodPost)
+		http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	owner, administrator, err := service.knowledgePrincipal(request.Context())
+	if err != nil {
+		writeAuthError(writer, http.StatusUnauthorized, "authentication_required")
+		return
+	}
+	baseID, documentID, ok := knowledgeDocumentActionPath(request.URL.Path, "regenerate")
+	if !ok {
+		http.NotFound(writer, request)
+		return
+	}
+	if err := service.workspace.Repository().RegenerateKnowledgeDocument(request.Context(), owner, baseID, documentID, administrator); err != nil {
+		writeAuthError(writer, publicStatus(err), publicReason(err))
+		return
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Cache-Control", "no-store")
+	writer.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(writer).Encode(map[string]any{"accepted": true})
+}
+
 func (service *Service) downloadKnowledgeDocument(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.Header().Set("Allow", http.MethodGet)

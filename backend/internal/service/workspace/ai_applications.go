@@ -1,12 +1,14 @@
 package workspace
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
 	aiapplicationdomain "agent-platform/backend/internal/biz/aiapplication/domain"
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 )
 
 type assistantPayload struct {
@@ -17,6 +19,7 @@ type assistantPayload struct {
 	Scenario         string       `json:"scenario"`
 	Prompt           string       `json:"prompt"`
 	PreprocessPrompt string       `json:"preprocess_prompt"`
+	ProviderModelID  string       `json:"provider_model_id"`
 	ServiceGoal      string       `json:"service_goal"`
 	AnswerScope      string       `json:"answer_scope"`
 	OperatingRules   string       `json:"operating_rules"`
@@ -70,14 +73,6 @@ type knowledgeDocumentPayload struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
 }
-type embeddingProviderPayload struct {
-	Endpoint   string `json:"endpoint"`
-	Model      string `json:"model"`
-	Dimensions int    `json:"dimensions"`
-	Enabled    bool   `json:"enabled"`
-	APIKey     string `json:"api_key"`
-	Version    int64  `json:"version"`
-}
 
 func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, request *http.Request) {
 	owner, err := service.owner(request.Context())
@@ -103,32 +98,29 @@ func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, reques
 		return
 	}
 	if parts[3] == "embedding-provider" && len(parts) == 4 {
-		if _, adminErr := service.administrator(request.Context()); adminErr != nil {
-			writeAuthError(writer, http.StatusForbidden, "administrator_required")
-			return
-		}
-		if request.Method == http.MethodGet {
-			value, configErr := service.aiapplications.GetEmbeddingConfiguration(request.Context())
-			service.writeAIResult(writer, value, configErr)
-			return
-		}
-		if request.Method == http.MethodPatch {
-			var payload embeddingProviderPayload
-			if !decodeJSON(writer, request, &payload) {
-				return
-			}
-			value, configErr := service.aiapplications.SaveEmbeddingConfiguration(request.Context(), aiapplicationdomain.EmbeddingConfiguration{Endpoint: payload.Endpoint, Model: payload.Model, Dimensions: payload.Dimensions, Enabled: payload.Enabled, Version: payload.Version}, []byte(payload.APIKey))
-			service.writeAIResult(writer, value, configErr)
-			return
-		}
+		writeAuthError(writer, http.StatusGone, "embedding_configuration_superseded_by_anythingllm")
+		return
 	}
 	http.NotFound(writer, request)
 }
 
 func (service *Service) handleKnowledgeBases(writer http.ResponseWriter, request *http.Request, owner string, rest []string) {
 	if len(rest) == 0 && request.Method == http.MethodGet {
-		value, err := service.aiapplications.ListKnowledgeBases(request.Context(), owner)
-		service.writeAIResult(writer, value, err)
+		_, administrator, principalErr := service.knowledgePrincipal(request.Context())
+		if principalErr != nil {
+			service.writeAIResult(writer, nil, principalErr)
+			return
+		}
+		items, err := service.workspace.Repository().ListKnowledgeBases(request.Context(), owner, administrator, false)
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		value := make([]aiapplicationdomain.KnowledgeBase, 0, len(items))
+		for _, item := range items {
+			value = append(value, assistantKnowledgeBaseFromWorkspace(item))
+		}
+		service.writeAIResult(writer, value, nil)
 		return
 	}
 	if len(rest) == 0 && request.Method == http.MethodPost {
@@ -136,13 +128,31 @@ func (service *Service) handleKnowledgeBases(writer http.ResponseWriter, request
 		if !decodeJSON(writer, request, &payload) {
 			return
 		}
-		value, err := service.aiapplications.CreateKnowledgeBase(request.Context(), owner, aiapplicationdomain.KnowledgeBase{Name: payload.Name, Description: payload.Description})
-		service.writeAIResult(writer, value, err)
+		_, administrator, principalErr := service.knowledgePrincipal(request.Context())
+		if principalErr != nil {
+			service.writeAIResult(writer, nil, principalErr)
+			return
+		}
+		item, err := service.workspace.Repository().CreateKnowledgeBase(request.Context(), owner, administrator, workspacedomain.KnowledgeBaseInput{Name: payload.Name, Description: payload.Description, Visibility: workspacedomain.KnowledgePrivate})
+		service.writeAIResult(writer, assistantKnowledgeBaseFromWorkspace(item), err)
 		return
 	}
 	if len(rest) == 2 && rest[1] == "documents" && request.Method == http.MethodGet {
-		value, err := service.aiapplications.ListKnowledgeDocuments(request.Context(), owner, rest[0])
-		service.writeAIResult(writer, value, err)
+		_, administrator, principalErr := service.knowledgePrincipal(request.Context())
+		if principalErr != nil {
+			service.writeAIResult(writer, nil, principalErr)
+			return
+		}
+		items, err := service.workspace.Repository().ListKnowledgeDocuments(request.Context(), owner, rest[0], administrator)
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		value := make([]aiapplicationdomain.KnowledgeDocument, 0, len(items))
+		for _, item := range items {
+			value = append(value, assistantKnowledgeDocumentFromWorkspace(item))
+		}
+		service.writeAIResult(writer, value, nil)
 		return
 	}
 	if len(rest) == 2 && rest[1] == "documents" && request.Method == http.MethodPost {
@@ -150,7 +160,12 @@ func (service *Service) handleKnowledgeBases(writer http.ResponseWriter, request
 		if !decodeJSON(writer, request, &payload) {
 			return
 		}
-		value, err := service.aiapplications.CreateKnowledgeDocument(request.Context(), owner, rest[0], aiapplicationdomain.KnowledgeDocument{Name: payload.Name, Content: payload.Content})
+		_, administrator, principalErr := service.knowledgePrincipal(request.Context())
+		if principalErr != nil {
+			service.writeAIResult(writer, nil, principalErr)
+			return
+		}
+		value, err := service.createAssistantKnowledgeDocument(request.Context(), owner, administrator, rest[0], payload)
 		service.writeAIResult(writer, value, err)
 		return
 	}
@@ -167,6 +182,14 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		if request.Method == http.MethodPost {
 			var payload assistantPayload
 			if !decodeJSON(writer, request, &payload) {
+				return
+			}
+			if payload.ProviderModelID == "" {
+				writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+				return
+			}
+			if err := service.validateAssistantModel(request.Context(), owner, payload.ProviderModelID); err != nil {
+				service.writeAssistantModelError(writer, err)
 				return
 			}
 			value, err := service.aiapplications.CreateAssistant(request.Context(), owner, assistantFromPayload(payload))
@@ -254,6 +277,17 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		if !decodeJSON(writer, request, &input) {
 			return
 		}
+		if input.State == aiapplicationdomain.StateEnabled {
+			assistant, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+			if err != nil {
+				service.writeAIResult(writer, nil, err)
+				return
+			}
+			if err := service.validateAssistantModel(request.Context(), owner, assistant.ProviderModelID); err != nil {
+				service.writeAssistantModelError(writer, err)
+				return
+			}
+		}
 		value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
 		service.writeAIResult(writer, value, err)
 		return
@@ -269,6 +303,19 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 	case http.MethodPatch:
 		var payload assistantPayload
 		if !decodeJSON(writer, request, &payload) {
+			return
+		}
+		current, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		if payload.ProviderModelID == "" && current.ProviderModelID != "" {
+			writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+			return
+		}
+		if err := service.validateAssistantModel(request.Context(), owner, payload.ProviderModelID); err != nil {
+			service.writeAssistantModelError(writer, err)
 			return
 		}
 		value, err := service.aiapplications.UpdateAssistant(request.Context(), owner, rest[0], assistantFromPayload(payload), payload.Version)
@@ -486,7 +533,20 @@ func (service *Service) writeAIResult(writer http.ResponseWriter, value any, err
 }
 
 func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssistant {
-	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, DigitalHumanID: value.DigitalHumanID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+}
+
+func (service *Service) validateAssistantModel(ctx context.Context, owner, modelID string) error {
+	_, err := service.resolveAssistantModel(ctx, owner, modelID)
+	return err
+}
+
+func (service *Service) writeAssistantModelError(writer http.ResponseWriter, err error) {
+	if errors.Is(err, aiapplicationdomain.ErrInvalid) {
+		writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
+		return
+	}
+	service.writeAIResult(writer, nil, err)
 }
 func humanFromPayload(value digitalHumanPayload) aiapplicationdomain.DigitalHuman {
 	return aiapplicationdomain.DigitalHuman{Name: value.Name, AvatarObjectKey: value.AvatarObjectKey, Voice: value.Voice, Language: value.Language, ExpressionStyle: value.ExpressionStyle, SceneDescription: value.SceneDescription, State: aiapplicationdomain.ApplicationState(value.State)}

@@ -30,7 +30,6 @@ function apiStub(): PlatformApi {
     listMCPServers: vi.fn(async () => []),
     listSkills: vi.fn(async () => []),
     listRuntimeEngines: vi.fn(async () => [{ name: "codex", available: true, native_resume: true, cli_version: "1.0.0" }]),
-    getEmbeddingConfiguration: vi.fn(async () => ({ endpoint: "https://api.openai.com/v1/embeddings", model: "text-embedding-3-small", dimensions: 1536, api_key_configured: false, enabled: false, version: 0, updated_at: "" })),
     updateModelProviderConnection: vi.fn(async () => ({ ...connection, endpoint: "http://model-gateway.internal/openai", version: 2 })),
   } as unknown as PlatformApi;
 }
@@ -104,7 +103,7 @@ describe("SettingsPage model provider feedback", () => {
     await flushPromises();
 
     expect(wrapper.find(".page-header .eyebrow").exists()).toBe(false);
-    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "模型设置", "向量模型"]);
+    expect(wrapper.findAll(".settings-nav button").map((button) => button.text())).toEqual(["个性", "模型设置"]);
     expect(wrapper.get(".page-header").text()).not.toContain("定义你的默认个性");
     expect(wrapper.find(".settings-canvas .section-heading h2").exists()).toBe(false);
     await wrapper.findAll(".settings-nav button")[1]!.trigger("click");

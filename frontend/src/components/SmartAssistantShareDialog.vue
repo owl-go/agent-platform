@@ -27,6 +27,7 @@ function input(): SmartAssistantInput | undefined {
     scenario: assistant.scenario,
     prompt: assistant.prompt ?? "",
     preprocess_prompt: assistant.preprocess_prompt ?? "",
+    provider_model_id: assistant.provider_model_id,
     service_goal: assistant.service_goal,
     answer_scope: assistant.answer_scope,
     operating_rules: assistant.operating_rules,
