@@ -168,6 +168,12 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	cancel()
 	if executeErr != nil {
 		discardSuccessCommit(result)
+		if ctx.Err() != nil {
+			// A Worker shutdown is not a User cancellation or a failed response.
+			// Leave the claimed job nonterminal for startup reconciliation, which
+			// can safely requeue it or fail it if a Connector approval was consumed.
+			return true, nil
+		}
 		cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job)
 		if checkErr == nil && cancelled {
 			return true, worker.repository.FinishCancelled(context.WithoutCancel(ctx), *job, result)
