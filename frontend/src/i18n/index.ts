@@ -181,6 +181,18 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorType: "连接器类型", connectionAddress: "连接地址", connectedApplication: "已连接应用", mcpDetailDescription: "通过标准 MCP 协议为会话、工作流和专家提供外部能力。" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorType: "Connector type", connectionAddress: "Connection", connectedApplication: "Connected application", mcpDetailDescription: "Provides external capabilities to Sessions, Workflows, and Experts through the standard MCP protocol." });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
+  connectorAuthorizeNow: "打开授权页面", connectorAuthorizationPending: "等待在对应应用中完成授权", connectorAuthorizationInvalidInput: "无法发起账号授权，请刷新页面后重试。",
+  dingtalkCLIAccessDisabled: "钉钉账号已确认授权，但当前企业或账号尚未获得 CLI 使用权限。请联系钉钉企业管理员检查开放范围，处理后再点击“继续完成授权”。",
+  dingtalkIdentityMismatch: "钉钉返回的账号与本次授权企业不一致。请确认当前登录的企业账号，然后重新授权。",
+  dingtalkAuthorizationFailed: "钉钉已确认授权，但连接器未能完成账号连接。请点击“继续完成授权”重新授权；若仍失败，请联系管理员检查服务日志。"
+});
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
+  connectorAuthorizeNow: "Open authorization page", connectorAuthorizationPending: "Waiting for authorization in the connected app", connectorAuthorizationInvalidInput: "Could not start account authorization. Refresh and retry.",
+  dingtalkCLIAccessDisabled: "DingTalk authorization was approved, but this organization or account does not have CLI access. Ask your DingTalk administrator to check access, then continue authorization.",
+  dingtalkIdentityMismatch: "DingTalk returned an account from a different organization. Confirm the signed-in organization and authorize again.",
+  dingtalkAuthorizationFailed: "DingTalk authorization was approved, but the account could not be connected. Continue authorization to retry; if it still fails, ask an administrator to check the service logs."
+});
 
 Object.assign(zh, { composer: {
   add: "添加到对话", skills: "技能", connectors: "连接器", send: "发送", search: "搜索", empty: "没有匹配的技能",
