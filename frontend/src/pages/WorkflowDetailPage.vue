@@ -26,6 +26,7 @@ const tab = ref<Tab>((route.query.tab as Tab) || "artifacts"); const workflow = 
 const credentialError = ref("");
 const revealApiSecret = ref(false);
 const nowMS = ref(Date.now());
+const lastWorkflowActivityAt = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const integrationGuideOpen = ref(false);
 type CopyTarget = "api_key" | "api_secret" | "token" | "run" | "stream" | "full";
@@ -47,6 +48,8 @@ const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? se
 const activeConversationRun = computed(() => conversationRuns.value.find((item) => item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"));
 const statusConversationRun = computed(() => activeConversationRun.value ?? latestConversationRun.value);
 const statusConversationModel = computed(() => statusConversationRun.value?.expert_stages?.at(-1)?.provider_model_name);
+const statusConversationActivity = computed(() => summarizeRuntimeActivities(runEvents.value).at(-1)?.label ?? (activeConversationRun.value?.state === "queued" ? t("common.queued") : t("sessions.progress.thinking")));
+const statusConversationModelCalls = computed(() => activeConversationRun.value?.expert_stages?.length ?? activeConversationRun.value?.credit_consumption?.stages.length ?? 0);
 const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => {
   const stored = Number.isFinite(item.elapsed_ms) ? Math.max(0, item.elapsed_ms) : 0;
   if (item.state !== "queued" && item.state !== "running") return total + stored;
@@ -114,6 +117,7 @@ let refreshingRuns = false;
 let lastRunRefresh = 0;
 let artifactsRefreshRequested = false;
 let eventController: AbortController | undefined;
+let streamReconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 let revealTarget = "";
 let runComposerObserver: ResizeObserver | undefined;
@@ -142,6 +146,7 @@ onBeforeUnmount(() => {
   clearGitCredential();
   if (copyResetTimer) clearTimeout(copyResetTimer);
   if (runTimer) clearInterval(runTimer);
+  if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
   eventController?.abort();
   stopRunReveal();
   runComposerObserver?.disconnect();
@@ -168,7 +173,14 @@ async function loadCredential() {
 }
 function isActiveRun(item: Run) { return item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"; }
 function canRefreshRuns() { return !disposed && !loading.value && document.visibilityState !== "hidden" && (Boolean(selectedRun.value) || tab.value === "history" || tab.value === "artifacts"); }
-function resumeRunPolling() { if (canRefreshRuns()) void refreshRuns(tab.value === "artifacts"); }
+async function resumeRunPolling() {
+  if (!canRefreshRuns()) return;
+  await refreshRuns(tab.value === "artifacts");
+  const active = activeConversationRun.value;
+  if (!active || !selectedRun.value) return;
+  eventController?.abort();
+  await reconcileConversationStream(active, true);
+}
 function runRevision(items: Run[]) { return JSON.stringify(items.map((item) => [item.id, item.turn_number, item.state, item.ended_at])); }
 async function refreshRuns(refreshArtifacts = false) {
   if (!canRefreshRuns()) return;
@@ -180,7 +192,9 @@ async function refreshRuns(refreshArtifacts = false) {
   try {
     const latest = await api.listRuns(id);
     if (!canRefreshRuns() || id !== workflowID.value) return;
-    artifactsRefreshRequested ||= runRevision(latest) !== runRevision(runs.value);
+    const changed = runRevision(latest) !== runRevision(runs.value);
+    artifactsRefreshRequested ||= changed;
+    if (changed) lastWorkflowActivityAt.value = Date.now();
     runs.value = latest;
     if (selectedID && selectedRun.value?.id === selectedID) {
       selectedRun.value = latest.find((item) => item.id === selectedID) ?? selectedRun.value;
@@ -259,7 +273,7 @@ async function openRun(item: Run) {
 	eventRunID.value = "";
 	await scrollConversationToEnd();
 	const active = activeConversationRun.value;
-	if (active) void streamConversationTurn(active);
+	if (active) { lastWorkflowActivityAt.value = Date.now(); void streamConversationTurn(active); }
 	void loadRunHistoryEvents(conversationRuns.value, item.id);
 }
 async function loadRunHistoryEvents(turns: Run[], conversationID: string) {
@@ -274,34 +288,73 @@ async function loadRunHistoryEvents(turns: Run[], conversationID: string) {
 		runEventsByID.value = { ...runEventsByID.value, [turn.id]: events };
 	}));
 }
-async function streamConversationTurn(item: Run) {
+async function streamConversationTurn(item: Run, reconnect = false) {
+	if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
 	eventController?.abort();
-	eventController = new AbortController();
+	const controller = new AbortController();
+	eventController = controller;
 	streamingRunID.value = item.id;
 	eventRunID.value = item.id;
-	runEvents.value = [];
-	runEventsByID.value = { ...runEventsByID.value, [item.id]: [] };
-	stopRunReveal();
-	revealedRunOutput.value = "";
+	if (!reconnect) {
+		runEvents.value = [];
+		runEventsByID.value = { ...runEventsByID.value, [item.id]: [] };
+		stopRunReveal();
+		revealedRunOutput.value = "";
+	}
 	try {
-		await api.streamRunEvents(workflowID.value, item.id, handleRunEvent, eventController.signal);
+		const afterSequence = runEvents.value.reduce((maximum, event) => Math.max(maximum, event.sequence), 0);
+		await api.streamRunEvents(workflowID.value, item.id, handleRunEvent, controller.signal, { afterSequence, reconnect });
 		const completed = await api.getRun(workflowID.value, item.id);
-		if (completed.final_text) setRunRevealTarget(completed.final_text);
-		else if (completed.final_json) setRunRevealTarget(`\`\`\`json\n${JSON.stringify(completed.final_json, null, 2)}\n\`\`\``);
-		await waitForRunReveal(item.id);
-		conversationRuns.value = conversationRuns.value.map((turn) => turn.id === completed.id ? completed : turn);
-		void refreshRuns(true);
-		window.dispatchEvent(new Event("credits-updated"));
+		if (isActiveRun(completed)) scheduleConversationReconnect(completed);
+		else await settleConversationRun(completed);
 	} catch (streamError) {
-		if (!(streamError instanceof DOMException && streamError.name === "AbortError")) error.value = t("errors.generic");
+		if (!controller.signal.aborted) await reconcileConversationStream(item, true);
 	} finally {
-		if (streamingRunID.value === item.id) streamingRunID.value = "";
+		if (eventController === controller) eventController = undefined;
+		if (!isActiveRun(conversationRuns.value.find((turn) => turn.id === item.id) ?? item) && streamingRunID.value === item.id) streamingRunID.value = "";
 	}
 }
+function scheduleConversationReconnect(item: Run) {
+	if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
+	streamReconnectTimer = setTimeout(() => {
+		streamReconnectTimer = undefined;
+		if (!disposed && selectedRun.value && conversationRuns.value.some((turn) => turn.id === item.id && isActiveRun(turn))) void streamConversationTurn(item, true);
+	}, 750);
+}
+async function reconcileConversationStream(item: Run, reconnect: boolean) {
+	try {
+		const authoritative = await api.getRun(workflowID.value, item.id);
+		if (disposed || !selectedRun.value || !conversationRuns.value.some((turn) => turn.id === item.id)) return;
+		const previous = conversationRuns.value.find((turn) => turn.id === item.id);
+		conversationRuns.value = conversationRuns.value.map((turn) => turn.id === authoritative.id ? authoritative : turn);
+		if (runRevision(previous ? [previous] : []) !== runRevision([authoritative])) lastWorkflowActivityAt.value = Date.now();
+		if (isActiveRun(authoritative)) {
+			if (reconnect) scheduleConversationReconnect(authoritative);
+			return;
+		}
+		await settleConversationRun(authoritative);
+	} catch {
+		if (reconnect && !disposed) scheduleConversationReconnect(item);
+	}
+}
+async function settleConversationRun(completed: Run) {
+	if (completed.final_text) setRunRevealTarget(completed.final_text);
+	else if (completed.final_json) setRunRevealTarget(`\`\`\`json\n${JSON.stringify(completed.final_json, null, 2)}\n\`\`\``);
+	await waitForRunReveal(completed.id);
+	conversationRuns.value = conversationRuns.value.map((turn) => turn.id === completed.id ? completed : turn);
+	if (streamingRunID.value === completed.id) streamingRunID.value = "";
+	void refreshRuns(true);
+	window.dispatchEvent(new Event("credits-updated"));
+}
 function handleRunEvent(event: RunEvent) {
-	runEvents.value.push(event);
+	if (runEvents.value.some((existing) => existing.sequence === event.sequence)) return;
+	lastWorkflowActivityAt.value = Date.now();
+	runEvents.value = [...runEvents.value, event].sort((left, right) => left.sequence - right.sequence);
 	const runID = streamingRunID.value;
-	if (runID) runEventsByID.value = { ...runEventsByID.value, [runID]: [...(runEventsByID.value[runID] ?? []), event] };
+	if (runID) {
+		const existing = runEventsByID.value[runID] ?? [];
+		if (!existing.some((candidate) => candidate.sequence === event.sequence)) runEventsByID.value = { ...runEventsByID.value, [runID]: [...existing, event].sort((left, right) => left.sequence - right.sequence) };
+	}
 	if (event.type === "expert.stage.updated" && event.payload.state === "running") {
 		stopRunReveal();
 		revealedRunOutput.value = "";
@@ -351,8 +404,8 @@ async function sendFollowUp(message: ComposerSubmission) {
   } finally { sendingFollowUp.value = false; }
 }
 
-async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; if (streamReconnectTimer) clearTimeout(streamReconnectTimer); await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
+function closeRun() { if (streamReconnectTimer) clearTimeout(streamReconnectTimer); eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
@@ -400,7 +453,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     <ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
     <div v-if="selectedRun" class="run-page">
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
-      <ExecutionStatusBar v-if="statusConversationRun" :state="statusConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="statusConversationRun.credit_consumption" :can-stop="Boolean(activeConversationRun)" @stop="cancelConversationRun" />
+      <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
         <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>

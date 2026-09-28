@@ -272,12 +272,15 @@ describe("Agent Workspace API client", () => {
 
   it("parses replayed and live SSE events in order", async () => {
     const body = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode("id: 1\nevent: run.started\ndata: {}\n\nid: 2\nevent: run.succeeded\ndata: {\"message\":\"done\"}\n\n")); controller.close(); } });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
     const events: string[] = [];
 
-    await createPlatformApi(() => "token").streamRunEvents("workflow-1", "run-1", (event) => events.push(`${event.sequence}:${event.type}:${String(event.payload.message ?? "")}`));
+    await createPlatformApi(() => "token").streamRunEvents("workflow-1", "run-1", (event) => events.push(`${event.sequence}:${event.type}:${String(event.payload.message ?? "")}`), undefined, { afterSequence: 4, reconnect: true });
 
     expect(events).toEqual(["1:run.started:", "2:run.succeeded:done"]);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/runs/run-1/events?reconnect=true");
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "Last-Event-ID": "4" });
   });
 
   it("streams Session message snapshots with progress and partial content", async () => {
@@ -305,6 +308,16 @@ describe("Agent Workspace API client", () => {
     await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, (snapshot) => snapshots.push(snapshot));
 
     expect(snapshots).toEqual([{ state: "completed", content: "完成", elapsed_ms: 1200 }]);
+  });
+
+  it("marks a resumed Session stream without changing the message identity", async () => {
+    const body = new ReadableStream({ start(controller) { controller.close(); } });
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, () => undefined, undefined, { reconnect: true });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/events?reconnect=true");
   });
 
   it("requests backend cancellation for the active Session response", async () => {

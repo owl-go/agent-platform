@@ -64,6 +64,7 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
   afterEach(() => {
+    vi.useRealTimers();
     embeddedSessionApprovalID.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
@@ -428,7 +429,7 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("shows safe progress instead of a queued label while the Agent is working", async () => {
+  it("distinguishes queued state from the safe activity description", async () => {
     const wrapper = await mountPage([
       messages[0]!,
       { id: 2, role: "assistant", state: "queued", content: "", progress_stage: "preparing", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" },
@@ -436,7 +437,8 @@ describe("SessionsPage conversation layout", () => {
 
     expect(wrapper.text()).toContain("思考中");
     expect(wrapper.text()).toContain("正在准备运行环境");
-    expect(wrapper.text()).not.toContain("排队中");
+    expect(wrapper.get(".execution-status-bar").text()).toContain("排队中");
+    expect(wrapper.get(".execution-status-stop").text()).toContain("取消排队");
     wrapper.unmount();
   });
 
@@ -615,6 +617,30 @@ describe("SessionsPage conversation layout", () => {
     expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain("图片内容已识别");
     expect(wrapper.text()).not.toContain("正在调用工具");
+    wrapper.unmount();
+  });
+
+  it("reads authoritative state before reconnecting a broken message stream", async () => {
+    vi.useFakeTimers();
+    const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "thinking", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, pending]);
+    let streamCalls = 0;
+    api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, _onSnapshot, signal, options) => {
+      streamCalls += 1;
+      if (streamCalls === 1) throw new Error("connection lost");
+      expect(options).toEqual({ reconnect: true });
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+    });
+
+    const wrapper = await mountPageWithAPI(api);
+    await flushPromises();
+    expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(750);
+    await flushPromises();
+
+    expect(api.streamSessionMessage).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(api.streamSessionMessage).mock.calls[1]?.[4]).toEqual({ reconnect: true });
     wrapper.unmount();
   });
 

@@ -50,6 +50,8 @@ var allowedTokenValues = map[string]map[string]struct{}{
 	"first_response_failed.safe_error_code":      tokenSet("invalid_configuration", "runtime_unavailable", "authentication_failed", "model_failed", "command_failed", "budget_exhausted", "interrupted", "timed_out", "event_delivery_failed", "internal_adapter_error"),
 	"workflow_created.source":                    tokenSet("manual", "session", "template", "import"),
 	"workflow_second_run_succeeded.trigger_type": tokenSet("manual", "scheduled", "api"),
+	"execution_stream_reconnected.stream_type":   tokenSet("session_message", "run"),
+	"execution_stream_reconnected.resume_mode":   tokenSet("snapshot", "replay", "sequence"),
 }
 
 var allowedAttributes = map[string]map[string]string{
@@ -61,6 +63,7 @@ var allowedAttributes = map[string]map[string]string{
 	"workflow_save_started":         {"source_session": "bool", "prefilled_fields": "int"},
 	"workflow_created":              {"source": "token", "has_schedule": "bool", "has_connector": "bool"},
 	"workflow_second_run_succeeded": {"days_since_create": "int", "trigger_type": "token"},
+	"execution_stream_reconnected":  {"stream_type": "token", "resume_mode": "token"},
 }
 
 var requiredAttributes = map[string][]string{
@@ -72,6 +75,7 @@ var requiredAttributes = map[string][]string{
 	"workflow_save_started":         {"source_session", "prefilled_fields"},
 	"workflow_created":              {"source", "has_schedule", "has_connector"},
 	"workflow_second_run_succeeded": {"days_since_create", "trigger_type"},
+	"execution_stream_reconnected":  {"stream_type", "resume_mode"},
 }
 
 func New(db *gorm.DB, logger *slog.Logger) (*Recorder, error) {
@@ -158,6 +162,14 @@ func (recorder *Recorder) WorkflowTerminal(ctx context.Context, observation anal
 	recorder.record(ctx, "workflow_second_run_succeeded", observation.OwnerID, observation.WorkflowID, "workflow", map[string]any{"days_since_create": facts.DaysSinceCreate, "trigger_type": facts.Trigger}, "subject")
 }
 
+func (recorder *Recorder) ExecutionStreamReconnected(ctx context.Context, ownerID, subjectID, streamType, resumeMode string) {
+	objectType := "run"
+	if streamType == "session_message" {
+		objectType = "session"
+	}
+	recorder.record(ctx, "execution_stream_reconnected", ownerID, subjectID, objectType, map[string]any{"stream_type": streamType, "resume_mode": resumeMode}, "window5m")
+}
+
 func (recorder *Recorder) record(ctx context.Context, name, ownerID, subjectID, objectType string, attributes map[string]any, dedupScope string) {
 	row, err := newEvent(name, ownerID, subjectID, objectType, attributes, dedupScope, time.Now().UTC())
 	if err != nil {
@@ -230,6 +242,8 @@ func newEvent(name, ownerID, subjectID, objectType string, attributes map[string
 	dedupValue := ownerID
 	if dedupScope == "subject" && subjectID != "" {
 		dedupValue = subjectID
+	} else if dedupScope == "window5m" && subjectID != "" {
+		dedupValue = subjectID + ":" + occurredAt.Truncate(5*time.Minute).Format(time.RFC3339)
 	}
 	return eventRecord{
 		ID: uuid.NewString(), Name: name, AnonymousUserKey: userKey, AnonymousSubjectKey: subjectKey,

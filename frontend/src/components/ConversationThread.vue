@@ -43,6 +43,12 @@ function isPending(message: ConversationMessage) {
 function stateLabel(message: ConversationMessage) {
   return message.stateLabel || message.state;
 }
+function terminalStateLabel(message: ConversationMessage) {
+  if (message.state === "completed" || message.state === "succeeded") return t("common.success");
+  if (message.state === "failed") return t("common.failed");
+  if (message.state === "cancelled") return t("common.cancelled");
+  return stateLabel(message);
+}
 function stageStateLabel(state: ExpertStage["state"]) {
   return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state;
 }
@@ -96,7 +102,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
       <span v-if="message.role === 'assistant'" class="agent-avatar" aria-hidden="true">AI</span>
       <div class="message-content">
         <div v-if="message.role === 'assistant'" class="message-identity">
-          <strong>{{ message.meta?.label || 'Agent Workspace' }}</strong><span>Agent</span><time :datetime="message.timestamp">{{ messageTime(message.timestamp) }}</time><small v-if="message.elapsedMs">{{ t('sessions.elapsed', { value: formatDuration(message.elapsedMs, locale as SupportedLocale) }) }}</small>
+          <strong>{{ message.meta?.label || 'Agent Workspace' }}</strong><span>Agent</span><span v-if="!isPending(message)" class="message-terminal-state" :class="`is-${message.state}`">{{ terminalStateLabel(message) }}</span><time :datetime="message.timestamp">{{ messageTime(message.timestamp) }}</time><small v-if="message.elapsedMs">{{ t('sessions.elapsed', { value: formatDuration(message.elapsedMs, locale as SupportedLocale) }) }}</small>
         </div>
         <div v-if="message.role === 'assistant' && isPending(message) && !message.finalizing" class="thinking-state">
           <span class="thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -130,8 +136,6 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
           <footer v-if="message.retryable"><el-button type="primary" @click="emit('retry', message.id)">{{ t('sessions.retryStep') }}</el-button></footer>
         </section>
         <p v-else-if="message.role !== 'assistant' && message.state !== 'cancelled' && (message.error || message.state === 'failed')">{{ message.error || stateLabel(message) }}</p>
-        <p v-else-if="!isPending(message) && message.stateLabel" class="muted">{{ message.stateLabel }}</p>
-
         <div v-if="message.role === 'user' && message.skills?.length" class="message-skill-badges" :aria-label="t('sessions.usedSkills')">
           <span v-for="skill in message.skills" :key="skill.id" class="message-skill-badge"><Box :size="14" aria-hidden="true" />{{ skill.name }}</span>
         </div>

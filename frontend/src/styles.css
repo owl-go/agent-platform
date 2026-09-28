@@ -883,11 +883,15 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .execution-status-bar { z-index: 4; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 24px; border-bottom: 1px solid var(--aw-n4); background: var(--aw-n1); color: var(--aw-n8); font-size: 12.5px; }
 .execution-status-dot { width: 7px; height: 7px; flex: 0 0 7px; border: 1px solid var(--aw-n6); border-radius: 50%; background: transparent; }
 .execution-status-bar.is-running .execution-status-dot { border-color: var(--aw-running); background: var(--aw-running); animation: aw-pulse 1.2s ease-in-out infinite; }
+.execution-status-bar.is-queued .execution-status-dot { border-color: var(--aw-running); background: var(--aw-running); animation: aw-pulse 1.2s ease-in-out infinite; }
+.execution-status-bar.is-stale .execution-status-dot { animation: none; }
 .execution-status-bar.is-waiting_for_user .execution-status-dot { border-color: var(--aw-warning); background: var(--aw-warning); }
 .execution-status-bar.is-succeeded .execution-status-dot { border-color: var(--aw-success); background: var(--aw-success); }
 .execution-status-bar.is-failed .execution-status-dot { border-color: var(--aw-danger); background: var(--aw-danger); }
 .execution-status-bar.is-cancelled .execution-status-dot { border-radius: 1px; border-color: var(--aw-n6); background: var(--aw-n6); }
 .execution-status-meta, .execution-status-model { color: var(--aw-n6); font: 11.5px/1.5 var(--aw-font-mono); }
+.execution-status-activity { min-width: 0; max-width: min(420px, 35vw); overflow: hidden; color: var(--aw-n7); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.execution-status-bar.is-stale .execution-status-activity { color: var(--aw-warning); }
 .execution-status-model { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .execution-status-spacer { flex: 1; }
 .execution-status-stop.el-button { height: 28px; margin: 0; padding: 4px 10px; border-color: var(--aw-danger-border); border-radius: var(--aw-radius-control); background: var(--aw-n0); color: var(--aw-danger); font-size: 12px; }
@@ -901,6 +905,9 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .message-identity { display: flex; align-items: center; gap: 7px; min-height: 28px; margin-bottom: 4px; color: var(--aw-n6); font-size: 12px; }
 .message-identity strong { max-width: min(360px, 55vw); overflow: hidden; color: var(--aw-n9); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .message-identity > span { padding: 1px 5px; border: 1px solid var(--aw-agent-border); border-radius: 3px; background: var(--aw-agent-soft); color: var(--aw-agent); font-size: 10px; font-weight: 600; }
+.message-identity .message-terminal-state { border-color: var(--aw-n5); background: var(--aw-n2); color: var(--aw-n7); }
+.message-identity .message-terminal-state.is-completed, .message-identity .message-terminal-state.is-succeeded { border-color: var(--aw-success-border); background: var(--aw-success-soft); color: var(--aw-success); }
+.message-identity .message-terminal-state.is-failed { border-color: var(--aw-danger-border); background: var(--aw-danger-soft); color: var(--aw-danger); }
 .message-identity time, .message-identity small { font: 11px/1.5 var(--aw-font-mono); }
 .message.user .message-content { max-width: 80%; }
 .message.user p { padding: 10px 14px; border-radius: var(--aw-radius-card); background: var(--aw-n3); color: var(--aw-n9); font-size: 13.5px; line-height: 1.75; }

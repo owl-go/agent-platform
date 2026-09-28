@@ -58,3 +58,28 @@ func TestDurationBucketUsesBoundedCategories(t *testing.T) {
 		}
 	}
 }
+
+func TestReconnectEventUsesBoundedMetadataAndFiveMinuteDeduplication(t *testing.T) {
+	firstAt := time.Date(2026, 9, 28, 6, 1, 0, 0, time.UTC)
+	first, err := newEvent("execution_stream_reconnected", "user", "run", "run", map[string]any{"stream_type": "run", "resume_mode": "sequence"}, "window5m", firstAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sameWindow, err := newEvent("execution_stream_reconnected", "user", "run", "run", map[string]any{"stream_type": "run", "resume_mode": "sequence"}, "window5m", firstAt.Add(3*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextWindow, err := newEvent("execution_stream_reconnected", "user", "run", "run", map[string]any{"stream_type": "run", "resume_mode": "sequence"}, "window5m", firstAt.Add(5*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.DedupKey != sameWindow.DedupKey {
+		t.Fatal("reconnects in one five-minute window were not deduplicated")
+	}
+	if first.DedupKey == nextWindow.DedupKey {
+		t.Fatal("reconnects in later windows cannot be measured")
+	}
+	if bytes.Contains(first.Attributes, []byte("user")) || bytes.Contains(first.Attributes, []byte("run-raw")) {
+		t.Fatalf("reconnect attributes leaked identifiers: %s", first.Attributes)
+	}
+}

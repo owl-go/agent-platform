@@ -158,7 +158,7 @@ export interface PlatformApi {
   setSessionExpertSelection(id: string, selection: { expert_id?: string; expert_team_id?: string }, version: number, signal?: AbortSignal): Promise<Session>;
   deleteSession(id: string, signal?: AbortSignal): Promise<void>;
   listSessionMessages(id: string, signal?: AbortSignal): Promise<SessionMessage[]>;
-  streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
+  streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal, options?: { reconnect?: boolean }): Promise<void>;
   uploadAttachment(file: File, signal?: AbortSignal): Promise<Attachment>;
   getAttachmentDownload(id: string, signal?: AbortSignal): Promise<Blob>;
   sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
@@ -178,7 +178,7 @@ export interface PlatformApi {
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
   continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<Run>;
-  streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<void>;
+  streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal, options?: { afterSequence?: number; reconnect?: boolean }): Promise<void>;
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listArtifacts(id: string, signal?: AbortSignal): Promise<Artifact[]>;
@@ -419,10 +419,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         after = next;
       }
     },
-    async streamSessionMessage(id, messageID, onSnapshot, signal) {
+    async streamSessionMessage(id, messageID, onSnapshot, signal, options) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
-      const response = await fetch(`/api/v1/sessions/${encodeURIComponent(id)}/messages/${messageID}/events`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
+      const reconnect = options?.reconnect ? "?reconnect=true" : "";
+      const response = await fetch(`/api/v1/sessions/${encodeURIComponent(id)}/messages/${messageID}/events${reconnect}`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
       if (!response.ok || !response.body) throw new ApiError(response.status === 404 ? "not_found" : "unknown", response.status, "message_stream_failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let pending = "";
@@ -476,10 +477,13 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
     async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal, input) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal))); },
-    async streamRunEvents(workflowID, runID, onEvent, signal) {
+    async streamRunEvents(workflowID, runID, onEvent, signal, options) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
-      const response = await fetch(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/events`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
+      const reconnect = options?.reconnect ? "?reconnect=true" : "";
+      const headers: Record<string, string> = { Accept: "text/event-stream", Authorization: `Bearer ${token}` };
+      if (options?.afterSequence) headers["Last-Event-ID"] = String(options.afterSequence);
+      const response = await fetch(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/events${reconnect}`, { signal, headers });
       if (!response.ok || !response.body) throw new ApiError(response.status === 403 ? "forbidden" : "unknown", response.status, "event_stream_failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let pending = "";

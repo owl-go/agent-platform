@@ -13,7 +13,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 - Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、Administrator-owned Connector Publication、User-private Connector Installation/Authorization、兼容期 CLI Definition/Enablement/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
-- Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建和第二次成功运行生成追加式 Product Event。它只保存匿名 User/对象 Key 和白名单粗粒度属性；采集失败不改变业务操作结果。
+- Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建、第二次成功运行和执行流重连生成追加式 Product Event。执行流重连只记录流类型与恢复方式，并按匿名对象的五分钟窗口去重；所有事件都只保存匿名 User/对象 Key 和白名单粗粒度属性，采集失败不改变业务操作结果。
 
 - AI Creation：具有独立 Endpoint 和加密 API Key 的 Image Model、单一 Prompt Optimization 设置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；不引用 Workspace 的 Model Provider Connection 或 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
 - AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。认证用户的 Assistant Conversation 拥有独立于 Workspace Session 的持久回合和完整审计记录；API 请求内通过独立 Model Provider Adapter 执行预处理和 SSE 生成，每个模型阶段走 Credits 准入与结算。External Conversation 仍是独立的匿名分享链路；真实数字人供应商和完整外部会话审计仍按产品规格分阶段实现。

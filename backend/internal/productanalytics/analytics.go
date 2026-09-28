@@ -41,6 +41,7 @@ type Observer interface {
 	WorkflowSaveStarted(context.Context, string, string, int)
 	WorkflowCreated(context.Context, WorkflowCreatedObservation)
 	WorkflowTerminal(context.Context, WorkflowTerminalObservation)
+	ExecutionStreamReconnected(context.Context, string, string, string, string)
 }
 
 type Nop struct{}
@@ -52,3 +53,5 @@ func (Nop) SessionTerminal(context.Context, SessionTerminalObservation)         
 func (Nop) WorkflowSaveStarted(context.Context, string, string, int)            {}
 func (Nop) WorkflowCreated(context.Context, WorkflowCreatedObservation)         {}
 func (Nop) WorkflowTerminal(context.Context, WorkflowTerminalObservation)       {}
+func (Nop) ExecutionStreamReconnected(context.Context, string, string, string, string) {
+}

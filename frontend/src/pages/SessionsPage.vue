@@ -47,6 +47,7 @@ const composerLayer = ref<HTMLElement>();
 const composerClearance = ref(154);
 const showJumpToLatest = ref(false);
 const keepAtLatest = ref(true);
+const lastSessionActivityAt = ref(Date.now());
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
 const setupRequired = computed(() => messages.value.length > 0 ? false : selectableModels.value.length === 0 || !settings.value?.runtime_model_defaults.some((item) => item.runtime_engine === settings.value?.default_runtime_engine) || !runtimes.value.some((item) => item.name === settings.value?.default_runtime_engine && item.available));
 const filteredSessions = computed(() => {
@@ -62,6 +63,13 @@ const activeAssistant = computed(() => {
 });
 const statusMessage = computed(() => activeAssistant.value ?? [...messages.value].reverse().find((message) => message.role === "assistant"));
 const statusIdentity = computed(() => statusMessage.value ? responseIdentity(statusMessage.value) : undefined);
+const statusActivity = computed(() => {
+  const message = activeAssistant.value;
+  if (!message) return undefined;
+  const summary = activitySummaries(message).at(-1);
+  return summary ? activitySummaryLabel(summary) : activeStageLabel(message);
+});
+const statusModelCalls = computed(() => activeAssistant.value?.expert_stages?.length ?? activeAssistant.value?.credit_consumption?.stages.length ?? 0);
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
   const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
@@ -122,6 +130,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
   };
 }));
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
+let streamReconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let pollGeneration = 0;
 let composerObserver: ResizeObserver | undefined;
 let responseController: AbortController | undefined;
@@ -135,6 +144,8 @@ onMounted(async () => {
   if (typeof ResizeObserver !== "undefined") composerObserver = new ResizeObserver(measureComposer);
   if (composerLayer.value) composerObserver?.observe(composerLayer.value);
   window.addEventListener("resize", handleViewportResize);
+  window.addEventListener("online", resumeAssistantStream);
+  document.addEventListener("visibilitychange", resumeAssistantStream);
   await refresh();
   if (route.query.new) await create();
   else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item) await open(item); }
@@ -204,6 +215,7 @@ async function open(item: Session) {
     messages.value = loadedMessages.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
     await nextTick(); scrollToLatest("auto");
     const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating"));
+    if (pending) lastSessionActivityAt.value = Date.now();
     if (pending) void streamAssistant(item.id, pending.id, generation);
   } catch {
     if (generation === pollGeneration) error.value = t("errors.generic");
@@ -243,6 +255,7 @@ async function send(message: ComposerSubmission) {
     const pair = await api.sendSessionMessage(sessionID, message.content, message.attachmentIDs, undefined, message.input);
     if (selected.value?.id !== sessionID || generation !== pollGeneration) return;
     messages.value.push(pair.user_message, pair.assistant_message);
+    lastSessionActivityAt.value = Date.now();
     void streamAssistant(sessionID, pair.assistant_message.id, generation);
   } finally { sending.value = false; }
 }
@@ -270,6 +283,7 @@ async function retry(index: number) {
   try {
     const pair = await api.retrySessionMessage(selected.value.id, original.id);
     messages.value.push(pair.user_message, pair.assistant_message);
+    lastSessionActivityAt.value = Date.now();
     void streamAssistant(selected.value.id, pair.assistant_message.id, pollGeneration);
   } catch { error.value = t("errors.generic"); }
   finally { sending.value = false; }
@@ -278,7 +292,7 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
   try {
     const latest = await api.listSessionMessages(sessionID);
     if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
-    messages.value = latest.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
+    replaceSessionMessages(latest, messageID);
     const message = latest.find((item) => item.id === messageID);
     if (message && (message.state === "queued" || message.state === "generating")) {
       pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 900);
@@ -296,22 +310,65 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
     if (generation === pollGeneration) pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 1800);
   }
 }
-async function streamAssistant(sessionID: string, messageID: number, generation: number) {
+async function streamAssistant(sessionID: string, messageID: number, generation: number, reconnect = false) {
+  if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
   responseController?.abort();
   const controller = new AbortController();
   responseController = controller;
   try {
     await api.streamSessionMessage(sessionID, messageID, (snapshot) => {
       if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
+      lastSessionActivityAt.value = Date.now();
       applySnapshot(messageID, snapshot);
-    }, controller.signal);
+    }, controller.signal, { reconnect });
     await waitForReveal(messageID, generation);
     if (!controller.signal.aborted && generation === pollGeneration && selected.value?.id === sessionID) await pollAssistant(sessionID, messageID, generation);
   } catch (streamError) {
-    if (!controller.signal.aborted && generation === pollGeneration) void pollAssistant(sessionID, messageID, generation);
+    if (!controller.signal.aborted && generation === pollGeneration) await reconcileAssistant(sessionID, messageID, generation, true);
   } finally {
     if (responseController === controller) responseController = undefined;
   }
+}
+function sessionMessageRevision(message?: SessionMessage) {
+  return message ? JSON.stringify([message.state, message.content, message.progress_stage, message.elapsed_ms, message.error, message.activities?.length, message.expert_stages?.map((stage) => [stage.position, stage.state])]) : "";
+}
+function replaceSessionMessages(latest: SessionMessage[], messageID: number) {
+  const previousRevision = sessionMessageRevision(messages.value.find((item) => item.id === messageID));
+  const nextRevision = sessionMessageRevision(latest.find((item) => item.id === messageID));
+  messages.value = latest.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
+  if (previousRevision !== nextRevision) lastSessionActivityAt.value = Date.now();
+}
+function scheduleAssistantReconnect(sessionID: string, messageID: number, generation: number) {
+  if (streamReconnectTimer) clearTimeout(streamReconnectTimer);
+  streamReconnectTimer = setTimeout(() => {
+    streamReconnectTimer = undefined;
+    if (generation === pollGeneration && selected.value?.id === sessionID) void streamAssistant(sessionID, messageID, generation, true);
+  }, 750);
+}
+async function reconcileAssistant(sessionID: string, messageID: number, generation: number, reconnect: boolean) {
+  try {
+    const latest = await api.listSessionMessages(sessionID);
+    if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
+    replaceSessionMessages(latest, messageID);
+    const message = latest.find((item) => item.id === messageID);
+    if (message?.state === "queued" || message?.state === "generating") {
+      if (reconnect) scheduleAssistantReconnect(sessionID, messageID, generation);
+      return;
+    }
+    if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
+    window.dispatchEvent(new Event("credits-updated"));
+    await refreshSessionList(sessionID);
+  } catch {
+    if (reconnect && generation === pollGeneration && selected.value?.id === sessionID) scheduleAssistantReconnect(sessionID, messageID, generation);
+  }
+}
+function resumeAssistantStream() {
+  if (document.visibilityState === "hidden") return;
+  const sessionID = selected.value?.id;
+  const message = activeAssistant.value;
+  if (!sessionID || !message || (message.state !== "queued" && message.state !== "generating")) return;
+  responseController?.abort();
+  void reconcileAssistant(sessionID, message.id, pollGeneration, true);
 }
 function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   const message = messages.value.find((item) => item.id === messageID);
@@ -527,7 +584,7 @@ async function confirmRemove() {
   }
   finally { deleting.value = false; }
 }
-onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); });
+onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTimer); if (streamReconnectTimer) clearTimeout(streamReconnectTimer); responseController?.abort(); stopReveal(); composerObserver?.disconnect(); window.removeEventListener("resize", handleViewportResize); window.removeEventListener("online", resumeAssistantStream); document.removeEventListener("visibilitychange", resumeAssistantStream); });
 </script>
 
 <template>
@@ -564,7 +621,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
         <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
-        <ExecutionStatusBar v-if="statusMessage" :state="statusMessage.state" :elapsed-ms="statusMessage.elapsed_ms" :model="statusIdentity?.modelName" :credit-consumption="statusMessage.credit_consumption" :can-stop="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" @stop="cancelGeneration" />
+        <ExecutionStatusBar v-if="activeAssistant" :state="activeAssistant.state" :elapsed-ms="activeAssistant.elapsed_ms" :model="statusIdentity?.modelName" :credit-consumption="activeAssistant.credit_consumption" :current-activity="statusActivity" :last-activity-at="lastSessionActivityAt" :model-call-count="statusModelCalls" can-stop :stopping="cancellingMessageID === activeAssistant.id" @stop="cancelGeneration" />
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>

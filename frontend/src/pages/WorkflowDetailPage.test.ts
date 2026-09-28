@@ -225,7 +225,8 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     const header = wrapper.get(".run-conversation-head").text();
-    expect(wrapper.get(".execution-status-bar").text()).toContain("失败");
+    expect(wrapper.find(".execution-status-bar").exists()).toBe(false);
+    expect(wrapper.get(".message-terminal-state.is-failed").text()).toBe("失败");
     expect(header).toContain(new Date(latestTurn.started_at!).toLocaleString());
     expect(header).not.toContain(new Date(run.started_at!).toLocaleString());
     wrapper.unmount();
@@ -650,5 +651,39 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.get(".run-conversation .message.assistant .markdown-body").text()).toBe(response);
     wrapper.unmount();
     vi.useRealTimers();
+  });
+
+  it("resumes from the last event sequence and ignores replayed duplicates", async () => {
+    vi.useFakeTimers();
+    const activeRun: Run = { ...run, state: "running", final_text: undefined, ended_at: undefined, elapsed_ms: 0 };
+    let streamCalls = 0;
+    const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal, options?: { afterSequence?: number; reconnect?: boolean }) => {
+      streamCalls += 1;
+      if (streamCalls === 1) {
+        onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+        throw new Error("connection lost");
+      }
+      onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+      onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+      expect(options).toEqual({ afterSequence: 1, reconnect: true });
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+    });
+    const api = apiStub({
+      listRuns: vi.fn(async () => [activeRun]),
+      listRunTurns: vi.fn(async () => [activeRun]),
+      getRun: vi.fn(async () => activeRun),
+      streamRunEvents,
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(750);
+    await flushPromises();
+
+    expect(streamRunEvents).toHaveBeenCalledTimes(2);
+    expect(streamRunEvents.mock.calls[1]?.[4]).toEqual({ afterSequence: 1, reconnect: true });
+    expect(wrapper.findAll(".activity-summary-group")).toHaveLength(2);
+    wrapper.unmount();
   });
 });

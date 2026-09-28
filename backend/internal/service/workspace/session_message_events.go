@@ -44,6 +44,9 @@ func (service *Service) streamSessionMessage(writer http.ResponseWriter, request
 		writeAuthError(writer, http.StatusNotFound, "resource_not_found")
 		return
 	}
+	if request.URL.Query().Get("reconnect") == "true" {
+		service.productAnalytics().ExecutionStreamReconnected(request.Context(), owner, sessionID, "session_message", "snapshot")
+	}
 
 	writer.Header().Set("Content-Type", "text/event-stream")
 	writer.Header().Set("Cache-Control", "no-store")
