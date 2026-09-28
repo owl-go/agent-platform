@@ -209,7 +209,7 @@ func validateExecutionPolicy(definition Definition) error {
 	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
 		return errors.New("CLI executable must be selected from package bin metadata")
 	}
-	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "none" && definition.AuthenticationDriver != "connector_package" {
+	if definition.AuthenticationDriver != "feishu" && definition.AuthenticationDriver != "dingtalk" && definition.AuthenticationDriver != "none" && definition.AuthenticationDriver != "connector_package" {
 		return errors.New("unsupported built-in authentication driver")
 	}
 	if len(definition.Capabilities) == 0 {

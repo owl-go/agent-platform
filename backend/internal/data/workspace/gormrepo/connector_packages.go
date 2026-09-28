@@ -876,7 +876,7 @@ func (repository *Repository) ResolveConnectorPackageAuthorization(ctx context.C
 	if authorization.IdentityRef != "" && authorization.IdentityRef != identity && authorization.IdentityRef != "user" {
 		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector identity is not authorized", domain.ErrConflict)
 	}
-	material := domain.ConnectorAuthorizationMaterial{CredentialCiphertext: append([]byte(nil), authorization.CredentialCiphertext...), CredentialAAD: authorization.CredentialAAD, CredentialFormat: authorization.CredentialFormat}
+	material := domain.ConnectorAuthorizationMaterial{Authorization: connectorAuthorizationDomain(authorization), CredentialCiphertext: append([]byte(nil), authorization.CredentialCiphertext...), CredentialAAD: authorization.CredentialAAD, CredentialFormat: authorization.CredentialFormat}
 	if err := json.Unmarshal(authorization.Scopes, &material.Scopes); err != nil {
 		return domain.ConnectorAuthorizationMaterial{}, fmt.Errorf("%w: Connector authorization scopes are invalid: %v", domain.ErrConflict, err)
 	}

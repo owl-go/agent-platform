@@ -432,6 +432,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		return nil, publicError(err)
 	}
 	refreshToken := ""
+	appID := ""
 	switch current.CredentialFormat {
 	case "json":
 		if current.CredentialAAD == "" {
@@ -443,10 +444,16 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		}
 		var credentials struct {
 			RefreshToken string `json:"refresh_token"`
+			ClientID     string `json:"client_id"`
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
+			if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
+				appID = credentials.ClientID
+			}
 		}
+		clear(plaintext)
 	case "access_token":
 		if len(current.RefreshCredentialCiphertext) > 0 && current.RefreshCredentialAAD != "" {
 			plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
@@ -459,26 +466,34 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if strings.TrimSpace(refreshToken) == "" {
 		return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
 	}
-	appID, appSecret, err := driver.Application(ctx, principal.UserID, request.InstallationId)
+	resolvedAppID, appSecret, err := driver.Application(ctx, principal.UserID, request.InstallationId)
 	if err != nil {
 		return nil, publicError(err)
+	}
+	if appID == "" {
+		appID = resolvedAppID
 	}
 	result, err := driver.Refresh(ctx, appID, appSecret, refreshToken)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if current.ExternalIdentityID != "" && current.ExternalIdentityID != result.ExternalID {
+	if result.ExternalID != "" && current.ExternalIdentityID != "" && current.ExternalIdentityID != result.ExternalID {
 		return nil, publicError(fmt.Errorf("%w: refreshed authorization belongs to a different account", domain.ErrConflict))
+	}
+	if result.ExternalID == "" {
+		result.ExternalID = current.ExternalIdentityID
+		result.DisplayName = current.ExternalDisplayName
 	}
 	if len(result.Scopes) == 0 {
 		result.Scopes = append([]string(nil), current.Scopes...)
 	}
-	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
 	if err != nil {
 		return nil, publicError(err)
 	}
 	aad := connectorAuthorizationAAD(principal.UserID, request.InstallationId, result.ExternalID)
 	ciphertext, err := service.box.Encrypt(refreshedCredentials, aad)
+	clear(refreshedCredentials)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -489,7 +504,11 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialAAD = aad
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
-	current.ExpiresAt = &result.ExpiresAt
+	expiry := result.ExpiresAt
+	if !result.RefreshExpiresAt.IsZero() {
+		expiry = result.RefreshExpiresAt
+	}
+	current.ExpiresAt = &expiry
 	updated, err := repository.RefreshConnectorAuthorization(ctx, current, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: request.InstallationId, Operation: "refresh_authorization", IdentityRef: current.IdentityRef, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
@@ -693,16 +712,21 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
 	if err != nil {
 		return nil, publicError(err)
 	}
 	aad := connectorAuthorizationAAD(principal.UserID, flow.InstallationID, result.ExternalID)
 	ciphertext, err := service.box.Encrypt(credentials, aad)
+	clear(credentials)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &result.ExpiresAt}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	expiry := result.ExpiresAt
+	if !result.RefreshExpiresAt.IsZero() {
+		expiry = result.RefreshExpiresAt
+	}
+	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -745,7 +769,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	if policy.CLI != nil {
 		switch policy.CLI.AuthenticationDriver {
-		case "feishu":
+		case "feishu", "dingtalk":
 			return "interactive"
 		case "connector_package":
 			return "provided"
@@ -808,8 +832,8 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
-	if pkg.CLI != nil && pkg.CLI.AuthenticationDriver == "feishu" {
-		return fmt.Errorf("%w: the Feishu authentication driver is reserved for a Conformance-backed platform publication", domain.ErrInvalid)
+	if pkg.CLI != nil && (pkg.CLI.AuthenticationDriver == "feishu" || pkg.CLI.AuthenticationDriver == "dingtalk") {
+		return fmt.Errorf("%w: interactive authentication drivers are reserved for Conformance-backed platform publications", domain.ErrInvalid)
 	}
 	return nil
 }
@@ -817,6 +841,9 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
 	if pkg.CLI == nil {
 		return nil
+	}
+	if (pkg.Metadata.Source == "dingtalk") != (pkg.CLI.AuthenticationDriver == "dingtalk") {
+		return fmt.Errorf("%w: DingTalk authorization driver must match the reviewed DingTalk package source", domain.ErrInvalid)
 	}
 	if len(pkg.CLIBundle) == 0 || len(pkg.CLIBundleSHA256) != 64 {
 		return fmt.Errorf("%w: a platform CLI publication requires an immutable executable bundle", domain.ErrInvalid)

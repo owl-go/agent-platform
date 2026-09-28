@@ -25,6 +25,21 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  it("opens DingTalk device authorization from an installed package without Feishu application setup", async () => {
+    const installation = { id: "installation-1", source: "dingtalk", active_revision_id: "revision-1", state: "active", authorized: false, version: 1, package_version: "1.0.62", name: "钉钉", description: "", authentication_driver: "dingtalk", upgrade_available: false };
+    const publication = { source: "dingtalk", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "dingtalk", package_version: "1.0.62", mode: "cli", sha256: "a".repeat(64), name: "钉钉", description: "", icon: "plug", authentication_driver: "dingtalk", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const beginConnectorAuthorizationFlow = vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://login.dingtalk.com/verify" }));
+    const beginConnectorSetup = vi.fn();
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow, beginConnectorSetup } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
+    await flushPromises();
+    expect(beginConnectorSetup).not.toHaveBeenCalled();
+    expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
+    expect(wrapper.find('a[href="https://login.dingtalk.com/verify"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
   function setupCLIFlow(initialState: "waiting_for_user" | "enabled" = "waiting_for_user", blocked = false) {
     const definition = { id: "cli-1", name: "Feishu CLI", state: "available", authentication_driver: "feishu", capabilities: [] };
     const enabled = { id: "enable-1", definition_id: definition.id, state: "enabled", version: 2 };

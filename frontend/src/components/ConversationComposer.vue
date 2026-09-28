@@ -223,6 +223,10 @@ async function beginRequestedManagedAuthorization() {
   pending.flow = undefined;
   managedCompletionBusy.value = true;
   try {
+    if (pending.definition.authentication_driver === "dingtalk") {
+      await beginManagedAuthorization();
+      return;
+    }
     const setup = await api.beginConnectorSetup(pending.definition.id);
     if (disposed || pendingManagedActivation.value !== pending) { closeBlankCLIWindow(pending.popup); return; }
     pending.setup = setup;
@@ -257,7 +261,7 @@ async function completeManagedActivation() {
 async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
   if (cliActivationBusy.value.includes(definition.id)) return;
   cliActivationBusy.value.push(definition.id); error.value = "";
-  const popup = active && definition.authentication_driver === "feishu" ? openCLIWindow() : null;
+  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") ? openCLIWindow() : null;
   try {
     await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
@@ -291,6 +295,10 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       return;
     }
     pendingManagedActivation.value = { definition, popup, selectAfter };
+    if (definition.authentication_driver === "dingtalk") {
+      await beginManagedAuthorization();
+      return;
+    }
     const setup = await api.beginConnectorSetup(installation.id);
     pendingManagedActivation.value.setup = setup;
     if (setup.state === "waiting_for_user") {
@@ -408,7 +416,7 @@ async function refreshRequestedCLIAuthorization() {
   }
   const definition = cli.value.find((item) => item.id === request.connectorID);
   const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
-  if (definition?.managed_installation && definition.authentication_driver === "feishu" && (capability || !request.capabilityID)) {
+  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") && (capability || !request.capabilityID)) {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;

@@ -348,6 +348,34 @@ func TestManagedCLIConnectorDeliversCredentialsOnlyToTheirDriver(t *testing.T) {
 	}
 }
 
+func TestManagedDingTalkCLIReceivesOnlyShortLivedToken(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := "connector-authorization:owner-1:installation-1:corp:user"
+	credential, err := json.Marshal(map[string]string{"access_token": "short-lived-token", "refresh_token": "platform-only-refresh", "client_id": "client-1", "access_expires_at": time.Now().UTC().Add(time.Hour).Format(time.RFC3339)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, err := box.Encrypt(credential, aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := &stubCLICredentialRepository{managedMaterial: domain.ConnectorAuthorizationMaterial{CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json"}}
+	executor := &Executor{box: box, cliCredentials: repository}
+	definition := cliconnector.Definition{ID: "installation-1", RevisionID: "revision-1", ManagedInstallation: true, AuthenticationDriver: "dingtalk"}
+	environment, err := executor.cliEnvironmentResolver("owner-1")(context.Background(), definition, cliconnector.Capability{ID: "read"}, cliconnector.IdentityUser)
+	if err != nil || environment["AGENT_PLATFORM_DWS_ACCESS_TOKEN"] != "short-lived-token" || environment["DO_NOT_TRACK"] != "1" || len(environment) != 2 {
+		t.Fatalf("DingTalk credential materialization failed: environment keys %d, error %v", len(environment), err)
+	}
+	for _, value := range environment {
+		if strings.Contains(value, "platform-only-refresh") {
+			t.Fatal("refresh token entered the CLI process")
+		}
+	}
+}
+
 func (repository *stubCLICredentialRepository) ResolveCLIConnectorExecutionCredentials(_ context.Context, ownerID, definitionID string, identity cliconnector.Identity, scopes []string) (cliconnector.EncryptedExecutionCredentials, error) {
 	repository.ownerID, repository.definitionID, repository.identity, repository.scopes = ownerID, definitionID, identity, append([]string(nil), scopes...)
 	return repository.credentials, nil
