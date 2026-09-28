@@ -172,6 +172,8 @@ describe("WorkflowDetailPage", () => {
     const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void) => {
       onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
       onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+      onEvent({ sequence: 3, type: "command.completed", payload: { command: "git status", exit_code: 0 }, raw: "{}" });
+      onEvent({ sequence: 4, type: "file.changed", payload: { path: "report.md" }, raw: "{}" });
     });
     const wrapper = await mountPage(apiStub({ streamRunEvents }));
 
@@ -179,9 +181,13 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(streamRunEvents).toHaveBeenCalledWith("workflow-1", "run-1", expect.any(Function));
-    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity").text()).toContain("正在更新文件");
     expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity details").text()).toContain("git status");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项文件变化");
+    expect(wrapper.findAll(".activity-kind").map((item) => item.text())).toEqual(["环境", "工具", "文件"]);
+    expect(wrapper.findAll(".activity-state").map((item) => item.text())).toEqual(["已完成", "已完成", "已完成"]);
     wrapper.unmount();
   });
 

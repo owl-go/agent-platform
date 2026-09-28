@@ -12,7 +12,7 @@ import ConversationThread from "../components/ConversationThread.vue";
 import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromEvents } from "../cliAuthorization";
-import type { ConversationMessage } from "../conversationThread";
+import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
 const api = inject(platformApiKey)!;
@@ -56,22 +56,25 @@ const conversationElapsed = computed(() => conversationRuns.value.reduce((total,
 const currentExpertStage = computed(() => [...runEvents.value].reverse().find((event) => event.type === "expert.stage.updated")?.payload);
 const cliAuthorizationRequest = computed(() => cliAuthorizationRequestFromEvents(runEvents.value));
 function summarizeRuntimeActivities(events: RunEvent[]) {
-  const activities: Array<{ sequence: number; label: string; historyLabel: string; detail: string }> = [];
+  const activities: Array<{ sequence: number; label: string; historyLabel: string; detail: string; kind: ConversationActivityKind; state: "running" | "completed"; toolCallCount?: number; fileChangeCount?: number }> = [];
   for (const event of events) {
     const activity = runtimeActivity(event);
     if (!activity) continue;
     const previous = activities.at(-1);
-    if (previous?.label === activity.label && previous.detail === activity.detail) previous.sequence = event.sequence;
+    const pendingTool = event.type === "command.completed" ? [...activities].reverse().find((item) => item.kind === "tool" && item.state === "running" && item.detail === activity.detail) : undefined;
+    if (pendingTool) Object.assign(pendingTool, activity, { sequence: event.sequence });
+    else if (previous?.label === activity.label && previous.detail === activity.detail) previous.sequence = event.sequence;
     else activities.push({ sequence: event.sequence, ...activity });
   }
-  return activities.slice(-8);
+  return activities.sort((left, right) => left.sequence - right.sequence).slice(-8);
 }
 const conversationMessages = computed<ConversationMessage[]>(() => conversationRuns.value.flatMap((turn, index) => {
   const input = runInputText(turn, index);
   const output = runOutput(turn);
   const pending = isActiveRun(turn);
   const streaming = turn.id === streamingRunID.value;
-  const turnActivities = summarizeRuntimeActivities(runEventsByID.value[turn.id] ?? (turn.id === eventRunID.value ? runEvents.value : []));
+  const turnEvents = runEventsByID.value[turn.id] ?? (turn.id === eventRunID.value ? runEvents.value : []);
+  const turnActivities = summarizeRuntimeActivities(turnEvents);
   const activity = streaming ? turnActivities.at(-1) : undefined;
   return [
     { id: `${turn.id}:user`, role: "user", content: input, copyText: input, state: "succeeded", timestamp: turn.queued_at, attachments: turn.attachments },
@@ -90,7 +93,8 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       progressTitle: pending ? (turn.state === "waiting_for_user" ? t("common.waitingForUser") : t("sessions.thinking")) : undefined,
       progressDetail: pending ? (turn.state === "queued" && turn.queue_position ? `${t("workflows.queuePosition")}: ${turn.queue_position}` : streaming && currentExpertStage.value ? `${currentExpertStage.value.position}/${currentExpertStage.value.total || ""} · ${currentExpertStage.value.expert_name}` : t("sessions.progress.thinking")) : undefined,
       currentActivity: activity ? { id: activity.sequence, label: activity.label, detail: activity.detail } : undefined,
-      activities: turnActivities.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })),
+      activities: turnActivities.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, kind: item.kind, toolCallCount: item.toolCallCount, fileChangeCount: item.fileChangeCount, state: item.state, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })),
+      executionEvidenceCounts: runtimeEvidenceCounts(turnEvents),
       stages: turn.expert_stages,
       creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
@@ -353,19 +357,26 @@ function runInputText(item: Run, index: number) { const input = item.text_input 
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
 function runtimeActivity(event: RunEvent) {
-	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "" };
-	if (event.type === "reasoning.summary") return { label: t("workflows.reasoningSummary"), historyLabel: t("workflows.reasoningSummary"), detail: typeof event.payload.summary === "string" ? event.payload.summary : "" };
-	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), historyLabel: t("sessions.progress.using_tool"), detail: runtimeCommandDetail(event) };
-	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), historyLabel: t("workflows.toolCompleted"), detail: runtimeCommandDetail(event) };
-	if (event.type === "file.changed") return { label: t("workflows.updatingFiles"), historyLabel: t("workflows.updatingFiles"), detail: "" };
-	if (event.type === "message.delta") return { label: t("workflows.streamingAnswer"), historyLabel: t("workflows.streamingAnswer"), detail: "" };
-	if (event.type === "message.completed") return { label: t("workflows.answerReady"), historyLabel: t("workflows.answerReady"), detail: "" };
+	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "", kind: "runtime" as const, state: "completed" as const };
+	if (event.type === "reasoning.summary") return { label: t("workflows.reasoningSummary"), historyLabel: t("workflows.reasoningSummary"), detail: typeof event.payload.summary === "string" ? event.payload.summary : "", kind: "reasoning" as const, state: "completed" as const };
+	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), historyLabel: t("sessions.progress.using_tool"), detail: runtimeCommandDetail(event), kind: "tool" as const, state: "running" as const, toolCallCount: 1 };
+	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), historyLabel: t("workflows.toolCompleted"), detail: runtimeCommandDetail(event), kind: "tool" as const, state: "completed" as const, toolCallCount: 1 };
+	if (event.type === "file.changed") return { label: t("workflows.updatingFiles"), historyLabel: t("workflows.updatingFiles"), detail: "", kind: "file" as const, state: "completed" as const, fileChangeCount: 1 };
+	if (event.type === "message.delta") return { label: t("workflows.streamingAnswer"), historyLabel: t("workflows.streamingAnswer"), detail: "", kind: "activity" as const, state: "running" as const };
+	if (event.type === "message.completed") return { label: t("workflows.answerReady"), historyLabel: t("workflows.answerReady"), detail: "", kind: "activity" as const, state: "completed" as const };
 	return undefined;
 }
 function runtimeCommandDetail(event: RunEvent) {
 	if (typeof event.payload.command === "string") return event.payload.command;
 	if (typeof event.payload.tool === "string") return event.payload.tool;
 	return t("workflows.command");
+}
+function runtimeEvidenceCounts(events: RunEvent[]) {
+	const requested = events.filter((event) => event.type === "command.requested").length;
+	return {
+		toolCalls: requested || events.filter((event) => event.type === "command.completed").length,
+		fileChanges: events.filter((event) => event.type === "file.changed").length,
+	};
 }
 async function scrollConversationToEnd(behavior: ScrollBehavior = "smooth") { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior }); }
 function addEnvironment() { settingsForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }

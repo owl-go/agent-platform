@@ -460,8 +460,10 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
     expect(wrapper.get(".activity-summary-group > summary").text()).toContain("先检查仓库状态");
+    expect(wrapper.get(".activity-state").text()).toBe("进行中");
     expect(wrapper.get(".activity-summary-group > summary").text()).not.toContain("git status --short");
     expect(wrapper.get(".activity-detail-list").text()).toContain("git status --short");
     wrapper.unmount();
@@ -488,7 +490,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, completed]);
     const summaries = wrapper.findAll(".activity-summary-group > summary");
 
-    expect(summaries.map((summary) => summary.text())).toEqual([
+    expect(summaries.map((summary) => summary.get("strong").text())).toEqual([
       "运行环境已准备",
       "已调用飞书连接器读取群聊搜索说明",
       "已调用飞书连接器搜索群聊",
@@ -571,7 +573,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, failed]);
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
-    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
     expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
     wrapper.unmount();

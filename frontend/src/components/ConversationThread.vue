@@ -9,7 +9,7 @@ import ArtifactDisclosure from "./ArtifactDisclosure.vue";
 import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
 import { runtimeEngineDisplayName, type Artifact, type ExpertStage } from "../api/client";
-import type { ConversationMessage } from "../conversationThread";
+import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 
 const props = defineProps<{
   messages: ConversationMessage[];
@@ -68,6 +68,25 @@ function messageAriaLabel(message: ConversationMessage) {
 function messageTime(timestamp: string) {
   return new Date(timestamp).toLocaleTimeString(locale.value as SupportedLocale, { hour: "2-digit", minute: "2-digit" });
 }
+function activityKindLabel(kind?: ConversationActivityKind) {
+  return t(`sessions.executionEvidence.kind.${kind ?? "activity"}`);
+}
+function hasExecutionEvidence(message: ConversationMessage) {
+  return Boolean(message.activities?.length || message.stages?.length || message.artifacts?.length);
+}
+function executionEvidenceSummary(message: ConversationMessage) {
+  const groups = message.activities ?? [];
+  const toolCount = message.executionEvidenceCounts?.toolCalls ?? groups.reduce((total, group) => total + (group.toolCallCount ?? (group.kind === "tool" ? 1 : 0)), 0);
+  const fileCount = message.executionEvidenceCounts?.fileChanges ?? groups.reduce((total, group) => total + (group.fileChangeCount ?? (group.kind === "file" ? 1 : 0)), 0);
+  const stageCount = message.stages?.length ?? 0;
+  const artifactCount = message.artifacts?.length ?? 0;
+  const parts: string[] = [];
+  if (toolCount) parts.push(t("sessions.executionEvidence.tools", { count: toolCount }));
+  if (fileCount) parts.push(t("sessions.executionEvidence.files", { count: fileCount }));
+  if (stageCount) parts.push(t("sessions.executionEvidence.stages", { count: stageCount }));
+  if (artifactCount) parts.push(t("sessions.executionEvidence.artifacts", { count: artifactCount }));
+  return parts.length ? parts.join(" · ") : t("sessions.executionEvidence.noExternal");
+}
 onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
 
@@ -86,15 +105,15 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         </div>
         <div v-else-if="message.role === 'assistant' && isPending(message) && message.finalizing" class="finalizing-state">{{ message.progressTitle || t('sessions.progress.finalizing') }}</div>
 
-        <div v-if="message.role === 'assistant' && message.activities?.length" class="runtime-activity" aria-live="polite">
+        <div v-if="message.role === 'assistant' && hasExecutionEvidence(message)" class="runtime-activity" aria-live="polite">
           <div v-if="message.currentActivity" class="runtime-activity-current">
             <span class="activity-pulse active"></span><strong>{{ message.currentActivity.label }}</strong><small v-if="message.currentActivity.detail">{{ message.currentActivity.detail }}</small>
           </div>
           <details class="runtime-activity-history">
-            <summary>{{ t('workflows.activityDetails') }}</summary>
+            <summary><strong>{{ t('sessions.executionEvidence.title') }}</strong><small>{{ executionEvidenceSummary(message) }}</small></summary>
             <div class="activity-summary-list">
-              <details v-for="group in message.activities" :key="`${message.id}-${group.id}`" class="activity-summary-group">
-                <summary><span class="activity-summary-mark" aria-hidden="true"></span><strong>{{ group.label }}</strong></summary>
+              <details v-for="group in message.activities" :key="`${message.id}-${group.id}`" class="activity-summary-group" :class="`is-${group.state || 'completed'}`">
+                <summary><span class="activity-summary-mark" aria-hidden="true"></span><span class="activity-kind">{{ activityKindLabel(group.kind) }}</span><strong>{{ group.label }}</strong><small class="activity-state">{{ t(`sessions.executionEvidence.${group.state === 'running' ? 'running' : 'completed'}`) }}</small></summary>
                 <ol class="activity-detail-list">
                   <li v-for="activity in group.items" :key="`${message.id}-${group.id}-${activity.id}`"><span></span><div><strong>{{ activity.label }}</strong><small v-if="activity.detail">{{ activity.detail }}</small></div></li>
                 </ol>

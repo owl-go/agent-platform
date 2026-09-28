@@ -922,8 +922,14 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .runtime-activity-current { min-height: 38px; padding: 9px 12px; border: 1px solid var(--aw-running-border); border-radius: var(--aw-radius-input); background: var(--aw-running-soft); }
 .runtime-activity-current strong { color: var(--aw-n10); font: 600 12.5px/1.5 var(--aw-font-mono); }
 .activity-pulse { width: 7px; height: 7px; background: var(--aw-running); }
+.runtime-activity-history > summary { display: flex; align-items: center; gap: 8px; min-height: 34px; color: var(--aw-n8); }
+.runtime-activity-history > summary strong { font-size: 12.5px; font-weight: 600; }
+.runtime-activity-history > summary small { color: var(--aw-n6); font: 11.5px/1.5 var(--aw-font-mono); }
 .runtime-activity .activity-summary-group > summary { min-height: 38px; padding: 9px 12px; border-color: var(--aw-n4); border-radius: var(--aw-radius-input); background: var(--aw-n1); color: var(--aw-n8); }
 .runtime-activity .activity-summary-group > summary strong { color: var(--aw-n10); font: 600 12.5px/1.5 var(--aw-font-mono); }
+.runtime-activity .activity-kind { padding: 1px 5px; border: 1px solid var(--aw-n5); border-radius: 3px; color: var(--aw-n7); background: var(--aw-n0); font-size: 10px; font-weight: 600; }
+.runtime-activity .activity-state { margin-left: auto; color: var(--aw-n6); font-size: 10px; white-space: nowrap; }
+.runtime-activity .activity-summary-group.is-running > summary { border-color: var(--aw-running-border); background: var(--aw-running-soft); }
 .runtime-activity .activity-detail-list { max-height: 180px; overflow-y: auto; border-color: var(--aw-n5); background: var(--aw-n2); }
 
 .failure-card { margin: 12px 0; overflow: hidden; border: 1.5px solid var(--aw-danger-border); border-radius: var(--aw-radius-card); background: var(--aw-n0); }

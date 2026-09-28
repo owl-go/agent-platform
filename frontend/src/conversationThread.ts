@@ -6,10 +6,15 @@ export interface ConversationActivityItem {
   detail?: string;
 }
 
+export type ConversationActivityKind = "runtime" | "reasoning" | "tool" | "file" | "activity";
+
 export interface ConversationActivityGroup {
   id: string | number;
   label: string;
   detail?: string;
+  kind?: ConversationActivityKind;
+  toolCallCount?: number;
+  fileChangeCount?: number;
   state?: "running" | "completed";
   items: ConversationActivityItem[];
 }
@@ -31,6 +36,7 @@ export interface ConversationMessage {
   progressDetail?: string;
   currentActivity?: ConversationActivityItem;
   activities?: ConversationActivityGroup[];
+  executionEvidenceCounts?: { toolCalls: number; fileChanges: number };
   stages?: ExpertStage[];
   creditConsumption?: CreditConsumption;
   artifacts?: Artifact[];

@@ -7,10 +7,10 @@ import ConversationThread from "./ConversationThread.vue";
 
 const stage = { expert_id: "expert-1", expert_name: "架构专家", provider_model_name: "Model", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 1200, final_text: "答案" };
 
-function mountThread(messages: ConversationMessage[]) {
+function mountThread(messages: ConversationMessage[], locale: "zh-CN" | "en-US" = "zh-CN") {
   return mount(ConversationThread, {
     props: { messages, loadAttachment: vi.fn(async () => new Blob()) },
-    global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    global: { plugins: [createAppI18n({ getItem: () => locale }, locale)] },
   });
 }
 
@@ -26,6 +26,7 @@ describe("ConversationThread", () => {
     expect(wrapper.findAll(".message")).toHaveLength(2);
     expect(wrapper.get(".message.user p").text()).toBe("用户原文");
     expect(wrapper.get(".message.assistant .markdown-body").text()).toBe("答案");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个执行阶段");
     expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -86,6 +87,63 @@ describe("ConversationThread", () => {
     expect(wrapper.get(".message.assistant .agent-avatar").text()).toBe("AI");
     expect(wrapper.get(".message-identity").text()).toContain("架构专家");
     expect(wrapper.get(".message-identity").text()).toContain("Agent");
+    wrapper.unmount();
+  });
+
+  it("summarizes platform-recorded execution evidence without claiming unavailable sources", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "已完成",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [
+        { id: "tool", kind: "tool", toolCallCount: 1, label: "已调用连接器", state: "completed", items: [{ id: 1, label: "连接器调用完成" }] },
+        { id: "file", kind: "file", fileChangeCount: 1, label: "已更新文件", state: "completed", items: [{ id: 2, label: "文件更新完成" }] },
+      ],
+      stages: [stage],
+      artifacts: [{ id: "artifact-1", kind: "file", name: "report.md", path: "report.md", size: 42, expired: false, created_at: "2026-08-25T12:00:01Z" }],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项文件变化");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个执行阶段");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个产物");
+    expect(wrapper.findAll(".activity-kind").map((item) => item.text())).toEqual(["工具", "文件"]);
+    expect(wrapper.findAll(".activity-state").map((item) => item.text())).toEqual(["已完成", "已完成"]);
+    expect(wrapper.text()).not.toContain("知识来源");
+    wrapper.unmount();
+  });
+
+  it("states only that no external activity was recorded", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "回答",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [{ id: "runtime", kind: "runtime", label: "运行环境已准备", state: "completed", items: [{ id: 1, label: "运行环境已准备" }] }],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("未记录外部工具或文件变化");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).not.toContain("未使用知识库");
+    wrapper.unmount();
+  });
+
+  it("renders execution evidence labels in English", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "Done",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [{ id: "tool", kind: "tool", toolCallCount: 1, label: "Tool completed", state: "completed", items: [{ id: 1, label: "Tool completed" }] }],
+    }], "en-US");
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("This execution");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 tool call");
+    expect(wrapper.get(".activity-kind").text()).toBe("Tool");
     wrapper.unmount();
   });
 });

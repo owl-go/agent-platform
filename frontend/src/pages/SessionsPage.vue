@@ -12,7 +12,7 @@ import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
 import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
-import type { ConversationMessage } from "../conversationThread";
+import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -105,6 +105,9 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       id: summary.id,
       label: activitySummaryLabel(summary),
       detail: summary.detail,
+      kind: conversationActivityKind(summary),
+      toolCallCount: executionActivityCount(summary, "command.requested", "command.completed"),
+      fileChangeCount: summary.activities.filter((activity) => activity.type === "file.changed").length,
       state: summary.state,
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
@@ -437,6 +440,17 @@ function activityLabel(activity: ExecutionActivity, historical = false) {
 }
 function activitySummaries(message: SessionMessage) {
   return summarizeExecutionActivities(message.activities ?? []);
+}
+function conversationActivityKind(summary: ExecutionActivitySummary): ConversationActivityKind {
+  if (summary.activities.some((activity) => activity.type.startsWith("command."))) return "tool";
+  if (summary.activities.some((activity) => activity.type === "file.changed")) return "file";
+  const kind = summary.kind;
+  if (kind === "runtime" || kind === "reasoning" || kind === "file" || kind === "activity") return kind;
+  return "tool";
+}
+function executionActivityCount(summary: ExecutionActivitySummary, primary: string, fallback: string) {
+  const primaryCount = summary.activities.filter((activity) => activity.type === primary).length;
+  return primaryCount || summary.activities.filter((activity) => activity.type === fallback).length;
 }
 async function decideResourceAction(messageOrID: SessionMessage | string, decision: "confirm" | "cancel") {
   const message = typeof messageOrID === "string" ? messages.value.find((item) => String(item.id) === messageOrID) : messageOrID;
