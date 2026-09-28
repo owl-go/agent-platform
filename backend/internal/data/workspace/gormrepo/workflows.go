@@ -40,6 +40,9 @@ func (repository *Repository) ListWorkflows(ctx context.Context, ownerID string,
 		}
 		items = append(items, item)
 	}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return nil, err
+	}
 	return items, nil
 }
 
@@ -60,7 +63,15 @@ func (repository *Repository) CreateWorkflow(ctx context.Context, ownerID string
 	}); err != nil {
 		return domain.Workflow{}, fmt.Errorf("create Workflow: %w", err)
 	}
-	return workflowDomain(row)
+	item, err := workflowDomain(row)
+	if err != nil {
+		return domain.Workflow{}, err
+	}
+	items := []domain.Workflow{item}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return domain.Workflow{}, err
+	}
+	return items[0], nil
 }
 
 func (repository *Repository) GetWorkflow(ctx context.Context, ownerID, workflowID string, includeDeleted bool) (domain.Workflow, error) {
@@ -72,7 +83,15 @@ func (repository *Repository) GetWorkflow(ctx context.Context, ownerID, workflow
 	if err := query.Take(&row).Error; err != nil {
 		return domain.Workflow{}, mapNotFound(err)
 	}
-	return workflowDomain(row)
+	item, err := workflowDomain(row)
+	if err != nil {
+		return domain.Workflow{}, err
+	}
+	items := []domain.Workflow{item}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return domain.Workflow{}, err
+	}
+	return items[0], nil
 }
 
 func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workflowID string, input domain.WorkflowInput, secretCiphertext []byte, expectedVersion int64) (domain.Workflow, error) {
@@ -95,6 +114,7 @@ func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workf
 		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID, "expert_team_id": input.ExpertTeamID,
 		"provider_model_id": nil, "runtime_engine": nil, "environment": environment,
 		"schedule": schedule, "knowledge_base_ids": knowledgeBaseIDs, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+		"execution_template": gorm.Expr("CASE WHEN expert_id IS NOT DISTINCT FROM ? AND expert_team_id IS NOT DISTINCT FROM ? THEN execution_template ELSE NULL END", input.ExpertID, input.ExpertTeamID),
 	}
 	if secretCiphertext != nil {
 		updates["environment_secret_ciphertext"] = secretCiphertext
@@ -646,6 +666,21 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		if err := json.Unmarshal(workflow.GitSource, snapshot.GitSource); err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow Git source snapshot: %w", err)
 		}
+	}
+	if len(workflow.ExecutionTemplate) > 0 && string(workflow.ExecutionTemplate) != "null" {
+		var template []domain.ExecutionStageSnapshot
+		if err := json.Unmarshal(workflow.ExecutionTemplate, &template); err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("decode saved Session execution template: %w", err)
+		}
+		configuration, err := currentExecutionStage(tx, workflow.OwnerID)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		snapshot.Stages = withCurrentExecutionConfiguration(template, configuration)
+		if _, err := snapshot.OrderedStages(); err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		return snapshot, nil
 	}
 	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
 		stage, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, nil, 1)
@@ -1290,6 +1325,31 @@ func workflowDomain(row workflowRecord) (domain.Workflow, error) {
 		}
 	}
 	return item, nil
+}
+
+func (repository *Repository) loadWorkflowOrigins(ctx context.Context, ownerID string, items []domain.Workflow) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	indexes := make(map[string]int, len(items))
+	for index := range items {
+		ids = append(ids, items[index].ID)
+		indexes[items[index].ID] = index
+	}
+	var rows []workflowSessionOriginRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id IN ?", ownerID, ids).Find(&rows).Error; err != nil {
+		return fmt.Errorf("load Workflow Session origins: %w", err)
+	}
+	for _, row := range rows {
+		index, ok := indexes[row.WorkflowID]
+		if !ok {
+			continue
+		}
+		link := originDomain(row, items[index].Name)
+		items[index].Origin = &link
+	}
+	return nil
 }
 
 func runDomain(row runRecord) domain.Run {

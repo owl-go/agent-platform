@@ -1,4 +1,4 @@
-import type { Artifact, Attachment, CreditConsumption, Evidence, ExecutionPlan, ExpertStage, ResourceCreationAction } from "./api/client";
+import type { Artifact, Attachment, CreditConsumption, Evidence, ExecutionPlan, ExpertStage, ResourceCreationAction, SessionWorkflowLink } from "./api/client";
 
 export interface ConversationActivityItem {
   id: string | number;
@@ -48,4 +48,6 @@ export interface ConversationMessage {
   skills?: Array<{ id: string; name: string }>;
   meta?: { label: string; title?: string };
   retryable?: boolean;
+  canSaveWorkflow?: boolean;
+  workflowLink?: SessionWorkflowLink;
 }

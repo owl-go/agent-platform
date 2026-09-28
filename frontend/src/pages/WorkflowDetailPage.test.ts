@@ -55,9 +55,9 @@ function apiStub(overrides: Partial<PlatformApi> = {}): PlatformApi {
   } as unknown as PlatformApi;
 }
 
-async function mountPage(api = apiStub()) {
+async function mountPage(api = apiStub(), path = `/workflows/${workflow.id}?tab=history`) {
   const router = createAppRouter(createMemoryHistory());
-  await router.push(`/workflows/${workflow.id}?tab=history`);
+  await router.push(path);
   await router.isReady();
   const wrapper = mount(WorkflowDetailPage, {
     global: {
@@ -151,6 +151,21 @@ describe("WorkflowDetailPage", () => {
     }
     expect(wrapper.find(".settings-section .section-number").exists()).toBe(false);
     wrapper.unmount();
+  });
+
+  it("shows the source Session and opens the first validation Run from the conversion link", async () => {
+    const validationRun: Run = { ...run, trigger: "session_conversion", state: "waiting_for_user", execution_plan: { id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules", steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }], resources: [], side_effects: [], reasons: ["workflow_execution"], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0 } };
+    const linkedWorkflow: Workflow = { ...workflow, origin: { session_id: "session-1", message_id: 2, workflow_id: workflow.id, workflow_name: workflow.name, validation_run_id: validationRun.id, created_at: validationRun.queued_at } };
+    const api = apiStub({ getWorkflow: vi.fn(async () => linkedWorkflow), listRuns: vi.fn(async () => [validationRun]), listRunTurns: vi.fn(async () => [validationRun]) });
+    const wrapper = await mountPage(api, `/workflows/${workflow.id}?open_run=${validationRun.id}`);
+
+    expect(api.listRunTurns).toHaveBeenCalledWith(workflow.id, validationRun.id);
+    expect(wrapper.get(".run-page .execution-plan-card").text()).toContain("执行任务");
+    wrapper.unmount();
+
+    const summary = await mountPage(api);
+    expect(summary.get(".workflow-origin-link").text()).toContain("来自会话");
+    summary.unmount();
   });
 
   it("opens a Run as a conversation instead of raw Runtime events", async () => {

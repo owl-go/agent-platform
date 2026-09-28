@@ -28,6 +28,7 @@ function apiStub(sessionMessages: SessionMessage[] = messages, stream?: (snapsho
     ...conversationApiStub(),
     listSessions: vi.fn(async (archived = false) => archived ? [] : [session]),
     listSessionMessages: vi.fn(async () => sessionMessages),
+    listSessionWorkflowLinks: vi.fn(async () => []),
     streamSessionMessage: vi.fn(async (_sessionID, _messageID, onSnapshot) => stream?.(onSnapshot)),
     listExperts: vi.fn(async () => []),
     listExpertTeams: vi.fn(async () => []),
@@ -79,6 +80,32 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".message.assistant .message-content").text()).toContain("Agent 的消息");
     expect(wrapper.find(".message-avatar").exists()).toBe(false);
     expect(wrapper.find(".composer-layer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("prefills a Workflow from a successful response and requires an explicit file destination", async () => {
+    const successful = [
+      { ...messages[0]!, attachments: [{ id: "attachment-1", name: "brief.pdf", content_type: "application/pdf", size: 2048, sha256: "digest", image: false }] },
+      { ...messages[1]!, state: "completed", response_snapshot: { schema_version: 2, stages: [{ position: 1, runtime_engine: "codex", provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" }, skills: [{ id: "skill-1", name: "Report", object_key: "skills/report.zip", sha256: "digest" }] }] } },
+    ] as SessionMessage[];
+    const api = apiStub(successful);
+    api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "周报", suggested_goal: "生成本周周报", specialist_name: "默认执行配置", resources: [{ kind: "skill", id: "skill-1", name: "Report" }], files: [{ source_key: "attachment:attachment-1", kind: "attachment", name: "brief.pdf", size: 2048, available: true }] }));
+    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(() => new Promise(() => undefined));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".message.assistant .message-actions button").trigger("click");
+    await flushPromises();
+
+    expect(api.previewSessionWorkflowDraft).toHaveBeenCalledWith(session.id, 2);
+    expect(wrapper.get<HTMLInputElement>(".workflow-save-dialog input").element.value).toBe("周报");
+    expect(wrapper.get(".workflow-save-dialog").text()).toContain("Report");
+    await wrapper.get(".workflow-save-dialog .modal-actions .el-button--primary").trigger("click");
+    await flushPromises();
+    expect(api.createWorkflowFromSession).toHaveBeenCalledWith(session.id, 2, {
+      name: "周报",
+      goal: "生成本周周报",
+      files: [{ source_key: "attachment:attachment-1", destination: "workspace" }],
+    });
     wrapper.unmount();
   });
 

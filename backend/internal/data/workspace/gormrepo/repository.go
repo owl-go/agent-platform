@@ -206,6 +206,7 @@ type workflowRecord struct {
 	EnvironmentSecret   []byte     `gorm:"column:environment_secret_ciphertext"`
 	Schedule            []byte     `gorm:"column:schedule;type:jsonb"`
 	KnowledgeBaseIDs    []byte     `gorm:"column:knowledge_base_ids;type:jsonb"`
+	ExecutionTemplate   []byte     `gorm:"column:execution_template;type:jsonb"`
 	NextScheduledAt     *time.Time `gorm:"column:next_scheduled_at"`
 	GitSource           []byte     `gorm:"column:git_source;type:jsonb"`
 	GitSecret           []byte     `gorm:"column:git_secret_ciphertext"`
@@ -220,6 +221,17 @@ type workflowRecord struct {
 }
 
 func (workflowRecord) TableName() string { return "workflows" }
+
+type workflowSessionOriginRecord struct {
+	WorkflowID      string    `gorm:"column:workflow_id"`
+	OwnerID         string    `gorm:"column:owner_user_id"`
+	SessionID       string    `gorm:"column:session_id"`
+	MessageID       int64     `gorm:"column:message_id"`
+	ValidationRunID string    `gorm:"column:validation_run_id"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+}
+
+func (workflowSessionOriginRecord) TableName() string { return "workflow_session_origins" }
 
 type knowledgeBaseRecord struct {
 	ID          string     `gorm:"column:id"`

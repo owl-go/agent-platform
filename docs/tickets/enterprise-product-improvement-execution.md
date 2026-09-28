@@ -22,7 +22,7 @@
 | EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的 Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 已完成代码与无数据库本地门禁；PostgreSQL Integration、真实 Provider 与生产历史证据待验证 |
 | EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 已完成代码与本地门禁；真实 Provider、浏览器断点与 PostgreSQL Integration 待验证 |
 | EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 已完成代码与本地组件/页面门禁；浏览器布局验收见 EP-05.3，真实部署待验证 |
-| EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 待 EP-00/02 |
+| EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 已完成代码、本地门禁与临时 PostgreSQL Integration；真实部署闭环待验证 |
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 待 EP-06 |
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 待 EP-00 |
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办完成后返回原任务；不读取用户内容 | 待 EP-06/08 |
@@ -130,7 +130,28 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 2026-09-28 的本地 Chromium 检查结果：四个视口的 `scrollWidth` 均等于 `clientWidth`；Workflow 在 1280px 使用 358px 覆盖抽屉、1440px 使用 360px 集成面板、1920px 使用 360px 集成面板，390px 使用从 `y=56` 开始的 390px 全宽面板；Session 在 1440px 使用 380px 覆盖抽屉、1920px 使用 320px 集成面板。截图保存在本地 `output/playwright/`，不作为生产证据提交。
 - `make web-typecheck`、`make web-build` 和 `git diff --check` 是提交门禁。真实部署的浏览器到 API 闭环仍按第 14 节执行，不能由静态布局检查替代。
 
-## 7. 发布与回滚
+## 7. EP-06 Session 保存为 Workflow
+
+### EP-06.1 服务端原子边界
+
+- 只有 owner-scoped、`completed` 的 Assistant Message 可以转换；名称和目标可编辑，Expert、Skill、MCP 与 CLI 资源必须来自该回复的服务端 Response Snapshot，客户端不能覆盖。
+- `workflows.execution_template` 只保留该回复的专家与资源阶段；每个新 Run 仍解析当前 Personal Settings 的 Runtime Engine、Provider Model、协议和 Credit Rate。用户在 Workflow 设置中切换 Specialist 时清除转换模板，避免旧专家继续执行。
+- Workflow、Session Workflow Origin 与首个 `session_conversion` 验证 Run 在同一个数据库事务中创建。验证 Run 带 pending Execution Plan 并进入 `waiting_for_user`；同一 owner/Session/Message 的并发或重复请求返回原对象。
+- 来源附件与 Artifact 在提交前逐个选择 `Workspace` 或 `不带入`。选择 Workspace 时先做 Size/SHA-256 校验并放入预分配 Workflow Workspace；数据库事务失败或幂等回放时清理本次预放内容。过期或缺少对象的文件只能排除。Knowledge Base 转换不在本批次伪造，留给资源库动作。
+
+### EP-06.2 界面与来源导航
+
+- 每个成功回复和对应 Task Panel 结果区显示“保存为工作流”；已保存的回复改为“打开已保存工作流”。
+- 确认层预填 Session 标题和原 User Message，显示实际带入的 Specialist/Skills/Connectors，并要求每个文件有明确去向。
+- 创建成功直接打开首个验证 Run 的 Plan；Workflow 标题区提供“来自会话”，Session 通过 Message Link 回到该 Workflow。两边后续历史独立。
+
+### EP-06.3 验收证据边界
+
+- Vitest 覆盖预填、文件默认去向、API contract、验证 Run 自动打开和来源展示；完整前端结果为 44 个文件、319 个测试通过。
+- `make test`、`make build`、`make web-typecheck`、`make web-build` 与 `git diff --check` 通过。
+- 使用临时 PostgreSQL 17 容器实际运行完整 migration chain 和 `TestSessionWorkflowConversionIsAtomicAndIdempotent`，验证成功转换、pending 验证 Run、幂等回放及失败回复不产生 Workflow。该结果不等于真实 OIDC、对象存储、Provider 或生产部署验收。
+
+## 8. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

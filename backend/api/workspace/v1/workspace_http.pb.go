@@ -47,6 +47,7 @@ const OperationAgentWorkspaceServiceCreateSession = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceCreateSkill = "/workspace.v1.AgentWorkspaceService/CreateSkill"
 const OperationAgentWorkspaceServiceCreateUser = "/workspace.v1.AgentWorkspaceService/CreateUser"
 const OperationAgentWorkspaceServiceCreateWorkflow = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
+const OperationAgentWorkspaceServiceCreateWorkflowFromSession = "/workspace.v1.AgentWorkspaceService/CreateWorkflowFromSession"
 const OperationAgentWorkspaceServiceDecideCommandApproval = "/workspace.v1.AgentWorkspaceService/DecideCommandApproval"
 const OperationAgentWorkspaceServiceDecideRunExecutionPlan = "/workspace.v1.AgentWorkspaceService/DecideRunExecutionPlan"
 const OperationAgentWorkspaceServiceDecideSessionExecutionPlan = "/workspace.v1.AgentWorkspaceService/DecideSessionExecutionPlan"
@@ -120,12 +121,14 @@ const OperationAgentWorkspaceServiceListRunTurns = "/workspace.v1.AgentWorkspace
 const OperationAgentWorkspaceServiceListRuns = "/workspace.v1.AgentWorkspaceService/ListRuns"
 const OperationAgentWorkspaceServiceListRuntimeEngines = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
 const OperationAgentWorkspaceServiceListSessionMessages = "/workspace.v1.AgentWorkspaceService/ListSessionMessages"
+const OperationAgentWorkspaceServiceListSessionWorkflowLinks = "/workspace.v1.AgentWorkspaceService/ListSessionWorkflowLinks"
 const OperationAgentWorkspaceServiceListSessions = "/workspace.v1.AgentWorkspaceService/ListSessions"
 const OperationAgentWorkspaceServiceListSkills = "/workspace.v1.AgentWorkspaceService/ListSkills"
 const OperationAgentWorkspaceServiceListUsers = "/workspace.v1.AgentWorkspaceService/ListUsers"
 const OperationAgentWorkspaceServiceListWorkflows = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 const OperationAgentWorkspaceServiceListWorkspaceEntries = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 const OperationAgentWorkspaceServiceOptimizeImagePrompt = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
+const OperationAgentWorkspaceServicePreviewSessionWorkflowDraft = "/workspace.v1.AgentWorkspaceService/PreviewSessionWorkflowDraft"
 const OperationAgentWorkspaceServicePublishCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
 const OperationAgentWorkspaceServicePublishConnectorRevision = "/workspace.v1.AgentWorkspaceService/PublishConnectorRevision"
 const OperationAgentWorkspaceServiceRedeemCreditCode = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
@@ -196,6 +199,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	CreateSkill(context.Context, *CreateSkillRequest) (*Skill, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
+	CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error)
 	DecideCommandApproval(context.Context, *DecideCommandApprovalRequest) (*CommandApproval, error)
 	DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error)
 	DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error)
@@ -269,12 +273,14 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
 	ListSessionMessages(context.Context, *ListSessionMessagesRequest) (*ListSessionMessagesResponse, error)
+	ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error)
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error)
+	PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	PublishConnectorRevision(context.Context, *PublishConnectorRevisionRequest) (*ConnectorPublication, error)
 	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
@@ -364,6 +370,9 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/retry", _AgentWorkspaceService_RetrySessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation", _AgentWorkspaceService_CancelSessionMessage0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision", _AgentWorkspaceService_DecideSessionExecutionPlan0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft", _AgentWorkspaceService_PreviewSessionWorkflowDraft0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/workflow", _AgentWorkspaceService_CreateWorkflowFromSession0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/sessions/{session_id}/workflow-links", _AgentWorkspaceService_ListSessionWorkflowLinks0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows", _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows", _AgentWorkspaceService_CreateWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_GetWorkflow0_HTTP_Handler(srv))
@@ -1427,6 +1436,72 @@ func _AgentWorkspaceService_DecideSessionExecutionPlan0_HTTP_Handler(srv AgentWo
 			return err
 		}
 		reply := out.(*SessionMessage)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_PreviewSessionWorkflowDraft0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in PreviewSessionWorkflowDraftRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServicePreviewSessionWorkflowDraft)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.PreviewSessionWorkflowDraft(ctx, req.(*PreviewSessionWorkflowDraftRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SessionWorkflowDraft)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CreateWorkflowFromSession0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CreateWorkflowFromSessionRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCreateWorkflowFromSession)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CreateWorkflowFromSession(ctx, req.(*CreateWorkflowFromSessionRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreateWorkflowFromSessionResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListSessionWorkflowLinks0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListSessionWorkflowLinksRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListSessionWorkflowLinks)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListSessionWorkflowLinks(ctx, req.(*ListSessionWorkflowLinksRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListSessionWorkflowLinksResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -3572,6 +3647,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	CreateSkill(ctx context.Context, req *CreateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
 	CreateUser(ctx context.Context, req *CreateUserRequest, opts ...http.CallOption) (rsp *CreateUserResponse, err error)
 	CreateWorkflow(ctx context.Context, req *CreateWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
+	CreateWorkflowFromSession(ctx context.Context, req *CreateWorkflowFromSessionRequest, opts ...http.CallOption) (rsp *CreateWorkflowFromSessionResponse, err error)
 	DecideCommandApproval(ctx context.Context, req *DecideCommandApprovalRequest, opts ...http.CallOption) (rsp *CommandApproval, err error)
 	DecideRunExecutionPlan(ctx context.Context, req *DecideRunExecutionPlanRequest, opts ...http.CallOption) (rsp *Run, err error)
 	DecideSessionExecutionPlan(ctx context.Context, req *DecideSessionExecutionPlanRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
@@ -3645,12 +3721,14 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListRuns(ctx context.Context, req *ListRunsRequest, opts ...http.CallOption) (rsp *ListRunsResponse, err error)
 	ListRuntimeEngines(ctx context.Context, req *ListRuntimeEnginesRequest, opts ...http.CallOption) (rsp *ListRuntimeEnginesResponse, err error)
 	ListSessionMessages(ctx context.Context, req *ListSessionMessagesRequest, opts ...http.CallOption) (rsp *ListSessionMessagesResponse, err error)
+	ListSessionWorkflowLinks(ctx context.Context, req *ListSessionWorkflowLinksRequest, opts ...http.CallOption) (rsp *ListSessionWorkflowLinksResponse, err error)
 	ListSessions(ctx context.Context, req *ListSessionsRequest, opts ...http.CallOption) (rsp *ListSessionsResponse, err error)
 	ListSkills(ctx context.Context, req *ListSkillsRequest, opts ...http.CallOption) (rsp *ListSkillsResponse, err error)
 	ListUsers(ctx context.Context, req *ListUsersRequest, opts ...http.CallOption) (rsp *ListUsersResponse, err error)
 	ListWorkflows(ctx context.Context, req *ListWorkflowsRequest, opts ...http.CallOption) (rsp *ListWorkflowsResponse, err error)
 	ListWorkspaceEntries(ctx context.Context, req *ListWorkspaceEntriesRequest, opts ...http.CallOption) (rsp *ListWorkspaceEntriesResponse, err error)
 	OptimizeImagePrompt(ctx context.Context, req *OptimizeImagePromptRequest, opts ...http.CallOption) (rsp *OptimizeImagePromptResponse, err error)
+	PreviewSessionWorkflowDraft(ctx context.Context, req *PreviewSessionWorkflowDraftRequest, opts ...http.CallOption) (rsp *SessionWorkflowDraft, err error)
 	PublishCLIConnectorDefinition(ctx context.Context, req *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	PublishConnectorRevision(ctx context.Context, req *PublishConnectorRevisionRequest, opts ...http.CallOption) (rsp *ConnectorPublication, err error)
 	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
@@ -4200,6 +4278,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) CreateWorkflow(ctx context.Context
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceCreateWorkflow),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...http.CallOption) (*CreateWorkflowFromSessionResponse, error) {
+	var out CreateWorkflowFromSessionResponse
+	pattern := "/api/v1/sessions/{session_id}/messages/{message_id}/workflow"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCreateWorkflowFromSession),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -5391,6 +5486,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListSessionMessages(ctx context.Co
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...http.CallOption) (*ListSessionWorkflowLinksResponse, error) {
+	var out ListSessionWorkflowLinksResponse
+	pattern := "/api/v1/sessions/{session_id}/workflow-links"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListSessionWorkflowLinks),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...http.CallOption) (*ListSessionsResponse, error) {
 	var out ListSessionsResponse
 	pattern := "/api/v1/sessions"
@@ -5482,6 +5593,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) OptimizeImagePrompt(ctx context.Co
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...http.CallOption) (*SessionWorkflowDraft, error) {
+	var out SessionWorkflowDraft
+	pattern := "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServicePreviewSessionWorkflowDraft),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

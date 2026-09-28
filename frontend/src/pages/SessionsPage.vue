@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, type Artifact, type Evidence, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Evidence, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot, type SessionWorkflowDraft, type SessionWorkflowFileDecision, type SessionWorkflowLink } from "../api/client";
 import ActionIconButton from "../components/ActionIconButton.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
@@ -46,6 +46,14 @@ const creating = ref(false);
 const showArchived = ref(false);
 const sessionQuery = ref("");
 const error = ref("");
+const workflowLinks = ref<Record<number, SessionWorkflowLink>>({});
+const workflowDraft = ref<SessionWorkflowDraft>();
+const workflowDraftMessageID = ref<number>();
+const workflowDraftName = ref("");
+const workflowDraftGoal = ref("");
+const workflowFileDestinations = ref<Record<string, "workspace" | "exclude">>({});
+const loadingWorkflowDraft = ref(false);
+const savingWorkflow = ref(false);
 const messageStream = ref<HTMLElement>();
 const composerLayer = ref<HTMLElement>();
 const composerClearance = ref(154);
@@ -134,6 +142,8 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     resourceAction: message.resource_action,
     meta: identity ? { label: `${identity.expertName ? `${identity.expertName} · ` : ""}${identity.modelName}`, title: `${identity.connection} · ${identity.modelID} · ${identity.runtime}` } : undefined,
     retryable: message.role === "assistant" && message.state === "failed",
+    canSaveWorkflow: message.role === "assistant" && message.state === "completed",
+    workflowLink: workflowLinks.value[message.id],
   };
 }));
 const selectedTaskMessage = computed(() => conversationMessages.value.find((message) => message.id === selectedTaskID.value));
@@ -220,13 +230,15 @@ async function open(item: Session) {
   cancellingMessageID.value = undefined;
   keepAtLatest.value = true; showJumpToLatest.value = false;
   const welcome = typeof route.query.assistant_welcome === "string" ? route.query.assistant_welcome : item.assistant_welcome;
-  selected.value = welcome ? { ...item, assistant_welcome: welcome } : item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
+  selected.value = welcome ? { ...item, assistant_welcome: welcome } : item; specialistName.value = ""; messages.value = []; workflowLinks.value = {}; loadingMessages.value = true;
   selectedTaskID.value = "";
   taskPanelOpen.value = localStorage.getItem(`agent-workspace:task-panel:session:${item.id}`) !== "closed";
   try {
-    const loadedMessages = await api.listSessionMessages(item.id);
+    const linksRequest = typeof api.listSessionWorkflowLinks === "function" ? api.listSessionWorkflowLinks(item.id) : Promise.resolve([]);
+    const [loadedMessages, links] = await Promise.all([api.listSessionMessages(item.id), linksRequest]);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
     messages.value = loadedMessages.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
+    workflowLinks.value = Object.fromEntries(links.map((link) => [link.message_id, link]));
     await nextTick(); scrollToLatest("auto");
     const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating"));
     if (pending) lastSessionActivityAt.value = Date.now();
@@ -239,6 +251,49 @@ async function open(item: Session) {
 }
 function selectTask(messageID: string) { selectedTaskID.value = messageID; taskPanelOpen.value = true; if (selected.value) localStorage.setItem(`agent-workspace:task-panel:session:${selected.value.id}`, "open"); }
 function closeTaskPanel() { taskPanelOpen.value = false; if (selected.value) localStorage.setItem(`agent-workspace:task-panel:session:${selected.value.id}`, "closed"); }
+async function openWorkflowSave(messageID: string) {
+  if (!selected.value || loadingWorkflowDraft.value) return;
+  const numericID = Number(messageID);
+  const existing = workflowLinks.value[numericID];
+  if (existing) {
+    await router.push({ path: `/workflows/${existing.workflow_id}`, query: { open_run: existing.validation_run_id, from_session: existing.session_id } });
+    return;
+  }
+  loadingWorkflowDraft.value = true;
+  try {
+    const draft = await api.previewSessionWorkflowDraft(selected.value.id, numericID);
+    if (draft.existing_link) {
+      workflowLinks.value[numericID] = draft.existing_link;
+      await router.push({ path: `/workflows/${draft.existing_link.workflow_id}`, query: { open_run: draft.existing_link.validation_run_id, from_session: draft.existing_link.session_id } });
+      return;
+    }
+    workflowDraft.value = draft;
+    workflowDraftMessageID.value = numericID;
+    workflowDraftName.value = draft.suggested_name;
+    workflowDraftGoal.value = draft.suggested_goal;
+    workflowFileDestinations.value = Object.fromEntries(draft.files.map((file) => [file.source_key, file.available ? "workspace" : "exclude"]));
+  } catch { error.value = t("sessions.workflowSave.loadFailed"); }
+  finally { loadingWorkflowDraft.value = false; }
+}
+function closeWorkflowSave() {
+  if (savingWorkflow.value) return;
+  workflowDraft.value = undefined;
+  workflowDraftMessageID.value = undefined;
+}
+async function confirmWorkflowSave() {
+  if (!selected.value || !workflowDraft.value || workflowDraftMessageID.value === undefined || savingWorkflow.value) return;
+  const name = workflowDraftName.value.trim(), goal = workflowDraftGoal.value.trim();
+  if (!name || !goal) { error.value = t("errors.validation"); return; }
+  savingWorkflow.value = true;
+  try {
+    const files: SessionWorkflowFileDecision[] = workflowDraft.value.files.map((file) => ({ source_key: file.source_key, destination: workflowFileDestinations.value[file.source_key] ?? "exclude" }));
+    const created = await api.createWorkflowFromSession(selected.value.id, workflowDraftMessageID.value, { name, goal, files });
+    workflowLinks.value[workflowDraftMessageID.value] = created.link;
+    workflowDraft.value = undefined;
+    await router.push({ path: `/workflows/${created.workflow.id}`, query: { open_run: created.validation_run.id, from_session: created.link.session_id } });
+  } catch { error.value = t("sessions.workflowSave.createFailed"); }
+  finally { savingWorkflow.value = false; }
+}
 async function create() {
   if (creating.value) return;
   creating.value = true;
@@ -674,9 +729,9 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
-          <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+          <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
-        <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
+        <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
           <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.id" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />
@@ -685,6 +740,17 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <div v-else class="chat-welcome center"><span class="welcome-orb">◌</span><h2>{{ t('sessions.title') }}</h2><p>{{ t('sessions.subtitle') }}</p><el-button type="primary" :loading="creating" @click="create">{{ t('sessions.new') }}</el-button></div>
     </article>
   </section>
+  <div v-if="workflowDraft" class="modal-layer" @click.self="closeWorkflowSave">
+    <section class="modal-card wide-modal workflow-save-dialog" role="dialog" aria-modal="true" aria-labelledby="workflow-save-title" @keydown.esc.stop="closeWorkflowSave">
+      <header><small>{{ t('sessions.workflowSave.eyebrow') }}</small><h2 id="workflow-save-title">{{ t('sessions.workflowSave.title') }}</h2><p>{{ t('sessions.workflowSave.description') }}</p></header>
+      <label><span>{{ t('workflows.name') }}</span><el-input v-model="workflowDraftName" maxlength="100" show-word-limit /></label>
+      <label><span>{{ t('workflows.goal') }}</span><el-input v-model="workflowDraftGoal" type="textarea" :rows="4" maxlength="100000" /></label>
+      <section class="workflow-save-summary"><h3>{{ t('sessions.workflowSave.carriedConfiguration') }}</h3><p><strong>{{ workflowDraft.specialist_name }}</strong></p><div v-if="workflowDraft.resources.length" class="workflow-save-resources"><span v-for="resource in workflowDraft.resources" :key="`${resource.kind}:${resource.id}`">{{ resource.name }} <small>{{ resource.kind }}</small></span></div><p v-else class="muted">{{ t('sessions.workflowSave.noExtraResources') }}</p></section>
+      <section v-if="workflowDraft.files.length" class="workflow-save-files"><h3>{{ t('sessions.workflowSave.filesTitle') }}</h3><p>{{ t('sessions.workflowSave.filesDescription') }}</p><div v-for="file in workflowDraft.files" :key="file.source_key" class="workflow-save-file"><div><strong>{{ file.name }}</strong><small>{{ file.kind }} · {{ Math.max(1, Math.ceil(file.size / 1024)) }} KB<template v-if="!file.available"> · {{ t('sessions.workflowSave.unavailable') }}</template></small></div><el-select v-model="workflowFileDestinations[file.source_key]" :disabled="!file.available"><el-option :label="t('sessions.workflowSave.toWorkspace')" value="workspace" /><el-option :label="t('sessions.workflowSave.exclude')" value="exclude" /></el-select></div></section>
+      <p class="workflow-save-note">{{ t('sessions.workflowSave.validationNotice') }}</p>
+      <div class="modal-actions"><el-button :disabled="savingWorkflow" @click="closeWorkflowSave">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="savingWorkflow" @click="confirmWorkflowSave">{{ t('sessions.workflowSave.confirm') }}</el-button></div>
+    </section>
+  </div>
   <div v-if="pendingDelete" class="modal-layer session-delete-layer" @click.self="cancelRemove">
     <section ref="deleteDialog" class="modal-card destructive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="session-delete-title" aria-describedby="session-delete-description" tabindex="-1" @keydown.esc.stop="cancelRemove">
       <div class="delete-dialog-head">

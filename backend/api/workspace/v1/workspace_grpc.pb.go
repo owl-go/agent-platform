@@ -66,6 +66,9 @@ const (
 	AgentWorkspaceService_RetrySessionMessage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 	AgentWorkspaceService_CancelSessionMessage_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
 	AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName                = "/workspace.v1.AgentWorkspaceService/DecideSessionExecutionPlan"
+	AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName               = "/workspace.v1.AgentWorkspaceService/PreviewSessionWorkflowDraft"
+	AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateWorkflowFromSession"
+	AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessionWorkflowLinks"
 	AgentWorkspaceService_ListWorkflows_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 	AgentWorkspaceService_CreateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 	AgentWorkspaceService_GetWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
@@ -219,6 +222,9 @@ type AgentWorkspaceServiceClient interface {
 	RetrySessionMessage(ctx context.Context, in *RetrySessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(ctx context.Context, in *CancelSessionMessageRequest, opts ...grpc.CallOption) (*SessionMessage, error)
 	DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...grpc.CallOption) (*SessionMessage, error)
+	PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...grpc.CallOption) (*SessionWorkflowDraft, error)
+	CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...grpc.CallOption) (*CreateWorkflowFromSessionResponse, error)
+	ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...grpc.CallOption) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
@@ -793,6 +799,36 @@ func (c *agentWorkspaceServiceClient) DecideSessionExecutionPlan(ctx context.Con
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SessionMessage)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...grpc.CallOption) (*SessionWorkflowDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionWorkflowDraft)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...grpc.CallOption) (*CreateWorkflowFromSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateWorkflowFromSessionResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...grpc.CallOption) (*ListSessionWorkflowLinksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSessionWorkflowLinksResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1850,6 +1886,9 @@ type AgentWorkspaceServiceServer interface {
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
 	DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error)
+	PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error)
+	CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error)
+	ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
@@ -2100,6 +2139,15 @@ func (UnimplementedAgentWorkspaceServiceServer) CancelSessionMessage(context.Con
 }
 func (UnimplementedAgentWorkspaceServiceServer) DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error) {
 	return nil, status.Error(codes.Unimplemented, "method DecideSessionExecutionPlan not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewSessionWorkflowDraft not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateWorkflowFromSession not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSessionWorkflowLinks not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkflows not implemented")
@@ -3264,6 +3312,60 @@ func _AgentWorkspaceService_DecideSessionExecutionPlan_Handler(srv interface{}, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).DecideSessionExecutionPlan(ctx, req.(*DecideSessionExecutionPlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_PreviewSessionWorkflowDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewSessionWorkflowDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).PreviewSessionWorkflowDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).PreviewSessionWorkflowDraft(ctx, req.(*PreviewSessionWorkflowDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateWorkflowFromSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkflowFromSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateWorkflowFromSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateWorkflowFromSession(ctx, req.(*CreateWorkflowFromSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListSessionWorkflowLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSessionWorkflowLinksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListSessionWorkflowLinks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListSessionWorkflowLinks(ctx, req.(*ListSessionWorkflowLinksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5262,6 +5364,18 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DecideSessionExecutionPlan",
 			Handler:    _AgentWorkspaceService_DecideSessionExecutionPlan_Handler,
+		},
+		{
+			MethodName: "PreviewSessionWorkflowDraft",
+			Handler:    _AgentWorkspaceService_PreviewSessionWorkflowDraft_Handler,
+		},
+		{
+			MethodName: "CreateWorkflowFromSession",
+			Handler:    _AgentWorkspaceService_CreateWorkflowFromSession_Handler,
+		},
+		{
+			MethodName: "ListSessionWorkflowLinks",
+			Handler:    _AgentWorkspaceService_ListSessionWorkflowLinks_Handler,
 		},
 		{
 			MethodName: "ListWorkflows",

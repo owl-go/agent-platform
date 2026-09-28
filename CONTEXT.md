@@ -114,6 +114,10 @@ _Avoid_: User-wide execution queue, Run Conversation, Workspace lock
 The immutable copy of a Workflow's goal, initial execution stages, environment, and other initiating inputs used by one Run Conversation. Follow-up Response Snapshots preserve that context while recording each turn's specialist and resource selection. API Keys are referenced through protected versioned credentials rather than copied into the ordinary snapshot.
 _Avoid_: Published Workflow, Workflow release
 
+**Session Workflow Origin**:
+The immutable, owner-scoped provenance link from one successful Session response to the Workflow and first validation Run created from it. It supports navigation and idempotent conversion; the Session and Workflow do not share later history.
+_Avoid_: copied Session, shared conversation, Workflow version
+
 **Execution Stage Snapshot**:
 The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert and Team Member identities, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, structured Expert guidance, Skills, and Connectors. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
 _Avoid_: Expert Stage result, mutable Expert, team Runtime Engine

@@ -5170,6 +5170,154 @@
         ]
       }
     },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateWorkflowFromSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1CreateWorkflowFromSessionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceCreateWorkflowFromSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft": {
+      "get": {
+        "operationId": "AgentWorkspaceService_PreviewSessionWorkflowDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1SessionWorkflowDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/workflow-links": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSessionWorkflowLinks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ListSessionWorkflowLinksResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "operationId": "AgentWorkspaceService_GetSettings",
@@ -6649,6 +6797,23 @@
         "properties": {
           "model_id": {
             "type": "string"
+          }
+        }
+      },
+      "AgentWorkspaceServiceCreateWorkflowFromSessionBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionWorkflowFileDecision"
+            }
           }
         }
       },
@@ -8277,6 +8442,23 @@
           }
         }
       },
+      "v1CreateWorkflowFromSessionResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/v1Workflow"
+          },
+          "validation_run": {
+            "$ref": "#/components/schemas/v1Run"
+          },
+          "link": {
+            "$ref": "#/components/schemas/v1SessionWorkflowLink"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
       "v1CreateWorkflowRequest": {
         "type": "object",
         "properties": {
@@ -9838,6 +10020,17 @@
           }
         }
       },
+      "v1ListSessionWorkflowLinksResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionWorkflowLink"
+            }
+          }
+        }
+      },
       "v1ListSessionsResponse": {
         "type": "object",
         "properties": {
@@ -10893,6 +11086,109 @@
           }
         }
       },
+      "v1SessionWorkflowDraft": {
+        "type": "object",
+        "properties": {
+          "suggested_name": {
+            "type": "string"
+          },
+          "suggested_goal": {
+            "type": "string"
+          },
+          "specialist_name": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionWorkflowResource"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1SessionWorkflowFile"
+            }
+          },
+          "existing_link": {
+            "$ref": "#/components/schemas/v1SessionWorkflowLink"
+          }
+        }
+      },
+      "v1SessionWorkflowFile": {
+        "type": "object",
+        "properties": {
+          "source_key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "unavailable_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SessionWorkflowFileDecision": {
+        "type": "object",
+        "properties": {
+          "source_key": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          }
+        }
+      },
+      "v1SessionWorkflowLink": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workflow_id": {
+            "type": "string"
+          },
+          "workflow_name": {
+            "type": "string"
+          },
+          "validation_run_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "v1SessionWorkflowResource": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "v1Skill": {
         "type": "object",
         "properties": {
@@ -11145,6 +11441,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "origin": {
+            "$ref": "#/components/schemas/v1SessionWorkflowLink"
           }
         }
       },

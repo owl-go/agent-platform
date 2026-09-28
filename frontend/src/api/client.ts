@@ -50,8 +50,14 @@ export interface KnowledgeDocument { id: string; knowledge_base_id: string; cate
 export interface KnowledgeSearchResult { document_id: string; revision_id: string; document_name: string; category_name?: string; text: string; relevance: number }
 export interface KnowledgeSearchResponse { index_ready: boolean; items: KnowledgeSearchResult[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
-export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
+export interface SessionWorkflowLink { session_id: string; message_id: number; workflow_id: string; workflow_name: string; validation_run_id: string; created_at: string }
+export interface SessionWorkflowResource { kind: "expert" | "skill" | "mcp" | "cli"; id: string; name: string }
+export interface SessionWorkflowFile { source_key: string; kind: "attachment" | "artifact"; name: string; size: number; available: boolean; unavailable_reason?: string }
+export interface SessionWorkflowDraft { suggested_name: string; suggested_goal: string; specialist_name: string; resources: SessionWorkflowResource[]; files: SessionWorkflowFile[]; existing_link?: SessionWorkflowLink }
+export interface SessionWorkflowFileDecision { source_key: string; destination: "workspace" | "exclude" }
+export interface SessionWorkflowCreation { workflow: Workflow; validation_run: Run; link: SessionWorkflowLink; replayed: boolean }
+export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -171,6 +177,9 @@ export interface PlatformApi {
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
   decideSessionExecutionPlan(sessionID: string, messageID: number, decision: "start" | "direct" | "cancel", version: number, signal?: AbortSignal): Promise<SessionMessage>;
+  previewSessionWorkflowDraft(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionWorkflowDraft>;
+  createWorkflowFromSession(sessionID: string, messageID: number, input: { name: string; goal: string; files: SessionWorkflowFileDecision[] }, signal?: AbortSignal): Promise<SessionWorkflowCreation>;
+  listSessionWorkflowLinks(sessionID: string, signal?: AbortSignal): Promise<SessionWorkflowLink[]>;
   decideResourceCreationAction(actionID: string, decision: "confirm" | "cancel", signal?: AbortSignal): Promise<ResourceCreationAction>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -473,6 +482,12 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     decideSessionExecutionPlan(sessionID, messageID, decision, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/plan-decision`, json("POST", { decision, expected_version: version }, signal)); },
+    previewSessionWorkflowDraft(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal }); },
+    async createWorkflowFromSession(sessionID, messageID, input, signal) {
+      const result = await call<SessionWorkflowCreation>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow`, json("POST", input, signal));
+      return { ...result, validation_run: normalizeRun(result.validation_run) };
+    },
+    async listSessionWorkflowLinks(sessionID, signal) { return (await call<{ items?: SessionWorkflowLink[] }>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/workflow-links`, { signal })).items ?? []; },
     decideResourceCreationAction(actionID, decision, signal) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`, json("POST", { decision }, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },

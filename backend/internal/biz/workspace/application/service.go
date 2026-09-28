@@ -102,6 +102,15 @@ type Repository interface {
 	RestoreKnowledgeDocument(context.Context, string, string, string, bool) error
 }
 
+// SessionWorkflowRepository is an optional atomic conversion seam. Keeping it
+// separate avoids widening every Repository fake while requiring production
+// persistence to create the Workflow, provenance link, and validation Run in
+// one transaction.
+type SessionWorkflowRepository interface {
+	CreateWorkflowFromSession(context.Context, string, string, string, int64, string, string) (domain.SessionWorkflowCreation, error)
+	ListSessionWorkflowLinks(context.Context, string, string) ([]domain.SessionWorkflowLink, error)
+}
+
 type ModelCatalog interface {
 	Discover(context.Context, domain.ModelProviderConnection, string) (ModelCatalogResult, error)
 }

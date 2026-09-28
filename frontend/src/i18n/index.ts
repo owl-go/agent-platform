@@ -332,6 +332,14 @@ Object.assign(en, { taskWorkspace: {
   eyebrow: "Current task", title: "Task panel", close: "Close task panel", open: "View task details", plan: "Plan", evidence: "Evidence", activities: "Execution activities", modelCalls: "Model stages", files: "Files", inputFile: "Input file", outputFile: "Output artifact", result: "Result summary", state: "State", elapsed: "Elapsed", credits: "Credits used",
   stepKinds: { review_input: "Review input", retrieve_knowledge: "Retrieve knowledge", execute_stage: "Execute task", deliver_result: "Deliver result" },
 } });
+Object.assign(zh.sessions, { workflowSave: {
+  action: "保存为工作流", open: "打开已保存工作流", eyebrow: "从成功结果创建", title: "保存为可重复运行的工作流", description: "名称、目标和本次实际使用的专家、技能与连接器会被带入。会话与工作流后续各自保留独立历史。", carriedConfiguration: "带入的执行配置", noExtraResources: "本次未使用额外技能或连接器。", filesTitle: "处理本次文件", filesDescription: "每个输入文件和输出产物都必须明确选择去向；不会静默复制。", unavailable: "不可用，只能排除", toWorkspace: "复制到工作区", exclude: "不带入", validationNotice: "创建后会立即生成首个验证运行，并先展示执行计划等待你确认。工作流、来源关系和验证运行会一起成功或一起失败。", confirm: "创建并验证", loadFailed: "无法读取这个成功结果，请刷新后重试。", createFailed: "工作流未创建；请检查名称、目标和文件后重试。",
+} });
+Object.assign(en.sessions, { workflowSave: {
+  action: "Save as Workflow", open: "Open saved Workflow", eyebrow: "Create from a successful result", title: "Save as a repeatable Workflow", description: "The name, goal, and the exact Experts, Skills, and Connectors used in this response are carried over. The Session and Workflow keep independent histories afterward.", carriedConfiguration: "Execution configuration", noExtraResources: "No additional Skills or Connectors were used.", filesTitle: "Handle files from this result", filesDescription: "Choose an explicit destination for every input file and artifact. Nothing is copied silently.", unavailable: "Unavailable; must be excluded", toWorkspace: "Copy to Workspace", exclude: "Do not carry over", validationNotice: "Creation immediately adds the first validation Run and shows its execution plan for confirmation. The Workflow, source link, and validation Run either all succeed or all fail.", confirm: "Create and validate", loadFailed: "This successful result could not be loaded. Refresh and retry.", createFailed: "No Workflow was created. Check the name, goal, and files, then retry.",
+} });
+Object.assign(zh.workflows, { session_conversion: "由会话创建", fromSession: "来自会话" });
+Object.assign(en.workflows, { session_conversion: "Created from Session", fromSession: "From Session" });
 
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);

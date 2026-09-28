@@ -58,6 +58,9 @@ service AgentWorkspaceService {
   rpc RetrySessionMessage(RetrySessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/retry" body: "*"}; }
   rpc CancelSessionMessage(CancelSessionMessageRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation" body: "*"}; }
   rpc DecideSessionExecutionPlan(DecideSessionExecutionPlanRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision" body: "*"}; }
+  rpc PreviewSessionWorkflowDraft(PreviewSessionWorkflowDraftRequest) returns (SessionWorkflowDraft) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft"}; }
+  rpc CreateWorkflowFromSession(CreateWorkflowFromSessionRequest) returns (CreateWorkflowFromSessionResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/workflow" body: "*"}; }
+  rpc ListSessionWorkflowLinks(ListSessionWorkflowLinksRequest) returns (ListSessionWorkflowLinksResponse) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/workflow-links"}; }
 
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
@@ -361,6 +364,16 @@ message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMes
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message DecideSessionExecutionPlanRequest { string session_id = 1; int64 message_id = 2; string decision = 3; int64 expected_version = 4; }
+message PreviewSessionWorkflowDraftRequest { string session_id = 1; int64 message_id = 2; }
+message CreateWorkflowFromSessionRequest { string session_id = 1; int64 message_id = 2; string name = 3; string goal = 4; repeated SessionWorkflowFileDecision files = 5; }
+message CreateWorkflowFromSessionResponse { Workflow workflow = 1; Run validation_run = 2; SessionWorkflowLink link = 3; bool replayed = 4; }
+message ListSessionWorkflowLinksRequest { string session_id = 1; }
+message ListSessionWorkflowLinksResponse { repeated SessionWorkflowLink items = 1; }
+message SessionWorkflowDraft { string suggested_name = 1; string suggested_goal = 2; string specialist_name = 3; repeated SessionWorkflowResource resources = 4; repeated SessionWorkflowFile files = 5; optional SessionWorkflowLink existing_link = 6; }
+message SessionWorkflowResource { string kind = 1; string id = 2; string name = 3; }
+message SessionWorkflowFile { string source_key = 1; string kind = 2; string name = 3; int64 size = 4; bool available = 5; optional string unavailable_reason = 6; }
+message SessionWorkflowFileDecision { string source_key = 1; string destination = 2; }
+message SessionWorkflowLink { string session_id = 1; int64 message_id = 2; string workflow_id = 3; string workflow_name = 4; string validation_run_id = 5; google.protobuf.Timestamp created_at = 6; }
 message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; repeated Artifact artifacts = 14; optional ResourceCreationAction resource_action = 15; repeated Evidence evidence = 16; optional ExecutionPlan execution_plan = 17; }
 message ResourceCreationAction { string id = 1; string kind = 2; string state = 3; string name = 4; string description = 5; string resource_id = 6; optional string error = 7; google.protobuf.Timestamp expires_at = 8; int64 version = 9; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; int32 schema_version = 12; repeated ExecutionStageSnapshot stages = 13; }
@@ -378,7 +391,7 @@ message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
 message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; repeated string knowledge_base_ids = 9; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; optional SessionWorkflowLink origin = 17; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }

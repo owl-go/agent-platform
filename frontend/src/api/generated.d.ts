@@ -1460,6 +1460,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateWorkflowFromSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_PreviewSessionWorkflowDraft"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/workflow-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSessionWorkflowLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -1853,6 +1901,11 @@ export interface components {
         };
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
+        };
+        AgentWorkspaceServiceCreateWorkflowFromSessionBody: {
+            name?: string;
+            goal?: string;
+            files?: components["schemas"]["v1SessionWorkflowFileDecision"][];
         };
         AgentWorkspaceServiceDecideCommandApprovalBody: {
             decision?: string;
@@ -2430,6 +2483,12 @@ export interface components {
             user?: components["schemas"]["v1UserAccount"];
             temporary_password?: string;
         };
+        v1CreateWorkflowFromSessionResponse: {
+            workflow?: components["schemas"]["v1Workflow"];
+            validation_run?: components["schemas"]["v1Run"];
+            link?: components["schemas"]["v1SessionWorkflowLink"];
+            replayed?: boolean;
+        };
         v1CreateWorkflowRequest: {
             workflow?: components["schemas"]["v1WorkflowInput"];
         };
@@ -2960,6 +3019,9 @@ export interface components {
         v1ListSessionMessagesResponse: {
             items?: components["schemas"]["v1SessionMessage"][];
         };
+        v1ListSessionWorkflowLinksResponse: {
+            items?: components["schemas"]["v1SessionWorkflowLink"][];
+        };
         v1ListSessionsResponse: {
             items?: components["schemas"]["v1Session"][];
         };
@@ -3321,6 +3383,42 @@ export interface components {
             evidence?: components["schemas"]["v1Evidence"][];
             execution_plan?: components["schemas"]["v1ExecutionPlan"];
         };
+        v1SessionWorkflowDraft: {
+            suggested_name?: string;
+            suggested_goal?: string;
+            specialist_name?: string;
+            resources?: components["schemas"]["v1SessionWorkflowResource"][];
+            files?: components["schemas"]["v1SessionWorkflowFile"][];
+            existing_link?: components["schemas"]["v1SessionWorkflowLink"];
+        };
+        v1SessionWorkflowFile: {
+            source_key?: string;
+            kind?: string;
+            name?: string;
+            /** Format: int64 */
+            size?: number;
+            available?: boolean;
+            unavailable_reason?: string;
+        };
+        v1SessionWorkflowFileDecision: {
+            source_key?: string;
+            destination?: string;
+        };
+        v1SessionWorkflowLink: {
+            session_id?: string;
+            /** Format: int64 */
+            message_id?: number;
+            workflow_id?: string;
+            workflow_name?: string;
+            validation_run_id?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1SessionWorkflowResource: {
+            kind?: string;
+            id?: string;
+            name?: string;
+        };
         v1Skill: {
             id?: string;
             name?: string;
@@ -3412,6 +3510,7 @@ export interface components {
             version?: number;
             expert_team_id?: string;
             knowledge_base_ids?: string[];
+            origin?: components["schemas"]["v1SessionWorkflowLink"];
         };
         v1WorkflowAccessToken: {
             jwt_token?: string;
@@ -7358,6 +7457,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1SendSessionMessageResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateWorkflowFromSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCreateWorkflowFromSessionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreateWorkflowFromSessionResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PreviewSessionWorkflowDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SessionWorkflowDraft"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSessionWorkflowLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSessionWorkflowLinksResponse"];
                 };
             };
             /** @description An unexpected error response. */

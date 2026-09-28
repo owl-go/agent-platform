@@ -705,6 +705,7 @@ type Workflow struct {
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 	Version                 int64
+	Origin                  *SessionWorkflowLink
 }
 
 type ExpertInput struct {

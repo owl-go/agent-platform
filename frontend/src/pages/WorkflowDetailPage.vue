@@ -140,6 +140,10 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", resumeRunPolling);
   await refresh();
   if (disposed) return;
+  if (typeof route.query.open_run === "string") {
+    const requested = runs.value.find((item) => item.id === route.query.open_run);
+    if (requested) await openRun(requested);
+  }
   if (tab.value === "settings" && workflow.value && !workflow.value.deleted) await loadCredential();
   lastRunRefresh = Date.now();
   runTimer = setInterval(() => {
@@ -505,7 +509,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
-      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
+      <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2><el-button v-if="workflow.origin" class="workflow-origin-link" text @click="router.push({ path: '/sessions', query: { open: workflow.origin.session_id } })">{{ t('workflows.fromSession') }} →</el-button></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
       <el-skeleton v-if="loading" :rows="10" animated class="page-loading" />
       <template v-else-if="workflow">
       <nav class="tabs"><el-button v-for="item in tabs" :key="item" text :class="{ active: tab === item }" @click="tab = item">{{ t(`workflows.${item}`) }}</el-button></nav>
