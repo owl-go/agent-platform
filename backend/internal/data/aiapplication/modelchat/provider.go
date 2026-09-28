@@ -89,10 +89,12 @@ func buildRequest(input application.ChatRequest) (string, any, error) {
 	}
 	switch input.Protocol {
 	case "openai_chat":
-		payload := map[string]any{"model": input.ModelID, "messages": input.Messages, "stream": input.Stream}
-		if input.Stream {
-			payload["stream_options"] = map[string]bool{"include_usage": true}
-		}
+		// Some OpenAI-compatible Codex gateways only accept streaming Chat
+		// Completions. Keep transport streaming enabled for internal stages such
+		// as classification and summarization; a nil onDelta still aggregates
+		// the complete response without exposing intermediate output.
+		payload := map[string]any{"model": input.ModelID, "messages": input.Messages, "stream": true}
+		payload["stream_options"] = map[string]bool{"include_usage": true}
 		return base + "/chat/completions", payload, nil
 	case "openai_responses":
 		return base + "/responses", map[string]any{"model": input.ModelID, "input": input.Messages, "stream": input.Stream}, nil
