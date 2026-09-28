@@ -71,6 +71,7 @@ async function mountPage(api = apiStub()) {
 
 describe("WorkflowDetailPage", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:workflow-attachment") });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
@@ -165,6 +166,24 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find(".run-conversation-head .eyebrow").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("message.delta");
     expect(wrapper.text()).not.toContain("工作流快照");
+    wrapper.unmount();
+  });
+
+  it("links a Run conversation to its adaptive task panel", async () => {
+    const plannedRun: Run = { ...run, execution_plan: {
+      id: "plan-1", state: "completed", objective: "审查发布风险", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+      steps: [{ id: "step-1", kind: "execute_stage", label: "检查变更", position: 1, state: "completed" }], resources: [], side_effects: [], reasons: [], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+    } };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [plannedRun]), listRunTurns: vi.fn(async () => [plannedRun]) }));
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".run-page").classes()).toContain("has-task-panel");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("审查发布风险");
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
     wrapper.unmount();
   });
 

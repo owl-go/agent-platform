@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import { Box } from "@lucide/vue";
+import { Box, PanelRightOpen } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderMarkdown } from "../markdown";
@@ -10,10 +10,12 @@ import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
 import { runtimeEngineDisplayName, type Artifact, type Evidence, type ExpertStage } from "../api/client";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
+import { hasTaskWorkspaceContent } from "../taskWorkspace";
 
 const props = defineProps<{
   messages: ConversationMessage[];
   loadAttachment: (id: string) => Promise<Blob>;
+  selectedTaskId?: string;
 }>();
 const emit = defineEmits<{
   downloadArtifact: [artifact: Artifact];
@@ -24,6 +26,7 @@ const emit = defineEmits<{
   editPlan: [messageID: string];
   attachmentError: [];
   copyError: [];
+  selectTask: [messageID: string];
 }>();
 const { t, locale } = useI18n();
 const pendingStates = new Set(["queued", "running", "generating", "waiting_for_user"]);
@@ -127,7 +130,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
 <template>
   <div class="conversation-thread">
-    <div v-for="message in props.messages" :key="message.id" class="message" :class="message.role">
+    <div v-for="message in props.messages" :key="message.id" class="message" :class="[message.role, { 'is-task-selected': message.id === selectedTaskId }]">
       <span v-if="message.role === 'assistant'" class="agent-avatar" aria-hidden="true">AI</span>
       <div class="message-content">
         <div v-if="message.role === 'assistant'" class="message-identity">
@@ -218,6 +221,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         <CreditConsumption v-if="message.role === 'assistant'" :value="message.creditConsumption" />
         <div class="message-actions">
           <small v-if="message.role === 'user'" class="message-meta">{{ messageTime(message.timestamp) }}</small>
+          <button v-if="hasTaskWorkspaceContent(message)" type="button" class="message-task" :aria-pressed="message.id === selectedTaskId" @click="emit('selectTask', message.id)"><PanelRightOpen :size="14" /><span>{{ t('taskWorkspace.open') }}</span></button>
           <button v-if="message.copyText || message.content" type="button" class="message-copy" :class="{ copied: isCopied(`message:${message.id}`) }" :aria-label="messageAriaLabel(message)" @click="copy(message.copyText || message.content, `message:${message.id}`)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg><span>{{ isCopied(`message:${message.id}`) ? t('common.copied') : t('common.copy') }}</span></button>
         </div>
       </div>

@@ -10,9 +10,11 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
 import ConversationThread from "../components/ConversationThread.vue";
 import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
+import TaskWorkspacePanel from "../components/TaskWorkspacePanel.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromEvents } from "../cliAuthorization";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
+import { latestTaskWorkspaceMessage } from "../taskWorkspace";
 
 type Tab = "artifacts" | "workspace" | "history" | "settings";
 const api = inject(platformApiKey)!;
@@ -29,6 +31,8 @@ const nowMS = ref(Date.now());
 const lastWorkflowActivityAt = ref(Date.now());
 const notice = ref(""); const confirmWorkflowDelete = ref(false); const savingGit = ref(false);
 const runEditPrompt = ref("");
+const selectedTaskID = ref("");
+const taskPanelOpen = ref(true);
 const integrationGuideOpen = ref(false);
 type CopyTarget = "api_key" | "api_secret" | "token" | "run" | "stream" | "full";
 const copiedTarget = ref<CopyTarget>();
@@ -102,11 +106,17 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       stages: turn.expert_stages,
       creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
+      taskAttachments: turn.attachments,
       evidence: turn.evidence,
       executionPlan: turn.execution_plan,
     },
   ];
 }));
+const selectedTaskMessage = computed(() => conversationMessages.value.find((message) => message.id === selectedTaskID.value && message.role === "assistant") ?? latestTaskWorkspaceMessage(conversationMessages.value));
+watch(conversationMessages, (messages) => {
+  if (messages.some((message) => message.id === selectedTaskID.value)) return;
+  selectedTaskID.value = latestTaskWorkspaceMessage(messages)?.id ?? "";
+}, { immediate: true });
 watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
@@ -270,6 +280,8 @@ async function openRun(item: Run) {
 	eventController?.abort();
 	stopRunReveal();
 	selectedRun.value = item;
+	selectedTaskID.value = "";
+	taskPanelOpen.value = localStorage.getItem(`agent-workspace:task-panel:run:${item.id}`) !== "closed";
 	conversationRuns.value = await api.listRunTurns(workflowID.value, item.id);
 	runEvents.value = [];
 	runEventsByID.value = Object.fromEntries(conversationRuns.value.map((turn) => [turn.id, []]));
@@ -427,7 +439,16 @@ async function editExecutionPlan(runID: string) {
 }
 
 async function cancelConversationRun() { const active = activeConversationRun.value; if (!active) return; if (streamReconnectTimer) clearTimeout(streamReconnectTimer); await api.cancelRun(workflowID.value, active.id); eventController?.abort(); conversationRuns.value = await api.listRunTurns(workflowID.value, selectedRun.value!.id); }
-function closeRun() { if (streamReconnectTimer) clearTimeout(streamReconnectTimer); eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function selectTask(messageID: string) {
+  selectedTaskID.value = messageID;
+  taskPanelOpen.value = true;
+  if (selectedRun.value) localStorage.setItem(`agent-workspace:task-panel:run:${selectedRun.value.id}`, "open");
+}
+function closeTaskPanel() {
+  taskPanelOpen.value = false;
+  if (selectedRun.value) localStorage.setItem(`agent-workspace:task-panel:run:${selectedRun.value.id}`, "closed");
+}
+function closeRun() { if (streamReconnectTimer) clearTimeout(streamReconnectTimer); eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; selectedTaskID.value = ""; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
@@ -474,12 +495,13 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
   <section class="detail-page workflow-detail-page" :class="{ 'workflow-run-view': selectedRun }">
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
-    <div v-if="selectedRun" class="run-page">
+    <div v-if="selectedRun" class="run-page" :class="{ 'has-task-panel': taskPanelOpen && selectedTaskMessage }">
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
       <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
-        <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+        <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
+      <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="openArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>

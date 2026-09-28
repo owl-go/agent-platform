@@ -324,6 +324,14 @@ Object.assign(en.sessions, { executionPlan: {
   reasons: { user_requested: "You requested a plan first", multiple_stages: "Multiple execution stages", multiple_external_sources: "Uses multiple external resources", external_side_effect: "May change an external system", workflow_execution: "Workflow execution", workspace_change: "May change workspace files" },
   sideEffects: { external_connector_operation: "May use a Connector to change an external system", workspace_files_may_change: "May change workspace files" },
 } });
+Object.assign(zh, { taskWorkspace: {
+  eyebrow: "当前任务", title: "任务面板", close: "关闭任务面板", open: "查看任务详情", plan: "计划", evidence: "证据", activities: "执行活动", modelCalls: "模型阶段", files: "文件", inputFile: "输入文件", outputFile: "输出产物", result: "结果摘要", state: "状态", elapsed: "耗时", credits: "消耗积分",
+  stepKinds: { review_input: "核对输入", retrieve_knowledge: "检索知识", execute_stage: "执行任务", deliver_result: "交付结果" },
+} });
+Object.assign(en, { taskWorkspace: {
+  eyebrow: "Current task", title: "Task panel", close: "Close task panel", open: "View task details", plan: "Plan", evidence: "Evidence", activities: "Execution activities", modelCalls: "Model stages", files: "Files", inputFile: "Input file", outputFile: "Output artifact", result: "Result summary", state: "State", elapsed: "Elapsed", credits: "Credits used",
+  stepKinds: { review_input: "Review input", retrieve_knowledge: "Retrieve knowledge", execute_stage: "Execute task", deliver_result: "Deliver result" },
+} });
 
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);

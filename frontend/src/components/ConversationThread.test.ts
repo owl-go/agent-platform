@@ -187,4 +187,18 @@ describe("ConversationThread", () => {
     expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
     wrapper.unmount();
   });
+
+  it("opens the task panel from a task-bearing historical response", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-task", role: "assistant", content: "Done", state: "succeeded", timestamp: "2026-09-28T08:00:00Z",
+      artifacts: [{ id: "artifact-1", kind: "file", name: "report.md", path: "report.md", size: 42, expired: false, created_at: "2026-09-28T08:01:00Z" }],
+    }]);
+    await wrapper.setProps({ selectedTaskId: "assistant-task" });
+
+    expect(wrapper.get(".message.assistant").classes()).toContain("is-task-selected");
+    expect(wrapper.get(".message-task").attributes("aria-pressed")).toBe("true");
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.emitted("selectTask")?.[0]).toEqual(["assistant-task"]);
+    wrapper.unmount();
+  });
 });

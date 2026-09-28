@@ -43,6 +43,7 @@ export interface ConversationMessage {
   evidence?: Evidence[];
   executionPlan?: ExecutionPlan;
   attachments?: Attachment[];
+  taskAttachments?: Attachment[];
   resourceAction?: ResourceCreationAction;
   skills?: Array<{ id: string; name: string }>;
   meta?: { label: string; title?: string };

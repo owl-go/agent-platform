@@ -21,7 +21,7 @@
 | EP-02 | 本次执行证据 | 用户能确认实际调用了哪些工具、产生了哪些文件和阶段结果 | 现有 public Activity、Artifact、Expert Stage、Credits | 不把“可用资源”显示为“已使用”；Session/Run 共用组件；中英文测试 | 已完成展示层；来源证据转 EP-03 |
 | EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的 Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 已完成代码与无数据库本地门禁；PostgreSQL Integration、真实 Provider 与生产历史证据待验证 |
 | EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 已完成代码与本地门禁；真实 Provider、浏览器断点与 PostgreSQL Integration 待验证 |
-| EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 待 EP-02/03/04 |
+| EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 已完成代码与本地组件/页面门禁；浏览器布局验收见 EP-05.3，真实部署待验证 |
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 待 EP-00/02 |
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 待 EP-06 |
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 待 EP-00 |
@@ -109,7 +109,28 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - Plan Step 状态由 Worker claim、Expert Stage 和终态事务回写为 pending/running/completed/skipped/failed，不从模型文字推断。
 - 本地可验证内容包括领域判定、去重资源、side-effect direct-answer 拒绝、API contract、共享组件和完整前端测试。真实 Provider 的首次副作用时序、数据库迁移、1280/1440/1920/390px 浏览器布局仍需目标环境验证，不能记作已通过。
 
-## 6. 发布与回滚
+## 6. EP-05 自适应任务面板
+
+### EP-05.1 内容与选择
+
+- Session 和 Run Conversation 复用同一个 Task Panel，只展示当前 Assistant Message 已持久化的 Execution Plan、Evidence、Execution Activity、Expert Stage、输入附件、Artifact、状态、耗时和 Credits；不解析回答文字补造步骤或来源。
+- 只有历史回答包含上述任一任务内容时才显示“查看任务详情”，打开后可切换到该回答。首次进入一段 Conversation 时默认选中最新的可检查回答；纯问答没有 Task Panel，仍保持单列。
+- 输入附件取自生成该回答的 User Message 或 Run，不混入其他轮次。Knowledge 来源仍通过 EP-03 的精确 Revision 权限检查打开；过期 Artifact 只显示元数据且不可下载。
+
+### EP-05.2 响应式布局与状态
+
+- Assistant 正文最大阅读宽度为 `76ch`。Workflow 在视口宽度至少 1360px 时将 Task Panel 集成到右侧，1360–1439px 使用 320px 面板，更宽视口使用 360px；1280px 使用覆盖抽屉，避免正文缩到 68ch 以下。
+- Session 还有产品主导航和 240px Session 列表，因此只在至少 1600px 时集成 320px 右栏；较窄桌面使用右侧覆盖抽屉，避免把正文压缩到目标阅读宽度以下。
+- 700px 及以下使用从移动端 Header 下方展开的全宽面板。关闭状态按 Session/Run Conversation ID 保存在当前浏览器设备；再次点击历史回答可重新打开。
+
+### EP-05.3 验收证据边界
+
+- Vitest 覆盖任务内容判定、最新历史回答选择、四类内容分组、来源/Artifact 动作、Session 和 Run Conversation 的关闭与重新打开行为。
+- 本地浏览器布局检查使用当前生产 CSS 与等价组件 DOM，在 1280、1440、1920 和 390px 检查 Task Panel 尺寸、正文区域和 `document.documentElement.scrollWidth <= clientWidth`；该检查不等于真实 OIDC、API 或 Provider 部署验收。
+- 2026-09-28 的本地 Chromium 检查结果：四个视口的 `scrollWidth` 均等于 `clientWidth`；Workflow 在 1280px 使用 358px 覆盖抽屉、1440px 使用 360px 集成面板、1920px 使用 360px 集成面板，390px 使用从 `y=56` 开始的 390px 全宽面板；Session 在 1440px 使用 380px 覆盖抽屉、1920px 使用 320px 集成面板。截图保存在本地 `output/playwright/`，不作为生产证据提交。
+- `make web-typecheck`、`make web-build` 和 `git diff --check` 是提交门禁。真实部署的浏览器到 API 闭环仍按第 14 节执行，不能由静态布局检查替代。
+
+## 7. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

@@ -9,10 +9,12 @@ import ToastMessage from "../components/ToastMessage.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
 import ConversationThread from "../components/ConversationThread.vue";
 import ExecutionStatusBar from "../components/ExecutionStatusBar.vue";
+import TaskWorkspacePanel from "../components/TaskWorkspacePanel.vue";
 import type { ComposerSubmission } from "../conversationDraft";
 import { cliAuthorizationRequestFromActivities } from "../cliAuthorization";
 import { summarizeExecutionActivities, type ExecutionActivitySummary } from "../executionActivitySummary";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
+import { latestTaskWorkspaceMessage } from "../taskWorkspace";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -38,6 +40,8 @@ const loading = ref(true);
 const sending = ref(false);
 const cancellingMessageID = ref<number>();
 const resourceActionBusy = ref<string>();
+const selectedTaskID = ref("");
+const taskPanelOpen = ref(true);
 const creating = ref(false);
 const showArchived = ref(false);
 const sessionQuery = ref("");
@@ -125,12 +129,14 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
     evidence: message.evidence,
     executionPlan: message.execution_plan,
     attachments: message.attachments,
+    taskAttachments: message.role === "assistant" ? messages.value[index - 1]?.attachments : undefined,
     skills: message.role === "user" ? messageSkills(index) : undefined,
     resourceAction: message.resource_action,
     meta: identity ? { label: `${identity.expertName ? `${identity.expertName} · ` : ""}${identity.modelName}`, title: `${identity.connection} · ${identity.modelID} · ${identity.runtime}` } : undefined,
     retryable: message.role === "assistant" && message.state === "failed",
   };
 }));
+const selectedTaskMessage = computed(() => conversationMessages.value.find((message) => message.id === selectedTaskID.value));
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let streamReconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let pollGeneration = 0;
@@ -165,6 +171,10 @@ watch(messages, async () => {
   if (shouldKeepAtLatest) scrollToLatest("auto");
   else updateScrollState();
 }, { deep: true, flush: "post" });
+watch(conversationMessages, (items) => {
+  const latest = latestTaskWorkspaceMessage(items);
+  if (!selectedTaskID.value || !items.some((item) => item.id === selectedTaskID.value)) selectedTaskID.value = latest?.id ?? "";
+}, { deep: true, immediate: true });
 
 function updateScrollState() {
   const stream = messageStream.value;
@@ -211,6 +221,8 @@ async function open(item: Session) {
   keepAtLatest.value = true; showJumpToLatest.value = false;
   const welcome = typeof route.query.assistant_welcome === "string" ? route.query.assistant_welcome : item.assistant_welcome;
   selected.value = welcome ? { ...item, assistant_welcome: welcome } : item; specialistName.value = ""; messages.value = []; loadingMessages.value = true;
+  selectedTaskID.value = "";
+  taskPanelOpen.value = localStorage.getItem(`agent-workspace:task-panel:session:${item.id}`) !== "closed";
   try {
     const loadedMessages = await api.listSessionMessages(item.id);
     if (generation !== pollGeneration || selected.value?.id !== item.id) return;
@@ -225,6 +237,8 @@ async function open(item: Session) {
     if (generation === pollGeneration && selected.value?.id === item.id) loadingMessages.value = false;
   }
 }
+function selectTask(messageID: string) { selectedTaskID.value = messageID; taskPanelOpen.value = true; if (selected.value) localStorage.setItem(`agent-workspace:task-panel:session:${selected.value.id}`, "open"); }
+function closeTaskPanel() { taskPanelOpen.value = false; if (selected.value) localStorage.setItem(`agent-workspace:task-panel:session:${selected.value.id}`, "closed"); }
 async function create() {
   if (creating.value) return;
   creating.value = true;
@@ -651,7 +665,7 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         </div>
       </div>
     </aside>
-    <article class="conversation-panel">
+    <article class="conversation-panel" :class="{ 'has-task-panel': taskPanelOpen && selectedTaskMessage }">
       <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
@@ -660,8 +674,9 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
-          <ConversationThread :messages="conversationMessages" :load-attachment="api.getAttachmentDownload" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+          <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
+        <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
           <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.id" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />

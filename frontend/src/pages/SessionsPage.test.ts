@@ -57,6 +57,7 @@ async function mountPageWithAPI(api: PlatformApi) {
 
 describe("SessionsPage conversation layout", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn(function (this: HTMLElement, options?: ScrollToOptions | number) {
       if (typeof options === "object") this.scrollTop = options.top ?? this.scrollTop;
     }) });
@@ -78,6 +79,24 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".message.assistant .message-content").text()).toContain("Agent 的消息");
     expect(wrapper.find(".message-avatar").exists()).toBe(false);
     expect(wrapper.find(".composer-layer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("shows task details only for a task-bearing response and reopens them from history", async () => {
+    const taskMessages = [messages[0]!, {
+      ...messages[1]!,
+      execution_plan: {
+        id: "plan-1", state: "completed", objective: "生成发布报告", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "检查变更", position: 1, state: "completed" }], resources: [], side_effects: [], reasons: [], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }] as SessionMessage[];
+    const wrapper = await mountPage(taskMessages);
+
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("生成发布报告");
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
     wrapper.unmount();
   });
 
