@@ -23,7 +23,7 @@
 | EP-04 | 条件式计划确认 | 复杂或有副作用的任务在执行前可确认范围和步骤 | Plan Snapshot、判定规则、计划确认 API | 普通问答不触发；写操作首次副作用前 100% 确认；Credits 可见 | 已完成代码与本地门禁；真实 Provider、浏览器断点与 PostgreSQL Integration 待验证 |
 | EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 已完成代码与本地组件/页面门禁；浏览器布局验收见 EP-05.3，真实部署待验证 |
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 已完成代码、本地门禁与临时 PostgreSQL Integration；真实部署闭环待验证 |
-| EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 待 EP-06 |
+| EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 已完成代码与本地门禁 |
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 待 EP-00 |
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办完成后返回原任务；不读取用户内容 | 待 EP-06/08 |
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 待 EP-00 |
@@ -150,6 +150,13 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - Vitest 覆盖预填、文件默认去向、API contract、验证 Run 自动打开和来源展示；完整前端结果为 44 个文件、319 个测试通过。
 - `make test`、`make build`、`make web-typecheck`、`make web-build` 与 `git diff --check` 通过。
 - 使用临时 PostgreSQL 17 容器实际运行完整 migration chain 和 `TestSessionWorkflowConversionIsAtomicAndIdempotent`，验证成功转换、pending 验证 Run、幂等回放及失败回复不产生 Workflow。该结果不等于真实 OIDC、对象存储、Provider 或生产部署验收。
+
+### EP-07 Workflow 最小创建与概览
+
+- 新建入口只收集名称和目标，不提前展示专家、知识库、环境变量、Schedule、API 或 Git 配置。
+- 创建成功后立即使用现有手动 Run API 生成强制 Plan 的验证 Run，并直接打开该 Plan；若 Run 启动失败，保留已创建 Workflow、直接进入其运行记录并给出可恢复提示，避免用户重试后重复创建。
+- 只有至少一个 Run 成功后，详情页才展示 Schedule、API Credential 和 Git Source 的后续配置建议；完整设置仍留在 Settings。
+- Vitest 覆盖最小提交、自动验证 Run、直接打开 Plan，以及成功前后建议的显隐。该批次不声称真实 Provider 验证成功。
 
 ## 8. 发布与回滚
 

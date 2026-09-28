@@ -340,6 +340,8 @@ Object.assign(en.sessions, { workflowSave: {
 } });
 Object.assign(zh.workflows, { session_conversion: "由会话创建", fromSession: "来自会话" });
 Object.assign(en.workflows, { session_conversion: "Created from Session", fromSession: "From Session" });
+Object.assign(zh.workflows, { createHint: "先用名称和目标跑通一次，再配置专家、知识库、定时、API 或 Git。", createAndValidate: "创建并验证", validationRunFailed: "工作流已创建，但验证运行未能启动；请检查个人执行设置后重试。", validatedTitle: "这个工作流已经跑通", validatedHint: "现在再按使用方式配置定时触发、API 接入或 Git 来源。", configureNext: "继续配置" });
+Object.assign(en.workflows, { createHint: "Start with a name and goal. Configure Experts, Knowledge Bases, schedules, API, or Git after the first run works.", createAndValidate: "Create and validate", validationRunFailed: "The Workflow was created, but its validation Run could not start. Check Personal Settings and retry.", validatedTitle: "This Workflow has completed a run", validatedHint: "Now configure a schedule, API integration, or Git source when the use case needs it.", configureNext: "Configure next" });
 
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);

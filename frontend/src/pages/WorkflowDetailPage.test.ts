@@ -83,6 +83,27 @@ describe("WorkflowDetailPage", () => {
     vi.restoreAllMocks();
   });
 
+  it("offers advanced setup only after a successful validation run", async () => {
+    const pending = await mountPage(apiStub({ listRuns: vi.fn(async () => [{ ...run, state: "waiting_for_user" as const }]) }));
+    expect(pending.find(".workflow-next-steps").exists()).toBe(false);
+    pending.unmount();
+
+    const validated = await mountPage();
+    expect(validated.get(".workflow-next-steps").text()).toContain("这个工作流已经跑通");
+    expect(validated.get(".workflow-next-steps").text()).toContain("定时触发");
+    expect(validated.get(".workflow-next-steps").text()).toContain("API 凭证");
+    expect(validated.get(".workflow-next-steps").text()).toContain("Git 来源");
+    await validated.get(".workflow-next-steps .el-button").trigger("click");
+    expect(validated.findAll(".tabs button")[3]!.classes()).toContain("active");
+    validated.unmount();
+  });
+
+  it("shows a recoverable error when initial validation could not start", async () => {
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => []) }), `/workflows/${workflow.id}?tab=history&validation_error=1`);
+    expect(wrapper.text()).toContain("工作流已创建，但验证运行未能启动");
+    wrapper.unmount();
+  });
+
   it("pauses polling in Settings and refreshes when returning to Run History", async () => {
     vi.useFakeTimers();
     const api = apiStub();

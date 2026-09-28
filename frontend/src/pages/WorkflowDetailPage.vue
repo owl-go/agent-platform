@@ -47,6 +47,7 @@ const selectedKnowledgeBaseIDs = computed<string[]>({
   get: () => settingsForm.value.knowledge_base_ids ?? [],
   set: (value) => { settingsForm.value.knowledge_base_ids = [...new Set(value)]; },
 });
+const workflowValidated = computed(() => runs.value.some((item) => item.state === "succeeded"));
 const tabs: Tab[] = ["artifacts", "workspace", "history", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestConversationRun = computed(() => conversationRuns.value.at(-1) ?? selectedRun.value);
@@ -140,6 +141,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", resumeRunPolling);
   await refresh();
   if (disposed) return;
+  if (route.query.validation_error === "1") error.value = t("workflows.validationRunFailed");
   if (typeof route.query.open_run === "string") {
     const requested = runs.value.find((item) => item.id === route.query.open_run);
     if (requested) await openRun(requested);
@@ -512,6 +514,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2><el-button v-if="workflow.origin" class="workflow-origin-link" text @click="router.push({ path: '/sessions', query: { open: workflow.origin.session_id } })">{{ t('workflows.fromSession') }} →</el-button></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
       <el-skeleton v-if="loading" :rows="10" animated class="page-loading" />
       <template v-else-if="workflow">
+      <aside v-if="workflowValidated && !workflow.deleted" class="workflow-next-steps" role="status"><div><strong>{{ t('workflows.validatedTitle') }}</strong><p>{{ t('workflows.validatedHint') }}</p></div><div class="workflow-next-step-tags"><el-tag>{{ t('workflows.schedule') }}</el-tag><el-tag>{{ t('workflows.apiCredential') }}</el-tag><el-tag>{{ t('workflows.gitSource') }}</el-tag></div><el-button @click="tab = 'settings'">{{ t('workflows.configureNext') }}</el-button></aside>
       <nav class="tabs"><el-button v-for="item in tabs" :key="item" text :class="{ active: tab === item }" @click="tab = item">{{ t(`workflows.${item}`) }}</el-button></nav>
       <div v-if="tab === 'artifacts'" class="tab-content"><div v-if="!fileArtifacts.length" class="empty-inline"><span>◇</span><p>{{ t('common.empty') }}</p></div><div v-else class="artifact-list"><article v-for="item in fileArtifacts" :key="item.id" role="button" tabindex="0" @click="openArtifact(item)" @keydown.enter="openArtifact(item)"><span class="file-icon" aria-hidden="true"><FileText /></span><div><strong>{{ item.name }}</strong><small>{{ formatFileSize(item.size) }} <template v-if="item.expired">· {{ t('workflows.expired') }}</template></small></div><code>{{ (item.sha256 || '').slice(0, 12) }}</code></article></div></div>
       <div v-if="tab === 'workspace'" class="tab-content"><div class="file-browser"><button v-if="workspacePath" class="file-row" @click="loadDirectory(parentPath())"><span class="file-icon" aria-hidden="true"><ArrowUp /></span><strong>..</strong></button><div v-for="entry in entries" :key="entry.path" class="file-row" role="button" tabindex="0" @click="openEntry(entry)" @keydown.enter="openEntry(entry)"><span class="file-icon" aria-hidden="true"><Folder v-if="entry.directory" /><FileText v-else /></span><strong>{{ entry.name }}</strong><small>{{ entry.directory ? '—' : `${entry.size} B` }}</small><time>{{ new Date(entry.modified_at).toLocaleString() }}</time><button v-if="!entry.directory" class="text-button" :aria-label="t('common.download')" @click.stop="downloadEntry(entry)">↓</button></div><div v-if="!entries.length" class="empty-inline"><span>□</span><p>{{ t('common.empty') }}</p></div></div></div>
