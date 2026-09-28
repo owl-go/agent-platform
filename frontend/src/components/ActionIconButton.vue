@@ -27,7 +27,7 @@ const emit = defineEmits<{ click: [event: MouseEvent] }>();
   padding: 0;
   border: 0;
   border-radius: 7px;
-  color: #64706a;
+  color: var(--aw-n7);
   background: transparent;
   cursor: pointer;
   transition: color .16s ease, background-color .16s ease, transform .16s ease;
@@ -41,20 +41,20 @@ const emit = defineEmits<{ click: [event: MouseEvent] }>();
 
 .action-icon-button:hover,
 .action-icon-button:focus-visible {
-  color: #275e48;
-  background: #fff;
+  color: var(--aw-primary);
+  background: var(--aw-n0);
   outline: none;
   transform: translateY(-1px);
 }
 
 .action-icon-button:focus-visible {
-  box-shadow: 0 0 0 2px #b8d1c1;
+  box-shadow: 0 0 0 2px var(--aw-primary-border);
 }
 
 .action-icon-button--danger:hover,
 .action-icon-button--danger:focus-visible {
-  color: #a44232;
-  background: #fff1ed;
+  color: var(--aw-danger);
+  background: var(--aw-danger-soft);
 }
 
 .action-icon-tooltip {

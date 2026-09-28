@@ -219,7 +219,7 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     const header = wrapper.get(".run-conversation-head").text();
-    expect(header).toContain("失败");
+    expect(wrapper.get(".execution-status-bar").text()).toContain("失败");
     expect(header).toContain(new Date(latestTurn.started_at!).toLocaleString());
     expect(header).not.toContain(new Date(run.started_at!).toLocaleString());
     wrapper.unmount();
@@ -247,7 +247,8 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    expect(wrapper.findAll(".message.assistant p").filter((item) => item.text() === error)).toHaveLength(1);
+    expect(wrapper.get(".failure-card").text()).toContain(error);
+    expect(wrapper.findAll(".failure-card dd").filter((item) => item.text() === error)).toHaveLength(1);
     expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -271,9 +272,9 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
 
-    const header = wrapper.get(".run-conversation-head").text();
-    expect(header).toContain("2分钟");
-    expect(header).not.toContain("NaN");
+    const status = wrapper.get(".execution-status-bar").text();
+    expect(status).toContain("2:00");
+    expect(status).not.toContain("NaN");
     wrapper.unmount();
     vi.useRealTimers();
   });

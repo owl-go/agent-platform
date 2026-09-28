@@ -158,7 +158,7 @@ function toggleAIApplications() {
     </section>
     <section v-else-if="authState.kind === 'error'" class="auth-screen"><el-result icon="error" :title="t('auth.unavailable')" :sub-title="authState.message" /></section>
     <el-container v-else class="app-shell">
-      <el-aside class="sidebar" :class="{ open: mobileOpen }" width="248px">
+      <el-aside class="sidebar" :class="{ open: mobileOpen }" width="240px">
         <RouterLink to="/sessions" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
         <el-button class="new-session" @click="$router.push('/sessions?new=1'); mobileOpen = false"><el-icon><Plus /></el-icon>{{ t('sessions.new') }}</el-button>
         <nav :aria-label="t('nav.label')">
