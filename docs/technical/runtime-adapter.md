@@ -39,5 +39,6 @@ Third-party CLI Connector 不进入各 Runtime Driver。公共 CLI Connector Wra
 高风险命令先持久化绑定 nonce 与完整命令摘要的一次性批准请求，然后令 Session response 或 Run 进入 `waiting_for_user`。每个 Execution Stage 同时只暴露一个请求；等待期间保留 Runtime、临时 Workspace、Workflow Queue slot 和当前 Execution Credit Reservation，暂停普通执行超时并继续响应取消。只有认证的 owning User 可决定，拒绝或超时作为结构化 CLI 错误返回 Runtime；批准消费后才可启动进程，且整个执行仍遵守单调 Event Sequence 与唯一终态。
 
 Worker 重启后的第一次任务领取会先对账遗留的非终态 Session response 和 Run。未消费 Connector Approval 的执行关闭旧 Approval、丢弃旧进程的部分输出与暂存 Stage 状态并从冻结快照重新排队；已请求取消的执行直接提交取消终态。已经消费 Approval 的外部命令可能已经产生副作用，平台无法从旧进程确认结果，因此该执行以明确失败收口，不自动重放命令。Workflow Run 保留重启前的非终态事件并以新的递增 Sequence 追加再次启动及最终终态事件。
+Worker 停止时传播给执行的父 Context 取消不得被记为 User 取消或执行失败；Worker 保留非终态记录，由上述重启对账按批准消费状态决定恢复或收口。
 
 PI Agent 固定使用非交互 JSONL 模式，并关闭隐式 Extension、Skill、Prompt Template 和 Context File 发现；平台冻结的 Skill 仍通过公共 Instruction seam 暴露。PI Agent 本身不内置 MCP，因此带 MCP Connector 的执行会 fail closed，直到平台提供并验证明确的 PI Extension 适配。
