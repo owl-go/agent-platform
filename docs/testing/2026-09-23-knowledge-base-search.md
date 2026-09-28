@@ -1,6 +1,6 @@
 # Knowledge Base interactive search: verification record
 
-This record covers commit `990af45` on `codex/knowledge-search`. It is local implementation evidence, not a production deployment or real AnythingLLM conformance result.
+This record covers commit `990af45` on `codex/knowledge-search`. It is local implementation evidence, not a production deployment or real Retrieval Provider conformance result.
 
 ## Automated checks completed
 
@@ -18,7 +18,7 @@ The disposable PostgreSQL container used for the targeted integration test was s
 
 ## Real-provider acceptance still required
 
-1. In the intended environment, record the configured AnythingLLM image digest and embedding model; confirm the API and Worker reach the same endpoint.
+1. In the intended environment, record the configured provider artifact digest and embedding model; confirm the API and Worker reach the same endpoint.
 2. Upload a supported document containing a unique, non-sensitive test phrase to a private Knowledge Base. Confirm the document reaches `ready` and the Base has a ready Knowledge Index Generation.
 3. Search that phrase in the Base detail page. Verify a relevant excerpt appears with the correct document name and optional Category, and no more than ten excerpts are returned. Repeat with a query known to have no match and confirm an indexed no-hit state rather than an unready or error state.
 4. Verify another User cannot search the private Base; then check that an authenticated User can search a public Administrator Base without being able to mutate it.
@@ -26,4 +26,4 @@ The disposable PostgreSQL container used for the targeted integration test was s
 
 Until this round trip and the remaining production conformance gates pass, the feature is implemented and locally tested but **not verified in production**.
 
-The current AnythingLLM client also cannot query a historical provider index by Knowledge Index Generation; it queries the Base's mutable provider workspace. This does not block the detail page's current-index preview, but frozen-generation reproducibility for Workflow Runs is still unverified and must not be inferred from these checks.
+The provider client tested by this historical record could not query a historical provider index by Knowledge Index Generation; it queried a mutable provider workspace. This did not establish frozen-generation reproducibility for Workflow Runs.

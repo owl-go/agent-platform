@@ -329,13 +329,13 @@ Image Creation = a separate tool for creating images
 
 ### 8.1 Knowledge Retrieval
 
-The first Knowledge Base retrieval implementation accepts text and Markdown documents. A document revision moves through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions participate in retrieval. Processing failure retains the source and permits a retry. A missing or disabled Embedding configuration fails the AI Application ingestion job explicitly rather than marking an unembedded document Ready.
+Knowledge Base source management accepts text and Markdown documents. A document revision is designed to move through `Accepted`, `Processing`, `Ready`, or `Failed`; only Ready revisions may participate in retrieval. Processing failure retains the source and permits a retry. The current deployment has no active Retrieval Provider, so new jobs remain unprocessed and selected knowledge fails closed rather than being treated as indexed.
 
-Retrieval uses the platform-controlled AnythingLLM Knowledge Base workspace for candidate chunks. Its embedding model and secret are deployment configuration, not a second per-Assistant or browser setting. The same retrieval path serves the Knowledge Base test search, Workflow Runs, and authenticated/new shared Smart Assistant conversations. Platform authorization and the latest Ready Document Revision are checked before any candidate is returned or cited.
+The provider-neutral retrieval path is shared by Knowledge Base test search, Workflow Runs, and authenticated/new shared Smart Assistant conversations. Platform authorization and the latest Ready Document Revision must be checked before any candidate is returned or cited. No provider or embedding setting is exposed per Assistant or in the browser.
 
-The application owns Knowledge Base, Document, Document Revision, permissions, Assistant binding, and retained Knowledge Citation records. AnythingLLM owns chunk indexing and recall only. A future provider may replace it only after matching the shared ingestion, authorization, provenance, and conformance contract.
+The application owns Knowledge Base, Document, Document Revision, permissions, Assistant binding, and retained Knowledge Citation records. A future provider may own chunk indexing and recall only after matching the shared ingestion, authorization, provenance, and Conformance contract.
 
-Reindexing a Ready document creates a new immutable revision from its saved source. The previous Ready revision remains eligible while the new ingestion is pending or fails. A successful replacement advances the platform generation and makes older revisions ineligible. Because the AnythingLLM workspace is mutable, a Workflow Run frozen to an older generation fails closed instead of pretending historical index isolation exists.
+When provider-backed ingestion is available, reindexing a Ready document creates a new immutable revision from its saved source. The previous Ready revision remains eligible while the new ingestion is pending or fails. A successful replacement advances the platform generation and makes older revisions ineligible. A Workflow Run frozen to an unavailable generation fails closed instead of substituting different content.
 
 When retrieval produces no eligible excerpts, the Assistant may answer directly with its selected Provider Model, subject to its safety and scope policy; it must not imply that an ungrounded answer came from a Knowledge Base. A grounded response stores bounded citation metadata identifying the Knowledge Base, Document Revision, source location, relevance, and safe display text.
 
@@ -364,7 +364,7 @@ Completion requires real browser-to-API closure for both ordinary User and Admin
 - Smart Assistant Share Configuration, unpredictable Token, Token rotation/revocation, allowed Origins, iframe width/height validation, generated snippet, anonymous Visitor ID, External Conversation isolation, owner Credit charging, and platform rate limits
 - Digital Human create, edit, copy, preview, list, enable, disable, delete conflict, reuse across multiple Assistants, protected provider configuration, and snapshot behavior
 - Image Creation route, old-route redirect, existing Image Generation behavior, existing Image Model administration, history, notifications, owner isolation, and credit settlement
-- Knowledge Base text/Markdown ingestion, asynchronous lifecycle, safety gating, common AnythingLLM indexing and retrieval, permission-checked revision provenance, bounded citations, grounded answers, and safe no-grounding responses; pinned-deployment end-to-end evidence remains required
+- Knowledge Base text/Markdown source management, asynchronous lifecycle records, safety gating, permission-checked revision provenance, and fail-closed behavior while no Retrieval Provider is active; any replacement requires pinned-deployment end-to-end evidence
 - historical conversations remain readable after an Assistant or Digital Human is disabled or deleted, subject to existing retention and artifact rules
 - no Assistant, Digital Human, or Image Creation API leaks credentials, private content, provider responses, internal object keys, or signed URLs
 

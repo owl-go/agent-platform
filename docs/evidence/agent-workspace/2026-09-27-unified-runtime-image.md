@@ -39,7 +39,7 @@ RepoDigest:
 
 The active source is
 `/opt/agent-platform/src.release-platform-20260927T090000Z-unified-runtime`.
-API, Worker, Egress Controller, Caddy, AnythingLLM, the public Web origin, and
+API, Worker, Egress Controller, Caddy, the then-configured external retrieval service, the public Web origin, and
 OIDC discovery passed post-cutover health checks. The Administrator's original
 default Runtime Engine and model mappings were restored after validation.
 

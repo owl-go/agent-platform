@@ -180,24 +180,6 @@ func TestWorkerExecutionConfigurationIsFailClosed(t *testing.T) {
 	}
 }
 
-func TestAnythingLLMConfigurationIsOptionalButStrictWhenEnabled(t *testing.T) {
-	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := config.ValidateWorker(); err != nil {
-		t.Fatalf("disabled AnythingLLM configuration rejected: %v", err)
-	}
-	config.AnythingLLM = AnythingLLMConfig{Endpoint: "http://127.0.0.1:3001", APIKey: "secret", Deployment: "anythingllm@sha256:test", EmbeddingModel: "nomic", Timeout: Duration(time.Minute)}
-	if err := config.ValidateWorker(); err != nil {
-		t.Fatalf("valid local AnythingLLM configuration rejected: %v", err)
-	}
-	config.AnythingLLM.APIKey = ""
-	if err := config.ValidateWorker(); err == nil {
-		t.Fatal("AnythingLLM configuration without API key accepted")
-	}
-}
-
 func TestCLIBuilderConfigurationRequiresPinnedIsolatedInputs(t *testing.T) {
 	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
 	if err != nil {

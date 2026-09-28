@@ -1,5 +1,7 @@
 # Knowledge Base and Workflow RAG Specification
 
+> Current implementation status: ADR-0040 retires the previously selected external Retrieval Provider without choosing a replacement. The provider-specific stories and decisions below remain design history, not currently available product behavior; source ownership, persistence, and lifecycle requirements remain active.
+
 ## Problem Statement
 
 Agent Workspace currently has attachments, Workflow Workspaces, and Artifacts, but no durable knowledge collection that a User can maintain and reuse across Workflow Runs. Users cannot organize source material, upload or capture supported documents, wait for asynchronous parsing and embedding, or ask a Workflow to retrieve grounded context from selected knowledge.
@@ -41,9 +43,9 @@ A Workflow can bind multiple complete Knowledge Bases. When a Run is created, it
 23. As a User, I want to restore a deleted private Knowledge Base, Category, or document during its tombstone period, so that an accidental deletion is recoverable.
 24. As an Administrator, I want to restore or permanently remove an Administrator Knowledge Base after its retention period, so that lifecycle cleanup is auditable and complete.
 25. As a User, I want configurable document-count, byte, and daily ingestion quotas, so that my Knowledge Base cannot grow without bounds.
-26. As an Administrator, I want one controlled AnythingLLM endpoint, deployment version/digest, API secret, and embedding model, so that RAG infrastructure is centrally governed.
-27. As a User, I want the platform to hide AnythingLLM workspace IDs and secrets, so that provider details do not become a second authorization surface.
-28. As a User, I want an unavailable AnythingLLM provider to fail an affected retrieval explicitly, so that the Workflow never silently answers without required knowledge.
+26. As an Administrator, I want one controlled Retrieval Provider configuration, deployment identity, and protected credentials when retrieval is enabled, so that RAG infrastructure is centrally governed.
+27. As a User, I want the platform to hide provider index IDs and secrets, so that provider details do not become a second authorization surface.
+28. As a User, I want an unavailable Retrieval Provider to fail an affected retrieval explicitly, so that the Workflow never silently answers without required knowledge.
 29. As a User, I want an empty retrieval result to continue with an explicit no-hit marker, so that no relevant source is distinguished from a provider outage.
 30. As a User, I want to bind multiple Knowledge Bases to one Workflow, so that a single execution can use several approved sources.
 31. As a User, I want Workflow binding to select whole Knowledge Bases rather than fragile document lists, so that Category management does not constantly rewrite Workflow configuration.
@@ -75,7 +77,7 @@ A Workflow can bind multiple complete Knowledge Bases. When a Run is created, it
 - **Safety limits**: Keep the existing 100 MiB per-source limit. Start with configurable defaults of 10,000 documents, 10 GiB source bytes per Knowledge Base, and 1,000 ingestion revisions per day. Failed retries count toward the daily task quota.
 - **Object storage**: Persist original bytes in the existing private Object Storage abstraction with size and lower-case SHA-256 validation. Store logical object keys only; never store provider URLs or signed parameters in domain snapshots.
 - **Ingestion seam**: Add a durable Ingestion Job queue separate from Runtime execution. Jobs use idempotency, leases, bounded retries, exponential backoff, and terminal `failed`/`blocked` reasons. Upload acceptance is independent from asynchronous extraction, OCR, chunking, and indexing.
-- **AnythingLLM boundary**: Add a trusted adapter owned by API/Worker processes. Administrator configuration supplies one endpoint, fixed deployment version/digest, API secret, and embedding model. Create one provider workspace per Knowledge Base; provider IDs are mappings, not authorization keys. Runtime containers never receive AnythingLLM credentials or call the provider directly.
+- **Retrieval Provider boundary**: Use a trusted adapter owned by API/Worker processes. Any future provider configuration supplies a fixed deployment identity and protected credentials. Provider IDs are mappings, not authorization keys. Runtime containers never receive retrieval credentials or call the provider directly.
 - **Index generations**: Rebuilds reuse the per-Knowledge-Base provider workspace while the platform records a coherent Knowledge Index Generation. A Run freezes the generation at creation; later ready revisions affect later Runs or explicit reruns.
 - **Workflow contract**: Extend Workflow input and snapshot with a set of Knowledge Base IDs. Binding is whole-Knowledge-Base only; Category and document selection remain management/citation boundaries. Validate every selected base against owner/public access at mutation and execution boundaries.
 - **Retrieval contract**: Query with fixed Workflow goal plus current Run/Follow-up input. Return at most eight deduplicated excerpts within a 6,000-token context. No-hit continues with an explicit marker. Provider outage, revoked access, or missing frozen generation fails the Run with a structured error.
@@ -85,22 +87,22 @@ A Workflow can bind multiple complete Knowledge Bases. When a Run is created, it
 - **API**: Add authenticated JSON endpoints for Knowledge Base/Category/document lifecycle, URL import, status, retry, restore, and downloads. Use a dedicated multipart endpoint for file ingestion. Mutating actions use idempotency keys and optimistic versions. Workflow API credentials cannot manage Knowledge Bases.
 - **Test-query API**: Add authenticated read-only `GET /api/v1/knowledge-bases/{knowledge_base_id}/search?q=...`, returning `index_ready` plus up to ten `items` containing excerpt text, relevance, Document/Revision IDs, document name, and optional Category name. The endpoint does not create a conversation, call a model, or persist a query history.
 - **Frontend**: Add a top-level Knowledge Bases route with overview, category/unclassified document management, upload/URL import, state filtering, retry, restore, deletion confirmation, public/private badges, and responsive empty/error states. Add only multi-select Knowledge Base binding to Workflow settings.
-- **Configuration and deployment**: Add strict YAML configuration for AnythingLLM endpoint, secret reference, fixed version/digest, embedding model, quotas, and request limits. Missing or unhealthy provider configuration blocks indexing/retrieval but does not delete accepted source bytes.
-- **Conformance**: Adapter fakes and contract tests establish behavior without external services. Production availability requires the exact AnythingLLM image digest, embedding model, endpoint health, workspace isolation, query citations, deletion cleanup, and Linux/network evidence. Skipped evidence remains unverified.
+- **Configuration and deployment**: A future provider must use strict configuration for its endpoint, secret reference, fixed deployment identity, model, quotas, and request limits. Missing or unhealthy provider configuration blocks indexing/retrieval but does not delete accepted source bytes.
+- **Conformance**: Adapter fakes and contract tests establish behavior without external services. Production availability requires the exact provider artifact, model, endpoint health, index isolation, query citations, deletion cleanup, and Linux/network evidence. Skipped evidence remains unverified.
 
 ## Testing Decisions
 
-- Test the highest seam first: authenticated Workspace API/Application Service behavior using fake Object Storage and a fake AnythingLLM adapter. Assert externally visible state, authorization, errors, and persisted outcomes rather than private helper calls.
+- Test the highest seam first: authenticated Workspace API/Application Service behavior using fake Object Storage and a fake Retrieval Provider. Assert externally visible state, authorization, errors, and persisted outcomes rather than private helper calls.
 - Add table-driven domain tests for ownership, visibility, Category cardinality, normalized source identity, revision transitions, quota limits, URL safety, and soft-delete/restore semantics.
 - Add GORM/PostgreSQL integration coverage for the append-only migration, owner/public read rules, optimistic versions, idempotency, tombstones, Workflow binding, frozen generation snapshots, and cleanup leases. Use the repository's existing integration-test database patterns.
 - Add Object Storage contract tests for source size/SHA-256 validation, private logical keys, download authorization, deletion, and idempotent cleanup. Extend the existing Memory/MinIO/Aliyun provider conformance suite rather than inventing a second storage abstraction.
 - Add Ingestion Worker tests for accepted-to-ready success, parser/OCR failure, provider outage, retry, lease expiry, duplicate job replay, failed refresh preserving an older ready revision, cancellation after Category/document deletion, and daily quota accounting.
-- Add AnythingLLM adapter contract tests for workspace creation/deletion, revision upsert/remove, generation query, safe provider error mapping, no raw response persistence, and secret absence. A real deployment test is a separate Conformance gate and cannot be replaced by a fake.
+- Add provider adapter contract tests for index creation/deletion, revision upsert/remove, generation query, safe provider error mapping, no raw response persistence, and secret absence. A real deployment test is a separate Conformance gate and cannot be replaced by a fake.
 - Add Workflow application/worker tests for multiple-base binding, generation freeze at Run creation, goal-plus-input query construction, bounded/deduplicated context, no-hit continuation, provider-failure fail-closed behavior, permission revocation, citation persistence, and API/scheduled/follow-up parity.
 - Add HTTP tests for multipart upload, URL import, status polling, retry, restore, download authorization, idempotency replay, optimistic conflicts, non-enumerating private access, and Workflow settings updates.
 - Add browser tests for the Knowledge Bases catalog/detail/upload/category flows, ingestion states and retry, public/private display, responsive layout, keyboard navigation, deletion/restore confirmations, and Workflow multi-select binding. Follow the existing Vue page-test style.
-- Test the interactive query's ten-result bound, citation source validation, owner/public isolation, stale/deleted revision filtering, and distinct unready/no-hit UI states. Verify a real upload-to-index-to-search round trip separately against the configured AnythingLLM deployment; fake adapter and local database tests do not establish that production behavior.
-- Run Go formatting and target package tests first, then `make test`, `make build`, `make web-typecheck`, and `make web-build`. Run runtime/storage/production Conformance only when the required AnythingLLM and Linux environment exists; report unavailable gates as missing evidence.
+- Test the interactive query's ten-result bound, citation source validation, owner/public isolation, stale/deleted revision filtering, and distinct unready/no-hit UI states. Verify a real upload-to-index-to-search round trip separately against the configured provider deployment; fake adapters and local database tests do not establish that production behavior.
+- Run Go formatting and target package tests first, then `make test`, `make build`, `make web-typecheck`, and `make web-build`. Run runtime/storage/production Conformance only when the required provider and Linux environment exists; report unavailable gates as missing evidence.
 
 ## Out of Scope
 
@@ -109,10 +111,10 @@ A Workflow can bind multiple complete Knowledge Bases. When a Run is created, it
 - Nested Categories, multi-category document membership, tags as a second hierarchy, or Workflow-level Category/document filters.
 - Recursive site crawling, authenticated websites, scheduled URL refresh, browser sessions, or a general web search engine.
 - Unsupported file formats, macro execution, arbitrary archives, private-network URL fetching, or claiming every MIME type is searchable.
-- Runtime-direct AnythingLLM access, provider credentials in Runtime containers, or treating AnythingLLM workspace IDs as product ownership.
+- Runtime-direct Retrieval Provider access, provider credentials in Runtime containers, or treating provider index IDs as product ownership.
 - Replacing the platform's Workspace, Artifact, Attachment, or File Reference semantics with Knowledge Document objects.
 - Session memory, automatic long-term model memory, or copying full source documents into Run history.
-- Exact production AnythingLLM image/embedding claims before the required deployment Conformance evidence exists.
+- Exact production provider artifact/model claims before the required deployment Conformance evidence exists.
 - Commit, Push, Review Branch, PR/MR, or source-control workflows for Knowledge Base documents.
 
 ## Further Notes
@@ -120,4 +122,4 @@ A Workflow can bind multiple complete Knowledge Bases. When a Run is created, it
 - The accepted architectural decisions are recorded in ADR-0034 and the glossary additions are in `CONTEXT.md`.
 - The product and technical requirements are amended in the existing requirements document and the Knowledge Base/RAG technical design.
 - The implementation should preserve the current Domain → Application → Data boundaries: GORM records, HTTP DTOs, and YAML configuration must not enter the domain model.
-- The first production milestone should be a vertical slice: private User Knowledge Base, one Category plus unclassified documents, accepted upload, durable Ingestion Job state, fake AnythingLLM adapter, one Workflow binding, frozen generation, and citation-bearing retrieval contract. Public Administrator bases and the real AnythingLLM Conformance gate can then be enabled without changing the core ownership model.
+- A future provider milestone should be a vertical slice: private User Knowledge Base, one Category plus unclassified documents, accepted upload, durable Ingestion Job state, fake provider adapter, one Workflow binding, frozen generation, and citation-bearing retrieval contract. Public Administrator bases and the real provider Conformance gate can then be enabled without changing the core ownership model.

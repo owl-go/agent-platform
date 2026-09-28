@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"github.com/google/uuid"
 )
 
@@ -31,30 +30,24 @@ func (repo *searchRepository) ResolveKnowledgeSearchSource(_ context.Context, _,
 }
 
 type searchProvider struct {
-	citations []anythingllm.Citation
+	citations []Citation
 	err       error
 	calls     int
 	onQuery   func()
 }
 
-func (*searchProvider) EnsureWorkspace(context.Context, string) error { return nil }
-func (*searchProvider) DeleteWorkspace(context.Context, string) error { return nil }
-func (*searchProvider) UpsertRevision(context.Context, string, string, string, []byte) error {
-	return nil
-}
-func (*searchProvider) RemoveRevision(context.Context, string, string) error { return nil }
-func (provider *searchProvider) Query(context.Context, string, int64, string, int, int) (anythingllm.Retrieval, error) {
+func (provider *searchProvider) Query(context.Context, string, int64, string, int, int) (Result, error) {
 	provider.calls++
 	if provider.onQuery != nil {
 		provider.onQuery()
 	}
-	return anythingllm.Retrieval{Citations: provider.citations}, provider.err
+	return Result{Citations: provider.citations}, provider.err
 }
 
 func TestSearchUsesOneVerifiedSourcePath(t *testing.T) {
 	active, old := uuid.NewString(), uuid.NewString()
 	repo := &searchRepository{visible: true, generation: 2, ready: map[string]domain.KnowledgeSearchSource{active: {DocumentID: "document", RevisionID: active, DocumentName: "guide.txt"}}}
-	provider := &searchProvider{citations: []anythingllm.Citation{
+	provider := &searchProvider{citations: []Citation{
 		{RevisionID: old, Text: "outdated"},
 		{RevisionID: "unattributed", Text: "unknown"},
 		{RevisionID: active + ".txt", Text: "current", Relevance: .9},
