@@ -80,7 +80,7 @@ func TestAssistantHistoryUsesOnlyLatestTenCompletedTurns(t *testing.T) {
 	}
 }
 
-func TestAssistantModelSelectionRequiresAvailableOpenAIChatModelAndKey(t *testing.T) {
+func TestAssistantModelSelectionRequiresAvailableOpenAIResponsesModelAndKey(t *testing.T) {
 	for _, test := range []struct {
 		name      string
 		protocols []string
@@ -88,16 +88,16 @@ func TestAssistantModelSelectionRequiresAvailableOpenAIChatModelAndKey(t *testin
 		hasKey    bool
 		valid     bool
 	}{
-		{name: "OpenAI Chat", protocols: []string{"openai_chat", "openai_responses"}, available: true, hasKey: true, valid: true},
-		{name: "Responses only", protocols: []string{"openai_responses"}, available: true, hasKey: true},
-		{name: "Unavailable model", protocols: []string{"openai_chat"}, hasKey: true},
-		{name: "Missing key", protocols: []string{"openai_chat"}, available: true},
+		{name: "OpenAI Responses", protocols: []string{"openai_responses", "openai_chat"}, available: true, hasKey: true, valid: true},
+		{name: "Chat only", protocols: []string{"openai_chat"}, available: true, hasKey: true},
+		{name: "Unavailable model", protocols: []string{"openai_responses"}, hasKey: true},
+		{name: "Missing key", protocols: []string{"openai_responses"}, available: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			connections := []workspacedomain.ModelProviderConnection{{ID: "connection-1", CredentialOwnerID: "admin", ProviderType: "openai", Endpoint: "https://example.test/v1", Protocols: test.protocols, HasAPIKey: test.hasKey, Version: 3, Models: []workspacedomain.ProviderModel{{ID: "model-1", ModelID: "chat-model", Available: test.available}}}}
 			model, err := selectAssistantModel(connections, "model-1")
 			if test.valid {
-				if err != nil || model.ProviderModelID != "model-1" || model.Protocol != "openai_chat" || model.ConnectionVersion != 3 {
+				if err != nil || model.ProviderModelID != "model-1" || model.Protocol != "openai_responses" || model.ConnectionVersion != 3 {
 					t.Fatalf("model = %+v, err = %v", model, err)
 				}
 			} else if err == nil {
@@ -113,7 +113,7 @@ func TestAssistantModelSelectionRequiresAvailableOpenAIChatModelAndKey(t *testin
 func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 	repository := &assistantModelRepository{connections: []workspacedomain.ModelProviderConnection{{
 		ID: "connection-current", CredentialOwnerID: "admin", ProviderType: "openai",
-		Endpoint: "https://current.example.test/v1", Protocols: []string{"openai_chat"}, HasAPIKey: true, Version: 16,
+		Endpoint: "https://current.example.test/v1", Protocols: []string{"openai_responses"}, HasAPIKey: true, Version: 16,
 		Models: []workspacedomain.ProviderModel{{ID: "model-1", ModelID: "gpt-current", Available: true}},
 	}}}
 	application, err := workspaceapplication.New(repository)
@@ -123,7 +123,7 @@ func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 	service := &Service{workspace: application}
 	conversation := aiappdomain.AssistantConversation{ModelSnapshot: aiappdomain.AssistantModel{
 		ProviderModelID: "model-1", ConnectionID: "connection-stale", CredentialOwnerID: "old-admin",
-		ProviderType: "openai", Protocol: "openai_chat", ModelID: "gpt-stale",
+		ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-stale",
 		Endpoint: "https://stale.example.test/v1", ConnectionVersion: 13,
 	}}
 

@@ -33,7 +33,7 @@ func (service *Service) resolveAssistantModel(ctx context.Context, owner, modelI
 		modelID = settings.RuntimeModelDefaults[settings.DefaultRuntimeEngine]
 	}
 	if modelID == "" {
-		return aiappdomain.AssistantModel{}, fmt.Errorf("%w: select an openai_chat Provider Model", aiappdomain.ErrInvalid)
+		return aiappdomain.AssistantModel{}, fmt.Errorf("%w: select an openai_responses Provider Model", aiappdomain.ErrInvalid)
 	}
 	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
 	if err != nil {
@@ -58,12 +58,12 @@ func selectAssistantModel(connections []workspacedomain.ModelProviderConnection,
 			}
 			if model.Available && connection.HasAPIKey {
 				for _, protocol := range connection.Protocols {
-					if protocol == "openai_chat" {
-						return aiappdomain.AssistantModel{ProviderModelID: model.ID, ConnectionID: connection.ID, CredentialOwnerID: connection.CredentialOwnerID, ProviderType: connection.ProviderType, Protocol: "openai_chat", ModelID: model.ModelID, Endpoint: connection.Endpoint, ConnectionVersion: connection.Version}, nil
+					if protocol == "openai_responses" {
+						return aiappdomain.AssistantModel{ProviderModelID: model.ID, ConnectionID: connection.ID, CredentialOwnerID: connection.CredentialOwnerID, ProviderType: connection.ProviderType, Protocol: "openai_responses", ModelID: model.ModelID, Endpoint: connection.Endpoint, ConnectionVersion: connection.Version}, nil
 					}
 				}
 			}
-			return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model must be available with an API key and openai_chat protocol", aiappdomain.ErrInvalid)
+			return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model must be available with an API key and openai_responses protocol", aiappdomain.ErrInvalid)
 		}
 	}
 	return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model is unavailable", aiappdomain.ErrInvalid)

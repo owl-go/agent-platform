@@ -19,7 +19,7 @@ function apiStub() {
     getSmartAssistant: vi.fn(async () => ({ ...assistant })),
     listAssistantFAQs: vi.fn(async () => [existingFAQ]),
     listApplicationKnowledgeBases: vi.fn(async () => []),
-    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_chat"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
+    listModelProviderConnections: vi.fn(async () => [{ id: "connection-1", name: "模型服务", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_responses"], api_key_configured: true, models: [{ id: "model-1", model_id: "chat-model", display_name: "聊天模型", available: true }] }]),
     uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...assistant, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
     updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...assistant, ...input, version: version + 1 })),
     createAssistantFAQ: vi.fn(async (_id, input) => ({ ...existingFAQ, ...input, id: "faq-2", question: input.question, answer_markdown: input.answer_markdown, version: 1 })),

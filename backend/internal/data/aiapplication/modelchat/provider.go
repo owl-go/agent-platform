@@ -97,7 +97,10 @@ func buildRequest(input application.ChatRequest) (string, any, error) {
 		payload["stream_options"] = map[string]bool{"include_usage": true}
 		return base + "/chat/completions", payload, nil
 	case "openai_responses":
-		return base + "/responses", map[string]any{"model": input.ModelID, "input": input.Messages, "stream": input.Stream}, nil
+		// The Codex Responses transport requires SSE even for internal stages.
+		// A nil onDelta keeps classification and summarization output private
+		// while decodeStream still aggregates the final text and Usage.
+		return base + "/responses", map[string]any{"model": input.ModelID, "input": input.Messages, "stream": true}, nil
 	case "anthropic_messages":
 		var system string
 		messages := make([]application.ChatMessage, 0, len(input.Messages))
