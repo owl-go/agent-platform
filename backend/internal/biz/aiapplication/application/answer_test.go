@@ -32,19 +32,6 @@ func (answerRepository) UpdateAssistant(context.Context, string, string, domain.
 	return domain.SmartAssistant{}, nil
 }
 func (answerRepository) DeleteAssistant(context.Context, string, string) error { return nil }
-func (answerRepository) ListDigitalHumans(context.Context, string) ([]domain.DigitalHuman, error) {
-	return nil, nil
-}
-func (answerRepository) GetDigitalHuman(context.Context, string, string) (domain.DigitalHuman, error) {
-	return domain.DigitalHuman{}, nil
-}
-func (answerRepository) CreateDigitalHuman(context.Context, string, domain.DigitalHuman) (domain.DigitalHuman, error) {
-	return domain.DigitalHuman{}, nil
-}
-func (answerRepository) UpdateDigitalHuman(context.Context, string, string, domain.DigitalHuman, int64) (domain.DigitalHuman, error) {
-	return domain.DigitalHuman{}, nil
-}
-func (answerRepository) DeleteDigitalHuman(context.Context, string, string) error { return nil }
 func (answerRepository) CreateFAQ(context.Context, string, string, domain.FAQ) (domain.FAQ, error) {
 	return domain.FAQ{}, nil
 }
