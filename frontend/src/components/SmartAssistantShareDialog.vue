@@ -35,7 +35,6 @@ function input(): SmartAssistantInput | undefined {
     knowledge_base_ids: assistant.knowledge_base_ids,
     expert_id: assistant.expert_id,
     expert_team_id: assistant.expert_team_id,
-    digital_human_id: assistant.digital_human_id || undefined,
     state: assistant.state,
     share: { enabled: assistant.share.enabled, allowed_origins: assistant.share.allowed_origins ?? [], width: assistant.share.width || "100%", height: assistant.share.height || 600, free_text_enabled: assistant.share.free_text_enabled ?? false, daily_call_limit: assistant.share.daily_call_limit ?? 0 },
   };
