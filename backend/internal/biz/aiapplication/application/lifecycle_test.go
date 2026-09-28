@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"agent-platform/backend/internal/biz/aiapplication/application"
 	"agent-platform/backend/internal/biz/aiapplication/domain"
@@ -67,6 +68,14 @@ func (r *lifecycleRepository) UpdateFAQ(context.Context, string, string, string,
 	return domain.FAQ{}, nil
 }
 func (r *lifecycleRepository) DeleteFAQ(context.Context, string, string, string) error { return nil }
+func (r *lifecycleRepository) RecordPublicationValidation(_ context.Context, _, _ string, version int64, checkedAt time.Time) (domain.SmartAssistant, error) {
+	r.assistant.LastValidatedAt = &checkedAt
+	r.assistant.ValidatedVersion = version
+	return r.assistant, nil
+}
+func (r *lifecycleRepository) PublicationStats(context.Context, string, string, time.Time) (domain.PublicationStats, error) {
+	return domain.PublicationStats{ExternalConversations: 2, FreeTextCalls: 3, CreditConsumedHundredths: 125}, nil
+}
 
 func TestCopyAssistantDoesNotReuseShareTokenOrState(t *testing.T) {
 	repository := &lifecycleRepository{assistant: domain.SmartAssistant{
@@ -142,6 +151,38 @@ func TestCopyDigitalHumanCreatesIndependentEnabledIdentity(t *testing.T) {
 	}
 	if copy.ID == "human-1" || copy.State != domain.StateEnabled {
 		t.Fatalf("copy = %#v, want independent enabled identity", copy)
+	}
+}
+
+func TestSharedAssistantRequiresValidationForCurrentRevision(t *testing.T) {
+	now := time.Now().UTC()
+	repository := &lifecycleRepository{assistant: domain.SmartAssistant{
+		ID: "assistant-1", Name: "助手", Icon: "sparkles", State: domain.StateEnabled, Version: 4,
+		Share: domain.ShareConfiguration{Enabled: true, TokenHash: "stored-by-repository", AllowedOrigins: []string{"https://support.example.test"}, DailyCallLimit: 100, DataProcessingAcknowledged: true},
+	}}
+	service, err := application.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.ResolveSharedAssistant(context.Background(), "share-token-long-enough-to-resolve-123"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("ResolveSharedAssistant() stale validation error = %v, want ErrNotFound", err)
+	}
+	repository.assistant.LastValidatedAt = &now
+	repository.assistant.ValidatedVersion = 4
+	if _, err := service.ResolveSharedAssistant(context.Background(), "share-token-long-enough-to-resolve-123"); err != nil {
+		t.Fatalf("ResolveSharedAssistant() current validation error = %v", err)
+	}
+}
+
+func TestPublicationStatsUsesBoundedWindow(t *testing.T) {
+	repository := &lifecycleRepository{assistant: domain.SmartAssistant{ID: "assistant-1"}}
+	service, err := application.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stats, err := service.PublicationStats(context.Background(), "owner-1", "assistant-1", 30)
+	if err != nil || stats.WindowDays != 30 || stats.CreditConsumedHundredths != 125 {
+		t.Fatalf("PublicationStats() = %#v, %v", stats, err)
 	}
 }
 

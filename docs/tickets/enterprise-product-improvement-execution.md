@@ -29,7 +29,7 @@
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 已完成代码、本地门禁与 PostgreSQL Integration；生产用量分布与部署浏览器闭环待验证 |
 | EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 已完成代码、本地门禁与 PostgreSQL Integration；真实部署发现效率待验证 |
 | EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 已完成代码、本地门禁与 PostgreSQL Integration；真实 Keycloak 和设计伙伴演练待验证 |
-| EP-13 | Smart Assistant 受控发布 | 将已验证问答发布给内部或受控访客 | EP-03/08/10/12 | FAQ/Knowledge 来源、安全、额度和 iframe 审计闭环 | 待核心指标连续四周达标 |
+| EP-13 | Smart Assistant 受控发布 | 将已验证问答发布给所有者或受控访客 | EP-03/08/10/12 | FAQ/Knowledge 来源、安全、额度和 iframe 审计闭环 | 已完成代码、本地门禁与 PostgreSQL Integration；四周指标、三家设计伙伴、真实 Provider/生产 iframe 待验证 |
 
 ## 3. EP-02 详细任务
 
@@ -198,7 +198,16 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 用户状态、角色、身份同步、预算和移交写入仅包含 actor、target、reason、time 与安全计数的 Governance Audit Event。管理页不展示提示词、回复、文件名、Object Key、外部 Token 或私有资源内容。
 - 本批已通过 Keycloak Adapter 单测、前后端目标测试、类型检查、完整构建，以及一次性 PostgreSQL 17 的完整迁移和跨范围集成测试。真实 Keycloak 目录规模/分页、生产身份映射、设计伙伴离职演练、浏览器端权限验收与生产审计导出仍未验证。
 
-## 10. 发布与回滚
+## 10. EP-13 Smart Assistant 受控发布
+
+- Publication Check 在服务端统一检查配置完整性、模型可用性、启用 FAQ 的安全状态、每个已选 Knowledge Base 至少一个 Ready 文档、所引用 Expert/Expert Team/Digital Human 可用、所有者仍有可用 Credits，以及 Share Configuration 具备明确 Origin、正数每日调用上限和数据处理确认。结果使用稳定 code 和不含私有内容的说明返回。
+- 开启、更新和新建 Assistant Conversation 均要求当前 Assistant Version 对应的 passing Publication Validation。普通配置更新清除旧验证；开启或更新启用态 Assistant 时先检查并为新版本记录结果。Token 轮换立即撤销旧 Token，但因回答配置未变化，可把当前 passing validation 绑定到轮换后的版本。
+- Migration `000065_smart_assistant_controlled_publication.sql` 增加 validation 版本字段，并撤销历史不受控分享，避免旧数据绕过新约束。访问旧 iframe 必须在所有者明确补齐控制并重新验证后才可恢复。
+- 分享界面显示真实 FAQ 预览、数据发送与 Credits 警告、Origin 和每日限额；预览不创建 Conversation、不调用模型、不消耗 Credits。最近三十天仅返回 visitor Conversation、free-text Turn、失败 Turn 和 Credit 消耗聚合，不返回提示词、回复、FAQ 文本、访客身份或检索内容。
+- Smart Assistant 列表显示受控访客/已认证所有者、绑定 Knowledge Base 数和当前版本验证时间，并允许在发布前查看每项检查。第一版认证入口仍是 owner-private，不伪造跨 User 的内部应用目录。
+- Go Domain/Application/Repository/HTTP 测试、前端组件/页面测试、完整门禁和临时 PostgreSQL 17 Migration/Integration 是本地验收证据。四周 Workflow 指标、三家设计伙伴明确需求、真实 Provider、生产 iframe/CSP、生产 Migration、真实访客负载与浏览器闭环仍未验证，不能据此宣布 P3 已达到产品进入条件。
+
+## 11. 发布与回滚
 
 - EP-02 是展示层增强，不改变执行和持久语义，可按前端版本整体回滚。
 - EP-03 起涉及公开协议和持久化，只允许追加字段和向后兼容读取。

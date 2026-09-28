@@ -39,6 +39,11 @@ type SafetyAuditRepository interface {
 	RecordSafetyAudit(context.Context, string, string, string, domain.SafetyDecision, string) error
 }
 
+type PublicationRepository interface {
+	RecordPublicationValidation(context.Context, string, string, int64, time.Time) (domain.SmartAssistant, error)
+	PublicationStats(context.Context, string, string, time.Time) (domain.PublicationStats, error)
+}
+
 func (service *Service) RecordSafetyAudit(ctx context.Context, owner, assistantID, source string, decision domain.SafetyDecision, creditOutcome string) error {
 	repository, ok := service.repository.(SafetyAuditRepository)
 	if !ok {
@@ -54,6 +59,9 @@ func (service *Service) BindAssistantSession(ctx context.Context, owner, assista
 	}
 	if assistant.State != domain.StateEnabled {
 		return fmt.Errorf("%w: assistant is disabled", domain.ErrInvalid)
+	}
+	if assistant.LastValidatedAt == nil || assistant.ValidatedVersion != assistant.Version {
+		return fmt.Errorf("%w: assistant publication validation is stale", domain.ErrInvalid)
 	}
 	if err := assistant.ValidateForEnable(); err != nil {
 		return err
@@ -263,6 +271,7 @@ func hashShareToken(token string) string {
 }
 func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
 	assistant.OwnerID = owner
+	issuedShareToken := ""
 	current, err := service.repository.GetAssistant(ctx, owner, id)
 	if err != nil {
 		return domain.SmartAssistant{}, err
@@ -279,6 +288,7 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 				return domain.SmartAssistant{}, tokenErr
 			}
 			assistant.Share.Token = token
+			issuedShareToken = token
 			assistant.Share.TokenHash = hashShareToken(token)
 			assistant.Share.TokenRevision++
 		}
@@ -315,7 +325,12 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 	} else if err := assistant.Validate(); err != nil {
 		return domain.SmartAssistant{}, err
 	}
-	return service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+	updated, err := service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
+	if err != nil {
+		return domain.SmartAssistant{}, err
+	}
+	updated.Share.Token = issuedShareToken
+	return updated, nil
 }
 
 func (service *Service) RegenerateShareToken(ctx context.Context, owner, id string, version int64) (domain.SmartAssistant, error) {
@@ -326,6 +341,7 @@ func (service *Service) RegenerateShareToken(ctx context.Context, owner, id stri
 	if !assistant.Share.Enabled {
 		return domain.SmartAssistant{}, fmt.Errorf("%w: sharing is disabled", domain.ErrInvalid)
 	}
+	validationWasCurrent := assistant.LastValidatedAt != nil && assistant.ValidatedVersion == assistant.Version
 	token, err := newShareToken()
 	if err != nil {
 		return domain.SmartAssistant{}, err
@@ -335,6 +351,14 @@ func (service *Service) RegenerateShareToken(ctx context.Context, owner, id stri
 	updated, err := service.repository.UpdateAssistant(ctx, owner, id, assistant, version)
 	if err != nil {
 		return domain.SmartAssistant{}, err
+	}
+	if validationWasCurrent {
+		if repository, ok := service.repository.(PublicationRepository); ok {
+			updated, err = repository.RecordPublicationValidation(ctx, owner, id, updated.Version, time.Now().UTC())
+			if err != nil {
+				return domain.SmartAssistant{}, err
+			}
+		}
 	}
 	updated.Share.Token = token
 	return updated, nil
@@ -351,6 +375,9 @@ func (service *Service) ResolveSharedAssistant(ctx context.Context, token string
 	if !assistant.Share.Enabled || assistant.State != domain.StateEnabled {
 		return domain.SmartAssistant{}, domain.ErrNotFound
 	}
+	if assistant.LastValidatedAt == nil || assistant.ValidatedVersion != assistant.Version {
+		return domain.SmartAssistant{}, domain.ErrNotFound
+	}
 	return assistant, nil
 }
 
@@ -364,6 +391,28 @@ func (service *Service) ConsumeSharedAssistantCall(ctx context.Context, assistan
 	}
 	return repository.ConsumeShareCall(ctx, assistantID, time.Now().UTC(), dailyLimit)
 }
+
+func (service *Service) RecordPublicationValidation(ctx context.Context, owner, id string, version int64, checkedAt time.Time) (domain.SmartAssistant, error) {
+	repository, ok := service.repository.(PublicationRepository)
+	if !ok {
+		return domain.SmartAssistant{}, fmt.Errorf("publication repository is unavailable")
+	}
+	return repository.RecordPublicationValidation(ctx, owner, id, version, checkedAt.UTC())
+}
+
+func (service *Service) PublicationStats(ctx context.Context, owner, id string, windowDays int) (domain.PublicationStats, error) {
+	if windowDays < 1 || windowDays > 90 {
+		windowDays = 30
+	}
+	repository, ok := service.repository.(PublicationRepository)
+	if !ok {
+		return domain.PublicationStats{}, fmt.Errorf("publication repository is unavailable")
+	}
+	stats, err := repository.PublicationStats(ctx, owner, id, time.Now().UTC().AddDate(0, 0, -windowDays))
+	stats.WindowDays = windowDays
+	return stats, err
+}
+
 func (service *Service) DeleteAssistant(ctx context.Context, owner, id string) error {
 	return service.repository.DeleteAssistant(ctx, owner, id)
 }

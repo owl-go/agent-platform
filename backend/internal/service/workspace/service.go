@@ -90,6 +90,8 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs/{faq_id}", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/answer", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/share-token", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/publication-check", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/publication-stats", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/sessions", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/conversations/{conversation_id}", http.HandlerFunc(service.aiApplicationsHandler))

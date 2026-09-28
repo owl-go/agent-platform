@@ -189,7 +189,9 @@ Share Configuration contains:
 
 - Enabled or disabled state
 - Unpredictable share Token and Token revision
-- Optional HTTPS allowed-Origin list
+- Required non-empty HTTPS allowed-Origin list
+- Positive daily free-text call limit
+- Explicit acknowledgement that visitor input is sent to the configured model and may consume the owner's Credits
 - iframe width, defaulting to `100%`
 - iframe height, defaulting to `600px`
 - Generated iframe snippet
@@ -216,6 +218,12 @@ External visitors are anonymous and receive a short-lived Visitor ID represented
 Free-text external model calls consume the Smart Assistant owner's Credits. The owner may disable free-text questions or set an Assistant-level daily call limit; direct FAQ clicks do not consume model Credits. Platform-wide concurrency, IP, Visitor ID, and Share Token rate limits always apply and cannot be disabled by the owner.
 
 Share Token validation is server-side. HTTPS embedding is required outside local development. The server emits an appropriate CSP `frame-ancestors` policy and validates `postMessage` origins; public access never relies on a client-only visibility flag. Disabling sharing or regenerating the Token immediately invalidates the old iframe.
+
+Enabling an Assistant or its Share Configuration requires a server-side Publication Validation for the exact Assistant version. The check returns stable pass or block results for configuration completeness, selected model availability, enabled FAQ safety, at least one Ready document in every selected Knowledge Base, referenced Expert or Expert Team and Digital Human availability, positive owner Credits, and the strict Share Configuration controls above. The UI may preview enabled FAQs and presentation settings, but preview never creates a conversation, invokes a model, consumes Credits, or appears in usage totals.
+
+Any material Assistant update clears the previous validation before the new version can serve a new conversation. A successful enable/update request runs the same check and records the passing result for the resulting version atomically from the product perspective; a failed check leaves publication blocked. Token rotation immediately revokes the old token and rebinds the current passing validation to the new version because it changes only the access secret, not the validated answer configuration. Existing shares created before these controls are revoked fail closed by Migration `000065_smart_assistant_controlled_publication.sql` and must be explicitly revalidated.
+
+The owner-facing publication view exposes only bounded thirty-day aggregates: visitor conversations, free-text turns, failed turns, and owner Credits consumed. It never returns prompts, answers, FAQ text, visitor identifiers, provider responses, Knowledge excerpts, credentials, Object Keys, or signed URLs. Authenticated use remains owner-private in the first version; this control does not create a cross-User internal application catalog.
 
 ## 5. Digital Humans
 
@@ -361,7 +369,7 @@ Completion requires real browser-to-API closure for both ordinary User and Admin
 - Smart Assistant conversation entry, configuration snapshot, resource revision snapshot, credit admission, cancellation, history, and later-edit isolation
 - Smart Assistant FAQ CRUD, ordering, safe Markdown rendering, direct-answer no-Credit behavior, deterministic and classifier-based FAQ matching, confidence thresholding, and immediate publication behavior
 - Smart Assistant Answer Safety Policy, non-overridable platform categories, fixed localized refusal, FAQ/Knowledge Document publication checks, classifier charging, minimum safety audit, and no sensitive-content leakage
-- Smart Assistant Share Configuration, unpredictable Token, Token rotation/revocation, allowed Origins, iframe width/height validation, generated snippet, anonymous Visitor ID, External Conversation isolation, owner Credit charging, and platform rate limits
+- Smart Assistant Share Configuration, version-bound Publication Validation, strict allowed Origins/daily limit/data acknowledgement, fail-closed migration, non-executing preview, aggregate-only publication statistics, unpredictable Token, Token rotation/revocation, iframe width/height validation, generated snippet, anonymous Visitor ID, External Conversation isolation, owner Credit charging, and platform rate limits
 - Digital Human create, edit, copy, preview, list, enable, disable, delete conflict, reuse across multiple Assistants, protected provider configuration, and snapshot behavior
 - Image Creation route, old-route redirect, existing Image Generation behavior, existing Image Model administration, history, notifications, owner isolation, and credit settlement
 - Knowledge Base text/Markdown ingestion, asynchronous lifecycle, safety gating, common AnythingLLM indexing and retrieval, permission-checked revision provenance, bounded citations, grounded answers, and safe no-grounding responses; pinned-deployment end-to-end evidence remains required

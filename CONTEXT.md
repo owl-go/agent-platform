@@ -197,8 +197,12 @@ The ordered, platform-enforced and Assistant-configurable boundary that decides 
 _Avoid_: Prompt instruction, content filter toggle, moderation note
 
 **Share Configuration**:
-The per-Smart-Assistant public-use configuration containing an unpredictable share Token, optional allowed Origins, iframe dimensions, rate limits, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
+The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, iframe dimensions, a positive daily free-text limit, a data-processing acknowledgement, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
 _Avoid_: Public Session, API Key, User Access Token
+
+**Publication Validation**:
+A version-bound, server-recorded result proving that one Smart Assistant revision passed the platform publication checks for configuration, model availability, FAQ safety, Knowledge readiness, referenced resources, owner Credits, and Share Configuration. Any material Assistant edit invalidates the result; an enabled or shared Assistant must have a passing result for its current version.
+_Avoid_: client-side checklist, permanent approval, production-provider evidence
 
 **External Conversation**:
 An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Digital Human, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.

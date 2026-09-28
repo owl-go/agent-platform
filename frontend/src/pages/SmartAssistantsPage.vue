@@ -2,13 +2,13 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
-import { Ellipsis, MessageCircle, Pause, Play, Search, Share2, Trash2 } from "@lucide/vue";
+import { Ellipsis, MessageCircle, Pause, Play, Search, Share2, ShieldCheck, Trash2 } from "@lucide/vue";
 import { ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import IconPicker from "../components/IconPicker.vue";
 import { assistantModelOptions } from "../assistantModels";
 import SmartAssistantShareDialog from "../components/SmartAssistantShareDialog.vue";
-import { ApiError, platformApiKey, type ModelProviderConnection, type SmartAssistant, type SmartAssistantInput } from "../api/client";
+import { ApiError, platformApiKey, type AssistantPublicationValidation, type ModelProviderConnection, type SmartAssistant, type SmartAssistantInput } from "../api/client";
 
 const api = inject(platformApiKey)!;
 const router = useRouter();
@@ -27,6 +27,8 @@ const iconFile = ref<File>();
 const iconPreviewUrl = ref("");
 const shareAssistant = ref<SmartAssistant>();
 const shareDialogOpen = ref(false);
+const publicationValidation = ref<AssistantPublicationValidation>();
+const publicationDialogOpen = ref(false);
 const scenarios = ["customer-consultation", "pre-sales-advisor", "after-sales-support", "product-guide", "enterprise-knowledge", "recruitment", "training", "custom"];
 const filteredItems = computed(() => {
   const query = search.value.trim().toLocaleLowerCase();
@@ -84,12 +86,29 @@ async function startConversation(item: SmartAssistant) {
 async function toggleState(item: SmartAssistant) {
   const next = item.state === "enabled" ? "disabled" : "enabled";
   try {
+    if (next === "enabled") {
+      publicationValidation.value = await api.runAssistantPublicationCheck(item.id);
+      if (!publicationValidation.value.ready) {
+        publicationDialogOpen.value = true;
+        return;
+      }
+    }
     const updated = await api.setSmartAssistantState(item.id, next, item.version);
     items.value = items.value.map((candidate) => candidate.id === updated.id ? updated : candidate);
   } catch { error.value = t("aiApplications.saveFailed"); }
 }
+async function inspectPublication(item: SmartAssistant) {
+  try {
+    publicationValidation.value = await api.runAssistantPublicationCheck(item.id);
+    if (publicationValidation.value.ready) await refresh();
+    publicationDialogOpen.value = true;
+  } catch {
+    error.value = t("aiApplications.publication.checkFailed");
+  }
+}
 function handleCardAction(item: SmartAssistant, command: string) {
   if (command === "toggle") void toggleState(item);
+  if (command === "check") void inspectPublication(item);
   if (command === "share") openShare(item);
   if (command === "delete") void remove(item);
 }
@@ -144,16 +163,34 @@ onBeforeUnmount(() => replaceIconPreview());
                 <el-dropdown-menu class="assistant-card-action-menu">
                   <el-dropdown-item command="toggle" :title="item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable')"><component :is="item.state === 'enabled' ? Pause : Play" :size="16" />{{ item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable') }}</el-dropdown-item>
                   <el-dropdown-item command="share" :title="t('aiApplications.shareAction')"><Share2 :size="16" />{{ t('aiApplications.shareAction') }}</el-dropdown-item>
+                  <el-dropdown-item command="check" :title="t('aiApplications.publication.runCheck')"><ShieldCheck :size="16" />{{ t('aiApplications.publication.runCheck') }}</el-dropdown-item>
                   <el-dropdown-item command="delete" class="assistant-card-delete-action" :title="t('common.delete')"><Trash2 :size="16" />{{ t('common.delete') }}</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </div>
         </div>
-        <small>{{ t(`aiApplications.states.${item.state}`) }} · {{ item.share.enabled ? t('aiApplications.shared') : t('aiApplications.private') }}</small>
+        <small>{{ t(`aiApplications.states.${item.state}`) }} · {{ item.share.enabled ? t('aiApplications.publication.controlledVisitors') : t('aiApplications.publication.authenticatedOwner') }} · {{ t('aiApplications.publication.boundKnowledge', { count: item.knowledge_base_ids.length }) }}</small>
+        <small>{{ item.last_validated_at && item.validated_version === item.version ? t('aiApplications.publication.validatedAt', { time: new Date(item.last_validated_at).toLocaleString() }) : t('aiApplications.publication.notValidated') }}</small>
       </el-card>
       <el-empty v-if="!loading && !filteredItems.length" :description="t('aiApplications.assistants.empty')" />
     </div>
     <SmartAssistantShareDialog v-model="shareDialogOpen" :assistant="shareAssistant" @updated="updateSharedAssistant" @error="showShareError" />
+    <el-dialog v-model="publicationDialogOpen" class="assistant-publication-dialog" :title="t('aiApplications.publication.title')" width="min(640px, 92vw)" data-testid="assistant-publication-dialog">
+      <el-result v-if="publicationValidation" :icon="publicationValidation.ready ? 'success' : 'warning'" :title="publicationValidation.ready ? t('aiApplications.publication.ready') : t('aiApplications.publication.blocked')">
+        <template #extra>
+          <ul class="publication-check-list">
+            <li v-for="check in publicationValidation.checks" :key="check.code"><el-tag :type="check.ready ? 'success' : 'danger'" effect="plain">{{ check.ready ? t('aiApplications.publication.passed') : t('aiApplications.publication.failed') }}</el-tag><span>{{ t(`aiApplications.publication.checks.${check.code}`) }}</span></li>
+          </ul>
+        </template>
+      </el-result>
+    </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.application-card > :deep(.el-card__body) { display: grid; gap: 8px; }
+.publication-check-list { display: grid; gap: 10px; margin: 0; padding: 0; text-align: left; list-style: none; }
+.publication-check-list li { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; }
+@media (max-width: 640px) { .publication-check-list li { grid-template-columns: 1fr; } }
+</style>

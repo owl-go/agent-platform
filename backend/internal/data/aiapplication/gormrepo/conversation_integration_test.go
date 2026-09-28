@@ -169,3 +169,71 @@ func TestPublicAssistantConversationIsVisitorScopedAndHiddenFromPrivateHistory(t
 		t.Fatalf("public audit turns = %+v, err = %v", turns, err)
 	}
 }
+
+func TestControlledPublicationPersistsValidationAndPrivacyBoundedAggregates(t *testing.T) {
+	db := rateLimitTestDatabase(t)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users (id, oidc_subject, username, email, display_name) VALUES (?, ?, ?, ?, ?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	repository := New(db, nil)
+	assistant, err := repository.CreateAssistant(ctx, owner, domain.SmartAssistant{Name: "受控发布助手", Icon: "sparkles", State: domain.StateEnabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedAt := time.Now().UTC().Add(-time.Minute)
+	validated, err := repository.RecordPublicationValidation(ctx, owner, assistant.ID, assistant.Version, checkedAt)
+	if err != nil || validated.LastValidatedAt == nil || validated.ValidatedVersion != assistant.Version {
+		t.Fatalf("validation = %+v, err = %v", validated, err)
+	}
+	validated.Description = "changed"
+	updated, err := repository.UpdateAssistant(ctx, owner, assistant.ID, validated, validated.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.LastValidatedAt != nil || updated.ValidatedVersion != 0 {
+		t.Fatalf("configuration edit retained stale validation: %+v", updated)
+	}
+	if _, err := repository.RecordPublicationValidation(ctx, owner, assistant.ID, validated.Version, time.Now()); !errors.Is(err, domain.ErrVersionConflict) {
+		t.Fatalf("stale validation error = %v, want ErrVersionConflict", err)
+	}
+
+	conversation, err := repository.CreateAssistantConversation(ctx, domain.AssistantConversation{
+		OwnerID: owner, AssistantID: assistant.ID, VisitorHash: "visitor-hash", ShareTokenRevision: 2,
+		AssistantName: "受控发布助手", AssistantSnapshot: updated, ModelSnapshot: domain.AssistantModel{ProviderModelID: "model-1", Protocol: "openai_chat"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	completed, err := repository.BeginAssistantTurn(ctx, owner, conversation.ID, "不应进入聚合结果的问题正文")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FinishAssistantTurn(ctx, owner, conversation.ID, completed.ID, "completed", "model", "", "不应进入聚合结果的回答正文", 10, 20); err != nil {
+		t.Fatal(err)
+	}
+	failed, err := repository.BeginAssistantTurn(ctx, owner, conversation.ID, "另一个私有问题")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FinishAssistantTurn(ctx, owner, conversation.ID, failed.ID, "failed", "model", "", "", 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO credit_ledger (id, user_id, entry_type, amount_hundredths, daily_delta_hundredths, persistent_delta_hundredths, resulting_balance_hundredths, credit_day, source, detail, created_at) VALUES (?, ?, 'consumption', -125, -125, 0, 99875, CURRENT_DATE, ?, '{}'::jsonb, now())`, uuid.NewString(), owner, "assistant-turn-"+completed.ID+":1").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO credit_ledger (id, user_id, entry_type, amount_hundredths, daily_delta_hundredths, persistent_delta_hundredths, resulting_balance_hundredths, credit_day, source, detail, created_at) VALUES (?, ?, 'consumption', -75, -75, 0, 99800, CURRENT_DATE, ?, '{}'::jsonb, now())`, uuid.NewString(), owner, "assistant-turn-"+completed.ID+":3").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO ai_application_safety_audits (id, owner_user_id, assistant_id, access_source, classification, policy_version, credit_outcome, created_at) VALUES (?, ?, ?, 'public', 'refuse', 'platform-v1', 'not_charged', now())`, uuid.NewString(), owner, assistant.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	stats, err := repository.PublicationStats(ctx, owner, assistant.ID, time.Now().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.ExternalConversations != 1 || stats.FreeTextCalls != 2 || stats.ModelAnswers != 1 || stats.FailedOrCancelledAnswers != 1 || stats.SafetyRefusals != 1 || stats.CreditConsumedHundredths != 200 {
+		t.Fatalf("publication stats = %+v", stats)
+	}
+}

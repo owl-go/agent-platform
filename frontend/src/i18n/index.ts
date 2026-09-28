@@ -465,6 +465,44 @@ Object.assign((en as unknown as { knowledgeBases: Record<string, unknown> }).kno
   departmentPublished: "Published by {name}", departmentReadPublisherEdit: "Department-readable · Publisher-editable", departmentReadOnly: "Department read-only"
 });
 
+const zhAIApplications = (zh as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
+const enAIApplications = (en as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
+Object.assign(zhAIApplications.share, {
+  allowedOriginsPlaceholder: "每行一个明确的 HTTPS 来源，例如 https://support.example.com",
+  dailyLimit: "每日自由提问上限",
+  controlsRequired: "开启分享前必须填写允许来源、正数调用上限，并确认数据处理与所有者付费影响。",
+  impactTitle: "匿名访客会消耗助手所有者的额度",
+  impactDescription: "访客问题会经过安全检查并可能发送给模型与知识检索服务；管理端只展示调用、错误和额度聚合值，不展示访客问题正文。",
+  acknowledge: "我已确认匿名访问、数据处理和所有者付费影响",
+  visitorPreview: "以访客身份预览",
+  previewNotice: "这是不调用模型、不创建对话、不计入用量的外观预览。",
+  tokenOnce: "这是新 Token 的唯一展示机会；复制后妥善保存。旧 Token 已立即失效。",
+  aggregateStats: "最近 {days} 天聚合数据",
+  statConversations: "匿名会话 {count}", statCalls: "自由提问 {count}", statErrors: "失败或取消 {count}", statCredits: "消耗积分 {count}"
+});
+Object.assign(enAIApplications.share, {
+  allowedOrigins: "Allowed embed origins", allowedOriginsPlaceholder: "One explicit HTTPS origin per line, e.g. https://support.example.com",
+  dailyLimit: "Daily free-text limit",
+  controlsRequired: "Sharing requires an allowed origin, a positive daily cap, and acknowledgement of data processing and owner-paid usage.",
+  impactTitle: "Anonymous visitors consume the Assistant owner's Credits",
+  impactDescription: "Visitor questions pass safety checks and may be sent to model and knowledge retrieval services. Management sees only aggregate calls, errors, and Credits—not visitor question content.",
+  acknowledge: "I acknowledge anonymous access, data processing, and owner-paid usage",
+  visitorPreview: "Preview as visitor", previewNotice: "This appearance preview makes no model call, creates no conversation, and does not affect usage.",
+  tokenOnce: "This is the only display of the new Token. Copy it now; the old Token is already invalid.",
+  aggregateStats: "Aggregate data for the last {days} days",
+  statConversations: "Anonymous conversations {count}", statCalls: "Free-text calls {count}", statErrors: "Failed or cancelled {count}", statCredits: "Credits consumed {count}"
+});
+Object.assign(zhAIApplications, { publication: {
+  title: "发布检查", runCheck: "运行发布检查", ready: "可以发布", blocked: "暂不可发布", passed: "通过", failed: "阻断", checkFailed: "发布检查失败，请稍后重试。",
+  controlledVisitors: "受控访客", authenticatedOwner: "已认证所有者", boundKnowledge: "绑定 {count} 个知识库", validatedAt: "最近验证 {time}", notValidated: "尚无当前版本的发布验证",
+  checks: { configuration_complete: "名称、图标和可见配置完整", model_available: "所选模型与凭证可用", faq_safe: "已启用 FAQ 通过安全检查", knowledge_ready: "绑定知识库均有 Ready 文档", resources_available: "引用的 Expert、Team 或数字人可用", credit_policy_ready: "所有者有可用额度策略", share_controls: "分享来源、每日上限和数据确认完整" }
+} });
+Object.assign(enAIApplications, { publication: {
+  title: "Publication check", runCheck: "Run publication check", ready: "Ready to publish", blocked: "Publication blocked", passed: "Passed", failed: "Blocked", checkFailed: "The publication check failed. Try again.",
+  controlledVisitors: "Controlled visitors", authenticatedOwner: "Authenticated owner", boundKnowledge: "{count} Knowledge Bases", validatedAt: "Last validated {time}", notValidated: "No validation for the current revision",
+  checks: { configuration_complete: "Name, icon, and visible configuration are complete", model_available: "Selected model and credential are available", faq_safe: "Enabled FAQs passed safety checks", knowledge_ready: "Every bound Knowledge Base has Ready content", resources_available: "Referenced Expert, Team, or Digital Human is available", credit_policy_ready: "Owner has a usable Credit policy", share_controls: "Origins, daily cap, and data acknowledgement are explicit" }
+} });
+
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);
   document.documentElement.lang = locale;

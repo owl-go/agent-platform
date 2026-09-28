@@ -51,6 +51,9 @@ func (service *Service) createAssistantConversation(ctx context.Context, owner, 
 	if assistant.State != domain.StateEnabled {
 		return domain.AssistantConversation{}, fmt.Errorf("%w: Assistant is not enabled", domain.ErrConflict)
 	}
+	if assistant.LastValidatedAt == nil || assistant.ValidatedVersion != assistant.Version {
+		return domain.AssistantConversation{}, fmt.Errorf("%w: Assistant publication validation is stale", domain.ErrConflict)
+	}
 	if err := assistant.ValidateForEnable(); err != nil {
 		return domain.AssistantConversation{}, err
 	}
