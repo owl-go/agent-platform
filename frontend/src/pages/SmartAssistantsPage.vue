@@ -88,8 +88,7 @@ async function toggleState(item: SmartAssistant) {
     items.value = items.value.map((candidate) => candidate.id === updated.id ? updated : candidate);
   } catch { error.value = t("aiApplications.saveFailed"); }
 }
-function handleCardAction(item: SmartAssistant, command: string, event: MouseEvent) {
-  (event.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
+function handleCardAction(item: SmartAssistant, command: string) {
   if (command === "toggle") void toggleState(item);
   if (command === "share") openShare(item);
   if (command === "delete") void remove(item);
@@ -137,14 +136,18 @@ onBeforeUnmount(() => replaceIconPreview());
             <el-tooltip :content="t('aiApplications.startConversation')" placement="top">
               <el-button data-testid="assistant-chat" class="application-card-action-button" text :icon="MessageCircle" :aria-label="t('aiApplications.startConversation')" @click.stop="startConversation(item)" />
             </el-tooltip>
-            <details class="assistant-card-more">
-              <summary data-testid="assistant-more" class="application-card-action-button" :aria-label="t('common.more')" :title="t('common.more')"><Ellipsis :size="20" /></summary>
-              <div class="assistant-card-action-menu">
-                <button type="button" :title="item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable')" @click="handleCardAction(item, 'toggle', $event)"><component :is="item.state === 'enabled' ? Pause : Play" :size="16" />{{ item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable') }}</button>
-                <button type="button" :title="t('aiApplications.shareAction')" @click="handleCardAction(item, 'share', $event)"><Share2 :size="16" />{{ t('aiApplications.shareAction') }}</button>
-                <button type="button" class="assistant-card-delete-action" :title="t('common.delete')" @click="handleCardAction(item, 'delete', $event)"><Trash2 :size="16" />{{ t('common.delete') }}</button>
-              </div>
-            </details>
+            <el-dropdown trigger="click" placement="bottom-end" @command="handleCardAction(item, $event)">
+              <el-tooltip :content="t('common.more')" placement="top">
+                <el-button data-testid="assistant-more" class="application-card-action-button" text :icon="Ellipsis" :aria-label="t('common.more')" @click.stop />
+              </el-tooltip>
+              <template #dropdown>
+                <el-dropdown-menu class="assistant-card-action-menu">
+                  <el-dropdown-item command="toggle" :title="item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable')"><component :is="item.state === 'enabled' ? Pause : Play" :size="16" />{{ item.state === 'enabled' ? t('aiApplications.disable') : t('aiApplications.enable') }}</el-dropdown-item>
+                  <el-dropdown-item command="share" :title="t('aiApplications.shareAction')"><Share2 :size="16" />{{ t('aiApplications.shareAction') }}</el-dropdown-item>
+                  <el-dropdown-item command="delete" class="assistant-card-delete-action" :title="t('common.delete')"><Trash2 :size="16" />{{ t('common.delete') }}</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
         <small>{{ t(`aiApplications.states.${item.state}`) }} · {{ item.share.enabled ? t('aiApplications.shared') : t('aiApplications.private') }}</small>

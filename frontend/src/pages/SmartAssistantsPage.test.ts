@@ -75,7 +75,8 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(wrapper.findAll(".application-card")).toHaveLength(0);
     await wrapper.get(".assistant-search input").setValue("产品");
     await wrapper.get("[data-testid=assistant-more]").trigger("click");
-    await wrapper.get(".assistant-card-action-menu button:nth-child(2)").trigger("click");
+    await flushPromises();
+    (document.body.querySelectorAll(".assistant-card-action-menu .el-dropdown-menu__item")[1] as HTMLElement).click();
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
     expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
@@ -94,13 +95,13 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(wrapper.find(".application-catalog-toolbar p").exists()).toBe(false);
     expect(wrapper.find(".assistant-search-button").text()).toBe("搜索");
     expect(wrapper.find(".assistant-search").classes()).toContain("assistant-search");
-    expect(wrapper.findAll(".application-card-actions .el-button")).toHaveLength(1);
+    expect(wrapper.findAll(".application-card-actions .el-button")).toHaveLength(2);
     expect(wrapper.get("[data-testid=assistant-chat]").attributes("aria-label")).toBe("开始对话");
     expect(wrapper.get("[data-testid=assistant-more]").attributes("aria-label")).toBe("更多");
     wrapper.unmount();
   });
 
-  it("shows the card actions when More is clicked", async () => {
+  it("renders the more menu outside the clipping assistant card", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");
     const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: apiStub() } } });
@@ -109,8 +110,13 @@ describe("SmartAssistantsPage lifecycle", () => {
     await wrapper.get("[data-testid=assistant-more]").trigger("click");
     await flushPromises();
 
-    expect(wrapper.get(".assistant-card-more").attributes("open")).toBe("");
-    expect(document.body.querySelector(".assistant-card-action-menu")).not.toBeNull();
+    const menu = document.body.querySelector(".assistant-card-action-menu");
+    expect(menu).not.toBeNull();
+    expect(wrapper.get(".application-card").element.contains(menu)).toBe(false);
+    (menu!.querySelectorAll(".el-dropdown-menu__item")[1] as HTMLElement).click();
+    await flushPromises();
+    expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
+    expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
     wrapper.unmount();
   });
 

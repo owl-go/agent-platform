@@ -745,13 +745,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .application-card-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; }
 .application-card-actions .el-button { margin-left: 0; }
 .application-card-action-button { width: 34px; height: 34px; padding: 0; }
-.assistant-card-more { position: relative; }
-.assistant-card-more summary { display: grid; place-items: center; border: 0; border-radius: 9px; color: var(--muted); background: var(--wash); cursor: pointer; list-style: none; }
-.assistant-card-more summary::-webkit-details-marker { display: none; }
-.assistant-card-more summary:hover, .assistant-card-more summary:focus-visible { color: var(--ink); background: var(--line); }
-.assistant-card-action-menu { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; min-width: 138px; padding: 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: 0 8px 24px color-mix(in srgb, var(--aw-code-bg) 12%, transparent); }
-.assistant-card-action-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; color: var(--ink); background: transparent; text-align: left; white-space: nowrap; cursor: pointer; }
-.assistant-card-action-menu button:hover, .assistant-card-action-menu button:focus-visible { background: var(--wash); }
+.assistant-card-action-menu svg { margin-right: 8px; }
+.assistant-card-delete-action { color: var(--aw-danger); }
 .assistant-card-delete-action { color: var(--el-color-danger); }
 .assistant-conversation-page { display: flex; flex-direction: column; width: min(100%, 1040px); min-height: calc(100vh - 120px); margin: 0 auto; }
 .assistant-conversation-header { display: flex; align-items: center; gap: 16px; padding: 12px 0 20px; border-bottom: 1px solid var(--line); }
