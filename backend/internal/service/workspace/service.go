@@ -232,6 +232,8 @@ func publicError(err error) error {
 		return public
 	case errors.Is(err, creditsdomain.ErrCodeUnavailable):
 		return kratoserrors.New(http.StatusUnprocessableEntity, "redemption_code_unavailable", "Redemption Code is unavailable")
+	case errors.Is(err, creditsdomain.ErrRedemptionDisabled):
+		return kratoserrors.New(http.StatusForbidden, "redemption_codes_disabled", "Redemption Codes are disabled")
 	case errors.Is(err, creditsdomain.ErrConflict):
 		return kratoserrors.New(http.StatusPreconditionFailed, "credit_conflict", "Credits state changed")
 	case errors.Is(err, creditsdomain.ErrInvalid):

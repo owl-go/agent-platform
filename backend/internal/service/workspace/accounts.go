@@ -23,7 +23,11 @@ func (service *Service) GetCurrentUser(ctx context.Context, _ *workspacev1.GetCu
 	if balanceErr != nil {
 		return nil, publicError(balanceErr)
 	}
-	return &workspacev1.CurrentUser{Id: principal.UserID, Username: principal.Username, Email: principal.Email, DisplayName: principal.DisplayName, Administrator: principal.Administrator, SettingsReady: settingsErr == nil, CreditBalance: creditBalanceResponse(balance)}, nil
+	policy, policyErr := service.credits.Policy(ctx)
+	if policyErr != nil {
+		return nil, publicError(policyErr)
+	}
+	return &workspacev1.CurrentUser{Id: principal.UserID, Username: principal.Username, Email: principal.Email, DisplayName: principal.DisplayName, Administrator: principal.Administrator, SettingsReady: settingsErr == nil, CreditBalance: creditBalanceResponse(balance, policy)}, nil
 }
 
 func (service *Service) ListUsers(ctx context.Context, _ *workspacev1.ListUsersRequest) (*workspacev1.ListUsersResponse, error) {
@@ -32,13 +36,17 @@ func (service *Service) ListUsers(ctx context.Context, _ *workspacev1.ListUsersR
 		return nil, publicError(err)
 	}
 	items := make([]*workspacev1.UserAccount, 0, len(users))
+	policy, policyErr := service.credits.Policy(ctx)
+	if policyErr != nil {
+		return nil, publicError(policyErr)
+	}
 	for _, user := range users {
 		response := userResponse(user)
 		balance, balanceErr := service.credits.Balance(ctx, user.ID, "")
 		if balanceErr != nil {
 			return nil, publicError(balanceErr)
 		}
-		response.CreditBalance = creditBalanceResponse(balance)
+		response.CreditBalance = creditBalanceResponse(balance, policy)
 		items = append(items, response)
 	}
 	return &workspacev1.ListUsersResponse{Items: items}, nil

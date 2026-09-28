@@ -46,7 +46,7 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
-Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、图片预留汇总和 Credit Ledger、兑换 Redemption Code，并允许 Administrator 管理账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订、Redemption Code 和带原因的 Credit Adjustment。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；返回当前 Available Credit、预留汇总与下一次每日额度时间，不返回其他 User 或内部费率数据。
+Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、预留汇总和 Credit Ledger，并允许 Administrator 管理企业默认额度、提醒阈值、账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订和带原因的 Credit Adjustment。Redemption Code 是默认关闭的可选渠道；关闭时普通用户和管理员 API 都 fail closed。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；准入按所有余额桶减去活动预留后的净 Available Credit 判定，返回当前 Available Credit 与下一次每日额度时间，不返回其他 User 或内部费率数据。
 
 工作流历史中的每一行是一个 Run Conversation。`GET /api/v1/workflows/{workflow_id}/runs/{run_id}/turns` 按顺序读取所有 Run；`POST` 同一路径提交追问并排队一个新 Run，即使同一 Conversation 已有 queued/running turn 也不返回冲突。创建请求立即返回 `202` 和稳定 Run ID；GET/SSE 返回权威状态与动态 queue position，API 继续使用 `Idempotency-Key`。队列超过五个 queued Run 时手动/API 返回 `429 queue_full` 且不创建 Run，定时触发记录失败历史 Run。已经终态的 Run 永不重开，因而事件顺序、终态和 Artifact 审计边界保持不变。
 

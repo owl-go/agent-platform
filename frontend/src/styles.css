@@ -484,6 +484,19 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .admin-tabs { display: flex; gap: 24px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
 .admin-tabs button { padding: 11px 2px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; cursor: pointer; }
 .admin-tabs button.active { color: var(--green); border-bottom-color: var(--green); font-weight: 700; }
+.credit-policy-card { margin-bottom: 18px; }
+.credit-policy-card .el-card__header > div { display: grid; gap: 3px; }
+.credit-policy-card .el-card__header small { color: var(--muted); font-weight: 400; }
+.credit-policy-card .el-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.credit-policy-card .el-form-item { margin: 0; }
+.credit-budget-tag { margin-left: 8px; }
+.credit-consumption details { margin-top: 5px; color: var(--muted); font-size: .7rem; }
+.credit-consumption > p { margin: 0; }
+.credit-consumption summary { cursor: pointer; }
+.credit-consumption ol { display: grid; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; }
+.credit-consumption li { display: grid; grid-template-columns: auto auto minmax(0,1fr); gap: 8px; align-items: baseline; }
+.credit-consumption li small { color: var(--aw-n6); }
+.credit-consumption-empty { color: var(--muted); }
 .admin-credit-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
 .rate-list { display: grid; gap: 2px; }
 .rate-list article { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }

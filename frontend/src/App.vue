@@ -182,7 +182,7 @@ function toggleAIApplications() {
           <el-dropdown placement="top-start" trigger="click" @command="handleUserCommand">
             <button class="user-button"><el-avatar :size="34">{{ initials }}</el-avatar><span><strong>{{ currentUser?.display_name }}</strong><small>@{{ currentUser?.username }}</small></span><el-icon><MoreFilled /></el-icon></button>
             <template #dropdown><el-dropdown-menu>
-              <el-dropdown-item command="credits"><span class="credit-menu-row"><b>✧</b><span>{{ t('credits.balance') }}</span><strong>{{ formatCredits(creditBalance?.total_hundredths) }} ›</strong></span></el-dropdown-item>
+              <el-dropdown-item command="credits"><span class="credit-menu-row"><b>✧</b><span>{{ t('credits.available') }}</span><strong>{{ formatCredits(creditBalance?.available_hundredths) }} ›</strong></span></el-dropdown-item>
               <el-dropdown-item v-if="currentUser?.administrator" command="users" :icon="User">{{ t('nav.users') }}</el-dropdown-item>
               <el-dropdown-item command="locale" :icon="UserFilled">{{ locale === 'zh-CN' ? 'English' : '中文' }}</el-dropdown-item>
               <el-dropdown-item command="signout" :icon="SwitchButton" divided>{{ t('auth.signOut') }}</el-dropdown-item>

@@ -53,10 +53,10 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if balance.Total != 60_000 || balance.DailyRemaining != 60_000 {
 		t.Fatalf("initial balance = %+v", balance)
 	}
-	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_999, "test debt boundary"); err != nil {
+	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_000, "test debt boundary"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_999, "test debt boundary"); err != nil {
+	if _, err := service.Adjust(ctx, userID, userID, "debt-boundary", "Asia/Shanghai", -59_000, "test debt boundary"); err != nil {
 		t.Fatal(err)
 	}
 	var adjustmentCount int64
@@ -70,26 +70,47 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := service.Settle(ctx, application.SettlementRequest{Admission: admission, Usage: domain.Usage{}})
+	first, err := service.Settle(ctx, application.SettlementRequest{Admission: admission, Usage: domain.Usage{InputTokens: 200_000, Known: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := service.Settle(ctx, application.SettlementRequest{Admission: admission, Usage: domain.Usage{}})
+	second, err := service.Settle(ctx, application.SettlementRequest{Admission: admission, Usage: domain.Usage{InputTokens: 200_000, Known: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.Amount != 1_000 || second.Amount != first.Amount {
+	if first.Amount != 2_000 || second.Amount != first.Amount {
 		t.Fatalf("idempotent settlement = %+v then %+v", first, second)
 	}
 	balance, err = service.Balance(ctx, userID, "Asia/Shanghai")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if balance.Total != -999 || balance.TodayConsumed != 1_000 {
+	if balance.Total != -1_000 || balance.TodayConsumed != 2_000 {
 		t.Fatalf("settled balance = %+v", balance)
 	}
 	if _, err := service.Admit(ctx, application.AdmissionRequest{UserID: userID, ExecutionID: "session-message-2", StagePosition: 1, Timezone: "Asia/Shanghai", ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-test"}); !errors.Is(err, domain.ErrInsufficientCredits) {
 		t.Fatalf("second admission error = %v", err)
+	}
+	if _, err := service.ReserveImage(ctx, userID, uuid.NewString(), "Asia/Shanghai", 100); !errors.Is(err, domain.ErrInsufficientCredits) {
+		t.Fatalf("image reservation with negative net balance error = %v", err)
+	}
+	policy, err := service.Policy(ctx)
+	if err != nil || policy.RedemptionCodesEnabled {
+		t.Fatalf("default enterprise Credit Policy = %+v, %v", policy, err)
+	}
+	policy.DefaultDailyAllocation = 25_000
+	policy.RedemptionCodesEnabled = true
+	policy, err = service.UpdatePolicy(ctx, userID, policy, policy.Version)
+	if err != nil || !policy.RedemptionCodesEnabled || policy.Version != 2 {
+		t.Fatalf("updated Credit Policy = %+v, %v", policy, err)
+	}
+	newUserID := uuid.NewString()
+	if err := database.ORM().Exec("INSERT INTO users (id, oidc_subject, username, email, display_name) VALUES (?, ?, ?, ?, ?)", newUserID, newUserID, "new-user", "new@example.test", "New User").Error; err != nil {
+		t.Fatal(err)
+	}
+	newBalance, err := service.Balance(ctx, newUserID, "Asia/Shanghai")
+	if err != nil || newBalance.DailyAllocation != 25_000 || newBalance.Total != 25_000 {
+		t.Fatalf("new account did not inherit policy: %+v, %v", newBalance, err)
 	}
 
 	batch, err := service.CreateRedemptionBatch(ctx, userID, 2, 2_000, nil)
@@ -114,7 +135,7 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if balance.Total != 1_001 {
+	if balance.Total != 1_000 {
 		t.Fatalf("redeemed balance = %+v", balance)
 	}
 	if _, err := service.Redeem(ctx, userID, "Asia/Shanghai", batch.Codes[0].Plaintext); !errors.Is(err, domain.ErrCodeUnavailable) {
@@ -150,7 +171,7 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 		t.Fatalf("rollback error = %v", err)
 	}
 	balance, err = service.Balance(ctx, userID, "Asia/Shanghai")
-	if err != nil || balance.Total != 1_001 {
+	if err != nil || balance.Total != 1_000 {
 		t.Fatalf("rolled-back settlement balance = %+v, %v", balance, err)
 	}
 	if err := service.Abort(ctx, atomicAdmission); err != nil {
@@ -164,7 +185,7 @@ func TestPostgresCreditLifecycleIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if balance.DailyAllocation != 0 || balance.DailyRemaining != 0 || balance.Persistent != -57_999 || balance.Total != -57_999 {
+	if balance.DailyAllocation != 0 || balance.DailyRemaining != 0 || balance.Persistent != -57_000 || balance.Total != -57_000 {
 		t.Fatalf("next-day debt carry = %+v", balance)
 	}
 }

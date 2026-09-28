@@ -20,3 +20,11 @@ func TestInsufficientCreditsErrorIncludesOnlyRecoveryMetadata(t *testing.T) {
 		t.Fatalf("public metadata = %#v", err.Metadata)
 	}
 }
+
+func TestDisabledRedemptionChannelFailsClosed(t *testing.T) {
+	err := kratoserrors.FromError(publicError(creditsdomain.ErrRedemptionDisabled))
+
+	if err.Code != 403 || err.Reason != "redemption_codes_disabled" {
+		t.Fatalf("public error = %+v", err)
+	}
+}

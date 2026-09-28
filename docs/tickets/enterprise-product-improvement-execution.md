@@ -26,7 +26,7 @@
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 已完成代码与本地门禁 |
 | EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 已完成代码、本地门禁与 PostgreSQL Integration；生产 Provider 证据待验证 |
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办定位回原任务；不读取用户内容 | 已完成代码、本地门禁与 PostgreSQL owner-scope Integration；真实部署待验证 |
-| EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 待 EP-00 |
+| EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 已完成代码、本地门禁与 PostgreSQL Integration；生产用量分布与部署浏览器闭环待验证 |
 | EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 待核心闭环 |
 | EP-12 | 企业治理 | 多管理员、用户组、部门资源和离职转移 | 新授权模型和身份源同步 | 跨范围访问 fail closed；管理员不可读私有内容 | 待设计伙伴验证 |
 | EP-13 | Smart Assistant 受控发布 | 将已验证问答发布给内部或受控访客 | EP-03/08/10/12 | FAQ/Knowledge 来源、安全、额度和 iframe 审计闭环 | 待核心指标连续四周达标 |
@@ -171,6 +171,14 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 待办按命令审批、计划确认、失败恢复排序；同一执行同时有 Plan 和命令审批时只保留审批。过期审批、归档或 external Session、已删除 Workflow 和其他账号的数据不出现。
 - 待办不复制决策逻辑。点击后打开所属 Session 或精确 Workflow Run，由已有 Plan、命令审批和恢复控件处理；最近任务和常用 Workflow 也只提供原对象入口。
 - 前端覆盖聚合区、空状态、原 Run 定位和 API repeated-field 兼容；PostgreSQL Integration 运行完整 migration chain，验证 owner 隔离、待办去重与内容/错误不进入返回 contract。真实 OIDC、生产数据分布和部署浏览器闭环仍待验证。
+
+### EP-10 企业额度治理
+
+- 新增唯一且 versioned 的 Enterprise Credit Policy：新建额度账户继承平台每日默认额度，已有账号继续使用自己的额度；管理员可设置 1–99% 用量提醒线。单用户额度仍在下一个 Credit Day 生效，Adjustment 继续要求原因、request ID 和不可变 Ledger。
+- 用户入口统一显示 Available Credit、执行中预留、今日使用和恢复时间。达到提醒线或耗尽时明确联系管理员；多阶段结果只展示阶段序号、额度和 measured/fallback 结算类别，不泄露 Token、模型、倍率、供应商成本或费率修订。
+- Redemption Code 默认关闭；普通用户输入、管理员 Tab 及相关 API 一起隐藏或 fail closed。只有管理员在 Enterprise Credit Policy 显式启用后才恢复原渠道能力。
+- 文本 Admission 和图片 Reservation 改为使用跨 daily/persistent bucket 的净 Available Credit。一个正余额 bucket 不能再掩盖另一个 bucket 的债务；真实 PostgreSQL 回归覆盖过量结算形成负余额、后续拒绝、新账号继承策略、策略 CAS 和兑换渠道开关。
+- 本地门禁不等于生产用量分布或部署浏览器闭环证据；本批仅提供产品内阈值提示，不提供站外通知。部门预算和跨用户组策略依赖 EP-12 的组织授权模型，不在本批次伪造。
 
 ## 8. 发布与回滚
 

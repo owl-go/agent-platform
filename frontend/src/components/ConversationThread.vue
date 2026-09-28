@@ -219,7 +219,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
             <button v-if="stage.final_text" type="button" class="stage-copy" @click="copy(stage.final_text, stageCopyKey(message.id, stage.position))">{{ isCopied(stageCopyKey(message.id, stage.position)) ? t('common.copied') : t('common.copy') }}</button>
           </details>
         </div>
-        <CreditConsumption v-if="message.role === 'assistant'" :value="message.creditConsumption" />
+        <CreditConsumption v-if="message.role === 'assistant'" :value="message.creditConsumption" :state="message.state" />
         <div class="message-actions">
           <small v-if="message.role === 'user'" class="message-meta">{{ messageTime(message.timestamp) }}</small>
           <button v-if="message.canSaveWorkflow || message.workflowLink" type="button" class="message-task" @click="emit('saveWorkflow', message.id)"><Workflow :size="14" /><span>{{ message.workflowLink ? t('sessions.workflowSave.open') : t('sessions.workflowSave.action') }}</span></button>

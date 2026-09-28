@@ -1,6 +1,7 @@
 import type { InjectionKey } from "vue";
 
-export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number }
+export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean }
+export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
 export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
 export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
 export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
@@ -139,6 +140,8 @@ export interface PlatformApi {
   listConversationFiles(scope: ConversationScope, workspacePath?: string, signal?: AbortSignal): Promise<ConversationFile[]>;
   getSkillDocument(id: string, signal?: AbortSignal): Promise<{ skill: Skill; content: string }>;
   getCreditBalance(signal?: AbortSignal): Promise<CreditBalance>;
+  getCreditPolicy(signal?: AbortSignal): Promise<CreditPolicy>;
+  updateCreditPolicy(policy: Pick<CreditPolicy, "default_daily_allocation_hundredths" | "warning_threshold_percent" | "redemption_codes_enabled" | "version">, signal?: AbortSignal): Promise<CreditPolicy>;
   listCreditLedger(cursor?: string, signal?: AbortSignal): Promise<{ items: CreditLedgerEntry[]; next_cursor?: string }>;
   redeemCreditCode(code: string, signal?: AbortSignal): Promise<CreditBalance>;
   configureUserDailyCredits(userID: string, allocationHundredths: number, signal?: AbortSignal): Promise<CreditBalance>;
@@ -369,7 +372,9 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async resolveConversationSelection(scope, input, signal) { return normalizeSelection(await call("/api/v1/conversation-selection", json("POST", { ...scope, ...input }, signal))); },
     async listConversationFiles(scope, workspacePath = "", signal) { const result = await call<{ items?: ConversationFile[] }>(`/api/v1/conversation-files?${scopeQuery(scope)}&workspace_path=${encodeURIComponent(workspacePath)}`, { signal }); return (result.items ?? []).map((item) => ({ ...item, size: Number(item.size), id: item.id ?? "", path: item.path ?? "" })); },
     getSkillDocument(id, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}/document`, { signal }); },
-    getCreditBalance(signal) { return call("/api/v1/credits/balance", { signal }); },
+    async getCreditBalance(signal) { const item = await call<CreditBalance>("/api/v1/credits/balance", { signal }); return { ...item, warning_threshold_percent: Number(item.warning_threshold_percent || 80), redemption_codes_enabled: Boolean(item.redemption_codes_enabled) }; },
+    async getCreditPolicy(signal) { const item = await call<CreditPolicy>("/api/v1/admin/credit-policy", { signal }); return { ...item, redemption_codes_enabled: Boolean(item.redemption_codes_enabled) }; },
+    updateCreditPolicy(policy, signal) { return call("/api/v1/admin/credit-policy", json("PUT", { default_daily_allocation_hundredths: policy.default_daily_allocation_hundredths, warning_threshold_percent: policy.warning_threshold_percent, redemption_codes_enabled: policy.redemption_codes_enabled, expected_version: policy.version }, signal)); },
     listCreditLedger(cursor = "", signal) { return call(`/api/v1/credits/ledger?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
     redeemCreditCode(code, signal) { return call("/api/v1/credits/redemptions", json("POST", { code }, signal)); },
     configureUserDailyCredits(userID, allocationHundredths, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/daily-credits`, json("PATCH", { allocation_hundredths: allocationHundredths }, signal)); },

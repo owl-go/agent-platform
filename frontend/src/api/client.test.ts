@@ -16,6 +16,17 @@ describe("Agent Workspace API client", () => {
     expect(item.common_workflows).toEqual([]);
   });
 
+  it("updates the versioned enterprise Credit policy", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").updateCreditPolicy({ default_daily_allocation_hundredths: 25_000, warning_threshold_percent: 85, redemption_codes_enabled: false, version: 3 });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/admin/credit-policy");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PUT");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ default_daily_allocation_hundredths: 25_000, warning_threshold_percent: 85, redemption_codes_enabled: false, expected_version: 3 });
+  });
+
   it("downloads the exact cited Knowledge revision", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("source", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

@@ -12,6 +12,7 @@ var (
 	ErrInvalid             = errors.New("Credits value is invalid")
 	ErrInsufficientCredits = errors.New("Credit Balance is not positive")
 	ErrCodeUnavailable     = errors.New("Redemption Code is unavailable")
+	ErrRedemptionDisabled  = errors.New("Redemption Codes are disabled")
 	ErrConflict            = errors.New("Credits state conflicts with current state")
 )
 
@@ -113,6 +114,22 @@ type Balance struct {
 	PendingEffectiveDay    string
 	NextAllocationAt       time.Time
 	Version                int64
+}
+
+type Policy struct {
+	DefaultDailyAllocation  Amount
+	WarningThresholdPercent int
+	RedemptionCodesEnabled  bool
+	UpdatedByUserID         string
+	UpdatedAt               time.Time
+	Version                 int64
+}
+
+func (policy Policy) Validate() error {
+	if policy.DefaultDailyAllocation < 0 || policy.WarningThresholdPercent < 1 || policy.WarningThresholdPercent > 99 || policy.Version < 0 {
+		return fmt.Errorf("%w: Credit Policy is invalid", ErrInvalid)
+	}
+	return nil
 }
 
 type ImageReservation struct {

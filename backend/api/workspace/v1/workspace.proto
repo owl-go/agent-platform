@@ -20,6 +20,8 @@ service AgentWorkspaceService {
   rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
   rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/password-reset" body: "*"}; }
   rpc GetCreditBalance(GetCreditBalanceRequest) returns (CreditBalance) { option (google.api.http) = {get: "/api/v1/credits/balance"}; }
+  rpc GetCreditPolicy(GetCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {get: "/api/v1/admin/credit-policy"}; }
+  rpc UpdateCreditPolicy(UpdateCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {put: "/api/v1/admin/credit-policy" body: "*"}; }
   rpc ListCreditLedger(ListCreditLedgerRequest) returns (ListCreditLedgerResponse) { option (google.api.http) = {get: "/api/v1/credits/ledger"}; }
   rpc RedeemCreditCode(RedeemCreditCodeRequest) returns (CreditBalance) { option (google.api.http) = {post: "/api/v1/credits/redemptions" body: "*"}; }
   rpc ConfigureUserDailyCredits(ConfigureUserDailyCreditsRequest) returns (CreditBalance) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/daily-credits" body: "*"}; }
@@ -190,7 +192,10 @@ message ResetUserPasswordResponse { string temporary_password = 1; }
 message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; }
 
 message GetCreditBalanceRequest {}
-message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; }
+message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; int32 warning_threshold_percent = 14; bool redemption_codes_enabled = 15; }
+message GetCreditPolicyRequest {}
+message UpdateCreditPolicyRequest { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 expected_version = 4; }
+message CreditPolicy { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 version = 4; google.protobuf.Timestamp updated_at = 5; optional string updated_by_user_id = 6; }
 message ListCreditLedgerRequest { optional string cursor = 1; optional int32 limit = 2; }
 message ListCreditLedgerResponse { repeated CreditLedgerEntry items = 1; optional string next_cursor = 2; }
 message CreditLedgerEntry { string id = 1; string type = 2; int64 amount_hundredths = 3; int64 resulting_balance_hundredths = 4; string credit_day = 5; optional string reason = 6; google.protobuf.Timestamp created_at = 7; }

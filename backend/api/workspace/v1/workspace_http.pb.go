@@ -75,6 +75,7 @@ const OperationAgentWorkspaceServiceExchangeWorkflowCredential = "/workspace.v1.
 const OperationAgentWorkspaceServiceGenerateWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
 const OperationAgentWorkspaceServiceGetConversationSelection = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
 const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
+const OperationAgentWorkspaceServiceGetCreditPolicy = "/workspace.v1.AgentWorkspaceService/GetCreditPolicy"
 const OperationAgentWorkspaceServiceGetCurrentUser = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
 const OperationAgentWorkspaceServiceGetExpert = "/workspace.v1.AgentWorkspaceService/GetExpert"
 const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspaceService/GetExpertTeam"
@@ -157,6 +158,7 @@ const OperationAgentWorkspaceServiceSubmitImageGeneration = "/workspace.v1.Agent
 const OperationAgentWorkspaceServiceTestMCPConnector = "/workspace.v1.AgentWorkspaceService/TestMCPConnector"
 const OperationAgentWorkspaceServiceUninstallConnector = "/workspace.v1.AgentWorkspaceService/UninstallConnector"
 const OperationAgentWorkspaceServiceUpdateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/UpdateCLIConnectorDefinition"
+const OperationAgentWorkspaceServiceUpdateCreditPolicy = "/workspace.v1.AgentWorkspaceService/UpdateCreditPolicy"
 const OperationAgentWorkspaceServiceUpdateExpert = "/workspace.v1.AgentWorkspaceService/UpdateExpert"
 const OperationAgentWorkspaceServiceUpdateExpertTeam = "/workspace.v1.AgentWorkspaceService/UpdateExpertTeam"
 const OperationAgentWorkspaceServiceUpdateKnowledgeBase = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
@@ -230,6 +232,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error)
 	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
+	GetCreditPolicy(context.Context, *GetCreditPolicyRequest) (*CreditPolicy, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	GetExpertTeam(context.Context, *GetExpertTeamRequest) (*ExpertTeam, error)
@@ -312,6 +315,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	TestMCPConnector(context.Context, *TestMCPConnectorRequest) (*MCPConnector, error)
 	UninstallConnector(context.Context, *UninstallConnectorRequest) (*DeleteResponse, error)
 	UpdateCLIConnectorDefinition(context.Context, *UpdateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
+	UpdateCreditPolicy(context.Context, *UpdateCreditPolicyRequest) (*CreditPolicy, error)
 	UpdateExpert(context.Context, *UpdateExpertRequest) (*Expert, error)
 	UpdateExpertTeam(context.Context, *UpdateExpertTeamRequest) (*ExpertTeam, error)
 	UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error)
@@ -340,6 +344,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/enabled", _AgentWorkspaceService_SetUserEnabled0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/users/{user_id}/password-reset", _AgentWorkspaceService_ResetUserPassword0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/credits/balance", _AgentWorkspaceService_GetCreditBalance0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/credit-policy", _AgentWorkspaceService_GetCreditPolicy0_HTTP_Handler(srv))
+	r.Handle("PUT", "/api/v1/admin/credit-policy", _AgentWorkspaceService_UpdateCreditPolicy0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/credits/ledger", _AgentWorkspaceService_ListCreditLedger0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/credits/redemptions", _AgentWorkspaceService_RedeemCreditCode0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/daily-credits", _AgentWorkspaceService_ConfigureUserDailyCredits0_HTTP_Handler(srv))
@@ -698,6 +704,44 @@ func _AgentWorkspaceService_GetCreditBalance0_HTTP_Handler(srv AgentWorkspaceSer
 			return err
 		}
 		reply := out.(*CreditBalance)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetCreditPolicy0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetCreditPolicyRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetCreditPolicy)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetCreditPolicy(ctx, req.(*GetCreditPolicyRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditPolicy)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_UpdateCreditPolicy0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateCreditPolicyRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateCreditPolicy)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateCreditPolicy(ctx, req.(*UpdateCreditPolicyRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*CreditPolicy)
 		return ctx.Result(200, reply)
 	}
 }
@@ -3741,6 +3785,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GenerateWorkflowCredential(ctx context.Context, req *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetConversationSelection(ctx context.Context, req *GetConversationSelectionRequest, opts ...http.CallOption) (rsp *ConversationSelection, err error)
 	GetCreditBalance(ctx context.Context, req *GetCreditBalanceRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
+	GetCreditPolicy(ctx context.Context, req *GetCreditPolicyRequest, opts ...http.CallOption) (rsp *CreditPolicy, err error)
 	GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest, opts ...http.CallOption) (rsp *CurrentUser, err error)
 	GetExpert(ctx context.Context, req *GetExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	GetExpertTeam(ctx context.Context, req *GetExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
@@ -3823,6 +3868,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	TestMCPConnector(ctx context.Context, req *TestMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UninstallConnector(ctx context.Context, req *UninstallConnectorRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	UpdateCLIConnectorDefinition(ctx context.Context, req *UpdateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
+	UpdateCreditPolicy(ctx context.Context, req *UpdateCreditPolicyRequest, opts ...http.CallOption) (rsp *CreditPolicy, err error)
 	UpdateExpert(ctx context.Context, req *UpdateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
 	UpdateExpertTeam(ctx context.Context, req *UpdateExpertTeamRequest, opts ...http.CallOption) (rsp *ExpertTeam, err error)
 	UpdateKnowledgeBase(ctx context.Context, req *UpdateKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
@@ -4809,6 +4855,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetCreditBalance(ctx context.Conte
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetCreditBalance),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetCreditPolicy(ctx context.Context, in *GetCreditPolicyRequest, opts ...http.CallOption) (*CreditPolicy, error) {
+	var out CreditPolicy
+	pattern := "/api/v1/admin/credit-policy"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetCreditPolicy),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -6151,6 +6213,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateCLIConnectorDefinition(ctx c
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateCreditPolicy(ctx context.Context, in *UpdateCreditPolicyRequest, opts ...http.CallOption) (*CreditPolicy, error) {
+	var out CreditPolicy
+	pattern := "/api/v1/admin/credit-policy"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceUpdateCreditPolicy),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

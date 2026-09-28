@@ -22,6 +22,57 @@ func New(db *gorm.DB) *Repository { return &Repository{db: db} }
 
 var _ application.Repository = (*Repository)(nil)
 
+type policyRecord struct {
+	Singleton              bool          `gorm:"column:singleton;primaryKey"`
+	DefaultDailyAllocation domain.Amount `gorm:"column:default_daily_allocation_hundredths"`
+	WarningThreshold       int           `gorm:"column:warning_threshold_percent"`
+	RedemptionCodesEnabled bool          `gorm:"column:redemption_codes_enabled"`
+	UpdatedByUserID        *string       `gorm:"column:updated_by_user_id"`
+	UpdatedAt              time.Time     `gorm:"column:updated_at"`
+	Version                int64         `gorm:"column:version"`
+}
+
+func (policyRecord) TableName() string { return "credit_policy" }
+
+func (repository *Repository) GetPolicy(ctx context.Context) (domain.Policy, error) {
+	var row policyRecord
+	if err := repository.db.WithContext(ctx).Where("singleton = true").Take(&row).Error; err != nil {
+		return domain.Policy{}, fmt.Errorf("get Credit Policy: %w", err)
+	}
+	return toPolicy(row), nil
+}
+
+func (repository *Repository) UpdatePolicy(ctx context.Context, administratorID string, policy domain.Policy, expectedVersion int64, now time.Time) (domain.Policy, error) {
+	var updated domain.Policy
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row policyRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("singleton = true").Take(&row).Error; err != nil {
+			return err
+		}
+		if row.Version != expectedVersion {
+			return domain.ErrConflict
+		}
+		row.DefaultDailyAllocation = policy.DefaultDailyAllocation
+		row.WarningThreshold = policy.WarningThresholdPercent
+		row.RedemptionCodesEnabled = policy.RedemptionCodesEnabled
+		row.UpdatedByUserID, row.UpdatedAt, row.Version = &administratorID, now, row.Version+1
+		if err := tx.Save(&row).Error; err != nil {
+			return err
+		}
+		updated = toPolicy(row)
+		return nil
+	})
+	return updated, mapConflict(err)
+}
+
+func toPolicy(row policyRecord) domain.Policy {
+	policy := domain.Policy{DefaultDailyAllocation: row.DefaultDailyAllocation, WarningThresholdPercent: row.WarningThreshold, RedemptionCodesEnabled: row.RedemptionCodesEnabled, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	if row.UpdatedByUserID != nil {
+		policy.UpdatedByUserID = *row.UpdatedByUserID
+	}
+	return policy
+}
+
 type accountRecord struct {
 	UserID            string         `gorm:"column:user_id;primaryKey"`
 	CreditDay         time.Time      `gorm:"column:credit_day;type:date"`
@@ -141,6 +192,9 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if err != nil {
 			return err
 		}
+		if account.DailyRemaining+account.Persistent-imageDaily-imagePersistent-stageDaily-stagePersistent < admission.Rate.Fallback {
+			return domain.ErrInsufficientCredits
+		}
 		dailyAvailable := account.DailyRemaining - imageDaily - stageDaily
 		persistentAvailable := account.Persistent - imagePersistent - stagePersistent
 		if dailyAvailable < 0 {
@@ -148,9 +202,6 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		}
 		if persistentAvailable < 0 {
 			persistentAvailable = 0
-		}
-		if dailyAvailable+persistentAvailable < admission.Rate.Fallback {
-			return domain.ErrInsufficientCredits
 		}
 		admission.Reserved = admission.Rate.Fallback
 		admission.DailyReserved = admission.Reserved
@@ -314,6 +365,9 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		}
 		dailyReserved := imageDaily + stageDaily
 		persistentReserved := imagePersistent + stagePersistent
+		if account.DailyRemaining+account.Persistent-dailyReserved-persistentReserved < reservation.Amount {
+			return domain.ErrInsufficientCredits
+		}
 		dailyAvailable := account.DailyRemaining - dailyReserved
 		persistentAvailable := account.Persistent - persistentReserved
 		if dailyAvailable < 0 {
@@ -321,9 +375,6 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		}
 		if persistentAvailable < 0 {
 			persistentAvailable = 0
-		}
-		if dailyAvailable+persistentAvailable < reservation.Amount {
-			return domain.ErrInsufficientCredits
 		}
 		reservation.DailyReserved = reservation.Amount
 		if reservation.DailyReserved > dailyAvailable {
@@ -412,7 +463,11 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 		return accountRecord{}, err
 	}
 	requestedDay := dateAt(now, location)
-	created := accountRecord{UserID: userID, CreditDay: requestedDay, Timezone: requestedTimezone, DailyAllocation: domain.DefaultDailyAllocation, DailyRemaining: domain.DefaultDailyAllocation, UpdatedAt: now, Version: 1}
+	var policy policyRecord
+	if err := tx.Where("singleton = true").Take(&policy).Error; err != nil {
+		return accountRecord{}, err
+	}
+	created := accountRecord{UserID: userID, CreditDay: requestedDay, Timezone: requestedTimezone, DailyAllocation: policy.DefaultDailyAllocation, DailyRemaining: policy.DefaultDailyAllocation, UpdatedAt: now, Version: 1}
 	result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&created)
 	if result.Error != nil {
 		return accountRecord{}, result.Error
@@ -420,7 +475,7 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 	if result.RowsAffected == 1 {
 		source := "daily:" + requestedDay.Format(time.DateOnly)
 		reason := "daily allocation"
-		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_allocation", Amount: domain.DefaultDailyAllocation, DailyDelta: domain.DefaultDailyAllocation, ResultingBalance: domain.DefaultDailyAllocation, CreditDay: requestedDay, Source: &source, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_allocation", Amount: policy.DefaultDailyAllocation, DailyDelta: policy.DefaultDailyAllocation, ResultingBalance: policy.DefaultDailyAllocation, CreditDay: requestedDay, Source: &source, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
 		if err := tx.Create(&entry).Error; err != nil {
 			return accountRecord{}, err
 		}

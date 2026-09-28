@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/credit-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetCreditPolicy"];
+        put: operations["AgentWorkspaceService_UpdateCreditPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model-credit-rates": {
         parameters: {
             query?: never;
@@ -2548,6 +2564,9 @@ export interface components {
             reserved_hundredths?: number;
             /** Format: int64 */
             available_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
         };
         v1CreditConsumption: {
             /** Format: int64 */
@@ -2565,6 +2584,18 @@ export interface components {
             reason?: string;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1CreditPolicy: {
+            /** Format: int64 */
+            default_daily_allocation_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
+            updated_by_user_id?: string;
         };
         v1CreditStageConsumption: {
             /** Format: int32 */
@@ -3549,6 +3580,15 @@ export interface components {
             request_id?: string;
             original_prompt?: string;
         };
+        v1UpdateCreditPolicyRequest: {
+            /** Format: int64 */
+            default_daily_allocation_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
+            /** Format: int64 */
+            expected_version?: number;
+        };
         v1UpdateSettingsRequest: {
             personality?: string;
             personality_instructions?: string;
@@ -4256,6 +4296,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ConnectorPublication"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetCreditPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditPolicy"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateCreditPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1UpdateCreditPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditPolicy"];
                 };
             };
             /** @description An unexpected error response. */

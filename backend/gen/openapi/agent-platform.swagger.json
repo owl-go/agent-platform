@@ -627,6 +627,58 @@
         ]
       }
     },
+    "/api/v1/admin/credit-policy": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetCreditPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreditPolicy"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "put": {
+        "operationId": "AgentWorkspaceService_UpdateCreditPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreditPolicy"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCreditPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/model-credit-rates": {
       "get": {
         "operationId": "AgentWorkspaceService_ListModelCreditRates",
@@ -7006,6 +7058,13 @@
         "available_hundredths": {
           "type": "string",
           "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
         }
       }
     },
@@ -7051,6 +7110,33 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1CreditPolicy": {
+      "type": "object",
+      "properties": {
+        "default_daily_allocation_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_by_user_id": {
+          "type": "string"
         }
       }
     },
@@ -10016,6 +10102,26 @@
         },
         "original_prompt": {
           "type": "string"
+        }
+      }
+    },
+    "v1UpdateCreditPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "default_daily_allocation_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
