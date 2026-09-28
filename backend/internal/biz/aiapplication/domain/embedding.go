@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// EmbeddingDimensions matches the fixed PostgreSQL vector index width.
+const EmbeddingDimensions = 1536
+
 type EmbeddingConfiguration struct {
 	Endpoint         string    `json:"endpoint"`
 	Model            string    `json:"model"`
@@ -28,7 +31,7 @@ func (configuration EmbeddingConfiguration) Validate() error {
 	if strings.TrimSpace(configuration.Model) == "" || len([]rune(configuration.Model)) > 200 {
 		return fmt.Errorf("%w: embedding model is required", ErrInvalid)
 	}
-	if configuration.Dimensions != 1536 {
+	if configuration.Dimensions != EmbeddingDimensions {
 		return fmt.Errorf("%w: current PostgreSQL vector index requires 1536 dimensions", ErrInvalid)
 	}
 	return nil
