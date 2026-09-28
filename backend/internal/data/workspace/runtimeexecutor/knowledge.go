@@ -20,7 +20,7 @@ func (executor *Executor) injectKnowledgeContext(ctx context.Context, owner stri
 		return instruction, nil
 	}
 	if executor.knowledge == nil {
-		return "", fmt.Errorf("Knowledge retrieval is configured but AnythingLLM is unavailable")
+		return "", fmt.Errorf("Knowledge retrieval is configured but no retrieval provider is available")
 	}
 	query := strings.TrimSpace(strings.Join([]string{snapshot.Goal, instruction}, "\n\n"))
 	if query == "" {

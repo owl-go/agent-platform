@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。知识库检索统一通过 AnythingLLM 与平台修订校验；旧 Embedding Provider 设置和 pgvector 召回不再是活动产品路径。真实 AnythingLLM 部署的上传至命中端到端证据、真实数字人供应商、AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。当前没有活动的 Knowledge Retrieval Provider，新的知识库摄取任务不处理，搜索及绑定知识库的执行 fail closed；历史 Embedding Provider 设置和 pgvector 召回也不是活动产品路径。真实数字人供应商、AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 

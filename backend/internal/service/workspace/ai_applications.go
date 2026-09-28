@@ -98,7 +98,7 @@ func (service *Service) aiApplicationsHandler(writer http.ResponseWriter, reques
 		return
 	}
 	if parts[3] == "embedding-provider" && len(parts) == 4 {
-		writeAuthError(writer, http.StatusGone, "embedding_configuration_superseded_by_anythingllm")
+		writeAuthError(writer, http.StatusGone, "embedding_configuration_unavailable")
 		return
 	}
 	http.NotFound(writer, request)

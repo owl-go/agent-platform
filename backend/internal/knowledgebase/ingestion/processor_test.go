@@ -9,7 +9,6 @@ import (
 	"time"
 
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/objectstore"
 )
 
@@ -62,8 +61,6 @@ type fakeProvider struct {
 	removed  []string
 }
 
-func (fake *fakeProvider) EnsureWorkspace(context.Context, string) error { return nil }
-func (fake *fakeProvider) DeleteWorkspace(context.Context, string) error { return nil }
 func (fake *fakeProvider) UpsertRevision(context.Context, string, string, string, []byte) error {
 	fake.uploaded = true
 	return nil
@@ -71,9 +68,6 @@ func (fake *fakeProvider) UpsertRevision(context.Context, string, string, string
 func (fake *fakeProvider) RemoveRevision(_ context.Context, _, revisionID string) error {
 	fake.removed = append(fake.removed, revisionID)
 	return nil
-}
-func (fake *fakeProvider) Query(context.Context, string, int64, string, int, int) (anythingllm.Retrieval, error) {
-	return anythingllm.Retrieval{}, nil
 }
 
 func TestProcessorAcceptsSourceOnlyAfterProviderIndexing(t *testing.T) {

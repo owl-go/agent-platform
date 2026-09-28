@@ -1,10 +1,10 @@
 -- Preserve legacy Assistant text sources while moving all new indexing to
--- immutable Knowledge Document Revisions and AnythingLLM.
+-- immutable Knowledge Document Revisions and the shared retrieval boundary.
 ALTER TABLE ai_application_knowledge_jobs
     ADD COLUMN IF NOT EXISTS lease_expires_at timestamptz;
 
--- Earlier Ready revisions could have been uploaded to AnythingLLM without
--- being attached to its workspace embeddings. No old Ready flag proves that
+-- Earlier Ready revisions could have been uploaded to an external provider
+-- without being attached to its searchable index. No old Ready flag proves that
 -- the vector index is usable. Keep revision history but requeue only the
 -- latest source for each active document.
 UPDATE knowledge_index_generations AS generation
@@ -12,7 +12,7 @@ SET state = 'failed'
 WHERE generation.state = 'ready';
 
 UPDATE knowledge_document_revisions AS revision
-SET state = 'blocked', error = 'Superseded during unified AnythingLLM reindex', ready_at = NULL
+SET state = 'blocked', error = 'Superseded during unified retrieval reindex', ready_at = NULL
 WHERE revision.state = 'ready'
   AND EXISTS (
       SELECT 1 FROM knowledge_document_revisions AS newer

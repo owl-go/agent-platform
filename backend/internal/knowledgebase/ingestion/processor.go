@@ -6,19 +6,25 @@ import (
 	"io"
 
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/objectstore"
 )
+
+// Provider is the replaceable indexing boundary. Provider-specific identifiers
+// and credentials must remain inside its implementation.
+type Provider interface {
+	UpsertRevision(context.Context, string, string, string, []byte) error
+	RemoveRevision(context.Context, string, string) error
+}
 
 type Processor struct {
 	repository workspaceapplication.KnowledgeIngestionRepository
 	objects    objectstore.Provider
-	provider   anythingllm.Adapter
+	provider   Provider
 }
 
-func New(repository workspaceapplication.KnowledgeIngestionRepository, objects objectstore.Provider, provider anythingllm.Adapter) (*Processor, error) {
+func New(repository workspaceapplication.KnowledgeIngestionRepository, objects objectstore.Provider, provider Provider) (*Processor, error) {
 	if repository == nil || objects == nil || provider == nil {
-		return nil, fmt.Errorf("Knowledge Ingestion requires a repository, Object Store, and AnythingLLM adapter")
+		return nil, fmt.Errorf("Knowledge Ingestion requires a repository, Object Store, and indexing provider")
 	}
 	return &Processor{repository: repository, objects: objects, provider: provider}, nil
 }

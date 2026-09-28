@@ -4,7 +4,7 @@ import "context"
 
 // KnowledgeIngestionJob is the worker-facing projection of a durable source
 // revision. It contains only logical object identity; provider credentials and
-// workspace IDs remain inside the AnythingLLM adapter.
+// index identifiers remain inside a future retrieval provider.
 type KnowledgeIngestionJob struct {
 	ID              string
 	RevisionID      string

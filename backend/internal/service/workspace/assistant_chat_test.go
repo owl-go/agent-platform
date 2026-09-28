@@ -39,7 +39,7 @@ func TestAssistantRetrievalUsesVerifiedKnowledgeSearcher(t *testing.T) {
 	}
 	service.knowledgeSearch = nil
 	if _, _, err := service.retrieveAssistantKnowledge(context.Background(), "owner", []string{"base"}, "question"); err == nil {
-		t.Fatal("missing AnythingLLM silently fell back to PostgreSQL")
+		t.Fatal("missing retrieval provider silently continued")
 	}
 }
 

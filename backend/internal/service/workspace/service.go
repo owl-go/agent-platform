@@ -23,7 +23,6 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/feishucli"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
@@ -114,16 +113,6 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
 	}
 	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
-	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
-		provider, err := anythingllm.NewClient(config.AnythingLLM.Endpoint, config.AnythingLLM.APIKey, config.AnythingLLM.Timeout.Value())
-		if err != nil {
-			return nil, err
-		}
-		service.knowledgeSearch, err = retrieval.New(workspace.Repository(), provider)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return service, nil
 }
 

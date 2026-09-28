@@ -177,7 +177,7 @@ The task-specific image-generation tool nested under AI Applications. It owns no
 _Avoid_: AI Creation, Smart Assistant, Image Artifact
 
 **Retrieval Provider**:
-The indexing and recall boundary used by a Knowledge Base, currently backed by the platform-controlled AnythingLLM deployment. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations. All product search paths use one permission-checked retrieval seam; the platform validates every candidate against the latest Ready revision.
+The optional indexing and recall boundary used by a Knowledge Base. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations; the platform currently has no active Retrieval Provider and preserves this seam for a future verified implementation.
 _Avoid_: Knowledge Base, RAG application, Provider Model
 
 **Image Model**:
@@ -259,8 +259,8 @@ A bounded set of source excerpts returned for one Run from its frozen Knowledge 
 _Avoid_: Model memory, full document dump, Artifact
 
 **Knowledge Index Generation**:
-The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion. A queued Run freezes its generation; because the current AnythingLLM workspace is mutable, a Run whose generation is no longer current fails closed rather than querying later content as if it were historical.
-_Avoid_: AnythingLLM workspace, mutable search state, Workflow Snapshot
+The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion by an active Retrieval Provider. A queued Run freezes its generation, and unavailable or superseded generations fail closed rather than being substituted with different content.
+_Avoid_: Provider workspace, mutable search state, Workflow Snapshot
 
 **Knowledge Citation**:
 A bounded, permission-checked provenance record for a Retrieval Context excerpt, identifying its Knowledge Base, Category, Document Revision, source location, relevance, and safe display text. It remains auditable in Run history without becoming an Artifact or granting unconditional source access.

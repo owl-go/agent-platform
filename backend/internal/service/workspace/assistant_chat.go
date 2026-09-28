@@ -210,14 +210,14 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	return result, generateErr
 }
 
-// retrieveAssistantKnowledge shares the same AnythingLLM retrieval and active
-// revision verification used by Knowledge Base search and Workflow Runs.
+// retrieveAssistantKnowledge shares the same provider-neutral retrieval and
+// active revision verification used by Knowledge Base search and Workflow Runs.
 func (service *Service) retrieveAssistantKnowledge(ctx context.Context, owner string, baseIDs []string, question string) (string, bool, error) {
 	if len(baseIDs) == 0 {
 		return "", false, nil
 	}
 	if service.knowledgeSearch == nil {
-		return "", false, fmt.Errorf("Knowledge retrieval is configured but AnythingLLM is unavailable")
+		return "", false, fmt.Errorf("Knowledge retrieval is configured but no retrieval provider is available")
 	}
 	var excerpts []string
 	seen := make(map[string]struct{})

@@ -1,6 +1,6 @@
 // Package retrieval is the single, permission-checked read path for Knowledge
-// Bases. AnythingLLM supplies candidate chunks; platform revisions determine
-// whether a candidate can actually be used or cited.
+// Bases. A replaceable provider supplies candidate chunks; platform revisions
+// determine whether a candidate can actually be used or cited.
 package retrieval
 
 import (
@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
-	"agent-platform/backend/internal/knowledgebase/anythingllm"
 	"github.com/google/uuid"
 )
 
@@ -32,21 +31,36 @@ type Searcher interface {
 	Search(context.Context, string, string, int64, string, int, int) ([]Hit, error)
 }
 
-type Engine struct {
-	repository SourceRepository
-	provider   anythingllm.Adapter
+type Citation struct {
+	RevisionID     string
+	SourceLocation string
+	Relevance      float32
+	Text           string
 }
 
-func New(repository SourceRepository, provider anythingllm.Adapter) (*Engine, error) {
+type Result struct {
+	Citations []Citation
+}
+
+type Provider interface {
+	Query(context.Context, string, int64, string, int, int) (Result, error)
+}
+
+type Engine struct {
+	repository SourceRepository
+	provider   Provider
+}
+
+func New(repository SourceRepository, provider Provider) (*Engine, error) {
 	if repository == nil || provider == nil {
-		return nil, fmt.Errorf("Knowledge retrieval requires a repository and AnythingLLM adapter")
+		return nil, fmt.Errorf("Knowledge retrieval requires a repository and retrieval provider")
 	}
 	return &Engine{repository: repository, provider: provider}, nil
 }
 
 // Search returns only excerpts whose revision is still the latest Ready
-// revision of an accessible document. AnythingLLM workspaces are mutable, so a
-// frozen older generation must fail closed rather than return current content.
+// revision of an accessible document. Providers may expose only mutable current
+// state, so a frozen older generation must fail closed rather than return it.
 func (engine *Engine) Search(ctx context.Context, principalID, baseID string, generation int64, question string, limit, tokenLimit int) ([]Hit, error) {
 	if principalID == "" || baseID == "" {
 		return nil, domain.ErrNotFound

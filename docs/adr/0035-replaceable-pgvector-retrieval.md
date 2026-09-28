@@ -1,5 +1,5 @@
 ---
-status: superseded by ADR-0038
+status: superseded by ADR-0040
 ---
 
 # Use replaceable PostgreSQL vector retrieval
