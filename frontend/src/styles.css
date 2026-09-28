@@ -935,7 +935,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .failure-card footer { display: flex; padding: 10px 14px; border-top: 1px solid var(--aw-n3); }
 .failure-card footer .el-button { height: 32px; border-radius: var(--aw-radius-control); }
 
-.composer-layer, .composer-layer.run-composer-layer { padding: 32px 24px 16px; background: var(--aw-n0); box-shadow: none; }
+.composer-layer, .composer-layer.run-composer-layer { justify-items: center; padding: 32px 24px 16px; background: var(--aw-n0); box-shadow: none; }
 .resource-composer.composer, .run-composer.composer { width: min(100%, 720px); gap: 0; padding: 0; overflow: visible; border-color: var(--aw-n4); border-radius: var(--aw-radius-card); background: var(--aw-n0); box-shadow: var(--aw-shadow-card); }
 .composer-editor { min-height: 64px; max-height: 192px; padding: 12px; color: var(--aw-n9); font-size: 13.5px; line-height: 1.75; }
 .composer-toolbar { min-height: 40px; gap: 4px; padding: 7px 8px; border-top: 1px solid var(--aw-n3); }
