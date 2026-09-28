@@ -27,7 +27,7 @@ func initializeWorker(contextContext context.Context, config platformconfig.Conf
 	if err != nil {
 		return nil, err
 	}
-	worker, err := workspaceworker.NewWorker(database, config, provider, warmManager)
+	worker, err := workspaceworker.NewWorker(database, config, provider, warmManager, logger)
 	if err != nil {
 		return nil, err
 	}

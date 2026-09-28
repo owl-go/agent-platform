@@ -2,11 +2,15 @@ package application
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"agent-platform/backend/internal/agentruntime"
+	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
+	"agent-platform/backend/internal/productanalytics"
 )
 
 type cancellationRepository struct {
@@ -82,6 +86,41 @@ func (unusedExecutor) Execute(context.Context, ExecutionJob, ProgressRecorder) (
 	return ExecutionResult{}, nil
 }
 
+type terminalRepository struct {
+	cancellationRepository
+	job ExecutionJob
+}
+
+func (repository *terminalRepository) ClaimNext(context.Context) (*ExecutionJob, error) {
+	if repository.claimed.Swap(true) {
+		return nil, nil
+	}
+	return &repository.job, nil
+}
+
+type terminalExecutor struct {
+	result ExecutionResult
+	err    error
+}
+
+func (executor terminalExecutor) Execute(context.Context, ExecutionJob, ProgressRecorder) (ExecutionResult, error) {
+	return executor.result, executor.err
+}
+
+type recordingAnalytics struct {
+	productanalytics.Nop
+	sessions  []productanalytics.SessionTerminalObservation
+	workflows []productanalytics.WorkflowTerminalObservation
+}
+
+func (analytics *recordingAnalytics) SessionTerminal(_ context.Context, observation productanalytics.SessionTerminalObservation) {
+	analytics.sessions = append(analytics.sessions, observation)
+}
+
+func (analytics *recordingAnalytics) WorkflowTerminal(_ context.Context, observation productanalytics.WorkflowTerminalObservation) {
+	analytics.workflows = append(analytics.workflows, observation)
+}
+
 func TestWorkerFailsCLIConnectorBuildClosedWithoutIsolatedBuilder(t *testing.T) {
 	repository := &connectorBuildRepository{}
 	worker, err := NewWorker(repository, unusedExecutor{})
@@ -124,5 +163,46 @@ func TestWorkerStopsActiveExecutionAfterCancellationRequest(t *testing.T) {
 	}
 	if err := <-done; err != nil {
 		t.Fatalf("ProcessNext: %v", err)
+	}
+}
+
+func TestWorkerRecordsOnlyPrivacyBoundedSessionTerminalFacts(t *testing.T) {
+	repository := &terminalRepository{job: ExecutionJob{Kind: JobSession, ID: "execution-1", OwnerID: "owner-1", SessionID: "session-1", AssistantMessageID: 2}}
+	result := ExecutionResult{FinalMessage: "private answer", ExpertStages: []domain.ExpertStage{{ElapsedMS: 1_500}}, Artifacts: []ExecutionArtifact{{Name: "private.txt"}}}
+	analytics := &recordingAnalytics{}
+	worker, err := NewWorker(repository, terminalExecutor{result: result})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.EnableProductAnalytics(analytics)
+
+	if processed, processErr := worker.ProcessNext(context.Background()); processErr != nil || !processed {
+		t.Fatalf("processed=%v err=%v", processed, processErr)
+	}
+	if len(analytics.sessions) != 1 {
+		t.Fatalf("observations = %#v", analytics.sessions)
+	}
+	observation := analytics.sessions[0]
+	if observation.State != "succeeded" || observation.Duration != 1500*time.Millisecond || observation.ArtifactCount != 1 || observation.SafeErrorCode != "none" {
+		t.Fatalf("observation = %#v", observation)
+	}
+}
+
+func TestWorkerClassifiesSessionFailuresWithoutRecordingRawError(t *testing.T) {
+	repository := &terminalRepository{job: ExecutionJob{Kind: JobSession, ID: "execution-2", OwnerID: "owner-1", SessionID: "session-1", AssistantMessageID: 2}}
+	runtimeError := &agentruntime.Error{Code: agentruntime.ErrorAuthenticationFailed, Message: "private provider response", Cause: errors.New("credential detail")}
+	analytics := &recordingAnalytics{}
+	worker, err := NewWorker(repository, terminalExecutor{err: runtimeError})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.EnableProductAnalytics(analytics)
+
+	if processed, processErr := worker.ProcessNext(context.Background()); processErr != nil || !processed {
+		t.Fatalf("processed=%v err=%v", processed, processErr)
+	}
+	observation := analytics.sessions[0]
+	if observation.SafeErrorCode != "authentication_failed" || observation.FailureStage != "authorization" || !observation.Recoverable {
+		t.Fatalf("observation = %#v", observation)
 	}
 }

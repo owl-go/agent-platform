@@ -16,6 +16,10 @@ _Avoid_: Organization member, Team member, product role
 The single bootstrap identity that manages User accounts, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption.
 _Avoid_: Platform operator, Organization administrator, support user
 
+**Product Event**:
+An append-only, privacy-bounded measurement record derived from a confirmed product transition. It contains only a stable anonymous User key, an optional anonymous subject key, an allowlisted event name, coarse state or duration attributes, and occurrence time; prompts, replies, filenames, Object Keys, external accounts, credentials, and signed URLs are forbidden.
+_Avoid_: Runtime Event, audit transcript, request log, user content
+
 ## Credits And Usage
 
 **Credit**:

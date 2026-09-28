@@ -179,6 +179,7 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 		return nil, publicError(err)
 	}
 	accepted = true
+	service.productAnalytics().FirstTaskStarted(ctx, owner, request.SessionId, "session", len(attachments) > 0)
 	return &workspacev1.SendSessionMessageResponse{UserMessage: messageResponse(user), AssistantMessage: messageResponse(assistant)}, nil
 }
 

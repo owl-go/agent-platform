@@ -8,13 +8,12 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 
 后端是两个 Go Kratos 进程：`cmd/api` 提供认证后的控制面，`cmd/worker` 领取会话回复、工作流 Run、定时触发和 MCP 测试。AI Creation 实现后，Worker 还会领取持久化的 Image Generation Record；图片供应商调用不在 API 请求生命周期内运行。Wire 只负责显式装配；所有运行配置来自严格校验的 YAML。
 
-当前实现分为三个限界上下文：
+当前实现包含以下限界上下文：
 
 - Account：OIDC 身份、本地 User 投影、管理员创建/启停账号和密码重置。
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、Administrator-owned Connector Publication、User-private Connector Installation/Authorization、兼容期 CLI Definition/Enablement/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
-
-AI Creation 修订新增第四个限界上下文：
+- Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建和第二次成功运行生成追加式 Product Event。它只保存匿名 User/对象 Key 和白名单粗粒度属性；采集失败不改变业务操作结果。
 
 - AI Creation：具有独立 Endpoint 和加密 API Key 的 Image Model、单一 Prompt Optimization 设置、Image Generation Record、Reference Image 与 Generated Image 的生命周期；不引用 Workspace 的 Model Provider Connection 或 Provider Model，通过 Credits 端口完成 Image Credit Reservation 与结算，并只保存 Object Storage 的逻辑 Object Key。
 - AI Applications：Smart Assistant、FAQ、Digital Human、Knowledge Base 和分享配置的用户私有目录与版本控制。认证用户的 Assistant Conversation 拥有独立于 Workspace Session 的持久回合和完整审计记录；API 请求内通过独立 Model Provider Adapter 执行预处理和 SSE 生成，每个模型阶段走 Credits 准入与结算。External Conversation 仍是独立的匿名分享链路；真实数字人供应商和完整外部会话审计仍按产品规格分阶段实现。
@@ -84,3 +83,5 @@ AI Creation 通过新的追加式 Migration 引入 Image Model revisions、独�
 Expert、Team Member 与 Connector 简化继续使用追加式 Migration：旧 Capability Introduction 和 Execution Instruction 分别进入 Introduction 与 Operating Procedure，新必填 guidance 留空并令该 Expert 不完整；旧 Expert model/runtime/tag columns 只保留兼容读取；旧团队顺序生成稳定 Team Member ID。P1 以 Revision、Publication、Installation、Authorization 和 Approval 分表表达平台目录与 User-private 状态，且数据库唯一性约束保证每个 User 仅有一个飞书应用、每个 Installation 下同一外部账号只有一个 Authorization。安装飞书 Connector 后，API 通过官方设备流生成创建链接，只持久化加密设备码；前端以固定间隔调用完成接口，服务端取得 App ID/App Secret 后加密写入 Provider Application 并销毁临时设备码。账号 Access Token 与 Refresh Token 绑定 Installation 和外部账号身份加密，刷新采用 Authorization version CAS，断开时清除全部凭证密文。已有飞书应用和有效账号 Token 在真实 `feishu` Publication 可用时由发布触发器增量投影，旧表和历史 Snapshot JSON 不回写。
 
 Conversation Selection 使用追加式 Migration `000027_conversation_selections.sql`，按 owner 与 Session / 根 Run 约束修订；删除所属对话时数据库级联删除修订。本地 PostgreSQL 17 临时数据库已验证完整迁移链与会话/工作流选择事务，生产迁移及 Linux + runsc 证据须单独取得。
+
+Product Analytics 使用追加式 Migration `000057_product_analytics.sql`。事件名、对象类型和属性在写入前经过代码白名单，User ID 与 Session/Workflow ID 只以带命名空间的 SHA-256 匿名 Key 保存；唯一 Dedup Key 保证重复请求、轮询和 Worker 重试不重复计算漏斗。该表不保存提示词、回答、文件名、文件内容、外部账号、Secret、Object Key 或签名 URL。第二次成功运行由终态 Run 持久化后读取权威成功次数产生，不由前端点击推测。

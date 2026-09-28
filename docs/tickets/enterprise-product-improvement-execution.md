@@ -16,7 +16,7 @@
 
 | ID | 垂直切片 | 用户结果 | 依赖 | 验收与门禁 | 状态 |
 |---|---|---|---|---|---|
-| EP-00 | 建立基线 | 可以测量首次任务、失败阶段和 Workflow 二次运行 | 产品事件最小字段约束 | 不采集提示词、结果、文件名和 Secret；事件单测与隐私检查 | 待开始 |
+| EP-00 | 建立基线 | 可以测量首次任务、失败阶段和 Workflow 二次运行 | 产品事件最小字段约束 | 不采集提示词、结果、文件名和 Secret；事件单测与隐私检查 | 已完成代码与本地门禁；待真实部署形成基线 |
 | EP-01 | 持续状态与停止 | 长任务在任意滚动位置可见状态、耗时、模型、消耗和停止 | 现有 Session/Run 状态与取消 API | Session、Run Conversation、移动端和停止测试 | 已在 `main` 完成基础版，待补活动摘要与重连指标 |
 | EP-02 | 本次执行证据 | 用户能确认实际调用了哪些工具、产生了哪些文件和阶段结果 | 现有 public Activity、Artifact、Expert Stage、Credits | 不把“可用资源”显示为“已使用”；Session/Run 共用组件；中英文测试 | 已完成展示层；来源证据转 EP-03 |
 | EP-03 | 来源与 Citation 证据 | 回答能定位实际读取的文件、Knowledge Citation 和 Connector 数据源 | 新的公开 Evidence contract、检索和 Broker 事件 | owner scope、脱敏、失败/未采用状态、历史快照测试 | 待开始 |

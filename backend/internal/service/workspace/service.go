@@ -27,6 +27,7 @@ import (
 	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
+	"agent-platform/backend/internal/productanalytics"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/skillstore"
 	"agent-platform/backend/internal/workspacefs"
@@ -51,6 +52,7 @@ type Service struct {
 	objects                  objectstore.Provider
 	knowledgeSearch          retrieval.Searcher
 	config                   platformconfig.Config
+	analytics                productanalytics.Observer
 	feishu                   feishuApplicationRegistrar
 	removeNativeSessionState func(string, string, string) error
 	cloneGitSource           func(context.Context, string, workspacefs.GitCloneOptions) error
@@ -109,11 +111,11 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, config platformconfig.Config) (*Service, error) {
-	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil {
-		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, and Object Store services are required")
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, analytics productanalytics.Observer, config platformconfig.Config) (*Service, error) {
+	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil || analytics == nil {
+		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, Object Store, and product analytics services are required")
 	}
-	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
+	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, analytics: analytics, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
 	if strings.TrimSpace(config.AnythingLLM.Endpoint) != "" {
 		provider, err := anythingllm.NewClient(config.AnythingLLM.Endpoint, config.AnythingLLM.APIKey, config.AnythingLLM.Timeout.Value())
 		if err != nil {
@@ -125,6 +127,19 @@ func New(accounts *accountapplication.Service, credits *creditsapplication.Servi
 		}
 	}
 	return service, nil
+}
+
+func (service *Service) EnableProductAnalytics(observer productanalytics.Observer) {
+	if observer != nil {
+		service.analytics = observer
+	}
+}
+
+func (service *Service) productAnalytics() productanalytics.Observer {
+	if service.analytics == nil {
+		return productanalytics.Nop{}
+	}
+	return service.analytics
 }
 
 func (service *Service) owner(ctx context.Context) (string, error) {

@@ -218,7 +218,42 @@ func (service *Service) GetSettings(ctx context.Context, _ *workspacev1.GetSetti
 	if err != nil {
 		return nil, publicError(err)
 	}
+	service.recordDefaultExecutionReady(ctx, owner, item)
 	return settingsResponse(item), nil
+}
+
+func (service *Service) recordDefaultExecutionReady(ctx context.Context, owner string, settings workspacedomain.Settings) {
+	runtime := settings.DefaultRuntimeEngine
+	runtimeConfig, available := service.config.Worker.Runtimes[string(runtime)]
+	modelID := settings.RuntimeModelDefaults[runtime]
+	if !available || !runtimeConfig.Available || modelID == "" {
+		return
+	}
+	connections, err := service.workspace.Repository().ListModelProviderConnections(ctx)
+	if err != nil {
+		return
+	}
+	for _, connection := range connections {
+		if !connection.HasAPIKey {
+			continue
+		}
+		for _, model := range connection.Models {
+			if model.ID != modelID || !model.Available {
+				continue
+			}
+			compatibility := "unverified"
+			for _, candidate := range model.Compatibility {
+				if candidate.RuntimeEngine == runtime {
+					compatibility = candidate.Status
+					break
+				}
+			}
+			if compatibility != "incompatible" {
+				service.productAnalytics().DefaultExecutionReady(ctx, owner, false, string(runtime), compatibility)
+			}
+			return
+		}
+	}
 }
 
 func (service *Service) UpdateSettings(ctx context.Context, request *workspacev1.UpdateSettingsRequest) (*workspacev1.PersonalSettings, error) {

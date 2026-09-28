@@ -8,6 +8,7 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/productanalytics"
 
 	"github.com/go-kratos/kratos/v3/transport"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -47,6 +48,7 @@ func (service *Service) CreateWorkflow(ctx context.Context, request *workspacev1
 	if err != nil {
 		return nil, publicError(err)
 	}
+	service.productAnalytics().WorkflowCreated(ctx, productanalytics.WorkflowCreatedObservation{OwnerID: owner, WorkflowID: item.ID, Source: "manual", HasSchedule: input.Schedule != nil, HasConnector: false})
 	return workflowResponse(item), nil
 }
 
