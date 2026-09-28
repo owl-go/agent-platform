@@ -67,18 +67,15 @@ export interface ModelProviderPreset { provider_type: string; display_name: stri
 export interface MCPServer { id: string; platform?: boolean; managed_installation?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
 export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number }
-export interface SmartAssistant { id: string; name: string; icon: string; description?: string; introduction: string; scenario: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
-export interface SmartAssistantInput { name: string; icon?: string; description?: string; introduction?: string; scenario?: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; digital_human_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
+export interface SmartAssistant { id: string; name: string; icon: string; description?: string; introduction: string; scenario: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
+export interface SmartAssistantInput { name: string; icon?: string; description?: string; introduction?: string; scenario?: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface AssistantConversation { id: string; assistant_id: string; assistant_name: string; welcome: string; created_at: string; updated_at: string }
-export interface AssistantTurn { id: string; conversation_id: string; turn_number: number; question: string; answer: string; source: string; faq_id?: string; state: "generating" | "completed" | "failed" | "cancelled"; input_tokens: number; output_tokens: number; created_at: string; updated_at: string; completed_at?: string }
+export interface AssistantTurn { id: string; conversation_id: string; turn_number: number; question: string; answer: string; source: string; faq_id?: string; state: "generating" | "completed" | "failed" | "cancelled"; failure_code?: string; input_tokens: number; output_tokens: number; created_at: string; updated_at: string; completed_at?: string }
 export interface AssistantConversationDetail { conversation: AssistantConversation; turns: AssistantTurn[]; faqs: SmartAssistantFAQ[] }
-export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; message: string };
+export type AssistantStreamEvent = { type: "thinking"; turn_id: string; message: string } | { type: "delta"; turn_id: string; text: string } | { type: "done"; turn: AssistantTurn } | { type: "error"; code: string; message: string };
 export interface ApplicationKnowledgeBase { id: string; name: string; description: string; state: "ready" | "failed" | "disabled"; created_at: string; updated_at: string; version: number }
 export interface ApplicationKnowledgeDocument { id: string; knowledge_base_id: string; name: string; content?: string; content_sha256: string; state: "processing" | "ready" | "failed" | "disabled"; failure_reason?: string; created_at: string; updated_at: string; version: number }
-export interface DigitalHuman { id: string; name: string; avatar_object_key: string; voice: string; language: string; expression_style: string; scene_description: string; state: "enabled" | "disabled"; created_at: string; updated_at: string; version: number }
-export interface DigitalHumanInput { name: string; avatar_object_key?: string; voice?: string; language?: string; expression_style?: string; scene_description?: string; state?: DigitalHuman["state"] }
-export interface DigitalHumanPreview extends Omit<DigitalHuman, "created_at" | "updated_at" | "version"> { preview_text: string }
 export interface ResourceDeletionImpact { affected_experts: Array<{ id: string; name: string; version: number }>; confirmation_token: string }
 export interface CLICapability { id: string; argv_prefix: string[]; risk: "low" | "high"; identities: Array<"user" | "bot">; scopes: string[]; egress_hosts: string[]; timeout_seconds: number }
 export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: string }
@@ -256,14 +253,6 @@ export interface PlatformApi {
   createApplicationKnowledgeBase(input: { name: string; description?: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeBase>;
   listApplicationKnowledgeDocuments(baseID: string, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument[]>;
   createApplicationKnowledgeDocument(baseID: string, input: { name: string; content: string }, signal?: AbortSignal): Promise<ApplicationKnowledgeDocument>;
-  listDigitalHumans(signal?: AbortSignal): Promise<DigitalHuman[]>;
-  getDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
-  createDigitalHuman(input: DigitalHumanInput, signal?: AbortSignal): Promise<DigitalHuman>;
-  updateDigitalHuman(id: string, input: DigitalHumanInput, version: number, signal?: AbortSignal): Promise<DigitalHuman>;
-  copyDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHuman>;
-  setDigitalHumanState(id: string, state: DigitalHuman["state"], version: number, signal?: AbortSignal): Promise<DigitalHuman>;
-  previewDigitalHuman(id: string, signal?: AbortSignal): Promise<DigitalHumanPreview>;
-  deleteDigitalHuman(id: string, detach?: boolean, signal?: AbortSignal): Promise<void>;
   createGitSkill(input: { git_url: string; git_ref?: string; icon?: string }, signal?: AbortSignal): Promise<Skill>;
   createUploadSkill(input: { archive: string; icon?: string }, signal?: AbortSignal): Promise<Skill>;
   updateSkill(id: string, input: { git_ref?: string; archive?: string; icon?: string }, version: number, signal?: AbortSignal): Promise<Skill>;
@@ -637,7 +626,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         if (fields.event === "thinking") onEvent({ type: "thinking", turn_id: String(data.turn_id), message: String(data.message) });
         if (fields.event === "delta") onEvent({ type: "delta", turn_id: String(data.turn_id), text: String(data.text) });
         if (fields.event === "done") { completed = true; onEvent({ type: "done", turn: data as unknown as AssistantTurn }); }
-        if (fields.event === "error") onEvent({ type: "error", message: String(data.message) });
+        if (fields.event === "error") onEvent({ type: "error", code: String(data.code ?? "assistant_failed"), message: String(data.message) });
       };
       while (true) {
         const { value, done } = await reader.read();
@@ -660,14 +649,6 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createApplicationKnowledgeBase(input, signal) { return call("/api/v1/ai-apps/knowledge-bases", json("POST", input, signal)); },
     async listApplicationKnowledgeDocuments(baseID, signal) { return await call<ApplicationKnowledgeDocument[]>(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, { signal }); },
     createApplicationKnowledgeDocument(baseID, input, signal) { return call(`/api/v1/ai-apps/knowledge-bases/${encodeURIComponent(baseID)}/documents`, json("POST", input, signal)); },
-    async listDigitalHumans(signal) { return await call<DigitalHuman[]>("/api/v1/ai-apps/digital-humans", { signal }); },
-    getDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, { signal }); },
-    createDigitalHuman(input, signal) { return call("/api/v1/ai-apps/digital-humans", json("POST", input, signal)); },
-    updateDigitalHuman(id, input, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
-    copyDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
-    setDigitalHumanState(id, state, version, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },
-    previewDigitalHuman(id, signal) { return call(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}/preview`, { signal }); },
-    deleteDigitalHuman(id, detach = false, signal) { return remove(`/api/v1/ai-apps/digital-humans/${encodeURIComponent(id)}${detach ? "?detach=true" : ""}`, signal); },
     createGitSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "git", git_url: input.git_url, git_ref: input.git_ref || undefined, icon: input.icon }, signal)); },
     createUploadSkill(input, signal) { return call("/api/v1/skills", json("POST", { source: "upload", archive: input.archive, icon: input.icon }, signal)); },
     updateSkill(id, input, version, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}`, json("PATCH", { ...input, expected_version: version }, signal)); },

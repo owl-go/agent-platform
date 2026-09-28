@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -130,41 +129,40 @@ func TestWorkerStopsActiveExecutionAfterCancellationRequest(t *testing.T) {
 	}
 }
 
-func TestWorkerLeavesActiveExecutionForRecoveryWhenParentStops(t *testing.T) {
+func TestWorkerLeavesActiveExecutionForRecoveryOnShutdown(t *testing.T) {
 	repository := &cancellationRepository{finished: make(chan struct{})}
 	executor := &cancellationExecutor{started: make(chan struct{})}
 	worker, err := NewWorker(repository, executor)
 	if err != nil {
-		t.Fatalf("NewWorker: %v", err)
+		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
 	done := make(chan error, 1)
 	go func() {
 		_, processErr := worker.ProcessNext(ctx)
 		done <- processErr
 	}()
-
 	select {
 	case <-executor.started:
 	case <-time.After(time.Second):
 		t.Fatal("executor did not start")
 	}
-	cancel()
-
+	stop()
 	select {
-	case processErr := <-done:
-		if !errors.Is(processErr, context.Canceled) {
-			t.Fatalf("ProcessNext error = %v, want context cancellation", processErr)
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("ProcessNext: %v", err)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("worker did not stop after parent cancellation")
+		t.Fatal("worker did not stop")
 	}
 	if repository.failed.Load() {
-		t.Fatal("Worker shutdown persisted an ordinary execution failure")
+		t.Fatal("worker shutdown incorrectly marked the response failed")
 	}
 	select {
 	case <-repository.finished:
-		t.Fatal("Worker shutdown persisted a User-requested cancellation")
+		t.Fatal("worker shutdown incorrectly marked the response cancelled")
 	default:
 	}
 }

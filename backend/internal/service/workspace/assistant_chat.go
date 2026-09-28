@@ -42,6 +42,14 @@ func (service *Service) resolveAssistantModel(ctx context.Context, owner, modelI
 	return selectAssistantModel(connections, modelID)
 }
 
+func (service *Service) resolveAssistantTurnModel(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation) (aiappdomain.AssistantModel, error) {
+	modelID := conversation.ModelSnapshot.ProviderModelID
+	if modelID == "" {
+		modelID = conversation.AssistantSnapshot.ProviderModelID
+	}
+	return service.resolveAssistantModel(ctx, owner, modelID)
+}
+
 func selectAssistantModel(connections []workspacedomain.ModelProviderConnection, modelID string) (aiappdomain.AssistantModel, error) {
 	for _, connection := range connections {
 		for _, model := range connection.Models {
@@ -130,12 +138,16 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		faqChoices = append(faqChoices, map[string]string{"id": faq.ID, "question": faq.Question})
 	}
 	choices, _ := json.Marshal(faqChoices)
+	model, err := service.resolveAssistantTurnModel(ctx, owner, conversation)
+	if err != nil {
+		return result, err
+	}
 	preprocessInstruction := "判断用户的问题是否在此智能助手的服务范围，或是否等价于一条常见问题。只返回 JSON：{\"decision\":\"faq|out_of_scope|continue\",\"faq_id\":\"\",\"question\":\"整理后的问题\"}。faq_id 只能来自提供的列表；没有充分依据就选择 continue。不得把范围外问题判为 FAQ。"
 	if assistant.PreprocessPrompt != "" {
 		preprocessInstruction += "\n用户配置的预处理提示词：" + assistant.PreprocessPrompt
 	}
 	preprocess := []aiapp.ChatMessage{{Role: "system", Content: preprocessInstruction}, {Role: "user", Content: "助手简介：" + assistant.Description + "\n助手提示词：" + assistant.Prompt + "\n常见问题：" + string(choices) + "\n用户问题：" + turn.Question}}
-	classified, err := service.runAssistantModel(ctx, owner, turn.ID, 1, conversation.ModelSnapshot, preprocess, false, nil)
+	classified, err := service.runAssistantModel(ctx, owner, turn.ID, 1, model, preprocess, false, nil)
 	result.inputTokens += classified.InputTokens
 	result.outputTokens += classified.OutputTokens
 	if err != nil {
@@ -149,7 +161,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	classification := strings.TrimSpace(classified.Text)
 	classification = strings.TrimPrefix(strings.TrimSuffix(strings.TrimPrefix(classification, "```json"), "```"), "```")
 	if err := json.Unmarshal([]byte(strings.TrimSpace(classification)), &decision); err != nil {
-		return result, fmt.Errorf("Assistant preprocessing returned invalid classification: %w", err)
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned invalid classification", Cause: err}
 	}
 	switch decision.Decision {
 	case "faq":
@@ -159,13 +171,13 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 				return result, nil
 			}
 		}
-		return result, fmt.Errorf("Assistant preprocessing returned an unknown FAQ")
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown FAQ"}
 	case "out_of_scope":
 		result.text, result.source = assistantScopeRefusal, "scope"
 		return result, nil
 	case "continue":
 	default:
-		return result, fmt.Errorf("Assistant preprocessing returned an unknown decision")
+		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown decision"}
 	}
 	question := strings.TrimSpace(decision.Question)
 	if question == "" || len([]rune(question)) > 4000 {
@@ -183,7 +195,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if err != nil {
 		return result, err
 	}
-	contextMessages, summaryUsage, err := service.assistantHistory(ctx, owner, conversation, turn.ID, history)
+	contextMessages, summaryUsage, err := service.assistantHistory(ctx, owner, conversation, model, turn.ID, history)
 	result.inputTokens += summaryUsage.InputTokens
 	result.outputTokens += summaryUsage.OutputTokens
 	if err != nil {
@@ -195,7 +207,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	}
 	messages := append([]aiapp.ChatMessage{{Role: "system", Content: system}}, contextMessages...)
 	messages = append(messages, aiapp.ChatMessage{Role: "user", Content: question})
-	generated, generateErr := service.runAssistantModel(ctx, owner, turn.ID, 3, conversation.ModelSnapshot, messages, true, func(delta string) error {
+	generated, generateErr := service.runAssistantModel(ctx, owner, turn.ID, 3, model, messages, true, func(delta string) error {
 		result.text += delta
 		if err := service.aiapplications.SaveAssistantTurnProgress(ctx, owner, conversation.ID, turn.ID, result.text); err != nil {
 			return err
@@ -253,7 +265,7 @@ func (service *Service) retrieveAssistantKnowledge(ctx context.Context, owner st
 	return "\n" + strings.Join(excerpts, "\n"), true, nil
 }
 
-func (service *Service) assistantHistory(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turnID string, turns []aiappdomain.AssistantTurn) ([]aiapp.ChatMessage, aiapp.ChatResult, error) {
+func (service *Service) assistantHistory(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, model aiappdomain.AssistantModel, turnID string, turns []aiappdomain.AssistantTurn) ([]aiapp.ChatMessage, aiapp.ChatResult, error) {
 	completed := make([]aiappdomain.AssistantTurn, 0, 10)
 	for _, turn := range turns {
 		if turn.State == "completed" && turn.TurnNumber > conversation.SummaryThroughTurn {
@@ -275,7 +287,7 @@ func (service *Service) assistantHistory(ctx context.Context, owner string, conv
 		for _, turn := range older {
 			material += "\n用户：" + truncateRunes(turn.Question, 800) + "\n助手：" + truncateRunes(turn.Answer, 1200)
 		}
-		compressed, err := service.runAssistantModel(ctx, owner, turnID, 2, conversation.ModelSnapshot, []aiapp.ChatMessage{{Role: "system", Content: "把对话信息压缩为不超过1000字的事实摘要，保留用户偏好和未解决问题，不添加未出现的事实。"}, {Role: "user", Content: material}}, false, nil)
+		compressed, err := service.runAssistantModel(ctx, owner, turnID, 2, model, []aiapp.ChatMessage{{Role: "system", Content: "把对话信息压缩为不超过1000字的事实摘要，保留用户偏好和未解决问题，不添加未出现的事实。"}, {Role: "user", Content: material}}, false, nil)
 		usage = compressed
 		if err != nil {
 			return nil, usage, err
@@ -312,4 +324,14 @@ func assistantTurnState(err error) string {
 		return "cancelled"
 	}
 	return "failed"
+}
+
+func assistantTurnFailureCode(err error) string {
+	if err == nil || errors.Is(err, context.Canceled) {
+		return ""
+	}
+	if code := aiapp.ChatFailureCode(err); code != "" {
+		return code
+	}
+	return "assistant_failed"
 }

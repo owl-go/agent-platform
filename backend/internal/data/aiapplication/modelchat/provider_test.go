@@ -2,6 +2,7 @@ package modelchat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,10 @@ import (
 
 	"agent-platform/backend/internal/biz/aiapplication/application"
 )
+
+type codedAssistantModelError interface {
+	FailureCode() string
+}
 
 func TestAssistantModelStreamsProviderDeltasAndUsage(t *testing.T) {
 	tests := []struct {
@@ -76,5 +81,22 @@ func TestAssistantModelRejectsNonStreamingFallback(t *testing.T) {
 	_, err := New().Generate(context.Background(), application.ChatRequest{Endpoint: server.URL, Protocol: "openai_chat", ModelID: "test-model", APIKey: []byte("secret"), Messages: []application.ChatMessage{{Role: "user", Content: "hello"}}, Stream: true}, nil)
 	if err == nil || !strings.Contains(err.Error(), "streaming response") {
 		t.Fatalf("non-streaming fallback = %v", err)
+	}
+}
+
+func TestAssistantModelClassifiesRejectedCredentialWithoutExposingProviderBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusUnauthorized)
+		_, _ = fmt.Fprint(writer, `{"error":"Invalid API key","secret_detail":"do not expose"}`)
+	}))
+	defer server.Close()
+
+	_, err := New().Generate(context.Background(), application.ChatRequest{Endpoint: server.URL, Protocol: "openai_chat", ModelID: "test-model", APIKey: []byte("stale-secret"), Messages: []application.ChatMessage{{Role: "user", Content: "hello"}}}, nil)
+	var coded codedAssistantModelError
+	if !errors.As(err, &coded) || coded.FailureCode() != "model_authentication" {
+		t.Fatalf("credential rejection code = %T %v", err, err)
+	}
+	if strings.Contains(err.Error(), "secret_detail") {
+		t.Fatalf("provider response body leaked through error: %v", err)
 	}
 }

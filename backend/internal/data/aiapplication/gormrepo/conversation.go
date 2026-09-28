@@ -190,7 +190,7 @@ func (r *Repository) SaveAssistantTurnProgress(ctx context.Context, owner, conve
 	return nil
 }
 
-func (r *Repository) FinishAssistantTurn(ctx context.Context, owner, conversationID, turnID, state, source, faqID, answer string, inputTokens, outputTokens int64) (domain.AssistantTurn, error) {
+func (r *Repository) FinishAssistantTurn(ctx context.Context, owner, conversationID, turnID, state, source, faqID, answer, failureCode string, inputTokens, outputTokens int64) (domain.AssistantTurn, error) {
 	var result domain.AssistantTurn
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var conversation assistantConversationRecord
@@ -208,7 +208,7 @@ func (r *Repository) FinishAssistantTurn(ctx context.Context, owner, conversatio
 			state = "cancelled"
 		}
 		now := time.Now().UTC()
-		updates := map[string]any{"state": state, "source": source, "answer": answer, "input_tokens": inputTokens, "output_tokens": outputTokens, "updated_at": now, "completed_at": now}
+		updates := map[string]any{"state": state, "source": source, "answer": answer, "error": failureCode, "input_tokens": inputTokens, "output_tokens": outputTokens, "updated_at": now, "completed_at": now}
 		if faqID != "" {
 			updates["faq_id"] = faqID
 		}
@@ -218,7 +218,7 @@ func (r *Repository) FinishAssistantTurn(ctx context.Context, owner, conversatio
 		if err := tx.Model(&conversation).Update("updated_at", now).Error; err != nil {
 			return err
 		}
-		row.State, row.Source, row.Answer, row.InputTokens, row.OutputTokens, row.CompletedAt, row.UpdatedAt = state, source, answer, inputTokens, outputTokens, &now, now
+		row.State, row.Source, row.Answer, row.Error, row.InputTokens, row.OutputTokens, row.CompletedAt, row.UpdatedAt = state, source, answer, failureCode, inputTokens, outputTokens, &now, now
 		if faqID != "" {
 			row.FAQID = &faqID
 		}
