@@ -11,4 +11,17 @@ describe("conversation layout styles", () => {
       .filter((declarations) => declarations?.includes("justify-items"));
     expect(alignmentDeclarations.at(-1)).toMatch(/justify-items:\s*center/);
   });
+
+  it("keeps the Smart Assistant composer inside the viewport", () => {
+    const pageLayout = styles.match(
+      /\.ai-applications-page--conversation\s*\{([^}]*)\}/,
+    )?.[1];
+    const conversationLayout = styles.match(
+      /\.assistant-conversation-page\s*\{([^}]*)\}/,
+    )?.[1];
+
+    expect(pageLayout).toMatch(/height:\s*100dvh/);
+    expect(pageLayout).toMatch(/overflow:\s*hidden/);
+    expect(conversationLayout).toMatch(/height:\s*100%/);
+  });
 });

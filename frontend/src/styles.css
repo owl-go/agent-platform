@@ -327,6 +327,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 /* Element Plus is the UI contract; these overrides carry the Agent Workspace brand. */
 .image-generation-page { min-height: 100%; padding: clamp(20px,3vw,38px); background: var(--aw-n2); }
 .ai-applications-page { min-height: 100%; padding: clamp(20px,3vw,38px); background: var(--aw-n2); }
+.ai-applications-page--conversation { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
 .application-catalog-page { max-width: 1460px; min-height: 380px; margin: 0 auto; padding: 22px; border: 1px solid color-mix(in srgb, var(--aw-n7) 18%, transparent); border-radius: var(--aw-radius-overlay); background: color-mix(in srgb, var(--aw-n0) 70%, transparent); }.application-catalog-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }.application-catalog-toolbar h2 { margin: 0 0 5px; }.application-catalog-toolbar p { margin: 0; color: var(--muted); }
 .application-list-filters { display: flex; align-items: center; gap: 10px; margin: 18px 0; }.application-list-filters .assistant-search { width: min(320px, 100%); }.application-list-filters .el-select { width: min(190px, 100%); }.assistant-search-button { flex: 0 0 auto; }
 .image-generation-head { max-width:1460px; margin: 0 auto 20px; display:flex; align-items:end; justify-content:space-between; gap:20px; }.image-generation-head h1 { margin:3px 0 5px; font-family:"Iowan Old Style","Palatino Linotype",serif; font-size:clamp(1.8rem,3vw,2.7rem); }.image-generation-head p:last-child { color:var(--muted); }
@@ -748,7 +749,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-card-action-menu svg { margin-right: 8px; }
 .assistant-card-delete-action { color: var(--aw-danger); }
 .assistant-card-delete-action { color: var(--el-color-danger); }
-.assistant-conversation-page { display: flex; flex-direction: column; width: min(100%, 1040px); height: 100vh; min-height: 0; margin: 0 auto; overflow: hidden; }
+.assistant-conversation-page { display: flex; flex-direction: column; width: min(100%, 1040px); height: 100%; min-height: 0; margin: 0 auto; overflow: hidden; }
 .assistant-conversation-header { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; padding: 12px 0 20px; border-bottom: 1px solid var(--line); }
 .assistant-conversation-header h2 { flex: 1; margin: 0; font-size: 1.35rem; }
 .assistant-conversation-actions { display: flex; align-items: center; gap: 8px; }
@@ -779,7 +780,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-conversation-composer .el-textarea__inner, .assistant-conversation-composer .el-textarea__inner:hover, .assistant-conversation-composer .el-textarea__inner:focus { padding: 8px 9px; border: 0; border-radius: 0; background: transparent; box-shadow: none; resize: none; }
 .assistant-conversation-composer-actions { display: flex; justify-content: flex-end; padding-top: 3px; }
 .assistant-conversation-send { min-width: 82px; border-radius: 10px; }
-@media (max-width: 1023px) { .assistant-conversation-page { height: calc(100vh - 56px); } }
+@media (max-width: 1023px) { .ai-applications-page--conversation { height: calc(100vh - 56px); height: calc(100dvh - 56px); } }
 @media (max-width: 700px) { .assistant-conversation-header { flex-wrap: wrap; } .assistant-conversation-header h2 { order: -1; width: 100%; flex: auto; } .assistant-conversation-actions { margin-left: auto; } .assistant-conversation-history { width: 140px; } .assistant-conversation-composer { padding-bottom: 10px; } }
 .application-card h3 { margin: 0 0 8px; }
 .application-card p { margin: 0 0 14px; color: var(--muted); }
