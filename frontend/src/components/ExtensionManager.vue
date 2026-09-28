@@ -195,6 +195,10 @@ async function setupPublishedConnector(item: ConnectorInstallation, publication?
   connectorFlowWindows.set(item.id, popup);
   connectorBusy.value = [...connectorBusy.value, item.source];
   try {
+    if (item.authentication_driver === "dingtalk") {
+      await beginPublishedConnectorAuthorization(item, publication, popup);
+      return;
+    }
     const setup = await api.beginConnectorSetup(item.id);
     connectorSetups.value = { ...connectorSetups.value, [item.id]: setup };
     if (setup.state === "waiting_for_user" && setup.action_url) popup?.location.replace(setup.action_url);
@@ -594,14 +598,14 @@ async function fileToBase64(file: File): Promise<string> {
             <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
             <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
-            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.authorizationPending') }}</small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.authorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.authorizeNow') }}</a></small>
             <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions">
               <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
             </div>
           </div>
           <div class="extension-card-actions">
             <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
-            <el-button v-else-if="entry.installation && entry.installation.authentication_driver === 'feishu' && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
+            <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
             <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
             <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
             <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
