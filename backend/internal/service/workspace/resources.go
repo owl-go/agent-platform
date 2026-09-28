@@ -219,7 +219,9 @@ func (service *Service) GetSettings(ctx context.Context, _ *workspacev1.GetSetti
 		return nil, publicError(err)
 	}
 	service.recordDefaultExecutionReady(ctx, owner, item)
-	return settingsResponse(item), nil
+	response := settingsResponse(item)
+	response.PlatformExecutionAvailable = service.platformExecutionDefaultAvailable(ctx)
+	return response, nil
 }
 
 func (service *Service) recordDefaultExecutionReady(ctx context.Context, owner string, settings workspacedomain.Settings) {
@@ -249,7 +251,7 @@ func (service *Service) recordDefaultExecutionReady(ctx context.Context, owner s
 				}
 			}
 			if compatibility != "incompatible" {
-				service.productAnalytics().DefaultExecutionReady(ctx, owner, false, string(runtime), compatibility)
+				service.productAnalytics().DefaultExecutionReady(ctx, owner, settings.ExecutionInherited, string(runtime), compatibility)
 			}
 			return
 		}
@@ -260,6 +262,10 @@ func (service *Service) UpdateSettings(ctx context.Context, request *workspacev1
 	owner, err := service.owner(ctx)
 	if err != nil {
 		return nil, err
+	}
+	existing, err := service.workspace.Repository().GetSettings(ctx, owner)
+	if err != nil {
+		return nil, publicError(err)
 	}
 	runtime, err := workspacedomain.ParseRuntime(request.DefaultRuntimeEngine)
 	if err != nil {
@@ -276,12 +282,66 @@ func (service *Service) UpdateSettings(ctx context.Context, request *workspacev1
 		}
 		defaults[parsed] = item.ProviderModelId
 	}
-	settings := workspacedomain.Settings{Personality: request.Personality, PersonalityInstructions: request.PersonalityInstructions, RuntimeModelDefaults: defaults, DefaultRuntimeEngine: runtime, Language: request.Language, Timezone: request.Timezone}
+	inherited := existing.ExecutionInherited
+	if request.InheritPlatformExecution != nil {
+		inherited = *request.InheritPlatformExecution
+	}
+	settings := workspacedomain.Settings{Personality: request.Personality, PersonalityInstructions: request.PersonalityInstructions, RuntimeModelDefaults: defaults, DefaultRuntimeEngine: runtime, Language: request.Language, Timezone: request.Timezone, ExecutionInherited: inherited}
 	item, err := service.workspace.Repository().UpdateSettings(ctx, owner, settings, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return settingsResponse(item), nil
+	response := settingsResponse(item)
+	response.PlatformExecutionAvailable = service.platformExecutionDefaultAvailable(ctx)
+	return response, nil
+}
+
+func (service *Service) GetPlatformExecutionDefault(ctx context.Context, _ *workspacev1.GetPlatformExecutionDefaultRequest) (*workspacev1.PlatformExecutionDefault, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	repository, ok := service.workspace.Repository().(workspaceapplication.PlatformExecutionDefaultRepository)
+	if !ok {
+		return nil, publicError(fmt.Errorf("%w: platform execution default is unavailable", workspacedomain.ErrNotFound))
+	}
+	item, err := repository.GetPlatformExecutionDefault(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return platformExecutionDefaultResponse(item), nil
+}
+
+func (service *Service) SetPlatformExecutionDefault(ctx context.Context, request *workspacev1.SetPlatformExecutionDefaultRequest) (*workspacev1.PlatformExecutionDefault, error) {
+	administrator, err := service.administrator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	runtime, err := workspacedomain.ParseRuntime(request.RuntimeEngine)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	runtimeConfig, available := service.config.Worker.Runtimes[string(runtime)]
+	if !available || !runtimeConfig.Available {
+		return nil, publicError(fmt.Errorf("%w: Runtime Engine is unavailable", workspacedomain.ErrInvalid))
+	}
+	repository, ok := service.workspace.Repository().(workspaceapplication.PlatformExecutionDefaultRepository)
+	if !ok {
+		return nil, publicError(fmt.Errorf("%w: platform execution default persistence is unavailable", workspacedomain.ErrInvalid))
+	}
+	item, err := repository.SetPlatformExecutionDefault(ctx, administrator.UserID, runtime, request.ProviderModelId, request.ValidationRunId, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return platformExecutionDefaultResponse(item), nil
+}
+
+func (service *Service) platformExecutionDefaultAvailable(ctx context.Context) bool {
+	repository, ok := service.workspace.Repository().(workspaceapplication.PlatformExecutionDefaultRepository)
+	if !ok {
+		return false
+	}
+	_, err := repository.GetPlatformExecutionDefault(ctx)
+	return err == nil
 }
 
 func (service *Service) ListRuntimeEngines(ctx context.Context, _ *workspacev1.ListRuntimeEnginesRequest) (*workspacev1.ListRuntimeEnginesResponse, error) {
@@ -839,13 +899,17 @@ func (service *Service) expertAvailability(ctx context.Context, experts []worksp
 }
 
 func settingsResponse(item workspacedomain.Settings) *workspacev1.PersonalSettings {
-	response := &workspacev1.PersonalSettings{Personality: item.Personality, PersonalityInstructions: item.PersonalityInstructions, DefaultRuntimeEngine: string(item.DefaultRuntimeEngine), Language: item.Language, Timezone: item.Timezone, Version: item.Version}
+	response := &workspacev1.PersonalSettings{Personality: item.Personality, PersonalityInstructions: item.PersonalityInstructions, DefaultRuntimeEngine: string(item.DefaultRuntimeEngine), Language: item.Language, Timezone: item.Timezone, Version: item.Version, ExecutionInherited: item.ExecutionInherited}
 	for _, runtime := range []workspacedomain.RuntimeEngine{workspacedomain.RuntimeClaude, workspacedomain.RuntimeCodex, workspacedomain.RuntimeHermes, workspacedomain.RuntimeOpenClaw, workspacedomain.RuntimePI} {
 		if modelID := item.RuntimeModelDefaults[runtime]; modelID != "" {
 			response.RuntimeModelDefaults = append(response.RuntimeModelDefaults, &workspacev1.RuntimeModelDefault{RuntimeEngine: string(runtime), ProviderModelId: modelID})
 		}
 	}
 	return response
+}
+
+func platformExecutionDefaultResponse(item workspacedomain.PlatformExecutionDefault) *workspacev1.PlatformExecutionDefault {
+	return &workspacev1.PlatformExecutionDefault{RuntimeEngine: string(item.RuntimeEngine), ProviderModelId: item.ProviderModelID, ValidationRunId: item.ValidationRunID, UpdatedByUserId: item.UpdatedBy, Version: item.Version, UpdatedAt: timestamppb.New(item.UpdatedAt)}
 }
 
 func modelProviderConnectionResponse(item workspacedomain.ModelProviderConnection) *workspacev1.ModelProviderConnection {

@@ -260,6 +260,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/platform-execution-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetPlatformExecutionDefault"];
+        put: operations["AgentWorkspaceService_SetPlatformExecutionDefault"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/redemption-code-batches": {
         parameters: {
             query?: never;
@@ -3150,6 +3166,18 @@ export interface components {
             timezone?: string;
             /** Format: int64 */
             version?: number;
+            execution_inherited?: boolean;
+            platform_execution_available?: boolean;
+        };
+        v1PlatformExecutionDefault: {
+            runtime_engine?: string;
+            provider_model_id?: string;
+            validation_run_id?: string;
+            updated_by_user_id?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
         };
         v1PromptOptimizationCandidate: {
             provider_model_id?: string;
@@ -3419,6 +3447,13 @@ export interface components {
             id?: string;
             name?: string;
         };
+        v1SetPlatformExecutionDefaultRequest: {
+            runtime_engine?: string;
+            provider_model_id?: string;
+            validation_run_id?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
         v1Skill: {
             id?: string;
             name?: string;
@@ -3474,6 +3509,7 @@ export interface components {
             timezone?: string;
             /** Format: int64 */
             expected_version?: number;
+            inherit_platform_execution?: boolean;
         };
         v1UploadConnectorPackageRequest: {
             /** Format: byte */
@@ -4233,6 +4269,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ModelCreditRate"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetPlatformExecutionDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PlatformExecutionDefault"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetPlatformExecutionDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1SetPlatformExecutionDefaultRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PlatformExecutionDefault"];
                 };
             };
             /** @description An unexpected error response. */

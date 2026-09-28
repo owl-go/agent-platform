@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type PlatformExecutionDefault, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -29,6 +29,9 @@ const manualModel = ref({ model_id: "" });
 const pendingConnectionDelete = ref<ModelProviderConnection>();
 const personalities: Personality[] = ["gentle_professional", "direct_efficient", "lively_friendly", "custom"];
 const customPersonalityInstructions = ref("");
+const platformDefault = ref<PlatformExecutionDefault>();
+const platformDefaultForm = ref<{ runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string }>({ runtime_engine: "codex", provider_model_id: "", validation_run_id: "" });
+const savingPlatformDefault = ref(false);
 onMounted(() => { void refresh(); });
 function clearFeedback() { error.value = ""; notice.value = ""; }
 function showError(kind: "generic" | "validation" | "conflict" = "generic") { error.value = t(`errors.${kind}`); }
@@ -45,6 +48,12 @@ async function refresh() {
     connections.value = nextConnections;
     presets.value = nextPresets;
     if (settings.value.personality === "custom") customPersonalityInstructions.value = settings.value.personality_instructions;
+    if (canManageModels.value) {
+      try {
+        platformDefault.value = await api.getPlatformExecutionDefault();
+        platformDefaultForm.value = { runtime_engine: platformDefault.value.runtime_engine, provider_model_id: platformDefault.value.provider_model_id, validation_run_id: platformDefault.value.validation_run_id };
+      } catch { platformDefault.value = undefined; }
+    }
   } catch { showError(); }
 }
 async function saveSettings() {
@@ -95,6 +104,18 @@ async function saveManualModel() { if (!manualConnection.value) return; try { aw
 function runtimeDefault(runtime: RuntimeEngine) { return settings.value?.runtime_model_defaults.find((item) => item.runtime_engine === runtime)?.provider_model_id ?? ""; }
 function setRuntimeDefault(runtime: RuntimeEngine, modelID: string) { if (!settings.value) return; settings.value.runtime_model_defaults = settings.value.runtime_model_defaults.filter((item) => item.runtime_engine !== runtime); if (modelID) settings.value.runtime_model_defaults.push({ runtime_engine: runtime, provider_model_id: modelID }); }
 function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setRuntimeDefault(runtime, (event.target as HTMLSelectElement).value); }
+function platformDefaultModels(runtime: RuntimeEngine) { return selectableModels.value.filter((item) => item.connection.verification_status === "verified" && item.compatibility.some((entry) => entry.runtime_engine === runtime && entry.status !== "incompatible")); }
+function setPlatformRuntime(runtime: RuntimeEngine) { platformDefaultForm.value.runtime_engine = runtime; if (!platformDefaultModels(runtime).some((item) => item.id === platformDefaultForm.value.provider_model_id)) platformDefaultForm.value.provider_model_id = ""; }
+async function savePlatformDefault() {
+  if (savingPlatformDefault.value) return;
+  savingPlatformDefault.value = true; clearFeedback();
+  try {
+    platformDefault.value = await api.setPlatformExecutionDefault({ ...platformDefaultForm.value, expected_version: platformDefault.value?.version ?? 0 });
+    await refresh();
+    notice.value = t("settings.platformDefaultSaved");
+  } catch { showError("validation"); }
+  finally { savingPlatformDefault.value = false; }
+}
 function selectPersonality(personality: Personality) {
   if (!settings.value || settings.value.personality === personality) return;
   if (settings.value.personality === "custom") customPersonalityInstructions.value = settings.value.personality_instructions;
@@ -121,12 +142,14 @@ function selectPersonality(personality: Personality) {
           <div class="personality-grid"><label v-for="item in personalities" :key="item" :class="{ selected: settings.personality === item }"><input type="radio" :value="item" :checked="settings.personality === item" @change="selectPersonality(item)"><span>{{ item === 'gentle_professional' ? '◡' : item === 'direct_efficient' ? '→' : item === 'lively_friendly' ? '✦' : '⌁' }}</span><strong>{{ t(`settings.${item === 'gentle_professional' ? 'gentle' : item === 'direct_efficient' ? 'direct' : item === 'lively_friendly' ? 'lively' : 'custom'}`) }}</strong></label></div>
           <label class="block-label">{{ t("settings.instructions") }}<textarea v-model="settings.personality_instructions" rows="6" :required="settings.personality === 'custom'"></textarea></label>
           <div class="form-grid">
-            <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
+            <label class="full check-row enterprise-default-toggle"><input v-model="settings.execution_inherited" type="checkbox" :disabled="!settings.platform_execution_available && !settings.execution_inherited"><span><strong>{{ t("settings.usePlatformDefault") }}</strong><small>{{ settings.platform_execution_available ? t("settings.platformDefaultHint") : t("settings.platformDefaultUnavailable") }}</small></span></label>
+            <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine" :disabled="settings.execution_inherited"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
             <label>{{ t("settings.language") }}<select v-model="settings.language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label><label>{{ t("settings.timezone") }}<input v-model="settings.timezone"></label>
-            <fieldset class="full runtime-defaults"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
+            <fieldset class="full runtime-defaults" :disabled="settings.execution_inherited"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
           </div>
         </form>
         <div v-if="section === 'models' && canManageModels">
+          <form class="platform-default-card" @submit.prevent="savePlatformDefault"><div><h2>{{ t('settings.platformDefault') }}</h2><p>{{ t('settings.platformDefaultAdminHint') }}</p></div><div class="form-grid"><label>{{ t('settings.runtime') }}<select :value="platformDefaultForm.runtime_engine" @change="setPlatformRuntime(($event.target as HTMLSelectElement).value as RuntimeEngine)"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }}</option></select></label><label>{{ t('modelField') }}<select v-model="platformDefaultForm.provider_model_id" required><option value="">—</option><option v-for="item in platformDefaultModels(platformDefaultForm.runtime_engine)" :key="item.id" :value="item.id">{{ item.connection.name }} / {{ item.display_name }} · {{ t(`settings.${item.compatibility.find((entry) => entry.runtime_engine === platformDefaultForm.runtime_engine)?.status ?? 'unverified'}`) }}</option></select></label><label class="full">{{ t('settings.validationRun') }}<input v-model.trim="platformDefaultForm.validation_run_id" required placeholder="Run ID"><small>{{ t('settings.validationRunHint') }}</small></label></div><el-button native-type="submit" type="primary" :loading="savingPlatformDefault" :disabled="!platformDefaultForm.provider_model_id || !platformDefaultForm.validation_run_id">{{ t('settings.setPlatformDefault') }}</el-button></form>
           <div class="section-heading"><div><h2>{{ t("settings.providers") }}</h2></div><el-button type="primary" @click="openNewConnection">＋ {{ t("settings.addProvider") }}</el-button></div>
           <div class="provider-grid"><article v-for="item in connections" :key="item.id" class="provider-card el-card"><header><span class="resource-mark">{{ item.name.slice(0, 2).toUpperCase() }}</span><div><strong>{{ item.name }}</strong><p>{{ presets.find((preset) => preset.provider_type === item.provider_type)?.display_name ?? item.provider_type }}</p></div><el-tag :type="item.verification_status === 'verified' ? 'success' : 'warning'" size="small">{{ t(`settings.${item.verification_status}`) }}</el-tag></header><p class="provider-endpoint">{{ item.endpoint }}</p><el-alert v-if="item.last_sync_error || item.verification_error" type="error" :closable="false" :title="item.last_sync_error || item.verification_error" /><div class="provider-model-summary"><strong>{{ item.models.filter((model) => model.available).length }}</strong><span>{{ t("settings.importedModels") }}</span><small v-if="item.last_synced_at">{{ new Date(item.last_synced_at).toLocaleString() }}</small></div><div class="provider-actions"><el-button class="button" @click="refreshModels(item)">↻ {{ t("settings.refreshModels") }}</el-button><el-button class="button" @click="openManualModel(item)">＋ {{ t("settings.manualModel") }}</el-button><el-button circle :aria-label="t('common.edit')" @click="openConnection(item)">✎</el-button><el-button circle type="danger" plain :aria-label="t('common.delete')" @click="pendingConnectionDelete = item">×</el-button></div><el-collapse><el-collapse-item :title="t('settings.modelCatalog')"><div class="catalog-list"><span v-for="model in item.models" :key="model.id" :class="{ unavailable: !model.available }"><strong>{{ model.display_name }}</strong><small>{{ model.model_id }}</small></span></div></el-collapse-item></el-collapse></article><el-empty v-if="!connections.length" :description="t('common.empty')" /></div>
         </div>

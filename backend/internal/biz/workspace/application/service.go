@@ -111,6 +111,13 @@ type SessionWorkflowRepository interface {
 	ListSessionWorkflowLinks(context.Context, string, string) ([]domain.SessionWorkflowLink, error)
 }
 
+// PlatformExecutionDefaultRepository keeps the enterprise-wide verified
+// Runtime/Model choice separate from User-owned Personal Settings.
+type PlatformExecutionDefaultRepository interface {
+	GetPlatformExecutionDefault(context.Context) (domain.PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(context.Context, string, domain.RuntimeEngine, string, string, int64) (domain.PlatformExecutionDefault, error)
+}
+
 type ModelCatalog interface {
 	Discover(context.Context, domain.ModelProviderConnection, string) (ModelCatalogResult, error)
 }

@@ -24,7 +24,7 @@
 | EP-05 | 自适应任务面板 | 宽屏集中查看计划、依据、文件和结果；无内容时保持单列 | EP-02/03/04 的统一 View Model | 1280/1440/1920/390px 浏览器测试，无水平页面滚动 | 已完成代码与本地组件/页面门禁；浏览器布局验收见 EP-05.3，真实部署待验证 |
 | EP-06 | Session 保存为 Workflow | 成功对话一键形成可再次运行的 Workflow | Workflow 创建预填 contract、来源关联 | 创建后验证 Run；失败不产生半成品；来源互链 | 已完成代码、本地门禁与临时 PostgreSQL Integration；真实部署闭环待验证 |
 | EP-07 | Workflow 最小创建与概览 | 用户先用名称和目标验证，再配置 Schedule/API/Git | EP-06、现有 Workflow API | 首次创建不展示全部高级字段；验证 Run 成功后解锁建议 | 已完成代码与本地门禁 |
-| EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 待 EP-00 |
+| EP-08 | 企业默认黄金组合 | 新用户登录后无需理解 Runtime/Provider 即可开始 | 管理员 verified default、Personal Settings 继承 | 默认组合真实测试证据；不可用时明确阻断，不静默回退 | 已完成代码、本地门禁与 PostgreSQL Integration；生产 Provider 证据待验证 |
 | EP-09 | 首页与统一待办 | 最近任务、常用 Workflow、审批与恢复入口集中呈现 | EP-00、Approval、授权和失败聚合 API | 待办完成后返回原任务；不读取用户内容 | 待 EP-06/08 |
 | EP-10 | 企业额度治理 | 用户看到预计与实际消耗，管理员分配额度和预算 | Credits 现有账本、预算策略 | 企业部署隐藏 Redemption Code 主入口；Adjustment 不可变 | 待 EP-00 |
 | EP-11 | 资源库收敛 | Expert、Skill、Connector、Knowledge Base 按任务发现 | 现有 catalog API | 所有资源显示来源、可用性和权限；未验证资源不推荐 | 待核心闭环 |
@@ -157,6 +157,13 @@ Evidence 与 Assistant Message 或 Run terminal state 一起持久化；Secret�
 - 创建成功后立即使用现有手动 Run API 生成强制 Plan 的验证 Run，并直接打开该 Plan；若 Run 启动失败，保留已创建 Workflow、直接进入其运行记录并给出可恢复提示，避免用户重试后重复创建。
 - 只有至少一个 Run 成功后，详情页才展示 Schedule、API Credential 和 Git Source 的后续配置建议；完整设置仍留在 Settings。
 - Vitest 覆盖最小提交、自动验证 Run、直接打开 Plan，以及成功前后建议的显隐。该批次不声称真实 Provider 验证成功。
+
+### EP-08 企业默认黄金组合
+
+- 新增唯一 Platform Execution Default。管理员只能从可用 Runtime、已验证 Provider Connection、非 incompatible 的 Provider Model，以及所有执行阶段均精确匹配该组合的成功 Run 建立默认；保留 Run ID 作为审计证据，并在同一事务把 unverified 组合晋升为 verified，incompatible 组合不能晋升。
+- Personal Settings 默认继承企业组合。更新企业默认时原子同步所有仍在继承的账号，新账号通过数据库触发器继承；用户保存个性、语言和时区不会隐式退出继承，也可显式切换为个人执行设置。
+- 未配置企业默认或组合不可用时沿用现有 setup blocking，绝不从目录中静默挑选另一个 Runtime 或模型。管理员界面允许用成功 Run 验证 unverified 组合，但不展示 incompatible 组合。
+- `make test`、`make build`、前端目标测试、typecheck、build 和临时 PostgreSQL 17 的完整 migration/integration 是本地证据。它们不等于真实 Provider 或生产镜像执行证据；生产设默认前仍必须先获得真实成功 Run。
 
 ## 8. 发布与回滚
 

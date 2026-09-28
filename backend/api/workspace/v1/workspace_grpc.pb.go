@@ -110,6 +110,8 @@ const (
 	AgentWorkspaceService_DeleteExpertTeam_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 	AgentWorkspaceService_GetSettings_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetSettings"
 	AgentWorkspaceService_UpdateSettings_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
+	AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetPlatformExecutionDefault"
+	AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName               = "/workspace.v1.AgentWorkspaceService/SetPlatformExecutionDefault"
 	AgentWorkspaceService_ListRuntimeEngines_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
 	AgentWorkspaceService_ListModelProviderPresets_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
 	AgentWorkspaceService_ListModelProviderConnections_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
@@ -266,6 +268,8 @@ type AgentWorkspaceServiceClient interface {
 	DeleteExpertTeam(ctx context.Context, in *DeleteExpertTeamRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
 	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
+	GetPlatformExecutionDefault(ctx context.Context, in *GetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(ctx context.Context, in *SetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error)
 	ListRuntimeEngines(ctx context.Context, in *ListRuntimeEnginesRequest, opts ...grpc.CallOption) (*ListRuntimeEnginesResponse, error)
 	ListModelProviderPresets(ctx context.Context, in *ListModelProviderPresetsRequest, opts ...grpc.CallOption) (*ListModelProviderPresetsResponse, error)
 	ListModelProviderConnections(ctx context.Context, in *ListModelProviderConnectionsRequest, opts ...grpc.CallOption) (*ListModelProviderConnectionsResponse, error)
@@ -1245,6 +1249,26 @@ func (c *agentWorkspaceServiceClient) UpdateSettings(ctx context.Context, in *Up
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) GetPlatformExecutionDefault(ctx context.Context, in *GetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformExecutionDefault)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SetPlatformExecutionDefault(ctx context.Context, in *SetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformExecutionDefault)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ListRuntimeEngines(ctx context.Context, in *ListRuntimeEnginesRequest, opts ...grpc.CallOption) (*ListRuntimeEnginesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListRuntimeEnginesResponse)
@@ -1930,6 +1954,8 @@ type AgentWorkspaceServiceServer interface {
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
+	GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(context.Context, *SetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
@@ -2271,6 +2297,12 @@ func (UnimplementedAgentWorkspaceServiceServer) GetSettings(context.Context, *Ge
 }
 func (UnimplementedAgentWorkspaceServiceServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPlatformExecutionDefault not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SetPlatformExecutionDefault(context.Context, *SetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetPlatformExecutionDefault not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRuntimeEngines not implemented")
@@ -4108,6 +4140,42 @@ func _AgentWorkspaceService_UpdateSettings_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_GetPlatformExecutionDefault_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlatformExecutionDefaultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetPlatformExecutionDefault(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetPlatformExecutionDefault(ctx, req.(*GetPlatformExecutionDefaultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SetPlatformExecutionDefault_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPlatformExecutionDefaultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetPlatformExecutionDefault(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetPlatformExecutionDefault(ctx, req.(*SetPlatformExecutionDefaultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ListRuntimeEngines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRuntimeEnginesRequest)
 	if err := dec(in); err != nil {
@@ -5540,6 +5608,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _AgentWorkspaceService_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "GetPlatformExecutionDefault",
+			Handler:    _AgentWorkspaceService_GetPlatformExecutionDefault_Handler,
+		},
+		{
+			MethodName: "SetPlatformExecutionDefault",
+			Handler:    _AgentWorkspaceService_SetPlatformExecutionDefault_Handler,
 		},
 		{
 			MethodName: "ListRuntimeEngines",

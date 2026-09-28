@@ -62,6 +62,31 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
+  it("offers testable pairs and excludes incompatible models from the enterprise default", async () => {
+    const verifiedConnection: ModelProviderConnection = { ...connection, verification_status: "verified", models: [
+      { id: "model-verified", connection_id: connection.id, model_id: "verified", display_name: "Verified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
+      { id: "model-unverified", connection_id: connection.id, model_id: "unverified", display_name: "Unverified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] },
+      { id: "model-incompatible", connection_id: connection.id, model_id: "incompatible", display_name: "Incompatible", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "incompatible" }] },
+    ] };
+    const saved = { runtime_engine: "codex" as const, provider_model_id: "model-verified", validation_run_id: "run-success", updated_by_user_id: "user-1", version: 1, updated_at: "2026-09-28T00:00:00Z" };
+    const api = apiStub();
+    api.listModelProviderConnections = vi.fn(async () => [verifiedConnection]);
+    api.getPlatformExecutionDefault = vi.fn(async () => saved);
+    api.setPlatformExecutionDefault = vi.fn(async () => saved);
+    const wrapper = mount(SettingsPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) } } });
+    await flushPromises();
+    await wrapper.findAll(".settings-nav button")[1]!.trigger("click");
+    const card = wrapper.get(".platform-default-card");
+    expect(card.find('option[value="model-verified"]').exists()).toBe(true);
+    expect(card.find('option[value="model-unverified"]').exists()).toBe(true);
+    expect(card.find('option[value="model-incompatible"]').exists()).toBe(false);
+    await card.find('input[placeholder="Run ID"]').setValue("run-success");
+    await card.trigger("submit");
+    await flushPromises();
+    expect(api.setPlatformExecutionDefault).toHaveBeenCalledWith({ runtime_engine: "codex", provider_model_id: "model-verified", validation_run_id: "run-success", expected_version: 1 });
+    wrapper.unmount();
+  });
+
   it("updates the personality instructions when a preset is selected", async () => {
     const api = apiStub();
     api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({
@@ -210,7 +235,7 @@ describe("SettingsPage model provider feedback", () => {
     });
     await flushPromises();
 
-    expect(wrapper.get(".form-grid > label").text()).toContain("运行引擎");
+    expect(wrapper.get(".form-grid > label:not(.enterprise-default-toggle)").text()).toContain("运行引擎");
     expect(wrapper.get(".runtime-defaults legend").text()).toBe("各运行引擎默认模型");
     expect(wrapper.find('option[value="openclaw"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("OpenClaw");

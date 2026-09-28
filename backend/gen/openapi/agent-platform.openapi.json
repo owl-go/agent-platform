@@ -881,6 +881,74 @@
         ]
       }
     },
+    "/api/v1/admin/platform-execution-default": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetPlatformExecutionDefault",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1PlatformExecutionDefault"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "put": {
+        "operationId": "AgentWorkspaceService_SetPlatformExecutionDefault",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1PlatformExecutionDefault"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1SetPlatformExecutionDefaultRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/redemption-code-batches": {
       "post": {
         "operationId": "AgentWorkspaceService_CreateRedemptionCodeBatch",
@@ -10409,6 +10477,37 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "execution_inherited": {
+            "type": "boolean"
+          },
+          "platform_execution_available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "v1PlatformExecutionDefault": {
+        "type": "object",
+        "properties": {
+          "runtime_engine": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "validation_run_id": {
+            "type": "string"
+          },
+          "updated_by_user_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -11189,6 +11288,24 @@
           }
         }
       },
+      "v1SetPlatformExecutionDefaultRequest": {
+        "type": "object",
+        "properties": {
+          "runtime_engine": {
+            "type": "string"
+          },
+          "provider_model_id": {
+            "type": "string"
+          },
+          "validation_run_id": {
+            "type": "string"
+          },
+          "expected_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "v1Skill": {
         "type": "object",
         "properties": {
@@ -11342,6 +11459,9 @@
           "expected_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "inherit_platform_execution": {
+            "type": "boolean"
           }
         }
       },

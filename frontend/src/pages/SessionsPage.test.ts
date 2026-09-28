@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -72,6 +72,17 @@ describe("SessionsPage conversation layout", () => {
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
+  });
+
+  it("blocks a new task when an inherited execution pair is no longer verified", async () => {
+    const api = apiStub([]);
+    api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1, execution_inherited: true, platform_execution_available: true }));
+    api.listModelProviderConnections = vi.fn(async (): Promise<ModelProviderConnection[]> => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]);
+    api.getAttachmentDownload = vi.fn(async () => new Blob());
+    const wrapper = await mountPageWithAPI(api);
+    expect(wrapper.text()).toContain("开始前完成 3 个步骤");
+    expect(wrapper.get(".setup-guide").text()).toContain("模型供应商");
+    wrapper.unmount();
   });
 
   it("keeps user and Agent messages in distinct role rows", async () => {

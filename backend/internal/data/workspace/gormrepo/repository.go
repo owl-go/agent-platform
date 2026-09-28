@@ -474,9 +474,23 @@ type settingsRecord struct {
 	Language                string `gorm:"column:language"`
 	Timezone                string `gorm:"column:timezone"`
 	Version                 int64  `gorm:"column:version"`
+	ExecutionInherited      bool   `gorm:"column:execution_inherited"`
 }
 
 func (settingsRecord) TableName() string { return "personal_settings" }
+
+type platformExecutionDefaultRecord struct {
+	Singleton       bool      `gorm:"column:singleton"`
+	RuntimeEngine   string    `gorm:"column:runtime_engine"`
+	ProviderModelID string    `gorm:"column:provider_model_id"`
+	ValidationRunID string    `gorm:"column:validation_run_id"`
+	UpdatedByUserID string    `gorm:"column:updated_by_user_id"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at"`
+	Version         int64     `gorm:"column:version"`
+}
+
+func (platformExecutionDefaultRecord) TableName() string { return "platform_execution_defaults" }
 
 type modelProviderConnectionRecord struct {
 	ID                 string     `gorm:"column:id"`

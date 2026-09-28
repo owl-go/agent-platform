@@ -61,7 +61,18 @@ const showJumpToLatest = ref(false);
 const keepAtLatest = ref(true);
 const lastSessionActivityAt = ref(Date.now());
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
-const setupRequired = computed(() => messages.value.length > 0 ? false : selectableModels.value.length === 0 || !settings.value?.runtime_model_defaults.some((item) => item.runtime_engine === settings.value?.default_runtime_engine) || !runtimes.value.some((item) => item.name === settings.value?.default_runtime_engine && item.available));
+const setupRequired = computed(() => {
+  if (messages.value.length > 0) return false;
+  const current = settings.value;
+  if (!current || !runtimes.value.some((item) => item.name === current.default_runtime_engine && item.available)) return true;
+  const selected = current.runtime_model_defaults.find((item) => item.runtime_engine === current.default_runtime_engine);
+  if (!selected) return true;
+  const model = selectableModels.value.find((item) => item.id === selected.provider_model_id);
+  if (!model || !model.connection.api_key_configured) return true;
+  const compatibility = model.compatibility.find((item) => item.runtime_engine === current.default_runtime_engine)?.status;
+  if (current.execution_inherited) return model.connection.verification_status !== "verified" || compatibility !== "verified";
+  return compatibility === "incompatible" || !compatibility;
+});
 const filteredSessions = computed(() => {
   const query = sessionQuery.value.trim().toLocaleLowerCase();
   return query ? sessions.value.filter((item) => item.title.toLocaleLowerCase().includes(query)) : sessions.value;

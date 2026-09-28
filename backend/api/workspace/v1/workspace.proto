@@ -107,6 +107,8 @@ service AgentWorkspaceService {
 
   rpc GetSettings(GetSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {get: "/api/v1/settings"}; }
   rpc UpdateSettings(UpdateSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {patch: "/api/v1/settings" body: "*"}; }
+  rpc GetPlatformExecutionDefault(GetPlatformExecutionDefaultRequest) returns (PlatformExecutionDefault) { option (google.api.http) = {get: "/api/v1/admin/platform-execution-default"}; }
+  rpc SetPlatformExecutionDefault(SetPlatformExecutionDefaultRequest) returns (PlatformExecutionDefault) { option (google.api.http) = {put: "/api/v1/admin/platform-execution-default" body: "*"}; }
   rpc ListRuntimeEngines(ListRuntimeEnginesRequest) returns (ListRuntimeEnginesResponse) { option (google.api.http) = {get: "/api/v1/runtime-engines"}; }
   rpc ListModelProviderPresets(ListModelProviderPresetsRequest) returns (ListModelProviderPresetsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-presets"}; }
   rpc ListModelProviderConnections(ListModelProviderConnectionsRequest) returns (ListModelProviderConnectionsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-connections"}; }
@@ -467,8 +469,11 @@ message CreditConsumption { int64 total_hundredths = 1; repeated CreditStageCons
 message CreditStageConsumption { int32 stage_position = 1; string provider_model = 2; string runtime_engine = 3; int64 input_tokens = 4; int64 output_tokens = 5; bool usage_reported = 6; int64 input_multiplier_micros = 7; int64 output_multiplier_micros = 8; int64 fallback_hundredths = 9; int64 amount_hundredths = 10; bool estimated = 11; string rate_revision_id = 12; }
 
 message GetSettingsRequest {}
-message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; }
-message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; }
+message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; optional bool inherit_platform_execution = 8; }
+message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; bool execution_inherited = 8; bool platform_execution_available = 9; }
+message GetPlatformExecutionDefaultRequest {}
+message SetPlatformExecutionDefaultRequest { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; int64 expected_version = 4; }
+message PlatformExecutionDefault { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; string updated_by_user_id = 4; int64 version = 5; google.protobuf.Timestamp updated_at = 6; }
 message RuntimeModelDefault { string runtime_engine = 1; string provider_model_id = 2; }
 message ListRuntimeEnginesRequest {}
 message ListRuntimeEnginesResponse { repeated RuntimeEngineStatus items = 1; }

@@ -1120,6 +1120,16 @@ type Settings struct {
 	Language                string
 	Timezone                string
 	Version                 int64
+	ExecutionInherited      bool
+}
+
+type PlatformExecutionDefault struct {
+	RuntimeEngine   RuntimeEngine
+	ProviderModelID string
+	ValidationRunID string
+	UpdatedBy       string
+	Version         int64
+	UpdatedAt       time.Time
 }
 
 func (settings Settings) Validate() error {

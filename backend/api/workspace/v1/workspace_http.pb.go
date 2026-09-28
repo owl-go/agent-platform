@@ -81,6 +81,7 @@ const OperationAgentWorkspaceServiceGetExpertTeam = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceGetImageGeneration = "/workspace.v1.AgentWorkspaceService/GetImageGeneration"
 const OperationAgentWorkspaceServiceGetKnowledgeBase = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
+const OperationAgentWorkspaceServiceGetPlatformExecutionDefault = "/workspace.v1.AgentWorkspaceService/GetPlatformExecutionDefault"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
 const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceService/GetSettings"
@@ -145,6 +146,7 @@ const OperationAgentWorkspaceServiceRunWorkflow = "/workspace.v1.AgentWorkspaceS
 const OperationAgentWorkspaceServiceSelectConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/SelectConnectorAuthorization"
 const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 const OperationAgentWorkspaceServiceSetImageModelAvailability = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
+const OperationAgentWorkspaceServiceSetPlatformExecutionDefault = "/workspace.v1.AgentWorkspaceService/SetPlatformExecutionDefault"
 const OperationAgentWorkspaceServiceSetSessionArchived = "/workspace.v1.AgentWorkspaceService/SetSessionArchived"
 const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.AgentWorkspaceService/SetSessionExpertSelection"
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
@@ -233,6 +235,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetImageGeneration(context.Context, *GetImageGenerationRequest) (*ImageGenerationRecord, error)
 	GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error)
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
+	GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
@@ -297,6 +300,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SelectConnectorAuthorization(context.Context, *SelectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error)
+	SetPlatformExecutionDefault(context.Context, *SetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
 	SetSessionArchived(context.Context, *SetSessionArchivedRequest) (*Session, error)
 	SetSessionExpertSelection(context.Context, *SetSessionExpertSelectionRequest) (*Session, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
@@ -414,6 +418,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("DELETE", "/api/v1/expert-teams/{expert_team_id}", _AgentWorkspaceService_DeleteExpertTeam0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/settings", _AgentWorkspaceService_GetSettings0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/settings", _AgentWorkspaceService_UpdateSettings0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/platform-execution-default", _AgentWorkspaceService_GetPlatformExecutionDefault0_HTTP_Handler(srv))
+	r.Handle("PUT", "/api/v1/admin/platform-execution-default", _AgentWorkspaceService_SetPlatformExecutionDefault0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/runtime-engines", _AgentWorkspaceService_ListRuntimeEngines0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/model-provider-presets", _AgentWorkspaceService_ListModelProviderPresets0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/model-provider-connections", _AgentWorkspaceService_ListModelProviderConnections0_HTTP_Handler(srv))
@@ -2378,6 +2384,44 @@ func _AgentWorkspaceService_UpdateSettings0_HTTP_Handler(srv AgentWorkspaceServi
 	}
 }
 
+func _AgentWorkspaceService_GetPlatformExecutionDefault0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetPlatformExecutionDefaultRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetPlatformExecutionDefault)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetPlatformExecutionDefault(ctx, req.(*GetPlatformExecutionDefaultRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*PlatformExecutionDefault)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SetPlatformExecutionDefault0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetPlatformExecutionDefaultRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSetPlatformExecutionDefault)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetPlatformExecutionDefault(ctx, req.(*SetPlatformExecutionDefaultRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*PlatformExecutionDefault)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_ListRuntimeEngines0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListRuntimeEnginesRequest
@@ -3681,6 +3725,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetImageGeneration(ctx context.Context, req *GetImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	GetKnowledgeBase(ctx context.Context, req *GetKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
+	GetPlatformExecutionDefault(ctx context.Context, req *GetPlatformExecutionDefaultRequest, opts ...http.CallOption) (rsp *PlatformExecutionDefault, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	GetSettings(ctx context.Context, req *GetSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
@@ -3745,6 +3790,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SelectConnectorAuthorization(ctx context.Context, req *SelectConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	SendSessionMessage(ctx context.Context, req *SendSessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
 	SetImageModelAvailability(ctx context.Context, req *SetImageModelAvailabilityRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
+	SetPlatformExecutionDefault(ctx context.Context, req *SetPlatformExecutionDefaultRequest, opts ...http.CallOption) (rsp *PlatformExecutionDefault, err error)
 	SetSessionArchived(ctx context.Context, req *SetSessionArchivedRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetSessionExpertSelection(ctx context.Context, req *SetSessionExpertSelectionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
@@ -4845,6 +4891,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetMCPConnectorDeletionImpact(ctx 
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetPlatformExecutionDefault(ctx context.Context, in *GetPlatformExecutionDefaultRequest, opts ...http.CallOption) (*PlatformExecutionDefault, error) {
+	var out PlatformExecutionDefault
+	pattern := "/api/v1/admin/platform-execution-default"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetPlatformExecutionDefault),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GetRun(ctx context.Context, in *GetRunRequest, opts ...http.CallOption) (*Run, error) {
 	var out Run
 	pattern := "/api/v1/workflows/{workflow_id}/runs/{run_id}"
@@ -5881,6 +5943,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) SetImageModelAvailability(ctx cont
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) SetPlatformExecutionDefault(ctx context.Context, in *SetPlatformExecutionDefaultRequest, opts ...http.CallOption) (*PlatformExecutionDefault, error) {
+	var out PlatformExecutionDefault
+	pattern := "/api/v1/admin/platform-execution-default"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSetPlatformExecutionDefault),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

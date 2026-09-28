@@ -69,7 +69,8 @@ export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert
 export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
 export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
-export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number }
+export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
+export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; updated_by_user_id: string; version: number; updated_at: string }
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
 export type CompatibilityStatus = "verified" | "unverified" | "incompatible";
 export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; status: CompatibilityStatus; reason?: string }
@@ -235,6 +236,8 @@ export interface PlatformApi {
   deleteExpertTeam(id: string, signal?: AbortSignal): Promise<void>;
   getSettings(signal?: AbortSignal): Promise<PersonalSettings>;
   updateSettings(settings: PersonalSettings, signal?: AbortSignal): Promise<PersonalSettings>;
+  getPlatformExecutionDefault(signal?: AbortSignal): Promise<PlatformExecutionDefault>;
+  setPlatformExecutionDefault(input: { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; expected_version: number }, signal?: AbortSignal): Promise<PlatformExecutionDefault>;
   listRuntimeEngines(signal?: AbortSignal): Promise<RuntimeEngineStatus[]>;
   listModelProviderPresets(signal?: AbortSignal): Promise<ModelProviderPreset[]>;
   listModelProviderConnections(signal?: AbortSignal): Promise<ModelProviderConnection[]>;
@@ -597,7 +600,9 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const settings = await call<PersonalSettings>("/api/v1/settings", { signal });
       return { ...settings, runtime_model_defaults: settings.runtime_model_defaults ?? [] };
     },
-    updateSettings(settings, signal) { const { version, ...values } = settings; return call("/api/v1/settings", json("PATCH", { ...values, expected_version: version }, signal)); },
+    updateSettings(settings, signal) { const { version, execution_inherited, platform_execution_available: _available, ...values } = settings; return call("/api/v1/settings", json("PATCH", { ...values, expected_version: version, inherit_platform_execution: execution_inherited }, signal)); },
+    getPlatformExecutionDefault(signal) { return call("/api/v1/admin/platform-execution-default", { signal }); },
+    setPlatformExecutionDefault(input, signal) { return call("/api/v1/admin/platform-execution-default", json("PUT", input, signal)); },
     async listRuntimeEngines(signal) { return (await call<{ items: RuntimeEngineStatus[] }>("/api/v1/runtime-engines", { signal })).items ?? []; },
     async listModelProviderPresets(signal) { return (await call<{ items: ModelProviderPreset[] }>("/api/v1/model-provider-presets", { signal })).items ?? []; },
     async listModelProviderConnections(signal) {
