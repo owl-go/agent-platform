@@ -3,8 +3,8 @@ package domain
 import "time"
 
 // AssistantConversation is a separate, owner-private transcript. Its snapshots
-// contain no credential; later Assistant edits do not rewrite this conversation.
-// Model execution resolves the selected Provider Model's current connection.
+// contain no credential and remain historical evidence only; every new turn
+// resolves the current Assistant configuration and Provider Model connection.
 type AssistantConversation struct {
 	ID                 string         `json:"id"`
 	OwnerID            string         `json:"-"`

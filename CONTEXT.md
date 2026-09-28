@@ -163,11 +163,11 @@ The per-Smart-Assistant public-use configuration containing an unpredictable sha
 _Avoid_: Public Session, API Key, User Access Token
 
 **External Conversation**:
-An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. It freezes the Assistant, Share Token revision, FAQ or retrieval source, and owner Credit settlement needed for audit.
+An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. Each accepted turn uses the Smart Assistant's current configuration while retaining its Share Token revision, answer source, and owner Credit settlement for audit.
 _Avoid_: Session, visitor account, public chat transcript
 
 **Assistant Conversation**:
-An authenticated User's private conversation with a Smart Assistant, separate from a Workspace Session and retained as a complete audit transcript. A new conversation starts with the Assistant's welcome and enabled FAQs; only a bounded portion of its history is used for subsequent answers.
+An authenticated User's private conversation with a Smart Assistant, separate from a Workspace Session and retained as a complete audit transcript. A new conversation starts with the Assistant's welcome and enabled FAQs; each accepted turn uses the Smart Assistant's current configuration and only a bounded portion of prior messages as context.
 _Avoid_: Session, External Conversation, temporary chat
 
 **Image Creation**:

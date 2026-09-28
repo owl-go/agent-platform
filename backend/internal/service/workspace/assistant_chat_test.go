@@ -33,6 +33,18 @@ func (repository *assistantModelRepository) ListModelProviderConnections(context
 	return repository.connections, nil
 }
 
+type currentAssistantRepository struct {
+	aiapp.Repository
+	assistant aiappdomain.SmartAssistant
+}
+
+func (repository *currentAssistantRepository) GetAssistant(_ context.Context, owner, id string) (aiappdomain.SmartAssistant, error) {
+	if owner != repository.assistant.OwnerID || id != repository.assistant.ID {
+		return aiappdomain.SmartAssistant{}, aiappdomain.ErrNotFound
+	}
+	return repository.assistant, nil
+}
+
 type assistantKnowledgeSearcher struct {
 	hits  []retrieval.Hit
 	err   error
@@ -110,6 +122,35 @@ func TestAssistantModelSelectionRequiresAvailableOpenAIResponsesModelAndKey(t *t
 	}
 }
 
+func TestAssistantTurnLoadsCurrentAssistantConfiguration(t *testing.T) {
+	repository := &currentAssistantRepository{assistant: aiappdomain.SmartAssistant{
+		ID: "assistant-1", OwnerID: "owner", Name: "current name", Prompt: "current prompt",
+		PreprocessPrompt: "current preprocess", ResponseStyle: "current style",
+		KnowledgeBaseIDs: []string{"current-knowledge"}, ProviderModelID: "current-model",
+	}}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{aiapplications: application}
+	conversation := aiappdomain.AssistantConversation{
+		AssistantID: "assistant-1",
+		AssistantSnapshot: aiappdomain.SmartAssistant{
+			ID: "assistant-1", OwnerID: "owner", Name: "stale name", Prompt: "stale prompt",
+			PreprocessPrompt: "stale preprocess", ResponseStyle: "stale style",
+			KnowledgeBaseIDs: []string{"stale-knowledge"}, ProviderModelID: "stale-model",
+		},
+	}
+
+	assistant, err := service.loadAssistantTurnConfiguration(context.Background(), "owner", conversation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assistant.Name != "current name" || assistant.Prompt != "current prompt" || assistant.PreprocessPrompt != "current preprocess" || assistant.ResponseStyle != "current style" || assistant.ProviderModelID != "current-model" || len(assistant.KnowledgeBaseIDs) != 1 || assistant.KnowledgeBaseIDs[0] != "current-knowledge" {
+		t.Fatalf("Assistant turn configuration = %+v, want current Assistant configuration", assistant)
+	}
+}
+
 func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 	repository := &assistantModelRepository{connections: []workspacedomain.ModelProviderConnection{{
 		ID: "connection-current", CredentialOwnerID: "admin", ProviderType: "openai",
@@ -121,13 +162,9 @@ func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	service := &Service{workspace: application}
-	conversation := aiappdomain.AssistantConversation{ModelSnapshot: aiappdomain.AssistantModel{
-		ProviderModelID: "model-1", ConnectionID: "connection-stale", CredentialOwnerID: "old-admin",
-		ProviderType: "openai", Protocol: "openai_responses", ModelID: "gpt-stale",
-		Endpoint: "https://stale.example.test/v1", ConnectionVersion: 13,
-	}}
+	assistant := aiappdomain.SmartAssistant{ProviderModelID: "model-1"}
 
-	model, err := service.resolveAssistantTurnModel(context.Background(), "owner", conversation)
+	model, err := service.resolveAssistantTurnModel(context.Background(), "owner", assistant)
 	if err != nil {
 		t.Fatal(err)
 	}
