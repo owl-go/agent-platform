@@ -8,11 +8,11 @@ import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
 import ConnectorIcon from "./ConnectorIcon.vue";
-import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPlacement";
+import { clearCommandApproval, placeCommandApproval } from "../commandApprovalPlacement";
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: string | number; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -44,6 +44,7 @@ const pendingCLIActivation = ref<{ definition: CLIConnectorDefinition; popup: Wi
 const pendingManagedActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean; scopes?: string[]; recovery?: boolean; setup?: ConnectorSetup; flow?: ConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
 const owner = computed(() => auth?.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser.id : "");
 const storageKey = computed(() => owner.value ? conversationDraftKey(owner.value, props.scope) : "");
+const approvalExecutionKind = computed(() => props.scope.session_id ? "session" as const : "run" as const);
 const editorLocked = computed(() => props.disabled || sending.value || loading.value);
 const locked = computed(() => editorLocked.value || updating.value);
 const canSend = computed(() => !locked.value && !props.sendDisabled && !props.active && !!selection.value && Boolean(draftText(parts.value) || pending.value.length || uploaded.value.length));
@@ -640,7 +641,7 @@ async function initialize() {
   finally { loading.value = false; }
 }
 onMounted(async () => {
-  placeSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined);
+  if (props.approvalExecutionId) placeCommandApproval(approvalExecutionKind.value, String(props.approvalExecutionId));
   document.addEventListener("pointerdown", outside);
   document.addEventListener("visibilitychange", handleAuthorizationReturn);
   const saved = storageKey.value ? loadConversationDraft(storageKey.value) : undefined;
@@ -656,14 +657,14 @@ watch(() => props.initialPrompt, async (value, previous) => {
   parts.value = [{ kind: "text", text: value }];
   await nextTick(); renderEditor(); persist(); editor.value?.focus();
 });
-watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearSessionApproval(String(previous)); placeSessionApproval(current ? String(current) : undefined); });
+watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearCommandApproval(approvalExecutionKind.value, String(previous)); if (current) placeCommandApproval(approvalExecutionKind.value, String(current)); });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
-onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
+onBeforeUnmount(() => { disposed = true; if (props.approvalExecutionId) clearCommandApproval(approvalExecutionKind.value, String(props.approvalExecutionId)); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
 </script>
 
 <template>
   <footer ref="root" class="composer resource-composer" :aria-busy="sending || updating || loading">
-    <div id="session-command-approval-slot" class="composer-approval-slot"></div>
+    <div id="command-approval-slot" class="composer-approval-slot"></div>
     <section v-if="pendingCLIActivation && cliEnablement(pendingCLIActivation.definition.id)?.state === 'waiting_for_user'" class="composer-authorization" role="status" aria-live="polite">
       <div><strong>{{ t('composer.activationRequired', { name: pendingCLIActivation.definition.name }) }}</strong><small>{{ t('composer.activationHint') }}</small></div>
       <a :href="cliEnablement(pendingCLIActivation.definition.id)?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.continueSetup') }}</a>

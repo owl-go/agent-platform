@@ -43,6 +43,19 @@ describe("ConversationThread", () => {
     wrapper.unmount();
   });
 
+  it("shows a stage status and model without exposing its Runtime Engine", () => {
+    const wrapper = mountThread([{
+      id: "assistant-running", role: "assistant", content: "", state: "running", timestamp: "2026-09-29T08:00:00Z",
+      stages: [{ ...stage, state: "running", final_text: undefined, elapsed_ms: 0 }],
+    }]);
+
+    const summary = wrapper.get(".expert-stage-list summary").text();
+    expect(summary).toContain("运行中");
+    expect(summary).toContain("Model");
+    expect(summary).not.toContain("Codex");
+    wrapper.unmount();
+  });
+
   it("does not render a failed stage twice when its error is the assistant error", () => {
     const error = "PI Agent stopped with error: OpenAI API error (502)";
     const wrapper = mountThread([{
