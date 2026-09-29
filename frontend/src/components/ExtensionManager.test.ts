@@ -349,6 +349,9 @@ describe("ExtensionManager", () => {
     expect(skillGroups).toHaveLength(2);
     expect(skillGroups[0]!.text()).toContain("平台技能");
     expect(skillGroups[0]!.text()).toContain(platformSkill.name);
+    expect(skillGroups[0]!.find(".skill-card-heading .profile-icon").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-catalog-card > .profile-icon").exists()).toBe(false);
     expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
     expect(skillGroups[1]!.text()).toContain("我的技能");
     expect(skillGroups[1]!.text()).toContain(mySkill.name);
