@@ -542,7 +542,21 @@ function runtimeEvidenceCounts(events: RunEvent[]) {
 		fileChanges: events.filter((event) => event.type === "file.changed").length,
 	};
 }
-async function scrollConversationToEnd(behavior: ScrollBehavior = "smooth") { await nextTick(); runConversationElement.value?.scrollTo?.({ top: runConversationElement.value.scrollHeight, behavior }); }
+async function scrollConversationToEnd(behavior: ScrollBehavior = "smooth") {
+  await nextTick();
+  const conversation = runConversationElement.value;
+  if (!conversation) return;
+  if (activeConversationRun.value?.execution_plan?.state === "pending") {
+    const cards = conversation.querySelectorAll<HTMLElement>(".execution-plan-card.is-pending");
+    const card = cards.item(cards.length - 1);
+    if (card) {
+      const top = conversation.scrollTop + card.getBoundingClientRect().top - conversation.getBoundingClientRect().top - 16;
+      conversation.scrollTo?.({ top: Math.max(0, top), behavior });
+      return;
+    }
+  }
+  conversation.scrollTo?.({ top: conversation.scrollHeight, behavior });
+}
 function addEnvironment() { settingsForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }
 function removeEnvironment(index: number) { settingsForm.value.environment.splice(index, 1); }
 function setWorkflowSpecialist(value: string) { settingsForm.value.expert_id = value.startsWith("expert:") ? value.slice(7) : undefined; settingsForm.value.expert_team_id = value.startsWith("team:") ? value.slice(5) : undefined; }
@@ -567,7 +581,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div><el-button v-if="selectedTaskMessage && !taskPanelOpen" class="task-panel-reopen" text :aria-label="t('taskWorkspace.reopen')" @click="selectTask(selectedTaskMessage.id)"><PanelRightOpen :size="16" />{{ t('taskWorkspace.reopen') }}</el-button></header>
       <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
-        <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+        <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :plan-actions-in-panel-id="taskPanelOpen ? selectedTaskMessage?.id : undefined" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
       <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" />
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>

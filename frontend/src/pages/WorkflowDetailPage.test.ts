@@ -220,11 +220,44 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(wrapper.get(".run-conversation .message.user").text()).toContain(workflow.goal);
-    expect(wrapper.get(".run-conversation .execution-plan-card footer").text()).toContain("按计划开始");
+    expect(wrapper.find(".run-conversation .execution-plan-card footer").exists()).toBe(false);
+    expect(wrapper.get(".task-workspace-plan-actions").text()).toContain("按计划开始");
     await wrapper.get(".task-workspace-plan-actions .el-button--primary").trigger("click");
     await flushPromises();
     expect(decideRunExecutionPlan).toHaveBeenCalledWith(workflow.id, pendingRun.id, "start", 1);
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.get(".run-conversation .execution-plan-card footer").text()).toContain("按计划开始");
     wrapper.unmount();
+  });
+
+  it("opens a pending plan at its start instead of scrolling past its heading", async () => {
+    const scrollTo = vi.fn();
+    const scrollToDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollTo");
+    const scrollHeightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scrollTo });
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => 1000 });
+    try {
+      const pendingRun: Run = {
+        ...run, state: "waiting_for_user", final_text: undefined,
+        execution_plan: {
+          id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+          steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }],
+          resources: [], side_effects: ["workspace_files_may_change"], reasons: ["workflow_execution"],
+          estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+        },
+      };
+      const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), getAttachmentDownload: vi.fn(async () => new Blob()) }));
+      await wrapper.get(".run-row:not(.run-head)").trigger("click");
+      await flushPromises();
+
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+      wrapper.unmount();
+    } finally {
+      if (scrollToDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollTo", scrollToDescriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
+      if (scrollHeightDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollHeight", scrollHeightDescriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, "scrollHeight");
+    }
   });
 
   it("opens a Run as a conversation instead of raw Runtime events", async () => {

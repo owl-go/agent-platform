@@ -193,12 +193,15 @@ describe("ConversationThread", () => {
       id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
       executionPlan: {
         id: "plan-1", state: "pending", objective: "解释设计", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
-        steps: [{ id: "step-1", kind: "execute_stage", label: "回答", position: 1, state: "pending" }],
-        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+        steps: [{ id: "step-1", kind: "execute_stage", position: 1, state: "pending" }],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100,
       } as NonNullable<ConversationMessage["executionPlan"]>,
     }]);
 
     expect(wrapper.get(".execution-plan-card").text()).toContain("解释设计");
+    expect(wrapper.get(".execution-plan-steps").text()).toContain("执行任务");
+    expect(wrapper.get(".execution-plan-card").text()).not.toContain("NaN");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("0.00 Credits");
     await wrapper.get(".execution-plan-card footer .el-button--primary").trigger("click");
     expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
     wrapper.unmount();
