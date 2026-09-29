@@ -53,7 +53,7 @@ async function downloadAttachment(item: Attachment) {
     <header><div><small>{{ t('taskWorkspace.eyebrow') }}</small><h2>{{ t('taskWorkspace.title') }}</h2></div><el-button text circle :aria-label="t('taskWorkspace.close')" @click="emit('close')"><X :size="18" /></el-button></header>
     <div class="task-workspace-scroll">
       <section v-if="message.executionPlan" class="task-workspace-section">
-        <h3>{{ t('taskWorkspace.plan') }}</h3><p class="task-workspace-objective">{{ message.executionPlan.objective }}</p>
+        <h3>{{ t('taskWorkspace.plan') }}</h3><p class="task-workspace-objective">{{ message.executionPlan.objective }}</p><p v-if="message.executionPlan.generator === 'model_failed'" class="muted" role="status">{{ t('sessions.executionPlan.modelFailedHint') }}</p>
         <ol class="task-workspace-steps"><li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span></span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepState(step.state) }}</small></div></li></ol>
         <div v-if="message.executionPlan.state === 'pending'" class="task-workspace-plan-actions">
           <el-button type="primary" @click="emit('planDecision', message.id, 'start')">{{ t('sessions.executionPlan.start') }}</el-button>

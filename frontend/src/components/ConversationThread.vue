@@ -151,6 +151,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
         <section v-if="message.role === 'assistant' && message.executionPlan" class="execution-plan-card" :class="`is-${message.executionPlan.state}`" aria-live="polite">
           <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan.state) }}</span></header>
+          <p v-if="message.executionPlan.generator === 'model_failed'" class="muted" role="status">{{ t('sessions.executionPlan.modelFailedHint') }}</p>
           <ol class="execution-plan-steps">
             <li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span>{{ step.position }}</span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepStateLabel(step.state) }}</small></div></li>
           </ol>
@@ -158,7 +159,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
             <div v-if="message.executionPlan.resources?.length"><dt>{{ t('sessions.executionPlan.resources') }}</dt><dd>{{ message.executionPlan.resources.map((item) => item.name).join(' · ') }}</dd></div>
             <div v-if="message.executionPlan.side_effects?.length"><dt>{{ t('sessions.executionPlan.sideEffectsTitle') }}</dt><dd>{{ message.executionPlan.side_effects.map((item) => planCodeLabel('sideEffects', item)).join(' · ') }}</dd></div>
             <div><dt>{{ t('sessions.executionPlan.estimate') }}</dt><dd>{{ t('sessions.executionPlan.estimateValue', { calls: message.executionPlan.estimated_model_calls ?? 0, credits: planCredits(message.executionPlan.estimated_credit_hundredths) }) }}</dd></div>
-            <div><dt>{{ t('sessions.executionPlan.generationCost') }}</dt><dd>{{ t('sessions.executionPlan.generationCostValue', { credits: planCredits(message.executionPlan.generation_credit_hundredths) }) }}</dd></div>
+            <div><dt>{{ t('sessions.executionPlan.generationCost') }}</dt><dd>{{ t(message.executionPlan.generator === 'model' || message.executionPlan.generator === 'model_failed' ? 'sessions.executionPlan.modelGenerationCostValue' : 'sessions.executionPlan.generationCostValue', { credits: planCredits(message.executionPlan.generation_credit_hundredths) }) }}</dd></div>
           </dl>
           <small v-if="message.executionPlan.reasons?.length" class="execution-plan-reasons">{{ message.executionPlan.reasons.map((item) => planCodeLabel('reasons', item)).join(' · ') }}</small>
           <footer v-if="message.executionPlan.state === 'pending' && message.id !== props.planActionsInPanelId">

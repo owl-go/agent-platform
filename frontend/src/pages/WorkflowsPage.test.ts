@@ -81,7 +81,7 @@ describe("WorkflowsPage", () => {
     await flushPromises();
 
     expect(createWorkflow).toHaveBeenCalledWith({ name: "带资料的工作流", goal: "根据资料回答问题", environment: [], knowledge_base_ids: [] });
-    expect(runWorkflow).toHaveBeenCalledWith("workflow-1", { plan_preference: "always" });
+    expect(runWorkflow).toHaveBeenCalledWith("workflow-1", {});
     await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe("/workflows/workflow-1?tab=history&open_run=run-validation"));
     wrapper.unmount();
   });

@@ -65,7 +65,7 @@ async function create() {
   let item: Workflow | undefined;
   try {
     item = await api.createWorkflow({ name: form.value.name.trim(), goal: form.value.goal.trim(), environment: [], knowledge_base_ids: [] });
-    const validationRun = await api.runWorkflow(item.id, { plan_preference: "always" });
+    const validationRun = await api.runWorkflow(item.id, {});
     showCreate.value = false;
     form.value = { name: "", goal: "", environment: [], knowledge_base_ids: [] };
     await router.push({ path: `/workflows/${item.id}`, query: { tab: "history", open_run: validationRun.id } });

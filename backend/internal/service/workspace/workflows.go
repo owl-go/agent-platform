@@ -243,6 +243,9 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 			return nil, publicError(portErr)
 		}
 		item, err = repository.CreatePlannedRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput, request.PlanPreference)
+		if err == nil {
+			item, err = service.completeRunPlanGeneration(ctx, repository, owner, request.WorkflowId, item, request.PlanPreference)
+		}
 	}
 	if err != nil {
 		return nil, publicError(err)
@@ -341,6 +344,10 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 		return nil, publicError(err)
 	}
 	accepted = true
+	item, err = service.completeRunPlanGeneration(ctx, repository, owner, request.WorkflowId, item, request.PlanPreference)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }

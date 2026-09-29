@@ -124,8 +124,41 @@ func BuildExecutionPlan(input ExecutionPlanContext, now time.Time) (*ExecutionPl
 
 func (plan ExecutionPlan) AllowsDirectAnswer() bool { return len(plan.SideEffects) == 0 }
 
+// CompleteModelGeneration changes only the user-visible labels. The ordered
+// step kinds and their Worker-owned state transitions remain frozen.
+func (plan *ExecutionPlan) CompleteModelGeneration(labels []string, creditHundredths int64, generationFailed bool) error {
+	if plan == nil || plan.State != "pending" || creditHundredths < 0 {
+		return fmt.Errorf("%w: invalid model Plan generation state", ErrInvalid)
+	}
+	if generationFailed {
+		plan.Generator = "model_failed"
+	} else {
+		if len(labels) != len(plan.Steps) {
+			return fmt.Errorf("%w: model Plan label count does not match steps", ErrInvalid)
+		}
+		seen := make(map[string]bool, len(labels))
+		normalized := make([]string, len(labels))
+		for index, label := range labels {
+			label = strings.TrimSpace(label)
+			key := strings.ToLower(label)
+			if len([]rune(label)) < 4 || len([]rune(label)) > 80 || strings.ContainsAny(label, "\r\n\x00") || seen[key] {
+				return fmt.Errorf("%w: invalid model Plan step label", ErrInvalid)
+			}
+			seen[key] = true
+			normalized[index] = label
+		}
+		for index, label := range normalized {
+			plan.Steps[index].Label = label
+		}
+		plan.Generator = "model"
+	}
+	plan.GenerationCreditHundredths = creditHundredths
+	plan.Version++
+	return plan.Validate()
+}
+
 func (plan ExecutionPlan) Validate() error {
-	if plan.ID == "" || plan.Version < 1 || plan.Objective == "" || plan.Generator != "platform_rules" || len(plan.Steps) < 2 || plan.EstimatedModelCalls < 1 || plan.EstimatedCreditHundredths < 0 || plan.GenerationCreditHundredths < 0 {
+	if plan.ID == "" || plan.Version < 1 || plan.Objective == "" || (plan.Generator != "platform_rules" && plan.Generator != "model" && plan.Generator != "model_failed") || len(plan.Steps) < 2 || plan.EstimatedModelCalls < 1 || plan.EstimatedCreditHundredths < 0 || plan.GenerationCreditHundredths < 0 {
 		return fmt.Errorf("%w: invalid Execution Plan", ErrInvalid)
 	}
 	if plan.State != "pending" && plan.State != "approved" && plan.State != "executing" && plan.State != "completed" && plan.State != "failed" && plan.State != "cancelled" && plan.State != "skipped" {

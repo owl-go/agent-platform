@@ -207,6 +207,39 @@ describe("ConversationThread", () => {
     wrapper.unmount();
   });
 
+  it("shows model-generated task labels and the charged Plan generation cost", () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "分析项目代码", created_at: "2026-09-28T08:00:00Z", version: 2, generator: "model",
+        steps: [
+          { id: "step-1", kind: "review_input", label: "确认代码分析范围和入口", position: 1, state: "pending" },
+          { id: "step-2", kind: "execute_stage", label: "梳理目录并追踪核心调用链", position: 2, state: "pending" },
+          { id: "step-3", kind: "deliver_result", label: "汇总鉴权风险与建议", position: 3, state: "pending" },
+        ],
+        resources: [], side_effects: [], reasons: ["user_requested"], estimated_model_calls: 1,
+        estimated_credit_hundredths: 100, generation_credit_hundredths: 37,
+      },
+    }]);
+    expect(wrapper.get(".execution-plan-steps").text()).toContain("梳理目录并追踪核心调用链");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("模型生成 · 0.37 Credits");
+    wrapper.unmount();
+  });
+
+  it("marks a failed detailed Plan generation as a rule-based fallback", () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "分析项目代码", created_at: "2026-09-28T08:00:00Z", version: 2, generator: "model_failed",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "", position: 1, state: "pending" }],
+        resources: [], side_effects: [], reasons: ["user_requested"], estimated_model_calls: 1,
+        estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }]);
+    expect(wrapper.get(".execution-plan-card [role='status']").text()).toContain("详细计划生成失败");
+    wrapper.unmount();
+  });
+
   it("opens the task panel from a task-bearing historical response", async () => {
     const wrapper = mountThread([{
       id: "assistant-task", role: "assistant", content: "Done", state: "succeeded", timestamp: "2026-09-28T08:00:00Z",
