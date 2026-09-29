@@ -65,8 +65,10 @@ describe("ApprovalInbox", () => {
     expect(wrapper.text()).not.toContain("im_messages_send");
     expect(wrapper.text()).not.toContain("im +messages-send");
     expect(wrapper.text()).not.toContain("arguments redacted");
+    expect(wrapper.get(".approval-approve").classes()).toContain("el-button--success");
+    expect(wrapper.get(".approval-reject").classes()).toEqual(expect.arrayContaining(["el-button--danger", "is-plain"]));
     await wrapper.get("select").setValue("bot");
-    await wrapper.get(".el-button--warning").trigger("click");
+    await wrapper.get(".approval-approve").trigger("click");
     await flushPromises();
 
     expect(decideCommandApproval).toHaveBeenCalledWith("approval-1", "approved", "bot", 4);

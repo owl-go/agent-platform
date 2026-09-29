@@ -38,8 +38,8 @@ function operationLabel(operation: string) {
       </div>
       <footer>
         <label class="approval-identity"><span>{{ t('approvals.identity') }}</span><select :value="identities[item.id] ?? item.identity ?? 'user'" :disabled="Boolean(item.identity || decidingId)" @change="changeIdentity(item.id, $event)"><option value="user">{{ t('approvals.user') }}</option><option value="bot">{{ t('approvals.bot') }}</option></select></label>
-        <el-button class="approval-reject" :disabled="Boolean(decidingId)" @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button>
-        <el-button type="warning" :loading="decidingId === item.id" :disabled="Boolean(decidingId)" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
+        <el-button class="approval-reject" type="danger" plain :disabled="Boolean(decidingId)" @click="emit('decide', item, 'rejected')">{{ t('approvals.reject') }}</el-button>
+        <el-button class="approval-approve" type="success" :loading="decidingId === item.id" :disabled="Boolean(decidingId)" @click="emit('decide', item, 'approved')">{{ t('approvals.approveOnce') }}</el-button>
       </footer>
     </article>
   </aside>

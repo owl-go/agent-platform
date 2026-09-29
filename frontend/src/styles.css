@@ -959,8 +959,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .approval-card > footer { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--aw-n3); }
 .approval-identity { display: grid; gap: 3px; color: var(--aw-n7); font-size: 11px; }
 .approval-card > footer select { width: auto; min-width: 136px; height: 32px; padding: 4px 28px 4px 10px; border-radius: var(--aw-radius-control); font-size: 12.5px; }
-.approval-card > footer .el-button { width: auto; height: 32px; flex: none; margin: 0; padding: 4px 12px; border-radius: var(--aw-radius-control); }
-.approval-card > footer .el-button--warning { background: var(--aw-warning); border-color: var(--aw-warning); }
+.approval-card > footer .el-button { width: auto; height: 32px; flex: none; margin: 0; padding: 4px 12px; border-radius: var(--aw-radius-control); font-size: 12.5px; font-weight: 600; letter-spacing: 0; }
+.approval-approve.el-button--success { border-color: var(--aw-success); background: var(--aw-success); color: var(--aw-n0); }
+.approval-reject.el-button--danger.is-plain { border-color: var(--aw-danger-border); background: var(--aw-n0); color: var(--aw-danger); }
+.approval-reject.el-button--danger.is-plain:not(:disabled):hover { border-color: var(--aw-danger); background: var(--aw-danger-soft); color: var(--aw-danger); }
 .approval-reject { margin-left: auto !important; }
 
 .run-table, .user-table, .file-browser { border-radius: var(--aw-radius-card); background: var(--aw-n0); }
