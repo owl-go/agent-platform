@@ -23,6 +23,21 @@ const taskMessage: ConversationMessage = {
 };
 
 describe("TaskWorkspacePanel", () => {
+  it("lets the user confirm a pending plan from the task panel", async () => {
+    const wrapper = mount(TaskWorkspacePanel, {
+      props: {
+        message: { ...taskMessage, state: "waiting_for_user", executionPlan: { ...taskMessage.executionPlan!, state: "pending", side_effects: ["workspace_files_may_change"] } },
+        loadAttachment: vi.fn(async () => new Blob()),
+      },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+
+    await wrapper.get(".task-workspace-plan-actions .el-button--primary").trigger("click");
+    expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-1", "start"]);
+    expect(wrapper.get(".task-workspace-plan-actions").text()).not.toContain("直接回答");
+    wrapper.unmount();
+  });
+
   it("does not display NaN when consumption has no usable total", () => {
     const wrapper = mount(TaskWorkspacePanel, {
       props: { message: { ...taskMessage, creditConsumption: { total_hundredths: Number.NaN, stages: [] } }, loadAttachment: vi.fn(async () => new Blob()) },

@@ -201,6 +201,32 @@ describe("WorkflowDetailPage", () => {
     summary.unmount();
   });
 
+  it("shows the input and plan actions when the API omits empty plan resources", async () => {
+    const pendingRun: Run = {
+      ...run,
+      state: "waiting_for_user",
+      final_text: undefined,
+      execution_plan: {
+        id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }],
+        side_effects: ["workspace_files_may_change"], reasons: ["workflow_execution"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      } as NonNullable<Run["execution_plan"]>,
+    };
+    const decideRunExecutionPlan = vi.fn(async () => pendingRun);
+    const api = apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), decideRunExecutionPlan, getAttachmentDownload: vi.fn(async () => new Blob()) });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".run-conversation .message.user").text()).toContain(workflow.goal);
+    expect(wrapper.get(".run-conversation .execution-plan-card footer").text()).toContain("按计划开始");
+    await wrapper.get(".task-workspace-plan-actions .el-button--primary").trigger("click");
+    await flushPromises();
+    expect(decideRunExecutionPlan).toHaveBeenCalledWith(workflow.id, pendingRun.id, "start", 1);
+    wrapper.unmount();
+  });
+
   it("opens a Run as a conversation instead of raw Runtime events", async () => {
     const wrapper = await mountPage();
     await wrapper.get(".run-row:not(.run-head)").trigger("click");

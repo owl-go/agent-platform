@@ -569,7 +569,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
         <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
-      <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="openArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
+      <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" />
       <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
     </div>
     <template v-else>
