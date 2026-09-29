@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { FileText, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
@@ -8,6 +9,12 @@ import type { ConversationMessage } from "../conversationThread";
 const props = defineProps<{ message: ConversationMessage; loadAttachment: (id: string) => Promise<Blob> }>();
 const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string] }>();
 const { t, locale } = useI18n();
+const consumedCredits = computed(() => {
+  const raw: unknown = props.message.creditConsumption?.total_hundredths;
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const amount = Number(raw);
+  return Number.isFinite(amount) && amount >= 0 ? (amount / 100).toFixed(2) : undefined;
+});
 
 function stateLabel(state: string) {
   if (state === "completed" || state === "succeeded") return t("common.success");
@@ -60,7 +67,7 @@ async function downloadAttachment(item: Attachment) {
       </section>
       <section class="task-workspace-section task-workspace-result">
         <h3>{{ t('taskWorkspace.result') }}</h3>
-        <dl><div><dt>{{ t('taskWorkspace.state') }}</dt><dd>{{ stateLabel(message.state) }}</dd></div><div v-if="message.elapsedMs"><dt>{{ t('taskWorkspace.elapsed') }}</dt><dd>{{ formatDuration(message.elapsedMs, locale as SupportedLocale) }}</dd></div><div v-if="message.creditConsumption"><dt>{{ t('taskWorkspace.credits') }}</dt><dd>{{ (message.creditConsumption.total_hundredths / 100).toFixed(2) }}</dd></div></dl>
+        <dl><div><dt>{{ t('taskWorkspace.state') }}</dt><dd>{{ stateLabel(message.state) }}</dd></div><div v-if="message.elapsedMs"><dt>{{ t('taskWorkspace.elapsed') }}</dt><dd>{{ formatDuration(message.elapsedMs, locale as SupportedLocale) }}</dd></div><div v-if="consumedCredits !== undefined"><dt>{{ t('taskWorkspace.credits') }}</dt><dd>{{ consumedCredits }}</dd></div></dl>
         <el-button v-if="message.canSaveWorkflow || message.workflowLink" type="primary" plain @click="emit('saveWorkflow', message.id)">{{ message.workflowLink ? t('sessions.workflowSave.open') : t('sessions.workflowSave.action') }}</el-button>
       </section>
     </div>

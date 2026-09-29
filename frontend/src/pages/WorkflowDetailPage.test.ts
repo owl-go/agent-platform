@@ -230,8 +230,9 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.get(".task-workspace-panel").text()).toContain("审查发布风险");
     await wrapper.get(".task-workspace-panel > header button").trigger("click");
     expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
-    await wrapper.get(".message-task").trigger("click");
+    await wrapper.get('.run-conversation-head button[aria-label="打开任务面板"]').trigger("click");
     expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
+    expect(wrapper.find('.run-conversation-head button[aria-label="打开任务面板"]').exists()).toBe(false);
     wrapper.unmount();
   });
 

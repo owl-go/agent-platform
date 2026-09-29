@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder } from "@lucide/vue";
+import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder, PanelRightOpen } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
@@ -564,7 +564,7 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <ToastMessage v-if="notice" kind="success" :title="t('common.success')" :message="notice" :close-label="t('common.close')" @dismiss="notice = ''" />
     <div v-if="selectedRun" class="run-page" :class="{ 'has-task-panel': taskPanelOpen && selectedTaskMessage }">
-      <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div></header>
+      <header class="run-conversation-head"><div><el-button class="back-link" text @click="closeRun">← {{ t('common.back') }}</el-button><h2>{{ t('workflows.conversation') }}</h2><p v-if="latestConversationRun"><span>{{ triggerLabel(selectedRun.trigger) }}</span><span>{{ new Date(latestConversationRun.started_at || latestConversationRun.queued_at).toLocaleString() }}</span></p></div><el-button v-if="selectedTaskMessage && !taskPanelOpen" class="task-panel-reopen" text :aria-label="t('taskWorkspace.reopen')" @click="selectTask(selectedTaskMessage.id)"><PanelRightOpen :size="16" />{{ t('taskWorkspace.reopen') }}</el-button></header>
       <ExecutionStatusBar v-if="activeConversationRun" :state="activeConversationRun.state" :elapsed-ms="conversationElapsed" :model="statusConversationModel" :credit-consumption="activeConversationRun.credit_consumption" :current-activity="statusConversationActivity" :last-activity-at="lastWorkflowActivityAt" :model-call-count="statusConversationModelCalls" can-stop @stop="cancelConversationRun" />
       <div ref="runConversationElement" class="run-conversation" :style="{ paddingBottom: `${runComposerClearance}px` }">
         <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />

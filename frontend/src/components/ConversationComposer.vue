@@ -688,19 +688,22 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
     </div>
     <div ref="editor" class="composer-editor" role="textbox" aria-multiline="true" :aria-label="t('sessions.placeholder')" :data-placeholder="t('composer.placeholder')" :contenteditable="!editorLocked" @input="onInput" @keydown="keydown" @keyup="rememberCaret" @mouseup="rememberCaret" @paste="paste" @drop.prevent></div>
     <div class="composer-toolbar">
-      <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
-      <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
-      <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
-        <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
-        <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="item.kind === 'cli' ? cliActivationIsOn(item.id) : connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
-        <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
-      </el-popover>
-      <span class="composer-spacer"></span>
-      <el-tooltip :content="t('composer.planFirstHint')" placement="top">
-        <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
-      </el-tooltip>
-      <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
-      <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
+      <div class="composer-toolbar-resources">
+        <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
+        <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
+        <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
+          <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
+          <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="item.kind === 'cli' ? cliActivationIsOn(item.id) : connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
+          <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
+        </el-popover>
+      </div>
+      <div class="composer-toolbar-actions">
+        <el-tooltip :content="t('composer.planFirstHint')" placement="top">
+          <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
+        </el-tooltip>
+        <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
+        <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
+      </div>
     </div>
     <input ref="fileInput" class="composer-file-input" type="file" multiple :disabled="locked" @change="chooseLocal">
     <section v-if="menu" class="composer-menu" :aria-label="t('composer.add')">

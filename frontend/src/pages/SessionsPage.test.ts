@@ -133,9 +133,16 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".task-workspace-panel").text()).toContain("生成发布报告");
     await wrapper.get(".task-workspace-panel > header button").trigger("click");
     expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
-    await wrapper.get(".message-task").trigger("click");
-    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
+    expect(localStorage.getItem(`agent-workspace:task-panel:session:${session.id}`)).toBe("closed");
     wrapper.unmount();
+
+    const restored = await mountPage(taskMessages);
+    expect(restored.find(".task-workspace-panel").exists()).toBe(false);
+    const reopen = restored.get('.conversation-head button[aria-label="打开任务面板"]');
+    await reopen.trigger("click");
+    expect(restored.get(".task-workspace-panel").text()).toContain("检查变更");
+    expect(restored.find('.conversation-head button[aria-label="打开任务面板"]').exists()).toBe(false);
+    restored.unmount();
   });
 
   it("shows the Skills frozen for a historical user message", async () => {
